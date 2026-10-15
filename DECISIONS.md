@@ -168,3 +168,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-040 — 2026-10-15 — Bug fixes lane
 **Decision:** A Bug fixes lane takes cross-lane and integration bugs assigned by the PM, one small PR per bug from main, touching whatever files the fix needs and telling the owning lane. First bug: players saved far from the origin rejoin stuck at spawn. Crafting goes back to crafting content.
 **Who:** Justin
+
+## D-041 — 2026-10-15 — Digging stick digs deeper
+**Decision:** A digging stick lets you dig one level deeper than bare hands, reaching better clay. It does not double clay or speed up digging.
+**Who:** Justin ("Dig deeper"; the PM had recommended double clay)
