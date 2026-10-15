@@ -352,9 +352,11 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
+        // Stacks whose qualities share a grade read the same, so they show as one line.
         var counts = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .ToDictionary(i => ItemLook.Label((Item)i.Item, i.Quality, i.Count), i => i.Count);
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
+            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
         hud.SetInventory(counts);
     }
 
