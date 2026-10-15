@@ -24,16 +24,19 @@ public static partial class Module
             ScheduledId = 0,
             ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(World.MoveTickMillis)),
         });
+        EnsureWorldClock(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
+        EnsureWorldClock(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
+            SurvivalConnected(ctx, existing with { Online = true });
             return;
         }
 
@@ -63,13 +66,17 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
+        SurvivalConnected(ctx, player);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]
     public static void PlayerDisconnected(ReducerContext ctx)
     {
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
+        {
             ctx.Db.Player.Identity.Update(player with { Online = false });
+            SurvivalDisconnected(ctx, player);
+        }
     }
 
     [SpacetimeDB.Reducer]

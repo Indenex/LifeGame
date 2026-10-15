@@ -22,10 +22,13 @@ public partial class Main : Node3D
     readonly Journal journal = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
+    readonly Atmosphere atmosphere = new();
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
+    BuildingSystem building = null!;
 
     DbConnection? conn;
     Identity? myIdentity;
@@ -44,6 +47,8 @@ public partial class Main : Node3D
         SetupInput();
         SetupView();
         SetupEnvironment();
+        atmosphere.Player = me;
+        view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
         view.AddChild(cameraRig);
@@ -54,6 +59,10 @@ public partial class Main : Node3D
         view.AddChild(journal.Notes);
         AddChild(crafting);
         crafting.Notice += hud.Note;
+        building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        AddChild(building);
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -220,7 +229,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.G);
+        Bind("feed_fire", Key.T);
     }
 
     // --- Networking -------------------------------------------------------
@@ -265,6 +274,8 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         crafting.Attach(conn);
         fires.Attach(conn);
+        building.Bind(conn);
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -273,6 +284,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         Subscribe(0, 0);
+        atmosphere.Connect(c);
     }
 
     void GoOffline(string reason)
@@ -303,7 +315,8 @@ public partial class Main : Node3D
                 $"SELECT * FROM fire WHERE {range}",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
-            });
+                $"SELECT * FROM structure WHERE {range}",
+            }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -357,9 +370,11 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
+        // Stacks whose qualities share a grade read the same, so they show as one line.
         var counts = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .ToDictionary(i => ItemLook.Label((Item)i.Item, i.Quality, i.Count), i => i.Count);
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
+            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
         hud.SetInventory(counts);
     }
 
@@ -403,7 +418,7 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire")) FeedFire();
+        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -439,7 +454,7 @@ public partial class Main : Node3D
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = me.Position + velocity * dt;
+        var pos = building.Collide(me.Position, me.Position + velocity * dt);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);

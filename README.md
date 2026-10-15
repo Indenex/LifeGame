@@ -16,6 +16,7 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
 | `tools/CraftCheck/` | One bot that gathers and runs every crafting process end to end (runs in CI) |
+| `tools/BuildTest/` | Two simulated players building a lean-to and a clay hut together |
 
 ## Requirements
 
@@ -44,7 +45,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, G to put fuel on the nearest fire, J to open the journal, R to read a note on the ground.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal, N to read a note on the ground.
 
 ## Crafting
 
@@ -53,6 +54,20 @@ Items and processes are plain data in `shared/Items.cs` and `shared/Processes.cs
 The server runs each process as a job with a finish time (`server/spacetimedb/Crafting.cs`). Process ids such as `knap.flake` are stable: skills and the journal key on them. The skills system plugs in through two partial methods, `OnProcessPerformed` and `QualityCapFor`. Other systems read warmth with `Module.WarmthAt(ctx, x, z)`.
 
 Item ids are stored as numbers, so never renumber or reuse one; add new items at the end.
+
+Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
+
+Survival: G picks berries from a ripe bush, V eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+
+### Day, night and weather
+
+An in-game day lasts 90 real minutes. The server keeps the clock and the weather (`server/spacetimedb/WorldClock.cs`), so every player sees the same sky. The client draws it in `client/scripts/atmosphere/`, and synthesizes all the sound as it plays: wind, rain, birds, crickets, footsteps and the music.
+
+Preview keys in debug builds (running from the editor) change only what you see and hear: hold F5 to fast-forward time (a whole day in about 45 seconds), press F6 to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
+
+To listen to the soundscape without the game, render it to a file: `cd tools/SoundPreview && dotnet run -- out.wav` (day, rain, dusk and night, with footsteps).
+
+Other server code can ask about the weather: `TimeOfDay(ctx)`, `CurrentWeather(ctx)` (cloud, rain, wind and ground wetness, each 0 to 1), `DryingRate(ctx)` (1 on a dry day, about half in rain) and `AirTemperature(ctx)` in degrees Celsius.
 
 ## After changing the server module
 
@@ -85,6 +100,15 @@ Measured on a 4-core cloud VM, with the load test running on the same machine as
 At 150 bots the single-threaded load-test harness itself becomes a bottleneck, so the 150-player latency is pessimistic.
 
 Two changes got traffic down from 94 KB/s per player in the first run: position updates now live in a small `player_pos` table separate from player identity, and moves are applied in one batch every 100 ms instead of one transaction per move.
+
+## Building test
+
+Two simulated players gather materials, build a lean-to and then a clay hut together, stand inside, and reconnect to check the buildings persisted. Run it against a freshly published local server:
+
+```sh
+cd tools/BuildTest
+dotnet run -- both        # or lean-to, or clay-hut
+```
 
 ## Screenshots without a display
 

@@ -21,6 +21,7 @@ public static class ItemLook
             Item.Flake => Look.Faceted(new PrismMesh { Size = new Vector3(0.12f, 0.03f, 0.08f) }, Look.Rock.Darkened(0.2f)),
             Item.HandAxe => Look.Faceted(new PrismMesh { Size = new Vector3(0.14f, 0.06f, 0.2f) }, Look.Rock.Darkened(0.15f)),
             Item.Cordage => Look.Faceted(new TorusMesh { InnerRadius = 0.05f, OuterRadius = 0.09f, Rings = 8, RingSegments = 5 }, Look.LeafWarm.Darkened(0.2f)),
+            Item.Berries => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, new Color(0.55f, 0.08f, 0.16f)),
             Item.Spear or Item.StoneAxe => Lying(new CylinderMesh { TopRadius = 0.025f, BottomRadius = 0.03f, Height = item == Item.Spear ? 1.6f : 0.7f, RadialSegments = 5 }, Look.Bark.Lightened(0.25f)),
             _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
         };

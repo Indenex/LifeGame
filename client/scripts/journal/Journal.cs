@@ -10,7 +10,7 @@ namespace LifeGame;
 
 // The discovery journal and skills: keeps the player's journal and skill rows in
 // sync, shows notes other players left on the ground, and opens the journal
-// panel. J opens the journal, R reads the nearest note.
+// panel. J opens the journal, N reads the nearest note.
 public partial class Journal : CanvasLayer
 {
     // Added to the 3D world by Main, so notes on the ground render with everything else.
@@ -54,7 +54,7 @@ public partial class Journal : CanvasLayer
         };
         panel.SetMode = (spec, mode) => conn?.Reducers.SetSkillMode(spec, mode);
         Bind("journal", Key.J);
-        Bind("read_note", Key.R);
+        Bind("read_note", Key.N);
         Refresh();
         // --journal opens the journal on start, for screenshots.
         if (OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--journal"))
@@ -109,7 +109,7 @@ public partial class Journal : CanvasLayer
 
         var near = NearestNote(at);
         prompt.Visible = near != null && !panel.IsOpen;
-        if (near != null) prompt.Text = $"R  Read {near.AuthorName}'s note";
+        if (near != null) prompt.Text = $"N  Read {near.AuthorName}'s note";
 
         // Notes stir a little, as if the breeze catches them.
         bob += (float)delta;
