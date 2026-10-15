@@ -210,7 +210,8 @@ public static class Look
 
     // The same surface drawn transparent, for trees fading out of the way.
     static Shader GhostShader => ghostShader ??= MakeShader(PaintedCode
-        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;\n#define GHOST"));
+        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
     const string PaintedCode = """
             shader_type spatial;
@@ -260,13 +261,6 @@ public static class Look
 
             void vertex() {
                 fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
-            #ifdef GHOST
-                // The ghost draws only trees in the way; the rest collapse to nothing.
-                if (fade < 0.002) { VERTEX = vec3(0.0); return; }
-            #else
-                // A tree in the way is drawn by its ghost instead.
-                if (fade >= 0.002) { VERTEX = vec3(0.0); return; }
-            #endif
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 if (sway > 0.0) {
                     float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);
@@ -279,6 +273,13 @@ public static class Look
                 world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
                 // Palette colors are authored in sRGB.
                 tint = pow(COLOR.rgb, vec3(2.2)) * albedo.rgb;
+            #ifdef GHOST
+                // The ghost draws only trees in the way; the rest collapse to nothing.
+                if (fade < 0.002) VERTEX = vec3(0.0);
+            #else
+                // A tree in the way is drawn by its ghost instead.
+                if (fade >= 0.002) VERTEX = vec3(0.0);
+            #endif
             }
 
             // World-space detail projected from three sides, so it wraps any shape
@@ -394,6 +395,6 @@ public static class Look
     {
         EnsureWeatherGlobals();
         int split = code.IndexOf('\n', code.IndexOf("render_mode")) + 1;
-        return new Shader { Code = code[..split] + WeatherCode + code[split..] };
+        return new Shader { Code = code[..split] + WeatherCode + "\n" + code[split..] };
     }
 }
