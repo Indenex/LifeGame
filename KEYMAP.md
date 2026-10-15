@@ -27,6 +27,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
+| Esc | Menu (resume, keys, volume, music, quit) when no panel, chat or placement is open. A panel that closes on Esc must call `GetViewport().SetInputAsHandled()` | UX/UI | new |
 
 ## Inside a panel or mode
 
