@@ -2,28 +2,28 @@ using Godot;
 
 namespace LifeGame;
 
-// The art direction in one place. The look is hand-painted isometric: warm,
-// saturated yellow-greens, soft banded light instead of smooth shading, and
-// brush-like color variation laid over every surface in world space.
+// The art direction in one place. Simple low-poly shapes under rich, moody
+// light: deep greens, soft wrapped shading, and subtle world-space color
+// variation so no two surfaces look like copies.
 public static class Look
 {
-    public static readonly Color GrassLow = new(0.40f, 0.60f, 0.18f);
-    public static readonly Color GrassHigh = new(0.62f, 0.74f, 0.22f);
-    public static readonly Color GrassBlade = new(0.80f, 0.85f, 0.36f);
+    public static readonly Color GrassLow = new(0.30f, 0.46f, 0.13f);
+    public static readonly Color GrassHigh = new(0.48f, 0.58f, 0.17f);
+    public static readonly Color GrassBlade = new(0.55f, 0.64f, 0.22f);
     public static readonly Color Clay = new(0.64f, 0.43f, 0.31f);
-    public static readonly Color Earth = new(0.37f, 0.28f, 0.23f);
-    public static readonly Color DugEarth = new(0.34f, 0.24f, 0.17f);
+    public static readonly Color Earth = new(0.32f, 0.25f, 0.19f);
+    public static readonly Color DugEarth = new(0.32f, 0.25f, 0.19f);
     public static readonly Color Shore = new(0.80f, 0.74f, 0.52f);
     public static readonly Color Bark = new(0.33f, 0.22f, 0.20f);
-    public static readonly Color Pine = new(0.24f, 0.36f, 0.26f);
-    public static readonly Color Leaf = new(0.44f, 0.54f, 0.26f);
-    public static readonly Color LeafLight = new(0.70f, 0.74f, 0.42f);
-    public static readonly Color LeafWarm = new(0.82f, 0.62f, 0.24f);
-    public static readonly Color Rock = new(0.58f, 0.58f, 0.56f);
+    public static readonly Color Pine = new(0.13f, 0.22f, 0.15f);
+    public static readonly Color Leaf = new(0.25f, 0.36f, 0.13f);
+    public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
+    public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
+    public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
-    public static readonly Color Water = new(0.34f, 0.58f, 0.62f, 0.93f);
+    public static readonly Color Water = new(0.16f, 0.30f, 0.34f, 0.9f);
 
     public const float WaterLevel = -1.0f;
 
@@ -98,7 +98,7 @@ public static class Look
             uniform float sway = 0.0;
             uniform float sway_height = 1.0;
             uniform float brush_scale = 0.09;
-            uniform float brush_strength = 0.22;
+            uniform float brush_strength = 0.14;
 
             varying vec3 tint;
             varying vec3 world_pos;
@@ -129,14 +129,10 @@ public static class Look
                 SPECULAR = 0.0;
             }
 
-            // Soft banded light: a lit tone, a mid tone and a shadow tone, laid
-            // down the way a painter would.
+            // Wrapped diffuse light, so forms turn softly into shadow.
             void light() {
-                float ndl = dot(NORMAL, LIGHT);
-                float wrapped = clamp((ndl + 0.25) / 1.25, 0.0, 1.0);
-                float bands = smoothstep(0.12, 0.2, wrapped) * 0.55 + smoothstep(0.5, 0.58, wrapped) * 0.45;
-                float shadow = smoothstep(0.25, 0.6, ATTENUATION);
-                DIFFUSE_LIGHT += LIGHT_COLOR * bands * shadow / PI;
+                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
+                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION / PI;
             }
             """,
     };
@@ -179,10 +175,8 @@ public static class Look
             }
 
             void light() {
-                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.25) / 1.25, 0.0, 1.0);
-                float bands = smoothstep(0.12, 0.2, wrapped) * 0.55 + smoothstep(0.5, 0.58, wrapped) * 0.45;
-                float shadow = smoothstep(0.25, 0.6, ATTENUATION);
-                DIFFUSE_LIGHT += LIGHT_COLOR * bands * shadow / PI;
+                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
+                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION / PI;
             }
             """,
     };

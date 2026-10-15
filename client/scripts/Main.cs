@@ -34,7 +34,7 @@ public partial class Main : Node3D
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
-    readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Disabled, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled };
+    readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Msaa4X, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa };
     static readonly Dictionary<ItemKind, Mesh> ItemMeshes = new();
 
     public override void _Ready()
@@ -65,17 +65,17 @@ public partial class Main : Node3D
         };
     }
 
-    // The world renders at a fraction of the window size and is scaled up with
-    // nearest filtering, for a crisp low-res painted look. --pixel=1 turns it off.
+    // The world renders at full resolution by default. --pixel=2 or more renders
+    // it smaller and scales it up with nearest filtering, for a retro look.
     void SetupView()
     {
-        int pixel = int.TryParse(Arg("pixel"), out var p) ? Math.Max(1, p) : 2;
+        int pixel = int.TryParse(Arg("pixel"), out var p) ? Math.Max(1, p) : 1;
         var layer = new CanvasLayer { Layer = -1 };
         var container = new SubViewportContainer
         {
             Stretch = true,
             StretchShrink = pixel,
-            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            TextureFilter = pixel > 1 ? CanvasItem.TextureFilterEnum.Nearest : CanvasItem.TextureFilterEnum.Linear,
         };
         container.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         container.AddChild(view);
@@ -94,7 +94,7 @@ public partial class Main : Node3D
                     void fragment() {
                         vec2 uv = (SCREEN_UV - 0.5) * vec2(1.0, 0.85);
                         float edge = smoothstep(0.4, 0.85, length(uv));
-                        COLOR = vec4(0.12, 0.07, 0.16, edge * 0.4);
+                        COLOR = vec4(0.04, 0.05, 0.06, edge * 0.45);
                     }
                     """,
             },
@@ -108,8 +108,8 @@ public partial class Main : Node3D
     {
         var sky = new ProceduralSkyMaterial
         {
-            SkyTopColor = new Color(0.42f, 0.58f, 0.76f),
-            SkyHorizonColor = new Color(0.93f, 0.80f, 0.66f),
+            SkyTopColor = new Color(0.30f, 0.45f, 0.62f),
+            SkyHorizonColor = new Color(0.80f, 0.74f, 0.62f),
             SkyCurve = 0.12f,
             GroundBottomColor = new Color(0.24f, 0.28f, 0.22f),
             GroundHorizonColor = new Color(0.86f, 0.76f, 0.64f),
@@ -122,36 +122,48 @@ public partial class Main : Node3D
             Sky = new Sky { SkyMaterial = sky },
             AmbientLightSource = Godot.Environment.AmbientSource.Sky,
             AmbientLightSkyContribution = 0.75f,
-            AmbientLightEnergy = 0.6f,
-            TonemapMode = Godot.Environment.ToneMapper.Agx,
-            TonemapExposure = 1.05f,
+            AmbientLightEnergy = 0.45f,
+            TonemapMode = Godot.Environment.ToneMapper.Aces,
+            TonemapExposure = 1.0f,
+            TonemapWhite = 6f,
             SsaoEnabled = true,
-            SsaoRadius = 1.4f,
-            SsaoIntensity = 1.0f,
+            SsaoRadius = 1.6f,
+            SsaoIntensity = 1.6f,
             GlowEnabled = true,
-            GlowIntensity = 0.5f,
-            GlowBloom = 0.12f,
+            GlowIntensity = 0.6f,
+            GlowBloom = 0.08f,
+            GlowHdrThreshold = 1.1f,
+            // Distance haze that swallows the far forest.
             FogEnabled = true,
-            FogLightColor = new Color(0.86f, 0.80f, 0.72f),
-            FogDensity = 0.002f,
-            FogSkyAffect = 0.35f,
-            FogAerialPerspective = 0.3f,
+            FogLightColor = new Color(0.62f, 0.68f, 0.70f),
+            FogDensity = 0.006f,
+            FogSkyAffect = 0.5f,
+            FogAerialPerspective = 0.5f,
+            // Volumetric fog catches the sun between the trees.
+            VolumetricFogEnabled = true,
+            VolumetricFogDensity = 0.012f,
+            VolumetricFogAlbedo = new Color(0.86f, 0.88f, 0.86f),
+            VolumetricFogAnisotropy = 0.6f,
+            VolumetricFogLength = 64f,
+            VolumetricFogAmbientInject = 0.4f,
+            VolumetricFogSkyAffect = 0.3f,
             AdjustmentEnabled = true,
-            AdjustmentSaturation = 1.15f,
-            AdjustmentContrast = 1.06f,
+            AdjustmentSaturation = 1.0f,
+            AdjustmentContrast = 1.08f,
         };
         view.AddChild(new WorldEnvironment { Environment = env });
 
-        // Late-afternoon sun: low, warm and soft-edged.
+        // Late-afternoon sun: low and warm, with long shadows.
         view.AddChild(new DirectionalLight3D
         {
-            LightColor = new Color(1.0f, 0.9f, 0.74f),
-            LightEnergy = 1.6f,
-            LightAngularDistance = 1.2f,
+            LightColor = new Color(1.0f, 0.86f, 0.66f),
+            LightEnergy = 2.4f,
+            LightAngularDistance = 0.8f,
+            LightVolumetricFogEnergy = 1.6f,
             ShadowEnabled = true,
-            ShadowBlur = 1.5f,
-            DirectionalShadowMaxDistance = 70f,
-            Rotation = new Vector3(Mathf.DegToRad(-32f), Mathf.DegToRad(-35f), 0),
+            ShadowBlur = 1.2f,
+            DirectionalShadowMaxDistance = 60f,
+            Rotation = new Vector3(Mathf.DegToRad(-24f), Mathf.DegToRad(-40f), 0),
         });
 
         water = new MeshInstance3D
