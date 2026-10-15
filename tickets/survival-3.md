@@ -3,7 +3,7 @@ Lane: Survival needs
 Owner: Survival thread
 Status: in_review
 Branch: claude/survival-needs-g7yrhi (restarted from main after #12 merged)
-PR: (not yet)
+PR: #39
 
 ## Goal
 Justin chose a carrying limit (D-042). Every item has a load (roughly kilograms). You can carry a base amount, and a woven basket (Crafting item 13) raises it. When you're over the limit, something happens; Justin picks what. The HUD shows "Load X / Y" under the needs gauges, and it turns amber when you're over. Justin signs off on the numbers from a screenshot before they ship.
