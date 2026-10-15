@@ -31,4 +31,4 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - D-025: one Use key. Once Crafting's crafting-2 Use registry is on main, move reading a note from R to a G Use handler. J for the journal stays.
 
 ## Next step
-Wait for CI on PR #7; when green, ask the PM for the merge (it must land with or after `crafting-core`).
+Justin approved merging #4 then #7 (D-028). After #4 merges: merge main into this branch, regenerate client/module_bindings, wait for CI green, merge #7 as a merge commit, send the PM the merge commit.
