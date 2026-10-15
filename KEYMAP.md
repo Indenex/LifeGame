@@ -39,7 +39,6 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
 
-Interim until crafting-2 (Use key) lands: tend clay is V (Ceramics); it then moves to G.
 
 ## Debug only (not in player builds)
 
@@ -72,7 +71,7 @@ Use.Register(new UseHandler
 - Pass `Target` (where the thing is) so G picks what the player faces: an offer with a Target within 60° of the player's facing beats one with no Target, which beats one with a Target off to the side; priority and distance decide within that. So a bush in front of you wins over a fire beside you, without a special priority.
 - Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while G is held.
 - G is ignored while the crafting minigame runs or a building is being placed.
-- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Crafting take meat off the fire 25, Crafting feed fire 20, Animals shear 15, Survival forage and drink 10 (forage_facing 25 is a stopgap until forage passes a Target), Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water).
+- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire 22, Crafting feed fire 20, Animals shear 15, Ceramics fire or pick up a pot 12, Ceramics fill pots 11, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
 - If the player does a hinted thing without its key (the server saw them pick berries, eat, open a panel by clicking), call `Hints.Done("eat")` so the hint is never taught after the fact. S, A and D count as walking; E and a right-drag count as turning.
 - A full panel (journal, claim panel, Esc menu) hides the world HUD while it is open. `Panels.Open()` (client/scripts/ui/Panels.cs) says whether one is; HUD pieces outside the UX/UI lane (the land chip, the needs rings) fade out while it is true. A new full panel is added to `Panels.Open` in Main.

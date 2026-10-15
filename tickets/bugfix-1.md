@@ -1,7 +1,7 @@
 # bugfix-1: Stuck at spawn when saved far from the origin
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #18
 
@@ -19,8 +19,10 @@ A player whose saved position is 48 m or more from the origin (for example woken
 
 - 2026-10-15 23:00: CI green on ba61c54: https://github.com/Indenex/LifeGame/actions/runs/38818683944
 
+- 2026-10-15 22:50: PR #18 merged (e147e09).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-PM merges PR #18 once CI is green on the head; then mark this ticket done.
+None. Merged to main as e147e09.

@@ -8,6 +8,7 @@ public enum StructureKind
     LeanTo,
     ClayHut,
     ClaimMarker,
+    Kiln,
 }
 
 // One material a structure's current stage still needs.
@@ -54,6 +55,21 @@ public static partial class Module
         public Timestamp PlacedAt;
     }
 
+    // Quality bookkeeping, kept beside Structure so its columns stay as they were
+    // (no world wipe). Public so clients can show how well something is built.
+    [SpacetimeDB.Table(Accessor = "StructureProgress", Public = true)]
+    public partial struct StructureProgress
+    {
+        [PrimaryKey]
+        public ulong StructureId;
+        // 1 to 100: the average quality of its finished stages so far.
+        public byte Quality;
+        // The stage being built: summed quality of what went in, and who helped.
+        public uint StageQualitySum;
+        public uint StageItems;
+        public List<uint> StageHelpers;
+    }
+
     // Who added what to which structure. Private: credit for later (journal, claims).
     [SpacetimeDB.Table(Accessor = "StructureBuilder")]
     public partial struct StructureBuilder
@@ -67,8 +83,8 @@ public static partial class Module
         public uint Added;
     }
 
-    // What each stage takes, by kind and stage. Sticks, fiber and stones are tier 0;
-    // fiber stands in for cordage and thatch until crafting has them.
+    // What each stage takes, by kind and stage. Fiber stands in for thatch; the
+    // hut's walls are daub (clean clay mixed with fiber, from Ceramics).
     static readonly (Item Item, uint Count)[][][] StageCosts =
     {
         // Lean-to: Frame, Lashing, Ribs, Thatch
@@ -84,13 +100,19 @@ public static partial class Module
         {
             new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
             new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
-            new[] { (Item.Clay, 12u), (Item.Fiber, 3u) },
+            new[] { (Item.Daub, 12u) },
             new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
         },
         // Claim marker: one stage, costs set by Claims in shared/Social.cs
         new[]
         {
             new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+        },
+        // Updraft kiln (Ceramics): Base, Dome
+        new[]
+        {
+            new[] { (Item.Brick, 4u) },
+            new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
         },
     };
 
@@ -164,21 +186,25 @@ public static partial class Module
         if (slot < 0)
             throw new Exception("Needs " + string.Join(", ", s.Needs
                 .Where(n => n.Have < n.Need)
-                .Select(n => $"{n.Need - n.Have} {ItemName(n.Item)}")));
+                .Select(n => $"{n.Need - n.Have} {Items.Def((Item)n.Item).Count(n.Need - n.Have).ToLowerInvariant()}")));
 
         var need = s.Needs[slot];
-        Take(ctx, (Item)need.Item, 1);
+        float quality = Take(ctx, (Item)need.Item, 1);
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
+        var p = ProgressOf(ctx, s.Id);
+        var helpers = new List<uint>(p.StageHelpers);
+        if (!helpers.Contains(player.PlayerId)) helpers.Add(player.PlayerId);
+        p = p with
+        {
+            StageQualitySum = p.StageQualitySum + (uint)quality,
+            StageItems = p.StageItems + 1,
+            StageHelpers = helpers,
+        };
         s = s with { Needs = needs };
         if (needs.All(n => n.Have >= n.Need))
-        {
-            int stages = StageCosts[(int)s.Kind].Length;
-            byte next = (byte)(s.Stage + 1);
-            s = next >= stages
-                ? s with { Stage = (byte)stages, Needs = new List<MaterialNeed>(), Complete = true }
-                : s with { Stage = next, Needs = NeedsFor((int)s.Kind, next) };
-        }
+            (s, p) = FinishStage(ctx, s, p);
+        ctx.Db.StructureProgress.StructureId.Update(p);
 
         if (RecordBuilder(ctx, structureId))
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
@@ -204,22 +230,24 @@ public static partial class Module
         var refund = new List<Item>();
         var costs = StageCosts[(int)s.Kind];
         for (int stage = 0; stage < s.Stage && stage < costs.Length; stage++)
-            foreach (var (kind, count) in costs[stage])
-                for (uint i = 0; i < count; i++) refund.Add(kind);
+            foreach (var (item, count) in costs[stage])
+                for (uint i = 0; i < count; i++) refund.Add(item);
         foreach (var need in s.Needs)
             for (uint i = 0; i < need.Have; i++) refund.Add((Item)need.Item);
+        byte built = ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? 0;
+        byte refundQuality = built > 0 ? built : Items.RawQuality;
 
         var shape = Structures.Shape((int)s.Kind);
         float spread = (shape.Round ? shape.Radius : MathF.Max(shape.HalfWidth, shape.HalfDepth)) * 0.8f;
-        foreach (var kind in refund)
+        foreach (var item in refund)
         {
             float a = (float)(ctx.Rng.NextDouble() * MathF.Tau), r = (float)ctx.Rng.NextDouble() * spread;
             float ix = s.X + MathF.Cos(a) * r, iz = s.Z + MathF.Sin(a) * r;
             ctx.Db.WorldItem.Insert(new WorldItem
             {
                 Id = 0,
-                Item = (ushort)kind,
-                Quality = Items.RawQuality,
+                Item = (ushort)item,
+                Quality = refundQuality,
                 X = ix,
                 Z = iz,
                 ChunkX = World.ChunkOf(ix),
@@ -229,9 +257,15 @@ public static partial class Module
 
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
+        ctx.Db.StructureProgress.StructureId.Delete(structureId);
         ctx.Db.Structure.Id.Delete(structureId);
         OnStructureRemoved(ctx, s);
+        CeramicsStructureRemoved(ctx, s);
     }
+
+    // Ceramics implements this to hand back what was loaded in a kiln that is taken down.
+    // Partial methods allow one implementation each, so every lane that needs it gets its own hook.
+    static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s);
 
     // Claims implements this to refuse placing or taking down buildings inside a
     // claim the sender has no access to (throw to refuse). Adding materials is
@@ -285,6 +319,46 @@ public static partial class Module
     static List<MaterialNeed> NeedsFor(int kind, int stage) =>
         StageCosts[kind][stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
 
+    // A stage is done: everyone who helped with it practices that building skill,
+    // and the work's quality (materials, capped by each builder's skill) is folded in.
+    static (Structure, StructureProgress) FinishStage(ReducerContext ctx, Structure s, StructureProgress p)
+    {
+        string process = Structures.StageProcess((int)s.Kind, s.Stage);
+        float materials = p.StageItems > 0 ? p.StageQualitySum / (float)p.StageItems : Items.RawQuality;
+        float sum = 0;
+        foreach (uint helper in p.StageHelpers)
+        {
+            byte cap = 100;
+            QualityCapFor(ctx, helper, process, ref cap);
+            byte q = Processes.Quality(materials, Processes.DefaultScore, cap);
+            OnProcessPerformed(ctx, helper, process, q, false);
+            sum += q;
+        }
+        byte stageQuality = p.StageHelpers.Count > 0 ? (byte)Math.Clamp(MathF.Round(sum / p.StageHelpers.Count), 1, 100) : Items.RawQuality;
+        byte overall = (byte)Math.Clamp(MathF.Round((p.Quality * s.Stage + stageQuality) / (float)(s.Stage + 1)), 1, 100);
+
+        int stages = StageCosts[(int)s.Kind].Length;
+        byte next = (byte)(s.Stage + 1);
+        p = p with { Quality = overall, StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() };
+        return next >= stages
+            ? (s with { Stage = (byte)stages, Needs = new List<MaterialNeed>(), Complete = true }, p)
+            : (s with { Stage = next, Needs = NeedsFor((int)s.Kind, next) }, p);
+    }
+
+    // Structures from before StructureProgress existed get a fresh row on first use.
+    static StructureProgress ProgressOf(ReducerContext ctx, ulong structureId)
+    {
+        if (ctx.Db.StructureProgress.StructureId.Find(structureId) is { } p) return p;
+        return ctx.Db.StructureProgress.Insert(new StructureProgress
+        {
+            StructureId = structureId,
+            Quality = 0,
+            StageQualitySum = 0,
+            StageItems = 0,
+            StageHelpers = new List<uint>(),
+        });
+    }
+
     static short DepthAt(ReducerContext ctx, int x, int z) =>
         ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z))?.Depth ?? 0;
 
@@ -300,7 +374,4 @@ public static partial class Module
         ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = ctx.Sender, Added = 1 });
         return true;
     }
-
-    static string ItemName(ushort item) =>
-        Items.IsKnown(item) ? Items.Def((Item)item).Plural.ToLowerInvariant() : "unknown";
 }
