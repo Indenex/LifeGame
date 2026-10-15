@@ -1,9 +1,9 @@
 # bugfix-5: Fresh-world playtest, fix small cross-lane issues
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (not opened yet)
+PR: #36
 
 ## Goal
 Play a fresh world on main with the real client and a bot (walk, gather, fire, cook, dig, clay, build, journal, sheep, every G prompt). Fix small cross-lane issues; report the rest to the PM with screenshots in /mnt/project-files/screenshots/bugfix-05-*.png.
