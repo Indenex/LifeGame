@@ -17,8 +17,10 @@ A player whose saved position is 48 m or more from the origin (for example woken
 
 - 2026-10-15 22:55: merged main 5adb2c1 (#13, #7, #12, #17); client builds, SpawnCheck passes. PR #18 marked ready.
 
+- 2026-10-15 23:00: CI green on ba61c54: https://github.com/Indenex/LifeGame/actions/runs/38818683944
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on PR #18 after the main merge; when green, mark it ready and send the PM the head sha.
+PM merges PR #18 once CI is green on the head; then mark this ticket done.
