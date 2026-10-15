@@ -8,7 +8,6 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    const int PlaceholderFires = 3;
     const float BushReach = 2.5f;
     // Warmth per second from standing right by a fire at full strength.
     const float FireHeat = 1f / 30f;
@@ -44,26 +43,6 @@ public static partial class Module
     [SpacetimeDB.View(Accessor = "MyVitals", Public = true)]
     public static List<Vitals> MyVitals(ViewContext ctx) =>
         ctx.Db.Vitals.Owner.Filter(ctx.Sender).ToList();
-
-    // Anything that warms people standing near it: campfires now, hearths and
-    // kilns later. Crafting adds a row when a fire is lit and removes it when
-    // the fire dies. Strength is warmth gained per second at the center.
-    [SpacetimeDB.Table(Accessor = "HeatSource", Public = true)]
-    [SpacetimeDB.Index.BTree(Accessor = "ByChunk", Columns = new[] { nameof(ChunkX), nameof(ChunkZ) })]
-    public partial struct HeatSource
-    {
-        [PrimaryKey]
-        [AutoInc]
-        public ulong Id;
-        public float X;
-        public float Z;
-        public int ChunkX;
-        public int ChunkZ;
-        public float Radius;
-        public float Strength;
-        // Placeholder fires stand in until crafted fires exist; they never go out.
-        public bool Placeholder;
-    }
 
     // Berry bushes. A bush is ripe from RipeAt on, so regrowth needs no timer.
     [SpacetimeDB.Table(Accessor = "ForageBush", Public = true)]
@@ -161,6 +140,24 @@ public static partial class Module
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
+    // Drink a pot of water you carry; the empty pot goes back in your hands.
+    [SpacetimeDB.Reducer]
+    public static void DrinkFrom(ReducerContext ctx, ushort item)
+    {
+        var player = RequirePlayer(ctx);
+        var (empty, water) = PotOfWater((Item)item);
+        if (water <= 0)
+            throw new Exception("There is nothing to drink in that");
+        var stack = AnyStack(ctx, (Item)item) ?? throw new Exception("You are not carrying that");
+        var v = RequireVitals(ctx, player);
+        if (v.Water >= 1f)
+            throw new Exception("You are not thirsty");
+
+        RemoveFromStack(ctx, stack, 1);
+        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+        ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
+    }
+
     [SpacetimeDB.Reducer]
     public static void Forage(ReducerContext ctx, ulong bushId)
     {
@@ -176,6 +173,7 @@ public static partial class Module
 
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
         AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
+        OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -198,7 +196,8 @@ public static partial class Module
             }
 
             var next = WithSurroundings(ctx, now, pos, online: true);
-            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet)
+            // Weather drifts slowly, so small changes in the rate wait for a bigger one.
+            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet)
                 ctx.Db.Vitals.PlayerId.Update(next);
         }
     }
@@ -303,7 +302,7 @@ public static partial class Module
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f));
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, pos.X, pos.Z, rainCover);
         return v with
         {
             FoodRate = -Needs.FoodDrain,
@@ -318,29 +317,22 @@ public static partial class Module
     // to 0..1 for the strongest burning fire near (x, z).
     static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth);
 
-    // Warmth per second from the fires around a spot; strongest at the center.
+    // Warmth per second from burning campfires around a spot.
     static float HeatAt(ReducerContext ctx, float x, float z)
     {
-        float crafted = 0;
-        FireWarmthAt(ctx, x, z, ref crafted);
-        return MathF.Max(crafted * FireHeat, PlaceholderHeatAt(ctx, x, z));
+        float warmth = 0;
+        FireWarmthAt(ctx, x, z, ref warmth);
+        return warmth * FireHeat;
     }
 
-    // Placeholder campfires, kept until crafted fires are on main.
-    static float PlaceholderHeatAt(ReducerContext ctx, float x, float z)
+    // How much faster the cold bites than on a mild day: 1x at 15 °C, rising to
+    // 2x at 0 °C and below; rain adds half again unless you are under cover.
+    static float Chill(ReducerContext ctx, float x, float z, float rainCover)
     {
-        int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
-        float best = 0;
-        for (int ox = -1; ox <= 1; ox++)
-            for (int oz = -1; oz <= 1; oz++)
-                foreach (var h in ctx.Db.HeatSource.ByChunk.Filter((cx + ox, cz + oz)))
-                {
-                    float dx = h.X - x, dz = h.Z - z;
-                    float d = MathF.Sqrt(dx * dx + dz * dz);
-                    if (d < h.Radius)
-                        best = MathF.Max(best, h.Strength * (1f - 0.6f * d / h.Radius));
-                }
-        return best;
+        float celsius = AirTemperature(ctx), rain = CurrentWeather(ctx).Rain;
+        float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
+        float wet = 1f + Needs.RainChill * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
+        return cold * wet;
     }
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
@@ -353,6 +345,22 @@ public static partial class Module
         Item.Berries => (Needs.BerryFood, Needs.BerryWater),
         _ => (0f, 0f),
     };
+
+    // What a pot of water gives back when drunk, and how much it quenches.
+    static (Item empty, float water) PotOfWater(Item item) => item switch
+    {
+        Item.PinchPotOfWater => (Item.PinchPot, Needs.PinchPotWater),
+        Item.CoilPotOfWater => (Item.CoilPot, Needs.CoilPotWater),
+        _ => (item, 0f),
+    };
+
+    // Any stack of an item the sender carries, whatever its quality.
+    static InventoryItem? AnyStack(ReducerContext ctx, Item item)
+    {
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+            return row;
+        return null;
+    }
 
     // --- Water and ground --------------------------------------------------
 
@@ -398,7 +406,7 @@ public static partial class Module
 
     // --- World setup -------------------------------------------------------
 
-    // Starts the tick and seeds fires and bushes the first time anyone connects,
+    // Starts the tick and seeds berry bushes the first time anyone connects,
     // so a database published before survival existed picks them up too.
     static void EnsureSurvivalWorld(ReducerContext ctx)
     {
@@ -408,27 +416,6 @@ public static partial class Module
                 ScheduledId = 0,
                 ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(SurvivalTickMillis)),
             });
-
-        if (!ctx.Db.HeatSource.Iter().Any(h => h.Placeholder))
-        {
-            // Smoldering campfires left by earlier wanderers, near where people wake.
-            (float, float)[] spots = { (4, 5), (-13, 8), (9, -14) };
-            foreach (var (x0, z0) in spots.Take(PlaceholderFires))
-            {
-                var (x, z) = FindDry(x0, z0);
-                ctx.Db.HeatSource.Insert(new HeatSource
-                {
-                    Id = 0,
-                    X = x,
-                    Z = z,
-                    ChunkX = World.ChunkOf(x),
-                    ChunkZ = World.ChunkOf(z),
-                    Radius = 4.5f,
-                    Strength = FireHeat,
-                    Placeholder = true,
-                });
-            }
-        }
 
         if (ctx.Db.ForageBush.Count == 0)
         {
