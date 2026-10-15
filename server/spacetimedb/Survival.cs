@@ -173,6 +173,7 @@ public static partial class Module
 
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
         AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
+        OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 

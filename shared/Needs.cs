@@ -40,6 +40,9 @@ namespace LifeGame.Shared
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;
         public const int BushesPerChunk = 2;
+        // The process id picking berries reports, so it trains Foraging. Not a crafting
+        // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
+        public const string ForageProcess = "gather.berries";
 
         // The surface of rivers and ponds, in meters. Matches Look.WaterLevel on the client.
         public const float WaterLevel = -1.0f;
