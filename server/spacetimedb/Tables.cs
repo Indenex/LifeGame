@@ -1,15 +1,5 @@
 using SpacetimeDB;
 
-[SpacetimeDB.Type]
-public enum ItemKind
-{
-    Stick,
-    Stone,
-    Fiber,
-    Clay,
-    Berries,
-}
-
 public static partial class Module
 {
     // One row per account: who the player is. Changes rarely, so it is cheap to replicate.
@@ -85,7 +75,7 @@ public static partial class Module
         public short Depth;
     }
 
-    // Loose items lying on the ground.
+    // Loose items lying on the ground. Item is a LifeGame.Shared.Item id.
     [SpacetimeDB.Table(Accessor = "WorldItem", Public = true)]
     [SpacetimeDB.Index.BTree(Accessor = "ByChunk", Columns = new[] { nameof(ChunkX), nameof(ChunkZ) })]
     public partial struct WorldItem
@@ -93,16 +83,17 @@ public static partial class Module
         [PrimaryKey]
         [AutoInc]
         public ulong Id;
-        public ItemKind Kind;
+        public ushort Item;
+        public byte Quality;
         public float X;
         public float Z;
         public int ChunkX;
         public int ChunkZ;
     }
 
-    // What each player carries, one row per item kind.
+    // What each player carries: one stack per item and quality.
     [SpacetimeDB.Table(Accessor = "InventoryItem")]
-    [SpacetimeDB.Index.BTree(Accessor = "ByOwnerKind", Columns = new[] { nameof(Owner), nameof(Kind) })]
+    [SpacetimeDB.Index.BTree(Accessor = "ByOwnerItem", Columns = new[] { nameof(Owner), nameof(Item) })]
     public partial struct InventoryItem
     {
         [PrimaryKey]
@@ -110,7 +101,8 @@ public static partial class Module
         public ulong Id;
         [SpacetimeDB.Index.BTree]
         public Identity Owner;
-        public ItemKind Kind;
+        public ushort Item;
+        public byte Quality;
         public uint Count;
     }
 

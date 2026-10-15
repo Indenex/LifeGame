@@ -20,6 +20,8 @@ public partial class Main : Node3D
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
     readonly SurvivalClient survival = new();
+    readonly CraftingUi crafting = new();
+    FireView fires = null!;
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -36,7 +38,6 @@ public partial class Main : Node3D
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
     readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Msaa4X, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa };
-    static readonly Dictionary<ItemKind, Mesh> ItemMeshes = new();
 
     public override void _Ready()
     {
@@ -46,9 +47,13 @@ public partial class Main : Node3D
         view.AddChild(terrain);
         view.AddChild(me);
         view.AddChild(cameraRig);
+        fires = new FireView(terrain.HeightAt);
+        view.AddChild(fires);
         AddChild(hud);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
+        AddChild(crafting);
+        crafting.Notice += hud.Note;
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -61,6 +66,13 @@ public partial class Main : Node3D
         if (Arg("screenshot") is not { } path) return;
         double delay = double.TryParse(Arg("screenshot-delay"), out var d) ? d : 6;
         if (Arg("screenshot-yaw") is { } yaw && int.TryParse(yaw, out var steps)) cameraRig.Turn(steps);
+        // --screenshot-craft=1 opens the crafting panel on that tier.
+        if (Arg("screenshot-craft") is { } craftTier && int.TryParse(craftTier, out var t))
+            GetTree().CreateTimer(Math.Max(1, delay - 3)).Timeout += () => crafting.Open(t);
+        // --screenshot-fire places a local campfire just in front of the player.
+        if (Arg("screenshot-fire") != null)
+            GetTree().CreateTimer(Math.Max(1, delay - 4)).Timeout += () =>
+                fires.Preview(me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0));
         GetTree().CreateTimer(delay).Timeout += () =>
         {
             GetViewport().GetTexture().GetImage().SavePng(path);
@@ -207,6 +219,8 @@ public partial class Main : Node3D
         Bind("turn_right", Key.E);
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
+        Bind("craft", Key.C);
+        Bind("feed_fire", Key.G);
     }
 
     // --- Networking -------------------------------------------------------
@@ -249,6 +263,8 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         survival.Attach(conn);
+        crafting.Attach(conn);
+        fires.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -283,7 +299,9 @@ public partial class Main : Node3D
                 $"SELECT * FROM player_pos WHERE {range}",
                 $"SELECT * FROM world_item WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
+                $"SELECT * FROM fire WHERE {range}",
                 "SELECT * FROM my_inventory",
+                "SELECT * FROM my_craft_job",
             }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
@@ -339,8 +357,8 @@ public partial class Main : Node3D
     {
         if (conn == null) return;
         var counts = conn.Db.MyInventory.Iter()
-            .OrderBy(i => i.Kind)
-            .ToDictionary(i => i.Kind.ToString(), i => i.Count);
+            .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
+            .ToDictionary(i => ItemLook.Label((Item)i.Item, i.Quality, i.Count), i => i.Count);
         hud.SetInventory(counts);
     }
 
@@ -349,7 +367,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.ContainsKey(item.Id)) return;
-        var node = new MeshInstance3D { Mesh = MeshFor(item.Kind) };
+        var node = new MeshInstance3D { Mesh = ItemLook.MeshFor((Item)item.Item) };
         float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         node.Position = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         node.Rotation = new Vector3(0, yaw, 0);
@@ -360,44 +378,6 @@ public partial class Main : Node3D
     void RemoveItem(ulong id)
     {
         if (items.Remove(id, out var node)) node.QueueFree();
-    }
-
-    static Mesh MeshFor(ItemKind kind)
-    {
-        if (ItemMeshes.TryGetValue(kind, out var mesh)) return mesh;
-        mesh = kind switch
-        {
-            ItemKind.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
-            ItemKind.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
-            ItemKind.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.07f, Height = 0.12f, RadialSegments = 7 }, Look.LeafWarm),
-            ItemKind.Berries => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, new Color(0.55f, 0.08f, 0.16f)),
-            _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
-        };
-        ItemMeshes[kind] = mesh;
-        return mesh;
-    }
-
-    static Mesh Lying(PrimitiveMesh source, Color color)
-    {
-        var st = new SurfaceTool();
-        st.CreateFrom(source, 0);
-        st.Deindex();
-        st.GenerateNormals();
-        var arrays = st.CommitToArrays();
-        var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
-        var normals = (Vector3[])arrays[(int)Mesh.ArrayType.Normal];
-        var tilt = new Basis(Vector3.Forward, Mathf.Pi / 2f);
-        for (int i = 0; i < verts.Length; i++)
-        {
-            verts[i] = tilt * verts[i];
-            normals[i] = tilt * normals[i];
-        }
-        arrays[(int)Mesh.ArrayType.Vertex] = verts;
-        arrays[(int)Mesh.ArrayType.Normal] = normals;
-        var mesh = new ArrayMesh();
-        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        mesh.SurfaceSetMaterial(0, Look.Solid(color));
-        return mesh;
     }
 
     // --- Frame loop -------------------------------------------------------
@@ -421,6 +401,8 @@ public partial class Main : Node3D
         }
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
+        if (e.IsActionPressed("craft")) crafting.Toggle();
+        if (e.IsActionPressed("feed_fire")) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -428,7 +410,7 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned) Walk(dt);
+        if (spawned && !crafting.CapturesInput) Walk(dt);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
         cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
@@ -496,6 +478,23 @@ public partial class Main : Node3D
             .FirstOrDefault();
         if (nearest.item == null) hud.Note("Nothing within reach");
         else conn.Reducers.PickUp(nearest.item.Id);
+    }
+
+    // Puts the cheapest fuel you carry on the nearest fire.
+    void FeedFire()
+    {
+        if (conn == null) return;
+        if (fires.NearestWithin(conn, me.Position, World.Reach) is not { } fire)
+        {
+            hud.Note("No fire within reach");
+            return;
+        }
+        var fuel = conn.Db.MyInventory.Iter()
+            .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
+            .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
+            .FirstOrDefault();
+        if (fuel == null) hud.Note("You have nothing that burns");
+        else conn.Reducers.FeedFire(fire.Id, fuel.Item);
     }
 
     void Dust(Vector3 at, Color color)

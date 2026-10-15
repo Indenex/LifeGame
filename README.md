@@ -15,6 +15,7 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | `client/module_bindings/` | Client bindings generated from the server module; do not edit by hand |
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
+| `tools/CraftCheck/` | One bot that gathers and runs every crafting process end to end (runs in CI) |
 
 ## Requirements
 
@@ -43,7 +44,15 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, G to put fuel on the nearest fire.
+
+## Crafting
+
+Items and processes are plain data in `shared/Items.cs` and `shared/Processes.cs`, compiled into both the server and the client. A process consumes inputs, may need a tool (matched by property, such as Hammer), takes time, and makes an item or a fire. Key steps have a short minigame: spinning a hand drill for fire (alternate A and D), and knapping stone (strike with Space as the mark crosses the bright spot). The minigame score and the input quality set the result's quality, capped by the crafter's skill.
+
+The server runs each process as a job with a finish time (`server/spacetimedb/Crafting.cs`). Process ids such as `knap.flake` are stable: skills and the journal key on them. The skills system plugs in through two partial methods, `OnProcessPerformed` and `QualityCapFor`. Other systems read warmth with `Module.WarmthAt(ctx, x, z)`.
+
+Item ids are stored as numbers, so never renumber or reuse one; add new items at the end.
 
 Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 

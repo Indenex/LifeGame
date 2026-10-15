@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void DropHandler(ReducerEventContext ctx, SpacetimeDB.Types.ItemKind kind);
+        public delegate void DropHandler(ReducerEventContext ctx, ushort item, byte quality);
         public event DropHandler? OnDrop;
 
-        public void Drop(SpacetimeDB.Types.ItemKind kind)
+        public void Drop(ushort item, byte quality)
         {
-            conn.InternalCallReducer(new Reducer.Drop(kind));
+            conn.InternalCallReducer(new Reducer.Drop(item, quality));
         }
 
         public bool InvokeDrop(ReducerEventContext ctx, Reducer.Drop args)
@@ -37,7 +37,8 @@ namespace SpacetimeDB.Types
             }
             OnDrop(
                 ctx,
-                args.Kind
+                args.Item,
+                args.Quality
             );
             return true;
         }
@@ -49,12 +50,18 @@ namespace SpacetimeDB.Types
         [DataContract]
         public sealed partial class Drop : Reducer, IReducerArgs
         {
-            [DataMember(Name = "kind")]
-            public ItemKind Kind;
+            [DataMember(Name = "item")]
+            public ushort Item;
+            [DataMember(Name = "quality")]
+            public byte Quality;
 
-            public Drop(ItemKind Kind)
+            public Drop(
+                ushort Item,
+                byte Quality
+            )
             {
-                this.Kind = Kind;
+                this.Item = Item;
+                this.Quality = Quality;
             }
 
             public Drop()

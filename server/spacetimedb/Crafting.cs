@@ -1,0 +1,269 @@
+using LifeGame.Shared;
+using SpacetimeDB;
+
+// Crafting: processes run as jobs that take their inputs up front and finish on
+// a schedule, so a long process is just a start time and an end time. Fires are
+// world objects that burn down unless fed.
+public static partial class Module
+{
+    // One running job per player: your hands are busy until it finishes.
+    [SpacetimeDB.Table(Accessor = "CraftJob")]
+    public partial struct CraftJob
+    {
+        [PrimaryKey]
+        public Identity Owner;
+        public uint PlayerId;
+        public string ProcessId;
+        public Timestamp StartedAt;
+        public Timestamp FinishAt;
+        public byte Quality;
+        public bool Failed;
+        // Where a fire will be lit, for processes that make one.
+        public float X;
+        public float Z;
+    }
+
+    // Clients see only their own job, to show its progress.
+    [SpacetimeDB.View(Accessor = "MyCraftJob", Public = true)]
+    public static List<CraftJob> MyCraftJob(ViewContext ctx) =>
+        ctx.Db.CraftJob.Owner.Find(ctx.Sender) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
+
+    [SpacetimeDB.Table(Accessor = "CraftTimer", Scheduled = nameof(FinishCraft), ScheduledAt = nameof(ScheduledAt))]
+    public partial struct CraftTimer
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong ScheduledId;
+        public ScheduleAt ScheduledAt;
+        public Identity Owner;
+    }
+
+    // A campfire. Public and indexed by chunk, so nearby clients draw it and
+    // other systems can ask how warm a spot is (see WarmthAt).
+    [SpacetimeDB.Table(Accessor = "Fire", Public = true)]
+    [SpacetimeDB.Index.BTree(Accessor = "ByChunk", Columns = new[] { nameof(ChunkX), nameof(ChunkZ) })]
+    public partial struct Fire
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong Id;
+        public float X;
+        public float Z;
+        public int ChunkX;
+        public int ChunkZ;
+        public uint LitBy;
+        public Timestamp LitAt;
+        // The fire is burning while the clock is before this.
+        public Timestamp FuelUntil;
+    }
+
+    [SpacetimeDB.Table(Accessor = "FireTimer", Scheduled = nameof(BurnOutFires), ScheduledAt = nameof(ScheduledAt))]
+    public partial struct FireTimer
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong ScheduledId;
+        public ScheduleAt ScheduledAt;
+    }
+
+    // Hooks for the skills system. It implements these in its own file; until it
+    // does, the compiler drops the calls and every cap stays at 100.
+    static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
+    static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
+    // Skill shortens processes: scale `seconds` down (never below zero).
+    static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
+
+    // Starts a process. The client plays the hands-on minigame first and sends its
+    // score from 0 to 1; hands-off processes ignore it.
+    [SpacetimeDB.Reducer]
+    public static void StartCraft(ReducerContext ctx, string processId, float score)
+    {
+        var player = RequirePlayer(ctx);
+        var pos = RequirePos(ctx, player);
+        var def = Processes.Find(processId) ?? throw new Exception("Unknown process");
+        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not null)
+            throw new Exception("Your hands are busy");
+        if (!float.IsFinite(score))
+            throw new Exception("Invalid score");
+        if (def.Minigame == Minigame.None)
+            score = Processes.DefaultScore;
+        score = Math.Clamp(score, 0f, 1f);
+
+        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
+            throw new Exception("You need the right tool");
+
+        // Check everything first so a missing input never half-consumes the rest.
+        foreach (var input in def.Consumes)
+            if (CountOf(ctx, input.Item) < input.Count)
+                throw new Exception($"You need {input.Count} {Items.Def(input.Item).Count(input.Count).ToLowerInvariant()}");
+        // A stone used as the hammer cannot also be the stone being knapped.
+        if (def.NeedsTool.HasFlag(ItemTags.Hammer) && !HasSpareHammer(ctx, def))
+            throw new Exception("You need a second stone to strike with");
+
+        float inputQuality = 0f;
+        uint taken = 0;
+        foreach (var input in def.Consumes)
+        {
+            inputQuality += Take(ctx, input.Item, input.Count);
+            taken += input.Count;
+        }
+        inputQuality = taken > 0 ? inputQuality / taken : Items.RawQuality;
+
+        byte cap = 100;
+        QualityCapFor(ctx, player.PlayerId, def.Id, ref cap);
+        bool failed = score < def.FailBelow;
+
+        // A fire is lit a step in front of the crafter.
+        float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
+        float seconds = def.Seconds;
+        DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
+        seconds = Math.Max(seconds, 0.5f);
+        var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
+        ctx.Db.CraftJob.Insert(new CraftJob
+        {
+            Owner = ctx.Sender,
+            PlayerId = player.PlayerId,
+            ProcessId = def.Id,
+            StartedAt = ctx.Timestamp,
+            FinishAt = finish,
+            Quality = Processes.Quality(inputQuality, score, cap),
+            Failed = failed,
+            X = fx,
+            Z = fz,
+        });
+        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+    }
+
+    [SpacetimeDB.Reducer]
+    public static void FinishCraft(ReducerContext ctx, CraftTimer timer)
+    {
+        if (ctx.Db.CraftJob.Owner.Find(timer.Owner) is not { } job) return;
+        ctx.Db.CraftJob.Owner.Delete(job.Owner);
+        var def = Processes.Find(job.ProcessId);
+        if (def is null) return;
+
+        OnProcessPerformed(ctx, job.PlayerId, def.Id, job.Quality, job.Failed);
+        if (job.Failed) return;
+
+        if (def.Outcome == Outcome.Fire)
+            LightFire(ctx, job.PlayerId, job.X, job.Z);
+        else
+            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
+    }
+
+    // Puts one burnable item on a fire within reach.
+    [SpacetimeDB.Reducer]
+    public static void FeedFire(ReducerContext ctx, ulong fireId, ushort item)
+    {
+        var pos = RequirePos(ctx, RequirePlayer(ctx));
+        var fire = ctx.Db.Fire.Id.Find(fireId) ?? throw new Exception("That fire is out");
+        RequireReach(pos, fire.X, fire.Z);
+        if (!Items.IsKnown(item) || Items.Def((Item)item).FuelSeconds <= 0)
+            throw new Exception("That will not burn");
+        if (CountOf(ctx, (Item)item) < 1)
+            throw new Exception("You are not carrying that");
+        Take(ctx, (Item)item, 1);
+
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        long until = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now)
+            + (long)(Items.Def((Item)item).FuelSeconds * 1_000_000);
+        until = Math.Min(until, now + (long)(Fires.MaxSeconds * 1_000_000));
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
+    }
+
+    // Clears away fires that have burned out.
+    [SpacetimeDB.Reducer]
+    public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
+    {
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        foreach (var fire in ctx.Db.Fire.Iter().ToList())
+            if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
+                ctx.Db.Fire.Id.Delete(fire.Id);
+    }
+
+    // How warm a spot is from nearby burning fires, 0 (none) to 1 (right beside
+    // one). For the survival system's warmth needs.
+    public static float WarmthAt(ReducerContext ctx, float x, float z)
+    {
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
+        float warmth = 0f;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
+                    if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z));
+        return warmth;
+    }
+
+    static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
+    {
+        ctx.Db.Fire.Insert(new Fire
+        {
+            Id = 0,
+            X = x,
+            Z = z,
+            ChunkX = World.ChunkOf(x),
+            ChunkZ = World.ChunkOf(z),
+            LitBy = playerId,
+            LitAt = ctx.Timestamp,
+            FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * 1_000_000)),
+        });
+        EnsureFireTimer(ctx);
+    }
+
+    static void EnsureFireTimer(ReducerContext ctx)
+    {
+        if (ctx.Db.FireTimer.Count > 0) return;
+        ctx.Db.FireTimer.Insert(new FireTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromSeconds(10)) });
+    }
+
+    static uint CountOf(ReducerContext ctx, Item item)
+    {
+        uint n = 0;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+            n += row.Count;
+        return n;
+    }
+
+    // Takes items, best quality first, and returns the summed quality taken.
+    static float Take(ReducerContext ctx, Item item, uint count)
+    {
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)).ToList();
+        stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
+        float sum = 0f;
+        foreach (var stack in stacks)
+        {
+            if (count == 0) break;
+            uint n = Math.Min(count, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            sum += n * stack.Quality;
+            count -= n;
+        }
+        return sum;
+    }
+
+    // The best carried item with all of these properties.
+    static InventoryItem? BestTool(ReducerContext ctx, ItemTags tags)
+    {
+        InventoryItem? best = null;
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+            if (Items.IsKnown(row.Item) && (Items.Def((Item)row.Item).Tags & tags) == tags
+                && (best is null || row.Quality > best.Value.Quality))
+                best = row;
+        return best;
+    }
+
+    // True when a hammer remains after the process takes its inputs.
+    static bool HasSpareHammer(ReducerContext ctx, ProcessDef def)
+    {
+        uint hammers = 0;
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+            if (Items.IsKnown(row.Item) && Items.Def((Item)row.Item).Tags.HasFlag(ItemTags.Hammer))
+                hammers += row.Count;
+        foreach (var input in def.Consumes)
+            if (Items.Def(input.Item).Tags.HasFlag(ItemTags.Hammer))
+                hammers -= Math.Min(hammers, input.Count);
+        return hammers > 0;
+    }
+}

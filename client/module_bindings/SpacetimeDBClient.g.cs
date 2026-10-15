@@ -27,8 +27,13 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+<<<<<<< HEAD
             AddTable(ForageBush = new(conn));
             AddTable(HeatSource = new(conn));
+=======
+            AddTable(Fire = new(conn));
+            AddTable(MyCraftJob = new(conn));
+>>>>>>> origin/crafting-core
             AddTable(MyInventory = new(conn));
             AddTable(MyVitals = new(conn));
             AddTable(Player = new(conn));
@@ -531,8 +536,13 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+<<<<<<< HEAD
             new QueryBuilder().From.ForageBush().ToSql(),
             new QueryBuilder().From.HeatSource().ToSql(),
+=======
+            new QueryBuilder().From.Fire().ToSql(),
+            new QueryBuilder().From.MyCraftJob().ToSql(),
+>>>>>>> origin/crafting-core
             new QueryBuilder().From.MyInventory().ToSql(),
             new QueryBuilder().From.MyVitals().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
@@ -545,8 +555,13 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+<<<<<<< HEAD
         public global::SpacetimeDB.Table<ForageBush, ForageBushCols, ForageBushIxCols> ForageBush() => new("forage_bush", new ForageBushCols("forage_bush"), new ForageBushIxCols("forage_bush"));
         public global::SpacetimeDB.Table<HeatSource, HeatSourceCols, HeatSourceIxCols> HeatSource() => new("heat_source", new HeatSourceCols("heat_source"), new HeatSourceIxCols("heat_source"));
+=======
+        public global::SpacetimeDB.Table<Fire, FireCols, FireIxCols> Fire() => new("fire", new FireCols("fire"), new FireIxCols("fire"));
+        public global::SpacetimeDB.Table<CraftJob, MyCraftJobCols, MyCraftJobIxCols> MyCraftJob() => new("my_craft_job", new MyCraftJobCols("my_craft_job"), new MyCraftJobIxCols("my_craft_job"));
+>>>>>>> origin/crafting-core
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
         public global::SpacetimeDB.Table<Vitals, MyVitalsCols, MyVitalsIxCols> MyVitals() => new("my_vitals", new MyVitalsCols("my_vitals"), new MyVitalsIxCols("my_vitals"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
@@ -637,11 +652,16 @@ namespace SpacetimeDB.Types
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
                 Reducer.Drink args => Reducers.InvokeDrink(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
+<<<<<<< HEAD
                 Reducer.Eat args => Reducers.InvokeEat(eventContext, args),
                 Reducer.Forage args => Reducers.InvokeForage(eventContext, args),
+=======
+                Reducer.FeedFire args => Reducers.InvokeFeedFire(eventContext, args),
+>>>>>>> origin/crafting-core
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
+                Reducer.StartCraft args => Reducers.InvokeStartCraft(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }
