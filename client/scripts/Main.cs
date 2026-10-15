@@ -75,6 +75,7 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing;
         AddChild(useKey);
         AddChild(new Hints());
+        AddChild(new KeyHelp());
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
