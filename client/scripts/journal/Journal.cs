@@ -10,14 +10,13 @@ namespace LifeGame;
 
 // The discovery journal and skills: keeps the player's journal and skill rows in
 // sync, shows notes other players left on the ground, and opens the journal
-// panel. J opens the journal, N reads the nearest note.
+// panel. J opens the journal; G (the Use key) reads a note on the ground.
 public partial class Journal : CanvasLayer
 {
     // Added to the 3D world by Main, so notes on the ground render with everything else.
     public readonly Node3D Notes = new() { Name = "JournalNotes" };
 
     readonly JournalPanel panel = new();
-    readonly Label prompt = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
     DbConnection? conn;
@@ -34,18 +33,6 @@ public partial class Journal : CanvasLayer
     {
         Layer = 2;
         AddChild(panel);
-
-        // Shown only while a note is within reach.
-        prompt.AddThemeFontSizeOverride("font_size", 16);
-        prompt.AddThemeColorOverride("font_color", new Color(Look.Cream, 0.9f));
-        prompt.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
-        prompt.AddThemeConstantOverride("shadow_offset_y", 1);
-        prompt.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);
-        prompt.GrowHorizontal = Control.GrowDirection.Both;
-        prompt.HorizontalAlignment = HorizontalAlignment.Center;
-        prompt.Position += new Vector2(0, -120);
-        prompt.Visible = false;
-        AddChild(prompt);
         panel.WriteNote = id =>
         {
             if (conn == null) return;
@@ -54,7 +41,15 @@ public partial class Journal : CanvasLayer
         };
         panel.SetMode = (spec, mode) => conn?.Reducers.SetSkillMode(spec, mode);
         Bind("journal", Key.J);
-        Bind("read_note", Key.N);
+        // G reads a note you can learn from (KEYMAP.md priority 5).
+        Use.Register(new UseHandler
+        {
+            Id = "journal.read_note",
+            Priority = 5,
+            Find = at => NearestNote(at) is { } note
+                ? new UseOffer($"Read {note.AuthorName}'s note", new Vector2(note.X - at.X, note.Z - at.Z).Length(), () => conn?.Reducers.ReadNote(note.Id))
+                : null,
+        });
         Refresh();
         // --journal opens the journal on start, for screenshots.
         if (OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--journal"))
@@ -94,11 +89,6 @@ public partial class Journal : CanvasLayer
             panel.Toggle();
             GetViewport().SetInputAsHandled();
         }
-        else if (e.IsActionPressed("read_note"))
-        {
-            ReadNearestNote();
-            GetViewport().SetInputAsHandled();
-        }
     }
 
     public override void _Process(double delta)
@@ -106,10 +96,6 @@ public partial class Journal : CanvasLayer
         if (conn == null) return;
         var at = playerPos();
         Follow(World.ChunkOf(at.X), World.ChunkOf(at.Z));
-
-        var near = NearestNote(at);
-        prompt.Visible = near != null && !panel.IsOpen;
-        if (near != null) prompt.Text = $"N  Read {near.AuthorName}'s note";
 
         // Notes stir a little, as if the breeze catches them.
         bob += (float)delta;
@@ -173,18 +159,9 @@ public partial class Journal : CanvasLayer
 
     static string Article(string word) => "AEIOU".Contains(word[0]) ? "an" : "a";
 
-    void ReadNearestNote()
-    {
-        if (conn == null) return;
-        if (NearestNote(playerPos()) is not { } note)
-        {
-            say("No note within reach");
-            return;
-        }
-        conn.Reducers.ReadNote(note.Id);
-    }
-
+    // The nearest note within reach that teaches something you don't know yet.
     JournalNote? NearestNote(Vector3 at) => conn?.Db.JournalNote.Iter()
+        .Where(n => !conn.Db.MyJournal.Iter().Any(e => e.ProcessId == n.ProcessId))
         .Select(n => (note: n, d: new Vector2(n.X - at.X, n.Z - at.Z).Length()))
         .Where(t => t.d <= World.Reach)
         .OrderBy(t => t.d)
