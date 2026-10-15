@@ -12,9 +12,9 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
-| Waiting on Justin | Clay pot timings, pot-shaping minigame, cracked pots becoming grog (cards in the PM thread) |
+| Waiting on Justin | Merge of PR #3 (these handoff files) |
 | Next merge | `crafting-core` once green; merging it wipes Justin's local world (`--delete-data`), so he decides with the merge |
-| Next PM action | Relay Justin's clay answers to the Clay and ceramics lane, record them in `DECISIONS.md` |
+| Next PM action | Merge PR #3 once Justin says yes and CI is green, then tell every lane to follow `WORKER_LOOP.md` |
 
 ## Lanes
 

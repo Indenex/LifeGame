@@ -63,3 +63,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-014 — 2026-10-15 — Pot-shaping minigame
 **Decision:** The pot turns in your hands; press and hold to raise the wall, release before it gets too thin (wall-thickness bar with a sweet spot). Coil pots: place 4 to 6 coils in rhythm. Better wall, better pot; skippable once skilled.
 **Who:** Justin
+
+## D-015 — 2026-10-15 — Cracked pots become grog
+**Decision:** A pot fired while damp cracks into potsherds, which can be crushed into grog, a temper that improves the next clay. Failure feeds the next try.
+**Who:** Justin
