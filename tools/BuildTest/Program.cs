@@ -208,8 +208,7 @@ sealed class Bot
             if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
-                var depth = Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(cx, cz))?.Depth ?? 0;
-                if (depth >= World.MaxDigDepth - 1) digCell = null;
+                if (DugOut(cx, cz)) digCell = null;
                 else Conn.Reducers.Dig(cx, cz);
             }
             return;
@@ -232,6 +231,10 @@ sealed class Bot
         }
     }
 
+    // A cell the load test or an earlier run already dug to the bottom gives no more clay.
+    bool DugOut(int x, int z) =>
+        (Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z))?.Depth ?? 0) >= World.MaxDigDepth;
+
     (int, int) NearestClay()
     {
         int x0 = World.CellOf(X), z0 = World.CellOf(Z);
@@ -239,7 +242,7 @@ sealed class Bot
             for (int x = x0 - r; x <= x0 + r; x++)
                 for (int z = z0 - r; z <= z0 + r; z++)
                     if (Math.Max(Math.Abs(x - x0), Math.Abs(z - z0)) == r && World.IsClay(x, z)
-                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f)
+                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z))
                         return (x, z);
         throw new Exception("No clay nearby");
     }
