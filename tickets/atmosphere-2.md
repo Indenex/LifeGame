@@ -1,7 +1,7 @@
 # atmosphere-2: Sheep sounds, canopy fade, rain and dawn polish
 Lane: World atmosphere and sound
 Owner: World atmosphere and sound thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: (none yet)
 
@@ -19,8 +19,10 @@ From the PM after atmosphere-1: soft sheep bleats, with a startled bleat when th
 
 - 2026-10-15 22:55: Ghost shader fixed (no `return` in vertex; `#define GHOST` after shader_type). Renders sent to PM: atmosphere-09-fade-before/after, atmosphere-10..13 rain drizzle/light/steady/storm, audio/atmosphere-02-rain-tiers.mp3. Merged main 5adb2c1 (bindings regenerated with tools/gen-bindings.sh); Animals is on main, so Atmosphere.Connect now feeds conn.Db.Animal to SheepVoices.
 
+- 2026-10-15 23:00: Justin chose "Ship it"; PM merged PR #16.
+
 ## Open questions / blockers
-- Waiting for Justin's OK on the reworked fade and rain tiers (via PM) before merging.
+- (none)
 
 ## Next step
-When the PM relays Justin's OK on the fade and rain tiers and CI is green, merge PR #16 as a merge commit and send the commit to the PM.
+None; done. Next ticket is atmosphere-3.
