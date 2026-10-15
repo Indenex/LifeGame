@@ -93,7 +93,7 @@ public partial class Terrain : Node3D
     Node3D BuildChunk(int cx, int cz)
     {
         var root = new Node3D { Name = $"Chunk_{cx}_{cz}" };
-        root.AddChild(new MeshInstance3D { Mesh = BuildGround(cx, cz), MaterialOverride = Look.Painted });
+        root.AddChild(new MeshInstance3D { Mesh = BuildGround(cx, cz), MaterialOverride = Look.Ground });
         AddVegetation(root, cx, cz);
         return root;
     }
@@ -208,10 +208,10 @@ public partial class Terrain : Node3D
                 }
             }
 
-        AddMulti(root, trunkMesh!, trunks, Look.Painted);
-        AddMulti(root, leafyMesh!, leafy, Look.Swaying);
-        AddMulti(root, pineMesh!, pines, Look.Swaying);
-        AddMulti(root, rockMesh!, rocks, Look.Painted);
+        AddMulti(root, trunkMesh!, trunks, Look.BarkSurface);
+        AddMulti(root, leafyMesh!, leafy, Look.Foliage);
+        AddMulti(root, pineMesh!, pines, Look.Foliage);
+        AddMulti(root, rockMesh!, rocks, Look.RockSurface);
         AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
     }
 
@@ -251,15 +251,15 @@ public partial class Terrain : Node3D
         // A broadleaf canopy built from clumps of leaves, lighter on top.
         var leafy = new SurfaceTool();
         leafy.Begin(Mesh.PrimitiveType.Triangles);
-        Append(leafy, Blob(1.05f), Xf(0, 3.6f, 0), new Color(1.12f, 1.1f, 1f));
+        Append(leafy, Blob(1.05f), Xf(0, 3.6f, 0), new Color(1.12f, 1.1f, 1f), 0.14f);
         for (int k = 0; k < 6; k++)
         {
             float a = k * Mathf.Tau / 6f + 0.4f;
             float r = 0.85f + 0.1f * (k % 2);
             Append(leafy, Blob(0.8f + 0.1f * (k % 3)), Xf(Mathf.Cos(a) * r, 3.0f + 0.15f * (k % 2), Mathf.Sin(a) * r),
-                new Color(0.95f, 0.97f, 0.95f));
+                new Color(0.95f, 0.97f, 0.95f), 0.14f);
         }
-        Append(leafy, Blob(0.75f), Xf(0.2f, 2.4f, -0.1f), new Color(0.8f, 0.82f, 0.85f));
+        Append(leafy, Blob(0.75f), Xf(0.2f, 2.4f, -0.1f), new Color(0.8f, 0.82f, 0.85f), 0.12f);
         leafyMesh = leafy.Commit();
 
         // A pine of stacked tiers.
@@ -271,10 +271,13 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
+        // A weathered boulder: lumpy, with flat facets that catch the light.
         var rock = new SurfaceTool();
         rock.Begin(Mesh.PrimitiveType.Triangles);
-        Append(rock, new SphereMesh { Radius = 0.45f, Height = 0.6f, RadialSegments = 9, Rings = 5 }, Xf(0, 0.12f, 0), Colors.White);
-        Append(rock, new SphereMesh { Radius = 0.28f, Height = 0.4f, RadialSegments = 8, Rings = 4 }, Xf(0.42f, 0.06f, 0.15f), Colors.White);
+        Append(rock, new SphereMesh { Radius = 0.45f, Height = 0.6f, RadialSegments = 11, Rings = 6 }, Xf(0, 0.12f, 0), Colors.White, 0.09f);
+        Append(rock, new SphereMesh { Radius = 0.28f, Height = 0.4f, RadialSegments = 9, Rings = 5 }, Xf(0.42f, 0.06f, 0.15f), Colors.White, 0.06f);
+        rock.Deindex();
+        rock.GenerateNormals();
         rockMesh = rock.Commit();
 
         tuftMesh = BuildTuft();
@@ -285,7 +288,7 @@ public partial class Terrain : Node3D
     static Transform3D Xf(float x, float y, float z) => Transform3D.Identity.Translated(new Vector3(x, y, z));
 
     // Appends a primitive with its smooth normals, so the banded light gives soft, painted forms.
-    static void Append(SurfaceTool target, PrimitiveMesh mesh, Transform3D offset, Color shade)
+    static void Append(SurfaceTool target, PrimitiveMesh mesh, Transform3D offset, Color shade, float lumps = 0f)
     {
         var arrays = mesh.GetMeshArrays();
         var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
@@ -293,11 +296,17 @@ public partial class Terrain : Node3D
         var indices = (int[])arrays[(int)Mesh.ArrayType.Index];
         foreach (int idx in indices)
         {
+            var v = offset * verts[idx];
             target.SetNormal(normals[idx]);
             target.SetColor(shade);
-            target.AddVertex(offset * verts[idx]);
+            target.AddVertex(v + normals[idx] * Lump(v) * lumps);
         }
     }
+
+    // Smooth pseudo-random relief in 3D, the same at every shared vertex.
+    static float Lump(Vector3 p) =>
+        Mathf.Sin(p.X * 3.1f + p.Y * 1.7f) * Mathf.Sin(p.Z * 2.7f + p.Y * 2.3f) * 0.6f
+        + Mathf.Sin(p.X * 7.3f - p.Z * 5.9f + p.Y * 4.1f) * 0.4f;
 
     // A one-meter patch of thin blades that fills its tile edge to edge. UV.y runs
     // from root to tip so the grass shader can color and bend each blade.

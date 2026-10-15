@@ -128,7 +128,12 @@ public partial class Main : Node3D
             TonemapWhite = 6f,
             SsaoEnabled = true,
             SsaoRadius = 1.6f,
-            SsaoIntensity = 1.6f,
+            SsaoIntensity = 1.8f,
+            SsaoDetail = 0.8f,
+            // Light bouncing off the grass tints the shadows green.
+            SsilEnabled = true,
+            SsilRadius = 3f,
+            SsilIntensity = 0.9f,
             GlowEnabled = true,
             GlowIntensity = 0.6f,
             GlowBloom = 0.08f,
@@ -141,7 +146,7 @@ public partial class Main : Node3D
             FogAerialPerspective = 0.5f,
             // Volumetric fog catches the sun between the trees.
             VolumetricFogEnabled = true,
-            VolumetricFogDensity = 0.012f,
+            VolumetricFogDensity = 0.007f,
             VolumetricFogAlbedo = new Color(0.86f, 0.88f, 0.86f),
             VolumetricFogAnisotropy = 0.6f,
             VolumetricFogLength = 64f,

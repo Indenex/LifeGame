@@ -12,6 +12,14 @@ public partial class CameraRig : Node3D
         Fov = 45f,
         Near = 0.3f,
         Far = 250f,
+        // The far forest softens out of focus, which sells the depth.
+        Attributes = new CameraAttributesPractical
+        {
+            DofBlurFarEnabled = true,
+            DofBlurFarDistance = 32f,
+            DofBlurFarTransition = 30f,
+            DofBlurAmount = 0.05f,
+        },
     };
 
     float yawTarget = Mathf.DegToRad(45f), yaw = Mathf.DegToRad(45f);
