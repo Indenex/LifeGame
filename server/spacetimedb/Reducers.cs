@@ -24,6 +24,8 @@ public static partial class Module
             ScheduledId = 0,
             ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(World.MoveTickMillis)),
         });
+        InitChat(ctx);
+        InitClaims(ctx);
         EnsureWorldClock(ctx);
     }
 
@@ -146,14 +148,17 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
+        RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
         // Skilled diggers work faster.
         var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        if (depth >= World.MaxDigDepth)
-            throw new Exception("Too deep to dig by hand");
+        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
+        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
+            throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
         if (edit is { } existing)
             ctx.Db.TerrainEdit.CellKey.Update(existing with { Depth = (short)(depth + 1) });
@@ -168,8 +173,13 @@ public static partial class Module
                 Depth = 1,
             });
 
+        // The extra level a digging stick reaches holds finer clay (D-041); Skills sets
+        // the quality above it. Ceramics' ClayRules.DugClayQuality will own both numbers.
         if (World.IsClay(cellX, cellZ))
-            GiveDugClay(ctx, player);
+        {
+            if (depth >= World.MaxDigDepth) AddToInventory(ctx, ctx.Sender, Item.Clay, 1, 80);
+            else GiveDugClay(ctx, player);
+        }
 
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
@@ -181,6 +191,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
+        RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);

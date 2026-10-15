@@ -144,3 +144,67 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-034 — 2026-10-15 — One chat for updates
 **Decision:** Lanes send status updates and screenshots to the PM instead of posting them in their own threads; the PM posts them in the PM thread so Justin reads one chat. Lanes still answer Justin in their own thread when he writes there.
 **Who:** Justin
+
+## D-035 — 2026-10-15 — Kiln is a blueprint building
+**Decision:** The updraft kiln is placed from the B build menu as a see-through blueprint that anyone can add bricks and daub to (StructureKind.Kiln), not crafted and dropped. Firing: up to 6 dry pots, 2 sticks of fuel, 3 minutes, 2% crack, +10 quality. Ceramics owns the kiln logic in its own files via Building's completion hooks.
+**Who:** Justin ("Blueprint build", which the PM recommended)
+
+## D-036 — 2026-10-15 — Immersion first; rain tiers and a smooth fade
+**Decision:** Immersion is a very high priority in every aspect of the game. Rain has intensity levels (mostly light and easy to see through; rare heavy storms), with sound scaling to match. The see-through fade for trees in front of the player must look smooth and natural, not dithered.
+**Who:** Justin
+
+## D-037 — 2026-10-15 — Use prompt placement
+**Decision:** The Use prompt (keycap plus verb, such as "G Feed the fire") sits fixed just below the player on a soft panel and fades in and out.
+**Who:** Justin ("Below player", which the PM recommended)
+
+## D-038 — 2026-10-15 — No controls line on screen
+**Decision:** The bottom-left controls text is removed. Players learn keys from the G Use prompt and hints inside panels; the UX/UI lane adds subtle discoverable cues for keys with no prompt (sneak, journal, claims, chat). Lanes stop adding text to the controls line.
+**Who:** Justin ("Drop it"; the PM had recommended fade plus F1)
+
+## D-039 — 2026-10-15 — Sheep for meat and hide
+**Decision:** Players can kill sheep (with a weapon or cutting tool; the flock flees) and butcher them for raw mutton and hide; flocks regrow slowly over in-game days and never vanish. Raw mutton is cooked at a fire (Crafting `cook.meat`); cooked mutton feeds about 40% hunger (Survival default). Shearing for wool comes first.
+**Who:** Justin ("Yes, slowly", which the PM recommended)
+
+## D-040 — 2026-10-15 — Bug fixes lane
+**Decision:** A Bug fixes lane takes cross-lane and integration bugs assigned by the PM, one small PR per bug from main, touching whatever files the fix needs and telling the owning lane. First bug: players saved far from the origin rejoin stuck at spawn. Crafting goes back to crafting content.
+**Who:** Justin
+
+## D-041 — 2026-10-15 — Digging stick digs deeper
+**Decision:** A digging stick lets you dig one level deeper than bare hands, reaching better clay. It does not double clay or speed up digging.
+**Who:** Justin ("Dig deeper"; the PM had recommended double clay)
+
+## D-042 — 2026-10-15 — Carrying limit, raised by a basket
+**Decision:** Survival adds a carrying limit, and carrying a woven basket (10 fiber + 3 sticks) raises it. No gather-all pickup. Survival proposes the numbers to Justin with screenshots before they ship.
+**Who:** Justin ("Carry limit"; the PM had recommended gather-all)
+
+## D-043 — 2026-10-15 — Cooking trains Firecraft
+**Decision:** Cooking on a fire trains Firecraft for now; a separate Cooking skill can come later.
+**Who:** Justin ("Firecraft now", which the PM recommended)
+
+## D-044 — 2026-10-15 — Next claim rules
+**Decision:** (1) A claim owner can take down any building in their claim, members' included; the materials drop inside the claim. (2) Claim borders show as a soft line on the ground that fades in within about 6 m of the edge. (3) One owner plus members, no co-owner rank yet.
+**Who:** Justin ("As proposed", which the PM recommended)
+
+## D-045 — 2026-10-15 — Quieter HUD
+**Decision:** The UX/UI lane builds the quieter HUD from its mockup: round slots with real item pictures, minimal text and panels.
+**Who:** Justin ("Build it", which the PM recommended)
+
+## D-046 — 2026-10-15 — Doors, storage baskets, and weathering outside claims
+**Decision:** Anyone can open a hut door. Anyone can take from a storage basket, except inside a claim, where only members can. All player-crafted things (buildings, storage baskets, crafted items left on the ground) that sit outside a claim weather away if no player has touched them for a while. Inside a claim nothing weathers. PM default timing: weathering starts after 3 real days untouched and the thing is gone 24 hours later; any interaction resets it. One server sweep per hour checks a last-touched timestamp, which keeps the cost low. Building owns `Weathering.cs`; Claims supplies the in-claim check.
+**Who:** Justin (weathering rule in his words; timing is the PM's default, his to change)
+
+## D-047 — 2026-10-15 — Masters skip minigames but can play them
+**Decision:** At Master rank, crafting minigames are skipped by default and score a steady 0.8. Holding a key while starting the craft plays the shortest version instead, for a chance at a better result. The UX/UI lane picks the key and adds it to KEYMAP.md.
+**Who:** Justin ("Skip, can play", which the PM recommended)
+
+## D-048 — 2026-10-15 — Doors are lockable (amends D-046)
+**Decision:** Doors can be locked. The PM's defaults: the player who built the door, or inside a claim any member, can lock and unlock it with Use. A locked door opens only for them; to everyone else it stays shut. Unlocked doors open for anyone, as in D-046. There is no lock-breaking yet.
+**Who:** Justin ("Doors should be lockable."); the details are PM defaults and his to change
+
+## D-049 — 2026-10-15 — Husbandry is a basic skill
+**Decision:** A new Husbandry skill covers shearing now and butchering and herding later. It is a survival basic outside the 300-point cap, like Foraging and Firecraft. Process ids `animal.*` map to it.
+**Who:** Justin ("Husbandry, basic"; the PM had recommended a capped specialty)
+
+## D-050 — 2026-10-15 — Right-drag turns the camera
+**Decision:** Holding the right mouse button and moving the mouse turns the camera. Q/E still turn it. The UX/UI lane builds it.
+**Who:** Justin
