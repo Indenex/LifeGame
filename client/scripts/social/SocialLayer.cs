@@ -164,7 +164,10 @@ public partial class SocialLayer : Node
             else panel.Open(marker, IsMine(marker));
         }
         else if (e.IsActionPressed("ui_cancel") && panel.IsOpen)
+        {
             panel.Close();
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     // --- Chat --------------------------------------------------------------
