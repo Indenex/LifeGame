@@ -3,7 +3,7 @@ Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
 Status: in_progress
 Branch: claude/atmosphere-sound-hlqfke
-PR: (opens after #16 merges)
+PR: #27
 
 ## Goal
 Campfires sound alive: a soft breathing roar under quick crackles and the odd sap pop, louder the closer you are and the better the fire burns, fading to quiet embers as fuel runs out, with sizzles when rain falls on it. Justin hears it in game near any lit fire.
@@ -15,4 +15,4 @@ Campfires sound alive: a soft breathing roar under quick crackles and the odd sa
 - (none)
 
 ## Next step
-Once #16 is merged, merge main, push, and open the atmosphere-3 PR; send the fire audio preview to the PM.
+Get PR #27 green (CI), then merge it (D-032: sound only, no look change) and send the commit to the PM.
