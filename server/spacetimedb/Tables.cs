@@ -7,6 +7,7 @@ public enum ItemKind
     Stone,
     Fiber,
     Clay,
+    Berries,
 }
 
 public static partial class Module

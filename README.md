@@ -45,6 +45,8 @@ Run two clients side by side with separate identities using `--profile=a` and `-
 
 Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
 
+Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+
 ## After changing the server module
 
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:
