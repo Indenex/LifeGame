@@ -12,7 +12,7 @@ namespace LifeGame;
 // stage, keeping people out of hut walls, and saying when you are sheltered.
 //
 // B opens placement (Tab picks what, T turns it, click lays it out, Esc cancels).
-// Hold H next to an unfinished site to add what you carry.
+// Hold G (the shared Use key) next to an unfinished site to add what you carry.
 public partial class BuildingSystem : Node
 {
     const float WorkInterval = 0.65f;
@@ -48,8 +48,6 @@ public partial class BuildingSystem : Node
         AlbedoColor = new Color(0.85f, 1f, 0.8f, 0.35f),
     };
 
-    float workTimer;
-    ulong noteShownFor;
 
     public BuildingSystem(Terrain terrain, Hud hud, Node3D me, CameraRig cameraRig, SubViewport view, Func<DbConnection?> conn)
     {
@@ -68,7 +66,6 @@ public partial class BuildingSystem : Node
         BindKey("build_mode", Key.B);
         BindKey("build_next", Key.Tab);
         BindKey("build_rotate", Key.T);
-        BindKey("build_work", Key.H);
         BindKey("build_cancel", Key.Escape);
 
         var layer = new CanvasLayer { Layer = 1 };
@@ -87,6 +84,21 @@ public partial class BuildingSystem : Node
         promptPanel.Position = new Vector2(0, -160);
         promptPanel.Visible = false;
         ui.AddChild(promptPanel);
+
+        // Adding materials is a hold-G Use action (KEYMAP.md); it runs again every WorkInterval while held.
+        Use.Register(new UseHandler
+        {
+            Id = "building.add",
+            Priority = 30,
+            Find = at =>
+            {
+                if (conn() is not { } c || NearestSite() is not { } site) return null;
+                var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
+                if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item))) return null;
+                float d = new Vector2(site.X - at.X, site.Z - at.Z).Length();
+                return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval);
+            },
+        });
 
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
         if (args.Contains("--building-showcase")) Showcase();
@@ -198,6 +210,13 @@ public partial class BuildingSystem : Node
     {
         foreach (var s in rows.Values)
         {
+            var shape = ShapeOf(s);
+            if (shape.Solid && shape.Round && (s.Complete || s.Stage >= 1))
+            {
+                float dx = to.X - s.X, dz = to.Z - s.Z, d = Mathf.Sqrt(dx * dx + dz * dz), keep = shape.Radius + 0.3f;
+                if (d < keep && d > 0.01f) to = new Vector3(s.X + dx / d * keep, to.Y, s.Z + dz / d * keep);
+                continue;
+            }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
             const float wall = 1.7f, half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
@@ -307,7 +326,6 @@ public partial class BuildingSystem : Node
     {
         float dt = (float)delta;
         if (placing) UpdateGhost(dt);
-        UpdateWork(dt);
         UpdatePrompt();
     }
 
@@ -377,34 +395,6 @@ public partial class BuildingSystem : Node
             .OrderBy(s => new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared())
             .FirstOrDefault();
 
-    void UpdateWork(float dt)
-    {
-        workTimer -= dt;
-        if (placing || !Input.IsActionPressed("build_work"))
-        {
-            if (!Input.IsActionPressed("build_work")) noteShownFor = 0;
-            return;
-        }
-        if (workTimer > 0f || conn() is not { } c) return;
-        workTimer = WorkInterval;
-
-        if (NearestSite() is not { } site)
-        {
-            if (noteShownFor != ulong.MaxValue) hud.Note("No building site within reach");
-            noteShownFor = ulong.MaxValue;
-            return;
-        }
-        // Say what's missing once per press instead of asking the server over and over.
-        var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
-        if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item)))
-        {
-            if (noteShownFor != site.Id) hud.Note("Needs " + Missing(site));
-            noteShownFor = site.Id;
-            return;
-        }
-        c.Reducers.Build(site.Id);
-    }
-
     void UpdatePrompt()
     {
         string? text = null;
@@ -419,8 +409,8 @@ public partial class BuildingSystem : Node
         {
             var shape = ShapeOf(site);
             string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
-            var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item)} {n.Have}/{n.Need}"));
-            text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}    hold H to add";
+            var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
+            text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
         }
         else if (ShelterAt(me.Position) is { } home)
             text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
@@ -431,13 +421,11 @@ public partial class BuildingSystem : Node
 
     // --- Helpers ----------------------------------------------------------
 
-    static string Missing(Structure s) =>
-        string.Join(", ", s.Needs.Where(n => n.Have < n.Need).Select(n => $"{n.Need - n.Have} {ItemName(n.Item)}"));
-
     // The server owns the costs; the prompt only lists the stage names here.
     static string StageList(int kind) => string.Join(", then ", Structures.Shape(kind).Stages).ToLowerInvariant();
 
-    static string ItemName(ushort item) => Items.IsKnown(item) ? Items.Def((Item)item).Plural.ToLowerInvariant() : "unknown";
+    static string ItemName(ushort item, uint count) =>
+        Items.IsKnown(item) ? Items.Def((Item)item).Count(count).ToLowerInvariant() : "something";
 
     SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
 
