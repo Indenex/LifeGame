@@ -12,24 +12,26 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
+| Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
+| Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
+| Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
 | Waiting on Justin | nothing open |
-| Next merge | skills #7 and claims #8 (merging main after #4); then ceramics #11; then building #10, survival #12; sheep #13 anytime. The PM merges (D-032); Justin wipes once after #12 |
-| Next PM action | Record lane branch names as lanes report them; bring `crafting-core` merge plus world wipe to Justin when green |
+| Next PM action | Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
 
-| Lane | Ticket | Status | Branch | Owns |
-|---|---|---|---|---|
-| Crafting (integration owner) | `tickets/crafting-1.md` (done, PR #4 merged 64812e0); next: CI speedups | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
-| Survival needs | `tickets/survival-2.md` | in_progress (draft PR #12, lands after #4 and #11) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
-| Journal and skills | `tickets/skills-1.md` | in_progress (PR #7, merges with or after crafting-core) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
-| Claims, chat and PvP rules | `tickets/claims-1.md` | in_review (PR #8 green) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
-| World atmosphere and sound | `tickets/atmosphere-2.md` (atmosphere-1 done, PR #9 merged a4ce058) | in_progress (sheep bleats, canopy fade, rain and dawn tweaks) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
-| House building | `tickets/building-2.md` (building-1 done, PR #6 merged bae255c) | in_progress (draft PR #10, lands after #4 and #11) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
-| Animals | `tickets/animals-1.md` | in_progress (draft PR #13) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
-| Clay and ceramics | `tickets/ceramics-1.md` | in_review (PR #11, CI running) | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
-| UX and UI | `tickets/ui-1.md` | in_progress | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
-| Bug fixes | `tickets/bugfix-1.md` (stuck at spawn when saved far from origin) | todo (thread starting) | lane to record | any file, minimal diffs, PM assigns |
+| Lane | Next ticket / PR | Branch | Owns |
+|---|---|---|---|
+| Crafting (integration owner) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
+| Survival needs | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
+| Journal and skills | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
+| Claims, chat and PvP rules | #8; then claims-2 (D-044) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
+| World atmosphere and sound | #27 campfire sound; firelight at night | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
+| House building | #10; then building-3 doors, storage basket, lockable doors, weathering (D-046, D-048) | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
+| Animals | #23 shearing; then animals-3 kill and butcher (D-039) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
+| Clay and ceramics | #21 kiln and deep clay; then kiln blueprint | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
+| UX and UI | #26 quieter HUD (D-045) with F1 key help; right-drag camera (D-050); Strike and Master-play keys | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
+| Bug fixes | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 
@@ -41,7 +43,8 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
 - Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building's `Module.ShelterAt(ctx, x, z)` / `ShelterFor(ctx, playerId)` return Shelter(RainCover, Warmth, StructureId); it implements Survival's `ShelterAtHook(ctx, x, z, ref rainCover, ref warmth)`.
-- Keys: every key goes in `KEYMAP.md` (proposed, awaiting Justin).
+- Keys: every key goes in `KEYMAP.md` (UX/UI owns it, D-033). World actions register Use handlers; never bind G.
+- Client subscriptions: `client/scripts/net/Subscriptions.cs` (#18); add new chunk queries there.
 - Placement: `PlaceStructure(kind, x, z, yaw)` and `shared/Structures.cs`; the claim marker is a new `StructureKind` with one stage.
 - Weather (`WorldClock.cs`, PR #9): `TimeOfDay`, `CurrentWeather` (Cloud, Rain, Wind, Wetness 0 to 1), `DryingRate`, `AirTemperature` in °C. `RainAt` one-liner goes in whichever of #9 or ceramics merges second.
 - Rain: Atmosphere implements `RainAt(ctx, x, z, ref rain)` (0 to 1), declared in `Ceramics.cs`.
