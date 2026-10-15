@@ -128,3 +128,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-030 — 2026-10-15 — Water pot amounts
 **Decision:** Drinking a pinch pot of water quenches 50% thirst, a coil pot 100%; the empty pot comes back at the same quality.
 **Who:** Justin ("50% / 100%", which the PM recommended over the lane's 35/70 default)
+
+## D-031 — 2026-10-15 — Hut recipes on real materials
+**Decision:** Clay hut walls take 12 daub (12 clay + 6 fiber via clean-clay and mix-daub); the daub stage's extra 3 fiber is dropped. Wattle-and-daub huts use no bricks; bricks wait for a later mud-brick house. The lean-to keeps its 3 fiber lashing.
+**Who:** Justin ("As proposed")
