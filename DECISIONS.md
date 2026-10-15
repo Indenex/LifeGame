@@ -116,3 +116,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-027 — 2026-10-15 — Sheep fleece colors
 **Decision:** Most sheep are cream, some oat-colored, and about one in eight is a dark brown "black sheep". More colors may come with the wool and dye work.
 **Who:** Justin ("As shown")
+
+## D-028 — 2026-10-15 — Merge Crafting core and Journal/skills (world wipe)
+**Decision:** PR #4 (crafting core) merges, then PR #7 (journal and capped skills) right after, each when CI is green. Item storage moves to numeric ids plus quality, so Justin's local world and survival vitals reset once (`spacetime publish --delete-data`).
+**Who:** Justin ("Merge both")
