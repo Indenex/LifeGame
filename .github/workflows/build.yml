@@ -52,6 +52,9 @@ jobs:
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
 
+      - name: Building check (two players build a lean-to and a clay hut together)
+        run: cd tools/BuildTest && dotnet run -c Release
+
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
       - uses: actions/upload-artifact@v4
