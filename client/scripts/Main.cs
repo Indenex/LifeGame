@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly Journal journal = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     CeramicsView clay = null!;
@@ -59,6 +60,8 @@ public partial class Main : Node3D
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
+        AddChild(journal);
+        view.AddChild(journal.Notes);
         AddChild(crafting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
@@ -256,6 +259,7 @@ public partial class Main : Node3D
         string? token = LoadToken();
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
+        journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -296,6 +300,7 @@ public partial class Main : Node3D
     {
         hud.SetStatus($"Offline: {reason}. Walking alone.");
         conn = null;
+        journal.Detach();
         Spawn(Vector3.Zero);
     }
 
