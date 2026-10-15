@@ -45,8 +45,8 @@ namespace LifeGame.Shared
         public const string Dig = "earth.dig";
         public const string Forage = "gather.forage";
         public const string Berries = "gather.berries";
-        public const string BuildLeanTo = "build.lean_to";
-        public const string BuildClayHut = "build.clay_hut";
+        // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
+        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
 
         public static readonly Specialization[] Specializations =
         {
@@ -65,8 +65,10 @@ namespace LifeGame.Shared
             [Forage] = "Foraging",
             [ClayRules.PitFireProcess] = "Pit firing",
             [ClayRules.FillProcess] = "Filling a pot",
-            [BuildLeanTo] = "Building a lean-to",
-            [BuildClayHut] = "Building a clay hut",
+            ["build.frame"] = "Raising a frame",
+            ["build.wattle"] = "Weaving wattle walls",
+            ["build.daub"] = "Daubing walls",
+            ["build.roof"] = "Thatching a roof",
             [Berries] = "Picking berries",
         };
 
@@ -79,8 +81,7 @@ namespace LifeGame.Shared
             foreach (var def in Processes.List) yield return def.Id;
             yield return ClayRules.FillProcess;
             yield return ClayRules.PitFireProcess;
-            yield return BuildLeanTo;
-            yield return BuildClayHut;
+            foreach (var id in BuildStages) yield return id;
         }
 
         public static Specialization? Spec(string id)
