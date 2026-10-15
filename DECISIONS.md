@@ -184,3 +184,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-044 — 2026-10-15 — Next claim rules
 **Decision:** (1) A claim owner can take down any building in their claim, members' included; the materials drop inside the claim. (2) Claim borders show as a soft line on the ground that fades in within about 6 m of the edge. (3) One owner plus members, no co-owner rank yet.
 **Who:** Justin ("As proposed", which the PM recommended)
+
+## D-045 — 2026-10-15 — Quieter HUD
+**Decision:** The UX/UI lane builds the quieter HUD from its mockup: round slots with real item pictures, minimal text and panels.
+**Who:** Justin ("Build it", which the PM recommended)
