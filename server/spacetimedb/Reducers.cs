@@ -33,6 +33,7 @@ public static partial class Module
     public static void PlayerConnected(ReducerContext ctx)
     {
         EnsureWorldClock(ctx);
+        EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
@@ -148,7 +149,8 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
-        var state = RequireCooldown(ctx, player);
+        // Skilled diggers work faster.
+        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
@@ -170,8 +172,9 @@ public static partial class Module
             });
 
         if (World.IsClay(cellX, cellZ))
-            AddToInventory(ctx, ctx.Sender, Item.Clay, 1, Items.RawQuality);
+            GiveDugClay(ctx, player);
 
+        PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -185,6 +188,7 @@ public static partial class Module
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
+        PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
     }
 
     [SpacetimeDB.Reducer]
@@ -250,11 +254,11 @@ public static partial class Module
             throw new Exception("Out of reach");
     }
 
-    static PlayerState RequireCooldown(ReducerContext ctx, Player player)
+    static PlayerState RequireCooldown(ReducerContext ctx, Player player, long cooldownMicros = World.DigCooldownMicros)
     {
         var state = ctx.Db.PlayerState.PlayerId.Find(player.PlayerId) ?? throw new Exception("No state");
         long elapsed = ctx.Timestamp.MicrosecondsSinceUnixEpoch - state.LastActionAt.MicrosecondsSinceUnixEpoch;
-        if (elapsed < World.DigCooldownMicros)
+        if (elapsed < cooldownMicros)
             throw new Exception("Still working");
         return state;
     }

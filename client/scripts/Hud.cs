@@ -3,8 +3,9 @@ using Godot;
 
 namespace LifeGame;
 
-// A quiet overlay: connection state, what you carry, controls, and short notes
-// that fade out on their own.
+// A quiet overlay: connection state, what you carry, and short notes that fade
+// out on their own. There is no controls line (D-038); keys are taught by the G
+// prompt, panel hints and first-time hints (ui/Hints.cs).
 public partial class Hud : CanvasLayer
 {
     readonly Label status = new();
@@ -25,12 +26,6 @@ public partial class Hud : CanvasLayer
         Style(status, 15, 0.85f);
         root.AddChild(statusPanel);
 
-        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up    C craft    T feed fire    V tend clay    Enter talk    K claim", 14);
-        controls.Modulate = new Color(1, 1, 1, 0.7f);
-        var controlsPanel = Panel(controls, Vector2.Zero);
-        controlsPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
-        controlsPanel.Position = new Vector2(20, -56);
-        root.AddChild(controlsPanel);
 
         inventory.AddThemeConstantOverride("separation", 10);
         inventory.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);

@@ -20,12 +20,15 @@ public partial class Main : Node3D
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
     readonly SocialLayer social = new();
+    readonly UseKey useKey = new();
+    readonly Journal journal = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     CeramicsView clay = null!;
     readonly Atmosphere atmosphere = new();
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
+    readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
@@ -52,6 +55,7 @@ public partial class Main : Node3D
         view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
+        view.AddChild(herd);
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
@@ -59,12 +63,20 @@ public partial class Main : Node3D
         AddChild(clay);
         AddChild(hud);
         AddChild(social);
+        AddChild(journal);
+        view.AddChild(journal.Notes);
         AddChild(crafting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
+        // Last child, so G reaches the Use key before any lane's old binding.
+        useKey.Player = () => me.Position;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        AddChild(useKey);
+        AddChild(new Hints());
+        RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
@@ -217,6 +229,7 @@ public partial class Main : Node3D
 
     static void SetupInput()
     {
+        Controls.Setup();
         void Bind(string action, params Key[] keys)
         {
             if (InputMap.HasAction(action)) return;
@@ -232,7 +245,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.T);
+        Bind("sneak", Key.Shift);
     }
 
     // --- Networking -------------------------------------------------------
@@ -255,6 +268,7 @@ public partial class Main : Node3D
         string? token = LoadToken();
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
+        journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -273,6 +287,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
+        herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
@@ -295,6 +310,7 @@ public partial class Main : Node3D
     {
         hud.SetStatus($"Offline: {reason}. Walking alone.");
         conn = null;
+        journal.Detach();
         Spawn(Vector3.Zero);
     }
 
@@ -314,6 +330,7 @@ public partial class Main : Node3D
                 "SELECT * FROM player WHERE online = true",
                 $"SELECT * FROM player_pos WHERE {range}",
                 $"SELECT * FROM world_item WHERE {range}",
+                $"SELECT * FROM animal WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 $"SELECT * FROM fire WHERE {range}",
                 $"SELECT * FROM clay_piece WHERE {range}",
@@ -423,7 +440,6 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -456,7 +472,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
@@ -502,21 +518,26 @@ public partial class Main : Node3D
         else conn.Reducers.PickUp(nearest.item.Id);
     }
 
-    // Puts the cheapest fuel you carry on the nearest fire.
-    void FeedFire()
+    // G on a fire puts the cheapest fuel you carry on it.
+    void RegisterUse()
     {
-        if (conn == null) return;
-        if (fires.NearestWithin(conn, me.Position, World.Reach) is not { } fire)
+        Use.Register(new UseHandler
         {
-            hud.Note("No fire within reach");
-            return;
-        }
-        var fuel = conn.Db.MyInventory.Iter()
-            .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
-            .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
-            .FirstOrDefault();
-        if (fuel == null) hud.Note("You have nothing that burns");
-        else conn.Reducers.FeedFire(fire.Id, fuel.Item);
+            Id = "crafting.feed_fire",
+            Priority = 20,
+            Find = at =>
+            {
+                if (conn == null || fires.NearestWithin(conn, at, World.Reach) is not { } fire) return null;
+                var fuel = conn.Db.MyInventory.Iter()
+                    .Where(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
+                    .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
+                    .FirstOrDefault();
+                if (fuel == null) return null;
+                float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
+                return new UseOffer("Feed the fire", d,
+                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item));
+            },
+        });
     }
 
     void Dust(Vector3 at, Color color)

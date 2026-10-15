@@ -61,6 +61,26 @@ public partial class SocialLayer : Node
         conn.Db.MyInventory.OnInsert += (_, _) => panel.MarkDirty();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyInventory.OnDelete += (_, _) => panel.MarkDirty();
+
+        // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
+        Use.Register(new UseHandler
+        {
+            Id = "claims.tend",
+            Priority = 5,
+            Find = at =>
+            {
+                Claim? best = null;
+                float bestD = Social.MarkerReach;
+                foreach (var c in conn.Db.Claim.Iter())
+                {
+                    float d = new Vector2(c.X - at.X, c.Z - at.Z).Length();
+                    if (d <= bestD && HasRights(c)) { best = c; bestD = d; }
+                }
+                return best is { } claim
+                    ? new UseOffer("Tend the marker", bestD, () => conn.Reducers.TendClaim(claim.Id))
+                    : null;
+            },
+        });
     }
 
     public override void _Ready()
