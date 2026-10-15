@@ -35,6 +35,8 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM fire",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                "SELECT * FROM roast",
+                "SELECT * FROM terrain_edit",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -60,6 +62,40 @@ Craft("knap.hand_axe", 0.95f, Item.HandAxe);
 Craft("lash.spear", 0, Item.Spear);
 Craft("lash.stone_axe", 0, Item.StoneAxe);
 
+// Crafting-2 tools: a knife, a digging stick and a basket.
+Gather(Item.Stick, 5);
+Gather(Item.Stone, 3);
+Gather(Item.Fiber, 13);
+Craft("knap.flake", 0.95f, Item.Flake);
+Craft("cord.twist", 0, Item.Cordage);
+Craft("haft.knife", 0, Item.StoneKnife);
+Craft("carve.digging_stick", 0, Item.DiggingStick);
+Craft("weave.basket", 0, Item.Basket);
+
+// A digging stick reaches one level below bare hands, where the clay is finer.
+var (clayX, clayZ) = Enumerable.Range(1, 40)
+    .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+    .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+    .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
+        && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
+WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
+for (int dig = 0; dig <= World.MaxDigDepth; dig++)
+{
+    uint clayBefore = CountOf(Item.Clay);
+    lastError = null;
+    conn.Reducers.Dig(clayX, clayZ);
+    Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging");
+    if (lastError != null) Fail($"dig {dig + 1}: {lastError}");
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+}
+var deepClay = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Clay).Max(r => r.Quality);
+if (deepClay < 80) Fail($"the deepest clay came up at quality {deepClay}");
+lastError = null;
+conn.Reducers.Dig(clayX, clayZ);
+Pump(() => lastError != null, 3, "a dig past the stick's reach to be refused");
+Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay quality {deepClay}); below that: {lastError}");
+
+Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
 Craft("fire.hand_drill", 1f, null);
@@ -85,6 +121,27 @@ conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
 if (lastError != null) Fail($"feeding the fire: {lastError}");
 Console.WriteLine("Fed the fire a stick");
+
+// Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
+// and put some in this player's inventory (the identity is printed) to check it.
+if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
+{
+    Console.WriteLine($"Waiting for raw mutton in the inventory of {me}");
+    Pump(() => CountOf(Item.RawMutton) > 0, 60, "raw mutton");
+    Craft("cook.meat", 0, null);
+    Pump(() => conn.Db.Roast.Iter().Any(r => r.Owner == me), 3, "the roast to go on the fire");
+    var roast = conn.Db.Roast.Iter().First(r => r.Owner == me);
+    lastError = null;
+    conn.Reducers.TakeOffFire(roast.Id);
+    Pump(() => lastError != null, 3, "taking it off too early to be refused");
+    Console.WriteLine($"Too early: {lastError}");
+    Pump(() => false, Roasting.BestSeconds, null);
+    lastError = null;
+    conn.Reducers.TakeOffFire(roast.Id);
+    Pump(() => lastError != null || CountOf(Item.CookedMutton) > 0, 5, "roast mutton");
+    if (lastError != null) Fail($"taking the roast off: {lastError}");
+    Console.WriteLine($"Roasted mutton (quality {conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CookedMutton).Quality})");
+}
 
 Console.WriteLine("Inventory:");
 foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))

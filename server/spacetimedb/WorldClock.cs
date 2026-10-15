@@ -97,9 +97,10 @@ public static partial class Module
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch >= w.NextChangeAt.MicrosecondsSinceUnixEpoch)
             w = NextWeather(ctx, w);
 
-        // Rain builds and clears over a couple of minutes; clouds a little faster.
-        w.Cloud = Toward(w.Cloud, w.TargetCloud, 0.08f);
-        w.Rain = Toward(w.Rain, w.TargetRain, w.TargetRain > w.Rain ? 0.12f : 0.08f);
+        // Clouds gather over a few minutes and rain follows them; a storm takes six
+        // or seven minutes to build and as long to pass.
+        w.Cloud = Toward(w.Cloud, w.TargetCloud, 0.06f);
+        w.Rain = Toward(w.Rain, Math.Min(w.TargetRain, w.Cloud * 1.1f), 0.05f);
         w.Wind = Toward(w.Wind, w.TargetWind, 0.06f);
 
         // Heavy rain soaks the ground in about five minutes. It dries over half an
@@ -113,6 +114,8 @@ public static partial class Module
     }
 
     // A front moves in: mostly fair weather, sometimes overcast, sometimes rain.
+    // Most rain is a drizzle or a light shower you can see through; steady rain is
+    // less common, and a heavy storm that closes the world in is rare.
     static Weather NextWeather(ReducerContext ctx, Weather w)
     {
         double roll = ctx.Rng.NextDouble();
@@ -124,7 +127,7 @@ public static partial class Module
             w.TargetWind = Range(ctx, 0.15f, 0.45f);
             minutes = ctx.Rng.Next(12, 30);
         }
-        else if (roll < 0.8)
+        else if (roll < 0.78)
         {
             w.TargetCloud = Range(ctx, 0.55f, 0.85f);
             w.TargetRain = 0f;
@@ -133,10 +136,14 @@ public static partial class Module
         }
         else
         {
-            w.TargetCloud = Range(ctx, 0.85f, 1f);
-            w.TargetRain = Range(ctx, 0.35f, 1f);
-            w.TargetWind = Range(ctx, 0.5f, 0.9f);
-            minutes = ctx.Rng.Next(6, 16);
+            double kind = ctx.Rng.NextDouble();
+            (w.TargetRain, w.TargetCloud, w.TargetWind, minutes) = kind switch
+            {
+                < 0.38 => (Range(ctx, 0.12f, 0.25f), Range(ctx, 0.7f, 0.85f), Range(ctx, 0.2f, 0.45f), ctx.Rng.Next(8, 20)),   // drizzle
+                < 0.72 => (Range(ctx, 0.3f, 0.45f), Range(ctx, 0.8f, 0.95f), Range(ctx, 0.35f, 0.6f), ctx.Rng.Next(6, 16)),    // light rain
+                < 0.93 => (Range(ctx, 0.55f, 0.72f), Range(ctx, 0.9f, 1f), Range(ctx, 0.5f, 0.75f), ctx.Rng.Next(6, 14)),      // steady rain
+                _ => (Range(ctx, 0.88f, 1f), 1f, Range(ctx, 0.75f, 1f), ctx.Rng.Next(5, 10)),                                  // storm
+            };
         }
         w.NextChangeAt = After(ctx, minutes * 60);
         return w;
