@@ -41,7 +41,7 @@ public partial class Journal : CanvasLayer
     public override void _Ready()
     {
         current = this;
-        Layer = 2;
+        Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         AddChild(panel);
         AddChild(chime);
         panel.WriteNote = id =>
