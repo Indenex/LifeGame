@@ -15,6 +15,7 @@ Building uses the shared `LifeGame.Shared.Item` ids. Each finished stage trains 
 - 2026-10-15 22:20: merged main 64812e0 (crafting #4). BuildTest skips clay cells already dug to the bottom (the load test can exhaust the nearest ones, which made Survival's CI flaky). LoadTest, CraftCheck and BuildTest pass back to back locally.
 - Justin chose "As proposed" for the building-2 recipes (D-031): 12 daub hut walls, bricks later, lean-to keeps 3 fiber.
 - 2026-10-15 22:35: merged main 25c8979 (#11 ceramics, #14, #15). Bindings untracked now (tools/gen-bindings.sh). Added Solid round shapes and the CeramicsStructureRemoved hook for the kiln. BuildTest passes (144 s).
+- 2026-10-15 23:15: merged main 714001c. Structure's columns are back to main's; stage quality lives in a new StructureProgress table, so publishing over Justin's world needs no wipe (checked: main's module, then this one, without --delete-data). Adding materials is now the `building.add` Use handler (priority 30, hold G). BuildTest passes (148 s).
 
 ## Open questions / blockers
 - (none)

@@ -51,6 +51,15 @@ public static partial class Module
         // How many different people have added to it.
         public byte Builders;
         public Timestamp PlacedAt;
+    }
+
+    // Quality bookkeeping, kept beside Structure so its columns stay as they were
+    // (no world wipe). Public so clients can show how well something is built.
+    [SpacetimeDB.Table(Accessor = "StructureProgress", Public = true)]
+    public partial struct StructureProgress
+    {
+        [PrimaryKey]
+        public ulong StructureId;
         // 1 to 100: the average quality of its finished stages so far.
         public byte Quality;
         // The stage being built: summed quality of what went in, and who helped.
@@ -137,10 +146,6 @@ public static partial class Module
             Complete = false,
             Builders = 0,
             PlacedAt = ctx.Timestamp,
-            Quality = 0,
-            StageQualitySum = 0,
-            StageItems = 0,
-            StageHelpers = new List<uint>(),
         });
     }
 
@@ -173,17 +178,19 @@ public static partial class Module
         float quality = Take(ctx, (Item)need.Item, 1);
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
-        var helpers = new List<uint>(s.StageHelpers);
+        var p = ProgressOf(ctx, s.Id);
+        var helpers = new List<uint>(p.StageHelpers);
         if (!helpers.Contains(player.PlayerId)) helpers.Add(player.PlayerId);
-        s = s with
+        p = p with
         {
-            Needs = needs,
-            StageQualitySum = s.StageQualitySum + (uint)quality,
-            StageItems = s.StageItems + 1,
+            StageQualitySum = p.StageQualitySum + (uint)quality,
+            StageItems = p.StageItems + 1,
             StageHelpers = helpers,
         };
+        s = s with { Needs = needs };
         if (needs.All(n => n.Have >= n.Need))
-            s = FinishStage(ctx, s);
+            (s, p) = FinishStage(ctx, s, p);
+        ctx.Db.StructureProgress.StructureId.Update(p);
 
         if (RecordBuilder(ctx, structureId))
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
@@ -210,7 +217,8 @@ public static partial class Module
                 for (uint i = 0; i < count; i++) refund.Add(item);
         foreach (var need in s.Needs)
             for (uint i = 0; i < need.Have; i++) refund.Add((Item)need.Item);
-        byte refundQuality = s.Quality > 0 ? s.Quality : Items.RawQuality;
+        byte built = ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? 0;
+        byte refundQuality = built > 0 ? built : Items.RawQuality;
 
         var shape = Structures.Shape((int)s.Kind);
         float spread = (shape.Round ? shape.Radius : MathF.Max(shape.HalfWidth, shape.HalfDepth)) * 0.8f;
@@ -232,6 +240,7 @@ public static partial class Module
 
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
+        ctx.Db.StructureProgress.StructureId.Delete(structureId);
         ctx.Db.Structure.Id.Delete(structureId);
         CeramicsStructureRemoved(ctx, s);
     }
@@ -286,12 +295,12 @@ public static partial class Module
 
     // A stage is done: everyone who helped with it practices that building skill,
     // and the work's quality (materials, capped by each builder's skill) is folded in.
-    static Structure FinishStage(ReducerContext ctx, Structure s)
+    static (Structure, StructureProgress) FinishStage(ReducerContext ctx, Structure s, StructureProgress p)
     {
         string process = Structures.StageProcess((int)s.Kind, s.Stage);
-        float materials = s.StageItems > 0 ? s.StageQualitySum / (float)s.StageItems : Items.RawQuality;
+        float materials = p.StageItems > 0 ? p.StageQualitySum / (float)p.StageItems : Items.RawQuality;
         float sum = 0;
-        foreach (uint helper in s.StageHelpers)
+        foreach (uint helper in p.StageHelpers)
         {
             byte cap = 100;
             QualityCapFor(ctx, helper, process, ref cap);
@@ -299,15 +308,29 @@ public static partial class Module
             OnProcessPerformed(ctx, helper, process, q, false);
             sum += q;
         }
-        byte stageQuality = s.StageHelpers.Count > 0 ? (byte)Math.Clamp(MathF.Round(sum / s.StageHelpers.Count), 1, 100) : Items.RawQuality;
-        byte overall = (byte)Math.Clamp(MathF.Round((s.Quality * s.Stage + stageQuality) / (float)(s.Stage + 1)), 1, 100);
+        byte stageQuality = p.StageHelpers.Count > 0 ? (byte)Math.Clamp(MathF.Round(sum / p.StageHelpers.Count), 1, 100) : Items.RawQuality;
+        byte overall = (byte)Math.Clamp(MathF.Round((p.Quality * s.Stage + stageQuality) / (float)(s.Stage + 1)), 1, 100);
 
         int stages = StageCosts[(int)s.Kind].Length;
         byte next = (byte)(s.Stage + 1);
-        s = s with { Quality = overall, StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() };
+        p = p with { Quality = overall, StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() };
         return next >= stages
-            ? s with { Stage = (byte)stages, Needs = new List<MaterialNeed>(), Complete = true }
-            : s with { Stage = next, Needs = NeedsFor((int)s.Kind, next) };
+            ? (s with { Stage = (byte)stages, Needs = new List<MaterialNeed>(), Complete = true }, p)
+            : (s with { Stage = next, Needs = NeedsFor((int)s.Kind, next) }, p);
+    }
+
+    // Structures from before StructureProgress existed get a fresh row on first use.
+    static StructureProgress ProgressOf(ReducerContext ctx, ulong structureId)
+    {
+        if (ctx.Db.StructureProgress.StructureId.Find(structureId) is { } p) return p;
+        return ctx.Db.StructureProgress.Insert(new StructureProgress
+        {
+            StructureId = structureId,
+            Quality = 0,
+            StageQualitySum = 0,
+            StageItems = 0,
+            StageHelpers = new List<uint>(),
+        });
     }
 
     static short DepthAt(ReducerContext ctx, int x, int z) =>
