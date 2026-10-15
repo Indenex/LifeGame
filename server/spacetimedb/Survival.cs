@@ -123,21 +123,21 @@ public static partial class Module
     // --- Reducers ----------------------------------------------------------
 
     [SpacetimeDB.Reducer]
-    public static void Eat(ReducerContext ctx, ItemKind kind)
+    public static void Eat(ReducerContext ctx, ushort item)
     {
         var player = RequirePlayer(ctx);
-        var (food, water) = Nourishment(kind);
+        if (!Items.IsKnown(item))
+            throw new Exception("You can't eat that");
+        var (food, water) = Nourishment((Item)item);
         if (food <= 0 && water <= 0)
             throw new Exception("You can't eat that");
-        var stack = FindStack(ctx, ctx.Sender, kind) ?? throw new Exception("You are not carrying that");
+        if (CountOf(ctx, (Item)item) < 1)
+            throw new Exception("You are not carrying that");
         var v = RequireVitals(ctx, player);
         if (v.Food >= 1f)
             throw new Exception("You are full");
 
-        if (stack.Count <= 1)
-            ctx.Db.InventoryItem.Id.Delete(stack.Id);
-        else
-            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - 1 });
+        Take(ctx, (Item)item, 1);
         ctx.Db.Vitals.PlayerId.Update(v with
         {
             Food = Math.Min(1f, v.Food + food),
@@ -175,7 +175,7 @@ public static partial class Module
         var state = RequireCooldown(ctx, player);
 
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, ctx.Sender, ItemKind.Berries, 3);
+        AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -219,7 +219,8 @@ public static partial class Module
                 ctx.Db.WorldItem.Insert(new WorldItem
                 {
                     Id = 0,
-                    Kind = stack.Kind,
+                    Item = stack.Item,
+                    Quality = stack.Quality,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),
@@ -347,9 +348,9 @@ public static partial class Module
     // when weather arrives.
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
-    static (float food, float water) Nourishment(ItemKind kind) => kind switch
+    static (float food, float water) Nourishment(Item item) => item switch
     {
-        ItemKind.Berries => (Needs.BerryFood, Needs.BerryWater),
+        Item.Berries => (Needs.BerryFood, Needs.BerryWater),
         _ => (0f, 0f),
     };
 

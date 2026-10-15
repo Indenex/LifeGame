@@ -12,9 +12,10 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | --- | --- |
 | `server/` | SpacetimeDB module in C#: tables and reducers for players, movement, digging and items |
 | `client/` | Godot 4.6 (.NET) game client |
-| `client/module_bindings/` | Client bindings generated from the server module; do not edit by hand |
+| `client/module_bindings/` | Client bindings generated from the server module by `tools/gen-bindings.sh`; not committed |
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
+| `tools/CraftCheck/` | One bot that gathers and runs every crafting process end to end (runs in CI) |
 | `tools/BuildTest/` | Two simulated players building a lean-to and a clay hut together |
 
 ## Requirements
@@ -33,7 +34,11 @@ spacetime start
 cd server
 spacetime publish lifegame --server local --yes
 
-# 3. Open client/project.godot in Godot 4.6 .NET and press Play
+# 3. Generate the client bindings (not committed; rerun whenever the server module changes)
+cd ..
+tools/gen-bindings.sh
+
+# 4. Open client/project.godot in Godot 4.6 .NET and press Play
 ```
 
 The client connects to `http://127.0.0.1:3000`, database `lifegame`. To point it somewhere else, pass arguments after `--`:
@@ -44,11 +49,19 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire.
+
+## Crafting
+
+Items and processes are plain data in `shared/Items.cs` and `shared/Processes.cs`, compiled into both the server and the client. A process consumes inputs, may need a tool (matched by property, such as Hammer), takes time, and makes an item or a fire. Key steps have a short minigame: spinning a hand drill for fire (alternate A and D), and knapping stone (strike with Space as the mark crosses the bright spot). The minigame score and the input quality set the result's quality, capped by the crafter's skill.
+
+The server runs each process as a job with a finish time (`server/spacetimedb/Crafting.cs`). Process ids such as `knap.flake` are stable: skills and the journal key on them. The skills system plugs in through two partial methods, `OnProcessPerformed` and `QualityCapFor`. Other systems read warmth with `Module.WarmthAt(ctx, x, z)`.
+
+Item ids are stored as numbers, so never renumber or reuse one; add new items at the end.
 
 Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
 
-Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+Survival: G picks berries from a ripe bush, V eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 
 ### Day, night and weather
 
@@ -65,9 +78,8 @@ Other server code can ask about the weather: `TimeOfDay(ctx)`, `CurrentWeather(c
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:
 
 ```sh
-cd server
-spacetime publish lifegame --server local --yes        # add --delete-data=always if the schema change is breaking
-spacetime generate --lang csharp --out-dir ../client/module_bindings --module-path ./spacetimedb
+(cd server && spacetime publish lifegame --server local --yes)   # add --delete-data=always if the schema change is breaking
+tools/gen-bindings.sh
 ```
 
 ## Load test

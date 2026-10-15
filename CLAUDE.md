@@ -9,7 +9,7 @@ Working state does not live in chat. It lives in the repo, so a session on eithe
 - `DECISIONS.md`: append-only log of what Justin and the PM decided, and why.
 - `WORKER_LOOP.md`: the step-by-step loop every lane session runs.
 
-Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
+Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Game design doc (skills, skill trees, materials, crafting chains): https://claude.ai/code/artifact/50ab4888-c6e0-44b1-9408-f5a02f887c8f. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
 
 ## Roles
 
@@ -34,18 +34,18 @@ Each lane works in its own files so lanes don't collide:
 - Client code under `client/scripts/<feature>/`.
 - Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Crafting lane is the integration owner for these, CI and builds.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
-- After merging main, regenerate `client/module_bindings/` with `spacetime generate` (see `README.md`). Never hand-merge generated files.
+- `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.
 
 ## Git
 
 - Cloud sessions push to the branch the harness assigns (usually `claude/...`). Record the real branch name in your ticket and `STATUS.md` row.
 - Commit messages lead with the ticket id: `crafting-1: add hand-drill fire`.
-- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR, and merging needs Justin's OK through the PM.
+- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. The PM approves routine merges once CI is green and the PR matches decisions already in `DECISIONS.md` (D-032); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
 - Commit before any checkout, rebase or merge. Never stash and walk away.
 
 ## CI
 
-- `.github/workflows/build.yml` builds the server module, checks bindings are current, runs a short load test, and exports Linux and Windows clients.
+- `.github/workflows/build.yml` builds the server module, generates the bindings, runs the load test (5 bots for 5 s on pull requests, 20 for 20 s on main) and the gameplay checks, and exports Linux and Windows clients. NuGet, SpacetimeDB and Godot downloads are cached.
 - Platforms are Linux and Windows only for now.
 - Build locally where you can before pushing; don't push just to see if CI passes.
 - Write the CI run link and result in your ticket so the next session doesn't re-run it.

@@ -3,7 +3,7 @@ using SpacetimeDB;
 
 public static partial class Module
 {
-    static readonly ItemKind[] GroundKinds = { ItemKind.Stick, ItemKind.Stick, ItemKind.Stone, ItemKind.Fiber };
+    static readonly Item[] GroundItems = { Item.Stick, Item.Stick, Item.Stone, Item.Fiber };
 
     [SpacetimeDB.Reducer(ReducerKind.Init)]
     public static void Init(ReducerContext ctx)
@@ -168,7 +168,7 @@ public static partial class Module
             });
 
         if (World.IsClay(cellX, cellZ))
-            AddToInventory(ctx, ctx.Sender, ItemKind.Clay, 1);
+            AddToInventory(ctx, ctx.Sender, Item.Clay, 1, Items.RawQuality);
 
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -181,24 +181,21 @@ public static partial class Module
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, item.Kind, 1);
+        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
     }
 
     [SpacetimeDB.Reducer]
-    public static void Drop(ReducerContext ctx, ItemKind kind)
+    public static void Drop(ReducerContext ctx, ushort item, byte quality)
     {
         var pos = RequirePos(ctx, RequirePlayer(ctx));
-        var stack = FindStack(ctx, ctx.Sender, kind) ?? throw new Exception("You are not carrying that");
-
-        if (stack.Count <= 1)
-            ctx.Db.InventoryItem.Id.Delete(stack.Id);
-        else
-            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - 1 });
+        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
+        RemoveFromStack(ctx, stack, 1);
 
         ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
-            Kind = kind,
+            Item = item,
+            Quality = quality,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -228,7 +225,8 @@ public static partial class Module
         ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
-            Kind = GroundKinds[ctx.Rng.Next(0, GroundKinds.Length)],
+            Item = (ushort)GroundItems[ctx.Rng.Next(0, GroundItems.Length)],
+            Quality = Items.RawQuality,
             X = x,
             Z = z,
             ChunkX = chunkX,
@@ -261,18 +259,27 @@ public static partial class Module
     static float SecondsBetween(Timestamp a, Timestamp b) =>
         (b.MicrosecondsSinceUnixEpoch - a.MicrosecondsSinceUnixEpoch) / 1_000_000f;
 
-    static InventoryItem? FindStack(ReducerContext ctx, Identity owner, ItemKind kind)
+    static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerKind.Filter((owner, kind)))
-            return row;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality)
+                return row;
         return null;
     }
 
-    static void AddToInventory(ReducerContext ctx, Identity owner, ItemKind kind, uint count)
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality)
     {
-        if (FindStack(ctx, owner, kind) is { } stack)
+        if (FindStack(ctx, owner, item, quality) is { } stack)
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count + count });
         else
-            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Kind = kind, Count = count });
+            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count });
+    }
+
+    static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)
+    {
+        if (stack.Count <= count)
+            ctx.Db.InventoryItem.Id.Delete(stack.Id);
+        else
+            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - count });
     }
 }

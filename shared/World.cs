@@ -30,6 +30,9 @@ namespace LifeGame.Shared
         // Movement reports are applied and sent to other clients in one batch per tick.
         public const int MoveTickMillis = 100;
 
+        // Ground below this height is under water.
+        public const float WaterLevel = -1.0f;
+
         // How many chunks around the player a client loads and subscribes to.
         public const int ViewRadiusChunks = 3;
 
