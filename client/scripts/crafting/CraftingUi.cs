@@ -34,7 +34,7 @@ public partial class CraftingUi : CanvasLayer
 
     public CraftingUi()
     {
-        Layer = 2;
+        Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         panel = Card(new Vector2(380, 0));
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
