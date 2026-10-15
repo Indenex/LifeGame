@@ -124,3 +124,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-029 — 2026-10-15 — Merge Atmosphere
 **Decision:** PR #9 (day and night, weather, rain, lighting, synthesized soundscape) merges into the playtest build when green. No world wipe. Ceramics, merging after it, adds the `RainAt` implementation.
 **Who:** Justin ("Merge", after testing in game)
+
+## D-030 — 2026-10-15 — Water pot amounts
+**Decision:** Drinking a pinch pot of water quenches 50% thirst, a coil pot 100%; the empty pot comes back at the same quality.
+**Who:** Justin ("50% / 100%", which the PM recommended over the lane's 35/70 default)

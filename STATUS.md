@@ -12,7 +12,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
-| Waiting on Justin | Hut recipe card (#10); pot water amounts card (#12) |
+| Waiting on Justin | Hut recipe card (#10) |
 | Next merge | `crafting-core` #4 (approved, world wipe); then skills #7 and claims #8 (both approved, merging main after #4); then ceramics #11, building-2 #10, survival-2 #12 |
 | Next PM action | Record lane branch names as lanes report them; bring `crafting-core` merge plus world wipe to Justin when green |
 
