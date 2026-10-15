@@ -47,7 +47,7 @@ jobs:
           spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
-          cd tools/LoadTest && dotnet run -c Release -- 20 20
+          (cd tools/LoadTest && dotnet run -c Release -- 20 20)
 
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
@@ -74,8 +74,6 @@ jobs:
             out: builds/linux/LifeGame.x86_64
           - preset: Windows
             out: builds/windows/LifeGame.exe
-          - preset: macOS
-            out: builds/macos/LifeGame.zip
     steps:
       - uses: actions/checkout@v4
 

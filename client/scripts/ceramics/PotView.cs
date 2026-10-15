@@ -10,7 +10,7 @@ namespace LifeGame;
 public partial class PotView : Node3D
 {
     // Pots are drawn a little larger than life so they read from the follow camera.
-    public const float Size = 1.6f;
+    public const float Size = 2.0f;
 
     readonly MeshInstance3D body = new();
     readonly MeshInstance3D water = new();

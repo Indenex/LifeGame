@@ -38,6 +38,16 @@ public partial class FireView : Node3D
         return best;
     }
 
+    // A local-only fire, for checking the look in screenshots without a server.
+    public void Preview(Vector3 at)
+    {
+        AddChild(new Campfire
+        {
+            Position = new Vector3(at.X, heightAt(at.X, at.Z), at.Z),
+            FuelUntilMicros = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 + 600_000_000L,
+        });
+    }
+
     void Upsert(Fire f)
     {
         if (!fires.TryGetValue(f.Id, out var node))
@@ -107,6 +117,22 @@ public partial class FireView : Node3D
         }
 
         static Mesh? stone, log;
+        static Texture2D? softDot;
+
+        // A round, soft-edged blob, so each flame particle reads as a lick of fire, not a square.
+        static Texture2D SoftDot => softDot ??= new GradientTexture2D
+        {
+            Width = 64,
+            Height = 64,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(0.5f, 0f),
+            Gradient = new Gradient
+            {
+                Offsets = new[] { 0f, 0.5f, 1f },
+                Colors = new[] { new Color(1, 1, 1, 1), new Color(1, 1, 1, 0.45f), new Color(1, 1, 1, 0) },
+            },
+        };
         static Mesh Stone => stone ??= Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.14f, RadialSegments = 6, Rings = 3 }, Look.Rock);
         static Mesh Log => log ??= Look.Faceted(new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.06f, Height = 0.75f, RadialSegments = 6 }, Look.Bark);
 
@@ -120,6 +146,7 @@ public partial class FireView : Node3D
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 VertexColorUseAsAlbedo = true,
                 AlbedoColor = color,
+                AlbedoTexture = SoftDot,
             };
             var ramp = new Gradient();
             ramp.SetColor(0, new Color(1f, 0.9f, 0.55f, 0.9f));

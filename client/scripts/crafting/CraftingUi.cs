@@ -19,6 +19,10 @@ public partial class CraftingUi : CanvasLayer
     DbConnection? conn;
     readonly PanelContainer panel;
     readonly VBoxContainer list = new();
+    readonly HBoxContainer tabs = new();
+    // Processes are grouped into tabs by tier, so the list stays short as tiers grow.
+    static readonly string[] TierNames = { "Bare hands", "Fire and stone", "Cord and haft", "Clay", "Tier 4", "Tier 5" };
+    int tier;
     readonly PanelContainer progressPanel;
     readonly Label progressLabel = new();
     readonly ProgressBar progressBar = new() { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(260, 8) };
@@ -33,7 +37,9 @@ public partial class CraftingUi : CanvasLayer
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
         box.AddChild(Text("Crafting", 20));
-        box.AddChild(Text("Click a process, or press its number.  C closes.", 13, 0.65f));
+        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C closes.", 13, 0.65f));
+        tabs.AddThemeConstantOverride("separation", 4);
+        box.AddChild(tabs);
         list.AddThemeConstantOverride("separation", 6);
         box.AddChild(list);
         panel.AddChild(box);
@@ -53,8 +59,11 @@ public partial class CraftingUi : CanvasLayer
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
+        // Pinned to the right edge; it grows leftward and downward to fit its rows.
         panel.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
-        panel.Position = new Vector2(-410, -200);
+        panel.GrowHorizontal = Control.GrowDirection.Begin;
+        panel.OffsetLeft = panel.OffsetRight = -24;
+        panel.OffsetTop = panel.OffsetBottom = -200;
         root.AddChild(panel);
         progressPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
@@ -70,6 +79,14 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyInventory.OnDelete += (_, _) => Refresh();
         conn.Db.MyCraftJob.OnInsert += (_, j) => StartedJob(j);
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
+    }
+
+    // Opens the panel on a tier; used by --screenshot-craft.
+    public void Open(int onTier)
+    {
+        tier = onTier;
+        panel.Visible = true;
+        Refresh();
     }
 
     public void Toggle()
@@ -95,7 +112,16 @@ public partial class CraftingUi : CanvasLayer
             && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key9)
         {
             int index = (int)(k.PhysicalKeycode - Key.Key1);
-            if (index < Processes.List.Count) Begin(Processes.List[index]);
+            var shown = InTier();
+            if (index < shown.Count) Begin(shown[index]);
+            GetViewport().SetInputAsHandled();
+        }
+        else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Tab } tabKey)
+        {
+            var tiers = Tiers();
+            int at = Math.Max(0, tiers.IndexOf(tier));
+            tier = tiers[(at + (tabKey.ShiftPressed ? tiers.Count - 1 : 1)) % tiers.Count];
+            Refresh();
             GetViewport().SetInputAsHandled();
         }
     }
@@ -176,12 +202,33 @@ public partial class CraftingUi : CanvasLayer
     bool HasTool(ItemTags tags) =>
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && (Items.Def((Item)i.Item).Tags & tags) == tags) ?? false;
 
+    static List<int> Tiers() => Processes.List.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
+
+    List<ProcessDef> InTier() => Processes.List.Where(p => p.Tier == tier).ToList();
+
     void Refresh()
     {
         if (!panel.Visible) return;
+        foreach (var child in tabs.GetChildren()) child.QueueFree();
+        foreach (int t in Tiers())
+        {
+            int ready = Processes.List.Count(p => p.Tier == t && Missing(p) == null);
+            var tabButton = new Button
+            {
+                Text = ready > 0 ? $"{TierName(t)} ({ready})" : TierName(t),
+                ToggleMode = true,
+                ButtonPressed = t == tier,
+                FocusMode = Control.FocusModeEnum.None,
+            };
+            tabButton.AddThemeFontSizeOverride("font_size", 13);
+            int captured = t;
+            tabButton.Pressed += () => { tier = captured; Refresh(); };
+            tabs.AddChild(tabButton);
+        }
+
         foreach (var child in list.GetChildren()) child.QueueFree();
         int n = 1;
-        foreach (var def in Processes.List)
+        foreach (var def in InTier())
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
             if (def.NeedsTool != ItemTags.None) inputs += $", using a {def.NeedsTool.ToString().ToLowerInvariant()}";
@@ -203,6 +250,8 @@ public partial class CraftingUi : CanvasLayer
             n++;
         }
     }
+
+    static string TierName(int t) => t < TierNames.Length ? TierNames[t] : $"Tier {t}";
 
     // --- Job progress ----------------------------------------------------
 

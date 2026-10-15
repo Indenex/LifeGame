@@ -70,6 +70,8 @@ public static partial class Module
     // does, the compiler drops the calls and every cap stays at 100.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
+    // Skill shortens processes: scale `seconds` down (never below zero).
+    static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
 
     // Processes with Outcome.Placed set something down at the job's X and Z; the
     // lane that owns the process implements this (Ceramics.cs for clay.*).
@@ -117,7 +119,10 @@ public static partial class Module
 
         // A fire is lit, or a placed thing set down, a step in front of the crafter.
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
-        var finish = ctx.Timestamp + new TimeDuration((long)(def.Seconds * 1_000_000));
+        float seconds = def.Seconds;
+        DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
+        seconds = Math.Max(seconds, 0.5f);
+        var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         ctx.Db.CraftJob.Insert(new CraftJob
         {
             Owner = ctx.Sender,
@@ -196,6 +201,10 @@ public static partial class Module
                         warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z));
         return warmth;
     }
+
+    // Survival asks how warm a spot is through this hook (see Survival.cs).
+    static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth) =>
+        warmth = Math.Max(warmth, WarmthAt(ctx, x, z));
 
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {

@@ -33,6 +33,7 @@ public partial class BuildingSystem : Node
     PanelContainer promptPanel = null!;
 
     bool placing;
+    public bool Placing => placing;
     int placeKind;
     float ghostYawTarget, ghostYaw;
     Vector3 ghostPos;

@@ -25,7 +25,7 @@ public partial class Hud : CanvasLayer
         Style(status, 15, 0.85f);
         root.AddChild(statusPanel);
 
-        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up    C craft    G feed fire    T tend clay", 14);
+        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up    C craft    T feed fire    X tend clay", 14);
         controls.Modulate = new Color(1, 1, 1, 0.7f);
         var controlsPanel = Panel(controls, Vector2.Zero);
         controlsPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
