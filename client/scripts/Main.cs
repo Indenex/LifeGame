@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly UseKey useKey = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     readonly Atmosphere atmosphere = new();
@@ -60,6 +61,11 @@ public partial class Main : Node3D
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
+        // Last child, so G reaches the Use key before any lane's old binding.
+        useKey.Player = () => me.Position;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        AddChild(useKey);
+        RegisterUse();
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -211,6 +217,7 @@ public partial class Main : Node3D
 
     static void SetupInput()
     {
+        Controls.Setup();
         void Bind(string action, params Key[] keys)
         {
             if (InputMap.HasAction(action)) return;
@@ -226,7 +233,6 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.T);
     }
 
     // --- Networking -------------------------------------------------------
@@ -413,7 +419,6 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -491,21 +496,26 @@ public partial class Main : Node3D
         else conn.Reducers.PickUp(nearest.item.Id);
     }
 
-    // Puts the cheapest fuel you carry on the nearest fire.
-    void FeedFire()
+    // G on a fire puts the cheapest fuel you carry on it.
+    void RegisterUse()
     {
-        if (conn == null) return;
-        if (fires.NearestWithin(conn, me.Position, World.Reach) is not { } fire)
+        Use.Register(new UseHandler
         {
-            hud.Note("No fire within reach");
-            return;
-        }
-        var fuel = conn.Db.MyInventory.Iter()
-            .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
-            .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
-            .FirstOrDefault();
-        if (fuel == null) hud.Note("You have nothing that burns");
-        else conn.Reducers.FeedFire(fire.Id, fuel.Item);
+            Id = "crafting.feed_fire",
+            Priority = 20,
+            Find = at =>
+            {
+                if (conn == null || fires.NearestWithin(conn, at, World.Reach) is not { } fire) return null;
+                var fuel = conn.Db.MyInventory.Iter()
+                    .Where(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
+                    .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
+                    .FirstOrDefault();
+                if (fuel == null) return null;
+                float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
+                return new UseOffer("Feed the fire", d,
+                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item));
+            },
+        });
     }
 
     void Dust(Vector3 at, Color color)
