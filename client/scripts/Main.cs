@@ -1,0 +1,525 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using LifeGame.Shared;
+using SpacetimeDB;
+using SpacetimeDB.Types;
+
+namespace LifeGame;
+
+// Sets up the scene and ties input, the world and the server connection together.
+// Server: --server=http://host:3000 and --db=lifegame after "--" on the command line,
+// or the LIFEGAME_SERVER and LIFEGAME_DB environment variables.
+public partial class Main : Node3D
+{
+    const float WalkSpeed = 4.2f;
+    const float SendInterval = World.MoveTickMillis / 1000f;
+
+    readonly Terrain terrain = new();
+    readonly CameraRig cameraRig = new();
+    readonly Hud hud = new();
+    readonly Avatar me = new("You");
+    readonly Dictionary<uint, Avatar> others = new();
+    readonly Dictionary<ulong, Node3D> items = new();
+    readonly Dictionary<uint, string> names = new();
+
+    DbConnection? conn;
+    Identity? myIdentity;
+    uint myId;
+    bool spawned;
+    Vector3 velocity;
+    float heading, sendTimer;
+    Vector3 lastSent = new(float.NaN, 0, float.NaN);
+    (int, int) subscribedChunk = (int.MinValue, int.MinValue);
+    SubscriptionHandle? subscription;
+    MeshInstance3D water = null!;
+    readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Disabled, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled };
+    static readonly Dictionary<ItemKind, Mesh> ItemMeshes = new();
+
+    public override void _Ready()
+    {
+        SetupInput();
+        SetupView();
+        SetupEnvironment();
+        view.AddChild(terrain);
+        view.AddChild(me);
+        view.AddChild(cameraRig);
+        AddChild(hud);
+        cameraRig.Camera.MakeCurrent();
+        Connect();
+        ScheduleScreenshot();
+    }
+
+    // --screenshot=path.png [--screenshot-delay=6] saves one frame and quits. Used to
+    // check the look in CI and on machines without a display.
+    void ScheduleScreenshot()
+    {
+        if (Arg("screenshot") is not { } path) return;
+        double delay = double.TryParse(Arg("screenshot-delay"), out var d) ? d : 6;
+        if (Arg("screenshot-yaw") is { } yaw && int.TryParse(yaw, out var steps)) cameraRig.Turn(steps);
+        GetTree().CreateTimer(delay).Timeout += () =>
+        {
+            GetViewport().GetTexture().GetImage().SavePng(path);
+            GetTree().Quit();
+        };
+    }
+
+    // The world renders at a fraction of the window size and is scaled up with
+    // nearest filtering, for a crisp low-res painted look. --pixel=1 turns it off.
+    void SetupView()
+    {
+        int pixel = int.TryParse(Arg("pixel"), out var p) ? Math.Max(1, p) : 2;
+        var layer = new CanvasLayer { Layer = -1 };
+        var container = new SubViewportContainer
+        {
+            Stretch = true,
+            StretchShrink = pixel,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+        };
+        container.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        container.AddChild(view);
+        layer.AddChild(container);
+        AddChild(layer);
+
+        // A soft vignette, like the edges of a painting.
+        var vignette = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };
+        vignette.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        vignette.Material = new ShaderMaterial
+        {
+            Shader = new Shader
+            {
+                Code = """
+                    shader_type canvas_item;
+                    void fragment() {
+                        vec2 uv = (SCREEN_UV - 0.5) * vec2(1.0, 0.85);
+                        float edge = smoothstep(0.4, 0.85, length(uv));
+                        COLOR = vec4(0.12, 0.07, 0.16, edge * 0.4);
+                    }
+                    """,
+            },
+        };
+        var vignetteLayer = new CanvasLayer { Layer = 0 };
+        vignetteLayer.AddChild(vignette);
+        AddChild(vignetteLayer);
+    }
+
+    void SetupEnvironment()
+    {
+        var sky = new ProceduralSkyMaterial
+        {
+            SkyTopColor = new Color(0.42f, 0.58f, 0.76f),
+            SkyHorizonColor = new Color(0.93f, 0.80f, 0.66f),
+            SkyCurve = 0.12f,
+            GroundBottomColor = new Color(0.24f, 0.28f, 0.22f),
+            GroundHorizonColor = new Color(0.86f, 0.76f, 0.64f),
+            SunAngleMax = 20f,
+            SunCurve = 0.08f,
+        };
+        var env = new Godot.Environment
+        {
+            BackgroundMode = Godot.Environment.BGMode.Sky,
+            Sky = new Sky { SkyMaterial = sky },
+            AmbientLightSource = Godot.Environment.AmbientSource.Sky,
+            AmbientLightSkyContribution = 0.75f,
+            AmbientLightEnergy = 0.6f,
+            TonemapMode = Godot.Environment.ToneMapper.Agx,
+            TonemapExposure = 1.05f,
+            SsaoEnabled = true,
+            SsaoRadius = 1.4f,
+            SsaoIntensity = 1.0f,
+            GlowEnabled = true,
+            GlowIntensity = 0.5f,
+            GlowBloom = 0.12f,
+            FogEnabled = true,
+            FogLightColor = new Color(0.86f, 0.80f, 0.72f),
+            FogDensity = 0.002f,
+            FogSkyAffect = 0.35f,
+            FogAerialPerspective = 0.3f,
+            AdjustmentEnabled = true,
+            AdjustmentSaturation = 1.15f,
+            AdjustmentContrast = 1.06f,
+        };
+        view.AddChild(new WorldEnvironment { Environment = env });
+
+        // Late-afternoon sun: low, warm and soft-edged.
+        view.AddChild(new DirectionalLight3D
+        {
+            LightColor = new Color(1.0f, 0.9f, 0.74f),
+            LightEnergy = 1.6f,
+            LightAngularDistance = 1.2f,
+            ShadowEnabled = true,
+            ShadowBlur = 1.5f,
+            DirectionalShadowMaxDistance = 70f,
+            Rotation = new Vector3(Mathf.DegToRad(-32f), Mathf.DegToRad(-35f), 0),
+        });
+
+        water = new MeshInstance3D
+        {
+            Mesh = new PlaneMesh { Size = new Vector2(260, 260) },
+            MaterialOverride = new StandardMaterial3D
+            {
+                AlbedoColor = Look.Water,
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                Roughness = 0.08f,
+                MetallicSpecular = 0.6f,
+                ProximityFadeEnabled = true,
+                ProximityFadeDistance = 0.6f,
+            },
+            Position = new Vector3(0, Look.WaterLevel, 0),
+        };
+        view.AddChild(water);
+    }
+
+    static void SetupInput()
+    {
+        void Bind(string action, params Key[] keys)
+        {
+            if (InputMap.HasAction(action)) return;
+            InputMap.AddAction(action);
+            foreach (var key in keys) InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
+        }
+        Bind("walk_forward", Key.W, Key.Up);
+        Bind("walk_back", Key.S, Key.Down);
+        Bind("walk_left", Key.A, Key.Left);
+        Bind("walk_right", Key.D, Key.Right);
+        Bind("turn_left", Key.Q);
+        Bind("turn_right", Key.E);
+        Bind("dig", Key.F);
+        Bind("pick_up", Key.Space);
+    }
+
+    // --- Networking -------------------------------------------------------
+
+    void Connect()
+    {
+        string server = Arg("server") ?? OS.GetEnvironment("LIFEGAME_SERVER");
+        if (string.IsNullOrEmpty(server)) server = "http://127.0.0.1:3000";
+        string db = Arg("db") ?? OS.GetEnvironment("LIFEGAME_DB");
+        if (string.IsNullOrEmpty(db)) db = "lifegame";
+
+        hud.SetStatus("Connecting...");
+        var builder = DbConnection.Builder()
+            .WithUri(server)
+            .WithDatabaseName(db)
+            .WithCompression(Compression.Brotli)
+            .OnConnect(OnConnected)
+            .OnConnectError(e => CallDeferred(nameof(GoOffline), e.Message))
+            .OnDisconnect((_, e) => CallDeferred(nameof(GoOffline), e?.Message ?? "disconnected"));
+        string? token = LoadToken();
+        if (token != null) builder = builder.WithToken(token);
+        conn = builder.Build();
+
+        conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
+        conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
+        // Only online players are subscribed, so a delete means they logged off.
+        conn.Db.Player.OnDelete += (_, p) =>
+        {
+            if (others.TryGetValue(p.PlayerId, out var a)) a.Visible = false;
+        };
+        conn.Db.PlayerPos.OnInsert += (_, p) => OnPlayerPos(p, true);
+        conn.Db.PlayerPos.OnUpdate += (_, _, p) => OnPlayerPos(p, false);
+        conn.Db.PlayerPos.OnDelete += (_, p) => RemoveAvatar(p.PlayerId);
+        conn.Db.WorldItem.OnInsert += (_, item) => AddItem(item);
+        conn.Db.WorldItem.OnDelete += (_, item) => RemoveItem(item.Id);
+        conn.Db.TerrainEdit.OnInsert += (_, e) => terrain.SetDepth(e.CellX, e.CellZ, e.Depth);
+        conn.Db.TerrainEdit.OnUpdate += (_, _, e) => terrain.SetDepth(e.CellX, e.CellZ, e.Depth);
+        conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
+        conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
+        conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
+        conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+    }
+
+    void OnConnected(DbConnection c, Identity identity, string token)
+    {
+        myIdentity = identity;
+        SaveToken(token);
+        hud.SetStatus("Connected");
+        Subscribe(0, 0);
+    }
+
+    void GoOffline(string reason)
+    {
+        hud.SetStatus($"Offline: {reason}. Walking alone.");
+        conn = null;
+        Spawn(Vector3.Zero);
+    }
+
+    void Subscribe(int chunkX, int chunkZ)
+    {
+        if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
+        subscribedChunk = (chunkX, chunkZ);
+        int r = World.ViewRadiusChunks;
+        string range = $"chunk_x >= {chunkX - r} AND chunk_x <= {chunkX + r} AND chunk_z >= {chunkZ - r} AND chunk_z <= {chunkZ + r}";
+        var old = subscription;
+        // Subscribe to the new area before dropping the old one so nothing pops out.
+        subscription = conn.SubscriptionBuilder()
+            .OnApplied(_ => old?.Unsubscribe())
+            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+            .Subscribe(new[]
+            {
+                "SELECT * FROM player WHERE online = true",
+                $"SELECT * FROM player_pos WHERE {range}",
+                $"SELECT * FROM world_item WHERE {range}",
+                $"SELECT * FROM terrain_edit WHERE {range}",
+                "SELECT * FROM my_inventory",
+            });
+    }
+
+    void OnPlayer(Player p)
+    {
+        names[p.PlayerId] = p.Name;
+        if (p.Identity == myIdentity) myId = p.PlayerId;
+        if (others.TryGetValue(p.PlayerId, out var avatar))
+        {
+            avatar.SetPlayerName(p.Name);
+            avatar.Visible = p.Online;
+        }
+    }
+
+    void OnPlayerPos(PlayerPos p, bool inserted)
+    {
+        var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
+        if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
+        {
+            if (!spawned) Spawn(at);
+            // The server clamps impossible moves; snap back if we drifted too far.
+            else if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+                me.Position = at;
+            return;
+        }
+
+        if (!others.TryGetValue(p.PlayerId, out var avatar))
+        {
+            avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
+            others[p.PlayerId] = avatar;
+            view.AddChild(avatar);
+        }
+        avatar.Target = at;
+        avatar.TargetHeading = p.Heading;
+        avatar.Visible = conn?.Db.Player.PlayerId.Find(p.PlayerId) is { Online: true };
+        if (inserted) avatar.Position = at;
+    }
+
+    bool IsMine(uint playerId)
+    {
+        if (conn == null || myIdentity == null) return false;
+        if (conn.Db.Player.Identity.Find(myIdentity.Value) is not { } mine) return false;
+        myId = mine.PlayerId;
+        return mine.PlayerId == playerId;
+    }
+
+    void RemoveAvatar(uint playerId)
+    {
+        if (others.Remove(playerId, out var avatar)) avatar.QueueFree();
+    }
+
+    void RefreshInventory()
+    {
+        if (conn == null) return;
+        var counts = conn.Db.MyInventory.Iter()
+            .OrderBy(i => i.Kind)
+            .ToDictionary(i => i.Kind.ToString(), i => i.Count);
+        hud.SetInventory(counts);
+    }
+
+    // --- Items on the ground ---------------------------------------------
+
+    void AddItem(WorldItem item)
+    {
+        if (items.ContainsKey(item.Id)) return;
+        var node = new MeshInstance3D { Mesh = MeshFor(item.Kind) };
+        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        node.Position = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
+        node.Rotation = new Vector3(0, yaw, 0);
+        items[item.Id] = node;
+        view.AddChild(node);
+    }
+
+    void RemoveItem(ulong id)
+    {
+        if (items.Remove(id, out var node)) node.QueueFree();
+    }
+
+    static Mesh MeshFor(ItemKind kind)
+    {
+        if (ItemMeshes.TryGetValue(kind, out var mesh)) return mesh;
+        mesh = kind switch
+        {
+            ItemKind.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
+            ItemKind.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
+            ItemKind.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.07f, Height = 0.12f, RadialSegments = 7 }, Look.LeafWarm),
+            _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
+        };
+        ItemMeshes[kind] = mesh;
+        return mesh;
+    }
+
+    static Mesh Lying(PrimitiveMesh source, Color color)
+    {
+        var st = new SurfaceTool();
+        st.CreateFrom(source, 0);
+        st.Deindex();
+        st.GenerateNormals();
+        var arrays = st.CommitToArrays();
+        var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+        var normals = (Vector3[])arrays[(int)Mesh.ArrayType.Normal];
+        var tilt = new Basis(Vector3.Forward, Mathf.Pi / 2f);
+        for (int i = 0; i < verts.Length; i++)
+        {
+            verts[i] = tilt * verts[i];
+            normals[i] = tilt * normals[i];
+        }
+        arrays[(int)Mesh.ArrayType.Vertex] = verts;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        mesh.SurfaceSetMaterial(0, Look.Solid(color));
+        return mesh;
+    }
+
+    // --- Frame loop -------------------------------------------------------
+
+    void Spawn(Vector3 at)
+    {
+        spawned = true;
+        me.Position = at;
+        cameraRig.Focus = at;
+        cameraRig.Position = at;
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (e.IsActionPressed("turn_left")) cameraRig.Turn(1);
+        if (e.IsActionPressed("turn_right")) cameraRig.Turn(-1);
+        if (e is InputEventMouseButton { Pressed: true } mb)
+        {
+            if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
+            if (mb.ButtonIndex == MouseButton.WheelDown) cameraRig.Zoom(2f);
+        }
+        if (e.IsActionPressed("dig")) Dig();
+        if (e.IsActionPressed("pick_up")) PickUp();
+    }
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        conn?.FrameTick();
+
+        if (spawned) Walk(dt);
+        terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
+        water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
+        cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
+
+        if (conn != null && spawned)
+        {
+            Subscribe(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
+            sendTimer -= dt;
+            if (sendTimer <= 0f)
+            {
+                sendTimer = SendInterval;
+                if (me.Position.DistanceTo(lastSent) > 0.01f || float.IsNaN(lastSent.X))
+                {
+                    conn.Reducers.Move(me.Position.X, me.Position.Z, heading);
+                    lastSent = me.Position;
+                }
+            }
+        }
+    }
+
+    void Walk(float dt)
+    {
+        var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
+        // Ease in and out of walking rather than starting and stopping instantly.
+        velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
+
+        var pos = me.Position + velocity * dt;
+        if (terrain.HeightAt(pos.X, pos.Z) < Look.WaterLevel - 0.3f)
+            pos = me.Position; // Deep water is not walkable yet.
+        // Ease up and down the terraces instead of popping between steps.
+        pos.Y = Mathf.Lerp(me.Position.Y, terrain.HeightAt(pos.X, pos.Z), 1f - Mathf.Exp(-14f * dt));
+        me.Position = pos;
+
+        if (velocity.LengthSquared() > 0.05f)
+        {
+            heading = Mathf.Atan2(velocity.X, velocity.Z);
+            me.Rotation = new Vector3(0, Mathf.LerpAngle(me.Rotation.Y, heading, 1f - Mathf.Exp(-12f * dt)), 0);
+        }
+    }
+
+    void Dig()
+    {
+        var front = me.Position + new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y)) * 1.0f;
+        int cx = World.CellOf(front.X), cz = World.CellOf(front.Z);
+        Dust(new Vector3(cx, terrain.TileHeight(cx, cz), cz), World.IsClay(cx, cz) ? Look.Clay : Look.DugEarth);
+        if (conn == null)
+        {
+            hud.Note("Digging needs the server");
+            return;
+        }
+        conn.Reducers.Dig(cx, cz);
+    }
+
+    void PickUp()
+    {
+        if (conn == null) return;
+        var nearest = conn.Db.WorldItem.Iter()
+            .Select(i => (item: i, d: new Vector2(i.X - me.Position.X, i.Z - me.Position.Z).Length()))
+            .Where(t => t.d <= World.Reach)
+            .OrderBy(t => t.d)
+            .FirstOrDefault();
+        if (nearest.item == null) hud.Note("Nothing within reach");
+        else conn.Reducers.PickUp(nearest.item.Id);
+    }
+
+    void Dust(Vector3 at, Color color)
+    {
+        var particles = new CpuParticles3D
+        {
+            Emitting = true,
+            OneShot = true,
+            Amount = 14,
+            Lifetime = 0.7f,
+            Explosiveness = 0.9f,
+            Direction = Vector3.Up,
+            Spread = 50f,
+            InitialVelocityMin = 1.2f,
+            InitialVelocityMax = 2.4f,
+            Gravity = new Vector3(0, -7f, 0),
+            ScaleAmountMin = 0.6f,
+            ScaleAmountMax = 1.2f,
+            Mesh = new BoxMesh { Size = Vector3.One * 0.07f, Material = Look.Solid(color) },
+            Position = at + new Vector3(0, 0.05f, 0),
+        };
+        view.AddChild(particles);
+        GetTree().CreateTimer(1.2).Timeout += particles.QueueFree;
+    }
+
+    // --- Helpers ----------------------------------------------------------
+
+    static string? Arg(string name)
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith($"--{name}="))
+                return arg[(name.Length + 3)..];
+        return null;
+    }
+
+    // One identity per install, so you keep your character between sessions.
+    static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
+
+    static string? LoadToken()
+    {
+        if (!FileAccess.FileExists(TokenPath)) return null;
+        using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Read);
+        var token = file.GetAsText().Trim();
+        return token.Length > 0 ? token : null;
+    }
+
+    static void SaveToken(string token)
+    {
+        using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Write);
+        file.StoreString(token);
+    }
+}
