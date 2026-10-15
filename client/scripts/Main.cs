@@ -63,6 +63,9 @@ public partial class Main : Node3D
         if (Arg("screenshot") is not { } path) return;
         double delay = double.TryParse(Arg("screenshot-delay"), out var d) ? d : 6;
         if (Arg("screenshot-yaw") is { } yaw && int.TryParse(yaw, out var steps)) cameraRig.Turn(steps);
+        // --screenshot-craft=1 opens the crafting panel on that tier.
+        if (Arg("screenshot-craft") is { } craftTier && int.TryParse(craftTier, out var t))
+            GetTree().CreateTimer(Math.Max(1, delay - 3)).Timeout += () => crafting.Open(t);
         // --screenshot-fire places a local campfire just in front of the player.
         if (Arg("screenshot-fire") != null)
             GetTree().CreateTimer(Math.Max(1, delay - 4)).Timeout += () =>
