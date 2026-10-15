@@ -27,7 +27,10 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(JournalNote = new(conn));
             AddTable(MyInventory = new(conn));
+            AddTable(MyJournal = new(conn));
+            AddTable(MySkills = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
             AddTable(TerrainEdit = new(conn));
@@ -528,7 +531,10 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.JournalNote().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
+            new QueryBuilder().From.MyJournal().ToSql(),
+            new QueryBuilder().From.MySkills().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
             new QueryBuilder().From.TerrainEdit().ToSql(),
@@ -539,7 +545,10 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<JournalNote, JournalNoteCols, JournalNoteIxCols> JournalNote() => new("journal_note", new JournalNoteCols("journal_note"), new JournalNoteIxCols("journal_note"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
+        public global::SpacetimeDB.Table<JournalEntry, MyJournalCols, MyJournalIxCols> MyJournal() => new("my_journal", new MyJournalCols("my_journal"), new MyJournalIxCols("my_journal"));
+        public global::SpacetimeDB.Table<SkillLevel, MySkillsCols, MySkillsIxCols> MySkills() => new("my_skills", new MySkillsCols("my_skills"), new MySkillsIxCols("my_skills"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
         public global::SpacetimeDB.Table<TerrainEdit, TerrainEditCols, TerrainEditIxCols> TerrainEdit() => new("terrain_edit", new TerrainEditCols("terrain_edit"), new TerrainEditIxCols("terrain_edit"));
@@ -629,7 +638,10 @@ namespace SpacetimeDB.Types
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
+                Reducer.ReadNote args => Reducers.InvokeReadNote(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
+                Reducer.SetSkillMode args => Reducers.InvokeSetSkillMode(eventContext, args),
+                Reducer.WriteNote args => Reducers.InvokeWriteNote(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }
