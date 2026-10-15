@@ -32,7 +32,6 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 
-Interim until crafting-2 (Use key) lands: tend clay is V (Ceramics); it then moves to G.
 
 ## Debug only (not in player builds)
 
@@ -63,6 +62,6 @@ Use.Register(new UseHandler
 - Return an offer only when G would actually do something (e.g. feed fire needs fuel in hand), so the prompt never promises what G can't do.
 - Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while G is held.
 - G is ignored while the crafting minigame runs or a building is being placed.
-- Priorities in use: Building add materials 30, Crafting feed fire 20, Animals shear 15, Survival forage and drink 10, Journal read note 5.
+- Priorities in use: Building add materials 30, Ceramics load or fire a kiln 25, Ceramics set pots in a fire 22, Crafting feed fire 20, Animals shear 15, Ceramics fire or pick up a pot 12, Ceramics fill pots 11, Survival forage and drink 10, Journal read note 5.
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
 - After migrating, remove your old key from your lane's `Bind` and from your own prompt text.

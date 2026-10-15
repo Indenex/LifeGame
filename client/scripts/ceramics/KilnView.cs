@@ -107,8 +107,8 @@ public partial class KilnView : Node3D
         }
         else
             label.Text = load == 0
-                ? "Kiln, empty: V loads dry pots"
-                : $"Kiln: {load} of {ClayRules.KilnCapacity} pots. V adds more, or fires it";
+                ? "Kiln, empty: bring dry pots"
+                : $"Kiln: {load} of {ClayRules.KilnCapacity} pots";
     }
 
     static CpuParticles3D Smoke()
