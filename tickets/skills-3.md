@@ -1,9 +1,9 @@
 # skills-3: Mastery takes the tedium out of hands-on crafting
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_progress
+Status: done
 Branch: claude/journal-skills-iseewg
-PR: (none yet)
+PR: #22 (merged 97821e5)
 
 ## Goal
 Skill already makes jobs faster and raises the best quality. This ticket makes the hands-on minigames shrink as you improve, so a practised crafter isn't asked to prove it every time: fewer strikes when knapping (3 down to 1), fewer coils on a coil pot (5 down to 1 just below Master), a hand drill that catches in fewer strokes (about 14 down to 4). At Master a craft is one action: the minigame is skipped and scored as a steady hand (`Skills.MasterScore`). Done when a rank 0 player sees the full minigame, a rank 50 player a shorter one, and a Master none,. Per D-047 a Master who holds the `craft_play_minigame` action (placeholder Ctrl; UX/UI sets the real key) while starting a craft plays the shortest version instead, for a chance at a better result.
@@ -30,4 +30,4 @@ Skill already makes jobs faster and raises the best quality. This ticket makes t
 - `cook.meat` (Crafting #20) already trains Firecraft through the `cook` prefix (D-043).
 
 ## Next step
-Wait for CI on PR #22 (skills-3 rides with the G note change, since this lane pushes to one branch); then test a Master craft locally and screenshot the shorter knapping game.
+Done: merged into main at 97821e5 on 2026-10-15 22:47. Follow-ups above go in the next skills ticket.
