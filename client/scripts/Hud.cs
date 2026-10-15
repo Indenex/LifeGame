@@ -76,7 +76,7 @@ public partial class Hud : CanvasLayer
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime, 0f, 1f));
     }
 
-    static Label Text(string text, int size)
+    internal static Label Text(string text, int size)
     {
         var label = new Label { Text = text };
         Style(label, size, 1f);
