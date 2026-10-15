@@ -204,3 +204,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-049 — 2026-10-15 — Husbandry is a basic skill
 **Decision:** A new Husbandry skill covers shearing now and butchering and herding later. It is a survival basic outside the 300-point cap, like Foraging and Firecraft. Process ids `animal.*` map to it.
 **Who:** Justin ("Husbandry, basic"; the PM had recommended a capped specialty)
+
+## D-050 — 2026-10-15 — Right-drag turns the camera
+**Decision:** Holding the right mouse button and moving the mouse turns the camera. Q/E still turn it. The UX/UI lane builds it.
+**Who:** Justin
