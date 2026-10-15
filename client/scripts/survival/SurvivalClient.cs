@@ -10,7 +10,7 @@ namespace LifeGame;
 
 // The client side of survival: reads your needs from the server's snapshot,
 // draws berry bushes, and handles foraging, eating and drinking.
-// G picks berries, X eats, R drinks from water or from a pot you carry.
+// G (the shared Use key) picks berries and drinks at water or from a pot you carry; X eats.
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
@@ -47,10 +47,40 @@ public partial class SurvivalClient : Node
 
     public override void _Ready()
     {
-        Bind("forage", Key.G);
         Bind("eat", Key.X);
-        Bind("drink", Key.R);
         AddChild(needsHud);
+        RegisterUse();
+    }
+
+    // G actions go through the shared Use registry (KEYMAP.md).
+    void RegisterUse()
+    {
+        Use.Register(new UseHandler
+        {
+            Id = "survival.forage",
+            Priority = 10,
+            Find = at => conn != null && NearestRipeBush() is { } bush
+                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id))
+                : null,
+        });
+        Use.Register(new UseHandler
+        {
+            Id = "survival.drink",
+            Priority = 10,
+            Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
+                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                : null,
+        });
+        // A pot you carry is the last resort: it only shows when you're thirsty and
+        // nothing in reach offers anything else.
+        Use.Register(new UseHandler
+        {
+            Id = "survival.drink_pot",
+            Priority = 1,
+            Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
+                ? new UseOffer("Drink from your pot", float.MaxValue, () => conn.Reducers.DrinkFrom((ushort)pot))
+                : null,
+        });
     }
 
     public void Attach(DbConnection connection)
@@ -150,25 +180,10 @@ public partial class SurvivalClient : Node
     public override void _UnhandledInput(InputEvent e)
     {
         if (conn == null) return;
-        if (e.IsActionPressed("forage"))
-        {
-            // G is shared with feeding a fire: berries win only when a ripe bush is in reach.
-            if (NearestRipeBush() is { } bush)
-            {
-                conn.Reducers.Forage(bush.Id);
-                GetViewport().SetInputAsHandled();
-            }
-        }
         if (e.IsActionPressed("eat"))
         {
             if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
             else hud.Note("You have nothing to eat");
-        }
-        if (e.IsActionPressed("drink"))
-        {
-            if (WaterNearby()) conn.Reducers.Drink();
-            else if (PotOfWater() is { } pot) conn.Reducers.DrinkFrom((ushort)pot);
-            else hud.Note("No water within reach");
         }
     }
 
@@ -176,10 +191,7 @@ public partial class SurvivalClient : Node
     {
         if (conn == null || vitals == null) return null;
         var parts = new List<string>();
-        if (NearestRipeBush() != null) parts.Add("G  pick berries");
-        var (food, water, _) = Current();
-        if (water < 0.97f && WaterNearby()) parts.Add("R  drink");
-        else if (water < 0.9f && PotOfWater() != null) parts.Add("R  drink from your pot");
+        var (food, _, _) = Current();
         if (food < 0.95f && Carrying(Item.Berries)) parts.Add("X  eat berries");
         return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
