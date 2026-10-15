@@ -254,10 +254,10 @@ int KilnCheck()
     WalkTo(fx + 4f, fz + 1f, 0.3f);
     float kx = x + 1.8f, kz = z;
     lastError = null;
-    conn.Reducers.PlaceStructure((StructureKind)ClayRules.KilnStructureKind, kx, kz, MathF.Atan2(x - kx, z - kz));
-    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me), 5, "the kiln blueprint");
+    conn.Reducers.PlaceStructure(StructureKind.Kiln, kx, kz, MathF.Atan2(x - kx, z - kz));
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.Kiln && s.Owner == me), 5, "the kiln blueprint");
     if (lastError != null) Fail($"placing the kiln: {lastError}");
-    var site = conn.Db.Structure.Iter().First(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me);
+    var site = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.Kiln && s.Owner == me);
     Log("STAGE kiln-blueprint");
     for (int i = 0; i < 20 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
     {
