@@ -134,7 +134,7 @@ public partial class CeramicsView : Node
     // really do something, so the prompt never promises what it can't do.
     void RegisterUse()
     {
-        Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 25, Find = KilnOffer });
+        Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = TendOffer });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });

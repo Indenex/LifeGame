@@ -49,7 +49,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal, N to read a note on the ground.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal; G reads a note on the ground.
 
 ## Crafting
 
@@ -67,7 +67,7 @@ Survival: G picks berries from a ripe bush, X eats, R drinks when you stand by w
 
 An in-game day lasts 90 real minutes. The server keeps the clock and the weather (`server/spacetimedb/WorldClock.cs`), so every player sees the same sky. The client draws it in `client/scripts/atmosphere/`, and synthesizes all the sound as it plays: wind, rain, birds, crickets, footsteps and the music.
 
-Preview keys in debug builds (running from the editor) change only what you see and hear: hold F5 to fast-forward time (a whole day in about 45 seconds), press F6 to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
+Preview keys in debug builds (running from the editor) change only what you see and hear: hold F5 to fast-forward time (a whole day in about 45 seconds), press F6 to step through clear, drizzle, light rain, steady rain, a storm and back to the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
 
 To listen to the soundscape without the game, render it to a file: `cd tools/SoundPreview && dotnet run -- out.wav` (day, rain, dusk and night, with footsteps).
 
@@ -111,6 +111,15 @@ Two simulated players gather materials, build a lean-to and then a clay hut toge
 ```sh
 cd tools/BuildTest
 dotnet run -- both        # or lean-to, or clay-hut
+```
+
+## Spawn check
+
+A player walks well past the area around the origin, logs off and logs back in, using the client's own subscriptions (`client/scripts/net/Subscriptions.cs`). It checks they get their own position back and the area around it. Run it against a freshly published local server:
+
+```sh
+cd tools/SpawnCheck
+dotnet run
 ```
 
 ## Screenshots without a display
