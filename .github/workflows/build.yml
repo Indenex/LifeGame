@@ -71,8 +71,6 @@ jobs:
             out: builds/linux/LifeGame.x86_64
           - preset: Windows
             out: builds/windows/LifeGame.exe
-          - preset: macOS
-            out: builds/macos/LifeGame.zip
     steps:
       - uses: actions/checkout@v4
 

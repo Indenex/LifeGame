@@ -54,6 +54,8 @@ The server runs each process as a job with a finish time (`server/spacetimedb/Cr
 
 Item ids are stored as numbers, so never renumber or reuse one; add new items at the end.
 
+Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+
 ## After changing the server module
 
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:

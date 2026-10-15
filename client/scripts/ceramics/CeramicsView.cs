@@ -8,7 +8,7 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Clay in the world: draws every drying and firing piece the server knows about,
-// and handles T, the one clay action. T on a pot beside a burning fire puts it in
+// and handles X, the one clay action (until the shared Use key lands). X on a pot beside a burning fire puts it in
 // the fire; on a dry pot or brick picks it up; near a fire with dry pots in your
 // bag sets them in; at the water's edge fills your fired pots.
 public partial class CeramicsView : Node
@@ -92,7 +92,7 @@ public partial class CeramicsView : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.T })
+        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.X })
         {
             Tend();
             GetViewport().SetInputAsHandled();
@@ -143,7 +143,7 @@ public partial class CeramicsView : Node
                 {
                     confirmPiece = piece.id;
                     confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
-                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press T again to fire it anyway.");
+                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press X again to fire it anyway.");
                     return;
                 }
                 confirmPiece = 0;
@@ -166,7 +166,7 @@ public partial class CeramicsView : Node
             return;
         }
         note(carryingUnfired
-            ? "Take your dry pots to a burning fire and press T to fire them."
+            ? "Take your dry pots to a burning fire and press X to fire them."
             : "Nothing to tend here. Shape clay from the crafting panel (C).");
     }
 

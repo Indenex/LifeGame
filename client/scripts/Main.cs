@@ -22,6 +22,7 @@ public partial class Main : Node3D
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     CeramicsView clay = null!;
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -54,6 +55,8 @@ public partial class Main : Node3D
         AddChild(hud);
         AddChild(crafting);
         crafting.Notice += hud.Note;
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
@@ -67,6 +70,13 @@ public partial class Main : Node3D
         if (Arg("screenshot") is not { } path) return;
         double delay = double.TryParse(Arg("screenshot-delay"), out var d) ? d : 6;
         if (Arg("screenshot-yaw") is { } yaw && int.TryParse(yaw, out var steps)) cameraRig.Turn(steps);
+        // --screenshot-craft=1 opens the crafting panel on that tier.
+        if (Arg("screenshot-craft") is { } craftTier && int.TryParse(craftTier, out var t))
+            GetTree().CreateTimer(Math.Max(1, delay - 3)).Timeout += () => crafting.Open(t);
+        // --screenshot-fire places a local campfire just in front of the player.
+        if (Arg("screenshot-fire") != null)
+            GetTree().CreateTimer(Math.Max(1, delay - 4)).Timeout += () =>
+                fires.Preview(me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0));
         GetTree().CreateTimer(delay).Timeout += () =>
         {
             GetViewport().GetTexture().GetImage().SavePng(path);
@@ -214,7 +224,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.G);
+        Bind("feed_fire", Key.T);
     }
 
     // --- Networking -------------------------------------------------------
@@ -259,6 +269,7 @@ public partial class Main : Node3D
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -298,7 +309,7 @@ public partial class Main : Node3D
                 "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
-            });
+            }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -352,9 +363,11 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
+        // Stacks whose qualities share a grade read the same, so they show as one line.
         var counts = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .ToDictionary(i => ItemLook.Label((Item)i.Item, i.Quality, i.Count), i => i.Count);
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
+            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
         hud.SetInventory(counts);
     }
 
