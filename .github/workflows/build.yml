@@ -62,6 +62,13 @@ jobs:
           (cd tools/BuildTest && dotnet run -c Release)
           (cd tools/SpawnCheck && dotnet run -c Release)
 
+      # Justin publishes each merge over his world without --delete-data (bugfix-3).
+      - name: Upgrade check (this module over the base branch's world, no wipe)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          tools/upgrade-check.sh FETCH_HEAD
+
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
 

@@ -122,6 +122,14 @@ cd tools/SpawnCheck
 dotnet run
 ```
 
+## Upgrade check
+
+Publishes the base branch's module to a local server, plays on it briefly, then publishes this checkout's module over it without `--delete-data`, as a host updates a running world. If that is refused, merging needs a world wipe. CI runs it on every pull request; locally, with a server running:
+
+```sh
+tools/upgrade-check.sh origin/main
+```
+
 ## Screenshots without a display
 
 The client can render one frame and quit, which is handy on servers and in CI:
