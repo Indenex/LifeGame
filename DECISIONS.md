@@ -84,3 +84,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-019 — 2026-10-15 — House costs and limits
 **Decision:** Lean-to: 10 sticks, 11 fiber. Clay hut: 22 sticks, 2 stones, 17 fiber, 12 clay (bricks and daub replace raw clay once ceramics lands). 3 open building sites per player; holding G adds one item every 0.65 s.
 **Who:** Justin
+
+## D-020 — 2026-10-15 — Slower skill gain
+**Decision:** About double the proposed uses: roughly rank 10 after 12 uses, rank 50 after about 100, Master after about 800. Novice quality cap stays 35, Master 100; failures teach at half rate; Earthwork raises dug clay quality 50 to 85 with up to a 50% second lump at Master.
+**Who:** Justin ("Slower"; PM had recommended faster)
