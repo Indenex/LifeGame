@@ -34,6 +34,7 @@ namespace SpacetimeDB.Types
             AddTable(MyInventory = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
+            AddTable(Structure = new(conn));
             AddTable(TerrainEdit = new(conn));
             AddTable(WorldItem = new(conn));
         }
@@ -539,6 +540,7 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.MyInventory().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
+            new QueryBuilder().From.Structure().ToSql(),
             new QueryBuilder().From.TerrainEdit().ToSql(),
             new QueryBuilder().From.WorldItem().ToSql(),
         }
@@ -554,6 +556,7 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
+        public global::SpacetimeDB.Table<Structure, StructureCols, StructureIxCols> Structure() => new("structure", new StructureCols("structure"), new StructureIxCols("structure"));
         public global::SpacetimeDB.Table<TerrainEdit, TerrainEditCols, TerrainEditIxCols> TerrainEdit() => new("terrain_edit", new TerrainEditCols("terrain_edit"), new TerrainEditIxCols("terrain_edit"));
         public global::SpacetimeDB.Table<WorldItem, WorldItemCols, WorldItemIxCols> WorldItem() => new("world_item", new WorldItemCols("world_item"), new WorldItemIxCols("world_item"));
     }
@@ -637,13 +640,16 @@ namespace SpacetimeDB.Types
             var eventContext = (ReducerEventContext)context;
             return reducer switch
             {
+                Reducer.Build args => Reducers.InvokeBuild(eventContext, args),
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
+                Reducer.Dismantle args => Reducers.InvokeDismantle(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
                 Reducer.FeedFire args => Reducers.InvokeFeedFire(eventContext, args),
                 Reducer.FillPots args => Reducers.InvokeFillPots(eventContext, args),
                 Reducer.FirePots args => Reducers.InvokeFirePots(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
+                Reducer.PlaceStructure args => Reducers.InvokePlaceStructure(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
                 Reducer.StartCraft args => Reducers.InvokeStartCraft(eventContext, args),
                 Reducer.TendClay args => Reducers.InvokeTendClay(eventContext, args),
