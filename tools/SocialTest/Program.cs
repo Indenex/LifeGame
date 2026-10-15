@@ -180,6 +180,45 @@ a.Conn.Reducers.Dismantle(hut!.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
+// --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
+float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
+// Not on claimed land with fighting off.
+a.Conn.Reducers.SetClaimPvp(claim.Id, false);
+Pump(() => a.MyClaim()?.AllowPvp == false, 5, "pvp off");
+Walk(a, claim.X + 4, claim.Z);
+Walk(b, claim.X + 5, claim.Z);
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "does not allow fighting", "no fighting on claimed land unless the owner allows it");
+// Open in the wild.
+float wx = claim.X + Social.ClaimRadius + 8, wz = claim.Z;
+Walk(a, wx, wz);
+Walk(b, wx + 4, wz);
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too far", "a strike out of reach misses");
+Walk(b, wx + 1, wz);
+float full = Hp(b, a.PlayerId);
+b.LastError = null;
+b.Conn.Reducers.StrikePlayer(a.PlayerId);
+Pump(() => Hp(b, a.PlayerId) < full || b.LastError != null, 5, "strike lands");
+Check(Hp(b, a.PlayerId) < full, $"a strike in the wild lands ({full:F1} -> {Hp(b, a.PlayerId):F1}, {b.LastError ?? "ok"})");
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too soon", "strikes have a short cooldown");
+// Strike until A falls: A's things drop and A wakes elsewhere.
+uint carried = (uint)a.Conn.Db.MyInventory.Iter().Sum(i => i.Count);
+for (int i = 0; i < 40 && !b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && m.Text.Contains("struck down")); i++)
+{
+    var until = DateTime.UtcNow.AddSeconds(0.85);
+    Pump(() => DateTime.UtcNow > until, 2, "cooldown");
+    b.LastError = null;
+    b.Conn.Reducers.StrikePlayer(a.PlayerId);
+    Pump(() => true, 1, "tick");
+}
+Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && m.Text.Contains("struck down")), 5, "struck down");
+Check(true, "a player can be struck down in the wild, and nearby players hear of it");
+Pump(() => a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, 5, "drop on death");
+Check(carried == 0 || a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, $"being struck down drops what you carry ({carried} things)");
+var woke = a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId)!;
+Check(MathF.Abs(woke.X - wx) + MathF.Abs(woke.Z - wz) > 5, "the fallen player wakes somewhere else");
+Check(Hp(b, a.PlayerId) >= Social.MaxHealth, "and wakes with full health");
+a.X = woke.X; a.Z = woke.Z;
+
 if (decay)
 {
     var expires = a.MyClaim()!.ExpiresAt.MicrosecondsSinceUnixEpoch;
@@ -248,7 +287,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
