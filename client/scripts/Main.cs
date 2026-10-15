@@ -20,6 +20,7 @@ public partial class Main : Node3D
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
     readonly Avatar me = new("You");
+    readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
@@ -44,6 +45,7 @@ public partial class Main : Node3D
         SetupEnvironment();
         view.AddChild(terrain);
         view.AddChild(me);
+        view.AddChild(herd);
         view.AddChild(cameraRig);
         AddChild(hud);
         cameraRig.Camera.MakeCurrent();
@@ -244,6 +246,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
+        herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
     }
 
@@ -278,6 +281,7 @@ public partial class Main : Node3D
                 "SELECT * FROM player WHERE online = true",
                 $"SELECT * FROM player_pos WHERE {range}",
                 $"SELECT * FROM world_item WHERE {range}",
+                $"SELECT * FROM animal WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 "SELECT * FROM my_inventory",
             });

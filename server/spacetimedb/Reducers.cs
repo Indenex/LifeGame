@@ -29,6 +29,7 @@ public static partial class Module
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
+        EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
