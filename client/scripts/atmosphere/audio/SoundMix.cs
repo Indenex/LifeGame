@@ -154,7 +154,7 @@ public sealed class SoundMix
                 gust = gustSmooth.Process(gustTarget, gustCoef);
                 float strength = Math.Clamp(wind + rain * 0.2f, 0f, 1f);
                 level += levelCoef * (strength - level);
-                float amp = (0.07f + level * 0.32f) * (0.45f + 0.55f * gust);
+                float amp = (0.07f + level * 0.2f) * (0.45f + 0.55f * gust);
                 float center = 220f + 520f * gust * (0.4f + level);
                 float a = bandL.Process(noise.Next(), center, 1.3f, rate);
                 float b = bandR.Process(noise.Next(), center * 1.07f, 1.3f, rate);
@@ -202,8 +202,8 @@ public sealed class SoundMix
                 float hl = hissTopL.Process(nl - hissLowL.Process(nl, low), top);
                 float hr = hissTopR.Process(nr - hissLowR.Process(nr, low), top);
                 float wl = washL.Process(noise.Next(), wash) * 3f, wr = washR.Process(noise.Next(), wash) * 3f;
-                l[i] += hl * level * 0.16f + wl * level * 0.09f;
-                r[i] += hr * level * 0.16f + wr * level * 0.09f;
+                l[i] += hl * level * 0.09f + wl * level * 0.07f;
+                r[i] += hr * level * 0.09f + wr * level * 0.07f;
 
                 if (rng.NextDouble() < dropsPerSecond * dt)
                     drops.Add(new Drop(Range(rng, 1800f, 5200f), Range(rng, 0.003f, 0.01f), Range(rng, 0.01f, 0.05f) * (0.4f + level), Range(rng, -0.9f, 0.9f), 0f, 0f));
