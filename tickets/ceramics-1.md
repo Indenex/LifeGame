@@ -26,14 +26,14 @@ Milestone 1 (this ticket's first PR): dig, clean, temper, shape, dry, pit-fire, 
 - 2026-10-15: client done: Shape/Coil minigames (client/scripts/ceramics/CraftingUi.Clay.cs via a MinigameFor partial hook in CraftingUi.cs), CeramicsView (pieces, labels, T key, news), pot meshes for ground items (hook in ItemLook.MeshFor). Pots drawn at 2x life size.
 - 2026-10-15: tools/ClayCheck passed twice on a local server: dug clay -> clean -> grit temper -> pinch pots by a fire -> damp pot cracked into sherds -> other pot dried in ~4 min by the fire -> pit-fired 4 min -> came out whole -> filled with water (quality 70, "fine") -> sherds crushed into grog -> 3 tempered clay.
 - 2026-10-15 21:48: opened PR #11; merged crafting-core e165799 (main with House building), pushed ab0c72e. Tend clay key X -> V (PM, X is eat under D-025).
+- 2026-10-15 22:00: merged crafting-core 87b303e (main with weather); RainAt implemented in server/spacetimedb/CeramicsWeather.cs from the region Weather row. CI on 2635db4 was green (run 38813062890).
 - Screenshots need the Vulkan Forward+ renderer to match Justin's view: apt install mesa-vulkan-drivers, then run Godot without --rendering-driver under xvfb-run (about 2 min per shot on llvmpipe).
 
 ## Open questions / blockers
-- Sent to PM: Atmosphere lane to implement `RainAt`; Survival lane can drink from pots of water (items 107, 108).
+- Sent to PM: Survival lane can drink from pots of water (items 107, 108).
 - After Claims PR #8 is on main: call Module.RequireClaimAccess(ctx, x, z) in TendClay, FirePots and OnPlaced.
 - After Crafting's crafting-2 Use-key registry is on main (D-025): move V (tend clay) onto the G Use handler.
 - V is Survival's eat on this branch until Survival #12 (eat moves to X) is merged; the PM assigned V to tend clay in KEYMAP.md.
-- Weather (#9) is on main: implement RainAt as `rain = CurrentWeather(ctx).Rain` once main reaches this branch via crafting-core.
 
 ## Next step
-Get PR #11 CI green and send it to the PM for Justin's merge; add RainAt when main (weather) reaches this branch; then milestone 2 (updraft kiln).
+Get PR #11 CI green and send it to the PM for Justin's merge; then milestone 2 (updraft kiln).

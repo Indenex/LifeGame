@@ -22,6 +22,7 @@ public partial class Main : Node3D
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     CeramicsView clay = null!;
+    readonly Atmosphere atmosphere = new();
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
@@ -46,6 +47,8 @@ public partial class Main : Node3D
         SetupInput();
         SetupView();
         SetupEnvironment();
+        atmosphere.Player = me;
+        view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
         view.AddChild(cameraRig);
@@ -282,6 +285,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         Subscribe(0, 0);
+        atmosphere.Connect(c);
     }
 
     void GoOffline(string reason)
