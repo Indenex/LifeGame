@@ -50,6 +50,8 @@ public partial class Journal : CanvasLayer
         };
         panel.SetMode = (spec, mode) => conn?.Reducers.SetSkillMode(spec, mode);
         Bind("journal", Key.J);
+        // Placeholder until UX/UI picks the key (D-047): held while starting a craft, a Master plays the minigame.
+        Bind(CraftingUi.PlayMinigame, Key.Ctrl);
         // G reads a note you can learn from (KEYMAP.md priority 5).
         Use.Register(new UseHandler
         {

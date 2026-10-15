@@ -4,14 +4,17 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Skill takes the tedium out of hands-on crafting: minigames lose steps as you
-// improve, and a Master just does the work (D-047). Holding Shift while starting
-// a craft lets a Master play the shortest version anyway, for a chance at better.
+// improve, and a Master just does the work (D-047). Holding the
+// "craft_play_minigame" action (placeholder Ctrl, bound in Journal.cs until UX/UI
+// sets it) while starting a craft lets a Master play the shortest version anyway.
 // Crafting calls these hooks; they are static so the minigame classes can ask too.
 public partial class CraftingUi
 {
+    public const string PlayMinigame = "craft_play_minigame";
+
     static partial void SkipMinigame(ProcessDef def, ref float? score)
     {
-        if (Skills.SkipsMinigame(Journal.RankFor(def.Id)) && !Input.IsPhysicalKeyPressed(Key.Shift))
+        if (Skills.SkipsMinigame(Journal.RankFor(def.Id)) && !Input.IsActionPressed(PlayMinigame))
             score = Skills.MasterScore;
     }
 
