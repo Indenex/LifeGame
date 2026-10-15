@@ -19,11 +19,14 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly Atmosphere atmosphere = new();
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
+    BuildingSystem building = null!;
 
     DbConnection? conn;
     Identity? myIdentity;
@@ -43,11 +46,17 @@ public partial class Main : Node3D
         SetupInput();
         SetupView();
         SetupEnvironment();
+        atmosphere.Player = me;
+        view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
         view.AddChild(herd);
         view.AddChild(cameraRig);
         AddChild(hud);
+        building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        AddChild(building);
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -206,6 +215,7 @@ public partial class Main : Node3D
         Bind("turn_right", Key.E);
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
+        Bind("sneak", Key.Shift);
     }
 
     // --- Networking -------------------------------------------------------
@@ -248,6 +258,8 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        building.Bind(conn);
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -256,6 +268,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         Subscribe(0, 0);
+        atmosphere.Connect(c);
     }
 
     void GoOffline(string reason)
@@ -284,7 +297,8 @@ public partial class Main : Node3D
                 $"SELECT * FROM animal WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 "SELECT * FROM my_inventory",
-            });
+                $"SELECT * FROM structure WHERE {range}",
+            }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -370,6 +384,7 @@ public partial class Main : Node3D
             ItemKind.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
             ItemKind.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
             ItemKind.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.07f, Height = 0.12f, RadialSegments = 7 }, Look.LeafWarm),
+            ItemKind.Berries => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, new Color(0.55f, 0.08f, 0.16f)),
             _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
         };
         ItemMeshes[kind] = mesh;
@@ -451,11 +466,11 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = me.Position + velocity * dt;
+        var pos = building.Collide(me.Position, me.Position + velocity * dt);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);

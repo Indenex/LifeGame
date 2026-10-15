@@ -25,7 +25,7 @@ public partial class Hud : CanvasLayer
         Style(status, 15, 0.85f);
         root.AddChild(statusPanel);
 
-        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up", 14);
+        var controls = Text("WASD walk    Shift sneak    Q/E turn    scroll zoom    F dig    Space pick up", 14);
         controls.Modulate = new Color(1, 1, 1, 0.7f);
         var controlsPanel = Panel(controls, Vector2.Zero);
         controlsPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
@@ -76,14 +76,14 @@ public partial class Hud : CanvasLayer
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime, 0f, 1f));
     }
 
-    static Label Text(string text, int size)
+    internal static Label Text(string text, int size)
     {
         var label = new Label { Text = text };
         Style(label, size, 1f);
         return label;
     }
 
-    static void Style(Label label, int size, float alpha)
+    internal static void Style(Label label, int size, float alpha)
     {
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", new Color(Look.Cream, alpha));
@@ -91,7 +91,7 @@ public partial class Hud : CanvasLayer
         label.AddThemeConstantOverride("shadow_offset_y", 1);
     }
 
-    static PanelContainer Panel(Control content, Vector2 position)
+    internal static PanelContainer Panel(Control content, Vector2 position)
     {
         var panel = new PanelContainer { Position = position, MouseFilter = Control.MouseFilterEnum.Ignore };
         var style = new StyleBoxFlat

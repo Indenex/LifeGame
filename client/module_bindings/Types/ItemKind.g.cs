@@ -14,5 +14,6 @@ namespace SpacetimeDB.Types
         Stone,
         Fiber,
         Clay,
+        Berries,
     }
 }

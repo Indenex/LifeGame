@@ -18,6 +18,8 @@ namespace LifeGame.Shared
         // Player limits the server enforces.
         public const float Reach = 2.5f;
         public const float MaxSpeed = 6f;
+        // Holding Shift walks this fast; animals don't take fright at it.
+        public const float SneakSpeed = 1.6f;
         public const float MoveSlack = 1.5f;
         public const long DigCooldownMicros = 600_000;
 
