@@ -83,7 +83,7 @@ public partial class Hud : CanvasLayer
         return label;
     }
 
-    static void Style(Label label, int size, float alpha)
+    internal static void Style(Label label, int size, float alpha)
     {
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", new Color(Look.Cream, alpha));
@@ -91,7 +91,7 @@ public partial class Hud : CanvasLayer
         label.AddThemeConstantOverride("shadow_offset_y", 1);
     }
 
-    static PanelContainer Panel(Control content, Vector2 position)
+    internal static PanelContainer Panel(Control content, Vector2 position)
     {
         var panel = new PanelContainer { Position = position, MouseFilter = Control.MouseFilterEnum.Ignore };
         var style = new StyleBoxFlat
