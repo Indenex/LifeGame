@@ -1,7 +1,7 @@
 # survival-2: Water pots, item ids, crafted fires, weather chill
 Lane: Survival needs
 Owner: Survival needs thread (session cse_01EzhhyMEiXNWShq9e1gpQ4w)
-Status: in_review
+Status: done
 Branch: claude/survival-needs-g7yrhi (restarted from main after PR #5 merged)
 PR: #12 (draft; lands after #4 crafting-core and #11 ceramics)
 
@@ -29,4 +29,4 @@ Plug survival into the other lanes as they land on main, keeping Justin's gentle
 - Removing the HeatSource table may need `--delete-data` when publishing over a survival-1 world (the crafting and ceramics merges may need it anyway).
 
 ## Next step
-PM merges #12 (merge commit, needs --delete-data). Then start the D-039 mutton follow-up once Crafting's mutton items are on main.
+Done: #12 merged at 06659df. Next ticket is survival-3.
