@@ -14,7 +14,7 @@ public enum StructureKind
 [SpacetimeDB.Type]
 public partial struct MaterialNeed
 {
-    public ItemKind Kind;
+    public ushort Item;
     public uint Have;
     public uint Need;
 }
@@ -69,28 +69,28 @@ public static partial class Module
 
     // What each stage takes, by kind and stage. Sticks, fiber and stones are tier 0;
     // fiber stands in for cordage and thatch until crafting has them.
-    static readonly (ItemKind Kind, uint Count)[][][] StageCosts =
+    static readonly (Item Item, uint Count)[][][] StageCosts =
     {
         // Lean-to: Frame, Lashing, Ribs, Thatch
         new[]
         {
-            new[] { (ItemKind.Stick, 4u) },
-            new[] { (ItemKind.Fiber, 3u) },
-            new[] { (ItemKind.Stick, 6u) },
-            new[] { (ItemKind.Fiber, 8u) },
+            new[] { (Item.Stick, 4u) },
+            new[] { (Item.Fiber, 3u) },
+            new[] { (Item.Stick, 6u) },
+            new[] { (Item.Fiber, 8u) },
         },
         // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
         new[]
         {
-            new[] { (ItemKind.Stick, 6u), (ItemKind.Stone, 2u) },
-            new[] { (ItemKind.Stick, 10u), (ItemKind.Fiber, 4u) },
-            new[] { (ItemKind.Clay, 12u), (ItemKind.Fiber, 3u) },
-            new[] { (ItemKind.Stick, 6u), (ItemKind.Fiber, 10u) },
+            new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
+            new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
+            new[] { (Item.Clay, 12u), (Item.Fiber, 3u) },
+            new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
         },
         // Claim marker: one stage, costs set by Claims in shared/Social.cs
         new[]
         {
-            new[] { (ItemKind.Stick, Social.MarkerSticks), (ItemKind.Fiber, Social.MarkerFiber) },
+            new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
         },
     };
 
@@ -156,7 +156,7 @@ public static partial class Module
 
         int slot = -1;
         for (int i = 0; i < s.Needs.Count; i++)
-            if (s.Needs[i].Have < s.Needs[i].Need && FindStack(ctx, ctx.Sender, s.Needs[i].Kind) is not null)
+            if (s.Needs[i].Have < s.Needs[i].Need && CountOf(ctx, (Item)s.Needs[i].Item) > 0)
             {
                 slot = i;
                 break;
@@ -164,10 +164,10 @@ public static partial class Module
         if (slot < 0)
             throw new Exception("Needs " + string.Join(", ", s.Needs
                 .Where(n => n.Have < n.Need)
-                .Select(n => $"{n.Need - n.Have} {n.Kind.ToString().ToLowerInvariant()}")));
+                .Select(n => $"{n.Need - n.Have} {ItemName(n.Item)}")));
 
         var need = s.Needs[slot];
-        TakeFromInventory(ctx, ctx.Sender, need.Kind);
+        Take(ctx, (Item)need.Item, 1);
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
         s = s with { Needs = needs };
@@ -199,13 +199,13 @@ public static partial class Module
         if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, pos.X, pos.Z, Structures.WorkReach))
             throw new Exception("Out of reach");
 
-        var refund = new List<ItemKind>();
+        var refund = new List<Item>();
         var costs = StageCosts[(int)s.Kind];
         for (int stage = 0; stage < s.Stage && stage < costs.Length; stage++)
             foreach (var (kind, count) in costs[stage])
                 for (uint i = 0; i < count; i++) refund.Add(kind);
         foreach (var need in s.Needs)
-            for (uint i = 0; i < need.Have; i++) refund.Add(need.Kind);
+            for (uint i = 0; i < need.Have; i++) refund.Add((Item)need.Item);
 
         var shape = Structures.Shape((int)s.Kind);
         float spread = (shape.Round ? shape.Radius : MathF.Max(shape.HalfWidth, shape.HalfDepth)) * 0.8f;
@@ -216,7 +216,8 @@ public static partial class Module
             ctx.Db.WorldItem.Insert(new WorldItem
             {
                 Id = 0,
-                Kind = kind,
+                Item = (ushort)kind,
+                Quality = Items.RawQuality,
                 X = ix,
                 Z = iz,
                 ChunkX = World.ChunkOf(ix),
@@ -279,7 +280,7 @@ public static partial class Module
     }
 
     static List<MaterialNeed> NeedsFor(int kind, int stage) =>
-        StageCosts[kind][stage].Select(c => new MaterialNeed { Kind = c.Kind, Have = 0, Need = c.Count }).ToList();
+        StageCosts[kind][stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
 
     static short DepthAt(ReducerContext ctx, int x, int z) =>
         ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z))?.Depth ?? 0;
@@ -297,12 +298,6 @@ public static partial class Module
         return true;
     }
 
-    static void TakeFromInventory(ReducerContext ctx, Identity owner, ItemKind kind)
-    {
-        var stack = FindStack(ctx, owner, kind) ?? throw new Exception("You are not carrying that");
-        if (stack.Count <= 1)
-            ctx.Db.InventoryItem.Id.Delete(stack.Id);
-        else
-            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - 1 });
-    }
+    static string ItemName(ushort item) =>
+        Items.IsKnown(item) ? Items.Def((Item)item).Plural.ToLowerInvariant() : "unknown";
 }

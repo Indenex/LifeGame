@@ -29,14 +29,16 @@ namespace SpacetimeDB.Types
     {
         public global::SpacetimeDB.Col<InventoryItem, ulong> Id { get; }
         public global::SpacetimeDB.Col<InventoryItem, SpacetimeDB.Identity> Owner { get; }
-        public global::SpacetimeDB.Col<InventoryItem, ItemKind> Kind { get; }
+        public global::SpacetimeDB.Col<InventoryItem, ushort> Item { get; }
+        public global::SpacetimeDB.Col<InventoryItem, byte> Quality { get; }
         public global::SpacetimeDB.Col<InventoryItem, uint> Count { get; }
 
         public MyInventoryCols(string tableName)
         {
             Id = new global::SpacetimeDB.Col<InventoryItem, ulong>(tableName, "id");
             Owner = new global::SpacetimeDB.Col<InventoryItem, SpacetimeDB.Identity>(tableName, "owner");
-            Kind = new global::SpacetimeDB.Col<InventoryItem, ItemKind>(tableName, "kind");
+            Item = new global::SpacetimeDB.Col<InventoryItem, ushort>(tableName, "item");
+            Quality = new global::SpacetimeDB.Col<InventoryItem, byte>(tableName, "quality");
             Count = new global::SpacetimeDB.Col<InventoryItem, uint>(tableName, "count");
         }
     }

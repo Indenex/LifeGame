@@ -29,14 +29,16 @@ namespace SpacetimeDB.Types
     {
         public global::SpacetimeDB.Col<ClaimStash, ulong> Id { get; }
         public global::SpacetimeDB.Col<ClaimStash, ulong> ClaimId { get; }
-        public global::SpacetimeDB.Col<ClaimStash, ItemKind> Kind { get; }
+        public global::SpacetimeDB.Col<ClaimStash, ushort> Item { get; }
+        public global::SpacetimeDB.Col<ClaimStash, byte> Quality { get; }
         public global::SpacetimeDB.Col<ClaimStash, uint> Count { get; }
 
         public MyClaimStashCols(string tableName)
         {
             Id = new global::SpacetimeDB.Col<ClaimStash, ulong>(tableName, "id");
             ClaimId = new global::SpacetimeDB.Col<ClaimStash, ulong>(tableName, "claim_id");
-            Kind = new global::SpacetimeDB.Col<ClaimStash, ItemKind>(tableName, "kind");
+            Item = new global::SpacetimeDB.Col<ClaimStash, ushort>(tableName, "item");
+            Quality = new global::SpacetimeDB.Col<ClaimStash, byte>(tableName, "quality");
             Count = new global::SpacetimeDB.Col<ClaimStash, uint>(tableName, "count");
         }
     }

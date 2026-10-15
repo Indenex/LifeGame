@@ -30,15 +30,19 @@ namespace SpacetimeDB.Types
             AddTable(ChatMessage = new(conn));
             AddTable(Claim = new(conn));
             AddTable(ClaimMember = new(conn));
+            AddTable(Fire = new(conn));
             AddTable(ForageBush = new(conn));
             AddTable(HeatSource = new(conn));
             AddTable(MyClaimStash = new(conn));
+            AddTable(MyCraftJob = new(conn));
             AddTable(MyInventory = new(conn));
             AddTable(MyVitals = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
             AddTable(Structure = new(conn));
             AddTable(TerrainEdit = new(conn));
+            AddTable(Weather = new(conn));
+            AddTable(WorldClock = new(conn));
             AddTable(WorldItem = new(conn));
         }
     }
@@ -539,15 +543,19 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.ChatMessage().ToSql(),
             new QueryBuilder().From.Claim().ToSql(),
             new QueryBuilder().From.ClaimMember().ToSql(),
+            new QueryBuilder().From.Fire().ToSql(),
             new QueryBuilder().From.ForageBush().ToSql(),
             new QueryBuilder().From.HeatSource().ToSql(),
             new QueryBuilder().From.MyClaimStash().ToSql(),
+            new QueryBuilder().From.MyCraftJob().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
             new QueryBuilder().From.MyVitals().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
             new QueryBuilder().From.Structure().ToSql(),
             new QueryBuilder().From.TerrainEdit().ToSql(),
+            new QueryBuilder().From.Weather().ToSql(),
+            new QueryBuilder().From.WorldClock().ToSql(),
             new QueryBuilder().From.WorldItem().ToSql(),
         }
         ;
@@ -558,15 +566,19 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<ChatMessage, ChatMessageCols, ChatMessageIxCols> ChatMessage() => new("chat_message", new ChatMessageCols("chat_message"), new ChatMessageIxCols("chat_message"));
         public global::SpacetimeDB.Table<Claim, ClaimCols, ClaimIxCols> Claim() => new("claim", new ClaimCols("claim"), new ClaimIxCols("claim"));
         public global::SpacetimeDB.Table<ClaimMember, ClaimMemberCols, ClaimMemberIxCols> ClaimMember() => new("claim_member", new ClaimMemberCols("claim_member"), new ClaimMemberIxCols("claim_member"));
+        public global::SpacetimeDB.Table<Fire, FireCols, FireIxCols> Fire() => new("fire", new FireCols("fire"), new FireIxCols("fire"));
         public global::SpacetimeDB.Table<ForageBush, ForageBushCols, ForageBushIxCols> ForageBush() => new("forage_bush", new ForageBushCols("forage_bush"), new ForageBushIxCols("forage_bush"));
         public global::SpacetimeDB.Table<HeatSource, HeatSourceCols, HeatSourceIxCols> HeatSource() => new("heat_source", new HeatSourceCols("heat_source"), new HeatSourceIxCols("heat_source"));
         public global::SpacetimeDB.Table<ClaimStash, MyClaimStashCols, MyClaimStashIxCols> MyClaimStash() => new("my_claim_stash", new MyClaimStashCols("my_claim_stash"), new MyClaimStashIxCols("my_claim_stash"));
+        public global::SpacetimeDB.Table<CraftJob, MyCraftJobCols, MyCraftJobIxCols> MyCraftJob() => new("my_craft_job", new MyCraftJobCols("my_craft_job"), new MyCraftJobIxCols("my_craft_job"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
         public global::SpacetimeDB.Table<Vitals, MyVitalsCols, MyVitalsIxCols> MyVitals() => new("my_vitals", new MyVitalsCols("my_vitals"), new MyVitalsIxCols("my_vitals"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
         public global::SpacetimeDB.Table<Structure, StructureCols, StructureIxCols> Structure() => new("structure", new StructureCols("structure"), new StructureIxCols("structure"));
         public global::SpacetimeDB.Table<TerrainEdit, TerrainEditCols, TerrainEditIxCols> TerrainEdit() => new("terrain_edit", new TerrainEditCols("terrain_edit"), new TerrainEditIxCols("terrain_edit"));
+        public global::SpacetimeDB.Table<Weather, WeatherCols, WeatherIxCols> Weather() => new("weather", new WeatherCols("weather"), new WeatherIxCols("weather"));
+        public global::SpacetimeDB.Table<WorldClock, WorldClockCols, WorldClockIxCols> WorldClock() => new("world_clock", new WorldClockCols("world_clock"), new WorldClockIxCols("world_clock"));
         public global::SpacetimeDB.Table<WorldItem, WorldItemCols, WorldItemIxCols> WorldItem() => new("world_item", new WorldItemCols("world_item"), new WorldItemIxCols("world_item"));
     }
 
@@ -657,6 +669,7 @@ namespace SpacetimeDB.Types
                 Reducer.Drink args => Reducers.InvokeDrink(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
                 Reducer.Eat args => Reducers.InvokeEat(eventContext, args),
+                Reducer.FeedFire args => Reducers.InvokeFeedFire(eventContext, args),
                 Reducer.Forage args => Reducers.InvokeForage(eventContext, args),
                 Reducer.LeaveClaim args => Reducers.InvokeLeaveClaim(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
@@ -667,6 +680,7 @@ namespace SpacetimeDB.Types
                 Reducer.SetClaimLifetime args => Reducers.InvokeSetClaimLifetime(eventContext, args),
                 Reducer.SetClaimPvp args => Reducers.InvokeSetClaimPvp(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
+                Reducer.StartCraft args => Reducers.InvokeStartCraft(eventContext, args),
                 Reducer.StashItem args => Reducers.InvokeStashItem(eventContext, args),
                 Reducer.TakeFromStash args => Reducers.InvokeTakeFromStash(eventContext, args),
                 Reducer.TendClaim args => Reducers.InvokeTendClaim(eventContext, args),

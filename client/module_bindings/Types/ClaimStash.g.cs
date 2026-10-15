@@ -17,21 +17,25 @@ namespace SpacetimeDB.Types
         public ulong Id;
         [DataMember(Name = "claim_id")]
         public ulong ClaimId;
-        [DataMember(Name = "kind")]
-        public ItemKind Kind;
+        [DataMember(Name = "item")]
+        public ushort Item;
+        [DataMember(Name = "quality")]
+        public byte Quality;
         [DataMember(Name = "count")]
         public uint Count;
 
         public ClaimStash(
             ulong Id,
             ulong ClaimId,
-            ItemKind Kind,
+            ushort Item,
+            byte Quality,
             uint Count
         )
         {
             this.Id = Id;
             this.ClaimId = ClaimId;
-            this.Kind = Kind;
+            this.Item = Item;
+            this.Quality = Quality;
             this.Count = Count;
         }
 

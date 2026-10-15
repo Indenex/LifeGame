@@ -66,11 +66,11 @@ Pump(() => a.Ready && b.Ready, 20, "connections");
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
 
 // A gathers what a marker needs.
-foreach (var (kind, count) in new[] { (ItemKind.Stick, (int)Social.MarkerSticks), (ItemKind.Fiber, (int)Social.MarkerFiber), (ItemKind.Stone, 1) })
+foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks), (Item.Fiber, (int)Social.MarkerFiber), (Item.Stone, 1) })
 {
     while (a.Count(kind) < count)
     {
-        var item = a.Conn.Db.WorldItem.Iter().Where(i => i.Kind == kind)
+        var item = a.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
             .OrderBy(i => (i.X - a.X) * (i.X - a.X) + (i.Z - a.Z) * (i.Z - a.Z)).First();
         Walk(a, item.X, item.Z);
         uint before = a.Count(kind);
@@ -79,7 +79,7 @@ foreach (var (kind, count) in new[] { (ItemKind.Stick, (int)Social.MarkerSticks)
         a.LastError = null;
     }
 }
-Console.WriteLine($"A gathered {a.Count(ItemKind.Stick)} sticks, {a.Count(ItemKind.Fiber)} fiber, {a.Count(ItemKind.Stone)} stone");
+Console.WriteLine($"A gathered {a.Count(Item.Stick)} sticks, {a.Count(Item.Fiber)} fiber, {a.Count(Item.Stone)} stone");
 
 // Markers are refused in the waking clearing.
 Walk(a, 2, 2);
@@ -104,7 +104,7 @@ for (int i = 0; i < 20 && a.MyClaim() == null; i++)
 }
 Pump(() => a.MyClaim() != null, 5, "claim raised");
 var claim = a.MyClaim()!;
-Check(a.Count(ItemKind.Stick) == 0 && a.Count(ItemKind.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
+Check(a.Count(Item.Stick) == 0 && a.Count(Item.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
 Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
 
@@ -116,10 +116,10 @@ Check(new Vector(heard.X - b.X, heard.Z - b.Z).Length <= Social.ChatRange, "B he
 
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
-a.Conn.Reducers.Drop(ItemKind.Stone);
-Pump(() => a.Count(ItemKind.Stone) == 0, 5, "drop");
-Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Kind == ItemKind.Stone), 5, "dropped stone visible");
-var stone = b.Conn.Db.WorldItem.Iter().First(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Kind == ItemKind.Stone);
+a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
+Pump(() => a.Count(Item.Stone) == 0, 5, "drop");
+Pump(() => b.Conn.Db.WorldItem.Iter().Any(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Item == (ushort)Item.Stone), 5, "dropped stone visible");
+var stone = b.Conn.Db.WorldItem.Iter().First(i => Social.InClaim(claim.X, claim.Z, i.X, i.Z) && i.Item == (ushort)Item.Stone);
 Walk(b, stone.X, stone.Z);
 ExpectError(b, () => b.Conn.Reducers.PickUp(stone.Id), "claimed", "B cannot pick up inside A's claim");
 ExpectError(b, () => b.Conn.Reducers.TendClaim(claim.Id), "Only the owner", "B cannot tend A's marker");
@@ -137,18 +137,18 @@ a.Conn.Reducers.AddClaimMember(b.PlayerId);
 Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "membership");
 b.LastError = null;
 b.Conn.Reducers.PickUp(stone.Id);
-Pump(() => b.Count(ItemKind.Stone) == 1 || b.LastError != null, 5, "member pick up");
-Check(b.Count(ItemKind.Stone) == 1, $"member B can pick up inside the claim ({b.LastError ?? "ok"})");
+Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "member pick up");
+Check(b.Count(Item.Stone) == 1, $"member B can pick up inside the claim ({b.LastError ?? "ok"})");
 Walk(b, claim.X + 1, claim.Z);
 b.LastError = null;
-b.Conn.Reducers.StashItem(claim.Id, ItemKind.Stone);
-Pump(() => a.Conn.Db.MyClaimStash.Iter().Any(s => s.Kind == ItemKind.Stone) || b.LastError != null, 5, "stash");
-Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Kind == ItemKind.Stone), $"B's stone shows in the owner's stash ({b.LastError ?? "ok"})");
-b.Conn.Reducers.TakeFromStash(claim.Id, ItemKind.Stone);
-Pump(() => b.Count(ItemKind.Stone) == 1 || b.LastError != null, 5, "take");
-Check(b.Count(ItemKind.Stone) == 1, "B can take from the stash");
-b.Conn.Reducers.StashItem(claim.Id, ItemKind.Stone);
-Pump(() => b.Count(ItemKind.Stone) == 0, 5, "stash again");
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+Pump(() => a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone) || b.LastError != null, 5, "stash");
+Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B's stone shows in the owner's stash ({b.LastError ?? "ok"})");
+b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
+Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
+Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // PvP needs the owner's say-so inside the claim.
 Check(!claim.AllowPvp, "fighting is off in a new claim");
@@ -160,7 +160,7 @@ Check(true, "owner can allow fighting");
 // Removing B locks them out again.
 a.Conn.Reducers.RemoveClaimMember(b.PlayerId);
 Pump(() => !b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "removal");
-ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, ItemKind.Stone), "not yours", "removed member cannot open the stash");
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality), "not yours", "removed member cannot open the stash");
 
 if (decay)
 {
@@ -170,7 +170,7 @@ if (decay)
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
     Check(true, "the marker post went with it");
-    Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Kind == ItemKind.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
+    Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
     digX = (int)MathF.Round(b.X); digZ = (int)MathF.Round(b.Z) + 1;
@@ -240,7 +240,9 @@ sealed class Tester
 
     public void Tick() => Conn.FrameTick();
 
-    public uint Count(ItemKind kind) => Conn.Db.MyInventory.Iter().Where(i => i.Kind == kind).Select(i => i.Count).FirstOrDefault();
+    public uint Count(Item item) => (uint)Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Sum(i => i.Count);
+
+    public byte Quality(Item item) => Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)item).Quality;
 
     public short Depth(int x, int z) => Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z))?.Depth ?? 0;
 

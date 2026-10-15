@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void TakeFromStashHandler(ReducerEventContext ctx, ulong claimId, SpacetimeDB.Types.ItemKind kind);
+        public delegate void TakeFromStashHandler(ReducerEventContext ctx, ulong claimId, ushort item, byte quality);
         public event TakeFromStashHandler? OnTakeFromStash;
 
-        public void TakeFromStash(ulong claimId, SpacetimeDB.Types.ItemKind kind)
+        public void TakeFromStash(ulong claimId, ushort item, byte quality)
         {
-            conn.InternalCallReducer(new Reducer.TakeFromStash(claimId, kind));
+            conn.InternalCallReducer(new Reducer.TakeFromStash(claimId, item, quality));
         }
 
         public bool InvokeTakeFromStash(ReducerEventContext ctx, Reducer.TakeFromStash args)
@@ -38,7 +38,8 @@ namespace SpacetimeDB.Types
             OnTakeFromStash(
                 ctx,
                 args.ClaimId,
-                args.Kind
+                args.Item,
+                args.Quality
             );
             return true;
         }
@@ -52,16 +53,20 @@ namespace SpacetimeDB.Types
         {
             [DataMember(Name = "claim_id")]
             public ulong ClaimId;
-            [DataMember(Name = "kind")]
-            public ItemKind Kind;
+            [DataMember(Name = "item")]
+            public ushort Item;
+            [DataMember(Name = "quality")]
+            public byte Quality;
 
             public TakeFromStash(
                 ulong ClaimId,
-                ItemKind Kind
+                ushort Item,
+                byte Quality
             )
             {
                 this.ClaimId = ClaimId;
-                this.Kind = Kind;
+                this.Item = Item;
+                this.Quality = Quality;
             }
 
             public TakeFromStash()

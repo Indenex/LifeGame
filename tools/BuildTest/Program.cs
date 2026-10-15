@@ -45,18 +45,18 @@ WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
 if (which is "lean-to" or "both")
     BuildTogether(StructureKind.LeanTo,
-        new() { [ItemKind.Stick] = 5, [ItemKind.Fiber] = 6 },
-        new() { [ItemKind.Stick] = 5, [ItemKind.Fiber] = 5 });
+        new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
+        new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
 if (which is "clay-hut" or "both")
     BuildTogether(StructureKind.ClayHut,
-        new() { [ItemKind.Stick] = 11, [ItemKind.Stone] = 2, [ItemKind.Fiber] = 9 },
-        new() { [ItemKind.Stick] = 11, [ItemKind.Fiber] = 8, [ItemKind.Clay] = 12 });
+        new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
+        new() { [Item.Stick] = 11, [Item.Fiber] = 8, [Item.Clay] = 12 });
 
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
 
-void BuildTogether(StructureKind kind, Dictionary<ItemKind, uint> forA, Dictionary<ItemKind, uint> forB)
+void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB)
 {
     string name = Structures.Shape((int)kind).Name;
     Console.WriteLine($"--- {name}");
@@ -114,7 +114,7 @@ sealed class Bot
     public DbConnection Conn;
     public bool Ready;
     public float X, Z;
-    public Dictionary<ItemKind, uint> Wants = new();
+    public Dictionary<Item, uint> Wants = new();
 
     readonly string name, uri, db;
     string? token;
@@ -179,11 +179,11 @@ sealed class Bot
         Conn = Connect();
     }
 
-    uint Count(ItemKind kind) => Conn.Db.MyInventory.Iter().Where(i => i.Kind == kind).Select(i => i.Count).FirstOrDefault();
+    uint Count(Item kind) => (uint)Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)kind).Sum(i => i.Count);
 
     public bool HasWants => Wants.All(w => Count(w.Key) >= w.Value);
 
-    public string Carried() => string.Join(" ", Conn.Db.MyInventory.Iter().Select(i => $"{i.Kind}:{i.Count}"));
+    public string Carried() => string.Join(" ", Conn.Db.MyInventory.Iter().Select(i => $"{(Item)i.Item}:{i.Count}"));
 
     // Walks toward the nearest wanted item and picks it up; digs clay where the ground has it.
     public void GatherStep(float dt)
@@ -192,7 +192,7 @@ sealed class Bot
         var missing = Wants.Where(w => Count(w.Key) < w.Value).Select(w => w.Key).ToHashSet();
         if (missing.Count == 0) return;
 
-        if (missing.Contains(ItemKind.Clay) && missing.Count == 1)
+        if (missing.Contains(Item.Clay) && missing.Count == 1)
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
@@ -207,10 +207,10 @@ sealed class Bot
         }
 
         var item = Conn.Db.WorldItem.Id.Find(targetItem);
-        if (item == null || !missing.Contains(item.Kind))
+        if (item == null || !missing.Contains((Item)item.Item))
         {
             item = Conn.Db.WorldItem.Iter()
-                .Where(i => missing.Contains(i.Kind) && i.Kind != ItemKind.Clay)
+                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay)
                 .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z))
                 .FirstOrDefault();
             targetItem = item?.Id ?? 0;
@@ -272,8 +272,8 @@ sealed class Bot
     public void TryBuild(ulong id)
     {
         if (Conn.Db.Structure.Id.Find(id) is not { Complete: false } s) return;
-        var carried = Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Kind).ToHashSet();
-        if (s.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Kind)))
+        var carried = Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
+        if (s.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item)))
             Conn.Reducers.Build(id);
     }
 }

@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void EatHandler(ReducerEventContext ctx, SpacetimeDB.Types.ItemKind kind);
+        public delegate void EatHandler(ReducerEventContext ctx, ushort item);
         public event EatHandler? OnEat;
 
-        public void Eat(SpacetimeDB.Types.ItemKind kind)
+        public void Eat(ushort item)
         {
-            conn.InternalCallReducer(new Reducer.Eat(kind));
+            conn.InternalCallReducer(new Reducer.Eat(item));
         }
 
         public bool InvokeEat(ReducerEventContext ctx, Reducer.Eat args)
@@ -37,7 +37,7 @@ namespace SpacetimeDB.Types
             }
             OnEat(
                 ctx,
-                args.Kind
+                args.Item
             );
             return true;
         }
@@ -49,12 +49,12 @@ namespace SpacetimeDB.Types
         [DataContract]
         public sealed partial class Eat : Reducer, IReducerArgs
         {
-            [DataMember(Name = "kind")]
-            public ItemKind Kind;
+            [DataMember(Name = "item")]
+            public ushort Item;
 
-            public Eat(ItemKind Kind)
+            public Eat(ushort Item)
             {
-                this.Kind = Kind;
+                this.Item = Item;
             }
 
             public Eat()

@@ -132,22 +132,22 @@ public partial class ClaimPanel : CanvasLayer
 
         // The shared stash at the foot of the marker.
         content.AddChild(Heading("Stash", 16));
-        var stash = Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == claim.Id).OrderBy(s => s.Kind).ToList();
+        var stash = Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == claim.Id).OrderBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
         if (stash.Count == 0) content.AddChild(Note("Empty. Anything you leave here is safe from outsiders."));
         foreach (var s in stash)
         {
-            var row = Row($"{s.Kind}  {s.Count}");
-            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Kind)));
+            var row = Row($"{Name(s.Item, s.Quality)}  {s.Count}");
+            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality)));
             content.AddChild(row);
         }
-        var carried = Conn.Db.MyInventory.Iter().OrderBy(i => i.Kind).ToList();
+        var carried = Conn.Db.MyInventory.Iter().OrderBy(i => i.Item).ThenByDescending(i => i.Quality).ToList();
         if (carried.Count > 0)
         {
             var row = new HFlowContainer();
             row.AddThemeConstantOverride("h_separation", 6);
             row.AddThemeConstantOverride("v_separation", 6);
             foreach (var item in carried)
-                row.AddChild(Small($"Leave {item.Kind}", () => Conn.Reducers.StashItem(claim.Id, item.Kind)));
+                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality)));
             content.AddChild(row);
         }
 
@@ -166,6 +166,14 @@ public partial class ClaimPanel : CanvasLayer
                 Close();
             }));
         content.AddChild(Note("K or Esc to close"));
+    }
+
+    // "Hand axe (fine)" for made things, just "Stick" for raw materials.
+    static string Name(ushort item, byte quality)
+    {
+        if (!Items.IsKnown(item)) return "Something";
+        var def = Items.Def((Item)item);
+        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
     }
 
     static string StandsFor(Claim claim)
