@@ -15,6 +15,7 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | `client/module_bindings/` | Client bindings generated from the server module; do not edit by hand |
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
+| `tools/BuildTest/` | Two simulated players building a lean-to and a clay hut together |
 
 ## Requirements
 
@@ -44,6 +45,8 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
 Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
+
+Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
 
 Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 
@@ -88,6 +91,15 @@ Measured on a 4-core cloud VM, with the load test running on the same machine as
 At 150 bots the single-threaded load-test harness itself becomes a bottleneck, so the 150-player latency is pessimistic.
 
 Two changes got traffic down from 94 KB/s per player in the first run: position updates now live in a small `player_pos` table separate from player identity, and moves are applied in one batch every 100 ms instead of one transaction per move.
+
+## Building test
+
+Two simulated players gather materials, build a lean-to and then a clay hut together, stand inside, and reconnect to check the buildings persisted. Run it against a freshly published local server:
+
+```sh
+cd tools/BuildTest
+dotnet run -- both        # or lean-to, or clay-hut
+```
 
 ## Screenshots without a display
 
