@@ -21,9 +21,9 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Lane | Ticket | Status | Branch | Owns |
 |---|---|---|---|---|
 | Crafting (integration owner) | `tickets/crafting-1.md` | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
-| Survival needs | `tickets/survival-2.md` (survival-1 done, PR #5 merged a59b3cd) | in_progress | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
+| Survival needs | `tickets/survival-2.md` (survival-1 done, PR #5 merged a59b3cd) | blocked until crafting-core, ceramics or #9 merge | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | `tickets/skills-1.md` | in_progress (PR #7, merges with or after crafting-core) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
-| Claims, chat and PvP rules | `tickets/claims-1.md` | in_progress (draft PR #8) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
+| Claims, chat and PvP rules | `tickets/claims-1.md` | in_review (PR #8 green) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere and sound | `tickets/atmosphere-1.md` | in_progress (draft PR #9) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
 | House building | `tickets/building-1.md` | merging (PR #6, Justin approved) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
 | Animals | `tickets/animals-1.md` | in_progress | lane to record | `Animals.cs`, `client/scripts/animals/` |
