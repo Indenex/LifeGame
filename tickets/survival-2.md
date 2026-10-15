@@ -20,10 +20,11 @@ Plug survival into the other lanes as they land on main, keeping Justin's gentle
 - 2026-10-15 21:48: key clash with crafting (C = craft, G = feed fire): eat moved to X (matches the open key proposal); G forages only when a ripe bush is in reach and otherwise falls through to feeding the fire.
 - 2026-10-15 21:58: merged latest crafting-core (e165799, which carries main with House building). Kept Crafting's FireWarmthAt implementation and call the hook again (no cross-lane deletion needed); took Crafting's Eat (CountOf/Take); eat stays on X per D-025 (crafting-core had V). Weather: per PM, AirTemperatureAt hook gets replaced by a direct call to WorldClock.AirTemperature/CurrentWeather once #9 lands.
 - 2026-10-15 22:00: merged main (Atmosphere #9). Chill() now calls AirTemperature(ctx) and CurrentWeather(ctx).Rain directly; the AirTemperatureAt hook is gone. Rate rewrites wait for a >2% change so drifting weather doesn't rewrite vitals every tick. Pots set to Justin's D-030: pinch 50%, coil 100%. Local test: full rain + wind doubled the cold drain (-0.00104 -> -0.00208 per s).
+- 2026-10-15 22:03: CI on da88f2d green (run 38813052752). The earlier run on e82bd39 failed in tools/BuildTest (bot B ended one clay short of 12 for the Clay hut, after the load test had dug the same area); the same check passed locally on da88f2d and in CI on the next commit, so it looks like a timing-sensitive gathering check in the building bot, not survival code. Reported to the PM for House building.
 
 ## Open questions / blockers
 - Keys: Justin's card on a single Use key is open; current default G forage/feed, X eat, R drink.
 - Removing the HeatSource table may need `--delete-data` when publishing over a survival-1 world (the crafting and ceramics merges may need it anyway).
 
 ## Next step
-Wait for CI on PR #12; when #4 (crafting-core) or #11 (ceramics) merges, merge origin/main in, regenerate client/module_bindings, build and push.
+PR #12 is green; when #4 (crafting-core) or #11 (ceramics) merges, merge origin/main in, regenerate client/module_bindings, build and push.
