@@ -452,9 +452,12 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         var pos = me.Position + velocity * dt;
-        if (terrain.HeightAt(pos.X, pos.Z) < Look.WaterLevel - 0.3f)
-            pos = me.Position; // Deep water is not walkable yet.
-        // Ease up and down the terraces instead of popping between steps.
+        // Deep water is not walkable yet, but a step that climbs is always allowed,
+        // so nobody gets trapped in a flooded hole they dug.
+        float next = terrain.HeightAt(pos.X, pos.Z);
+        if (next < Look.WaterLevel - 0.3f && next < terrain.HeightAt(me.Position.X, me.Position.Z))
+            pos = me.Position;
+        // Ease up and down slopes instead of popping between heights.
         pos.Y = Mathf.Lerp(me.Position.Y, terrain.HeightAt(pos.X, pos.Z), 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
 
