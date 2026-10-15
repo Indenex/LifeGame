@@ -173,13 +173,9 @@ public static partial class Module
                 Depth = 1,
             });
 
-        // The extra level a digging stick reaches holds finer clay (D-041); Skills sets
-        // the quality above it. Ceramics' ClayRules.DugClayQuality will own both numbers.
+        // The extra level a digging stick reaches holds finer clay (D-041).
         if (World.IsClay(cellX, cellZ))
-        {
-            if (depth >= World.MaxDigDepth) AddToInventory(ctx, ctx.Sender, Item.Clay, 1, 80);
-            else GiveDugClay(ctx, player);
-        }
+            GiveDugClay(ctx, player, depth);
 
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });

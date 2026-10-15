@@ -7,10 +7,10 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Clay in the world: draws every drying and firing piece the server knows about,
-// and handles X, the one clay action (until the shared Use key lands). X on a pot beside a burning fire puts it in
-// the fire; on a dry pot or brick picks it up; near a fire with dry pots in your
-// bag sets them in; at the water's edge fills your fired pots.
+// Clay in the world: draws every drying and firing piece and every kiln the server
+// knows about, and offers the clay actions on the Use key: fire a pot beside a
+// burning fire, pick up a dry pot or brick, set pots from your bag into a fire,
+// load or fire a kiln, and fill fired pots at the water's edge.
 public partial class CeramicsView : Node
 {
     const double ConfirmSeconds = 4;
@@ -20,6 +20,7 @@ public partial class CeramicsView : Node
     readonly Node3D me;
     readonly Action<string> note;
     readonly Dictionary<ulong, PotView> pieces = new();
+    readonly Dictionary<ulong, KilnView> kilns = new();
     DbConnection? conn;
     uint myId;
     ulong confirmPiece;
@@ -36,11 +37,26 @@ public partial class CeramicsView : Node
     public void Attach(DbConnection conn)
     {
         this.conn = conn;
+        RegisterUse();
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
         {
             if (pieces.Remove(p.Id, out var view)) view.QueueFree();
+        };
+        // A finished kiln structure gets the fire, smoke and label; the bricks
+        // themselves are Building's StructureView.
+        conn.Db.Structure.OnInsert += (_, s) => KilnSite(s);
+        conn.Db.Structure.OnUpdate += (_, _, s) => KilnSite(s);
+        conn.Db.Structure.OnDelete += (_, s) =>
+        {
+            if (kilns.Remove(s.Id, out var view)) view.QueueFree();
+        };
+        conn.Db.Kiln.OnInsert += (_, k) => KilnState(k);
+        conn.Db.Kiln.OnUpdate += (_, _, k) => KilnState(k);
+        conn.Db.Kiln.OnDelete += (_, k) =>
+        {
+            if (kilns.TryGetValue(k.StructureId, out var view)) view.Show(0, false, 0, 0);
         };
         conn.Db.ClayNews.OnInsert += (_, n) =>
         {
@@ -79,6 +95,30 @@ public partial class CeramicsView : Node
             view.Firing(Seconds(p.FireStart), Seconds(p.FireFinish));
     }
 
+    void KilnSite(Structure s)
+    {
+        if ((int)s.Kind != ClayRules.KilnStructureKind || !s.Complete || kilns.ContainsKey(s.Id)) return;
+        var view = new KilnView { Position = new Vector3(s.X, heightAt(s.X, s.Z), s.Z), Rotation = new Vector3(0, s.Yaw, 0) };
+        kilns[s.Id] = view;
+        world.AddChild(view);
+        if (conn?.Db.Kiln.StructureId.Find(s.Id) is { } k) KilnState(k);
+    }
+
+    void KilnState(Kiln k)
+    {
+        if (kilns.TryGetValue(k.StructureId, out var view))
+            view.Show(k.Load?.Count ?? 0, k.State == 1, Seconds(k.FireStart), Seconds(k.FireFinish));
+    }
+
+    // Show a kiln without a server, for the offline demo.
+    public KilnView DemoKiln(Vector3 at, float yaw, int pots, bool firing)
+    {
+        var view = new KilnView(withBricks: true) { Position = at, Rotation = new Vector3(0, yaw, 0) };
+        world.AddChild(view);
+        view.Show(pots, firing, PotView.Now - 20, PotView.Now + 160);
+        return view;
+    }
+
     static double Seconds(SpacetimeDB.Timestamp t) => t.MicrosecondsSinceUnixEpoch / 1_000_000.0;
 
     public override void _Ready()
@@ -90,13 +130,14 @@ public partial class CeramicsView : Node
                 rig.Zoom(zoom);
     }
 
-    public override void _UnhandledInput(InputEvent e)
+    // Clay actions on the shared Use key (G, D-025). Each offers only when G would
+    // really do something, so the prompt never promises what it can't do.
+    void RegisterUse()
     {
-        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.V })
-        {
-            Tend();
-            GetViewport().SetInputAsHandled();
-        }
+        Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
+        Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
+        Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = TendOffer });
+        Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
     }
 
     public override void _Process(double delta)
@@ -112,63 +153,101 @@ public partial class CeramicsView : Node
             float ground = heightAt(view.Position.X, view.Position.Z) + (view.Stage == ClayStage.Firing ? -0.03f : 0f);
             view.Position = new Vector3(view.Position.X, ground, view.Position.Z);
         }
-        foreach (var view in pieces.Values) view.ShowLabel = view == nearest;
+        foreach (var view in kilns.Values)
+            view.Position = new Vector3(view.Position.X, heightAt(view.Position.X, view.Position.Z), view.Position.Z);
+        // A kiln's label shows when it is the closest thing to tend.
+        var kiln = NearestKiln(new Vector2(me.Position.X, me.Position.Z));
+        bool kilnFirst = kiln.view != null && kiln.d < nearestDist;
+        foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst;
+        foreach (var view in kilns.Values) view.ShowLabel = kilnFirst && view == kiln.view;
     }
 
-    void Tend()
+    UseOffer? KilnOffer(Vector3 me3)
     {
-        if (conn == null)
-        {
-            note("Clay needs the server");
-            return;
-        }
-        var at = new Vector2(me.Position.X, me.Position.Z);
+        if (conn == null) return null;
+        var kiln = NearestKiln(new Vector2(me3.X, me3.Z));
+        if (kiln.view == null || kiln.view.IsFiring) return null;
+        bool pots = Carrying(i => ClayRules.FormOfUnfired(i) != null);
+        ulong id = kiln.id;
+        if (pots && kiln.view.Load < ClayRules.KilnCapacity)
+            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+        if (kiln.view.Load > 0 && FuelSeconds() >= ClayRules.KilnFireSeconds)
+            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+        return null;
+    }
 
-        // The nearest piece of drying clay within reach.
+    UseOffer? FirePotsOffer(Vector3 me3)
+    {
+        if (conn == null || !Carrying(i => ClayRules.FormOfUnfired(i) != null)) return null;
+        var at = new Vector2(me3.X, me3.Z);
+        if (BurningFireNear(at, World.Reach) is not { } fire) return null;
+        float d = new Vector2(fire.X, fire.Z).DistanceTo(at);
+        return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id));
+    }
+
+    UseOffer? TendOffer(Vector3 me3)
+    {
+        if (conn == null) return null;
+        var at = new Vector2(me3.X, me3.Z);
         var piece = pieces
             .Where(kv => kv.Value.Stage == ClayStage.Drying)
             .Select(kv => (id: kv.Key, view: kv.Value, d: new Vector2(kv.Value.Position.X, kv.Value.Position.Z).DistanceTo(at)))
             .Where(t => t.d <= World.Reach)
             .OrderBy(t => t.d)
             .FirstOrDefault();
-        if (piece.view != null)
-        {
-            var row = conn.Db.ClayPiece.Id.Find(piece.id);
-            bool isPot = row != null && row.Form != (byte)ClayForm.Brick;
-            bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
-            if (besideFire && ClayRules.TooWetToFire(piece.view.Moisture))
-            {
-                // Firing a damp pot cracks it: ask first.
-                if (confirmPiece != piece.id || Time.GetTicksMsec() / 1000.0 > confirmUntil)
-                {
-                    confirmPiece = piece.id;
-                    confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
-                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press V again to fire it anyway.");
-                    return;
-                }
-                confirmPiece = 0;
-                conn.Reducers.TendClay(piece.id, true);
-                return;
-            }
-            conn.Reducers.TendClay(piece.id, false);
-            return;
-        }
-
-        bool carryingUnfired = Carrying(i => ClayRules.FormOfUnfired(i) != null);
-        if (carryingUnfired && BurningFireNear(at, World.Reach) is { } fire)
-        {
-            conn.Reducers.FirePots(fire.Id);
-            return;
-        }
-        if (Carrying(i => ClayRules.FilledItem(i) != null))
-        {
-            conn.Reducers.FillPots();
-            return;
-        }
-        note(carryingUnfired
-            ? "Take your dry pots to a burning fire and press V to fire them."
-            : "Nothing to tend here. Shape clay from the crafting panel (C).");
+        if (piece.view == null) return null;
+        var row = conn.Db.ClayPiece.Id.Find(piece.id);
+        bool isPot = row != null && row.Form != (byte)ClayForm.Brick;
+        float moisture = piece.view.Moisture;
+        bool dry = !ClayRules.TooWetToFire(moisture);
+        bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
+        ulong id = piece.id;
+        if (besideFire)
+            return dry
+                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
+                : new UseOffer("Fire it wet (it will crack)", piece.d, () => FireDamp(id, moisture));
+        if (dry)
+            return new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false));
+        return null;
     }
+
+    // Firing a damp pot cracks it: the first press warns, a second within a few seconds fires it.
+    void FireDamp(ulong id, float moisture)
+    {
+        if (confirmPiece != id || Time.GetTicksMsec() / 1000.0 > confirmUntil)
+        {
+            confirmPiece = id;
+            confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
+            note($"It is still {ClayRules.Describe(moisture)} and will crack. Press G again to fire it anyway.");
+            return;
+        }
+        confirmPiece = 0;
+        conn?.Reducers.TendClay(id, true);
+    }
+
+    UseOffer? FillOffer(Vector3 me3)
+    {
+        if (conn == null || !Carrying(i => ClayRules.FilledItem(i) != null)) return null;
+        // Water within reach: any ground point nearby below the water line.
+        for (float dx = -World.Reach; dx <= World.Reach; dx += 0.5f)
+            for (float dz = -World.Reach; dz <= World.Reach; dz += 0.5f)
+                if (dx * dx + dz * dz <= World.Reach * World.Reach && heightAt(me3.X + dx, me3.Z + dz) < World.WaterLevel)
+                    return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
+        return null;
+    }
+
+    float FuelSeconds() =>
+        conn?.Db.MyInventory.Iter()
+            .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
+            .Sum(i => Items.Def((Item)i.Item).FuelSeconds * i.Count) ?? 0f;
+
+    // Kilns are measured from their wall, not their center.
+    (ulong id, KilnView? view, float d) NearestKiln(Vector2 at) =>
+        kilns
+            .Select(kv => (id: kv.Key, view: (KilnView?)kv.Value, d: Math.Max(0f, new Vector2(kv.Value.Position.X, kv.Value.Position.Z).DistanceTo(at) - 0.8f)))
+            .Where(t => t.d <= World.Reach - 0.8f)
+            .OrderBy(t => t.d)
+            .FirstOrDefault();
 
     bool Carrying(Func<Item, bool> match) =>
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && match((Item)i.Item)) ?? false;
