@@ -52,6 +52,7 @@ public partial class Main : Node3D
         AddChild(crafting);
         crafting.Notice += hud.Note;
         cameraRig.Camera.MakeCurrent();
+        if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
         ScheduleScreenshot();
     }
