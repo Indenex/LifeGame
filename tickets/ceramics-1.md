@@ -35,5 +35,8 @@ Milestone 1 (this ticket's first PR): dig, clean, temper, shape, dry, pit-fire, 
 - After Crafting's crafting-2 Use-key registry is on main (D-025): move V (tend clay) onto the G Use handler.
 - V is Survival's eat on this branch until Survival #12 (eat moves to X) is merged; the PM assigned V to tend clay in KEYMAP.md.
 
+## Merge plan (D-032)
+PM approved #11. Merge it myself as a merge commit once crafting #4, skills #7 and claims #8 are on main. Merge main in first, regenerate bindings, wait for green CI, then send the PM the merge commit.
+
 ## Next step
 Get PR #11 CI green and send it to the PM for Justin's merge; then milestone 2 (updraft kiln).

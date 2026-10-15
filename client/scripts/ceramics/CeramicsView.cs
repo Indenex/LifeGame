@@ -86,7 +86,7 @@ public partial class CeramicsView : Node
         // --camera-zoom=-8 starts the camera closer, for screenshots of small things.
         var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--camera-zoom="));
         if (arg != null && float.TryParse(arg[14..], out var zoom))
-            foreach (var rig in GetTree().Root.FindChildren("*", nameof(CameraRig), true, false).OfType<CameraRig>())
+            foreach (var rig in GetTree().Root.FindChildren("*", "", true, false).OfType<CameraRig>())
                 rig.Zoom(zoom);
     }
 
