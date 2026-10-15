@@ -1,7 +1,7 @@
 # claims-1: Claims, proximity chat and PvP rules
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_review
+Status: in_review (merge held for crafting #4)
 Branch: claude/claims-chat-pvp-vk2qak
 PR: https://github.com/Indenex/LifeGame/pull/8
 
@@ -24,4 +24,4 @@ Proximity text chat; land claims via a marker structure (placed with House build
 ## Open questions / blockers
 
 ## Next step
-Merge PR #8 (merge commit) once CI is green on the head that includes main; report the merge commit to the PM and post screenshots.
+Wait for crafting PR #4 to merge (PM will ping); then merge main in, convert marker cost to LifeGame.Shared.Item ids, regenerate bindings, run BuildTest + SocialTest, merge PR #8 as a merge commit when green, report the merge commit to the PM.
