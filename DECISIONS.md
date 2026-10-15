@@ -59,3 +59,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-013 — 2026-10-15 — Clay pot timings
 **Decision:** Drying a pot takes about 8 real minutes in the open (about twice as long in rain, faster beside a fire); pit firing about 4 minutes; kiln firing about 3.
 **Who:** Justin
+
+## D-014 — 2026-10-15 — Pot-shaping minigame
+**Decision:** The pot turns in your hands; press and hold to raise the wall, release before it gets too thin (wall-thickness bar with a sweet spot). Coil pots: place 4 to 6 coils in rhythm. Better wall, better pot; skippable once skilled.
+**Who:** Justin
