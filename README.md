@@ -61,7 +61,7 @@ Item ids are stored as numbers, so never renumber or reuse one; add new items at
 
 Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
 
-Survival: G picks berries from a ripe bush, V eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+Survival: G picks berries from a ripe bush, X eats, R drinks when you stand by water or from a pot of water you carry. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 
 ### Day, night and weather
 
