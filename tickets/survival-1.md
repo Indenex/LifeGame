@@ -12,8 +12,8 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - 2026-10-15 20:38: lane started
 - 2026-10-15 21:10: PR #5 opened. Server `server/spacetimedb/Survival.cs` (Vitals snapshot + MyVitals view, HeatSource placeholder campfires, ForageBush, Eat/Drink/Forage, 2 s SurvivalTick for death), tuning in `shared/Needs.cs`, client `client/scripts/survival/` (ring gauges, prompts, frost overlay, death fade, campfire and bush visuals). Tested on local SpacetimeDB 2.12: freeze and thirst deaths, item drop, respawn at rim, eat, drink, forage. Screenshot: project files screenshots/07-survival-campfire-and-bushes.png
 - 2026-10-15 21:15: merged main; added `FireWarmthAt` partial hook (PM call) so Crafting can feed Module.WarmthAt in without a second heat table
-
 - 2026-10-15 21:16: renamed the shelter hook to ShelterAtHook to avoid clashing with House building's ShelterAt (PM call)
+- 2026-10-15 21:17: CI green on e3e9b0b, run https://github.com/Indenex/LifeGame/actions/runs/38808400967 (server + load test, Linux/Windows/macOS clients)
 
 ## Interfaces for other lanes
 - Fire: Crafting implements `static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth)` (0..1). Once it does, delete the placeholder seeding in `EnsureSurvivalWorld` and the HeatSource table.
@@ -25,4 +25,4 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - Needs numbers (45 min food, 30 min water, 8 min of cold, pause while offline, 60% food/water after respawn): PM is taking them to Justin. Defaults are in shared/Needs.cs.
 
 ## Next step
-Wait for CI on PR #5; when green, tell the PM (session cse_01HQQLrCgy3JhRUA9YMTqyL1) so Justin can approve the merge.
+PR #5 is green and waits on Justin's merge OK via the PM. After it merges, wire the ceramics water pots and convert Berries to item 160 if crafting-core merged first.
