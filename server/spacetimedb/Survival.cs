@@ -10,6 +10,8 @@ public static partial class Module
     const int SurvivalTickMillis = 2000;
     const int PlaceholderFires = 3;
     const float BushReach = 2.5f;
+    // Warmth per second from standing right by a fire at full strength.
+    const float FireHeat = 1f / 30f;
 
     [SpacetimeDB.Table(Accessor = "Vitals")]
     public partial struct Vitals
@@ -309,8 +311,20 @@ public static partial class Module
         };
     }
 
+    // Crafted fires: Crafting implements this with Module.WarmthAt, setting warmth
+    // to 0..1 for the strongest burning fire near (x, z).
+    static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth);
+
     // Warmth per second from the fires around a spot; strongest at the center.
     static float HeatAt(ReducerContext ctx, float x, float z)
+    {
+        float crafted = 0;
+        FireWarmthAt(ctx, x, z, ref crafted);
+        return MathF.Max(crafted * FireHeat, PlaceholderHeatAt(ctx, x, z));
+    }
+
+    // Placeholder campfires, kept until crafted fires are on main.
+    static float PlaceholderHeatAt(ReducerContext ctx, float x, float z)
     {
         int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
         float best = 0;
@@ -406,7 +420,7 @@ public static partial class Module
                     ChunkX = World.ChunkOf(x),
                     ChunkZ = World.ChunkOf(z),
                     Radius = 4.5f,
-                    Strength = 1f / 30f,
+                    Strength = FireHeat,
                     Placeholder = true,
                 });
             }
