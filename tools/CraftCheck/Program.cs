@@ -114,6 +114,19 @@ if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
 if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
 Console.WriteLine("Failed drill lit nothing and used up its tinder");
 
+// Crafting-3: a bow drill lights a fire on a score that fails a hand drill.
+Gather(Item.Fiber, 5);
+Gather(Item.Stick, 4);
+Craft("cord.twist", 0, Item.Cordage);
+Craft("lash.bow_drill", 0, Item.BowDrill);
+Craft("gather.tinder", 0, Item.Tinder);
+int firesBeforeBow = conn.Db.Fire.Count;
+Craft("fire.bow_drill", 0.25f, null);
+Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
+if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
+Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
+Gather(Item.Stick, 1);
+
 WalkTo(fire.X, fire.Z);
 long fuelBefore = fire.FuelUntil.MicrosecondsSinceUnixEpoch;
 lastError = null;

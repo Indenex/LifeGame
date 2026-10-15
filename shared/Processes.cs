@@ -127,6 +127,19 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = 15, Makes = Item.Basket,
             },
+            new ProcessDef
+            {
+                Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
+                Seconds = 8, Makes = Item.BowDrill,
+            },
+            // The bow spins the drill for you: half the strokes of a hand drill, and surer.
+            new ProcessDef
+            {
+                Id = "fire.bow_drill", Name = "Bow-drill fire", Doing = "Nursing an ember into flame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) }, NeedsTool = ItemTags.FireBow,
+                Seconds = 3, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.2f,
+            },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
