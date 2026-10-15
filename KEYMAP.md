@@ -30,6 +30,8 @@ Status: DECIDED by Justin on 2026-10-15 (D-025). Crafting builds the shared Use 
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 
+Interim until crafting-2 (Use key) lands: tend clay is V (Ceramics); it then moves to G.
+
 ## Debug only (not in player builds)
 
 | Key | Action | Lane | Today |
