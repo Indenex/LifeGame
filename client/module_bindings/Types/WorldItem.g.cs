@@ -15,8 +15,10 @@ namespace SpacetimeDB.Types
     {
         [DataMember(Name = "id")]
         public ulong Id;
-        [DataMember(Name = "kind")]
-        public ItemKind Kind;
+        [DataMember(Name = "item")]
+        public ushort Item;
+        [DataMember(Name = "quality")]
+        public byte Quality;
         [DataMember(Name = "x")]
         public float X;
         [DataMember(Name = "z")]
@@ -28,7 +30,8 @@ namespace SpacetimeDB.Types
 
         public WorldItem(
             ulong Id,
-            ItemKind Kind,
+            ushort Item,
+            byte Quality,
             float X,
             float Z,
             int ChunkX,
@@ -36,7 +39,8 @@ namespace SpacetimeDB.Types
         )
         {
             this.Id = Id;
-            this.Kind = Kind;
+            this.Item = Item;
+            this.Quality = Quality;
             this.X = X;
             this.Z = Z;
             this.ChunkX = ChunkX;

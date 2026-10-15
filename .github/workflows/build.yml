@@ -50,6 +50,9 @@ jobs:
           (cd tools/LoadTest && dotnet run -c Release -- 20 20)
           (cd tools/BuildTest && dotnet run -c Release)
 
+      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
+        run: cd tools/CraftCheck && dotnet run -c Release
+
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
       - uses: actions/upload-artifact@v4
@@ -69,8 +72,6 @@ jobs:
             out: builds/linux/LifeGame.x86_64
           - preset: Windows
             out: builds/windows/LifeGame.exe
-          - preset: macOS
-            out: builds/macos/LifeGame.zip
     steps:
       - uses: actions/checkout@v4
 
