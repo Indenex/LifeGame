@@ -225,6 +225,14 @@ public static partial class Module
     }
 
     // Dismantling the marker ends the claim.
+    // claims-2: the owner of a standing claim may take down anything built inside
+    // it, members' buildings included (the land is theirs). Building's Dismantle
+    // asks this when the caller isn't whoever laid the building out.
+    static partial void CanClearStructure(ReducerContext ctx, Structure s, ref bool allowed)
+    {
+        if (ClaimAt(ctx, s.X, s.Z) is { } claim && claim.Owner == ctx.Sender) allowed = true;
+    }
+
     static partial void OnStructureRemoved(ReducerContext ctx, Structure s)
     {
         if (s.Kind == StructureKind.ClaimMarker && ctx.Db.Claim.StructureId.Find(s.Id) is { } claim)

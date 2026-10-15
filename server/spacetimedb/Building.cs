@@ -192,8 +192,10 @@ public static partial class Module
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
-        if (s.Owner != ctx.Sender)
-            throw new Exception("Only whoever laid it out can take it down");
+        bool allowed = s.Owner == ctx.Sender;
+        if (!allowed) CanClearStructure(ctx, s, ref allowed);
+        if (!allowed)
+            throw new Exception("Only whoever laid it out, or the land's owner, can take it down");
         CheckClaimAccess(ctx, s.X, s.Z);
         var pos = RequirePos(ctx, RequirePlayer(ctx));
         if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, pos.X, pos.Z, Structures.WorkReach))
@@ -242,6 +244,7 @@ public static partial class Module
     static partial void CheckStructureSite(ReducerContext ctx, StructureKind kind, float x, float z);
     static partial void OnStructureComplete(ReducerContext ctx, Structure s);
     static partial void OnStructureRemoved(ReducerContext ctx, Structure s);
+    static partial void CanClearStructure(ReducerContext ctx, Structure s, ref bool allowed);
 
     // For other systems (survival needs, weather): how sheltered a spot is. Only
     // finished structures shelter, and only when you are well inside.
