@@ -160,6 +160,12 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CleanClay), new Ingredient(Item.Fiber) },
                 Seconds = 4, Makes = Item.Daub, MakesCount = 2,
             },
+            new ProcessDef
+            {
+                Id = "clay.kiln", Name = "Build an updraft kiln", Doing = "Laying bricks and daubing a kiln", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.Brick, 8), new Ingredient(Item.Daub, 2) },
+                Seconds = 20, Outcome = Outcome.Placed,
+            },
         };
 
         static readonly Dictionary<string, ProcessDef> ById = Index();

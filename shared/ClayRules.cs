@@ -66,6 +66,20 @@ namespace LifeGame.Shared
 
         public const int SherdsPerCrack = 2;
 
+        // The updraft kiln (ceramics-2). Built from bricks and daub, loaded with dry
+        // pots, then fired with fuel from your bag. It heats evenly, so pots rarely
+        // crack and come out a little better than from a pit.
+        public const string KilnProcess = "clay.kiln";
+        public const string KilnFireProcess = "clay.kiln_fire";
+        public const int KilnCapacity = 6;
+        public const int MaxKilnsPerPlayer = 2;
+        public const int KilnQualityBonus = 10;
+        // How far in front of the builder a new kiln stands, and how close two may be.
+        public const float KilnSetBack = 1.4f;
+        public const float KilnSpacing = 2.2f;
+
+        public static byte KilnFired(byte quality) => (byte)Math.Min(100, quality + KilnQualityBonus);
+
         // rain and warmth are both 0..1.
         public static float DryRate(float rain, float warmth) =>
             (1f - RainSlowdown * Clamp01(rain)) * (1f + WarmthSpeedup * Clamp01(warmth)) / BaseDrySeconds;

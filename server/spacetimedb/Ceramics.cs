@@ -73,6 +73,7 @@ public static partial class Module
     // Shaping a pot or molding a brick sets it down here to dry.
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
+        if (def.Id == ClayRules.KilnProcess) { PlaceKiln(ctx, job, def); return; }
         if (ClayRules.FormFor(def.Id) is not { } form) return;
         if (ctx.Db.ClayPiece.MadeBy.Filter(job.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
         {
