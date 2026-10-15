@@ -176,3 +176,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-042 — 2026-10-15 — Carrying limit, raised by a basket
 **Decision:** Survival adds a carrying limit, and carrying a woven basket (10 fiber + 3 sticks) raises it. No gather-all pickup. Survival proposes the numbers to Justin with screenshots before they ship.
 **Who:** Justin ("Carry limit"; the PM had recommended gather-all)
+
+## D-043 — 2026-10-15 — Cooking trains Firecraft
+**Decision:** Cooking on a fire trains Firecraft for now; a separate Cooking skill can come later.
+**Who:** Justin ("Firecraft now", which the PM recommended)
