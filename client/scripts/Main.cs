@@ -24,6 +24,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
+    BuildingSystem building = null!;
 
     DbConnection? conn;
     Identity? myIdentity;
@@ -47,6 +48,8 @@ public partial class Main : Node3D
         view.AddChild(me);
         view.AddChild(cameraRig);
         AddChild(hud);
+        building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
         cameraRig.Camera.MakeCurrent();
@@ -248,6 +251,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        building.Bind(conn);
         survival.Attach(conn);
     }
 
@@ -284,6 +288,7 @@ public partial class Main : Node3D
                 $"SELECT * FROM world_item WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 "SELECT * FROM my_inventory",
+                $"SELECT * FROM structure WHERE {range}",
             }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
@@ -456,7 +461,7 @@ public partial class Main : Node3D
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = me.Position + velocity * dt;
+        var pos = building.Collide(me.Position, me.Position + velocity * dt);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);
