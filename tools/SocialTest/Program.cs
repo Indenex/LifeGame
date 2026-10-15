@@ -3,6 +3,7 @@
 // other is kept from digging or taking items there until invited in.
 //
 // Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [decay=0|1]
+// Run it on a fresh database: it lays out a claim marker at (35, 30).
 // With decay=1 it also waits for the claim to fall; run
 // `spacetime call <db> set_claim_lifetime 30` as the database owner first.
 using System.Diagnostics;
@@ -80,18 +81,32 @@ foreach (var (kind, count) in new[] { (ItemKind.Stick, (int)Social.MarkerSticks)
 }
 Console.WriteLine($"A gathered {a.Count(ItemKind.Stick)} sticks, {a.Count(ItemKind.Fiber)} fiber, {a.Count(ItemKind.Stone)} stone");
 
-// Claims are refused in the waking clearing.
+// Markers are refused in the waking clearing.
 Walk(a, 2, 2);
-ExpectError(a, () => a.Conn.Reducers.PlaceClaim(), "clearing", "no claims in the waking clearing");
+ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "clearing", "no claims in the waking clearing");
 
+// A lays out a marker like any structure and builds it; the claim starts when it stands.
 float cx = 34, cz = 30;
 Walk(a, cx, cz);
 Walk(b, cx + 4, cz);
-a.Conn.Reducers.PlaceClaim();
-Pump(() => a.MyClaim() != null, 5, "claim placed");
+a.LastError = null;
+a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 1, cz, 0);
+Pump(() => a.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClaimMarker) || a.LastError != null, 5, "marker laid out");
+if (a.LastError != null) { Console.WriteLine($"FAIL  laying out the marker: {a.LastError}"); Environment.Exit(1); }
+var site = a.Conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClaimMarker);
+Check(a.MyClaim() == null, "no claim until the marker is built");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 4, cz + 3, 0), "", "B cannot lay out a marker next to A's");
+for (int i = 0; i < 20 && a.MyClaim() == null; i++)
+{
+    a.Conn.Reducers.Build(site.Id);
+    Wait(() => a.MyClaim() != null, 0.7);
+    a.LastError = null;
+}
+Pump(() => a.MyClaim() != null, 5, "claim raised");
 var claim = a.MyClaim()!;
 Check(a.Count(ItemKind.Stick) == 0 && a.Count(ItemKind.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
-ExpectError(b, () => b.Conn.Reducers.PlaceClaim(), "", "B cannot claim on top of A");
+Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
 
 // Chat reaches the player standing nearby.
 a.Conn.Reducers.SendChat("hello neighbour");
@@ -153,6 +168,8 @@ if (decay)
     Console.WriteLine($"Waiting for the marker to fall ({(expires - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)...");
     Pump(() => a.MyClaim() == null, 120, "decay");
     Check(true, "untended claim fell");
+    Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
+    Check(true, "the marker post went with it");
     Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Kind == ItemKind.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
@@ -164,9 +181,10 @@ if (decay)
 }
 else
 {
-    a.Conn.Reducers.AbandonClaim(claim.Id);
-    Pump(() => a.MyClaim() == null, 5, "abandon");
-    Check(true, "owner can take the marker down");
+    Walk(a, site.X + 1, site.Z);
+    a.Conn.Reducers.Dismantle(site.Id);
+    Pump(() => a.MyClaim() == null, 5, "dismantle");
+    Check(true, "dismantling the marker ends the claim");
 }
 
 Console.WriteLine(failures == 0 ? "All social checks passed" : $"{failures} checks failed");
@@ -212,7 +230,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

@@ -1,7 +1,8 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Land claims: a player raises a marker post, and the circle of land around it is
+// Land claims: a player builds a claim marker (a structure from Building.cs, laid
+// out from the build menu), and once it stands the circle of land around it is
 // theirs while they keep tending it. Outsiders cannot dig there or take what lies
 // on the ground, members share a stash kept at the marker, and fighting inside a
 // standing claim needs the owner's permission. Left alone, the marker falls.
@@ -14,6 +15,9 @@ public static partial class Module
         [PrimaryKey]
         [AutoInc]
         public ulong Id;
+        // The finished ClaimMarker structure this claim belongs to.
+        [Unique]
+        public ulong StructureId;
         [SpacetimeDB.Index.BTree]
         public Identity Owner;
         public uint OwnerPlayerId;
@@ -162,58 +166,70 @@ public static partial class Module
 
     // --- Reducers ----------------------------------------------------------
 
-    [SpacetimeDB.Reducer]
-    public static void PlaceClaim(ReducerContext ctx)
+    // Rules for laying out a claim marker, on top of Building's own placement checks.
+    static partial void CheckStructureSite(ReducerContext ctx, StructureKind kind, float x, float z)
     {
+        if (kind != StructureKind.ClaimMarker) return;
         EnsureDecayTimer(ctx);
-        var player = RequirePlayer(ctx);
-        var pos = RequirePos(ctx, player);
 
         float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
-        if (pos.X * pos.X + pos.Z * pos.Z < keepOut * keepOut)
+        if (x * x + z * z < keepOut * keepOut)
             throw new Exception("This clearing is where newcomers wake up. Claim land further out");
 
         int owned = 0;
         foreach (var mine in ctx.Db.Claim.Owner.Filter(ctx.Sender))
             if (IsStanding(ctx, mine)) owned++;
+        foreach (var site in ctx.Db.Structure.Owner.Filter(ctx.Sender))
+            if (site.Kind == StructureKind.ClaimMarker && !site.Complete) owned++;
         if (owned >= Social.MaxClaimsPerPlayer)
-            throw new Exception("You already hold a claim. Abandon it first");
+            throw new Exception("You already have a claim marker. Take it down first");
 
-        // Claims may not overlap: no point of the new circle can fall inside another.
-        int cx = World.ChunkOf(pos.X), cz = World.ChunkOf(pos.Z);
+        // Claims may not overlap, counting markers that are still being built.
         float minGap = Social.ClaimRadius * 2f;
-        int reach = ClaimChunkReach * 2;
+        int cx = World.ChunkOf(x), cz = World.ChunkOf(z), reach = ClaimChunkReach * 2;
         for (int dx = -reach; dx <= reach; dx++)
             for (int dz = -reach; dz <= reach; dz++)
+            {
                 foreach (var other in ctx.Db.Claim.ByChunk.Filter((cx + dx, cz + dz)))
-                {
-                    float ox = other.X - pos.X, oz = other.Z - pos.Z;
-                    if (IsStanding(ctx, other) && ox * ox + oz * oz < minGap * minGap)
+                    if (IsStanding(ctx, other) && Closer(other.X - x, other.Z - z, minGap))
                         throw new Exception($"Too close to {other.OwnerName}'s claim");
-                }
+                foreach (var site in ctx.Db.Structure.ByChunk.Filter((cx + dx, cz + dz)))
+                    if (site.Kind == StructureKind.ClaimMarker && !site.Complete && Closer(site.X - x, site.Z - z, minGap))
+                        throw new Exception("Too close to another claim marker being built");
+            }
+    }
 
-        TakeFromInventory(ctx, ctx.Sender, ItemKind.Stick, Social.MarkerSticks, "sticks");
-        TakeFromInventory(ctx, ctx.Sender, ItemKind.Fiber, Social.MarkerFiber, "fiber");
-
-        // Clear out any fallen claims of this player before raising a new one.
-        foreach (var old in ctx.Db.Claim.Owner.Filter(ctx.Sender).ToList())
-            RemoveClaim(ctx, old);
-
+    // The marker's last material went in: the land around it is claimed from now on.
+    static partial void OnStructureComplete(ReducerContext ctx, Structure s)
+    {
+        if (s.Kind != StructureKind.ClaimMarker) return;
+        EnsureDecayTimer(ctx);
+        var owner = ctx.Db.Player.Identity.Find(s.Owner);
         ctx.Db.Claim.Insert(new Claim
         {
             Id = 0,
-            Owner = ctx.Sender,
-            OwnerPlayerId = player.PlayerId,
-            OwnerName = player.Name,
-            X = pos.X,
-            Z = pos.Z,
-            ChunkX = World.ChunkOf(pos.X),
-            ChunkZ = World.ChunkOf(pos.Z),
+            StructureId = s.Id,
+            Owner = s.Owner,
+            OwnerPlayerId = owner?.PlayerId ?? 0,
+            OwnerName = owner?.Name ?? "someone",
+            X = s.X,
+            Z = s.Z,
+            ChunkX = World.ChunkOf(s.X),
+            ChunkZ = World.ChunkOf(s.Z),
             TendedAt = ctx.Timestamp,
             ExpiresAt = After(ctx.Timestamp, ClaimLifetimeSeconds(ctx)),
             AllowPvp = false,
         });
     }
+
+    // Dismantling the marker ends the claim.
+    static partial void OnStructureRemoved(ReducerContext ctx, Structure s)
+    {
+        if (s.Kind == StructureKind.ClaimMarker && ctx.Db.Claim.StructureId.Find(s.Id) is { } claim)
+            RemoveClaim(ctx, claim);
+    }
+
+    static bool Closer(float dx, float dz, float distance) => dx * dx + dz * dz < distance * distance;
 
     // Owners and members keep a claim standing by visiting the marker.
     [SpacetimeDB.Reducer]
@@ -265,6 +281,7 @@ public static partial class Module
     }
 
     // Taking a marker down drops whatever was in the stash at its foot.
+    // (Dismantling it from the build menu does the same, and gives the materials back.)
     [SpacetimeDB.Reducer]
     public static void AbandonClaim(ReducerContext ctx, ulong claimId)
     {
@@ -276,7 +293,7 @@ public static partial class Module
     public static void StashItem(ReducerContext ctx, ulong claimId, ItemKind kind)
     {
         var claim = RequireStashAccess(ctx, claimId);
-        TakeFromInventory(ctx, ctx.Sender, kind, 1, kind.ToString().ToLowerInvariant());
+        TakeFromInventory(ctx, ctx.Sender, kind);
         if (FindStash(ctx, claim.Id, kind) is { } row)
             ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + 1 });
         else
@@ -341,6 +358,13 @@ public static partial class Module
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).ToList())
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         ctx.Db.Claim.Id.Delete(claim.Id);
+        // The marker post goes with it; what was built into it is not given back.
+        if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
+        {
+            foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(marker.Id).ToList())
+                ctx.Db.StructureBuilder.Id.Delete(row.Id);
+            ctx.Db.Structure.Id.Delete(marker.Id);
+        }
     }
 
     static Claim RequireStandingClaim(ReducerContext ctx, ulong claimId)
@@ -386,17 +410,6 @@ public static partial class Module
         foreach (var row in ctx.Db.ClaimStash.ByClaimKind.Filter((claimId, kind)))
             return row;
         return null;
-    }
-
-    static void TakeFromInventory(ReducerContext ctx, Identity owner, ItemKind kind, uint count, string what)
-    {
-        var stack = FindStack(ctx, owner, kind);
-        if (stack is not { } s || s.Count < count)
-            throw new Exception(count == 1 ? $"You are not carrying any {what}" : $"You need {count} {what}");
-        if (s.Count == count)
-            ctx.Db.InventoryItem.Id.Delete(s.Id);
-        else
-            ctx.Db.InventoryItem.Id.Update(s with { Count = s.Count - count });
     }
 
     static Timestamp After(Timestamp t, long seconds) =>

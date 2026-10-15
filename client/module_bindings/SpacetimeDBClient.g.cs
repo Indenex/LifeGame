@@ -661,7 +661,6 @@ namespace SpacetimeDB.Types
                 Reducer.LeaveClaim args => Reducers.InvokeLeaveClaim(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
-                Reducer.PlaceClaim args => Reducers.InvokePlaceClaim(eventContext, args),
                 Reducer.PlaceStructure args => Reducers.InvokePlaceStructure(eventContext, args),
                 Reducer.RemoveClaimMember args => Reducers.InvokeRemoveClaimMember(eventContext, args),
                 Reducer.SendChat args => Reducers.InvokeSendChat(eventContext, args),

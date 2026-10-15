@@ -8,7 +8,7 @@ namespace LifeGame;
 // opening the chat box brings the recent ones back.
 public partial class ChatPanel : CanvasLayer
 {
-    const int MaxLines = 8;
+    const int MaxLines = 6;
     const float LineLife = 18f;
 
     readonly VBoxContainer lines = new();
@@ -29,7 +29,7 @@ public partial class ChatPanel : CanvasLayer
         column.AddThemeConstantOverride("separation", 6);
         column.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         column.GrowVertical = Control.GrowDirection.Begin;
-        column.Position = new Vector2(20, -74);
+        column.Position = new Vector2(20, -112);
         column.CustomMinimumSize = new Vector2(440, 0);
         root.AddChild(column);
 

@@ -15,6 +15,8 @@ namespace SpacetimeDB.Types
     {
         [DataMember(Name = "id")]
         public ulong Id;
+        [DataMember(Name = "structure_id")]
+        public ulong StructureId;
         [DataMember(Name = "owner")]
         public SpacetimeDB.Identity Owner;
         [DataMember(Name = "owner_player_id")]
@@ -38,6 +40,7 @@ namespace SpacetimeDB.Types
 
         public Claim(
             ulong Id,
+            ulong StructureId,
             SpacetimeDB.Identity Owner,
             uint OwnerPlayerId,
             string OwnerName,
@@ -51,6 +54,7 @@ namespace SpacetimeDB.Types
         )
         {
             this.Id = Id;
+            this.StructureId = StructureId;
             this.Owner = Owner;
             this.OwnerPlayerId = OwnerPlayerId;
             this.OwnerName = OwnerName;

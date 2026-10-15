@@ -12,5 +12,6 @@ namespace SpacetimeDB.Types
     {
         LeanTo,
         ClayHut,
+        ClaimMarker,
     }
 }

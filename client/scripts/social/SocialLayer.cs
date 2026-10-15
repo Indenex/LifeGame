@@ -12,8 +12,8 @@ namespace LifeGame;
 // fight where you stand. Main hands it the connection and, every frame, where the
 // player is; it keeps its own subscriptions so the rest of the client is untouched.
 //
-// Keys (KEYMAP.md): Enter to talk, K at a marker to open it. L raises a marker
-// until the marker moves into the B build menu.
+// Keys (KEYMAP.md): Enter to talk, K at a marker to open it. Markers are laid out
+// from House building's B menu like any other structure.
 public partial class SocialLayer : Node
 {
     DbConnection? conn;
@@ -66,7 +66,6 @@ public partial class SocialLayer : Node
     public override void _Ready()
     {
         Bind("chat", Key.Enter, Key.KpEnter);
-        Bind("claim_place", Key.L);
         Bind("claim_open", Key.K);
 
         AddChild(chat);
@@ -136,13 +135,6 @@ public partial class SocialLayer : Node
             chat.Open();
             GetViewport().SetInputAsHandled();
         }
-        else if (e.IsActionPressed("claim_place"))
-        {
-            if (ClaimAt(myPos.X, myPos.Z) is { } here)
-                hud.Note(IsMine(here) ? "This land is already yours" : $"This land is claimed by {here.OwnerName}");
-            else
-                conn.Reducers.PlaceClaim();
-        }
         else if (e.IsActionPressed("claim_open"))
         {
             if (panel.IsOpen) { panel.Close(); return; }
@@ -187,8 +179,8 @@ public partial class SocialLayer : Node
         {
             Text = Wrap(m.Text, 34),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FontSize = 24,
-            PixelSize = 0.0055f,
+            FontSize = 30,
+            PixelSize = 0.0075f,
             Modulate = new Color(Look.Cream, 0f),
             OutlineSize = 8,
             OutlineModulate = new Color(0.08f, 0.09f, 0.07f, 0.6f),

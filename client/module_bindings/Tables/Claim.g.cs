@@ -44,11 +44,21 @@ namespace SpacetimeDB.Types
 
             public readonly OwnerIndex Owner;
 
+            public sealed class StructureIdUniqueIndex : UniqueIndexBase<ulong>
+            {
+                protected override ulong GetKey(Claim row) => row.StructureId;
+
+                public StructureIdUniqueIndex(ClaimHandle table) : base(table) { }
+            }
+
+            public readonly StructureIdUniqueIndex StructureId;
+
             internal ClaimHandle(DbConnection conn) : base(conn)
             {
                 ByChunk = new(this);
                 Id = new(this);
                 Owner = new(this);
+                StructureId = new(this);
             }
 
             protected override object GetPrimaryKey(Claim row) => row.Id;
@@ -60,6 +70,7 @@ namespace SpacetimeDB.Types
     public sealed class ClaimCols
     {
         public global::SpacetimeDB.Col<Claim, ulong> Id { get; }
+        public global::SpacetimeDB.Col<Claim, ulong> StructureId { get; }
         public global::SpacetimeDB.Col<Claim, SpacetimeDB.Identity> Owner { get; }
         public global::SpacetimeDB.Col<Claim, uint> OwnerPlayerId { get; }
         public global::SpacetimeDB.Col<Claim, string> OwnerName { get; }
@@ -74,6 +85,7 @@ namespace SpacetimeDB.Types
         public ClaimCols(string tableName)
         {
             Id = new global::SpacetimeDB.Col<Claim, ulong>(tableName, "id");
+            StructureId = new global::SpacetimeDB.Col<Claim, ulong>(tableName, "structure_id");
             Owner = new global::SpacetimeDB.Col<Claim, SpacetimeDB.Identity>(tableName, "owner");
             OwnerPlayerId = new global::SpacetimeDB.Col<Claim, uint>(tableName, "owner_player_id");
             OwnerName = new global::SpacetimeDB.Col<Claim, string>(tableName, "owner_name");
@@ -90,6 +102,7 @@ namespace SpacetimeDB.Types
     public sealed class ClaimIxCols
     {
         public global::SpacetimeDB.IxCol<Claim, ulong> Id { get; }
+        public global::SpacetimeDB.IxCol<Claim, ulong> StructureId { get; }
         public global::SpacetimeDB.IxCol<Claim, SpacetimeDB.Identity> Owner { get; }
         public global::SpacetimeDB.IxCol<Claim, int> ChunkX { get; }
         public global::SpacetimeDB.IxCol<Claim, int> ChunkZ { get; }
@@ -97,6 +110,7 @@ namespace SpacetimeDB.Types
         public ClaimIxCols(string tableName)
         {
             Id = new global::SpacetimeDB.IxCol<Claim, ulong>(tableName, "id");
+            StructureId = new global::SpacetimeDB.IxCol<Claim, ulong>(tableName, "structure_id");
             Owner = new global::SpacetimeDB.IxCol<Claim, SpacetimeDB.Identity>(tableName, "owner");
             ChunkX = new global::SpacetimeDB.IxCol<Claim, int>(tableName, "chunk_x");
             ChunkZ = new global::SpacetimeDB.IxCol<Claim, int>(tableName, "chunk_z");
