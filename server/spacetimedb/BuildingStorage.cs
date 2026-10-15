@@ -1,8 +1,10 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Things you do with a finished building: hang and swing a hut's door, and keep
-// items in a storage basket. Anyone can open a door (D-046). Anyone can put into
+// Things you do with a finished building: hang, swing and lock a hut's door, and
+// keep items in a storage basket. Anyone can open an unlocked door (D-046); a
+// locked one opens only for whoever hung it or, inside a claim, the claim's
+// members, and they lock and unlock it (D-048). Anyone can put into
 // a basket; taking out is open too, except inside a claim, where only those with
 // access to the claim can (Claims' CheckClaimAccess decides).
 public static partial class Module
@@ -14,6 +16,9 @@ public static partial class Module
         [PrimaryKey]
         public ulong StructureId;
         public bool Closed;
+        public bool Locked;
+        // Whoever hung it; they can always lock and unlock it.
+        public Identity HungBy;
     }
 
     // One stack inside a storage basket.
@@ -44,20 +49,47 @@ public static partial class Module
         var state = RequireCooldown(ctx, player);
         Take(ctx, Item.Stick, Structures.DoorSticks);
         Take(ctx, Item.Fiber, Structures.DoorFiber);
-        ctx.Db.StructureDoor.Insert(new StructureDoor { StructureId = structureId, Closed = true });
+        ctx.Db.StructureDoor.Insert(new StructureDoor { StructureId = structureId, Closed = true, Locked = false, HungBy = ctx.Sender });
         TouchStructure(ctx, structureId);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
-    // Opens or shuts a hut's door. Anyone can.
+    // Opens or shuts a hut's door. Anyone can, unless it is locked.
     [SpacetimeDB.Reducer]
     public static void ToggleDoor(ReducerContext ctx, ulong structureId)
     {
-        RequireFinishedInReach(ctx, structureId);
+        var (s, _) = RequireFinishedInReach(ctx, structureId);
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
-        ctx.Db.StructureDoor.StructureId.Update(door with { Closed = !door.Closed });
+        if (door.Locked && !CanLock(ctx, s, door))
+            throw new Exception("The door is barred");
+        // Opening a locked door unbars it; it stays unbarred until someone locks it again.
+        ctx.Db.StructureDoor.StructureId.Update(door with { Closed = !door.Closed, Locked = false });
         TouchStructure(ctx, structureId);
     }
+
+    // Bars or unbars a hut's door: whoever hung it, or a member of the claim it stands in.
+    // Barring shuts it.
+    [SpacetimeDB.Reducer]
+    public static void ToggleLock(ReducerContext ctx, ulong structureId)
+    {
+        var (s, _) = RequireFinishedInReach(ctx, structureId);
+        var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
+        if (!CanLock(ctx, s, door))
+            throw new Exception("Only whoever hung the door, or the claim's members, can bar it");
+        ctx.Db.StructureDoor.StructureId.Update(door with { Locked = !door.Locked, Closed = door.Closed || !door.Locked });
+        TouchStructure(ctx, structureId);
+    }
+
+    static bool CanLock(ReducerContext ctx, Structure s, StructureDoor door)
+    {
+        if (door.HungBy == ctx.Sender) return true;
+        bool member = false;
+        ClaimMemberHook(ctx, s.X, s.Z, ref member);
+        return member;
+    }
+
+    // Claims implements this: true when the point is inside a claim the sender is a member of.
+    static partial void ClaimMemberHook(ReducerContext ctx, float x, float z, ref bool member);
 
     // Puts carried items of one kind and quality into a basket.
     [SpacetimeDB.Reducer]

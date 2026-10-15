@@ -29,7 +29,9 @@ public static class StructureModel
     static ShaderMaterial Thatch => thatch ??= Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f);
     internal static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
     internal static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
-    static ShaderMaterial? weave;
+    static ShaderMaterial? weave, paleWood;
+    // Freshly cut wood, for things that should catch the eye (a door's bar).
+    internal static ShaderMaterial PaleWood => paleWood ??= Tinted(Look.BarkSurface, new Color(0.86f, 0.74f, 0.55f));
     internal static ShaderMaterial Weave => weave ??= Tinted(Look.Foliage, new Color(0.72f, 0.58f, 0.32f), sway: 0f);
 
     public static int StageCount(int kind) => LifeGame.Shared.Structures.Shape(kind).Stages.Length;
@@ -171,7 +173,7 @@ public static class StructureModel
     public static Mesh Door(float width, float height)
     {
         var st = Begin();
-        const int uprights = 5, rods = 7;
+        const int uprights = 7, rods = 13;
         for (int i = 0; i < uprights; i++)
         {
             float x = 0.05f + i * (width - 0.1f) / (uprights - 1);
@@ -179,9 +181,22 @@ public static class StructureModel
         }
         for (int r = 0; r < rods; r++)
         {
-            float y = 0.14f + r * (height - 0.25f) / (rods - 1), weave = (r % 2 == 0 ? 1 : -1) * 0.025f;
-            StickInto(st, new Vector3(0.0f, y, weave), new Vector3(width, y + 0.02f, -weave), 0.022f, Shade(r * 13 + 2));
+            float y = 0.1f + r * (height - 0.18f) / (rods - 1), weave = (r % 2 == 0 ? 1 : -1) * 0.025f;
+            StickInto(st, new Vector3(0.0f, y, weave), new Vector3(width, y + 0.02f, -weave), 0.05f, Shade(r * 13 + 2));
         }
+        return st.Commit();
+    }
+
+    // The bar across a locked door, in the door's frame: a pole a little longer than
+    // the door, resting on two short pegs.
+    public static Mesh Bar(float width)
+    {
+        var st = Begin();
+        // Fresh, pale wood so it reads at a glance against the weathered door.
+        var pale = Shade(91).Lightened(0.55f);
+        StickInto(st, new Vector3(-0.15f, 0.02f, -0.05f), new Vector3(width + 0.15f, 0f, -0.05f), 0.06f, pale);
+        foreach (float x in new[] { 0.16f, width - 0.16f })
+            StickInto(st, new Vector3(x, -0.09f, 0.04f), new Vector3(x, -0.07f, -0.14f), 0.03f, pale.Darkened(0.15f));
         return st.Commit();
     }
 

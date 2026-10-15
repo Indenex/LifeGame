@@ -122,6 +122,13 @@ public partial class BuildingSystem : Node
             Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
                 (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
         }
+        // --building-door: just a finished hut with its door barred, close up.
+        if (OS.GetCmdlineUserArgs().Contains("--building-door"))
+        {
+            Put(StructureKind.ClayHut, 5.5f, 0f, 4, 1f, 0f);
+            SetDoor(new StructureDoor(ulong.MaxValue, true, true, default), animate: false);
+            return;
+        }
         Put(StructureKind.ClayHut, 8f, -3.2f, 4, 1f, 0.3f);
         Put(StructureKind.LeanTo, 6f, 3.4f, 4, 1f, -2.3f);
         Put(StructureKind.ClayHut, 14f, 5.5f, 2, 0.5f, -0.5f);
@@ -129,7 +136,7 @@ public partial class BuildingSystem : Node
         Put(StructureKind.LeanTo, 4f, -4.5f, 0, 0.5f, 2.6f);
         Put(StructureKind.Basket, 4.5f, -1.2f, 1, 1f);
         Put(StructureKind.Basket, 5.2f, -0.4f, 0, 0.5f, 1f);
-        SetDoor(ulong.MaxValue, closed: true, animate: false);
+        SetDoor(new StructureDoor(ulong.MaxValue, true, true, default), animate: false);
     }
 
     public void Bind(DbConnection c)

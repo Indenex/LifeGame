@@ -105,17 +105,23 @@ public partial class StructureView : Node3D
 
     // The doorway in the hut's frame: hinged on one jamb, swinging inward when open.
     const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.45f, DoorOpenAngle = 1.75f;
-    Node3D? doorHinge;
+    Node3D? doorHinge, doorBar;
     bool? doorClosed;
 
-    // closed: null takes the door away (none hung yet).
-    public void SetDoor(bool? closed, bool animate)
+    // closed: null takes the door away (none hung yet). locked shows the bar across it.
+    public void SetDoor(bool? closed, bool locked, bool animate)
     {
+        if (doorBar != null && doorBar.Visible != locked)
+        {
+            doorBar.Visible = locked;
+            if (locked && animate && IsInsideTree()) Settle(doorBar, doorBar.Position);
+        }
         if (closed == doorClosed) return;
         if (closed == null)
         {
             doorHinge?.QueueFree();
             doorHinge = null;
+            doorBar = null;
             doorClosed = null;
             return;
         }
@@ -130,6 +136,12 @@ public partial class StructureView : Node3D
                 Mesh = StructureModel.Door(a.DistanceTo(b), DoorHeight),
                 MaterialOverride = StructureModel.Wood,
             });
+            // The bar: a stout pole dropped into two pegs across the middle of the door, outside
+            // (the hinge's -Z faces out of the hut).
+            float width = a.DistanceTo(b);
+            doorBar = new Node3D { Position = new Vector3(0, DoorHeight * 0.52f, -0.08f), Visible = locked };
+            doorBar.AddChild(new MeshInstance3D { Mesh = StructureModel.Bar(width), MaterialOverride = StructureModel.PaleWood });
+            doorHinge.AddChild(doorBar);
             AddChild(doorHinge);
             if (animate && IsInsideTree()) Settle(doorHinge, doorHinge.Position);
         }

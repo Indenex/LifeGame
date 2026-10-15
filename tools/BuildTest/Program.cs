@@ -157,6 +157,18 @@ void HangDoor(ulong hut)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(hut);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "and shut it again");
+
+    // A, who hung it, bars it; B can't open it then; A unbars it and B can again.
+    a.Conn.Reducers.ToggleLock(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: true, Closed: true }, 10, "A barred the door");
+    b.Conn.Reducers.ToggleLock(hut);
+    b.Conn.Reducers.ToggleDoor(hut);
+    Pump(1500);
+    Check(a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: true, Closed: true }, "B can't unbar or open it");
+    a.Conn.Reducers.ToggleLock(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: false }, 10, "A unbarred it");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "and B can open it again");
 }
 
 // A puts sticks in the basket; B takes one out.

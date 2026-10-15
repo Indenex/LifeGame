@@ -12,9 +12,11 @@ Ceramics can place an updraft kiln from the B menu as a blueprint (D-035): Build
 - 2026-10-15 22:40: kiln hooks landed in #10 (e43c0f3). Design questions on the door and basket sent to the PM.
 
 - 2026-10-15 23:00: Justin's answers (D-046): anyone opens doors; baskets open to anyone except in a claim (members only); player-made things outside claims weather after 72 h untouched, gone 24 h later. Built: HangDoor/ToggleDoor (closed door: warmth 0.9, blocks the doorway), Storage basket kind (6 fiber + 2 cordage, 12 stacks, BasketPut/BasketTake, G opens a panel), Weathering.cs (StructureTouch, GroundItemTouch, hourly sweep, darken and sag in the last day). BuildTest covers door and basket; passes locally in 196 s.
+- 2026-10-15 23:40: rebased on #10 (StructureProgress, Use registry). Locks (D-048): StructureDoor has Locked and HungBy; ToggleLock for whoever hung it or claim members (Claims' ClaimMemberHook); a barred door opens only for them and shows a pale bar. Door and basket are the `building.use` Use handler (priority 28), Shift+G bars. Publishing over #10's schema needs no wipe (checked). BuildTest covers barring; passes in 200 s. Screenshots: building-06-door-basket.png, building-07-barred-door.png.
 
 ## Open questions / blockers
-- Claims must implement `InClaimHook(ctx, x, z, ref bool inClaim)` (Weathering.cs) or nothing is ever treated as inside a claim.
+- Claims must implement `InClaimHook(ctx, x, z, ref bool inClaim)` (Weathering.cs) and `ClaimMemberHook(ctx, x, z, ref bool member)` (BuildingStorage.cs), or nothing counts as inside a claim and only the door's hanger can bar it.
+- Shift+G for barring is a default; asked the PM/UX whether a different key or gesture is wanted.
 - Crafting must call `OnPlayerDroppedItem(ctx, row)` in Drop (Reducers.cs) with the inserted WorldItem, or dropped items never weather.
 - StructureKind.Basket is 2 here; Claims' ClaimMarker and Ceramics' Kiln also append. Whoever lands later renumbers its own entry (enum, StageCosts, Shapes and StructureModel kind switch together).
 

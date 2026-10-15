@@ -7,12 +7,13 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Using finished buildings: G at a hut's doorway hangs a door (4 sticks, 2 fiber)
-// or opens and shuts it; G at a storage basket opens it. Also shows weathering
-// on things left untouched outside a claim (D-046).
+// Using finished buildings, all through the shared Use key (G): at a hut's doorway
+// G hangs a door (4 sticks, 2 fiber) or opens and shuts it, and Shift+G bars or
+// unbars it (D-048); at a storage basket G opens it. Also shows weathering on
+// things left untouched outside a claim (D-046).
 public partial class BuildingSystem
 {
-    readonly Dictionary<ulong, bool> doors = new();
+    readonly Dictionary<ulong, StructureDoor> doors = new();
     readonly Dictionary<ulong, DateTimeOffset> touched = new();
     float weatherTimer;
 
@@ -31,9 +32,14 @@ public partial class BuildingSystem
 
     void BindUse(DbConnection c)
     {
-        c.Db.StructureDoor.OnInsert += (_, d) => SetDoor(d.StructureId, d.Closed, animate: true);
-        c.Db.StructureDoor.OnUpdate += (_, _, d) => SetDoor(d.StructureId, d.Closed, animate: true);
-        c.Db.StructureDoor.OnDelete += (_, d) => SetDoor(d.StructureId, null, animate: false);
+        c.Db.StructureDoor.OnInsert += (_, d) => SetDoor(d, animate: true);
+        c.Db.StructureDoor.OnUpdate += (_, _, d) => SetDoor(d, animate: true);
+        c.Db.StructureDoor.OnDelete += (_, d) =>
+        {
+            doors.Remove(d.StructureId);
+            if (views.TryGetValue(d.StructureId, out var v)) v.SetDoor(null, false, animate: false);
+        };
+        RegisterUse(c);
         c.Db.StructureTouch.OnInsert += (_, t) => Touched(t);
         c.Db.StructureTouch.OnUpdate += (_, _, t) => Touched(t);
         c.Db.StructureTouch.OnDelete += (_, t) => touched.Remove(t.StructureId);
@@ -45,21 +51,20 @@ public partial class BuildingSystem
         c.Db.MyInventory.OnDelete += (_, _) => RefreshBasket();
     }
 
-    void SetDoor(ulong structureId, bool? closed, bool animate)
+    void SetDoor(StructureDoor d, bool animate)
     {
-        if (closed is { } shut) doors[structureId] = shut;
-        else doors.Remove(structureId);
-        if (views.TryGetValue(structureId, out var v)) v.SetDoor(closed, animate);
+        doors[d.StructureId] = d;
+        if (views.TryGetValue(d.StructureId, out var v)) v.SetDoor(d.Closed, d.Locked, animate);
     }
 
     // A view made after its door row arrived picks the door up here.
     void ApplyExtras(Structure s, StructureView v)
     {
-        if (doors.TryGetValue(s.Id, out var shut)) v.SetDoor(shut, animate: false);
+        if (doors.TryGetValue(s.Id, out var d)) v.SetDoor(d.Closed, d.Locked, animate: false);
         v.SetWeathered(Weathered(s.Id));
     }
 
-    bool DoorShut(ulong structureId) => doors.TryGetValue(structureId, out var shut) && shut;
+    bool DoorShut(ulong structureId) => doors.TryGetValue(structureId, out var d) && d.Closed;
 
     // --- Weathering -------------------------------------------------------
 
@@ -107,40 +112,46 @@ public partial class BuildingSystem
         return new Vector2(lx, lz - 1.7f).Length() < 1.2f;
     }
 
-    void Use()
+    // G on a finished hut's doorway or a basket. Priority sits just under adding materials (30).
+    void RegisterUse(DbConnection c)
     {
-        if (conn() is not { } c || UsableNear() is not { } s) return;
-        if (s.Kind == StructureKind.Basket)
+        Use.Register(new UseHandler
         {
-            if (openBasket == s.Id) CloseBasket();
-            else OpenBasket(s.Id);
-            return;
-        }
-        if (doors.ContainsKey(s.Id))
-        {
-            c.Reducers.ToggleDoor(s.Id);
-            return;
-        }
-        uint sticks = Carried(c, Item.Stick), fiber = Carried(c, Item.Fiber);
-        if (sticks < Structures.DoorSticks || fiber < Structures.DoorFiber)
-            hud.Note($"A door takes {Structures.DoorSticks} sticks and {Structures.DoorFiber} fiber");
-        else
-            c.Reducers.HangDoor(s.Id);
+            Id = "building.use",
+            Priority = 28,
+            Find = at =>
+            {
+                if (UsableNear() is not { } s) return null;
+                float d = new Vector2(s.X - at.X, s.Z - at.Z).Length();
+                if (s.Kind == StructureKind.Basket)
+                    return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id));
+                if (!doors.TryGetValue(s.Id, out var door))
+                    return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
+                        ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id))
+                        : null;
+                bool mine = door.HungBy == c.Identity;
+                // Shift+G bars and unbars; members of the claim can too, the server decides.
+                Action act = () =>
+                {
+                    if (Input.IsKeyPressed(Key.Shift)) c.Reducers.ToggleLock(s.Id);
+                    else c.Reducers.ToggleDoor(s.Id);
+                };
+                if (door.Locked && !mine) return new UseOffer("Barred", d, act);
+                string verb = door.Closed ? (door.Locked ? "Unbar and open" : "Open the door") : "Shut the door";
+                if (mine) verb += door.Locked ? "    Shift unbar" : "    Shift bar";
+                return new UseOffer(verb, d, act);
+            },
+        });
     }
 
     static uint Carried(DbConnection c, Item item) =>
         (uint)c.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Sum(i => i.Count);
 
+    // The door costs show beside the doorway when you can't hang one yet.
     string? UsePrompt()
     {
-        if (UsableNear() is not { } s) return null;
-        if (s.Kind == StructureKind.Basket)
-        {
-            int stacks = conn()?.Db.BasketItem.Iter().Count(b => b.StructureId == s.Id) ?? 0;
-            return openBasket == s.Id ? null : $"Storage basket ({stacks} of {Structures.BasketStacks})    G open";
-        }
-        if (doors.TryGetValue(s.Id, out var shut)) return shut ? "G open the door" : "G shut the door";
-        return $"G hang a door ({Structures.DoorSticks} sticks, {Structures.DoorFiber} fiber)";
+        if (UsableNear() is not { } s || s.Kind != StructureKind.ClayHut || doors.ContainsKey(s.Id)) return null;
+        return $"A door takes {Structures.DoorSticks} sticks and {Structures.DoorFiber} fiber";
     }
 
     // --- Basket panel -----------------------------------------------------
@@ -235,14 +246,8 @@ public partial class BuildingSystem
 
     bool UseInput(InputEvent e)
     {
-        if (openBasket != null && e.IsActionPressed("build_cancel"))
-        {
-            CloseBasket();
-            return true;
-        }
-        if (!e.IsActionPressed("build_work") || e.IsEcho() || NearestSite() != null) return false;
-        if (UsableNear() == null) return false;
-        Use();
+        if (openBasket == null || !(e.IsActionPressed("build_cancel") || e.IsActionPressed("use"))) return false;
+        CloseBasket();
         return true;
     }
 }
