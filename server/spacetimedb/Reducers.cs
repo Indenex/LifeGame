@@ -31,6 +31,7 @@ public static partial class Module
     public static void PlayerConnected(ReducerContext ctx)
     {
         EnsureWorldClock(ctx);
+        EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
