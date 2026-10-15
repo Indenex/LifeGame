@@ -51,7 +51,7 @@ Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by w
 
 An in-game day lasts 90 real minutes. The server keeps the clock and the weather (`server/spacetimedb/WorldClock.cs`), so every player sees the same sky. The client draws it in `client/scripts/atmosphere/`, and synthesizes all the sound as it plays: wind, rain, birds, crickets, footsteps and the music.
 
-Preview keys change only what you see and hear: hold T to fast-forward time (a whole day in about 45 seconds), press Y to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
+Preview keys in debug builds (running from the editor) change only what you see and hear: hold F5 to fast-forward time (a whole day in about 45 seconds), press F6 to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
 
 To listen to the soundscape without the game, render it to a file: `cd tools/SoundPreview && dotnet run -- out.wav` (day, rain, dusk and night, with footsteps).
 

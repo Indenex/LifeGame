@@ -9,8 +9,8 @@ namespace LifeGame;
 // Day and night, weather and the sounds of the forest. The server owns the clock
 // and the weather; this node turns them into sun, sky, fog, rain and ambience.
 //
-// Preview keys (only change what you see and hear): hold T to fast-forward time,
-// Y to cycle rain / clear / the server's weather, M to mute or unmute music.
+// Preview keys in debug builds (only change what you see and hear): hold F5 to
+// fast-forward time, F6 to cycle rain / clear / the server's weather, M to mute or unmute music.
 // Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5
 // --day-minutes=4 (a shorter day, for watching the whole cycle).
 public partial class Atmosphere : Node3D
@@ -58,8 +58,12 @@ public partial class Atmosphere : Node3D
         AddChild(fireflies);
         AddChild(sound);
 
-        Bind("preview_time", Key.T);
-        Bind("preview_weather", Key.Y);
+        // Previews are for testing, so release builds leave them out.
+        if (OS.IsDebugBuild())
+        {
+            Bind("preview_time", Key.F5);
+            Bind("preview_weather", Key.F6);
+        }
         Bind("toggle_music", Key.M);
 
         fixedTime = ArgFloat("time-of-day");
@@ -114,7 +118,7 @@ public partial class Atmosphere : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e.IsActionPressed("preview_weather")) previewWeather = (previewWeather + 1) % 3;
+        if (InputMap.HasAction("preview_weather") && e.IsActionPressed("preview_weather")) previewWeather = (previewWeather + 1) % 3;
         if (e.IsActionPressed("toggle_music")) sound.MusicOn = !sound.MusicOn;
     }
 
@@ -122,7 +126,7 @@ public partial class Atmosphere : Node3D
     {
         float dt = (float)delta;
         // A whole day in about 45 seconds while T is held.
-        if (Input.IsActionPressed("preview_time")) previewDays += dt / 45f;
+        if (InputMap.HasAction("preview_time") && Input.IsActionPressed("preview_time")) previewDays += dt / 45f;
         Update(dt, false);
         Footsteps();
     }
