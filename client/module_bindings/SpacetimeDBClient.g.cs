@@ -30,8 +30,11 @@ namespace SpacetimeDB.Types
             AddTable(ChatMessage = new(conn));
             AddTable(Claim = new(conn));
             AddTable(ClaimMember = new(conn));
+            AddTable(ForageBush = new(conn));
+            AddTable(HeatSource = new(conn));
             AddTable(MyClaimStash = new(conn));
             AddTable(MyInventory = new(conn));
+            AddTable(MyVitals = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
             AddTable(TerrainEdit = new(conn));
@@ -535,8 +538,11 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.ChatMessage().ToSql(),
             new QueryBuilder().From.Claim().ToSql(),
             new QueryBuilder().From.ClaimMember().ToSql(),
+            new QueryBuilder().From.ForageBush().ToSql(),
+            new QueryBuilder().From.HeatSource().ToSql(),
             new QueryBuilder().From.MyClaimStash().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
+            new QueryBuilder().From.MyVitals().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
             new QueryBuilder().From.TerrainEdit().ToSql(),
@@ -550,8 +556,11 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<ChatMessage, ChatMessageCols, ChatMessageIxCols> ChatMessage() => new("chat_message", new ChatMessageCols("chat_message"), new ChatMessageIxCols("chat_message"));
         public global::SpacetimeDB.Table<Claim, ClaimCols, ClaimIxCols> Claim() => new("claim", new ClaimCols("claim"), new ClaimIxCols("claim"));
         public global::SpacetimeDB.Table<ClaimMember, ClaimMemberCols, ClaimMemberIxCols> ClaimMember() => new("claim_member", new ClaimMemberCols("claim_member"), new ClaimMemberIxCols("claim_member"));
+        public global::SpacetimeDB.Table<ForageBush, ForageBushCols, ForageBushIxCols> ForageBush() => new("forage_bush", new ForageBushCols("forage_bush"), new ForageBushIxCols("forage_bush"));
+        public global::SpacetimeDB.Table<HeatSource, HeatSourceCols, HeatSourceIxCols> HeatSource() => new("heat_source", new HeatSourceCols("heat_source"), new HeatSourceIxCols("heat_source"));
         public global::SpacetimeDB.Table<ClaimStash, MyClaimStashCols, MyClaimStashIxCols> MyClaimStash() => new("my_claim_stash", new MyClaimStashCols("my_claim_stash"), new MyClaimStashIxCols("my_claim_stash"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
+        public global::SpacetimeDB.Table<Vitals, MyVitalsCols, MyVitalsIxCols> MyVitals() => new("my_vitals", new MyVitalsCols("my_vitals"), new MyVitalsIxCols("my_vitals"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
         public global::SpacetimeDB.Table<TerrainEdit, TerrainEditCols, TerrainEditIxCols> TerrainEdit() => new("terrain_edit", new TerrainEditCols("terrain_edit"), new TerrainEditIxCols("terrain_edit"));
@@ -640,7 +649,10 @@ namespace SpacetimeDB.Types
                 Reducer.AbandonClaim args => Reducers.InvokeAbandonClaim(eventContext, args),
                 Reducer.AddClaimMember args => Reducers.InvokeAddClaimMember(eventContext, args),
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
+                Reducer.Drink args => Reducers.InvokeDrink(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
+                Reducer.Eat args => Reducers.InvokeEat(eventContext, args),
+                Reducer.Forage args => Reducers.InvokeForage(eventContext, args),
                 Reducer.LeaveClaim args => Reducers.InvokeLeaveClaim(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),

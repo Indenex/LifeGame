@@ -43,7 +43,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, Enter to talk, C to raise a claim marker, R at a marker to open it.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, Enter to talk, B to raise a claim marker, T at a marker to open it.
 
 ## Chat, land claims and PvP
 
@@ -52,6 +52,8 @@ Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to di
 - Fighting is allowed in the wild. Inside a standing claim it needs the owner's permission (off by default). There is no combat yet; `Module.RequirePvpAllowed` is the rule combat code should call.
 - A marker stands for 3 days after it was last tended, then falls and spills its stash. To watch that happen in a playtest, shorten it as the database owner: `spacetime call lifegame set_claim_lifetime 120`.
 - `tools/SocialTest` checks all of this with two simulated players against a running server (CI runs it).
+
+Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 
 ## After changing the server module
 

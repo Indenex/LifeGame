@@ -20,6 +20,7 @@ public partial class Main : Node3D
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
     readonly SocialLayer social = new();
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -48,6 +49,8 @@ public partial class Main : Node3D
         view.AddChild(cameraRig);
         AddChild(hud);
         AddChild(social);
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -248,6 +251,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -283,7 +287,7 @@ public partial class Main : Node3D
                 $"SELECT * FROM world_item WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 "SELECT * FROM my_inventory",
-            });
+            }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -369,6 +373,7 @@ public partial class Main : Node3D
             ItemKind.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
             ItemKind.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
             ItemKind.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.07f, Height = 0.12f, RadialSegments = 7 }, Look.LeafWarm),
+            ItemKind.Berries => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, new Color(0.55f, 0.08f, 0.16f)),
             _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
         };
         ItemMeshes[kind] = mesh;
