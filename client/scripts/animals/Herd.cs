@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
@@ -9,10 +10,15 @@ namespace LifeGame;
 // Every animal the server sends us. The server decides where animals go a couple
 // of times a second; each animal node glides between those positions. Also
 // offers shearing on the Use key (G) next to a sheep with a full fleece, and asks
-// for the sneak hint the first time a flock bolts near the player.
+// for the sneak hint the first time a flock bolts near the player. Dead animals
+// (carcasses) lie where they fell until someone butchers them with G.
 public partial class Herd : Node3D
 {
     readonly Dictionary<ulong, Sheep> animals = new();
+    readonly Dictionary<ulong, Sheep> carcasses = new();
+    // Animals whose row just went away; if a carcass for them arrives this frame
+    // the same node lies down, otherwise it is freed at the end of the frame.
+    readonly Dictionary<ulong, Sheep> leaving = new();
     Terrain terrain = null!;
     DbConnection? conn;
     Func<Vector3> player = () => Vector3.Zero;
@@ -26,7 +32,14 @@ public partial class Herd : Node3D
         conn.Db.Animal.OnUpdate += (_, _, a) => Upsert(a, false);
         conn.Db.Animal.OnDelete += (_, a) =>
         {
-            if (animals.Remove(a.Id, out var node)) node.QueueFree();
+            if (!animals.Remove(a.Id, out var node)) return;
+            leaving[a.Id] = node;
+            Callable.From(() => { if (leaving.Remove(a.Id, out var gone)) gone.QueueFree(); }).CallDeferred();
+        };
+        conn.Db.AnimalCarcass.OnInsert += (_, c) => AddCarcass(c);
+        conn.Db.AnimalCarcass.OnDelete += (_, c) =>
+        {
+            if (carcasses.Remove(c.Id, out var node)) node.FadeAway();
         };
         conn.Db.Animal.OnUpdate += (_, old, a) =>
         {
@@ -34,16 +47,48 @@ public partial class Herd : Node3D
                 Hints.Request("sneak");
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
+        Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
     }
 
     const float BoltHintRange = 10f;
+
+    void AddCarcass(AnimalCarcass c)
+    {
+        // Seen alive a moment ago: that same sheep settles down where it stood.
+        bool gently = leaving.Remove(c.AnimalId, out var sheep) || animals.Remove(c.AnimalId, out sheep);
+        if (!gently)
+        {
+            sheep = new Sheep(c.AnimalId, terrain);
+            AddChild(sheep);
+        }
+        sheep!.LieDown(c.X, c.Z, c.Heading, c.Fleece, c.Growth, gently);
+        carcasses[c.Id] = sheep;
+    }
+
+    bool Carrying(ItemTags tags) =>
+        conn?.Db.MyInventory.Iter().Any(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).Tags.HasFlag(tags)) == true;
+
+    UseOffer? OfferButcher(Vector3 at)
+    {
+        if (conn == null || !Carrying(ItemTags.Cutting)) return null;
+        AnimalCarcass? nearest = null;
+        float best = World.Reach;
+        foreach (var c in conn.Db.AnimalCarcass.Iter())
+        {
+            float d = new Vector2(c.X - at.X, c.Z - at.Z).Length();
+            if (d <= best) (nearest, best) = (c, d);
+        }
+        if (nearest == null) return null;
+        ulong id = nearest.Id;
+        return new UseOffer("Butcher", best, () => conn.Reducers.ButcherCarcass(id));
+    }
 
     static float DistanceTo(Animal a, Vector3 at) => new Vector2(a.X - at.X, a.Z - at.Z).Length();
 
     // Only offered when shearing can work: a sheep in reach with its wool grown back.
     UseOffer? OfferShear(Vector3 at)
     {
-        if (conn == null) return null;
+        if (conn == null || !Carrying(ItemTags.Cutting)) return null;
         Animal? nearest = null;
         float best = World.Reach;
         foreach (var a in conn.Db.Animal.Iter())

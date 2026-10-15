@@ -28,6 +28,14 @@ public partial class Sheep : Node3D
     readonly MeshInstance3D fleece;
     Color woolColor;
     float wool = 1f, woolTarget = 1f;
+    // Grown size (varies per sheep), and how grown up this one is (lambs are small).
+    readonly float adultSize;
+    float growth = 1f, growthTarget = 1f;
+    // Lying down for good: -1 while alive, then seconds since it lay down.
+    float lying = -1f;
+    // Fading away after butchering: -1 until then.
+    float fading = -1f;
+    const float LieSeconds = 1.4f, FadeSeconds = 1.2f;
 
     static readonly Color Face = new(0.17f, 0.14f, 0.12f);
     // Mostly cream, some oatmeal, and the odd dark sheep.
@@ -79,8 +87,36 @@ public partial class Sheep : Node3D
         AddChild(body);
 
         // Not every sheep is the same size.
-        Scale = Vector3.One * (0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f);
+        adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f;
+        Scale = Vector3.One * adultSize;
     }
+
+    // Lambs are born at 35 and grow to 100. A lamb is a little over half size.
+    static float GrownFraction(byte growth) => Mathf.Lerp(0.55f, 1f, Mathf.Clamp((growth - 35) / 65f, 0f, 1f));
+
+    // The animal has died: it settles onto its side and stays there. Kept quiet
+    // and gentle on purpose (D-036). Called on a fresh node too, already lying.
+    public void LieDown(float x, float z, float heading, byte fleece, byte grown, bool gently)
+    {
+        to = from = new Vector2(x, z);
+        glide = 1f;
+        targetHeading = heading;
+        woolTarget = fleece / 100f;
+        growthTarget = GrownFraction(grown);
+        if (lying < 0f && !gently)
+        {
+            wool = woolTarget;
+            growth = growthTarget;
+            Position = new Vector3(x, terrain.HeightAt(x, z), z);
+            Rotation = new Vector3(0, heading, 0);
+        }
+        lying = gently ? Mathf.Max(lying, 0f) : LieSeconds;
+        state = AnimalState.Idle;
+    }
+
+    // Butchered: sink softly into the grass and go.
+    public void FadeAway() => fading = 0f;
+
 
     public void Apply(Animal a, bool snap)
     {
@@ -101,7 +137,8 @@ public partial class Sheep : Node3D
         }
         if (a.State == AnimalState.Run && state != AnimalState.Run && !snap) hop = 0f;
         woolTarget = a.Fleece / 100f;
-        if (snap) wool = woolTarget;
+        growthTarget = GrownFraction(a.Growth);
+        if (snap) (wool, growth) = (woolTarget, growthTarget);
         // Just shorn: the fleece comes off in a soft burst of tufts.
         else if (woolTarget < wool - 0.5f) Tufts();
         state = a.State;
@@ -111,6 +148,11 @@ public partial class Sheep : Node3D
     {
         float dt = (float)delta;
         float time = Time.GetTicksMsec() / 1000f + seed;
+        if (lying >= 0f)
+        {
+            Lie(dt, time);
+            return;
+        }
 
         glide = Mathf.Min(glide + dt / GlideSeconds, 1f);
         var flat = from.Lerp(to, glide);
@@ -169,6 +211,34 @@ public partial class Sheep : Node3D
         // Wool shrinks away quickly when shorn and creeps back as it regrows.
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
         fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, wool);
+        growth = Mathf.Lerp(growth, growthTarget, 1f - Mathf.Exp(-0.5f * dt));
+        Scale = Vector3.One * adultSize * growth;
+    }
+
+    void Lie(float dt, float time)
+    {
+        lying = Mathf.Min(lying + dt, LieSeconds);
+        // Ease down: legs fold, then the body rolls gently onto its side.
+        float t = Mathf.SmoothStep(0f, 1f, lying / LieSeconds);
+        float roll = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((lying / LieSeconds - 0.3f) / 0.7f, 0f, 1f));
+        float ground = terrain.HeightAt(to.X, to.Y);
+        Position = new Vector3(to.X, ground, to.Y);
+        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-4f * dt)), 0);
+        body.Position = new Vector3(0, -0.28f * t - 0.06f * roll, 0);
+        body.Rotation = new Vector3(0, 0, roll * 1.35f);
+        body.Scale = Vector3.One;
+        foreach (var leg in legs) leg.Rotation = new Vector3(0, 0, -roll * 0.35f);
+        pitch = Mathf.Lerp(pitch, 0.35f, 1f - Mathf.Exp(-3f * dt));
+        head.Rotation = new Vector3(pitch, 0, 0);
+        fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, woolTarget);
+        Scale = Vector3.One * adultSize * growthTarget;
+
+        if (fading < 0f) return;
+        fading += dt;
+        float f = Mathf.Clamp(fading / FadeSeconds, 0f, 1f);
+        Scale = Vector3.One * adultSize * growthTarget * (1f - f * 0.6f);
+        Position += Vector3.Down * f * 0.3f;
+        if (f >= 1f) QueueFree();
     }
 
     void Tufts()
