@@ -78,6 +78,7 @@ public partial class Journal : CanvasLayer
         conn.Db.MyJournal.OnUpdate += (_, _, _) => Refresh();
         conn.Db.MySkills.OnInsert += (_, s) => { SkillChanged(s); Refresh(); };
         conn.Db.MySkills.OnUpdate += (_, _, s) => { SkillChanged(s); Refresh(); };
+        conn.Db.MyTaught.OnInsert += (_, t) => { TaughtSomeone(t); Refresh(); };
         conn.Db.JournalNote.OnInsert += (_, n) => AddNote(n);
         conn.Db.JournalNote.OnDelete += (_, n) => RemoveNote(n.Id);
     }
@@ -125,6 +126,7 @@ public partial class Journal : CanvasLayer
             .OnApplied(_ =>
             {
                 old?.Unsubscribe();
+                if (!caughtUp) WhileYouWereAway();
                 caughtUp = true;
             })
             .OnError((_, e) => say($"Journal subscription error: {e.Message}"))
@@ -132,6 +134,7 @@ public partial class Journal : CanvasLayer
             {
                 "SELECT * FROM my_journal",
                 "SELECT * FROM my_skills",
+                "SELECT * FROM my_taught",
                 $"SELECT * FROM journal_note WHERE chunk_x >= {chunkX - r} AND chunk_x <= {chunkX + r} AND chunk_z >= {chunkZ - r} AND chunk_z <= {chunkZ + r}",
             });
     }
@@ -141,7 +144,8 @@ public partial class Journal : CanvasLayer
         if (!IsInsideTree()) return;
         var entries = conn?.Db.MyJournal.Iter().ToList() ?? new List<JournalEntry>();
         var skills = conn?.Db.MySkills.Iter().ToList() ?? new List<SkillLevel>();
-        panel.SetData(entries, skills);
+        var taught = conn?.Db.MyTaught.Iter().ToList() ?? new List<Taught>();
+        panel.SetData(entries, skills, taught);
     }
 
     // Quiet notes when you learn something new, but not for what you already knew at login.
@@ -155,6 +159,32 @@ public partial class Journal : CanvasLayer
             LearnedBy.Reading => $"You learned {name.ToLowerInvariant()} from {e.LearnedFrom}'s note",
             _ => $"New in your journal: {name}",
         });
+    }
+
+    // Someone just learned from you.
+    void TaughtSomeone(Taught t)
+    {
+        if (!caughtUp || t.Seen) return;
+        string what = Skills.ProcessName(t.ProcessId).ToLowerInvariant();
+        say(t.LearnedBy == LearnedBy.Reading
+            ? $"{t.LearnerName} learned {what} from your note"
+            : $"{t.LearnerName} picked up {what} from watching you");
+        conn?.Reducers.MarkTaughtSeen();
+    }
+
+    // At login, what others learned from your notes while you were gone.
+    void WhileYouWereAway()
+    {
+        if (conn == null) return;
+        var unseen = conn.Db.MyTaught.Iter().Where(t => !t.Seen).ToList();
+        if (unseen.Count == 0) return;
+        var people = unseen.Select(t => t.LearnerName).Distinct().ToList();
+        say(unseen.Count == 1
+            ? $"While you were away, {people[0]} learned {Skills.ProcessName(unseen[0].ProcessId).ToLowerInvariant()} from your note"
+            : people.Count == 1
+                ? $"While you were away, {people[0]} learned {unseen.Count} things from you"
+                : $"While you were away, {people.Count} people learned from you");
+        conn.Reducers.MarkTaughtSeen();
     }
 
     void SkillChanged(SkillLevel s)
