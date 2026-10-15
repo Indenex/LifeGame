@@ -19,11 +19,11 @@ Plug survival into the other lanes as they land on main, keeping Justin's gentle
 - 2026-10-15 21:45: tested on local SpacetimeDB: pot of water 0.30 -> 0.65 water and empty pot returned; hand-drill fire gives near_heat and +0.024/s warmth. Screenshot: project files screenshots/08-survival-pot-of-water-by-crafted-fire.png
 - 2026-10-15 21:48: key clash with crafting (C = craft, G = feed fire): eat moved to X (matches the open key proposal); G forages only when a ripe bush is in reach and otherwise falls through to feeding the fire.
 - 2026-10-15 21:58: merged latest crafting-core (e165799, which carries main with House building). Kept Crafting's FireWarmthAt implementation and call the hook again (no cross-lane deletion needed); took Crafting's Eat (CountOf/Take); eat stays on X per D-025 (crafting-core had V). Weather: per PM, AirTemperatureAt hook gets replaced by a direct call to WorldClock.AirTemperature/CurrentWeather once #9 lands.
+- 2026-10-15 22:00: merged main (Atmosphere #9). Chill() now calls AirTemperature(ctx) and CurrentWeather(ctx).Rain directly; the AirTemperatureAt hook is gone. Rate rewrites wait for a >2% change so drifting weather doesn't rewrite vitals every tick. Pots set to Justin's D-030: pinch 50%, coil 100%. Local test: full rain + wind doubled the cold drain (-0.00104 -> -0.00208 per s).
 
 ## Open questions / blockers
-- After Atmosphere #9 merges: replace the AirTemperatureAt hook in Survival.cs with WorldClock's AirTemperature(ctx) (Ceramics provides RainAt). Until then it is always a mild dry 15 °C.
 - Keys: Justin's card on a single Use key is open; current default G forage/feed, X eat, R drink.
 - Removing the HeatSource table may need `--delete-data` when publishing over a survival-1 world (the crafting and ceramics merges may need it anyway).
 
 ## Next step
-When #4 or #11 merges: merge origin/main in, regenerate client/module_bindings, build, push; when #9 merges, check Atmosphere implements AirTemperatureAt/RainAt.
+Wait for CI on PR #12; when #4 (crafting-core) or #11 (ceramics) merges, merge origin/main in, regenerate client/module_bindings, build and push.

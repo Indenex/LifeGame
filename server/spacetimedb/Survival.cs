@@ -195,7 +195,8 @@ public static partial class Module
             }
 
             var next = WithSurroundings(ctx, now, pos, online: true);
-            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet)
+            // Weather drifts slowly, so small changes in the rate wait for a bigger one.
+            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet)
                 ctx.Db.Vitals.PlayerId.Update(next);
         }
     }
@@ -323,17 +324,11 @@ public static partial class Module
         return warmth * FireHeat;
     }
 
-    // Weather, from the Atmosphere lane: air temperature in °C (default a mild
-    // 15 °C day) and rain from 0 to 1 (Ceramics declares RainAt for drying too).
-    static partial void AirTemperatureAt(ReducerContext ctx, float x, float z, ref float celsius);
-
     // How much faster the cold bites than on a mild day: 1x at 15 °C, rising to
     // 2x at 0 °C and below; rain adds half again unless you are under cover.
     static float Chill(ReducerContext ctx, float x, float z, float rainCover)
     {
-        float celsius = Needs.MildCelsius, rain = 0;
-        AirTemperatureAt(ctx, x, z, ref celsius);
-        RainAt(ctx, x, z, ref rain);
+        float celsius = AirTemperature(ctx), rain = CurrentWeather(ctx).Rain;
         float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
         float wet = 1f + Needs.RainChill * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
         return cold * wet;
