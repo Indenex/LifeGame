@@ -104,3 +104,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-024 — 2026-10-15 — Crafting panel layout
 **Decision:** Keep the crafting panel as built: tier tabs on the right, Tab cycles the tabs, number keys pick a row. A "what I can make now" filter may be added later.
 **Who:** Justin ("Keep tabs", which the PM recommended)
+
+## D-025 — 2026-10-15 — One Use key and a shared keymap
+**Decision:** G is a single Use key that acts on what the player faces: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note. C crafting, X eat, B build menu (claim marker included), K claims, J journal, Enter chat, M music; time and weather previews move to debug-only F5/F6. `KEYMAP.md` is the one list of keys; lanes register keys there before binding.
+**Who:** Justin ("One Use key", which the PM recommended). Crafting (integration owner) builds the Use dispatcher; lanes register handlers.

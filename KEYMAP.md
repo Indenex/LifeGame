@@ -2,7 +2,7 @@
 
 The one list of every key the game uses. Before binding a key, add it here on your branch; if the key is taken, ask the PM. Keys that only work inside an open panel or minigame are listed under that context and may reuse a key from the world list.
 
-Status: PROPOSED by the PM on 2026-10-15, waiting for Justin's answer (see DECISIONS.md once decided). Lanes keep their current keys until then.
+Status: DECIDED by Justin on 2026-10-15 (D-025). Crafting builds the shared Use key (crafting-2); each lane moves its keys to this table after that lands.
 
 ## In the world
 
