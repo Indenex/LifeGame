@@ -73,12 +73,6 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
-                Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
-                Consumes = new[] { new Ingredient(Item.RawMutton) },
-                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
-            },
-            new ProcessDef
-            {
                 Id = "knap.flake", Name = "Knap a flake", Doing = "Knapping a flake", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = 3, Minigame = Minigame.Strike, Makes = Item.Flake, FailBelow = 0.2f,
@@ -88,6 +82,18 @@ namespace LifeGame.Shared
                 Id = "knap.hand_axe", Name = "Shape a hand axe", Doing = "Shaping a hand axe", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = 8, Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
+            },
+            new ProcessDef
+            {
+                Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawMutton) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
+            },
+            new ProcessDef
+            {
+                Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 5, Makes = Item.DiggingStick,
             },
 
             // Tier 2: cordage and hafted tools.
@@ -108,6 +114,18 @@ namespace LifeGame.Shared
                 Id = "lash.stone_axe", Name = "Haft a stone axe", Doing = "Hafting a stone axe", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.HandAxe), new Ingredient(Item.Cordage) },
                 Seconds = 10, Makes = Item.StoneAxe,
+            },
+            new ProcessDef
+            {
+                Id = "haft.knife", Name = "Haft a stone knife", Doing = "Binding a flake into a handle", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Flake), new Ingredient(Item.Cordage) },
+                Seconds = 8, Makes = Item.StoneKnife,
+            },
+            new ProcessDef
+            {
+                Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
+                Seconds = 15, Makes = Item.Basket,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,

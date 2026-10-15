@@ -61,6 +61,46 @@ Craft("knap.hand_axe", 0.95f, Item.HandAxe);
 Craft("lash.spear", 0, Item.Spear);
 Craft("lash.stone_axe", 0, Item.StoneAxe);
 
+// Crafting-2 tools: a knife, a digging stick and a basket.
+Gather(Item.Stick, 5);
+Gather(Item.Stone, 3);
+Gather(Item.Fiber, 13);
+Craft("knap.flake", 0.95f, Item.Flake);
+Craft("cord.twist", 0, Item.Cordage);
+Craft("haft.knife", 0, Item.StoneKnife);
+Craft("carve.digging_stick", 0, Item.DiggingStick);
+Craft("weave.basket", 0, Item.Basket);
+
+// With a basket, one pick-up takes every stone in reach.
+uint stonesBefore = CountOf(Item.Stone);
+var heap = conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)Item.Stone)
+    .Select(i => (i, n: conn.Db.WorldItem.Iter().Count(o => o.Item == i.Item && MathF.Abs(o.X - i.X) + MathF.Abs(o.Z - i.Z) < 2.5f)))
+    .OrderByDescending(t => t.n).First().i;
+WalkTo(heap.X, heap.Z);
+int inReach = conn.Db.WorldItem.Iter().Count(o => o.Item == (ushort)Item.Stone && (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= World.Reach * World.Reach);
+conn.Reducers.PickUp(heap.Id);
+Pump(() => CountOf(Item.Stone) > stonesBefore, 5, "the basket pick-up");
+Pump(() => false, 0.5f, null);
+uint gained = CountOf(Item.Stone) - stonesBefore;
+if (inReach > 1 && gained < 2) Fail($"the basket picked up {gained} of {inReach} stones in reach");
+Console.WriteLine($"Basket scooped up {gained} stones ({inReach} in reach)");
+
+// A digging stick gives two clay a dig.
+var (clayX, clayZ) = Enumerable.Range(1, 40)
+    .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+    .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+    .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f);
+WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
+uint clayBefore = CountOf(Item.Clay);
+lastError = null;
+conn.Reducers.Dig(clayX, clayZ);
+Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging");
+if (lastError != null) Fail($"digging: {lastError}");
+Pump(() => false, 0.5f, null);
+if (CountOf(Item.Clay) - clayBefore != 2) Fail($"a dig with a digging stick gave {CountOf(Item.Clay) - clayBefore} clay");
+Console.WriteLine("Digging stick dug up 2 clay");
+
+Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
 Craft("fire.hand_drill", 1f, null);

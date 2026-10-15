@@ -95,7 +95,8 @@ public partial class FireView : Node3D
             });
             AddChild(new MeshInstance3D
             {
-                Mesh = Look.Faceted(new SphereMesh { Radius = 0.08f, Height = 0.12f, RadialSegments = 7, Rings = 4 }, Raw),
+                Mesh = Look.Faceted(new SphereMesh { Radius = 0.13f, Height = 0.2f, RadialSegments = 8, Rings = 5 }, Raw),
+                Scale = new Vector3(1.3f, 1f, 1f),
                 MaterialOverride = meat,
             });
         }

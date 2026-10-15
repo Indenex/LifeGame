@@ -1,4 +1,4 @@
-# crafting-3: Roast mutton over a fire
+# crafting-2: Roast mutton, stone knife, digging stick, basket
 Lane: Crafting
 Owner: Crafting thread
 Status: in_progress
