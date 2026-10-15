@@ -30,8 +30,8 @@ namespace LifeGame.Shared
         public const int MaxRank = 100;
         public const int TotalCap = 300;
 
-        // Skill is stored in tenths of a rank, so small gains still add up.
-        public const int PointsPerRank = 10;
+        // Skill is stored in hundredths of a rank, so small gains still add up.
+        public const int PointsPerRank = 100;
         public const int MaxPoints = MaxRank * PointsPerRank;
         public const int CapPoints = TotalCap * PointsPerRank;
 
@@ -102,12 +102,12 @@ namespace LifeGame.Shared
 
         // Points gained for finishing a process once. Fast at first so learning
         // feels good, slower near mastery, never zero: rank 10 after about 11 uses,
-        // rank 50 after about 100, Master after about 540 (Justin chose this slower
-        // pace). A failed attempt still teaches, at half the rate.
+        // rank 50 after about 100, Master after about 800, so masters stay rare
+        // (Justin's choice). A failed attempt still teaches, at half the rate.
         public static int Gain(int points, bool failed)
         {
             float left = 1f - Math.Clamp(points, 0, MaxPoints) / (float)MaxPoints;
-            int gain = Math.Max(1, (int)MathF.Round(10f * left * left));
+            int gain = Math.Max(5, (int)MathF.Round(100f * left * left));
             return failed ? Math.Max(1, gain / 2) : gain;
         }
 

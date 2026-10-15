@@ -21,6 +21,7 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - 2026-10-15 21:20: merged main and `crafting-core`; switched to Crafting's partial hooks, dotted ids and the PM's skill families; `tools/CraftCheck` passes locally with the quality cap active.
 - 2026-10-15 21:25: "R  Read <name>'s note" prompt appears only near a note; HUD controls just add "J journal". Reported to PM: Main.RefreshInventory throws when two stacks of one item share a grade label (Crafting's file).
 - 2026-10-15 21:30: Justin chose slower skill pacing (about double the uses): gain halved, now about rank 10 after 11 uses, rank 50 after 100, Master after about 540. He kept the novice cap of 35, half-rate learning from failures, and the dug clay quality and bonus lump.
+- 2026-10-15 21:35: Justin wants masters rare: skill is now stored in hundredths of a rank with a minimum gain of 0.05 ranks per use, so Master takes about 800 uses (rank 10 still after 11, rank 50 after 100).
 
 ## Open questions / blockers
 - Waiting on Crafting: a speed hook (`ref float seconds`) so skill also shortens crafting jobs. `Skills.DurationScale` is ready for it; digging already uses it.

@@ -27,7 +27,7 @@ public static partial class Module
         [SpacetimeDB.Index.BTree]
         public Identity Owner;
         public string Spec;
-        // Tenths of a rank: 1000 is rank 100.
+        // Hundredths of a rank: 10000 is rank 100.
         public ushort Points;
         public SkillMode Mode;
     }
