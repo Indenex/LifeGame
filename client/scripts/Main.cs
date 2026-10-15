@@ -518,9 +518,11 @@ public partial class Main : Node3D
 
     // --- Helpers ----------------------------------------------------------
 
+    // Accepts options with or without Godot's "--" separator, so both
+    // "LifeGame --profile=2" and "LifeGame -- --profile=2" work.
     static string? Arg(string name)
     {
-        foreach (var arg in OS.GetCmdlineUserArgs())
+        foreach (var arg in OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()))
             if (arg.StartsWith($"--{name}="))
                 return arg[(name.Length + 3)..];
         return null;
