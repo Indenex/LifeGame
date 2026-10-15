@@ -76,3 +76,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-017 — 2026-10-15 — Gentler survival needs
 **Decision:** Full to empty takes about 90 minutes for food, 60 for water, and 16 minutes of cold away from a fire (3 times faster standing in water). Needs pause while offline; after a respawn you have 60% food and water and full warmth.
 **Who:** Justin ("Gentler" over the proposed 45/30/8)
+
+## D-018 — 2026-10-15 — Merge Survival needs and House building
+**Decision:** PR #5 (survival needs) and PR #6 (house building with see-through blueprints) merge into the playtest build. Neither needs a world wipe.
+**Who:** Justin
