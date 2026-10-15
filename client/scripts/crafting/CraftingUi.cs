@@ -28,7 +28,7 @@ public partial class CraftingUi : CanvasLayer
     readonly ProgressBar progressBar = new() { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(260, 8) };
     Minigame_? minigame;
     CraftJob? job;
-    double jobStartLocal, jobSeconds;
+    double jobStartLocal, jobSeconds, roastRefresh;
 
     public CraftingUi()
     {
@@ -79,6 +79,23 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyInventory.OnDelete += (_, _) => Refresh();
         conn.Db.MyCraftJob.OnInsert += (_, j) => StartedJob(j);
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
+        conn.Db.Roast.OnInsert += (_, _) => Refresh();
+        conn.Db.Roast.OnDelete += (_, _) => Refresh();
+        // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
+        Use.Register(new UseHandler
+        {
+            Id = "crafting.take_roast",
+            Priority = 25,
+            Find = at =>
+            {
+                var (roast, seconds) = MyRoasts().FirstOrDefault(r => Roasting.Done(r.seconds));
+                if (roast == null) return null;
+                float d = new Vector2(roast.X - at.X, roast.Z - at.Z).Length();
+                if (d > World.Reach) return null;
+                return new UseOffer(Roasting.Burnt(seconds) ? "Take the burnt meat off" : "Take the meat off the fire", d,
+                    () => conn.Reducers.TakeOffFire(roast.Id));
+            },
+        });
     }
 
     // Opens the panel on a tier; used by --screenshot-craft.
@@ -108,7 +125,12 @@ public partial class CraftingUi : CanvasLayer
             }
             return;
         }
-        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false } k
+        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Key0 })
+        {
+            TakeOffFire();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false } k
             && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key9)
         {
             int index = (int)(k.PhysicalKeycode - Key.Key1);
@@ -130,6 +152,14 @@ public partial class CraftingUi : CanvasLayer
     {
         minigame?.Tick((float)delta);
         if (minigame is { Done: true } done) EndMinigame(done.Score);
+
+        // Roasts change from browning to ready to burnt while you watch.
+        roastRefresh -= delta;
+        if (roastRefresh <= 0 && panel.Visible && MyRoasts().Any())
+        {
+            roastRefresh = 1;
+            Refresh();
+        }
 
         if (job != null)
         {
@@ -227,6 +257,25 @@ public partial class CraftingUi : CanvasLayer
         }
 
         foreach (var child in list.GetChildren()) child.QueueFree();
+        foreach (var (roast, seconds) in MyRoasts())
+        {
+            var name = Items.IsKnown(roast.Item) ? Items.Def((Item)roast.Item).Name.ToLowerInvariant() : "meat";
+            var row = new Button
+            {
+                Text = Roasting.Done(seconds)
+                    ? $"0.  Take your {name} off the fire\n      {Roasting.State(seconds)}"
+                    : $"     Your {name} is over the fire\n      browning, ready in {Roasting.CookSeconds - seconds:0}s",
+                Alignment = HorizontalAlignment.Left,
+                Disabled = !Roasting.Done(seconds),
+                Flat = true,
+                FocusMode = Control.FocusModeEnum.None,
+            };
+            row.AddThemeColorOverride("font_color", Roasting.Burnt(seconds) ? new Color(0.8f, 0.6f, 0.5f) : new Color(1f, 0.82f, 0.5f));
+            row.AddThemeColorOverride("font_disabled_color", new Color(Look.Cream, 0.5f));
+            row.AddThemeFontSizeOverride("font_size", 14);
+            row.Pressed += TakeOffFire;
+            list.AddChild(row);
+        }
         int n = 1;
         foreach (var def in InTier())
         {
@@ -249,6 +298,26 @@ public partial class CraftingUi : CanvasLayer
             list.AddChild(button);
             n++;
         }
+    }
+
+    // Your roasts on fires nearby, with how long each has been cooking.
+    IEnumerable<(Roast roast, float seconds)> MyRoasts()
+    {
+        if (conn?.Identity is not { } me) return Enumerable.Empty<(Roast, float)>();
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        return conn.Db.Roast.Iter().Where(r => r.Owner == me)
+            .Select(r => (r, (now - r.PutAt.MicrosecondsSinceUnixEpoch) / 1_000_000f))
+            .OrderByDescending(t => t.Item2).ToList();
+    }
+
+    // Takes off the roast that has been on longest, if it is done.
+    void TakeOffFire()
+    {
+        if (conn == null) return;
+        var (roast, seconds) = MyRoasts().FirstOrDefault();
+        if (roast == null) { Notice?.Invoke("Nothing of yours is on a fire"); return; }
+        if (!Roasting.Done(seconds)) { Notice?.Invoke("It isn't cooked yet"); return; }
+        conn.Reducers.TakeOffFire(roast.Id);
     }
 
     static string TierName(int t) => t < TierNames.Length ? TierNames[t] : $"Tier {t}";
@@ -274,6 +343,8 @@ public partial class CraftingUi : CanvasLayer
             Notice?.Invoke(def.Outcome == Outcome.Fire ? "The ember dies before it catches" : "It breaks wrong. The material is lost");
         else if (def.Outcome == Outcome.Fire)
             Notice?.Invoke("The tinder catches. You have fire.");
+        else if (def.Outcome == Outcome.Roast)
+            Notice?.Invoke($"It's over the fire. Press G by the fire once it's browned ({Roasting.BestSeconds:0}s is about right)");
         else if (def.Outcome != Outcome.Placed)
             Notice?.Invoke($"Made: {ItemLook.Label(def.Makes, j.Quality, def.MakesCount)}");
         Refresh();

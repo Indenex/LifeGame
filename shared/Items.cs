@@ -21,6 +21,9 @@ namespace LifeGame.Shared
         Cordage = 8,
         Spear = 9,
         StoneAxe = 10,
+        StoneKnife = 11,
+        DiggingStick = 12,
+        Basket = 13,
 
         // Clay and ceramics (tier 3) use 100 to 129.
         CleanClay = 100,
@@ -40,7 +43,10 @@ namespace LifeGame.Shared
         // Survival
         Berries = 160,
 
-        // Animals use 190 to 219 (Crafting holds 190-192 for mutton).
+        // Animals (190-219); mutton is cooked by Crafting
+        RawMutton = 190,
+        CookedMutton = 191,
+        BurntMutton = 192,
         Wool = 193,
     }
 
@@ -70,6 +76,8 @@ namespace LifeGame.Shared
         Piercing = 8,   // a point
         Binding = 16,   // ties things together
         Kindling = 32,  // catches a spark
+        Digging = 64,   // breaks ground faster than hands
+        Container = 128, // carries loose things
     }
 
     public static class Items
@@ -101,7 +109,13 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
+            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
+            new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
+            new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
+            new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true },
+            new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton" },
             new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
