@@ -1,7 +1,7 @@
 # ui-1: One input map, the G Use key, and a HUD prompt
 Lane: UX and UI
 Owner: UX and UI thread (session_01NAW5B3eCSw3JtCiFrZeSNz)
-Status: in_progress
+Status: done
 Branch: claude/ux-ui-xlrh2s
 PR: #17
 
@@ -21,9 +21,10 @@ Per D-025 and D-033: every key the game binds is declared in one place (`client/
 - 2026-10-15 22:10: PM: each lane migrates its own Use handler in its own files; this lane owns every key in the Controls table (eat on X is fine). After ui-1 is on main, tell the PM, who asks lanes to migrate. Survival #12 and building #10 touch the same keys; whichever lands second keeps Controls.cs as the source of truth. D-034: status updates and screenshots go to the PM by send_message, not as replies in this thread.
 - 2026-10-15 22:14: Justin: Use prompt stays below the player (D-037). Immersion is a very high priority everywhere (D-036): keep the HUD minimal and soft, gentle fades, nothing harsh.
 - 2026-10-15 22:20: D-038 (Justin): drop the controls line. Removed it from Hud.cs and Building's "B build  H help build" panel from BuildingSystem.cs (Building lane's file, told the PM). Added ui/Hints.cs: one first-time hint at a time, bottom left, soft fade, once per install (user://hints.cfg), skipped for keys the player already pressed; hint text sits in the Controls table, with hint-only rows for sneak, journal, claims and chat that wait until those lanes' actions exist. Screenshot /mnt/project-files/screenshots/ui-02-first-hint.png.
+- 2026-10-15 22:38: PR #17 merged by Justin (head 5e4d668). PM asks lanes to move their G actions to Use handlers.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on PR #17 and record the run here; after PR #14 merges, add a "How to add a Use action" section to KEYMAP.md (code is in the comment at the top of client/scripts/ui/Use.cs).
+None; continued in tickets/ui-2.md.

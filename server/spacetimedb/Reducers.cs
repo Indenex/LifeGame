@@ -24,6 +24,8 @@ public static partial class Module
             ScheduledId = 0,
             ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(World.MoveTickMillis)),
         });
+        InitChat(ctx);
+        InitClaims(ctx);
         EnsureWorldClock(ctx);
     }
 
@@ -146,6 +148,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
+        RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
         // Skilled diggers work faster.
         var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
@@ -188,6 +191,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
+        RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);

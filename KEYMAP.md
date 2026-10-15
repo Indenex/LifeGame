@@ -4,7 +4,7 @@ The one list of every key the game uses. Before binding a key, add it here on yo
 
 Status: DECIDED by Justin on 2026-10-15 (D-025). The UX/UI lane owns this file, the input map and the shared Use key (D-033); each lane moves its keys to this table after that lands.
 
-The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does. There is no controls line (D-038): players learn keys from the G prompt, hints inside panels, and a one-time hint per key that `Controls.cs` also holds (shown once per install, skipped if the player finds the key first). Don't add key lists to the HUD; ask the UX/UI lane for a hint instead. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
+The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does. There is no controls line (D-038): players learn keys from the G prompt, hints inside panels, and a one-time hint per key that `Controls.cs` also holds (shown once per install, skipped if the player finds the key first). Don't add key lists to the HUD; ask the UX/UI lane for a hint instead. Holding F1 shows every world key, built from that table and the live input map. Give your action a row there (with its help text) so it appears. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
 
 ## In the world
 
@@ -12,10 +12,11 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Q / E | Turn | Crafting | same |
+| Hold right mouse + drag | Turn the view freely, eased (D-050) | UX/UI | new |
 | Hold Shift | Sneak (slow walk; sheep stay calm) | Animals (small hook in Main.cs) | new, D-026 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
-| G | **Use** what you're facing: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note | all | G forage (Survival), G feed fire (Crafting), R drink (Survival), H add materials (Building), R read note (Journal) |
+| G | **Use** what you're facing: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note, tend a claim marker | all | G forage (Survival), G feed fire (Crafting), R drink (Survival), H add materials (Building), R read note (Journal) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |
@@ -23,6 +24,9 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
+| Left click / Z | Strike (attack an animal, D-039) | Animals | new |
+| Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047) | Journal and skills | new |
+| Hold F1 | Show every world key | UX/UI | new |
 
 ## Inside a panel or mode
 

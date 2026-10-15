@@ -17,6 +17,9 @@ public sealed class SoundMix
     public float Daylight = 1f, Rain, Wind = 0.3f, Wetness;
     // 1 when the listener is under a roof.
     public float Cover;
+    // The nearest campfires: how loud (0 to 1, from distance and how well it burns)
+    // and where (pan -1 left to 1 right).
+    public float Fire, FirePan;
     public bool MusicOn = true;
     public float Volume = 1.3f;
 
@@ -24,6 +27,7 @@ public sealed class SoundMix
     readonly WindVoice wind;
     readonly RainVoice rain;
     readonly ThunderVoice thunder;
+    readonly FireVoice fire;
     readonly Birds birds;
     readonly NightVoices night;
     readonly Steps steps;
@@ -40,6 +44,7 @@ public sealed class SoundMix
         wind = new WindVoice(rate, noise);
         rain = new RainVoice(rate, noise, rng);
         thunder = new ThunderVoice(rate, noise, rng);
+        fire = new FireVoice(rate, noise, rng);
         birds = new Birds(rate, rng);
         night = new NightVoices(rate, rng);
         steps = new Steps(rate, noise, rng);
@@ -74,6 +79,7 @@ public sealed class SoundMix
         wind.Render(left, right, count, Wind, Rain);
         rain.Render(left, right, count, Rain, Wetness, Cover);
         thunder.Render(left, right, count);
+        fire.Render(left, right, count, Fire, FirePan, Rain);
         birds.Render(left, right, sendL, sendR, count, Daylight * (1f - 0.9f * Rain) * (1f - 0.5f * Wind));
         night.Render(left, right, sendL, sendR, count, night01 * (1f - 0.9f * Rain));
         steps.Render(left, right, count);
@@ -327,6 +333,89 @@ public sealed class SoundMix
                 }
                 if (roll.Age - roll.Delay >= roll.Length) rolls.RemoveAt(d);
                 else rolls[d] = roll;
+            }
+        }
+    }
+
+    // --- Campfire ---------------------------------------------------------------
+
+    // A soft breathing roar under quick crackles, now and then a louder pop as a
+    // pocket of sap bursts, and a hiss when rain lands in the flames.
+    sealed class FireVoice
+    {
+        readonly int rate;
+        readonly Noise noise;
+        readonly Random rng;
+        readonly List<Crack> cracks = new();
+        Lowpass roarL, roarR, flutter, hissLow;
+        float level, flutterTarget = 0.5f, hissLeft;
+        int counter;
+
+        sealed class Crack
+        {
+            public float Age, Decay, Amp, Cutoff, Pan;
+            public SoundMix.BandPass Band;
+        }
+
+        public FireVoice(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        public void Render(float[] l, float[] r, int n, float gain, float pan, float rain)
+        {
+            float dt = 1f / rate;
+            float levelCoef = Lowpass.Coef(1.5f, rate), roarCoef = Lowpass.Coef(260f, rate);
+            float flutterCoef = Lowpass.Coef(3f, rate), hissCoef = Lowpass.Coef(2500f, rate);
+            if (gain < 0.001f && level < 0.001f && cracks.Count == 0) return;
+            float pl = Pan(pan * 0.8f, true), pr = Pan(pan * 0.8f, false);
+            for (int i = 0; i < n; i++)
+            {
+                level += levelCoef * (gain - level);
+                if (counter-- <= 0)
+                {
+                    counter = rate / 12;
+                    flutterTarget = Math.Clamp(flutterTarget + noise.Next() * 0.4f, 0.1f, 1f);
+                }
+                float f = flutter.Process(flutterTarget, flutterCoef);
+                float roar = level * (0.4f + 0.6f * f) * 0.12f;
+                l[i] += roarL.Process(noise.Next(), roarCoef) * 3f * roar * pl;
+                r[i] += roarR.Process(noise.Next(), roarCoef) * 3f * roar * pr;
+
+                if (rng.NextDouble() < (5f + 40f * level * f) * level * dt)
+                    cracks.Add(new Crack { Decay = Range(rng, 0.0015f, 0.006f), Amp = Range(rng, 0.1f, 0.35f) * level, Cutoff = Range(rng, 1500f, 4500f), Pan = pan * 0.8f + Range(rng, -0.15f, 0.15f) });
+                if (rng.NextDouble() < 0.4f * level * dt)
+                    cracks.Add(new Crack { Decay = Range(rng, 0.012f, 0.03f), Amp = Range(rng, 0.4f, 0.8f) * level, Cutoff = Range(rng, 500f, 1200f), Pan = pan * 0.8f });
+
+                // Rain on the embers: short sizzles.
+                if (hissLeft <= 0f && rng.NextDouble() < rain * 2f * level * dt) hissLeft = Range(rng, 0.1f, 0.35f);
+                if (hissLeft > 0f)
+                {
+                    hissLeft -= dt;
+                    float x = noise.Next();
+                    float h = (x - hissLow.Process(x, hissCoef)) * level * 0.06f * Math.Min(1f, hissLeft * 8f);
+                    l[i] += h * pl;
+                    r[i] += h * pr;
+                }
+            }
+
+            for (int c = cracks.Count - 1; c >= 0; c--)
+            {
+                var crack = cracks[c];
+                int start = crack.Age == 0f ? (int)(rng.NextDouble() * n * 0.98) : 0;
+                float cl = Pan(crack.Pan, true), cr = Pan(crack.Pan, false);
+                for (int i = start; i < n; i++)
+                {
+                    float env = MathF.Exp(-crack.Age / crack.Decay);
+                    if (env < 0.001f) break;
+                    float s = crack.Band.Process(noise.Next(), crack.Cutoff, 0.6f, rate) * env * crack.Amp;
+                    l[i] += s * cl;
+                    r[i] += s * cr;
+                    crack.Age += dt;
+                }
+                if (MathF.Exp(-crack.Age / crack.Decay) < 0.001f) cracks.RemoveAt(c);
             }
         }
     }
