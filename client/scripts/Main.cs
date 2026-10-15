@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly SocialLayer social = new();
     readonly UseKey useKey = new();
     readonly Journal journal = new();
     readonly CraftingUi crafting = new();
@@ -61,6 +62,7 @@ public partial class Main : Node3D
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
+        AddChild(social);
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
@@ -288,6 +290,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
@@ -461,6 +464,7 @@ public partial class Main : Node3D
         conn?.FrameTick();
 
         if (spawned && !crafting.CapturesInput) Walk(dt);
+        social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
         cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
@@ -483,7 +487,7 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
+        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));

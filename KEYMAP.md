@@ -15,7 +15,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Hold Shift | Sneak (slow walk; sheep stay calm) | Animals (small hook in Main.cs) | new, D-026 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
-| G | **Use** what you're facing: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note | all | G forage (Survival), G feed fire (Crafting), R drink (Survival), H add materials (Building), R read note (Journal) |
+| G | **Use** what you're facing: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note, tend a claim marker | all | G forage (Survival), G feed fire (Crafting), R drink (Survival), H add materials (Building), R read note (Journal) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |

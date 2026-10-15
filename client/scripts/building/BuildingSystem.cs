@@ -142,6 +142,8 @@ public partial class BuildingSystem : Node
         }
 
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
+        // A finished claim marker is drawn by client/scripts/social, which weathers it.
+        v.Visible = !(s.Complete && s.Kind == StructureKind.ClaimMarker);
         if (appeared > 0 && (existed || fresh))
             Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || s.Kind == StructureKind.ClayHut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
 

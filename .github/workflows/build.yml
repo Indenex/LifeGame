@@ -65,6 +65,11 @@ jobs:
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
 
+      - name: Check chat, claim and PvP rules with two players
+        run: |
+          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
+
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
       - uses: actions/upload-artifact@v4
