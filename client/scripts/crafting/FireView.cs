@@ -11,6 +11,7 @@ namespace LifeGame;
 public partial class FireView : Node3D
 {
     readonly Dictionary<ulong, Campfire> fires = new();
+    readonly Dictionary<ulong, RoastView> roasts = new();
     readonly Func<float, float, float> heightAt;
 
     public FireView(Func<float, float, float> heightAt) => this.heightAt = heightAt;
@@ -22,6 +23,21 @@ public partial class FireView : Node3D
         conn.Db.Fire.OnDelete += (_, f) =>
         {
             if (fires.Remove(f.Id, out var node)) node.QueueFree();
+        };
+        conn.Db.Roast.OnInsert += (_, r) =>
+        {
+            if (roasts.ContainsKey(r.Id)) return;
+            var node = new RoastView(r.PutAt.MicrosecondsSinceUnixEpoch)
+            {
+                Position = new Vector3(r.X, heightAt(r.X, r.Z) + 0.38f, r.Z),
+                Rotation = new Vector3(0, Mathf.Atan2(r.X % 1f, r.Z % 1f), 0),
+            };
+            roasts[r.Id] = node;
+            AddChild(node);
+        };
+        conn.Db.Roast.OnDelete += (_, r) =>
+        {
+            if (roasts.Remove(r.Id, out var node)) node.QueueFree();
         };
     }
 
@@ -46,6 +62,52 @@ public partial class FireView : Node3D
             Position = new Vector3(at.X, heightAt(at.X, at.Z), at.Z),
             FuelUntilMicros = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 + 600_000_000L,
         });
+        // Two roasts, one nicely browned and one just put on.
+        foreach (var (dx, dz, age) in new[] { (0.18f, 0.05f, 28f), (-0.12f, -0.16f, 4f) })
+            AddChild(new RoastView(0) { FixedAge = age,
+                Position = new Vector3(at.X + dx, heightAt(at.X, at.Z) + 0.38f, at.Z + dz),
+                Rotation = new Vector3(0, dx * 9f, 0),
+            });
+    }
+
+    // A chunk of meat on a green stick over the coals, browning and then
+    // blackening as it cooks (see Roasting for the timings).
+    partial class RoastView : Node3D
+    {
+        static readonly Color Raw = new(0.78f, 0.36f, 0.34f);
+        static readonly Color Cooked = new(0.50f, 0.27f, 0.12f);
+        static readonly Color Charred = new(0.09f, 0.07f, 0.06f);
+        readonly long putAtMicros;
+        readonly ShaderMaterial meat = Look.Solid(Raw);
+
+        // Previews hold one doneness instead of cooking in real time.
+        public float? FixedAge;
+
+        public RoastView(long putAtMicros) => this.putAtMicros = putAtMicros;
+
+        public override void _Ready()
+        {
+            AddChild(new MeshInstance3D
+            {
+                Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.012f, BottomRadius = 0.015f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.3f)),
+                Rotation = new Vector3(0, 0, Mathf.Pi / 2f - 0.5f),
+                Position = new Vector3(0.18f, -0.1f, 0),
+            });
+            AddChild(new MeshInstance3D
+            {
+                Mesh = Look.Faceted(new SphereMesh { Radius = 0.08f, Height = 0.12f, RadialSegments = 7, Rings = 4 }, Raw),
+                MaterialOverride = meat,
+            });
+        }
+
+        public override void _Process(double delta)
+        {
+            float t = FixedAge ?? (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - putAtMicros) / 1_000_000f;
+            var color = t < Roasting.BestSeconds
+                ? Raw.Lerp(Cooked, Mathf.Clamp(t / Roasting.BestSeconds, 0f, 1f))
+                : Cooked.Lerp(Charred, Mathf.Clamp((t - Roasting.BestSeconds) / (Roasting.BurnSeconds - Roasting.BestSeconds), 0f, 1f));
+            meat.SetShaderParameter("albedo", color);
+        }
     }
 
     void Upsert(Fire f)

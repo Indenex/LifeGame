@@ -23,6 +23,7 @@ namespace LifeGame.Shared
         Item,  // an item into the crafter's inventory
         Fire,  // a campfire on the ground in front of the crafter
         Placed, // something set down in front of the crafter; its lane's OnPlaced hook makes it
+        Roast,  // set over the nearest burning fire; taken off later, cooked or burnt (see Roasting)
     }
 
     public sealed class Ingredient
@@ -69,6 +70,12 @@ namespace LifeGame.Shared
                 Id = "fire.hand_drill", Name = "Hand-drill fire", Doing = "Nursing an ember into flame", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) },
                 Seconds = 4, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.35f,
+            },
+            new ProcessDef
+            {
+                Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawMutton) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
             },
             new ProcessDef
             {
@@ -212,5 +219,27 @@ namespace LifeGame.Shared
             float d = MathF.Sqrt(dx * dx + dz * dz);
             return Math.Clamp(1f - d / WarmthRadius, 0f, 1f);
         }
+    }
+
+    // Meat over a fire browns with time: take it off too soon and it isn't done,
+    // leave it too long and it burns. Best at BestSeconds.
+    public static class Roasting
+    {
+        public const float CookSeconds = 20f;
+        public const float BestSeconds = 30f;
+        public const float BurnSeconds = 60f;
+        // Most roasts one fire holds at once.
+        public const int PerFire = 4;
+
+        public static bool Done(float seconds) => seconds >= CookSeconds;
+        public static bool Burnt(float seconds) => seconds >= BurnSeconds;
+
+        // How well it was timed, 0 to 1, for the quality of the roast.
+        public static float Score(float seconds) => seconds <= BestSeconds
+            ? Math.Clamp(0.6f + 0.4f * (seconds - CookSeconds) / (BestSeconds - CookSeconds), 0f, 1f)
+            : Math.Clamp(1f - 0.6f * (seconds - BestSeconds) / (BurnSeconds - BestSeconds), 0f, 1f);
+
+        public static string State(float seconds) =>
+            Burnt(seconds) ? "burnt" : seconds >= BurnSeconds - 10f ? "starting to char" : Done(seconds) ? "ready" : "browning";
     }
 }

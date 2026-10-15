@@ -35,6 +35,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM fire",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                "SELECT * FROM roast",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -85,6 +86,27 @@ conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
 if (lastError != null) Fail($"feeding the fire: {lastError}");
 Console.WriteLine("Fed the fire a stick");
+
+// Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
+// and put some in this player's inventory (the identity is printed) to check it.
+if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
+{
+    Console.WriteLine($"Waiting for raw mutton in the inventory of {me}");
+    Pump(() => CountOf(Item.RawMutton) > 0, 60, "raw mutton");
+    Craft("cook.meat", 0, null);
+    Pump(() => conn.Db.Roast.Iter().Any(r => r.Owner == me), 3, "the roast to go on the fire");
+    var roast = conn.Db.Roast.Iter().First(r => r.Owner == me);
+    lastError = null;
+    conn.Reducers.TakeOffFire(roast.Id);
+    Pump(() => lastError != null, 3, "taking it off too early to be refused");
+    Console.WriteLine($"Too early: {lastError}");
+    Pump(() => false, Roasting.BestSeconds, null);
+    lastError = null;
+    conn.Reducers.TakeOffFire(roast.Id);
+    Pump(() => lastError != null || CountOf(Item.CookedMutton) > 0, 5, "roast mutton");
+    if (lastError != null) Fail($"taking the roast off: {lastError}");
+    Console.WriteLine($"Roasted mutton (quality {conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CookedMutton).Quality})");
+}
 
 Console.WriteLine("Inventory:");
 foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
