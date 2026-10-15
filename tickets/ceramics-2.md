@@ -28,6 +28,7 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 2026-10-15 23:30: merged main 0c3964b (#20 digging stick, #18 subscriptions) at aa47c20. Kiln query now in net/Subscriptions.cs Area; GiveDugClay(ctx, player, depth) grades max(ClayRules.DugClayQuality(depth), Skills.DugClayQuality(rank)); kiln Use priority 26. Server, client, ClayCheck build.
 - 2026-10-15 23:31: CI run https://github.com/Indenex/LifeGame/actions/runs/38823236524 green on 4716d4e; sha sent to PM for merge.
 - 2026-10-15 23:40: #21 merged (85a1572). Claims is on main: TendClay, FirePots and UseKiln now call RequireClaimAccess; server builds. Rides with the blueprint PR. #10 still open.
+- 2026-10-15 23:50: blueprint hooks re-applied on top of this branch + Building's branch (local prep f883e16): enum Kiln after ClaimMarker, StageCosts {Brick 4} / {Brick 4, Daub 2}, Shapes "Updraft kiln" (Round r0.85, Solid, Base/Dome), StageProcess KilnStructureKind => clay.kiln, StructureModel kind 3 => KilnModel.Pieces(), CeramicsStructureRemoved made the partial, casts replaced by StructureKind.Kiln. Builds; ClayCheck --kiln running.
 
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
