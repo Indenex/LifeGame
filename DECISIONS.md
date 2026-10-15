@@ -100,3 +100,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-023 — 2026-10-15 — Bigger claims
 **Decision:** The claim size goes from 10 m to 20 m so a group's huts and fire fit in one claim. The other claim rules stay as proposed: a marker costs 4 sticks and 2 fiber, one claim per player, none within 20 m of spawn, 3-day decay when untended, and PvP is off inside a claim unless the owner allows it. The wild stays open PvP.
 **Who:** Justin ("Bigger claims", which the PM recommended)
+
+## D-024 — 2026-10-15 — Crafting panel layout
+**Decision:** Keep the crafting panel as built: tier tabs on the right, Tab cycles the tabs, number keys pick a row. A "what I can make now" filter may be added later.
+**Who:** Justin ("Keep tabs", which the PM recommended)
