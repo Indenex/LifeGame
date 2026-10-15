@@ -25,9 +25,11 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 22:40: D-041 deep clay: ClayRules.DugClayQuality (80 at the stick-only depth); Crafting wires it into Dig. Kiln moved to the structure model (Kiln row keyed by StructureId, made on first use); crafted clay.kiln removed. Kind index is ClayRules.KilnStructureKind = 3 until StructureKind.Kiln exists.
 - Prepared (local, on top of #8 and #10): StructureKind.Kiln + StageCosts (Base 4 bricks; Dome 4 bricks + 2 daub), Structures.Shapes entry (Radius 0.85, Solid, Warmth 0), StageProcess 3 => clay.kiln, StructureModel dispatch to KilnModel.Pieces(), CeramicsStructureRemoved partial, bot builds the blueprint.
 
+- 2026-10-15 23:30: merged main 0c3964b (#20 digging stick, #18 subscriptions) at aa47c20. Kiln query now in net/Subscriptions.cs Area; GiveDugClay(ctx, player, depth) grades max(ClayRules.DugClayQuality(depth), Skills.DugClayQuality(rank)); kiln Use priority 26. Server, client, ClayCheck build.
+
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
 - After Claims PR #8 is on main: RequireClaimAccess in TendClay, FirePots, OnPlaced and kiln use.
 
 ## Next step
-After #8 and #10 merge: merge main, add the prepared Building/Structures/StructureModel hooks and KilnModel.Pieces, make CeramicsStructureRemoved the partial, run ClayCheck --kiln, take in-game kiln screenshots.
+Wait for CI on #21 head, send the PM the green sha; then port the blueprint hooks from the kiln-structure-prep notes above once #8 and #10 merge.
