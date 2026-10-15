@@ -21,6 +21,7 @@ public partial class Main : Node3D
     readonly Hud hud = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -51,6 +52,8 @@ public partial class Main : Node3D
         AddChild(hud);
         AddChild(crafting);
         crafting.Notice += hud.Note;
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -217,7 +220,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.G);
+        Bind("feed_fire", Key.T);
     }
 
     // --- Networking -------------------------------------------------------
@@ -261,6 +264,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         crafting.Attach(conn);
         fires.Attach(conn);
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -298,7 +302,7 @@ public partial class Main : Node3D
                 $"SELECT * FROM fire WHERE {range}",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
-            });
+            }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)

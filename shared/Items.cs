@@ -21,6 +21,9 @@ namespace LifeGame.Shared
         Cordage = 8,
         Spear = 9,
         StoneAxe = 10,
+
+        // Survival
+        Berries = 160,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -66,7 +69,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
             new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true });
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" });
 
         public static ItemDef Def(Item item) => All[item];
 
