@@ -4,7 +4,7 @@ The one list of every key the game uses. Before binding a key, add it here on yo
 
 Status: DECIDED by Justin on 2026-10-15 (D-025). The UX/UI lane owns this file, the input map and the shared Use key (D-033); each lane moves its keys to this table after that lands.
 
-The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does and builds the on-screen controls line. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
+The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does. There is no controls line (D-038): players learn keys from the G prompt, hints inside panels, and a one-time hint per key that `Controls.cs` also holds (shown once per install, skipped if the player finds the key first). Don't add key lists to the HUD; ask the UX/UI lane for a hint instead. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
 
 ## In the world
 
