@@ -3,15 +3,15 @@ using Godot;
 
 namespace LifeGame;
 
-// A quiet overlay: connection state, what you carry, and short notes that fade
-// out on their own. There is no controls line (D-038); keys are taught by the G
+// A quiet overlay: what you carry, short notes and connection news that fade out
+// on their own. There is no controls line (D-038); keys are taught by the G
 // prompt, panel hints and first-time hints (ui/Hints.cs).
 public partial class Hud : CanvasLayer
 {
     readonly Label status = new();
-    readonly HBoxContainer inventory = new();
+    readonly InventoryBar inventory = new();
     readonly Label toast = new();
-    float toastTime;
+    float toastTime, statusTime;
 
     public override void _Ready()
     {
@@ -19,56 +19,85 @@ public partial class Hud : CanvasLayer
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         root.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(root);
+        ItemIcon.Attach(this);
 
-        var title = Panel(Text("LifeGame", 22), new Vector2(20, 18));
-        root.AddChild(title);
-        var statusPanel = Panel(status, new Vector2(20, 66));
-        Style(status, 15, 0.85f);
-        root.AddChild(statusPanel);
+        // Connection news is one quiet line at the top that fades (D-036, D-045).
+        Soft(status, 14, 0.8f);
+        status.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+        status.GrowHorizontal = Control.GrowDirection.Both;
+        status.HorizontalAlignment = HorizontalAlignment.Center;
+        status.Position = new Vector2(0, 18);
+        root.AddChild(status);
 
-
-        inventory.AddThemeConstantOverride("separation", 10);
-        inventory.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
-        inventory.GrowHorizontal = Control.GrowDirection.Both;
-        inventory.Position = new Vector2(0, -64);
         root.AddChild(inventory);
 
-        Style(toast, 18, 1f);
-        toast.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+        // Notes sit just above what you carry, small and slanted, with no box.
+        Soft(toast, 16, 0.92f);
+        toast.AddThemeFontOverride("font", new FontVariation
+        {
+            BaseFont = ThemeDB.FallbackFont,
+            VariationTransform = new Transform2D(new Vector2(1, 0.2f), new Vector2(0, 1), Vector2.Zero),
+        });
+        toast.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         toast.GrowHorizontal = Control.GrowDirection.Both;
+        toast.GrowVertical = Control.GrowDirection.Begin;
         toast.HorizontalAlignment = HorizontalAlignment.Center;
-        toast.Position = new Vector2(0, 40);
+        toast.Position = new Vector2(0, -122);
         root.AddChild(toast);
 
-        SetInventory(new Dictionary<string, uint>());
+        // --screenshot-hud fills the HUD with sample things, for screenshots without a server.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-hud") >= 0)
+            GetTree().CreateTimer(2).Timeout += () =>
+            {
+                SetItems(new[]
+                {
+                    new InventoryEntry(LifeGame.Shared.Item.Stick, "Sticks", 4),
+                    new InventoryEntry(LifeGame.Shared.Item.Stone, "Stones", 2),
+                    new InventoryEntry(LifeGame.Shared.Item.Flake, "Fine stone flake", 1),
+                });
+                SetItems(new[]
+                {
+                    new InventoryEntry(LifeGame.Shared.Item.Stick, "Sticks", 4),
+                    new InventoryEntry(LifeGame.Shared.Item.Stone, "Stones", 2),
+                    new InventoryEntry(LifeGame.Shared.Item.Fiber, "Plant fiber", 6),
+                    new InventoryEntry(LifeGame.Shared.Item.Flake, "Fine stone flake", 1),
+                    new InventoryEntry(LifeGame.Shared.Item.Berries, "Berries", 5),
+                });
+                GetTree().CreateTimer(3.5).Timeout += () => Note("The fire takes the stick and brightens");
+            };
     }
 
-    public void SetStatus(string text) => status.Text = text;
+    public void SetStatus(string text)
+    {
+        if (status.Text == text) return;
+        status.Text = text;
+        statusTime = 6f;
+    }
 
     public void Note(string text)
     {
         toast.Text = text;
-        toastTime = 2.5f;
+        toastTime = 3f;
     }
 
-    public void SetInventory(IReadOnlyDictionary<string, uint> items)
-    {
-        foreach (var child in inventory.GetChildren()) child.QueueFree();
-        if (items.Count == 0)
-        {
-            var empty = Text("Empty hands", 15);
-            empty.Modulate = new Color(1, 1, 1, 0.6f);
-            inventory.AddChild(Panel(empty, Vector2.Zero));
-            return;
-        }
-        foreach (var (name, count) in items)
-            inventory.AddChild(Panel(Text($"{name}  {count}", 16), Vector2.Zero));
-    }
+    public void SetItems(IReadOnlyList<InventoryEntry> items) => inventory.SetItems(items);
 
     public override void _Process(double delta)
     {
-        toastTime -= (float)delta;
-        toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime, 0f, 1f));
+        float dt = (float)delta;
+        toastTime -= dt;
+        toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
+        statusTime -= dt;
+        status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
+    }
+
+    // Text with a wide, faint shadow instead of a box behind it.
+    internal static void Soft(Label label, int size, float alpha)
+    {
+        Style(label, size, alpha);
+        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
+        label.AddThemeConstantOverride("shadow_outline_size", 7);
+        label.AddThemeConstantOverride("shadow_offset_y", 2);
     }
 
     internal static Label Text(string text, int size)

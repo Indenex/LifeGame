@@ -35,7 +35,7 @@ public static class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind == 1 ? ClayHut() : LeanTo();
+        pieces = kind == 1 ? ClayHut() : kind == 2 ? ClaimMarkerModel.Pieces() : LeanTo();
         Cache[kind] = pieces;
         return pieces;
     }

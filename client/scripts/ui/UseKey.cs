@@ -13,7 +13,7 @@ public partial class UseKey : CanvasLayer
     public Func<bool> Blocked = () => false;
 
     readonly Label verb = new();
-    PanelContainer panel = null!;
+    Control panel = null!;
     UseOffer? offer;
     float repeatTimer, alpha;
 
@@ -27,11 +27,12 @@ public partial class UseKey : CanvasLayer
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 12);
         row.AddChild(KeyCap("G"));
-        Hud.Style(verb, 18, 1f);
+        Hud.Soft(verb, 18, 1f);
         verb.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(verb);
 
-        panel = Hud.Panel(row, Vector2.Zero);
+        // No box behind it: just the key and the words (D-045).
+        panel = row;
         panel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         panel.GrowHorizontal = Control.GrowDirection.Both;
         panel.GrowVertical = Control.GrowDirection.Begin;
@@ -80,14 +81,18 @@ public partial class UseKey : CanvasLayer
     static Control KeyCap(string key)
     {
         var label = Hud.Text(key, 16);
+        Hud.Soft(label, 16, 1f);
         label.HorizontalAlignment = HorizontalAlignment.Center;
         label.VerticalAlignment = VerticalAlignment.Center;
         label.CustomMinimumSize = new Vector2(18, 0);
         var cap = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(Look.Cream, 0.12f),
-            BorderColor = new Color(Look.Cream, 0.75f),
+            BgColor = new Color(0.09f, 0.10f, 0.07f, 0.35f),
+            BorderColor = new Color(Look.Cream, 0.8f),
+            ShadowColor = new Color(0, 0, 0, 0.25f),
+            ShadowSize = 5,
+            ShadowOffset = new Vector2(0, 2),
             ContentMarginLeft = 8,
             ContentMarginRight = 8,
             ContentMarginTop = 1,

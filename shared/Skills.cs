@@ -45,6 +45,8 @@ namespace LifeGame.Shared
         public const string Dig = "earth.dig";
         public const string Forage = "gather.forage";
         public const string Berries = "gather.berries";
+        // Shearing, reported by the Animals lane (Shearing.cs ShearProcess).
+        public const string Shear = "animal.shear";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
         static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
 
@@ -56,6 +58,8 @@ namespace LifeGame.Shared
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
+            // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
         };
 
         // Names for processes that are not in Processes.List.
@@ -70,6 +74,7 @@ namespace LifeGame.Shared
             ["build.daub"] = "Daubing walls",
             ["build.roof"] = "Thatching a roof",
             [Berries] = "Picking berries",
+            [Shear] = "Shearing a sheep",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -82,6 +87,7 @@ namespace LifeGame.Shared
             yield return ClayRules.FillProcess;
             yield return ClayRules.PitFireProcess;
             foreach (var id in BuildStages) yield return id;
+            yield return Shear;
         }
 
         public static Specialization? Spec(string id)

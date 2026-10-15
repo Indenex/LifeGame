@@ -1,9 +1,9 @@
 # skills-2: Skills and journal for clay, building and food
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_review
+Status: done
 Branch: claude/journal-skills-iseewg (restarted from main after #7 merged)
-PR: #19 (merged 4e6090a at 409a4a8), then a follow-up PR for G note reading
+PR: #19 (merged 4e6090a), G note reading in #22 (merged 97821e5)
 
 ## Goal
 Every process that has landed since skills-1 trains a skill and appears in the journal: clay crafting (`clay.*` through Crafting's hooks), pit firing and filling pots (Ceramics), building stages `build.frame`, `build.wattle`, `build.daub`, `build.roof` (Builder, capped), picking berries (Foraging), and cooking (`cook.meat`) when it exists. The journal names each of them and counts them in "still to discover".
@@ -20,4 +20,4 @@ Every process that has landed since skills-1 trains a skill and appears in the j
 - Which skill cooking (`cook.*`) trains is with Justin (card open via the PM). Implemented default: Firecraft (survival basic). The alternative, a capped Cook skill, is one new line in `shared/Skills.cs`.
 
 ## Next step
-Wait for CI on the G note-reading follow-up PR, send the green sha to the PM (who merges), then work tickets/skills-3.md.
+Done: merged into main at 97821e5 on 2026-10-15 22:47.
