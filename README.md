@@ -49,7 +49,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal; G reads a note on the ground.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal; G reads a note on the ground; Enter talks; K opens your claim; G at your claim marker tends it.
 
 ## Crafting
 
@@ -58,6 +58,14 @@ Items and processes are plain data in `shared/Items.cs` and `shared/Processes.cs
 The server runs each process as a job with a finish time (`server/spacetimedb/Crafting.cs`). Process ids such as `knap.flake` are stable: skills and the journal key on them. The skills system plugs in through two partial methods, `OnProcessPerformed` and `QualityCapFor`. Other systems read warmth with `Module.WarmthAt(ctx, x, z)`.
 
 Item ids are stored as numbers, so never renumber or reuse one; add new items at the end.
+
+## Chat, land claims and PvP
+
+- Chat is heard within 24 m of the speaker. Type `/name Something` in chat to rename yourself.
+- A claim marker is laid out from the build menu (B, then Tab to it) and built with 4 sticks and 2 fiber like any structure. Once it stands it protects land within 20 m of it. Outsiders cannot dig there or pick up what lies on the ground. The owner can invite people standing nearby; members can dig, pick up, tend the marker and use the stash at its foot.
+- Fighting is allowed in the wild. Inside a standing claim it needs the owner's permission (off by default). There is no combat yet; `Module.RequirePvpAllowed` is the rule combat code should call.
+- A marker stands for 3 days after it was last tended, then falls and spills its stash. To watch that happen in a playtest, shorten it as the database owner: `spacetime call lifegame set_claim_lifetime 120`.
+- `tools/SocialTest` checks all of this with two simulated players against a running server (CI runs it).
 
 Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
 

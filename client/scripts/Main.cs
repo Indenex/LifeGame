@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly SocialLayer social = new();
     readonly UseKey useKey = new();
     readonly Journal journal = new();
     readonly CraftingUi crafting = new();
@@ -61,6 +62,7 @@ public partial class Main : Node3D
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
+        AddChild(social);
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
@@ -72,9 +74,17 @@ public partial class Main : Node3D
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
         AddChild(useKey);
         AddChild(new Hints());
+        var keyHelp = new KeyHelp();
+        AddChild(keyHelp);
+        // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
+        var menu = new PauseMenu { Keys = keyHelp, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || GetViewport().GuiGetFocusOwner() != null };
+        AddChild(menu);
+        // First child, so Esc reaches it only after every lane panel had its turn.
+        MoveChild(menu, 0);
+        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
@@ -288,6 +298,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
@@ -405,12 +416,13 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
-        // Stacks whose qualities share a grade read the same, so they show as one line.
-        var counts = conn.Db.MyInventory.Iter()
+        // Stacks whose qualities share a grade read the same, so they show as one slot.
+        var stacks = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
             .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
-            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
-        hud.SetInventory(counts);
+            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n), n); })
+            .ToList();
+        hud.SetItems(stacks);
     }
 
     // --- Items on the ground ---------------------------------------------
@@ -460,7 +472,8 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned && !crafting.CapturesInput) Walk(dt);
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
+        social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
         cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
@@ -483,7 +496,7 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
+        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));

@@ -4,7 +4,8 @@
 //   dotnet run -- out.wav [scene:seconds ...] [--no-music]
 //
 // Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
-// from under a roof), rain (same as storm), dusk, night, sheep (a grazing flock that
+// from under a roof), rain (same as storm), fire (a campfire at night), firerain
+// (a campfire in light rain), dusk, night, sheep (a grazing flock that
 // bolts halfway). Each scene walks on grass for its first half.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -31,6 +32,8 @@ foreach (var scene in scenes)
         "steady" or "roof" => (0.75f, 0.65f, 0.6f, 1f),
         "rain" or "storm" => (0.6f, 1f, 0.9f, 1f),
         "dusk" => (0.35f, 0f, 0.3f, 0.2f),
+        "fire" => (0f, 0f, 0.2f, 0.1f),
+        "firerain" => (0.1f, 0.4f, 0.4f, 0.7f),
         "night" => (0f, 0f, 0.25f, 0.1f),
         _ => (1f, 0f, 0.3f, 0f),
     };
@@ -46,6 +49,8 @@ foreach (var scene in scenes)
         mix.Wind += (wind - mix.Wind) * k;
         mix.Wetness += (wet - mix.Wetness) * k;
         mix.Cover += ((parts[0] == "roof" ? 1f : 0f) - mix.Cover) * k;
+        mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
+        mix.FirePan = -0.3f;
         double t = done / (double)rate;
         if (t < seconds / 2 && t >= nextStep)
         {

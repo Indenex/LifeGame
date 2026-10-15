@@ -53,6 +53,8 @@ public partial class Atmosphere : Node3D
 
     // Whether a spot is under a roof; Main points this at the building system.
     public Func<Vector3, bool>? Sheltered;
+
+    readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
     Vector2 cloudOffset;
 
     Vector2? debugPosition;
@@ -118,6 +120,10 @@ public partial class Atmosphere : Node3D
         conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
         conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
         conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
+        // Campfires crackle; FireView subscribes to the fires near the player.
+        conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
+        conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
+        conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather" });
@@ -209,6 +215,7 @@ public partial class Atmosphere : Node3D
         sound.Wetness = wetness;
         sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
         Lightning(dt);
+        if (GetViewport()?.GetCamera3D() is { } ear) FireSound(focus, ear.GlobalBasis.X);
     }
 
     // --- Sun, sky and fog -----------------------------------------------------
@@ -313,6 +320,31 @@ public partial class Atmosphere : Node3D
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
+    }
+
+    // The campfires you can hear: louder the closer and the better they burn,
+    // panned toward the nearest. Matches FireView's fade to embers.
+    void FireSound(Vector3 listener, Vector3 right)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        float total = 0f, nearest = 0f, pan = 0f;
+        foreach (var (x, z, fuelUntil) in fires.Values)
+        {
+            float left = (fuelUntil - now) / 1_000_000f;
+            if (left <= 0f) continue;
+            var offset = new Vector3(x - listener.X, 0f, z - listener.Z);
+            float d = offset.Length();
+            if (d > 18f) continue;
+            float g = Mathf.Clamp(left / 60f, 0.15f, 1f) * Mathf.Pow(1f - d / 18f, 2f);
+            total += g;
+            if (g > nearest)
+            {
+                nearest = g;
+                pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
+            }
+        }
+        sound.Fire = Mathf.Min(total, 1f);
+        sound.FirePan = pan;
     }
 
     float strikeAge = 10f, strikePeak;

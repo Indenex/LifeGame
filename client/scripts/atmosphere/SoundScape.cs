@@ -15,6 +15,8 @@ public partial class SoundScape : Node
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
     public float Cover { set => mix.Cover = value; }
+    public float Fire { set => mix.Fire = value; }
+    public float FirePan { set => mix.FirePan = value; }
     public bool MusicOn { get => mix.MusicOn; set => mix.MusicOn = value; }
 
     public override void _Ready()

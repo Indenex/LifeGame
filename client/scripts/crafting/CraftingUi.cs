@@ -207,6 +207,15 @@ public partial class CraftingUi : CanvasLayer
     // with this score, and how many steps (strikes, coils, strokes) it takes.
     static partial void SkipMinigame(ProcessDef def, ref float? score);
     static partial void StepsFor(ProcessDef def, ref int steps);
+    static partial void Mastered(ProcessDef def, ref bool mastered);
+    // The row's note on the minigame: a Master does it by heart (D-047).
+    static string HandsOn(ProcessDef def)
+    {
+        if (def.Minigame == Minigame.None) return "";
+        bool mastered = false;
+        Mastered(def, ref mastered);
+        return mastered ? "  ·  by heart. Hold Ctrl to work it by hand" : "  ·  hands-on";
+    }
     static int Steps(ProcessDef def, int baseSteps)
     {
         StepsFor(def, ref baseSteps);
@@ -304,7 +313,7 @@ public partial class CraftingUi : CanvasLayer
             bool ready = Missing(def) == null;
             var button = new Button
             {
-                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{(def.Minigame != Minigame.None ? "  ·  hands-on" : "")}",
+                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}",
                 Alignment = HorizontalAlignment.Left,
                 Disabled = !ready,
                 Flat = true,
