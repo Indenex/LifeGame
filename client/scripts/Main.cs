@@ -34,15 +34,17 @@ public partial class Main : Node3D
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
+    readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Disabled, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled };
     static readonly Dictionary<ItemKind, Mesh> ItemMeshes = new();
 
     public override void _Ready()
     {
         SetupInput();
+        SetupView();
         SetupEnvironment();
-        AddChild(terrain);
-        AddChild(me);
-        AddChild(cameraRig);
+        view.AddChild(terrain);
+        view.AddChild(me);
+        view.AddChild(cameraRig);
         AddChild(hud);
         cameraRig.Camera.MakeCurrent();
         Connect();
@@ -63,6 +65,45 @@ public partial class Main : Node3D
         };
     }
 
+    // The world renders at a fraction of the window size and is scaled up with
+    // nearest filtering, for a crisp low-res painted look. --pixel=1 turns it off.
+    void SetupView()
+    {
+        int pixel = int.TryParse(Arg("pixel"), out var p) ? Math.Max(1, p) : 2;
+        var layer = new CanvasLayer { Layer = -1 };
+        var container = new SubViewportContainer
+        {
+            Stretch = true,
+            StretchShrink = pixel,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+        };
+        container.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        container.AddChild(view);
+        layer.AddChild(container);
+        AddChild(layer);
+
+        // A soft vignette, like the edges of a painting.
+        var vignette = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };
+        vignette.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        vignette.Material = new ShaderMaterial
+        {
+            Shader = new Shader
+            {
+                Code = """
+                    shader_type canvas_item;
+                    void fragment() {
+                        vec2 uv = (SCREEN_UV - 0.5) * vec2(1.0, 0.85);
+                        float edge = smoothstep(0.4, 0.85, length(uv));
+                        COLOR = vec4(0.12, 0.07, 0.16, edge * 0.4);
+                    }
+                    """,
+            },
+        };
+        var vignetteLayer = new CanvasLayer { Layer = 0 };
+        vignetteLayer.AddChild(vignette);
+        AddChild(vignetteLayer);
+    }
+
     void SetupEnvironment()
     {
         var sky = new ProceduralSkyMaterial
@@ -81,31 +122,31 @@ public partial class Main : Node3D
             Sky = new Sky { SkyMaterial = sky },
             AmbientLightSource = Godot.Environment.AmbientSource.Sky,
             AmbientLightSkyContribution = 0.75f,
-            AmbientLightEnergy = 0.75f,
+            AmbientLightEnergy = 0.6f,
             TonemapMode = Godot.Environment.ToneMapper.Agx,
             TonemapExposure = 1.05f,
             SsaoEnabled = true,
             SsaoRadius = 1.4f,
-            SsaoIntensity = 1.6f,
+            SsaoIntensity = 1.0f,
             GlowEnabled = true,
-            GlowIntensity = 0.35f,
-            GlowBloom = 0.05f,
+            GlowIntensity = 0.5f,
+            GlowBloom = 0.12f,
             FogEnabled = true,
             FogLightColor = new Color(0.86f, 0.80f, 0.72f),
-            FogDensity = 0.0035f,
+            FogDensity = 0.002f,
             FogSkyAffect = 0.35f,
             FogAerialPerspective = 0.3f,
             AdjustmentEnabled = true,
             AdjustmentSaturation = 1.15f,
             AdjustmentContrast = 1.06f,
         };
-        AddChild(new WorldEnvironment { Environment = env });
+        view.AddChild(new WorldEnvironment { Environment = env });
 
         // Late-afternoon sun: low, warm and soft-edged.
-        AddChild(new DirectionalLight3D
+        view.AddChild(new DirectionalLight3D
         {
-            LightColor = new Color(1.0f, 0.86f, 0.70f),
-            LightEnergy = 1.35f,
+            LightColor = new Color(1.0f, 0.9f, 0.74f),
+            LightEnergy = 1.6f,
             LightAngularDistance = 1.2f,
             ShadowEnabled = true,
             ShadowBlur = 1.5f,
@@ -127,7 +168,7 @@ public partial class Main : Node3D
             },
             Position = new Vector3(0, Look.WaterLevel, 0),
         };
-        AddChild(water);
+        view.AddChild(water);
     }
 
     static void SetupInput()
@@ -252,7 +293,7 @@ public partial class Main : Node3D
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
             others[p.PlayerId] = avatar;
-            AddChild(avatar);
+            view.AddChild(avatar);
         }
         avatar.Target = at;
         avatar.TargetHeading = p.Heading;
@@ -292,7 +333,7 @@ public partial class Main : Node3D
         node.Position = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         node.Rotation = new Vector3(0, yaw, 0);
         items[item.Id] = node;
-        AddChild(node);
+        view.AddChild(node);
     }
 
     void RemoveItem(ulong id)
@@ -394,9 +435,10 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         var pos = me.Position + velocity * dt;
-        if (World.BaseHeight(World.CellOf(pos.X), World.CellOf(pos.Z)) < Look.WaterLevel - 0.35f)
+        if (terrain.HeightAt(pos.X, pos.Z) < Look.WaterLevel - 0.3f)
             pos = me.Position; // Deep water is not walkable yet.
-        pos.Y = terrain.HeightAt(pos.X, pos.Z);
+        // Ease up and down the terraces instead of popping between steps.
+        pos.Y = Mathf.Lerp(me.Position.Y, terrain.HeightAt(pos.X, pos.Z), 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
 
         if (velocity.LengthSquared() > 0.05f)
@@ -410,7 +452,7 @@ public partial class Main : Node3D
     {
         var front = me.Position + new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y)) * 1.0f;
         int cx = World.CellOf(front.X), cz = World.CellOf(front.Z);
-        Dust(new Vector3(cx, terrain.PointHeight(cx, cz), cz), World.IsClay(cx, cz) ? Look.Clay : Look.DugEarth);
+        Dust(new Vector3(cx, terrain.TileHeight(cx, cz), cz), World.IsClay(cx, cz) ? Look.Clay : Look.DugEarth);
         if (conn == null)
         {
             hud.Note("Digging needs the server");
@@ -450,7 +492,7 @@ public partial class Main : Node3D
             Mesh = new BoxMesh { Size = Vector3.One * 0.07f, Material = Look.Solid(color) },
             Position = at + new Vector3(0, 0.05f, 0),
         };
-        AddChild(particles);
+        view.AddChild(particles);
         GetTree().CreateTimer(1.2).Timeout += particles.QueueFree;
     }
 

@@ -16,13 +16,13 @@ public partial class Avatar : Node3D
     float walkPhase, speed;
     Vector3 lastPosition;
 
-    static StandardMaterial3D? skin, hair, leaves;
+    static ShaderMaterial? skin, hair, leaves;
 
     public Avatar(string name)
     {
-        skin ??= Look.Solid(Look.Skin, 0.75f);
-        hair ??= Look.Solid(Look.Hair, 0.9f);
-        leaves ??= Look.Solid(Look.Pine.Lightened(0.1f), 0.9f);
+        skin ??= Look.Solid(Look.Skin);
+        hair ??= Look.Solid(Look.Hair);
+        leaves ??= Look.Solid(Look.Leaf);
 
         body.AddChild(Part(new CapsuleMesh { Radius = 0.2f, Height = 0.72f, RadialSegments = 12, Rings = 4 }, skin, new Vector3(0, 1.02f, 0)));
         body.AddChild(Part(new SphereMesh { Radius = 0.17f, Height = 0.34f, RadialSegments = 14, Rings = 7 }, skin, new Vector3(0, 1.52f, 0)));
