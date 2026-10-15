@@ -278,7 +278,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
-        herd.Bind(conn, terrain);
+        herd.Bind(conn, terrain, () => me.Position, hud.Note);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         crafting.Attach(conn);
         fires.Attach(conn);
