@@ -41,7 +41,15 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, Enter to talk, C to raise a claim marker, R at a marker to open it.
+
+## Chat, land claims and PvP
+
+- Chat is heard within 24 m of the speaker. Type `/name Something` in chat to rename yourself.
+- A claim marker costs 4 sticks and 2 fiber and protects a 10 m circle around it. Outsiders cannot dig there or pick up what lies on the ground. The owner can invite people standing nearby; members can dig, pick up, tend the marker and use the stash at its foot.
+- Fighting is allowed in the wild. Inside a standing claim it needs the owner's permission (off by default). There is no combat yet; `Module.RequirePvpAllowed` is the rule combat code should call.
+- A marker stands for 3 days after it was last tended, then falls and spills its stash. To watch that happen in a playtest, shorten it as the database owner: `spacetime call lifegame set_claim_lifetime 120`.
+- `tools/SocialTest` checks all of this with two simulated players against a running server (CI runs it).
 
 ## After changing the server module
 

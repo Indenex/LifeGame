@@ -24,6 +24,8 @@ public static partial class Module
             ScheduledId = 0,
             ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(World.MoveTickMillis)),
         });
+        InitChat(ctx);
+        InitClaims(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
@@ -138,6 +140,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
+        RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
         var state = RequireCooldown(ctx, player);
 
         long key = World.CellKey(cellX, cellZ);
@@ -171,6 +174,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
+        RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, item.Kind, 1);

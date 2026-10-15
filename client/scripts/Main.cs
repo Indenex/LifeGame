@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly SocialLayer social = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -46,6 +47,7 @@ public partial class Main : Node3D
         view.AddChild(me);
         view.AddChild(cameraRig);
         AddChild(hud);
+        AddChild(social);
         cameraRig.Camera.MakeCurrent();
         Connect();
         ScheduleScreenshot();
@@ -245,6 +247,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -424,6 +427,7 @@ public partial class Main : Node3D
         conn?.FrameTick();
 
         if (spawned) Walk(dt);
+        social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
         cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
@@ -446,7 +450,7 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
+        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));

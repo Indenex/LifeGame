@@ -49,6 +49,11 @@ jobs:
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
           cd tools/LoadTest && dotnet run -c Release -- 20 20
 
+      - name: Check chat, claim and PvP rules with two players
+        run: |
+          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
+
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
       - uses: actions/upload-artifact@v4

@@ -27,6 +27,10 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(ChatMessage = new(conn));
+            AddTable(Claim = new(conn));
+            AddTable(ClaimMember = new(conn));
+            AddTable(MyClaimStash = new(conn));
             AddTable(MyInventory = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
@@ -528,6 +532,10 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.ChatMessage().ToSql(),
+            new QueryBuilder().From.Claim().ToSql(),
+            new QueryBuilder().From.ClaimMember().ToSql(),
+            new QueryBuilder().From.MyClaimStash().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
@@ -539,6 +547,10 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<ChatMessage, ChatMessageCols, ChatMessageIxCols> ChatMessage() => new("chat_message", new ChatMessageCols("chat_message"), new ChatMessageIxCols("chat_message"));
+        public global::SpacetimeDB.Table<Claim, ClaimCols, ClaimIxCols> Claim() => new("claim", new ClaimCols("claim"), new ClaimIxCols("claim"));
+        public global::SpacetimeDB.Table<ClaimMember, ClaimMemberCols, ClaimMemberIxCols> ClaimMember() => new("claim_member", new ClaimMemberCols("claim_member"), new ClaimMemberIxCols("claim_member"));
+        public global::SpacetimeDB.Table<ClaimStash, MyClaimStashCols, MyClaimStashIxCols> MyClaimStash() => new("my_claim_stash", new MyClaimStashCols("my_claim_stash"), new MyClaimStashIxCols("my_claim_stash"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
@@ -625,11 +637,22 @@ namespace SpacetimeDB.Types
             var eventContext = (ReducerEventContext)context;
             return reducer switch
             {
+                Reducer.AbandonClaim args => Reducers.InvokeAbandonClaim(eventContext, args),
+                Reducer.AddClaimMember args => Reducers.InvokeAddClaimMember(eventContext, args),
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
+                Reducer.LeaveClaim args => Reducers.InvokeLeaveClaim(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
+                Reducer.PlaceClaim args => Reducers.InvokePlaceClaim(eventContext, args),
+                Reducer.RemoveClaimMember args => Reducers.InvokeRemoveClaimMember(eventContext, args),
+                Reducer.SendChat args => Reducers.InvokeSendChat(eventContext, args),
+                Reducer.SetClaimLifetime args => Reducers.InvokeSetClaimLifetime(eventContext, args),
+                Reducer.SetClaimPvp args => Reducers.InvokeSetClaimPvp(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
+                Reducer.StashItem args => Reducers.InvokeStashItem(eventContext, args),
+                Reducer.TakeFromStash args => Reducers.InvokeTakeFromStash(eventContext, args),
+                Reducer.TendClaim args => Reducers.InvokeTendClaim(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }
