@@ -120,3 +120,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-028 — 2026-10-15 — Merge Crafting core and Journal/skills (world wipe)
 **Decision:** PR #4 (crafting core) merges, then PR #7 (journal and capped skills) right after, each when CI is green. Item storage moves to numeric ids plus quality, so Justin's local world and survival vitals reset once (`spacetime publish --delete-data`).
 **Who:** Justin ("Merge both")
+
+## D-029 — 2026-10-15 — Merge Atmosphere
+**Decision:** PR #9 (day and night, weather, rain, lighting, synthesized soundscape) merges into the playtest build when green. No world wipe. Ceramics, merging after it, adds the `RainAt` implementation.
+**Who:** Justin ("Merge", after testing in game)
