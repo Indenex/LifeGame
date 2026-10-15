@@ -3,7 +3,7 @@ Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
 Status: in_progress
 Branch: claude/atmosphere-sound-hlqfke
-PR: (none yet)
+PR: #32
 
 ## Goal
 A campfire at night throws a wide, soft, warm pool of light with a glow in the mist and a living flicker, and the hour after sunset is dusky rather than pitch black. Justin sees it in night screenshots.
@@ -15,4 +15,4 @@ A campfire at night throws a wide, soft, warm pool of light with a glow in the m
 - (none)
 
 ## Next step
-Check the night and dusk re-renders, send them to the PM with the before shots, open the PR.
+Wait for CI on PR #32 and Justin's OK via the PM (look change); send the green sha to the PM, who merges.
