@@ -7,3 +7,5 @@ obj/
 server/spacetimedb/SpacetimeDB.Codegen/
 # Exports
 builds/
+# Generated from the server module by tools/gen-bindings.sh; never committed
+client/module_bindings/

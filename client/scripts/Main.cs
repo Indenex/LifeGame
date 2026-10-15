@@ -19,11 +19,15 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly UseKey useKey = new();
+    readonly Journal journal = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
+    CeramicsView clay = null!;
     readonly Atmosphere atmosphere = new();
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
+    readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
@@ -50,10 +54,15 @@ public partial class Main : Node3D
         view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
+        view.AddChild(herd);
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
+        clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
+        AddChild(clay);
         AddChild(hud);
+        AddChild(journal);
+        view.AddChild(journal.Notes);
         AddChild(crafting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
@@ -61,7 +70,14 @@ public partial class Main : Node3D
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
+        // Last child, so G reaches the Use key before any lane's old binding.
+        useKey.Player = () => me.Position;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        AddChild(useKey);
+        AddChild(new Hints());
+        RegisterUse();
         cameraRig.Camera.MakeCurrent();
+        if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
         ScheduleScreenshot();
     }
@@ -212,6 +228,7 @@ public partial class Main : Node3D
 
     static void SetupInput()
     {
+        Controls.Setup();
         void Bind(string action, params Key[] keys)
         {
             if (InputMap.HasAction(action)) return;
@@ -227,7 +244,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.T);
+        Bind("sneak", Key.Shift);
     }
 
     // --- Networking -------------------------------------------------------
@@ -250,6 +267,7 @@ public partial class Main : Node3D
         string? token = LoadToken();
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
+        journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -268,9 +286,11 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
+        herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         crafting.Attach(conn);
         fires.Attach(conn);
+        clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
     }
@@ -280,7 +300,7 @@ public partial class Main : Node3D
         myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
-        Subscribe(0, 0);
+        SubscribeSelf();
         atmosphere.Connect(c);
     }
 
@@ -288,31 +308,49 @@ public partial class Main : Node3D
     {
         hud.SetStatus($"Offline: {reason}. Walking alone.");
         conn = null;
+        journal.Detach();
         Spawn(Vector3.Zero);
     }
+
+    // Our own rows come first, wherever we saved, then the area around them. The
+    // area around the origin would miss a player who logged off far from it (bugfix-1).
+    void SubscribeSelf()
+    {
+        if (conn == null) return;
+        conn.SubscriptionBuilder()
+            .OnApplied(_ =>
+            {
+                var at = MyPos();
+                Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+            })
+            .OnError((_, e) =>
+            {
+                hud.Note($"Subscription error: {e.Message}");
+                Subscribe(0, 0);
+            })
+            .Subscribe(Subscriptions.Self);
+    }
+
+    PlayerPos? MyPos() =>
+        conn != null && myIdentity is { } id && conn.Db.Player.Identity.Find(id) is { } p
+            ? conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) : null;
 
     void Subscribe(int chunkX, int chunkZ)
     {
         if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
         subscribedChunk = (chunkX, chunkZ);
-        int r = World.ViewRadiusChunks;
-        string range = $"chunk_x >= {chunkX - r} AND chunk_x <= {chunkX + r} AND chunk_z >= {chunkZ - r} AND chunk_z <= {chunkZ + r}";
+        string range = Subscriptions.Range(chunkX, chunkZ, World.ViewRadiusChunks);
         var old = subscription;
         // Subscribe to the new area before dropping the old one so nothing pops out.
+        // The first area is where we wake up: appear once it has loaded, all at once.
         subscription = conn.SubscriptionBuilder()
-            .OnApplied(_ => old?.Unsubscribe())
-            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
-            .Subscribe(new[]
+            .OnApplied(_ =>
             {
-                "SELECT * FROM player WHERE online = true",
-                $"SELECT * FROM player_pos WHERE {range}",
-                $"SELECT * FROM world_item WHERE {range}",
-                $"SELECT * FROM terrain_edit WHERE {range}",
-                $"SELECT * FROM fire WHERE {range}",
-                "SELECT * FROM my_inventory",
-                "SELECT * FROM my_craft_job",
-                $"SELECT * FROM structure WHERE {range}",
-            }.Concat(SurvivalClient.Queries(range)).ToArray());
+                old?.Unsubscribe();
+                if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
+            })
+            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -331,9 +369,10 @@ public partial class Main : Node3D
         var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
-            if (!spawned) Spawn(at);
+            // Before spawning we wait for the area around us (see Subscribe).
+            if (!spawned) return;
             // The server clamps impossible moves; snap back if we drifted too far.
-            else if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+            if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
                 me.Position = at;
             return;
         }
@@ -414,7 +453,6 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -446,7 +484,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
@@ -492,21 +530,26 @@ public partial class Main : Node3D
         else conn.Reducers.PickUp(nearest.item.Id);
     }
 
-    // Puts the cheapest fuel you carry on the nearest fire.
-    void FeedFire()
+    // G on a fire puts the cheapest fuel you carry on it.
+    void RegisterUse()
     {
-        if (conn == null) return;
-        if (fires.NearestWithin(conn, me.Position, World.Reach) is not { } fire)
+        Use.Register(new UseHandler
         {
-            hud.Note("No fire within reach");
-            return;
-        }
-        var fuel = conn.Db.MyInventory.Iter()
-            .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
-            .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
-            .FirstOrDefault();
-        if (fuel == null) hud.Note("You have nothing that burns");
-        else conn.Reducers.FeedFire(fire.Id, fuel.Item);
+            Id = "crafting.feed_fire",
+            Priority = 20,
+            Find = at =>
+            {
+                if (conn == null || fires.NearestWithin(conn, at, World.Reach) is not { } fire) return null;
+                var fuel = conn.Db.MyInventory.Iter()
+                    .Where(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
+                    .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
+                    .FirstOrDefault();
+                if (fuel == null) return null;
+                float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
+                return new UseOffer("Feed the fire", d,
+                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item));
+            },
+        });
     }
 
     void Dust(Vector3 at, Color color)

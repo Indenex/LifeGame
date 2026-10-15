@@ -28,10 +28,21 @@ namespace LifeGame.Shared
         public const float BerryFood = 0.12f;
         public const float BerryWater = 0.02f;
         public const float SipWater = 0.2f;
+        // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
+        public const float PinchPotWater = 0.5f;
+        public const float CoilPotWater = 1f;
+
+        // Weather (Justin, 2026-10-15): the cold drain doubles from a mild 15 °C
+        // down to 0 °C, and rain adds half again unless you are under cover.
+        public const float MildCelsius = 15f;
+        public const float RainChill = 0.5f;
 
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;
         public const int BushesPerChunk = 2;
+        // The process id picking berries reports, so it trains Foraging. Not a crafting
+        // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
+        public const string ForageProcess = "gather.berries";
 
         // The surface of rivers and ponds, in meters. Matches Look.WaterLevel on the client.
         public const float WaterLevel = -1.0f;
