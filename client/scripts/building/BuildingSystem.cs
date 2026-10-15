@@ -120,6 +120,7 @@ public partial class BuildingSystem : Node
         Put(StructureKind.LeanTo, 6f, 3.4f, 4, 1f, -2.3f);
         Put(StructureKind.ClayHut, 14f, 5.5f, 2, 0.5f, -0.5f);
         Put(StructureKind.LeanTo, 13.5f, -1.5f, 3, 0.4f, 0.7f);
+        Put(StructureKind.LeanTo, 4f, -4.5f, 0, 0.5f, 2.6f);
     }
 
     public void Bind(DbConnection c)
