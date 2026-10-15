@@ -44,6 +44,9 @@ namespace LifeGame.Shared
         // Processes that are not crafting jobs, reported by the base game.
         public const string Dig = "earth.dig";
         public const string Forage = "gather.forage";
+        public const string Berries = "gather.berries";
+        public const string BuildLeanTo = "build.lean_to";
+        public const string BuildClayHut = "build.clay_hut";
 
         public static readonly Specialization[] Specializations =
         {
@@ -60,16 +63,24 @@ namespace LifeGame.Shared
         {
             [Dig] = "Digging",
             [Forage] = "Foraging",
-            ["clay.pit_fire"] = "Pit firing",
-            ["clay.fill"] = "Filling a pot",
+            [ClayRules.PitFireProcess] = "Pit firing",
+            [ClayRules.FillProcess] = "Filling a pot",
+            [BuildLeanTo] = "Building a lean-to",
+            [BuildClayHut] = "Building a clay hut",
+            [Berries] = "Picking berries",
         };
 
         // Everything the journal counts toward "still to discover".
         public static IEnumerable<string> AllProcessIds()
         {
             yield return Forage;
+            yield return Berries;
             yield return Dig;
             foreach (var def in Processes.List) yield return def.Id;
+            yield return ClayRules.FillProcess;
+            yield return ClayRules.PitFireProcess;
+            yield return BuildLeanTo;
+            yield return BuildClayHut;
         }
 
         public static Specialization? Spec(string id)
