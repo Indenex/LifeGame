@@ -3,7 +3,7 @@ Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
 Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
-PR: (opening)
+PR: https://github.com/Indenex/LifeGame/pull/31
 
 ## Goal
 D-044 and D-046/D-048 support. A claim owner can take down any building in their claim, members' included, and the materials drop where it stood, which is inside the claim. Claim borders show as a soft line on the ground that fades in within 6 m of the edge. There is one owner plus members, with no co-owner rank. Claims supply Building's weathering check: nothing inside a standing claim weathers. Justin sees the border line when walking near an edge, and can clear a member's hut from his land.
