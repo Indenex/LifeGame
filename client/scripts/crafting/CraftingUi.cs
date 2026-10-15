@@ -177,6 +177,14 @@ public partial class CraftingUi : CanvasLayer
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
         panel.Visible = false;
+        // Skill hook (journal/CraftingUi.Skills.cs): a Master just does the work.
+        float? skipped = null;
+        if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
+        if (skipped is { } sure)
+        {
+            conn.Reducers.StartCraft(def.Id, sure);
+            return;
+        }
         minigame = def.Minigame switch
         {
             Minigame.Drill => new DrillGame(def),
@@ -194,6 +202,18 @@ public partial class CraftingUi : CanvasLayer
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
+
+    // Skill hooks, implemented in journal/CraftingUi.Skills.cs: skip the minigame
+    // with this score, and how many steps (strikes, coils, strokes) it takes.
+    static partial void SkipMinigame(ProcessDef def, ref float? score);
+    static partial void StepsFor(ProcessDef def, ref int steps);
+    static int Steps(ProcessDef def, int baseSteps)
+    {
+        StepsFor(def, ref baseSteps);
+        return Math.Max(1, baseSteps);
+    }
+    static string Times(int n, string one, string many) =>
+        (n <= 5 ? new[] { "", "One", "Two", "Three", "Four", "Five" }[n] : n.ToString()) + " " + (n == 1 ? one : many);
 
     void EndMinigame(float? score)
     {
@@ -390,17 +410,20 @@ public partial class CraftingUi : CanvasLayer
     sealed class DrillGame : Minigame_
     {
         const float Limit = 8f;
+        // About 14 good strokes catch an ember for a novice, fewer with skill.
+        readonly float stroke;
         float heat, peak, elapsed;
         Key last;
 
-        public DrillGame(ProcessDef process) : base(process, "Alternate A and D to spin the drill. Keep the rhythm.") { }
+        public DrillGame(ProcessDef process) : base(process, "Alternate A and D to spin the drill. Keep the rhythm.") =>
+            stroke = 1.05f / Steps(process, 14);
 
         public override void Key(Key key)
         {
             bool left = key is Godot.Key.A or Godot.Key.Left, right = key is Godot.Key.D or Godot.Key.Right;
             if (!left && !right) return;
             bool alternated = left ? last != Godot.Key.A : last != Godot.Key.D;
-            heat += alternated ? 0.075f : -0.04f;
+            heat += alternated ? stroke : -0.04f;
             last = left ? Godot.Key.A : Godot.Key.D;
         }
 
@@ -422,17 +445,19 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // Knap: a mark sweeps along the core. Strike with Space as it crosses the
-    // bright spot. Three strikes; each is scored by how close it landed.
+    // bright spot. Three strikes (fewer with skill); each is scored by how close it landed.
     sealed class StrikeGame : Minigame_
     {
-        const int Strikes = 3;
+        readonly int strikes;
         readonly List<float> hits = new();
         readonly ColorRect zone = new() { Color = new Color(1f, 0.92f, 0.6f, 0.45f), MouseFilter = Control.MouseFilterEnum.Ignore };
         readonly RandomNumberGenerator rng = new();
         float t, target, speed;
 
-        public StrikeGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot. Three strikes.")
+        public StrikeGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot.")
         {
+            strikes = Steps(process, 3);
+            Hint.Text = $"Press Space as the mark crosses the bright spot. {Times(strikes, "strike", "strikes")}.    Esc gives up.";
             rng.Randomize();
             Bar.AddChild(zone);
             Next();
@@ -452,7 +477,7 @@ public partial class CraftingUi : CanvasLayer
             float mark = (float)Bar.Value;
             hits.Add(Math.Clamp(1f - Math.Abs(mark - target) / 0.3f, 0f, 1f));
             Title.Text = hits[^1] > 0.8f ? "A clean flake comes away" : hits[^1] > 0.4f ? "It chips" : "A glancing blow";
-            if (hits.Count >= Strikes)
+            if (hits.Count >= strikes)
             {
                 Score = hits.Average();
                 Done = true;
