@@ -1,7 +1,7 @@
 # bugfix-1: Stuck at spawn when saved far from the origin
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-lyle6o
 PR: #18
 
@@ -14,6 +14,8 @@ A player whose saved position is 48 m or more from the origin (for example woken
 - 2026-10-15 22:50: PR #18 opened (draft). Checked in the real client (Godot 4.6.2, llvmpipe): a player saved at x=-56 now wakes there with bushes and stones loaded (screenshots/bugfix-01-after-far-spawn.png); main's client leaves them at the origin unable to walk (screenshots/bugfix-01-before-stuck-at-spawn.png).
 
 - 2026-10-15 22:45: merged main (bindings no longer committed, #15; animal query moved into Subscriptions.Area). SpawnCheck passes again locally.
+
+- 2026-10-15 22:55: merged main 5adb2c1 (#13, #7, #12, #17); client builds, SpawnCheck passes. PR #18 marked ready.
 
 ## Open questions / blockers
 - (none)
