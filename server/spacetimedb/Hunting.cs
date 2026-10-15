@@ -10,7 +10,7 @@ using SpacetimeDB;
 // on purpose (D-036): no blood, the sheep just lies down.
 public static partial class Module
 {
-    const string HuntProcess = "animal.hunt";
+    const string HuntProcess = "animal.kill";
     const string ButcherProcess = "animal.butcher";
     // A lamb is born this grown and reaches 100 after LambGrowMicros.
     const byte LambGrowth = 35;

@@ -72,6 +72,7 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        herd.Blocked = () => crafting.CapturesInput || building.Placing;
         AddChild(useKey);
         AddChild(new Hints());
         RegisterUse();

@@ -22,6 +22,19 @@ public partial class Herd : Node3D
     Terrain terrain = null!;
     DbConnection? conn;
     Func<Vector3> player = () => Vector3.Zero;
+    // True while something else owns the mouse (crafting, placing a building).
+    public Func<bool> Blocked = () => false;
+    double lastStrike, lastStrikeHint = -1000;
+
+    public override void _Ready()
+    {
+        // Strike (D-039): left mouse or Z. The UX lane owns the binding in
+        // Controls.cs; this only fills in if that hasn't run.
+        if (InputMap.HasAction("strike")) return;
+        InputMap.AddAction("strike");
+        InputMap.ActionAddEvent("strike", new InputEventMouseButton { ButtonIndex = MouseButton.Left });
+        InputMap.ActionAddEvent("strike", new InputEventKey { PhysicalKeycode = Key.Z });
+    }
 
     public void Bind(DbConnection connection, Terrain ground, Func<Vector3> playerPosition)
     {
@@ -63,6 +76,37 @@ public partial class Herd : Node3D
         }
         sheep!.LieDown(c.X, c.Z, c.Heading, c.Fleece, c.Growth, gently);
         carcasses[c.Id] = sheep;
+    }
+
+    // Strike the nearest animal in reach with a spear or blade. The server checks
+    // reach and weapon again; a struck sheep bolts, so a kill is a short chase.
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (conn == null || Blocked() || !e.IsActionPressed("strike")) return;
+        double now = Time.GetTicksMsec() / 1000.0;
+        if (now - lastStrike < 0.5 || !(Carrying(ItemTags.Piercing) || Carrying(ItemTags.Cutting))) return;
+        var me = player();
+        Animal? nearest = null;
+        float best = World.Reach + 1.5f;
+        foreach (var a in conn.Db.Animal.Iter())
+        {
+            float d = DistanceTo(a, me);
+            if (d <= best) (nearest, best) = (a, d);
+        }
+        if (nearest == null) return;
+        lastStrike = now;
+        conn.Reducers.StrikeAnimal(nearest.Id);
+    }
+
+    public override void _Process(double delta)
+    {
+        // Carrying a weapon near a sheep: offer the strike hint now and then.
+        double now = Time.GetTicksMsec() / 1000.0;
+        if (conn == null || now - lastStrikeHint < 30) return;
+        lastStrikeHint = now;
+        var me = player();
+        if (Carrying(ItemTags.Piercing) && conn.Db.Animal.Iter().Any(a => DistanceTo(a, me) < 6f))
+            Hints.Request("strike");
     }
 
     bool Carrying(ItemTags tags) =>
