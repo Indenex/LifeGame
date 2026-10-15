@@ -160,3 +160,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-038 — 2026-10-15 — No controls line on screen
 **Decision:** The bottom-left controls text is removed. Players learn keys from the G Use prompt and hints inside panels; the UX/UI lane adds subtle discoverable cues for keys with no prompt (sneak, journal, claims, chat). Lanes stop adding text to the controls line.
 **Who:** Justin ("Drop it"; the PM had recommended fade plus F1)
+
+## D-039 — 2026-10-15 — Sheep for meat and hide
+**Decision:** Players can kill sheep (with a weapon or cutting tool; the flock flees) and butcher them for raw mutton and hide; flocks regrow slowly over in-game days and never vanish. Raw mutton is cooked at a fire (Crafting `cook.meat`); cooked mutton feeds about 40% hunger (Survival default). Shearing for wool comes first.
+**Who:** Justin ("Yes, slowly", which the PM recommended)
