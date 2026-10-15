@@ -74,7 +74,12 @@ public partial class Main : Node3D
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        JournalPanel? journalPanel = null;
+        ClaimPanel? claimPanel = null;
+        Panels.Open = () => PauseMenu.IsOpen
+            || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
+            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();

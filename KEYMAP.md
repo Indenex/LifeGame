@@ -70,4 +70,6 @@ Use.Register(new UseHandler
 - G is ignored while the crafting minigame runs or a building is being placed.
 - Priorities in use: Building add materials 30, Crafting take meat off the fire 25, Crafting feed fire 20, Animals shear 15, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water).
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
+- If the player does a hinted thing without its key (the server saw them pick berries, eat, open a panel by clicking), call `Hints.Done("eat")` so the hint is never taught after the fact. S, A and D count as walking; E and a right-drag count as turning.
+- A full panel (journal, claim panel, Esc menu) hides the world HUD while it is open. `Panels.Open()` (client/scripts/ui/Panels.cs) says whether one is; HUD pieces outside the UX/UI lane (the land chip, the needs rings) fade out while it is true. A new full panel is added to `Panels.Open` in Main.
 - After migrating, remove your old key from your lane's `Bind` and from your own prompt text.

@@ -21,6 +21,19 @@ public partial class Hints : CanvasLayer
     // Shows an OnRequest hint (or any hint) next, unless the player has seen it or
     // already uses the key. Safe to call often, e.g. every time a flock bolts.
     public static void Request(string action) => requested.Enqueue(action);
+
+    // Marks a hint as learned when the player did the thing some other way (a lane
+    // that saw it happen), so it is never taught after the fact.
+    public static void Done(string action) => done.Enqueue(action);
+    static readonly Queue<string> done = new();
+
+    // Keys that teach the same thing as a row with a hint: S, A or D is walking, and
+    // E or a right-drag is turning the view.
+    static readonly Dictionary<string, string> Teaches = new()
+    {
+        ["walk_back"] = "walk_forward", ["walk_left"] = "walk_forward", ["walk_right"] = "walk_forward",
+        ["turn_right"] = "turn_left", ["camera_drag"] = "turn_left",
+    };
     float wait = FirstDelay, shownFor, alpha;
 
     public override void _Ready()
@@ -43,15 +56,20 @@ public partial class Hints : CanvasLayer
     {
         // Watch, never consume: a key pressed means that key is learned.
         foreach (var b in Controls.World)
-            if (b.Hint != null && !Seen(b) && InputMap.HasAction(b.Action) && e.IsActionPressed(b.Action))
-                MarkSeen(b);
+            if (InputMap.HasAction(b.Action) && e.IsActionPressed(b.Action))
+                Learned(Teaches.GetValueOrDefault(b.Action, b.Action));
         if (showing != null && Seen(showing)) showing = null;
     }
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        if (showing != null)
+        while (done.TryDequeue(out var action)) Learned(action);
+        if (showing != null && Seen(showing)) showing = null;
+        // Never over a panel: a hint waits, and one already showing steps aside.
+        bool covered = Panels.Open();
+        if (covered) wait = Mathf.Max(wait, 2f);
+        if (showing != null && !covered)
         {
             shownFor += dt;
             if (shownFor > Linger) { MarkSeen(showing); showing = null; }
@@ -66,8 +84,14 @@ public partial class Hints : CanvasLayer
             shownFor = 0f;
             wait = Gap;
         }
-        alpha = Mathf.MoveToward(alpha, showing != null ? 1f : 0f, dt * 1.2f);
+        alpha = Mathf.MoveToward(alpha, showing != null && !covered ? 1f : 0f, dt * (covered ? 6f : 1.2f));
         panel.Modulate = new Color(1, 1, 1, alpha);
+    }
+
+    void Learned(string action)
+    {
+        foreach (var b in Controls.World)
+            if (b.Action == action && b.Hint != null && !Seen(b)) MarkSeen(b);
     }
 
     bool Seen(Controls.Binding b) => (bool)seen.GetValue("seen", b.Action, false);
