@@ -2,8 +2,8 @@ using Godot;
 
 namespace LifeGame;
 
-// Three soft ring gauges in the bottom-right corner (food, water, warmth), a
-// prompt for whatever you can do nearby, frost creeping in from the screen
+// Soft ring gauges in the bottom-right corner (food, water, warmth, and load
+// when it matters), frost creeping in from the screen
 // edges as you get cold, and a quiet fade to black when you die.
 public partial class NeedsHud : CanvasLayer
 {
@@ -16,8 +16,6 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
     readonly NeedGauge load = new(NeedGauge.Glyph.Sack) { Visible = false, Modulate = new Color(1, 1, 1, 0) };
-    readonly Label prompt = new();
-    readonly PanelContainer promptPanel;
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly Label deathTitle = new();
@@ -27,7 +25,6 @@ public partial class NeedsHud : CanvasLayer
     public NeedsHud()
     {
         Layer = 2;
-        promptPanel = Hud.Panel(prompt, Vector2.Zero);
     }
 
     public override void _Ready()
@@ -54,13 +51,6 @@ public partial class NeedsHud : CanvasLayer
         gaugePanel.Position = new Vector2(-20, -20);
         root.AddChild(gaugePanel);
 
-        Hud.Style(prompt, 16, 0.95f);
-        promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
-        promptPanel.GrowHorizontal = Control.GrowDirection.Both;
-        promptPanel.GrowVertical = Control.GrowDirection.Begin;
-        promptPanel.Position = new Vector2(0, -112);
-        promptPanel.Visible = false;
-        root.AddChild(promptPanel);
 
         fade.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(fade);
@@ -100,12 +90,6 @@ public partial class NeedsHud : CanvasLayer
         load.Set(Mathf.Clamp(fraction, 0f, 1f), over ? OverloadColor : LoadColor);
         load.Alert = over;
         loadAlpha = fraction >= 0.8f ? 1f : 0f;
-    }
-
-    public void SetPrompt(string? text)
-    {
-        promptPanel.Visible = text != null;
-        if (text != null) prompt.Text = text;
     }
 
     public void ShowDeath(string cause)

@@ -170,7 +170,6 @@ public partial class SurvivalClient : Node
         }
 
         UpdateLoad();
-        needsHud.SetPrompt(Prompt());
     }
 
     // Carrying limit (D-042): too heavy a load slows your walk.
@@ -195,15 +194,6 @@ public partial class SurvivalClient : Node
             if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
             else hud.Note("You have nothing to eat");
         }
-    }
-
-    string? Prompt()
-    {
-        if (conn == null || vitals == null) return null;
-        var parts = new List<string>();
-        var (food, _, _) = Current();
-        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("X  eat berries");
-        return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
 
     bool Carrying(Item item) => conn?.Db.MyInventory.Iter().Any(i => i.Item == (ushort)item && i.Count > 0) == true;
