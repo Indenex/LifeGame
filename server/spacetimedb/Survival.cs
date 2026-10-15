@@ -105,15 +105,18 @@ public static partial class Module
     public static void Eat(ReducerContext ctx, ushort item)
     {
         var player = RequirePlayer(ctx);
-        var (food, water) = Nourishment((Item)item);
-        if (food <= 0)
+        if (!Items.IsKnown(item))
             throw new Exception("You can't eat that");
-        var stack = AnyStack(ctx, (Item)item) ?? throw new Exception("You are not carrying that");
+        var (food, water) = Nourishment((Item)item);
+        if (food <= 0 && water <= 0)
+            throw new Exception("You can't eat that");
+        if (CountOf(ctx, (Item)item) < 1)
+            throw new Exception("You are not carrying that");
         var v = RequireVitals(ctx, player);
         if (v.Food >= 1f)
             throw new Exception("You are full");
 
-        RemoveFromStack(ctx, stack, 1);
+        Take(ctx, (Item)item, 1);
         ctx.Db.Vitals.PlayerId.Update(v with
         {
             Food = Math.Min(1f, v.Food + food),
@@ -308,8 +311,17 @@ public static partial class Module
         };
     }
 
-    // Warmth per second from burning campfires around a spot (see Module.WarmthAt).
-    static float HeatAt(ReducerContext ctx, float x, float z) => WarmthAt(ctx, x, z) * FireHeat;
+    // Crafted fires: Crafting implements this with Module.WarmthAt, setting warmth
+    // to 0..1 for the strongest burning fire near (x, z).
+    static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth);
+
+    // Warmth per second from burning campfires around a spot.
+    static float HeatAt(ReducerContext ctx, float x, float z)
+    {
+        float warmth = 0;
+        FireWarmthAt(ctx, x, z, ref warmth);
+        return warmth * FireHeat;
+    }
 
     // Weather, from the Atmosphere lane: air temperature in °C (default a mild
     // 15 °C day) and rain from 0 to 1 (Ceramics declares RainAt for drying too).

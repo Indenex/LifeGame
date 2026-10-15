@@ -27,6 +27,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
+    BuildingSystem building = null!;
 
     DbConnection? conn;
     Identity? myIdentity;
@@ -53,10 +54,12 @@ public partial class Main : Node3D
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
-        survival.Setup(view, terrain, me, hud);
-        AddChild(survival);
         AddChild(crafting);
         crafting.Notice += hud.Note;
+        building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        AddChild(building);
+        survival.Setup(view, terrain, me, hud);
+        AddChild(survival);
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
@@ -224,7 +227,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.G);
+        Bind("feed_fire", Key.T);
     }
 
     // --- Networking -------------------------------------------------------
@@ -266,10 +269,11 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
-        survival.Attach(conn);
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
+        building.Bind(conn);
+        survival.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -309,6 +313,7 @@ public partial class Main : Node3D
                 "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                $"SELECT * FROM structure WHERE {range}",
             }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
@@ -363,9 +368,11 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
+        // Stacks whose qualities share a grade read the same, so they show as one line.
         var counts = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .ToDictionary(i => ItemLook.Label((Item)i.Item, i.Quality, i.Count), i => i.Count);
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
+            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
         hud.SetInventory(counts);
     }
 
@@ -409,7 +416,7 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire")) FeedFire();
+        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -445,7 +452,7 @@ public partial class Main : Node3D
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = me.Position + velocity * dt;
+        var pos = building.Collide(me.Position, me.Position + velocity * dt);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);

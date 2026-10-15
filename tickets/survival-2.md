@@ -18,9 +18,10 @@ Plug survival into the other lanes as they land on main, keeping Justin's gentle
 - 2026-10-15 21:36: PM said start now: merged origin/crafting-core and origin/claude/clay-ceramics-kfr4kr into this branch. Berries is Item 160. Placeholder campfires and HeatSource removed; warmth = Module.WarmthAt * 1/30 per s (called directly, the FireWarmthAt hook is gone). DrinkFrom(107/108) gives back 105/106 at the same quality and quenches 0.35 / 0.7. Weather: AirTemperatureAt partial hook (new, for Atmosphere) and Ceramics' RainAt partial, combined in Survival.Chill() with Justin's numbers.
 - 2026-10-15 21:45: tested on local SpacetimeDB: pot of water 0.30 -> 0.65 water and empty pot returned; hand-drill fire gives near_heat and +0.024/s warmth. Screenshot: project files screenshots/08-survival-pot-of-water-by-crafted-fire.png
 - 2026-10-15 21:48: key clash with crafting (C = craft, G = feed fire): eat moved to X (matches the open key proposal); G forages only when a ripe bush is in reach and otherwise falls through to feeding the fire.
+- 2026-10-15 21:58: merged latest crafting-core (e165799, which carries main with House building). Kept Crafting's FireWarmthAt implementation and call the hook again (no cross-lane deletion needed); took Crafting's Eat (CountOf/Take); eat stays on X per D-025 (crafting-core had V). Weather: per PM, AirTemperatureAt hook gets replaced by a direct call to WorldClock.AirTemperature/CurrentWeather once #9 lands.
 
 ## Open questions / blockers
-- Atmosphere #9 needs to implement `static partial void AirTemperatureAt(ReducerContext ctx, float x, float z, ref float celsius)` and `RainAt` (declared in Ceramics.cs) for night chill and rain to apply; until then it is always a mild dry 15 °C.
+- After Atmosphere #9 merges: replace the AirTemperatureAt hook in Survival.cs with WorldClock's AirTemperature(ctx) (Ceramics provides RainAt). Until then it is always a mild dry 15 °C.
 - Keys: Justin's card on a single Use key is open; current default G forage/feed, X eat, R drink.
 - Removing the HeatSource table may need `--delete-data` when publishing over a survival-1 world (the crafting and ceramics merges may need it anyway).
 

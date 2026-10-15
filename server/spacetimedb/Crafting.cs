@@ -202,6 +202,10 @@ public static partial class Module
         return warmth;
     }
 
+    // Survival asks how warm a spot is through this hook (see Survival.cs).
+    static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth) =>
+        warmth = Math.Max(warmth, WarmthAt(ctx, x, z));
+
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {
         ctx.Db.Fire.Insert(new Fire
