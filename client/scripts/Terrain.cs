@@ -18,6 +18,11 @@ public partial class Terrain : Node3D
 
     static Mesh? trunkMesh, leafyMesh, pineMesh, rockMesh, tuftMesh;
 
+    // Cells under buildings: no trees or grass, and the ground is trodden bare.
+    public Func<int, int, bool>? Cleared;
+
+    public void Refresh(int x, int z) => dirty.Add((World.ChunkOfCell(x), World.ChunkOfCell(z)));
+
     // Ground height at a world position, blended between the four nearest cells.
     public float HeightAt(float x, float z)
     {
@@ -148,6 +153,8 @@ public partial class Terrain : Node3D
         if (depths.TryGetValue(World.CellKey(x, z), out var d) && d > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
 
+        if (Cleared?.Invoke(x, z) == true) color = color.Lerp(Look.Earth, 0.6f);
+
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
 
@@ -165,7 +172,7 @@ public partial class Terrain : Node3D
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
-                if (depths.ContainsKey(World.CellKey(x, z))) continue;
+                if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) continue;
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
 
