@@ -18,6 +18,7 @@ Players can strike each other in the wild with the Strike key (left click / Z, s
 ## Open questions / blockers
 - Justin's answer on the PvP card (from the PM).
 - When survival-3 lands: switch Combat.cs to Survival's `KillPlayer(ctx, victim, "slain")` and `NeedsNow(ctx, id)` (stable names from the Survival lane) instead of calling Die/Snapshot directly.
+- When UX #33 and ui-4 land: land chip uses Hud.Soft and fades out while `Panels.Open()` is true (UX asked; playtest found it showing through the journal). Keep ClaimPanel a direct child of SocialLayer with public IsOpen (UX's Main reads it).
 - Animals: how the Strike key dispatches between animal and player targets (asked the Animals session).
 
 ## Next step
