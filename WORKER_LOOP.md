@@ -18,7 +18,7 @@ Repeat until the ticket's goal is met:
 3. At every checkpoint:
    - **[WRITE]** commit and push
    - **[WRITE]** add a progress-log line and update `Next step` in the ticket
-4. When something visible changes, post a short update with a screenshot in your thread for Justin.
+4. When something visible changes or a milestone lands, send the PM a short update (what changed, in plain words) with screenshot paths under /mnt/project-files/screenshots/. Justin reads one chat, the PM thread, and the PM posts it there (D-034). Keep your own thread's status checklist current; post replies there only when Justin writes to you there.
 5. A design question for Justin, or anything outside your lane: send it to the PM, **[WRITE]** add it under the ticket's `Open questions`, and keep working on a stated default. If it truly blocks you, set the ticket to `blocked` with exactly what you need.
 6. When the PM relays a decision: **[WRITE]** note it in the ticket. The PM records it in `DECISIONS.md`.
 

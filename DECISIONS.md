@@ -140,3 +140,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-033 — 2026-10-15 — UX/UI lane owns bindings; lanes stay in their own files; no macOS
 **Decision:** A UX/UI lane owns key bindings (the input map and `KEYMAP.md`), the shared Use key registry, and the HUD layout. Other lanes register Use handlers rather than binding keys. Lanes stay in their own files as much as possible to avoid merge conflicts. The macOS build is dropped from CI.
 **Who:** Justin
+
+## D-034 — 2026-10-15 — One chat for updates
+**Decision:** Lanes send status updates and screenshots to the PM instead of posting them in their own threads; the PM posts them in the PM thread so Justin reads one chat. Lanes still answer Justin in their own thread when he writes there.
+**Who:** Justin
