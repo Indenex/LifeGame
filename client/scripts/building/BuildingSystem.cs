@@ -11,8 +11,8 @@ namespace LifeGame;
 // adding materials to nearby sites, drawing every structure at its current
 // stage, keeping people out of hut walls, and saying when you are sheltered.
 //
-// B opens placement (Tab picks what, R turns it, click lays it out, Esc cancels).
-// Hold G next to an unfinished site to add what you carry.
+// B opens placement (Tab picks what, T turns it, click lays it out, Esc cancels).
+// Hold H next to an unfinished site to add what you carry.
 public partial class BuildingSystem : Node
 {
     const float WorkInterval = 0.65f;
@@ -66,8 +66,8 @@ public partial class BuildingSystem : Node
         view.AddChild(root);
         BindKey("build_mode", Key.B);
         BindKey("build_next", Key.Tab);
-        BindKey("build_rotate", Key.R);
-        BindKey("build_work", Key.G);
+        BindKey("build_rotate", Key.T);
+        BindKey("build_work", Key.H);
         BindKey("build_cancel", Key.Escape);
 
         var layer = new CanvasLayer { Layer = 1 };
@@ -82,17 +82,17 @@ public partial class BuildingSystem : Node
         promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         promptPanel.GrowHorizontal = Control.GrowDirection.Both;
         promptPanel.GrowVertical = Control.GrowDirection.Begin;
-        promptPanel.Position = new Vector2(0, -78);
+        // Above the inventory and the survival prompt.
+        promptPanel.Position = new Vector2(0, -160);
         promptPanel.Visible = false;
         ui.AddChild(promptPanel);
 
-        var hint = Hud.Text("B build    G add materials", 14);
+        var hint = Hud.Text("B build    H help build", 14);
         hint.Modulate = new Color(1, 1, 1, 0.7f);
         var hintPanel = Hud.Panel(hint, Vector2.Zero);
-        hintPanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
-        hintPanel.GrowHorizontal = Control.GrowDirection.Begin;
-        hintPanel.GrowVertical = Control.GrowDirection.Begin;
-        hintPanel.Position = new Vector2(-20, -20);
+        // Just above the controls line; the bottom-right corner holds the survival rings.
+        hintPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        hintPanel.Position = new Vector2(20, -100);
         ui.AddChild(hintPanel);
 
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
@@ -416,7 +416,7 @@ public partial class BuildingSystem : Node
         if (placing)
         {
             var shape = Structures.Shape(placeKind);
-            text = $"Lay out a {shape.Name.ToLowerInvariant()}    Tab change    R turn    click to place    Esc cancel";
+            text = $"Lay out a {shape.Name.ToLowerInvariant()}    Tab change    T turn    click to place    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }
@@ -425,7 +425,7 @@ public partial class BuildingSystem : Node
             var shape = ShapeOf(site);
             string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Kind)} {n.Have}/{n.Need}"));
-            text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}    hold G to add";
+            text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}    hold H to add";
         }
         else if (ShelterAt(me.Position) is { } home)
             text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";

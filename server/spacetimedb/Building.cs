@@ -241,6 +241,14 @@ public static partial class Module
         return best;
     }
 
+    // Survival reads shelter through this hook.
+    static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth)
+    {
+        var shelter = ShelterAt(ctx, x, z);
+        rainCover = MathF.Max(rainCover, shelter.RainCover);
+        warmth = MathF.Max(warmth, shelter.Warmth);
+    }
+
     public static Shelter ShelterFor(ReducerContext ctx, uint playerId) =>
         ctx.Db.PlayerPos.PlayerId.Find(playerId) is { } pos ? ShelterAt(ctx, pos.X, pos.Z) : new Shelter(0f, 0f, 0);
 

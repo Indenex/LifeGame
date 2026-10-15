@@ -27,7 +27,10 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(ForageBush = new(conn));
+            AddTable(HeatSource = new(conn));
             AddTable(MyInventory = new(conn));
+            AddTable(MyVitals = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
             AddTable(Structure = new(conn));
@@ -529,7 +532,10 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.ForageBush().ToSql(),
+            new QueryBuilder().From.HeatSource().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
+            new QueryBuilder().From.MyVitals().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
             new QueryBuilder().From.Structure().ToSql(),
@@ -541,7 +547,10 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<ForageBush, ForageBushCols, ForageBushIxCols> ForageBush() => new("forage_bush", new ForageBushCols("forage_bush"), new ForageBushIxCols("forage_bush"));
+        public global::SpacetimeDB.Table<HeatSource, HeatSourceCols, HeatSourceIxCols> HeatSource() => new("heat_source", new HeatSourceCols("heat_source"), new HeatSourceIxCols("heat_source"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
+        public global::SpacetimeDB.Table<Vitals, MyVitalsCols, MyVitalsIxCols> MyVitals() => new("my_vitals", new MyVitalsCols("my_vitals"), new MyVitalsIxCols("my_vitals"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
         public global::SpacetimeDB.Table<Structure, StructureCols, StructureIxCols> Structure() => new("structure", new StructureCols("structure"), new StructureIxCols("structure"));
@@ -631,7 +640,10 @@ namespace SpacetimeDB.Types
                 Reducer.Build args => Reducers.InvokeBuild(eventContext, args),
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
                 Reducer.Dismantle args => Reducers.InvokeDismantle(eventContext, args),
+                Reducer.Drink args => Reducers.InvokeDrink(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
+                Reducer.Eat args => Reducers.InvokeEat(eventContext, args),
+                Reducer.Forage args => Reducers.InvokeForage(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
                 Reducer.PlaceStructure args => Reducers.InvokePlaceStructure(eventContext, args),

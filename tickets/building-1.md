@@ -15,12 +15,12 @@ Placing a house puts down a visible see-through blueprint of the finished buildi
 - 2026-10-15 21:25: merged main; placed sites now show the whole finished building as a see-through blueprint, and pieces turn solid as materials arrive (Justin's requirement). Screenshot: project files `screenshots/building-04-blueprint.png`.
 
 - 2026-10-15 21:30: added the CheckClaimAccess partial hook for Claims; BuildTest lean-to passes locally.
+- 2026-10-15 21:40: Justin approved merging PR #6 and kept the proposed costs and limits. Merged main (Survival is in): implemented ShelterAtHook, so finished buildings cut the cold drain. Moved building keys off Survival's: H adds materials (G is forage), T turns the blueprint (R is drink). BuildTest passes locally.
 
 ## Open questions / blockers
 - Waiting on crafting-core reaching main before switching to `LifeGame.Shared.Item` ids, the `OnProcessPerformed`/`QualityCapFor` hooks (ids build.frame, build.wattle, build.daub, build.roof), and Brick/Daub (109/110) for the clay hut. Until then costs use Stick, Fiber, Stone and dig-clay Clay.
-- Survival's `ShelterAtHook` partial: implement in Building.cs once Survival (PR #5) or this PR lands second.
 - Dismantle is placer-only; claim owners get it once Claims exists.
 - Claims access: Building.cs declares `static partial void CheckClaimAccess(ctx, x, z)`, called when placing and dismantling (never when adding materials). Claims implements it by calling its `RequireClaimAccess`.
 
 ## Next step
-Wait for CI on the blueprint push, then ask the PM to get Justin's OK to merge PR #6.
+Once CI is green on the latest commit, merge PR #6 into main (Justin approved) and tell the PM the merge commit.
