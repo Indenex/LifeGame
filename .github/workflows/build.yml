@@ -72,7 +72,7 @@ jobs:
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-Server
           path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
@@ -152,7 +152,7 @@ jobs:
           "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "../${{ matrix.out }}"
           test -e "../${{ matrix.out }}"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-${{ matrix.preset }}
           path: builds/
