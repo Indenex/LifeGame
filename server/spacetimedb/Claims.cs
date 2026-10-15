@@ -225,6 +225,23 @@ public static partial class Module
     }
 
     // Dismantling the marker ends the claim.
+    // Weathering (D-046): nothing inside a standing claim weathers. Building's
+    // Weathering.cs asks this. Declared here until Weathering.cs lands; when it does,
+    // keep exactly one declaration of the hook (drop one of the two lines).
+    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim);
+    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim)
+    {
+        if (ClaimAt(ctx, x, z) is not null) inClaim = true;
+    }
+
+    // claims-2: the owner of a standing claim may take down anything built inside
+    // it, members' buildings included (the land is theirs). Building's Dismantle
+    // asks this when the caller isn't whoever laid the building out.
+    static partial void CanClearStructure(ReducerContext ctx, Structure s, ref bool allowed)
+    {
+        if (ClaimAt(ctx, s.X, s.Z) is { } claim && claim.Owner == ctx.Sender) allowed = true;
+    }
+
     static partial void OnStructureRemoved(ReducerContext ctx, Structure s)
     {
         if (s.Kind == StructureKind.ClaimMarker && ctx.Db.Claim.StructureId.Find(s.Id) is { } claim)

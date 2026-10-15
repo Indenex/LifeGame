@@ -58,7 +58,11 @@ public partial class ChatPanel : CanvasLayer
         input.TextSubmitted += Submit;
         input.GuiInput += e =>
         {
-            if (e.IsActionPressed("ui_cancel")) Close();
+            if (e.IsActionPressed("ui_cancel"))
+            {
+                Close();
+                GetViewport().SetInputAsHandled();
+            }
         };
         column.AddChild(input);
     }

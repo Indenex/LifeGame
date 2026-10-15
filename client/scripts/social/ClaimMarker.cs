@@ -129,7 +129,7 @@ public partial class ClaimMarker : Node3D
     {
         if (claim == null || falling) return;
         float d = new Vector2(player.X - claim.X, player.Z - claim.Z).Length();
-        float target = Mathf.Clamp(1f - Mathf.Abs(d - Social.ClaimRadius) / 7f, 0f, 1f);
+        float target = Mathf.Clamp(1f - Mathf.Abs(d - Social.ClaimRadius) / Social.BorderFadeDistance, 0f, 1f);
         ringAlpha = Mathf.Lerp(ringAlpha, target, 0.05f);
         ring.Visible = ringAlpha > 0.01f;
         if (ring.Visible && float.IsNaN(lastRingBuiltFrom.X)) BuildRing();

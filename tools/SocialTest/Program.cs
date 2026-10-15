@@ -150,6 +150,15 @@ Check(b.Count(Item.Stone) == 1, "B can take from the stash");
 b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
+// A member may lay out a building on the claim.
+float hx = claim.X + 6, hz = claim.Z + 5;
+Walk(b, hx - 2, hz);
+b.LastError = null;
+b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
+Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+var hut = b.Conn.Db.Structure.Iter().FirstOrDefault(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity);
+Check(hut != null, $"member B can lay out a building in the claim ({b.LastError ?? "ok"})");
+
 // PvP needs the owner's say-so inside the claim.
 Check(!claim.AllowPvp, "fighting is off in a new claim");
 ExpectError(b, () => b.Conn.Reducers.SetClaimPvp(claim.Id, true), "Only the owner", "a member cannot allow fighting");
@@ -161,6 +170,15 @@ Check(true, "owner can allow fighting");
 a.Conn.Reducers.RemoveClaimMember(b.PlayerId);
 Pump(() => !b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "removal");
 ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality), "not yours", "removed member cannot open the stash");
+
+// The land's owner can clear anything on it; nobody else can take down the owner's things.
+Walk(b, site.X + 1.5f, site.Z);
+ExpectError(b, () => b.Conn.Reducers.Dismantle(site.Id), "take it down", "B cannot take down A's marker");
+Walk(a, hx - 2, hz);
+a.LastError = null;
+a.Conn.Reducers.Dismantle(hut!.Id);
+Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
+Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
 if (decay)
 {
