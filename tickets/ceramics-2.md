@@ -29,6 +29,7 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 2026-10-15 23:31: CI run https://github.com/Indenex/LifeGame/actions/runs/38823236524 green on 4716d4e; sha sent to PM for merge.
 - 2026-10-15 23:40: #21 merged (85a1572). Claims is on main: TendClay, FirePots and UseKiln now call RequireClaimAccess; server builds. Rides with the blueprint PR. #10 still open.
 - 2026-10-15 23:50: blueprint hooks re-applied on top of this branch + Building's branch (local prep f883e16): enum Kiln after ClaimMarker, StageCosts {Brick 4} / {Brick 4, Daub 2}, Shapes "Updraft kiln" (Round r0.85, Solid, Base/Dome), StageProcess KilnStructureKind => clay.kiln, StructureModel kind 3 => KilnModel.Pieces(), CeramicsStructureRemoved made the partial, casts replaced by StructureKind.Kiln. Builds; ClayCheck --kiln running.
+- 2026-10-15 23:52: Building says building-3 (after #10) adds Basket as StructureKind 3, so Kiln becomes 4 (set ClayRules.KilnStructureKind = 4, append every Kiln row after Basket's). Agreed with Building.
 
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
