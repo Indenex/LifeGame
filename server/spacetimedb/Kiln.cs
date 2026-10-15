@@ -182,8 +182,7 @@ public static partial class Module
 
     // Building calls this after a structure is taken down. A cold kiln's load
     // comes back out where it stood; a firing one finishes on its timer.
-    // TODO(after #10): becomes Building's `static partial void CeramicsStructureRemoved`.
-    static void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
+    static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
     {
         if ((int)s.Kind != ClayRules.KilnStructureKind || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
         if (kiln.State == (byte)KilnState.Firing) return;
