@@ -39,6 +39,7 @@ public partial class SurvivalClient : Node
         this.terrain = terrain;
         this.player = player;
         this.hud = hud;
+        if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
     public override void _Ready()
