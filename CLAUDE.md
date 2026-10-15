@@ -34,7 +34,7 @@ Each lane works in its own files so lanes don't collide:
 - Client code under `client/scripts/<feature>/`.
 - Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Crafting lane is the integration owner for these, CI and builds.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
-- After merging main, regenerate `client/module_bindings/` with `spacetime generate` (see `README.md`). Never hand-merge generated files.
+- `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.
 
 ## Git
 
@@ -45,7 +45,7 @@ Each lane works in its own files so lanes don't collide:
 
 ## CI
 
-- `.github/workflows/build.yml` builds the server module, checks bindings are current, runs a short load test, and exports Linux and Windows clients.
+- `.github/workflows/build.yml` builds the server module, generates the bindings, runs the load test (5 bots for 5 s on pull requests, 20 for 20 s on main) and the gameplay checks, and exports Linux and Windows clients. NuGet, SpacetimeDB and Godot downloads are cached.
 - Platforms are Linux and Windows only for now.
 - Build locally where you can before pushing; don't push just to see if CI passes.
 - Write the CI run link and result in your ticket so the next session doesn't re-run it.
