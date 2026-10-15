@@ -172,3 +172,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-041 — 2026-10-15 — Digging stick digs deeper
 **Decision:** A digging stick lets you dig one level deeper than bare hands, reaching better clay. It does not double clay or speed up digging.
 **Who:** Justin ("Dig deeper"; the PM had recommended double clay)
+
+## D-042 — 2026-10-15 — Carrying limit, raised by a basket
+**Decision:** Survival adds a carrying limit, and carrying a woven basket (10 fiber + 3 sticks) raises it. No gather-all pickup. Survival proposes the numbers to Justin with screenshots before they ship.
+**Who:** Justin ("Carry limit"; the PM had recommended gather-all)
