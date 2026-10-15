@@ -196,3 +196,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-047 — 2026-10-15 — Masters skip minigames but can play them
 **Decision:** At Master rank, crafting minigames are skipped by default and score a steady 0.8. Holding a key while starting the craft plays the shortest version instead, for a chance at a better result. The UX/UI lane picks the key and adds it to KEYMAP.md.
 **Who:** Justin ("Skip, can play", which the PM recommended)
+
+## D-048 — 2026-10-15 — Doors are lockable (amends D-046)
+**Decision:** Doors can be locked. The PM's defaults: the player who built the door, or inside a claim any member, can lock and unlock it with Use. A locked door opens only for them; to everyone else it stays shut. Unlocked doors open for anyone, as in D-046. There is no lock-breaking yet.
+**Who:** Justin ("Doors should be lockable."); the details are PM defaults and his to change
