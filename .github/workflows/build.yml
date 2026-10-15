@@ -60,9 +60,15 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then bots=20; secs=20; else bots=5; secs=5; fi
           (cd tools/LoadTest && dotnet run -c Release -- $bots $secs)
           (cd tools/BuildTest && dotnet run -c Release)
+          (cd tools/SpawnCheck && dotnet run -c Release)
 
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
+
+      - name: Check chat, claim and PvP rules with two players
+        run: |
+          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm

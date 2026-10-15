@@ -443,4 +443,12 @@ public static partial class Module
 
     static Timestamp Later(ReducerContext ctx, long micros) =>
         ctx.Timestamp + new TimeDuration(micros);
+
+    // Carrying limit (D-042): an overloaded player walks slower. Move scales its
+    // speed check by this, matching the client's slowdown.
+    static float CarryWalkFactor(ReducerContext ctx, Identity owner)
+    {
+        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Select(i => ((Item)i.Item, i.Count)));
+        return Carry.WalkFactor(load, limit);
+    }
 }

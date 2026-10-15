@@ -15,8 +15,8 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge food = new(NeedGauge.Glyph.Berry);
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
+    readonly NeedGauge load = new(NeedGauge.Glyph.Sack) { Visible = false, Modulate = new Color(1, 1, 1, 0) };
     readonly Label prompt = new();
-    readonly Label load = new();
     readonly PanelContainer promptPanel;
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -45,15 +45,9 @@ public partial class NeedsHud : CanvasLayer
         gauges.AddChild(food);
         gauges.AddChild(water);
         gauges.AddChild(warmth);
-        // The load you carry sits under the gauges, and turns amber when it slows you.
-        var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        column.AddThemeConstantOverride("separation", 4);
-        column.AddChild(gauges);
-        Hud.Style(load, 13, 0.8f);
-        load.HorizontalAlignment = HorizontalAlignment.Center;
-        load.Visible = false;
-        column.AddChild(load);
-        var gaugePanel = Hud.Panel(column, Vector2.Zero);
+        // The load ring only fades in when you near your carrying limit.
+        gauges.AddChild(load);
+        var gaugePanel = Hud.Panel(gauges, Vector2.Zero);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
@@ -93,11 +87,19 @@ public partial class NeedsHud : CanvasLayer
         frostAmount = Mathf.Clamp((0.55f - warmthValue) / 0.5f, 0f, 1f);
     }
 
+    static readonly Color LoadColor = new(0.86f, 0.80f, 0.66f);
+    static readonly Color OverloadColor = new(1f, 0.66f, 0.30f);
+    float loadAlpha;
+
+    // A sack ring next to the needs, shown from 80% of your limit. It fills toward
+    // the limit, and turns amber and breathes once the load slows you down.
     public void SetLoad(float carried, float limit)
     {
-        load.Visible = true;
-        load.Text = $"Load  {carried:0.#} / {limit:0}";
-        load.Modulate = carried > limit ? new Color(1f, 0.72f, 0.35f) : Colors.White;
+        float fraction = limit > 0 ? carried / limit : 0f;
+        bool over = carried > limit;
+        load.Set(Mathf.Clamp(fraction, 0f, 1f), over ? OverloadColor : LoadColor);
+        load.Alert = over;
+        loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
 
     public void SetPrompt(string? text)
@@ -127,6 +129,10 @@ public partial class NeedsHud : CanvasLayer
 
     public override void _Process(double delta)
     {
+        float a = Mathf.MoveToward(load.Modulate.A, loadAlpha, (float)delta * 2f);
+        load.Modulate = new Color(1, 1, 1, a);
+        load.Visible = a > 0.01f;
+
         var material = (ShaderMaterial)frost.Material;
         float current = (float)material.GetShaderParameter("amount");
         material.SetShaderParameter("amount", Mathf.Lerp(current, frostAmount, 1f - Mathf.Exp(-2f * (float)delta)));

@@ -7,6 +7,7 @@ public enum StructureKind
 {
     LeanTo,
     ClayHut,
+    ClaimMarker,
 }
 
 // One material a structure's current stage still needs.
@@ -86,6 +87,11 @@ public static partial class Module
             new[] { (Item.Clay, 12u), (Item.Fiber, 3u) },
             new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
         },
+        // Claim marker: one stage, costs set by Claims in shared/Social.cs
+        new[]
+        {
+            new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+        },
     };
 
     // Lays out a footprint. The structure exists from here on, at stage 0 with nothing added.
@@ -112,6 +118,7 @@ public static partial class Module
                 throw new Exception("Too close to another building");
 
         CheckClaimAccess(ctx, x, z);
+        CheckStructureSite(ctx, kind, x, z);
         yaw = MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
@@ -176,6 +183,7 @@ public static partial class Module
         if (RecordBuilder(ctx, structureId))
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
         ctx.Db.Structure.Id.Update(s);
+        if (s.Complete) OnStructureComplete(ctx, s);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -220,12 +228,20 @@ public static partial class Module
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
         ctx.Db.Structure.Id.Delete(structureId);
+        OnStructureRemoved(ctx, s);
     }
 
     // Claims implements this to refuse placing or taking down buildings inside a
     // claim the sender has no access to (throw to refuse). Adding materials is
     // never gated: anyone can help build.
     static partial void CheckClaimAccess(ReducerContext ctx, float x, float z);
+
+    // Claims implements these for the claim marker: extra placement rules (throw to
+    // refuse), raising the claim when the marker is finished, and dropping it when
+    // the marker is taken down.
+    static partial void CheckStructureSite(ReducerContext ctx, StructureKind kind, float x, float z);
+    static partial void OnStructureComplete(ReducerContext ctx, Structure s);
+    static partial void OnStructureRemoved(ReducerContext ctx, Structure s);
 
     // For other systems (survival needs, weather): how sheltered a spot is. Only
     // finished structures shelter, and only when you are well inside.

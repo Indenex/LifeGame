@@ -119,6 +119,14 @@ public static partial class Module
 
         // A fire is lit, or a placed thing set down, a step in front of the crafter.
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
+        // Roasting goes over a fire already burning within reach.
+        if (def.Outcome == Outcome.Roast)
+        {
+            var fire = BurningFireNear(ctx, pos.X, pos.Z, World.Reach) ?? throw new Exception("You need a burning fire within reach");
+            if (ctx.Db.Roast.FireId.Filter(fire.Id).Count() >= Roasting.PerFire)
+                throw new Exception("That fire is full");
+            (fx, fz) = (fire.X, fire.Z);
+        }
         float seconds = def.Seconds;
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         seconds = Math.Max(seconds, 0.5f);
@@ -130,7 +138,8 @@ public static partial class Module
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
             FinishAt = finish,
-            Quality = Processes.Quality(inputQuality, score, cap),
+            // A roast keeps its meat's quality until it comes off the fire.
+            Quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap),
             Failed = failed,
             X = fx,
             Z = fz,
@@ -146,13 +155,17 @@ public static partial class Module
         var def = Processes.Find(job.ProcessId);
         if (def is null) return;
 
-        OnProcessPerformed(ctx, job.PlayerId, def.Id, job.Quality, job.Failed);
+        // A roast counts for skills when it comes off the fire (Cooking.cs), not when it goes on.
+        if (def.Outcome != Outcome.Roast)
+            OnProcessPerformed(ctx, job.PlayerId, def.Id, job.Quality, job.Failed);
         if (job.Failed) return;
 
         if (def.Outcome == Outcome.Fire)
             LightFire(ctx, job.PlayerId, job.X, job.Z);
         else if (def.Outcome == Outcome.Placed)
             OnPlaced(ctx, job, def);
+        else if (def.Outcome == Outcome.Roast)
+            PutOnFire(ctx, job, def, job.Quality);
         else
             AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
     }
@@ -184,7 +197,10 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var fire in ctx.Db.Fire.Iter().ToList())
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
+            {
+                DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
+            }
     }
 
     // How warm a spot is from nearby burning fires, 0 (none) to 1 (right beside

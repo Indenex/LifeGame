@@ -10,14 +10,13 @@ namespace LifeGame;
 
 // The discovery journal and skills: keeps the player's journal and skill rows in
 // sync, shows notes other players left on the ground, and opens the journal
-// panel. J opens the journal, N reads the nearest note.
+// panel. J opens the journal; G (the Use key) reads a note on the ground.
 public partial class Journal : CanvasLayer
 {
     // Added to the 3D world by Main, so notes on the ground render with everything else.
     public readonly Node3D Notes = new() { Name = "JournalNotes" };
 
     readonly JournalPanel panel = new();
-    readonly Label prompt = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
     DbConnection? conn;
@@ -29,23 +28,20 @@ public partial class Journal : CanvasLayer
     bool caughtUp;
     float bob;
     static Mesh? noteMesh;
+    static Journal? current;
+
+    // The player's rank, 0 to 100, in the skill a process trains. Crafting asks this
+    // to shorten minigames (see CraftingUi.Skills.cs).
+    public static int RankFor(string processId) =>
+        current?.conn is { } c && Skills.SpecFor(processId) is { } spec
+            ? c.Db.MySkills.Iter().Where(s => s.Spec == spec.Id).Select(s => Skills.Rank(s.Points)).FirstOrDefault()
+            : 0;
 
     public override void _Ready()
     {
+        current = this;
         Layer = 2;
         AddChild(panel);
-
-        // Shown only while a note is within reach.
-        prompt.AddThemeFontSizeOverride("font_size", 16);
-        prompt.AddThemeColorOverride("font_color", new Color(Look.Cream, 0.9f));
-        prompt.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
-        prompt.AddThemeConstantOverride("shadow_offset_y", 1);
-        prompt.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);
-        prompt.GrowHorizontal = Control.GrowDirection.Both;
-        prompt.HorizontalAlignment = HorizontalAlignment.Center;
-        prompt.Position += new Vector2(0, -120);
-        prompt.Visible = false;
-        AddChild(prompt);
         panel.WriteNote = id =>
         {
             if (conn == null) return;
@@ -54,7 +50,17 @@ public partial class Journal : CanvasLayer
         };
         panel.SetMode = (spec, mode) => conn?.Reducers.SetSkillMode(spec, mode);
         Bind("journal", Key.J);
-        Bind("read_note", Key.N);
+        // Placeholder until UX/UI picks the key (D-047): held while starting a craft, a Master plays the minigame.
+        Bind(CraftingUi.PlayMinigame, Key.Ctrl);
+        // G reads a note you can learn from (KEYMAP.md priority 5).
+        Use.Register(new UseHandler
+        {
+            Id = "journal.read_note",
+            Priority = 5,
+            Find = at => NearestNote(at) is { } note
+                ? new UseOffer($"Read {note.AuthorName}'s note", new Vector2(note.X - at.X, note.Z - at.Z).Length(), () => conn?.Reducers.ReadNote(note.Id))
+                : null,
+        });
         Refresh();
         // --journal opens the journal on start, for screenshots.
         if (OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--journal"))
@@ -72,6 +78,7 @@ public partial class Journal : CanvasLayer
         conn.Db.MyJournal.OnUpdate += (_, _, _) => Refresh();
         conn.Db.MySkills.OnInsert += (_, s) => { SkillChanged(s); Refresh(); };
         conn.Db.MySkills.OnUpdate += (_, _, s) => { SkillChanged(s); Refresh(); };
+        conn.Db.MyTaught.OnInsert += (_, t) => { TaughtSomeone(t); Refresh(); };
         conn.Db.JournalNote.OnInsert += (_, n) => AddNote(n);
         conn.Db.JournalNote.OnDelete += (_, n) => RemoveNote(n.Id);
     }
@@ -94,11 +101,6 @@ public partial class Journal : CanvasLayer
             panel.Toggle();
             GetViewport().SetInputAsHandled();
         }
-        else if (e.IsActionPressed("read_note"))
-        {
-            ReadNearestNote();
-            GetViewport().SetInputAsHandled();
-        }
     }
 
     public override void _Process(double delta)
@@ -106,10 +108,6 @@ public partial class Journal : CanvasLayer
         if (conn == null) return;
         var at = playerPos();
         Follow(World.ChunkOf(at.X), World.ChunkOf(at.Z));
-
-        var near = NearestNote(at);
-        prompt.Visible = near != null && !panel.IsOpen;
-        if (near != null) prompt.Text = $"N  Read {near.AuthorName}'s note";
 
         // Notes stir a little, as if the breeze catches them.
         bob += (float)delta;
@@ -128,6 +126,7 @@ public partial class Journal : CanvasLayer
             .OnApplied(_ =>
             {
                 old?.Unsubscribe();
+                if (!caughtUp) WhileYouWereAway();
                 caughtUp = true;
             })
             .OnError((_, e) => say($"Journal subscription error: {e.Message}"))
@@ -135,6 +134,7 @@ public partial class Journal : CanvasLayer
             {
                 "SELECT * FROM my_journal",
                 "SELECT * FROM my_skills",
+                "SELECT * FROM my_taught",
                 $"SELECT * FROM journal_note WHERE chunk_x >= {chunkX - r} AND chunk_x <= {chunkX + r} AND chunk_z >= {chunkZ - r} AND chunk_z <= {chunkZ + r}",
             });
     }
@@ -144,7 +144,8 @@ public partial class Journal : CanvasLayer
         if (!IsInsideTree()) return;
         var entries = conn?.Db.MyJournal.Iter().ToList() ?? new List<JournalEntry>();
         var skills = conn?.Db.MySkills.Iter().ToList() ?? new List<SkillLevel>();
-        panel.SetData(entries, skills);
+        var taught = conn?.Db.MyTaught.Iter().ToList() ?? new List<Taught>();
+        panel.SetData(entries, skills, taught);
     }
 
     // Quiet notes when you learn something new, but not for what you already knew at login.
@@ -160,6 +161,32 @@ public partial class Journal : CanvasLayer
         });
     }
 
+    // Someone just learned from you.
+    void TaughtSomeone(Taught t)
+    {
+        if (!caughtUp || t.Seen) return;
+        string what = Skills.ProcessName(t.ProcessId).ToLowerInvariant();
+        say(t.LearnedBy == LearnedBy.Reading
+            ? $"{t.LearnerName} learned {what} from your note"
+            : $"{t.LearnerName} picked up {what} from watching you");
+        conn?.Reducers.MarkTaughtSeen();
+    }
+
+    // At login, what others learned from your notes while you were gone.
+    void WhileYouWereAway()
+    {
+        if (conn == null) return;
+        var unseen = conn.Db.MyTaught.Iter().Where(t => !t.Seen).ToList();
+        if (unseen.Count == 0) return;
+        var people = unseen.Select(t => t.LearnerName).Distinct().ToList();
+        say(unseen.Count == 1
+            ? $"While you were away, {people[0]} learned {Skills.ProcessName(unseen[0].ProcessId).ToLowerInvariant()} from your note"
+            : people.Count == 1
+                ? $"While you were away, {people[0]} learned {unseen.Count} things from you"
+                : $"While you were away, {people.Count} people learned from you");
+        conn.Reducers.MarkTaughtSeen();
+    }
+
     void SkillChanged(SkillLevel s)
     {
         int rank = Skills.Rank(s.Points);
@@ -173,18 +200,9 @@ public partial class Journal : CanvasLayer
 
     static string Article(string word) => "AEIOU".Contains(word[0]) ? "an" : "a";
 
-    void ReadNearestNote()
-    {
-        if (conn == null) return;
-        if (NearestNote(playerPos()) is not { } note)
-        {
-            say("No note within reach");
-            return;
-        }
-        conn.Reducers.ReadNote(note.Id);
-    }
-
+    // The nearest note within reach that teaches something you don't know yet.
     JournalNote? NearestNote(Vector3 at) => conn?.Db.JournalNote.Iter()
+        .Where(n => !conn.Db.MyJournal.Iter().Any(e => e.ProcessId == n.ProcessId))
         .Select(n => (note: n, d: new Vector2(n.X - at.X, n.Z - at.Z).Length()))
         .Where(t => t.d <= World.Reach)
         .OrderBy(t => t.d)
