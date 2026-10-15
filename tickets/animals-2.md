@@ -16,10 +16,10 @@ Then (D-039): killing with a weapon or cutting tool turns into a short chase; bu
 
 ## Progress log
 - 2026-10-15 22:55: shearing works locally (no tool -> "need something sharp", sheared -> 2 wool, re-shear -> "hasn't grown back"). Screenshots screenshots/animals-03-*.png.
+- 2026-10-15 23:30: merged main; shearing is now a Use action ("Shear", priority 15, offered only next to a sheep with grown wool) and Herd no longer binds G. A flock bolting within 10 m asks for the sneak hint.
 
 ## Open questions / blockers
 - Skills: `animal.shear` maps to no skill yet, so wool quality is capped at the novice cap (35). Skills lane to map it (e.g. a husbandry skill).
-- Move G shearing onto the UX Use dispatcher when #17 is on main.
 
 ## Next step
-Open the shearing PR; then start killing/butchering per D-039.
+PM merges #23 once CI is green; then killing/butchering per D-039 (animals-3).
