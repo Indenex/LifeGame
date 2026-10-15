@@ -13,7 +13,7 @@ public static class ClayLook
     public static readonly Color Wet = new(0.36f, 0.23f, 0.16f);
     public static readonly Color Dry = new(0.62f, 0.52f, 0.41f);
     public static readonly Color PitFired = new(0.70f, 0.35f, 0.19f);
-    public static readonly Color KilnFired = new(0.72f, 0.33f, 0.19f);
+    public static readonly Color KilnFired = new(0.64f, 0.31f, 0.19f);
 
     static Shader? shader;
     static ShaderMaterial? water;

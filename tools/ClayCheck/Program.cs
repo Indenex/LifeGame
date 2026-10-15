@@ -78,7 +78,7 @@ Gather(Item.Fiber, 4);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-while (CountOf(Item.Clay) < 8)
+while (CountOf(Item.Clay) < 12)
 {
     int cx = clayX + cell % 3 - 1, cz = clayZ + cell / 3 % 3 - 1;
     if (!World.IsClay(cx, cz) || DepthAt(cx, cz) >= World.MaxDigDepth - 1) { cell++; continue; }
@@ -110,7 +110,7 @@ Craft("fire.hand_drill", 1f, null);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
-Feed(4);
+KeepFireGoing();
 
 // Shape two pinch pots. They are set down at the fire's edge if shaped onto it.
 int piecesBefore = conn.Db.ClayPiece.Count;
@@ -215,10 +215,13 @@ void KeepFireGoing()
 {
     var f = conn.Db.Fire.Id.Find(fire.Id) ?? throw new Exception("fire went out");
     double left = (f.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1e6;
-    if (left > ClayRules.PitFireSeconds + 30) return;
-    if (CountOf(Item.Stick) < 3) Gather(Item.Stick, 6);
-    WalkTo(fire.X, fire.Z, 1.2f);
-    Feed(3);
+    while (left < ClayRules.PitFireSeconds + 30)
+    {
+        if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 4);
+        WalkTo(fire.X, fire.Z, 1.2f);
+        Feed(1);
+        left += Items.Def(Item.Stick).FuelSeconds;
+    }
 }
 
 float MoistureOf(ulong id)

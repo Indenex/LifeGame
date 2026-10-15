@@ -13,7 +13,10 @@ public partial class CeramicsDemo : Node3D
     readonly Camera3D camera = new() { Fov = 38f, Near = 0.05f, Far = 200f };
     readonly Node3D row = new();
 
-    public static bool Wanted => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo");
+    public static bool Wanted => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Any(a => a.StartsWith("--ceramics-demo"));
+
+    // --ceramics-demo=shape also opens the pinch-pot minigame part way through.
+    static bool ShowMinigame => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=shape");
 
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
@@ -58,6 +61,12 @@ public partial class CeramicsDemo : Node3D
         }
         AddChild(camera);
         camera.MakeCurrent();
+        if (ShowMinigame)
+            GetTree().CreateTimer(1.0).Timeout += () =>
+            {
+                foreach (var ui in GetTree().Root.FindChildren("*", nameof(CraftingUi), true, false).OfType<CraftingUi>())
+                    ui.DemoClayMinigame("clay.pinch_pot", 0.55f);
+            };
     }
 
     public override void _Process(double delta)

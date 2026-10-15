@@ -9,6 +9,18 @@ namespace LifeGame;
 // The clay minigames, plugged into the crafting panel (Justin, D-014).
 public partial class CraftingUi
 {
+    // For screenshots: opens a clay minigame part way through, without a server.
+    public void DemoClayMinigame(string processId, float progress)
+    {
+        if (Processes.Find(processId) is not { } def) return;
+        Minigame_? game = null;
+        MinigameFor(def, ref game);
+        if (game == null) return;
+        minigame = game;
+        AddChild(game.Root);
+        if (game is ShapeGame shape) shape.Demo(progress);
+    }
+
     partial void MinigameFor(ProcessDef def, ref Minigame_? game)
     {
         if (def.Minigame == Minigame.Shape) game = new ShapeGame(def);
@@ -49,6 +61,17 @@ public partial class CraftingUi
 
         public override void Key(Key key) { }
 
+        public void Demo(float progress)
+        {
+            pulls.Add(0.9f);
+            wall = 1f - progress;
+            holding = false;
+            Bar.Value = wall;
+            sketch.Wall = wall;
+            sketch.Height = (pulls.Count + progress) / Pulls;
+            speed = 0f;
+        }
+
         public override void Tick(float dt)
         {
             sketch.Turn += dt * 2.4f;
@@ -63,6 +86,7 @@ public partial class CraftingUi
                 return;
             }
 
+            if (speed == 0f) return;
             bool down = Input.IsPhysicalKeyPressed(Godot.Key.Space);
             if (down)
             {
