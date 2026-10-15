@@ -29,7 +29,24 @@ public static class Look
 
     static Shader? paintedShader, grassShader;
     static ShaderMaterial? ground, bark, rock, foliage, grass;
-    static NoiseTexture2D? brush, detail;
+    static NoiseTexture2D? brush, detail, clouds;
+
+    // Weather every surface reads, set each frame by the atmosphere: how soaked the
+    // ground is, how hard the wind blows, how much sky the clouds cover and where
+    // their shadows have drifted to.
+    static bool weatherGlobalsAdded;
+
+    static void EnsureWeatherGlobals()
+    {
+        if (weatherGlobalsAdded) return;
+        weatherGlobalsAdded = true;
+        static void Add(string name, RenderingServer.GlobalShaderParameterType type, Variant value) =>
+            RenderingServer.GlobalShaderParameterAdd(name, type, value);
+        Add("wetness", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("wind_strength", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
+        Add("cloud_cover", RenderingServer.GlobalShaderParameterType.Float, 0.2f);
+        Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
+    }
 
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
@@ -44,7 +61,14 @@ public static class Look
 
     // Grass has its own shader: blades take their tile's color at the root, so the
     // carpet and the ground read as one surface, and rolling gusts sweep across it.
-    public static ShaderMaterial Grass => grass ??= new ShaderMaterial { Shader = GrassShader };
+    public static ShaderMaterial Grass => grass ??= MakeGrass();
+
+    static ShaderMaterial MakeGrass()
+    {
+        var material = new ShaderMaterial { Shader = GrassShader };
+        material.SetShaderParameter("clouds", Clouds);
+        return material;
+    }
 
     public static ShaderMaterial Solid(Color color)
     {
@@ -76,6 +100,7 @@ public static class Look
         material.SetShaderParameter("detail_stretch", stretch ?? Vector3.One);
         material.SetShaderParameter("bump", bump);
         material.SetShaderParameter("cavity", cavity);
+        material.SetShaderParameter("clouds", Clouds);
         return material;
     }
 
@@ -96,6 +121,23 @@ public static class Look
         },
     };
 
+    // Soft, billowy shapes for the shadows of passing clouds.
+    public static NoiseTexture2D Clouds => clouds ??= new NoiseTexture2D
+    {
+        Width = 512,
+        Height = 512,
+        Seamless = true,
+        GenerateMipmaps = true,
+        Noise = new FastNoiseLite
+        {
+            NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
+            Frequency = 0.006f,
+            FractalType = FastNoiseLite.FractalTypeEnum.Fbm,
+            FractalOctaves = 5,
+            FractalGain = 0.5f,
+        },
+    };
+
     // Fine relief: bumps, cracks and clumps that catch the low sun.
     static NoiseTexture2D Detail => detail ??= new NoiseTexture2D
     {
@@ -112,11 +154,26 @@ public static class Look
         },
     };
 
-    static Shader PaintedShader => paintedShader ??= new Shader
-    {
-        Code = """
+    // Weather shared by both shaders: cloud shadows only dim direct sunlight, and
+    // wet surfaces darken and pick up a sheen.
+    const string WeatherCode = """
+        global uniform float wetness;
+        global uniform float wind_strength;
+        global uniform float cloud_cover;
+        global uniform vec2 cloud_offset;
+        uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
+
+        float cloud_shadow(vec3 p) {
+            if (cloud_cover <= 0.01) return 1.0;
+            float n = texture(clouds, (p.xz + cloud_offset) * 0.004).r;
+            float edge = 1.0 - cloud_cover;
+            return 1.0 - smoothstep(edge - 0.08, edge + 0.22, n) * 0.6;
+        }
+        """;
+
+    static Shader PaintedShader => paintedShader ??= MakeShader("""
             shader_type spatial;
-            render_mode cull_disabled, specular_disabled;
+            render_mode cull_disabled;
 
             uniform vec4 albedo : source_color = vec4(1.0);
             uniform sampler2D brush : repeat_enable, filter_linear;
@@ -133,13 +190,15 @@ public static class Look
             varying vec3 tint;
             varying vec3 world_pos;
             varying vec3 world_normal;
+            varying float shade;
+            varying float wet;
 
             void vertex() {
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 if (sway > 0.0) {
                     float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);
                     float t = TIME * 0.9 + world.x * 0.21 + world.z * 0.17;
-                    float gust = 0.6 + 0.4 * sin(TIME * 0.23 + world.x * 0.03);
+                    float gust = (0.6 + 0.4 * sin(TIME * 0.23 + world.x * 0.03)) * (0.5 + wind_strength * 1.6);
                     VERTEX.x += sin(t) * sway * h * h * gust;
                     VERTEX.z += cos(t * 0.73) * sway * 0.6 * h * h * gust;
                 }
@@ -168,7 +227,11 @@ public static class Look
                 float h = relief(world_pos, world_normal);
                 vec3 color = tint * (1.0 + paint * 2.0);
                 color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));
+                // Rain soaks upward-facing ground first; everything else darkens a little.
+                wet = wetness * mix(0.45, 1.0, smoothstep(0.4, 0.9, world_normal.y)) * mix(0.75, 1.0, h);
+                color *= mix(1.0, 0.58, wet);
                 ALBEDO = clamp(color, 0.0, 1.0);
+                shade = cloud_shadow(world_pos);
 
                 vec3 dpdx = dFdx(VERTEX), dpdy = dFdy(VERTEX);
                 vec3 r1 = cross(dpdy, NORMAL), r2 = cross(NORMAL, dpdx);
@@ -179,36 +242,44 @@ public static class Look
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
-                ROUGHNESS = 1.0;
-                SPECULAR = 0.0;
+                ROUGHNESS = mix(1.0, 0.3, wet);
+                SPECULAR = 0.45 * wet;
             }
 
-            // Wrapped diffuse light, so forms turn softly into shadow.
+            // Wrapped diffuse light, so forms turn softly into shadow, plus a soft
+            // glint of sun on wet surfaces.
             void light() {
+                float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
                 float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION / PI;
+                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                if (wet > 0.01) {
+                    vec3 half_dir = normalize(LIGHT + VIEW);
+                    float glint = pow(max(dot(NORMAL, half_dir), 0.0), 48.0) * wet * 0.5;
+                    SPECULAR_LIGHT += LIGHT_COLOR * glint * ATTENUATION * sky;
+                }
             }
-            """,
-    };
+            """);
 
-    static Shader GrassShader => grassShader ??= new Shader
-    {
-        Code = """
+    static Shader GrassShader => grassShader ??= MakeShader("""
             shader_type spatial;
             render_mode cull_disabled, specular_disabled;
 
             varying vec3 tint;
             varying float tip;
             varying float gust;
+            varying vec3 world_pos;
+            varying float shade;
 
             void vertex() {
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+                world_pos = world;
                 tip = UV.y;
                 // Long, slow waves rolling across the field, plus a small flutter.
                 float wave = sin(dot(world.xz, vec2(0.23, 0.31)) - TIME * 1.3);
                 gust = smoothstep(0.2, 1.0, wave);
                 float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
-                vec3 bend = vec3(0.6, 0.0, 0.8) * (0.06 + gust * 0.16) + vec3(flutter, 0.0, -flutter);
+                float wind = 0.45 + wind_strength * 1.8;
+                vec3 bend = vec3(0.6, 0.0, 0.8) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
                 vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
                 VERTEX.xz += local.xz * tip * tip;
                 VERTEX.y -= gust * 0.06 * tip * tip;
@@ -221,7 +292,9 @@ public static class Look
                 vec3 warm = tint * vec3(1.3, 1.3, 1.0) + vec3(0.02, 0.02, 0.0);
                 vec3 color = mix(tint, warm, smoothstep(0.0, 1.0, tip));
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
+                color *= mix(1.0, 0.7, wetness);
                 ALBEDO = clamp(color, 0.0, 1.0);
+                shade = cloud_shadow(world_pos);
                 // Both faces of a blade are lit like the ground beneath it.
                 NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
                 ROUGHNESS = 1.0;
@@ -229,9 +302,17 @@ public static class Look
             }
 
             void light() {
+                float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
                 float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION / PI;
+                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
             }
-            """,
-    };
+            """);
+
+    // Puts the weather uniforms right after the shader's render mode line.
+    static Shader MakeShader(string code)
+    {
+        EnsureWeatherGlobals();
+        int split = code.IndexOf('\n', code.IndexOf("render_mode")) + 1;
+        return new Shader { Code = code[..split] + WeatherCode + code[split..] };
+    }
 }
