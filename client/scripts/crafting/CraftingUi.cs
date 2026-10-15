@@ -300,7 +300,7 @@ public partial class CraftingUi : CanvasLayer
         foreach (var def in InTier())
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
-            if (def.NeedsTool != ItemTags.None) inputs += $", using a {def.NeedsTool.ToString().ToLowerInvariant()}";
+            if (def.NeedsTool != ItemTags.None) inputs += $", using a {(def.NeedsTool == ItemTags.FireBow ? "bow drill" : def.NeedsTool.ToString().ToLowerInvariant())}";
             bool ready = Missing(def) == null;
             var button = new Button
             {
