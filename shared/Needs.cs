@@ -8,12 +8,12 @@ namespace LifeGame.Shared
     public static class Needs
     {
         // Each need runs from 1 (full, warm) down to 0, which is death.
-        // Rates are per second of time spent online. Tunable starting values,
-        // picked so a careless player gets hungry in under an hour, thirsty a
-        // little sooner, and cold within a few minutes of leaving the fire.
-        public const float FoodDrain = 1f / (45 * 60);
-        public const float WaterDrain = 1f / (30 * 60);
-        public const float ColdDrain = 1f / (8 * 60);
+        // Rates are per second of time spent online. Justin chose the gentler
+        // rates (2026-10-15): 90 minutes for food, 60 for water, and 16 minutes
+        // of cold away from a fire.
+        public const float FoodDrain = 1f / (90 * 60);
+        public const float WaterDrain = 1f / (60 * 60);
+        public const float ColdDrain = 1f / (16 * 60);
         // Standing in water chills you three times as fast.
         public const float WetChill = 3f;
 

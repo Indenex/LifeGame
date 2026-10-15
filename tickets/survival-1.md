@@ -14,6 +14,7 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - 2026-10-15 21:15: merged main; added `FireWarmthAt` partial hook (PM call) so Crafting can feed Module.WarmthAt in without a second heat table
 - 2026-10-15 21:16: renamed the shelter hook to ShelterAtHook to avoid clashing with House building's ShelterAt (PM call)
 - 2026-10-15 21:17: CI green on e3e9b0b, run https://github.com/Indenex/LifeGame/actions/runs/38808400967 (server + load test, Linux/Windows/macOS clients)
+- 2026-10-15 21:20: Justin chose gentler needs: 90 min food, 60 min water, 16 min cold (3x in water); pause offline and 60% after respawn kept. Applied in shared/Needs.cs
 
 ## Interfaces for other lanes
 - Fire: Crafting implements `static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth)` (0..1). Once it does, delete the placeholder seeding in `EnsureSurvivalWorld` and the HeatSource table.
@@ -22,7 +23,7 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - Water pots (from ceramics): PinchPotOfWater 107 / CoilPotOfWater 108 should quench thirst and give back PinchPot 105 / CoilPot 106. Add to `Nourishment`/Eat once those items are on main.
 
 ## Open questions / blockers
-- Needs numbers (45 min food, 30 min water, 8 min of cold, pause while offline, 60% food/water after respawn): PM is taking them to Justin. Defaults are in shared/Needs.cs.
+- (none)
 
 ## Next step
 PR #5 is green and waits on Justin's merge OK via the PM. After it merges, wire the ceramics water pots and convert Berries to item 160 if crafting-core merged first.
