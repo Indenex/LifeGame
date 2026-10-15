@@ -1,7 +1,7 @@
 # skills-7: Skills and journal names for work in flight
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_progress
+Status: done
 Branch: claude/journal-skills-iseewg
 PR: #34 (merged 2026-10-15 23:41)
 
@@ -14,9 +14,10 @@ New processes from other lanes train the right skill and read well in the journa
 ## Progress log
 - 2026-10-15 23:35: names and to-discover entries for animal.kill/butcher; `weave` mapped to Toolmaking. Bow drill confirmed by Crafting.
 - 2026-10-15 23:41: #34 merged; door and lock still waiting on Building.
+- 2026-10-15 23:56: Building confirmed: storage basket stage `build.weave` and `build.door` (HangDoor, building-3), both Builder; lock is a toggle with no skill, left out. Names added in #37 (skills-8).
 
 ## Open questions / blockers
-- Building: exact ids for the door and lock, and whether they're structure stages (`build.*`, reported) or crafting jobs.
+- (none)
 
 ## Next step
-Add door and lock names when Building confirms the ids (then a small follow-up PR).
+None; done.

@@ -3,7 +3,7 @@ Lane: Journal and skills
 Owner: Journal and skills thread
 Status: in_review
 Branch: claude/journal-skills-iseewg
-PR: (opening)
+PR: #37
 
 ## Goal
 Progress feels good without being gamey. Before, every single rank showed a toast ("Earthwork 5"). Now:
@@ -19,6 +19,9 @@ Preview of both sounds: /mnt/project-files/audio/journal-chime.wav (title chime,
 
 ## Progress log
 - 2026-10-15 23:45: built; client compiles; chime rendered offline to the preview WAV (peak about -8 dBFS in the file, played at -16/-22 dB in game).
+
+- 2026-10-15 23:44: PR #37 opened at cc4c7ed.
+- 2026-10-15 23:56: merged main (#36 journal layer, #10 building). Main's server build broke on Kiln.cs `CeramicsStructureRemoved` (#10 made it Building's partial); ported #40's one-word fix (`static partial void`) so this PR builds; it no-ops once #40 lands. Also added Building's ids from skills-7: `build.weave` ("Weaving a storage basket") and `build.door` ("Hanging a door"); no lock (a toggle, no skill).
 
 ## Open questions / blockers
 - Justin may prefer the old per-rank toasts; restoring them is one line in `Journal.SkillChanged`.
