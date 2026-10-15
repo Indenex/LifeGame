@@ -23,8 +23,14 @@ Milestone 1 (this ticket's first PR): dig, clean, temper, shape, dry, pit-fire, 
 - 2026-10-15: pot meshes, clay shader (wet, dry, fired, cracked), --ceramics-demo render. Screenshot: screenshots/clay-01-pot-stages.png in project files.
 - 2026-10-15: rebased onto crafting-core (+ main). Server: Ceramics.cs, items, clay processes, OnPlaced/RainAt hooks; module builds, bindings regenerated.
 
+- 2026-10-15: client done: Shape/Coil minigames (client/scripts/ceramics/CraftingUi.Clay.cs via a MinigameFor partial hook in CraftingUi.cs), CeramicsView (pieces, labels, T key, news), pot meshes for ground items (hook in ItemLook.MeshFor). Pots drawn at 2x life size.
+- 2026-10-15: tools/ClayCheck passed twice on a local server: dug clay -> clean -> grit temper -> pinch pots by a fire -> damp pot cracked into sherds -> other pot dried in ~4 min by the fire -> pit-fired 4 min -> came out whole -> filled with water (quality 70, "fine") -> sherds crushed into grog -> 3 tempered clay.
+- Screenshots need the Vulkan Forward+ renderer to match Justin's view: apt install mesa-vulkan-drivers, then run Godot without --rendering-driver under xvfb-run (about 2 min per shot on llvmpipe).
+
 ## Open questions / blockers
 - Sent to PM: Atmosphere lane to implement `RainAt`; Survival lane can drink from pots of water (items 107, 108).
+- After Claims PR #8 is on main: call Module.RequireClaimAccess(ctx, x, z) in TendClay, FirePots and OnPlaced.
+- After Crafting's crafting-2 Use-key registry is on main (D-025): move T (tend clay) onto the G Use handler.
 
 ## Next step
-Client: CeramicsView (pieces in the world, T key, news), Shape and Coil minigames in client/scripts/ceramics/CraftingUi.Clay.cs, pot meshes for ground items; then tools/ClayCheck end-to-end bot.
+Open the milestone 1 PR into main, get CI green, ask the PM for the merge; then milestone 2 (updraft kiln).
