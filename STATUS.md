@@ -21,7 +21,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Lane | Ticket | Status | Branch | Owns |
 |---|---|---|---|---|
 | Crafting (integration owner) | `tickets/crafting-1.md` | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
-| Survival needs | `tickets/survival-1.md` | in_progress | lane to record | `Survival.cs`, `client/scripts/survival/` |
+| Survival needs | `tickets/survival-1.md` | in_review (PR #5) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | `tickets/skills-1.md` | in_progress | lane to record | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules | `tickets/claims-1.md` | in_progress | lane to record | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere and sound | `tickets/atmosphere-1.md` | in_progress | lane to record | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
@@ -38,6 +38,7 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Warmth: `Module.WarmthAt(ctx, x, z)` returns 0 to 1 from burning fires within 5 m; raw data in the public `fire` table.
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
+- Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building implements `ShelterAt()` in `Survival.cs`.
 - Rain: Atmosphere implements `RainAt(ctx, x, z, ref rain)` (0 to 1), declared in `Ceramics.cs`.
 - House building provides structure placement (Claims uses it for markers) and "is this player sheltered" (Survival reads it).
 
