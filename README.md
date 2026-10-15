@@ -49,7 +49,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal, N to read a note on the ground.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal; G reads a note on the ground.
 
 ## Crafting
 
@@ -111,6 +111,15 @@ Two simulated players gather materials, build a lean-to and then a clay hut toge
 ```sh
 cd tools/BuildTest
 dotnet run -- both        # or lean-to, or clay-hut
+```
+
+## Spawn check
+
+A player walks well past the area around the origin, logs off and logs back in, using the client's own subscriptions (`client/scripts/net/Subscriptions.cs`). It checks they get their own position back and the area around it. Run it against a freshly published local server:
+
+```sh
+cd tools/SpawnCheck
+dotnet run
 ```
 
 ## Screenshots without a display

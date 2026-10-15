@@ -44,12 +44,15 @@ namespace LifeGame.Shared
         // Processes that are not crafting jobs, reported by the base game.
         public const string Dig = "earth.dig";
         public const string Forage = "gather.forage";
+        public const string Berries = "gather.berries";
+        // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
+        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
 
         public static readonly Specialization[] Specializations =
         {
             new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
-            new("firecraft", "Firecraft", true, "Making fire and keeping it alive.", "fire"),
+            new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
@@ -60,16 +63,25 @@ namespace LifeGame.Shared
         {
             [Dig] = "Digging",
             [Forage] = "Foraging",
-            ["clay.pit_fire"] = "Pit firing",
-            ["clay.fill"] = "Filling a pot",
+            [ClayRules.PitFireProcess] = "Pit firing",
+            [ClayRules.FillProcess] = "Filling a pot",
+            ["build.frame"] = "Raising a frame",
+            ["build.wattle"] = "Weaving wattle walls",
+            ["build.daub"] = "Daubing walls",
+            ["build.roof"] = "Thatching a roof",
+            [Berries] = "Picking berries",
         };
 
         // Everything the journal counts toward "still to discover".
         public static IEnumerable<string> AllProcessIds()
         {
             yield return Forage;
+            yield return Berries;
             yield return Dig;
             foreach (var def in Processes.List) yield return def.Id;
+            yield return ClayRules.FillProcess;
+            yield return ClayRules.PitFireProcess;
+            foreach (var id in BuildStages) yield return id;
         }
 
         public static Specialization? Spec(string id)
@@ -123,6 +135,10 @@ namespace LifeGame.Shared
             if (rank >= MaxRank) return 1;
             return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
         }
+
+        // A Master doesn't play the minigame; the craft scores as a steady hand.
+        public const float MasterScore = 0.8f;
+        public static bool SkipsMinigame(int rank) => rank >= MaxRank;
 
         // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
         // lumps and sometimes two at once.

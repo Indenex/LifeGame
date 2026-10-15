@@ -88,14 +88,6 @@ public partial class BuildingSystem : Node
         promptPanel.Visible = false;
         ui.AddChild(promptPanel);
 
-        var hint = Hud.Text("B build    G help build", 14);
-        hint.Modulate = new Color(1, 1, 1, 0.7f);
-        var hintPanel = Hud.Panel(hint, Vector2.Zero);
-        // Just above the controls line; the bottom-right corner holds the survival rings.
-        hintPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
-        hintPanel.Position = new Vector2(20, -100);
-        ui.AddChild(hintPanel);
-
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
         if (args.Contains("--building-showcase")) Showcase();
         if (args.Contains("--building-closeup")) cameraRig.Zoom(-8f);
