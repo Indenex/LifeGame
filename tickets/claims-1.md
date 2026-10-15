@@ -1,7 +1,7 @@
 # claims-1: Claims, proximity chat and PvP rules
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_review (merge held for crafting #4)
+Status: done (merged via PR #8)
 Branch: claude/claims-chat-pvp-vk2qak
 PR: https://github.com/Indenex/LifeGame/pull/8
 
@@ -20,8 +20,9 @@ Proximity text chat; land claims via a marker structure (placed with House build
 ## Decisions / defaults
 - Keys follow KEYMAP.md (D-025): Enter chat, K claim panel. The marker is laid out from House building's B menu.
 - Marker cost 4 sticks + 2 fiber; claim radius 20 m (Justin, D-023); 1 claim per player; no claims within 20 m of spawn; marker stands 3 days untended; PvP off inside claims unless owner allows; wild is open PvP; chat range 24 m.
+- 2026-10-15 22:20: merged main (ceramics #11, PM #14) as d367547; CI run https://github.com/Indenex/LifeGame/actions/runs/38815757226 green (server, Linux, Windows); PR #8 merged as a merge commit under D-032.
 
 ## Open questions / blockers
 
 ## Next step
-Wait for crafting PR #4 to merge (PM will ping); then merge main in, convert marker cost to LifeGame.Shared.Item ids, regenerate bindings, run BuildTest + SocialTest, merge PR #8 as a merge commit when green, report the merge commit to the PM.
+None for claims-1. A follow-up claims ticket comes from the PM.
