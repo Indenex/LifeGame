@@ -19,6 +19,7 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
+    readonly Atmosphere atmosphere = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -42,6 +43,8 @@ public partial class Main : Node3D
         SetupInput();
         SetupView();
         SetupEnvironment();
+        atmosphere.Player = me;
+        view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
         view.AddChild(cameraRig);
@@ -253,6 +256,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         Subscribe(0, 0);
+        atmosphere.Connect(c);
     }
 
     void GoOffline(string reason)

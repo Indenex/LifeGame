@@ -43,6 +43,16 @@ Run two clients side by side with separate identities using `--profile=a` and `-
 
 Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
 
+### Day, night and weather
+
+An in-game day lasts 90 real minutes. The server keeps the clock and the weather (`server/spacetimedb/WorldClock.cs`), so every player sees the same sky. The client draws it in `client/scripts/atmosphere/`, and synthesizes all the sound as it plays: wind, rain, birds, crickets, footsteps and the music.
+
+Preview keys change only what you see and hear: hold T to fast-forward time (a whole day in about 45 seconds), press R to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
+
+To listen to the soundscape without the game, render it to a file: `cd tools/SoundPreview && dotnet run -- out.wav` (day, rain, dusk and night, with footsteps).
+
+Other server code can ask about the weather: `TimeOfDay(ctx)`, `CurrentWeather(ctx)` (cloud, rain, wind and ground wetness, each 0 to 1), `DryingRate(ctx)` (1 on a dry day, about half in rain) and `AirTemperature(ctx)` in degrees Celsius.
+
 ## After changing the server module
 
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:
