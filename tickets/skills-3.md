@@ -25,5 +25,9 @@ Skill already makes jobs faster and raises the best quality. This ticket makes t
 ## Open questions / blockers
 - Which key plays the minigame at Master: UX/UI (owns KEYMAP.md) to bind `craft_play_minigame`; placeholder Ctrl, bound by Journal.cs only if the action doesn't exist yet. (Shift is sneak, D-026.)
 
+## Follow-ups (not in this ticket)
+- When Ceramics' PR lands: fold `GiveDugClay` (Skills.cs), Ceramics' `ClayRules.DugClayQuality` and Crafting's stick depth into one place: skill-based quality on normal levels, 80 on the stick's extra level (PM 2026-10-15 22:44).
+- `cook.meat` (Crafting #20) already trains Firecraft through the `cook` prefix (D-043).
+
 ## Next step
 Wait for CI on PR #22 (skills-3 rides with the G note change, since this lane pushes to one branch); then test a Master craft locally and screenshot the shorter knapping game.
