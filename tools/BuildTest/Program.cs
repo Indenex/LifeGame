@@ -106,7 +106,8 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     WaitFor(() => b.Conn.Db.Structure.Id.Find(id) != null, 10, "the other player sees the footprint");
 
     // Both stand at the open front and add what they carry until it stands.
-    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, Structures.Shape((int)kind).Round ? 2.5f : 1.9f);
+    var shape = Structures.Shape((int)kind);
+    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, shape.Round ? shape.Radius + 0.6f : 1.9f);
     b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
