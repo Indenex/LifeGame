@@ -12,6 +12,9 @@ public partial class KeyHelp : CanvasLayer
     float alpha;
     bool open;
 
+    // Kept open from the Esc menu's Keys entry until Esc.
+    public bool Pinned;
+
     public override void _Ready()
     {
         Layer = 3;
@@ -53,7 +56,7 @@ public partial class KeyHelp : CanvasLayer
         center.AddChild(grid);
         column.AddChild(center);
 
-        var footer = new Label { Text = "Panels and building show their own keys while open.", HorizontalAlignment = HorizontalAlignment.Center };
+        var footer = new Label { Text = "Panels and building show their own keys while open.  Esc for the menu.", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(footer, 14, 0.6f);
         column.AddChild(footer);
 
@@ -63,7 +66,7 @@ public partial class KeyHelp : CanvasLayer
 
     public override void _Process(double delta)
     {
-        bool held = InputMap.HasAction("key_help") && Input.IsActionPressed("key_help");
+        bool held = Pinned || InputMap.HasAction("key_help") && Input.IsActionPressed("key_help");
         if (held && !open) Fill();
         open = held || open && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-keys") >= 0;
         alpha = Mathf.MoveToward(alpha, open ? 1f : 0f, (float)delta * 7f);

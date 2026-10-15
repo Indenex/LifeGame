@@ -16,9 +16,11 @@ Esc in the world (with no panel, chat, minigame or building placement open) open
 
 ## Progress log
 - 2026-10-15 23:15: plan sent to the PM. Main CI after #26 (with Claims #8) building; local client build on main passes.
+- 2026-10-15 23:30: built ui/PauseMenu.cs: Resume, Keys (pins the F1 list until Esc), Volume (master bus, saved in user://settings.cfg), Music on or off (fires toggle_music; no on/off state shown until Atmosphere exposes one), Quit. Esc opens it only when crafting minigame, building placement, chat typing or any focused control isn't open; the menu is Main's first child so lane panels see Esc first. Walking and G wait while open. Screenshot /mnt/project-files/screenshots/ui-06-esc-menu.png.
 
 ## Open questions / blockers
-- To PM: plan OK? Music volume hook from Atmosphere.
+- Journal (J) and claim (K) panels close on Esc but don't mark it handled, so Esc would also open the menu. Asked those lanes for `GetViewport().SetInputAsHandled()` when they close on Esc.
+- Music volume slider waits on a MusicVolume property from Atmosphere (asked via the PM).
 
 ## Next step
-Build PauseMenu.cs with the Esc predicate hook in Main.cs, then screenshot it for Justin.
+Open the PR for ui-3, record CI here, send the green sha to the PM.
