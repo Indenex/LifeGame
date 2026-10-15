@@ -96,3 +96,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-022 — 2026-10-15 — Merge Claims and chat
 **Decision:** PR #8 (proximity chat, claims, decay, in-claim PvP toggle) merges into the playtest build.
 **Who:** Justin
+
+## D-023 — 2026-10-15 — Bigger claims
+**Decision:** The claim size goes from 10 m to 20 m so a group's huts and fire fit in one claim. The other claim rules stay as proposed: a marker costs 4 sticks and 2 fiber, one claim per player, none within 20 m of spawn, 3-day decay when untended, and PvP is off inside a claim unless the owner allows it. The wild stays open PvP.
+**Who:** Justin ("Bigger claims", which the PM recommended)
