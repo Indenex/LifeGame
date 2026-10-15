@@ -16,7 +16,7 @@ Plug survival into the other lanes as they land on main, keeping Justin's gentle
 - 2026-10-15 21:26: ticket created from the PM's go-ahead. None of the dependencies are on main yet (crafting-core, clay-ceramics, atmosphere #9 all open).
 
 ## Open questions / blockers
-- Blocked on other lanes merging to main: crafting-core (Items.cs, WarmthAt), claude/clay-ceramics-kfr4kr (water pots), Atmosphere PR #9 (weather). Design question for later, to the PM: how cold should night feel at the gentle rates? Default: cold drain scales from 1x at 15 °C to 2x at 0 °C, rain adds +50% unless covered.
+- Blocked on other lanes merging to main: crafting-core (Items.cs, WarmthAt), claude/clay-ceramics-kfr4kr (water pots), Atmosphere PR #9 (weather). Waiting on Atmosphere #9 for weather (PM will ping when it merges).
 
 ## Next step
 `git fetch origin main` and check whether crafting-core, clay-ceramics or Atmosphere #9 has merged; start with whichever landed first.
