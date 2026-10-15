@@ -17,6 +17,7 @@ public partial class Journal : CanvasLayer
     public readonly Node3D Notes = new() { Name = "JournalNotes" };
 
     readonly JournalPanel panel = new();
+    readonly Chime chime = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
     DbConnection? conn;
@@ -42,6 +43,7 @@ public partial class Journal : CanvasLayer
         current = this;
         Layer = 2;
         AddChild(panel);
+        AddChild(chime);
         panel.WriteNote = id =>
         {
             if (conn == null) return;
@@ -64,7 +66,7 @@ public partial class Journal : CanvasLayer
         Refresh();
         // --journal opens the journal on start, for screenshots.
         if (OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--journal"))
-            GetTree().CreateTimer(1.0).Timeout += panel.Toggle;
+            GetTree().CreateTimer(1.0).Timeout += ToggleJournal;
     }
 
     public void Attach(DbConnection connection, Func<Vector3> player, Func<float, float, float> height, Action<string> note)
@@ -93,12 +95,12 @@ public partial class Journal : CanvasLayer
     {
         if (e.IsActionPressed("journal"))
         {
-            panel.Toggle();
+            ToggleJournal();
             GetViewport().SetInputAsHandled();
         }
         else if (e.IsActionPressed("ui_cancel") && panel.IsOpen)
         {
-            panel.Toggle();
+            ToggleJournal();
             GetViewport().SetInputAsHandled();
         }
     }
@@ -139,6 +141,13 @@ public partial class Journal : CanvasLayer
             });
     }
 
+    // Closing clears the "changed since you last looked" marks, so redraw.
+    void ToggleJournal()
+    {
+        panel.Toggle();
+        Refresh();
+    }
+
     void Refresh()
     {
         if (!IsInsideTree()) return;
@@ -152,6 +161,8 @@ public partial class Journal : CanvasLayer
     void Learned(JournalEntry e)
     {
         if (!caughtUp) return;
+        panel.Fresh.Add(e.ProcessId);
+        chime.Discovery();
         string name = Skills.ProcessName(e.ProcessId);
         say(e.LearnedBy switch
         {
@@ -193,9 +204,13 @@ public partial class Journal : CanvasLayer
         bool known = ranks.TryGetValue(s.Spec, out int before);
         ranks[s.Spec] = rank;
         if (!caughtUp || !known || rank <= before) return;
-        string name = Skills.Spec(s.Spec)?.Name ?? s.Spec;
+        // Every rank shows in the journal; only a new title is worth a word and a chime.
+        panel.Fresh.Add(s.Spec);
         string title = Skills.Title(rank);
-        say(title != Skills.Title(before) ? $"{name} {rank}: you are now {Article(title)} {title.ToLowerInvariant()}" : $"{name} {rank}");
+        if (title == Skills.Title(before)) return;
+        string name = (Skills.Spec(s.Spec)?.Name ?? s.Spec).ToLowerInvariant();
+        say($"You have become {Article(title)} {title.ToLowerInvariant()} in {name}");
+        chime.Title();
     }
 
     static string Article(string word) => "AEIOU".Contains(word[0]) ? "an" : "a";
