@@ -13,20 +13,20 @@ namespace SpacetimeDB.Types
     [DataContract]
     public sealed partial class MaterialNeed
     {
-        [DataMember(Name = "kind")]
-        public ItemKind Kind;
+        [DataMember(Name = "item")]
+        public ushort Item;
         [DataMember(Name = "have")]
         public uint Have;
         [DataMember(Name = "need")]
         public uint Need;
 
         public MaterialNeed(
-            ItemKind Kind,
+            ushort Item,
             uint Have,
             uint Need
         )
         {
-            this.Kind = Kind;
+            this.Item = Item;
             this.Have = Have;
             this.Need = Need;
         }

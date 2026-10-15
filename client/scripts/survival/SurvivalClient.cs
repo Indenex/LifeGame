@@ -46,7 +46,7 @@ public partial class SurvivalClient : Node
     public override void _Ready()
     {
         Bind("forage", Key.G);
-        Bind("eat", Key.C);
+        Bind("eat", Key.V);
         Bind("drink", Key.R);
         AddChild(needsHud);
     }
@@ -144,7 +144,7 @@ public partial class SurvivalClient : Node
         }
         if (e.IsActionPressed("eat"))
         {
-            if (Carrying(ItemKind.Berries)) conn.Reducers.Eat(ItemKind.Berries);
+            if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
             else hud.Note("You have nothing to eat");
         }
         if (e.IsActionPressed("drink"))
@@ -161,11 +161,11 @@ public partial class SurvivalClient : Node
         if (NearestRipeBush() != null) parts.Add("G  pick berries");
         var (food, water, _) = Current();
         if (water < 0.97f && WaterNearby()) parts.Add("R  drink");
-        if (food < 0.95f && Carrying(ItemKind.Berries)) parts.Add("C  eat berries");
+        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("V  eat berries");
         return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
 
-    bool Carrying(ItemKind kind) => conn?.Db.MyInventory.Iter().Any(i => i.Kind == kind && i.Count > 0) == true;
+    bool Carrying(Item item) => conn?.Db.MyInventory.Iter().Any(i => i.Item == (ushort)item && i.Count > 0) == true;
 
     ForageBush? NearestRipeBush()
     {

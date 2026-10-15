@@ -33,6 +33,7 @@ public partial class BuildingSystem : Node
     PanelContainer promptPanel = null!;
 
     bool placing;
+    public bool Placing => placing;
     int placeKind;
     float ghostYawTarget, ghostYaw;
     Vector3 ghostPos;
@@ -112,7 +113,7 @@ public partial class BuildingSystem : Node
         {
             var at = f * forward + r * right;
             int stages = Structures.Shape((int)kind).Stages.Length;
-            var needs = stage >= stages ? new List<MaterialNeed>() : new List<MaterialNeed> { new(ItemKind.Stick, (uint)(fraction * 10), 10) };
+            var needs = stage >= stages ? new List<MaterialNeed>() : new List<MaterialNeed> { new((ushort)Item.Stick, (uint)(fraction * 10), 10) };
             Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
                 (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
         }
@@ -400,8 +401,8 @@ public partial class BuildingSystem : Node
             return;
         }
         // Say what's missing once per press instead of asking the server over and over.
-        var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Kind).ToHashSet();
-        if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Kind)))
+        var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
+        if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item)))
         {
             if (noteShownFor != site.Id) hud.Note("Needs " + Missing(site));
             noteShownFor = site.Id;
@@ -424,7 +425,7 @@ public partial class BuildingSystem : Node
         {
             var shape = ShapeOf(site);
             string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
-            var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Kind)} {n.Have}/{n.Need}"));
+            var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}    hold H to add";
         }
         else if (ShelterAt(me.Position) is { } home)
@@ -437,12 +438,12 @@ public partial class BuildingSystem : Node
     // --- Helpers ----------------------------------------------------------
 
     static string Missing(Structure s) =>
-        string.Join(", ", s.Needs.Where(n => n.Have < n.Need).Select(n => $"{n.Need - n.Have} {ItemName(n.Kind)}"));
+        string.Join(", ", s.Needs.Where(n => n.Have < n.Need).Select(n => $"{n.Need - n.Have} {ItemName(n.Item)}"));
 
     // The server owns the costs; the prompt only lists the stage names here.
     static string StageList(int kind) => string.Join(", then ", Structures.Shape(kind).Stages).ToLowerInvariant();
 
-    static string ItemName(ItemKind kind) => kind.ToString().ToLowerInvariant();
+    static string ItemName(ushort item) => Items.IsKnown(item) ? Items.Def((Item)item).Plural.ToLowerInvariant() : "unknown";
 
     SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
 
