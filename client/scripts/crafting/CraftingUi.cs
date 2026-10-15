@@ -19,6 +19,8 @@ public partial class CraftingUi : CanvasLayer
     DbConnection? conn;
     readonly PanelContainer panel;
     readonly VBoxContainer list = new();
+    // The list scrolls once it would run past the bottom of the screen (the clay tier is long).
+    readonly ScrollContainer scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     readonly HBoxContainer tabs = new();
     // Processes are grouped into tabs by tier, so the list stays short as tiers grow.
     static readonly string[] TierNames = { "Bare hands", "Fire and stone", "Cord and haft", "Clay", "Tier 4", "Tier 5" };
@@ -28,20 +30,22 @@ public partial class CraftingUi : CanvasLayer
     readonly ProgressBar progressBar = new() { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(260, 8) };
     Minigame_? minigame;
     CraftJob? job;
-    double jobStartLocal, jobSeconds;
+    double jobStartLocal, jobSeconds, roastRefresh;
 
     public CraftingUi()
     {
-        Layer = 2;
+        Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         panel = Card(new Vector2(380, 0));
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
         box.AddChild(Text("Crafting", 20));
-        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C closes.", 13, 0.65f));
+        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C or Esc closes.", 13, 0.65f));
         tabs.AddThemeConstantOverride("separation", 4);
         box.AddChild(tabs);
         list.AddThemeConstantOverride("separation", 6);
-        box.AddChild(list);
+        list.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.AddChild(list);
+        box.AddChild(scroll);
         panel.AddChild(box);
         panel.Visible = false;
 
@@ -79,6 +83,23 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyInventory.OnDelete += (_, _) => Refresh();
         conn.Db.MyCraftJob.OnInsert += (_, j) => StartedJob(j);
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
+        conn.Db.Roast.OnInsert += (_, _) => Refresh();
+        conn.Db.Roast.OnDelete += (_, _) => Refresh();
+        // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
+        Use.Register(new UseHandler
+        {
+            Id = "crafting.take_roast",
+            Priority = 25,
+            Find = at =>
+            {
+                var (roast, seconds) = MyRoasts().FirstOrDefault(r => Roasting.Done(r.seconds));
+                if (roast == null) return null;
+                float d = new Vector2(roast.X - at.X, roast.Z - at.Z).Length();
+                if (d > World.Reach) return null;
+                return new UseOffer(Roasting.Burnt(seconds) ? "Take the burnt meat off" : "Take the meat off the fire", d,
+                    () => conn.Reducers.TakeOffFire(roast.Id));
+            },
+        });
     }
 
     // Opens the panel on a tier; used by --screenshot-craft.
@@ -108,7 +129,17 @@ public partial class CraftingUi : CanvasLayer
             }
             return;
         }
-        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false } k
+        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape })
+        {
+            panel.Visible = false;
+            GetViewport().SetInputAsHandled();
+        }
+        else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Key0 })
+        {
+            TakeOffFire();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false } k
             && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key9)
         {
             int index = (int)(k.PhysicalKeycode - Key.Key1);
@@ -130,6 +161,20 @@ public partial class CraftingUi : CanvasLayer
     {
         minigame?.Tick((float)delta);
         if (minigame is { Done: true } done) EndMinigame(done.Score);
+        if (panel.Visible)
+        {
+            // The panel's top sits 200 px above the middle; keep its foot clear of the HUD.
+            float room = Math.Max(160f, GetViewport().GetVisibleRect().Size.Y / 2 - 50);
+            scroll.CustomMinimumSize = new Vector2(0, Math.Min(list.GetCombinedMinimumSize().Y, room));
+        }
+
+        // Roasts change from browning to ready to burnt while you watch.
+        roastRefresh -= delta;
+        if (roastRefresh <= 0 && panel.Visible && MyRoasts().Any())
+        {
+            roastRefresh = 1;
+            Refresh();
+        }
 
         if (job != null)
         {
@@ -147,6 +192,14 @@ public partial class CraftingUi : CanvasLayer
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
         panel.Visible = false;
+        // Skill hook (journal/CraftingUi.Skills.cs): a Master just does the work.
+        float? skipped = null;
+        if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
+        if (skipped is { } sure)
+        {
+            conn.Reducers.StartCraft(def.Id, sure);
+            return;
+        }
         minigame = def.Minigame switch
         {
             Minigame.Drill => new DrillGame(def),
@@ -164,6 +217,27 @@ public partial class CraftingUi : CanvasLayer
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
+
+    // Skill hooks, implemented in journal/CraftingUi.Skills.cs: skip the minigame
+    // with this score, and how many steps (strikes, coils, strokes) it takes.
+    static partial void SkipMinigame(ProcessDef def, ref float? score);
+    static partial void StepsFor(ProcessDef def, ref int steps);
+    static partial void Mastered(ProcessDef def, ref bool mastered);
+    // The row's note on the minigame: a Master does it by heart (D-047).
+    static string HandsOn(ProcessDef def)
+    {
+        if (def.Minigame == Minigame.None) return "";
+        bool mastered = false;
+        Mastered(def, ref mastered);
+        return mastered ? "  ·  by heart. Hold Ctrl to work it by hand" : "  ·  hands-on";
+    }
+    static int Steps(ProcessDef def, int baseSteps)
+    {
+        StepsFor(def, ref baseSteps);
+        return Math.Max(1, baseSteps);
+    }
+    static string Times(int n, string one, string many) =>
+        (n <= 5 ? new[] { "", "One", "Two", "Three", "Four", "Five" }[n] : n.ToString()) + " " + (n == 1 ? one : many);
 
     void EndMinigame(float? score)
     {
@@ -188,7 +262,7 @@ public partial class CraftingUi : CanvasLayer
                 return "You need a second stone to strike with";
         }
         else if (def.NeedsTool != ItemTags.None && !HasTool(def.NeedsTool))
-            return "You need the right tool";
+            return $"You need {ToolName(def.NeedsTool)}";
         return null;
     }
 
@@ -201,6 +275,23 @@ public partial class CraftingUi : CanvasLayer
 
     bool HasTool(ItemTags tags) =>
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && (Items.Def((Item)i.Item).Tags & tags) == tags) ?? false;
+
+    // What a tool tag reads as in a sentence: "using a cutting edge".
+    static string ToolName(ItemTags tags) => string.Join(" and ", Enum.GetValues<ItemTags>()
+        .Where(t => t != ItemTags.None && tags.HasFlag(t))
+        .Select(t => t switch
+        {
+            ItemTags.Hammer => "a hammer",
+            ItemTags.Cutting => "a cutting edge",
+            ItemTags.Chopping => "a chopping tool",
+            ItemTags.Piercing => "a sharp point",
+            ItemTags.Binding => "something to bind with",
+            ItemTags.Kindling => "kindling",
+            ItemTags.Digging => "a digging tool",
+            ItemTags.FireBow => "a bow drill",
+            ItemTags.Container => "a container",
+            _ => t.ToString().ToLowerInvariant(),
+        }));
 
     static List<int> Tiers() => Processes.List.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
 
@@ -227,15 +318,34 @@ public partial class CraftingUi : CanvasLayer
         }
 
         foreach (var child in list.GetChildren()) child.QueueFree();
+        foreach (var (roast, seconds) in MyRoasts())
+        {
+            var name = Items.IsKnown(roast.Item) ? Items.Def((Item)roast.Item).Name.ToLowerInvariant() : "meat";
+            var row = new Button
+            {
+                Text = Roasting.Done(seconds)
+                    ? $"0.  Take your {name} off the fire\n      {Roasting.State(seconds)}"
+                    : $"     Your {name} is over the fire\n      browning, ready in {Roasting.CookSeconds - seconds:0}s",
+                Alignment = HorizontalAlignment.Left,
+                Disabled = !Roasting.Done(seconds),
+                Flat = true,
+                FocusMode = Control.FocusModeEnum.None,
+            };
+            row.AddThemeColorOverride("font_color", Roasting.Burnt(seconds) ? new Color(0.8f, 0.6f, 0.5f) : new Color(1f, 0.82f, 0.5f));
+            row.AddThemeColorOverride("font_disabled_color", new Color(Look.Cream, 0.5f));
+            row.AddThemeFontSizeOverride("font_size", 14);
+            row.Pressed += TakeOffFire;
+            list.AddChild(row);
+        }
         int n = 1;
         foreach (var def in InTier())
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
-            if (def.NeedsTool != ItemTags.None) inputs += $", using a {def.NeedsTool.ToString().ToLowerInvariant()}";
+            if (def.NeedsTool != ItemTags.None) inputs += $", using {ToolName(def.NeedsTool)}";
             bool ready = Missing(def) == null;
             var button = new Button
             {
-                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{(def.Minigame != Minigame.None ? "  ·  hands-on" : "")}",
+                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}",
                 Alignment = HorizontalAlignment.Left,
                 Disabled = !ready,
                 Flat = true,
@@ -249,6 +359,26 @@ public partial class CraftingUi : CanvasLayer
             list.AddChild(button);
             n++;
         }
+    }
+
+    // Your roasts on fires nearby, with how long each has been cooking.
+    IEnumerable<(Roast roast, float seconds)> MyRoasts()
+    {
+        if (conn?.Identity is not { } me) return Enumerable.Empty<(Roast, float)>();
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        return conn.Db.Roast.Iter().Where(r => r.Owner == me)
+            .Select(r => (r, (now - r.PutAt.MicrosecondsSinceUnixEpoch) / 1_000_000f))
+            .OrderByDescending(t => t.Item2).ToList();
+    }
+
+    // Takes off the roast that has been on longest, if it is done.
+    void TakeOffFire()
+    {
+        if (conn == null) return;
+        var (roast, seconds) = MyRoasts().FirstOrDefault();
+        if (roast == null) { Notice?.Invoke("Nothing of yours is on a fire"); return; }
+        if (!Roasting.Done(seconds)) { Notice?.Invoke("It isn't cooked yet"); return; }
+        conn.Reducers.TakeOffFire(roast.Id);
     }
 
     static string TierName(int t) => t < TierNames.Length ? TierNames[t] : $"Tier {t}";
@@ -274,6 +404,8 @@ public partial class CraftingUi : CanvasLayer
             Notice?.Invoke(def.Outcome == Outcome.Fire ? "The ember dies before it catches" : "It breaks wrong. The material is lost");
         else if (def.Outcome == Outcome.Fire)
             Notice?.Invoke("The tinder catches. You have fire.");
+        else if (def.Outcome == Outcome.Roast)
+            Notice?.Invoke($"It's over the fire. Press G by the fire once it's browned ({Roasting.BestSeconds:0}s is about right)");
         else if (def.Outcome != Outcome.Placed)
             Notice?.Invoke($"Made: {ItemLook.Label(def.Makes, j.Quality, def.MakesCount)}");
         Refresh();
@@ -319,17 +451,23 @@ public partial class CraftingUi : CanvasLayer
     sealed class DrillGame : Minigame_
     {
         const float Limit = 8f;
+        // About 14 good strokes catch an ember for a novice, fewer with skill.
+        readonly float stroke;
         float heat, peak, elapsed;
         Key last;
 
-        public DrillGame(ProcessDef process) : base(process, "Alternate A and D to spin the drill. Keep the rhythm.") { }
+        // A bow drill turns the spindle several times a stroke, so it needs half as many.
+        public DrillGame(ProcessDef process) : base(process, process.NeedsTool.HasFlag(ItemTags.FireBow)
+            ? "Alternate A and D to saw the bow. Keep the rhythm."
+            : "Alternate A and D to spin the drill. Keep the rhythm.") =>
+            stroke = 1.05f / Steps(process, process.NeedsTool.HasFlag(ItemTags.FireBow) ? 7 : 14);
 
         public override void Key(Key key)
         {
             bool left = key is Godot.Key.A or Godot.Key.Left, right = key is Godot.Key.D or Godot.Key.Right;
             if (!left && !right) return;
             bool alternated = left ? last != Godot.Key.A : last != Godot.Key.D;
-            heat += alternated ? 0.075f : -0.04f;
+            heat += alternated ? stroke : -0.04f;
             last = left ? Godot.Key.A : Godot.Key.D;
         }
 
@@ -351,17 +489,19 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // Knap: a mark sweeps along the core. Strike with Space as it crosses the
-    // bright spot. Three strikes; each is scored by how close it landed.
+    // bright spot. Three strikes (fewer with skill); each is scored by how close it landed.
     sealed class StrikeGame : Minigame_
     {
-        const int Strikes = 3;
+        readonly int strikes;
         readonly List<float> hits = new();
         readonly ColorRect zone = new() { Color = new Color(1f, 0.92f, 0.6f, 0.45f), MouseFilter = Control.MouseFilterEnum.Ignore };
         readonly RandomNumberGenerator rng = new();
         float t, target, speed;
 
-        public StrikeGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot. Three strikes.")
+        public StrikeGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot.")
         {
+            strikes = Steps(process, 3);
+            Hint.Text = $"Press Space as the mark crosses the bright spot. {Times(strikes, "strike", "strikes")}.    Esc gives up.";
             rng.Randomize();
             Bar.AddChild(zone);
             Next();
@@ -381,7 +521,7 @@ public partial class CraftingUi : CanvasLayer
             float mark = (float)Bar.Value;
             hits.Add(Math.Clamp(1f - Math.Abs(mark - target) / 0.3f, 0f, 1f));
             Title.Text = hits[^1] > 0.8f ? "A clean flake comes away" : hits[^1] > 0.4f ? "It chips" : "A glancing blow";
-            if (hits.Count >= Strikes)
+            if (hits.Count >= strikes)
             {
                 Score = hits.Average();
                 Done = true;

@@ -54,6 +54,48 @@ public static partial class Module
         public Timestamp WrittenAt;
     }
 
+    // Someone learned from you, by watching you work or by reading your note.
+    // Teachers hear about it: at once if online, or when they next log in.
+    [SpacetimeDB.Table(Accessor = "Taught")]
+    public partial struct Taught
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong Id;
+        [SpacetimeDB.Index.BTree]
+        public Identity Teacher;
+        public string LearnerName;
+        public string ProcessId;
+        public LearnedBy LearnedBy;
+        public Timestamp At;
+        // False until the teacher's client has shown it.
+        public bool Seen;
+    }
+
+    [SpacetimeDB.View(Accessor = "MyTaught", Public = true)]
+    public static List<Taught> MyTaught(ViewContext ctx) =>
+        ctx.Db.Taught.Teacher.Filter(ctx.Sender).ToList();
+
+    // The client calls this once it has told the teacher about what they taught.
+    [SpacetimeDB.Reducer]
+    public static void MarkTaughtSeen(ReducerContext ctx)
+    {
+        foreach (var row in ctx.Db.Taught.Teacher.Filter(ctx.Sender).Where(t => !t.Seen).ToList())
+            ctx.Db.Taught.Id.Update(row with { Seen = true });
+    }
+
+    static void RecordTeaching(ReducerContext ctx, Identity teacher, string learner, string processId, LearnedBy how) =>
+        ctx.Db.Taught.Insert(new Taught
+        {
+            Id = 0,
+            Teacher = teacher,
+            LearnerName = learner,
+            ProcessId = processId,
+            LearnedBy = how,
+            At = ctx.Timestamp,
+            Seen = false,
+        });
+
     // Crafting calls this when a job finishes, failed or not.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed)
     {
@@ -115,6 +157,8 @@ public static partial class Module
         if (KnowsProcess(ctx, ctx.Sender, note.ProcessId))
             throw new Exception("You already know this");
         Learn(ctx, ctx.Sender, note.ProcessId, LearnedBy.Reading, note.AuthorName, performed: 0);
+        if (note.Author != ctx.Sender)
+            RecordTeaching(ctx, note.Author, player.Name, note.ProcessId, LearnedBy.Reading);
     }
 
     static JournalEntry? FindEntry(ReducerContext ctx, Identity who, string processId)
@@ -152,6 +196,7 @@ public static partial class Module
                     if (ctx.Db.Player.PlayerId.Find(pos.PlayerId) is not { Online: true } watcher) continue;
                     if (KnowsProcess(ctx, watcher.Identity, processId)) continue;
                     Learn(ctx, watcher.Identity, processId, LearnedBy.Watching, worker.Name, performed: 0);
+                    RecordTeaching(ctx, worker.Identity, watcher.Name, processId, LearnedBy.Watching);
                 }
     }
 }

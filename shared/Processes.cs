@@ -23,6 +23,7 @@ namespace LifeGame.Shared
         Item,  // an item into the crafter's inventory
         Fire,  // a campfire on the ground in front of the crafter
         Placed, // something set down in front of the crafter; its lane's OnPlaced hook makes it
+        Roast,  // set over the nearest burning fire; taken off later, cooked or burnt (see Roasting)
     }
 
     public sealed class Ingredient
@@ -82,6 +83,18 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = 8, Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
             },
+            new ProcessDef
+            {
+                Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawMutton) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
+            },
+            new ProcessDef
+            {
+                Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 5, Makes = Item.DiggingStick,
+            },
 
             // Tier 2: cordage and hafted tools.
             new ProcessDef
@@ -101,6 +114,31 @@ namespace LifeGame.Shared
                 Id = "lash.stone_axe", Name = "Haft a stone axe", Doing = "Hafting a stone axe", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.HandAxe), new Ingredient(Item.Cordage) },
                 Seconds = 10, Makes = Item.StoneAxe,
+            },
+            new ProcessDef
+            {
+                Id = "haft.knife", Name = "Haft a stone knife", Doing = "Binding a flake into a handle", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Flake), new Ingredient(Item.Cordage) },
+                Seconds = 8, Makes = Item.StoneKnife,
+            },
+            new ProcessDef
+            {
+                Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
+                Seconds = 15, Makes = Item.Basket,
+            },
+            new ProcessDef
+            {
+                Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
+                Seconds = 8, Makes = Item.BowDrill,
+            },
+            // The bow spins the drill for you: half the strokes of a hand drill, and surer.
+            new ProcessDef
+            {
+                Id = "fire.bow_drill", Name = "Bow-drill fire", Doing = "Nursing an ember into flame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) }, NeedsTool = ItemTags.FireBow,
+                Seconds = 3, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.2f,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
@@ -212,5 +250,27 @@ namespace LifeGame.Shared
             float d = MathF.Sqrt(dx * dx + dz * dz);
             return Math.Clamp(1f - d / WarmthRadius, 0f, 1f);
         }
+    }
+
+    // Meat over a fire browns with time: take it off too soon and it isn't done,
+    // leave it too long and it burns. Best at BestSeconds.
+    public static class Roasting
+    {
+        public const float CookSeconds = 20f;
+        public const float BestSeconds = 30f;
+        public const float BurnSeconds = 60f;
+        // Most roasts one fire holds at once.
+        public const int PerFire = 4;
+
+        public static bool Done(float seconds) => seconds >= CookSeconds;
+        public static bool Burnt(float seconds) => seconds >= BurnSeconds;
+
+        // How well it was timed, 0 to 1, for the quality of the roast.
+        public static float Score(float seconds) => seconds <= BestSeconds
+            ? Math.Clamp(0.6f + 0.4f * (seconds - CookSeconds) / (BestSeconds - CookSeconds), 0f, 1f)
+            : Math.Clamp(1f - 0.6f * (seconds - BestSeconds) / (BurnSeconds - BestSeconds), 0f, 1f);
+
+        public static string State(float seconds) =>
+            Burnt(seconds) ? "burnt" : seconds >= BurnSeconds - 10f ? "starting to char" : Done(seconds) ? "ready" : "browning";
     }
 }

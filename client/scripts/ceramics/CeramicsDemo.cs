@@ -15,6 +15,9 @@ public partial class CeramicsDemo : Node3D
 
     public static bool Wanted => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Any(a => a.StartsWith("--ceramics-demo"));
 
+    // --ceramics-demo=kiln shows a cold kiln and a firing one instead of the pot row.
+    static bool ShowKilns => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=kiln");
+
     // --ceramics-demo=shape also opens the pinch-pot minigame part way through.
     static bool ShowMinigame => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=shape");
 
@@ -27,6 +30,24 @@ public partial class CeramicsDemo : Node3D
     public override void _Ready()
     {
         AddChild(row);
+        if (ShowKilns)
+        {
+            var cold = new KilnView(withBricks: true) { Position = new Vector3(-1.1f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) };
+            cold.Show(0, false, 0, 0);
+            row.AddChild(cold);
+            var hot = new KilnView(withBricks: true) { Position = new Vector3(1.2f, 0, -0.3f), Rotation = new Vector3(0, -0.3f, 0) };
+            hot.Show(4, true, PotView.Now - 30, PotView.Now + 150);
+            row.AddChild(hot);
+            for (int i = 0; i < 3; i++)
+            {
+                var pot = new PotView { Position = new Vector3(-0.6f + i * 0.45f, 0, 1.2f) };
+                row.AddChild(pot);
+                pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
         var stages = new (ClayForm form, ClayStage stage, FireKind fire, float moisture, bool full)[]
         {
             (ClayForm.PinchPot, ClayStage.Drying, FireKind.Pit, 1f, false),
@@ -64,7 +85,7 @@ public partial class CeramicsDemo : Node3D
         if (ShowMinigame)
             GetTree().CreateTimer(1.0).Timeout += () =>
             {
-                foreach (var ui in GetTree().Root.FindChildren("*", nameof(CraftingUi), true, false).OfType<CraftingUi>())
+                foreach (var ui in GetTree().Root.FindChildren("*", "", true, false).OfType<CraftingUi>())
                     ui.DemoClayMinigame("clay.pinch_pot", 0.55f);
             };
     }
@@ -80,6 +101,12 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
+        if (ShowKilns)
+        {
+            camera.Position = at + new Vector3(0.2f, 2.0f, 5.6f);
+            camera.LookAt(at + new Vector3(0.1f, 0.6f, 0), Vector3.Up);
+            return;
+        }
         camera.Position = at + new Vector3(0.3f, 1.5f, 4.0f);
         camera.LookAt(at + new Vector3(0.3f, 0.1f, 0), Vector3.Up);
     }

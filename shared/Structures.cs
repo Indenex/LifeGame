@@ -16,6 +16,8 @@ namespace LifeGame.Shared
         public float Clearance;
         // Shelter given to someone standing inside once it is finished, 0 to 1.
         public float RainCover, Warmth;
+        // Round shapes only: players can't walk into the footprint once the first stage is done.
+        public bool Solid;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -40,6 +42,14 @@ namespace LifeGame.Shared
                 RainCover = 1f, Warmth = 0.75f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
+            // A land claim's marker post (Claims.cs makes the claim when it is finished).
+            new StructureShape
+            {
+                Name = "Claim marker",
+                Round = true, Radius = 0.5f,
+                Clearance = 1.2f,
+                Stages = new[] { "Marker post" },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -52,6 +62,17 @@ namespace LifeGame.Shared
         public const float WorkReach = 2.2f;
         // Standing water; matches the client's Look.WaterLevel.
         public const float WaterLevel = -1.0f;
+
+        // The skill each stage practices, for the journal and skills (build.* process ids).
+        public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
+            DaubProcess = "build.daub", RoofProcess = "build.roof";
+
+        public static string StageProcess(int kind, int stage) => kind switch
+        {
+            // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
+            0 => stage >= 3 ? RoofProcess : FrameProcess,
+            _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
+        };
 
         public static StructureShape Shape(int kind) => Shapes[Math.Clamp(kind, 0, Shapes.Length - 1)];
 

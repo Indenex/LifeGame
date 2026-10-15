@@ -45,6 +45,11 @@ namespace LifeGame.Shared
         public const string Dig = "earth.dig";
         public const string Forage = "gather.forage";
         public const string Berries = "gather.berries";
+        // Shearing, reported by the Animals lane (Shearing.cs ShearProcess).
+        public const string Shear = "animal.shear";
+        // Reported on every strike that lands, and when a carcass is butchered (Animals lane).
+        public const string Kill = "animal.kill";
+        public const string Butcher = "animal.butcher";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
         static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
 
@@ -53,9 +58,11 @@ namespace LifeGame.Shared
             new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets, lashing simple tools.", "knap", "cord", "weave", "lash"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
+            // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
         };
 
         // Names for processes that are not in Processes.List.
@@ -70,6 +77,9 @@ namespace LifeGame.Shared
             ["build.daub"] = "Daubing walls",
             ["build.roof"] = "Thatching a roof",
             [Berries] = "Picking berries",
+            [Shear] = "Shearing a sheep",
+            [Kill] = "Hunting",
+            [Butcher] = "Butchering a carcass",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -82,6 +92,9 @@ namespace LifeGame.Shared
             yield return ClayRules.FillProcess;
             yield return ClayRules.PitFireProcess;
             foreach (var id in BuildStages) yield return id;
+            yield return Shear;
+            yield return Kill;
+            yield return Butcher;
         }
 
         public static Specialization? Spec(string id)
@@ -135,6 +148,10 @@ namespace LifeGame.Shared
             if (rank >= MaxRank) return 1;
             return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
         }
+
+        // A Master doesn't play the minigame; the craft scores as a steady hand.
+        public const float MasterScore = 0.8f;
+        public static bool SkipsMinigame(int rank) => rank >= MaxRank;
 
         // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
         // lumps and sometimes two at once.
