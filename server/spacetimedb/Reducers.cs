@@ -155,8 +155,10 @@ public static partial class Module
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        if (depth >= World.MaxDigDepth)
-            throw new Exception("Too deep to dig by hand");
+        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
+        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
+            throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
         if (edit is { } existing)
             ctx.Db.TerrainEdit.CellKey.Update(existing with { Depth = (short)(depth + 1) });
@@ -171,8 +173,13 @@ public static partial class Module
                 Depth = 1,
             });
 
+        // The extra level a digging stick reaches holds finer clay (D-041); Skills sets
+        // the quality above it. Ceramics' ClayRules.DugClayQuality will own both numbers.
         if (World.IsClay(cellX, cellZ))
-            GiveDugClay(ctx, player);
+        {
+            if (depth >= World.MaxDigDepth) AddToInventory(ctx, ctx.Sender, Item.Clay, 1, 80);
+            else GiveDugClay(ctx, player);
+        }
 
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });

@@ -136,6 +136,10 @@ namespace LifeGame.Shared
             return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
         }
 
+        // A Master doesn't play the minigame; the craft scores as a steady hand.
+        public const float MasterScore = 0.8f;
+        public static bool SkipsMinigame(int rank) => rank >= MaxRank;
+
         // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
         // lumps and sometimes two at once.
         // Steps of 5 keep a digger's clay in a few stacks instead of one per point.

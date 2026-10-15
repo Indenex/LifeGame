@@ -68,6 +68,7 @@ public partial class Main : Node3D
         AddChild(crafting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
@@ -302,7 +303,7 @@ public partial class Main : Node3D
         myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
-        Subscribe(0, 0);
+        SubscribeSelf();
         atmosphere.Connect(c);
     }
 
@@ -314,31 +315,45 @@ public partial class Main : Node3D
         Spawn(Vector3.Zero);
     }
 
+    // Our own rows come first, wherever we saved, then the area around them. The
+    // area around the origin would miss a player who logged off far from it (bugfix-1).
+    void SubscribeSelf()
+    {
+        if (conn == null) return;
+        conn.SubscriptionBuilder()
+            .OnApplied(_ =>
+            {
+                var at = MyPos();
+                Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+            })
+            .OnError((_, e) =>
+            {
+                hud.Note($"Subscription error: {e.Message}");
+                Subscribe(0, 0);
+            })
+            .Subscribe(Subscriptions.Self);
+    }
+
+    PlayerPos? MyPos() =>
+        conn != null && myIdentity is { } id && conn.Db.Player.Identity.Find(id) is { } p
+            ? conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) : null;
+
     void Subscribe(int chunkX, int chunkZ)
     {
         if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
         subscribedChunk = (chunkX, chunkZ);
-        int r = World.ViewRadiusChunks;
-        string range = $"chunk_x >= {chunkX - r} AND chunk_x <= {chunkX + r} AND chunk_z >= {chunkZ - r} AND chunk_z <= {chunkZ + r}";
+        string range = Subscriptions.Range(chunkX, chunkZ, World.ViewRadiusChunks);
         var old = subscription;
         // Subscribe to the new area before dropping the old one so nothing pops out.
+        // The first area is where we wake up: appear once it has loaded, all at once.
         subscription = conn.SubscriptionBuilder()
-            .OnApplied(_ => old?.Unsubscribe())
-            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
-            .Subscribe(new[]
+            .OnApplied(_ =>
             {
-                "SELECT * FROM player WHERE online = true",
-                $"SELECT * FROM player_pos WHERE {range}",
-                $"SELECT * FROM world_item WHERE {range}",
-                $"SELECT * FROM animal WHERE {range}",
-                $"SELECT * FROM terrain_edit WHERE {range}",
-                $"SELECT * FROM fire WHERE {range}",
-                $"SELECT * FROM clay_piece WHERE {range}",
-                "SELECT * FROM clay_news",
-                "SELECT * FROM my_inventory",
-                "SELECT * FROM my_craft_job",
-                $"SELECT * FROM structure WHERE {range}",
-            }.Concat(SurvivalClient.Queries(range)).ToArray());
+                old?.Unsubscribe();
+                if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
+            })
+            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -357,9 +372,10 @@ public partial class Main : Node3D
         var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
-            if (!spawned) Spawn(at);
+            // Before spawning we wait for the area around us (see Subscribe).
+            if (!spawned) return;
             // The server clamps impossible moves; snap back if we drifted too far.
-            else if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+            if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
                 me.Position = at;
             return;
         }

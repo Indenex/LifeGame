@@ -3,7 +3,9 @@
 //
 //   dotnet run -- out.wav [scene:seconds ...] [--no-music]
 //
-// Scenes: day, rain, dusk, night. Each scene walks on grass for its first half.
+// Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
+// from under a roof), rain (same as storm), dusk, night, sheep (a grazing flock that
+// bolts halfway). Each scene walks on grass for its first half.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
@@ -24,7 +26,10 @@ foreach (var scene in scenes)
     float seconds = parts.Length > 1 ? float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : 30f;
     (float day, float rain, float wind, float wet) = parts[0] switch
     {
-        "rain" => (0.8f, 1f, 0.8f, 1f),
+        "drizzle" => (0.85f, 0.2f, 0.3f, 0.4f),
+        "light" => (0.8f, 0.4f, 0.45f, 0.7f),
+        "steady" or "roof" => (0.75f, 0.65f, 0.6f, 1f),
+        "rain" or "storm" => (0.6f, 1f, 0.9f, 1f),
         "dusk" => (0.35f, 0f, 0.3f, 0.2f),
         "night" => (0f, 0f, 0.25f, 0.1f),
         _ => (1f, 0f, 0.3f, 0f),
@@ -40,11 +45,23 @@ foreach (var scene in scenes)
         mix.Rain += (rain - mix.Rain) * k;
         mix.Wind += (wind - mix.Wind) * k;
         mix.Wetness += (wet - mix.Wetness) * k;
+        mix.Cover += ((parts[0] == "roof" ? 1f : 0f) - mix.Cover) * k;
         double t = done / (double)rate;
         if (t < seconds / 2 && t >= nextStep)
         {
             mix.Step(Ground.Grass, mix.Wetness);
             nextStep = t + 0.36;
+        }
+        // Sheep scenes: a calm flock, then it bolts halfway through.
+        if (parts[0] == "sheep" && Random.Shared.NextDouble() < n / (double)rate * 0.4)
+            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false);
+        if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
+            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true);
+        // Storms: a strike every 10 seconds or so, some close, most far off.
+        if (parts[0] is "storm" or "rain" && Random.Shared.NextDouble() < n / (double)rate * 0.1)
+        {
+            float near = (float)Math.Pow(Random.Shared.NextDouble(), 2);
+            mix.Thunder(0.5f + (1f - near) * 5f, 0.4f + 0.6f * near, near);
         }
         mix.Render(left, right, n);
         for (int i = 0; i < n; i++)
