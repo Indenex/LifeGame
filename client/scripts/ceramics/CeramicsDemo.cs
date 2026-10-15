@@ -32,10 +32,10 @@ public partial class CeramicsDemo : Node3D
         AddChild(row);
         if (ShowKilns)
         {
-            var cold = new KilnView { Position = new Vector3(-1.1f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) };
+            var cold = new KilnView(withBricks: true) { Position = new Vector3(-1.1f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) };
             cold.Show(0, false, 0, 0);
             row.AddChild(cold);
-            var hot = new KilnView { Position = new Vector3(1.2f, 0, -0.3f), Rotation = new Vector3(0, -0.3f, 0) };
+            var hot = new KilnView(withBricks: true) { Position = new Vector3(1.2f, 0, -0.3f), Rotation = new Vector3(0, -0.3f, 0) };
             hot.Show(4, true, PotView.Now - 30, PotView.Now + 150);
             row.AddChild(hot);
             for (int i = 0; i < 3; i++)

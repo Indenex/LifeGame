@@ -77,7 +77,7 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 
 Gather(Item.Stone, 3);
 Gather(Item.Stick, 10);
-Gather(Item.Fiber, kilnRun ? 9u : 4u);
+Gather(Item.Fiber, kilnRun ? 12u : 4u);
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);

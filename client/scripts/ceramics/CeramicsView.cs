@@ -90,7 +90,7 @@ public partial class CeramicsView : Node
     {
         if (!kilns.TryGetValue(k.Id, out var view))
         {
-            view = new KilnView();
+            view = new KilnView(withBricks: true);
             kilns[k.Id] = view;
             world.AddChild(view);
         }
@@ -102,7 +102,7 @@ public partial class CeramicsView : Node
     // Show a kiln without a server, for the offline demo.
     public KilnView DemoKiln(Vector3 at, float yaw, int pots, bool firing)
     {
-        var view = new KilnView { Position = at, Rotation = new Vector3(0, yaw, 0) };
+        var view = new KilnView(withBricks: true) { Position = at, Rotation = new Vector3(0, yaw, 0) };
         world.AddChild(view);
         view.Show(pots, firing, PotView.Now - 20, PotView.Now + 160);
         return view;

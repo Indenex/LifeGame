@@ -9,16 +9,10 @@ namespace LifeGame;
 // the door and chimney glow and smoke rises. A label shows its load and time left.
 public partial class KilnView : Node3D
 {
-    const float Radius = 0.78f;     // outer radius at the ground
-    const float DomeHeight = 1.15f;
-    const float Course = 0.095f;    // one row of bricks
-    const float DoorHalfAngle = 0.42f;
-    const float DoorHeight = 0.5f;
-    const float ChimneyRadius = 0.2f;
-    const int ChimneyCourses = 5;
-
-    static readonly Color Brick = new(0.66f, 0.53f, 0.40f);
-    static readonly Color Soot = new(0.09f, 0.07f, 0.06f);
+    const float Radius = KilnModel.Radius;
+    const float DomeHeight = KilnModel.DomeHeight;
+    const float Course = KilnModel.Course;
+    const int ChimneyCourses = KilnModel.ChimneyCourses;
 
     readonly OmniLight3D inner = new()
     {
@@ -56,15 +50,17 @@ public partial class KilnView : Node3D
     double fireStart, fireFinish;
     float time;
 
-    public KilnView()
+    // In the world the brickwork is the finished structure, drawn by Building's
+    // StructureView; this adds the fire, smoke and label. The offline demo has no
+    // structure, so it asks for the bricks too.
+    public KilnView(bool withBricks = false)
     {
-        AddChild(BrickWork(1234));
-        AddChild(new MeshInstance3D
+        if (withBricks)
         {
-            // The sooty inside, seen through the door and between the bricks.
-            Mesh = new SphereMesh { Radius = Radius * 0.93f, Height = DomeHeight * 1.86f, RadialSegments = 20, Rings = 10 },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = Soot, CullMode = BaseMaterial3D.CullModeEnum.Front, Roughness = 1f },
-        });
+            AddChild(new MeshInstance3D { Mesh = KilnModel.Interior });
+            foreach (var course in KilnModel.Courses)
+                AddChild(new MeshInstance3D { Mesh = course });
+        }
         embers.Mesh = new CylinderMesh { TopRadius = Radius * 0.7f, BottomRadius = Radius * 0.7f, Height = 0.06f, RadialSegments = 16 };
         embers.MaterialOverride = emberMaterial;
         embers.Position = new Vector3(0, 0.03f, 0);
@@ -113,71 +109,6 @@ public partial class KilnView : Node3D
             label.Text = load == 0
                 ? "Kiln, empty: V loads dry pots"
                 : $"Kiln: {load} of {ClayRules.KilnCapacity} pots. V adds more, or fires it";
-    }
-
-    // Courses of bricks laid round a beehive dome, leaving a door, then a chimney.
-    static MultiMeshInstance3D BrickWork(int seed)
-    {
-        var rng = new RandomNumberGenerator { Seed = (ulong)seed };
-        var bricks = new System.Collections.Generic.List<(Transform3D, Color)>();
-        int courses = Mathf.CeilToInt(DomeHeight / Course);
-        for (int c = 0; c < courses; c++)
-        {
-            float y = c * Course + Course * 0.5f;
-            float s = Mathf.Clamp(y / DomeHeight, 0f, 1f);
-            float r = Mathf.Max(ChimneyRadius + 0.02f, Radius * Mathf.Sqrt(1f - s * s * s));
-            // Slope of the dome here, so each brick leans in with the wall.
-            float lean = Mathf.Atan2(Radius * 1.5f * s * s / Mathf.Max(0.2f, Mathf.Sqrt(1f - s * s * s)), DomeHeight) * 0.9f;
-            Lay(bricks, rng, y, r, lean, c, door: y < DoorHeight);
-        }
-        for (int c = 0; c < ChimneyCourses; c++)
-            Lay(bricks, rng, DomeHeight + c * Course + Course * 0.5f, ChimneyRadius, 0f, courses + c, door: false, small: true);
-
-        var mm = new MultiMesh
-        {
-            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true,
-            Mesh = BrickMesh,
-            InstanceCount = bricks.Count,
-        };
-        for (int i = 0; i < bricks.Count; i++)
-        {
-            mm.SetInstanceTransform(i, bricks[i].Item1);
-            mm.SetInstanceColor(i, bricks[i].Item2);
-        }
-        return new MultiMeshInstance3D { Multimesh = mm };
-    }
-
-    static void Lay(System.Collections.Generic.List<(Transform3D, Color)> bricks, RandomNumberGenerator rng,
-        float y, float r, float lean, int course, bool door, bool small = false)
-    {
-        float length = small ? 0.16f : 0.25f;
-        int count = Math.Max(5, Mathf.FloorToInt(Mathf.Tau * r / length));
-        float offset = course % 2 == 0 ? 0f : 0.5f;  // stagger the joints
-        for (int i = 0; i < count; i++)
-        {
-            float a = (i + offset) / count * Mathf.Tau;
-            float fromDoor = Mathf.Abs(Mathf.Wrap(a, -Mathf.Pi, Mathf.Pi));
-            if (door && fromDoor < DoorHalfAngle) continue;
-            var basis = new Basis(Vector3.Up, a) * new Basis(Vector3.Right, -lean);
-            float stretch = Mathf.Tau * r / count / 0.24f * 0.96f;
-            basis *= Basis.FromScale(new Vector3(stretch * (small ? 0.75f : 1f), 1f, small ? 0.8f : 1f));
-            var at = new Vector3(Mathf.Sin(a) * r, y, Mathf.Cos(a) * r);
-            float shade = rng.RandfRange(0.86f, 1.08f);
-            var tint = new Color(Brick.R * shade, Brick.G * shade * rng.RandfRange(0.97f, 1.02f), Brick.B * shade);
-            // Bricks round the door and near the top are smoke-stained.
-            float stain = Mathf.Clamp((door ? 0f : Mathf.Max(0f, 0.6f - fromDoor) * 0.8f) + (small ? 0.35f : 0f), 0f, 0.6f);
-            bricks.Add((new Transform3D(basis, at), tint.Lerp(Soot, stain)));
-        }
-    }
-
-    static Mesh? brickMesh;
-    static Mesh BrickMesh => brickMesh ??= MakeBrick();
-
-    static Mesh MakeBrick()
-    {
-        var mesh = (ArrayMesh)Look.Faceted(new BoxMesh { Size = new Vector3(0.24f, Course * 0.9f, 0.12f) }, Colors.White);
-        return mesh;
     }
 
     static CpuParticles3D Smoke()
