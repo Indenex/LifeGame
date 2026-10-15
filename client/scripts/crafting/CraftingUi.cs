@@ -415,8 +415,11 @@ public partial class CraftingUi : CanvasLayer
         float heat, peak, elapsed;
         Key last;
 
-        public DrillGame(ProcessDef process) : base(process, "Alternate A and D to spin the drill. Keep the rhythm.") =>
-            stroke = 1.05f / Steps(process, 14);
+        // A bow drill turns the spindle several times a stroke, so it needs half as many.
+        public DrillGame(ProcessDef process) : base(process, process.NeedsTool.HasFlag(ItemTags.FireBow)
+            ? "Alternate A and D to saw the bow. Keep the rhythm."
+            : "Alternate A and D to spin the drill. Keep the rhythm.") =>
+            stroke = 1.05f / Steps(process, process.NeedsTool.HasFlag(ItemTags.FireBow) ? 7 : 14);
 
         public override void Key(Key key)
         {
