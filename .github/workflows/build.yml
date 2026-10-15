@@ -60,9 +60,24 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then bots=20; secs=20; else bots=5; secs=5; fi
           (cd tools/LoadTest && dotnet run -c Release -- $bots $secs)
           (cd tools/BuildTest && dotnet run -c Release)
+          (cd tools/SpawnCheck && dotnet run -c Release)
+
+      # Justin publishes each merge over his world without --delete-data (bugfix-3).
+      - name: Upgrade check (this module over the base branch's world, no wipe)
+        if: github.event_name == 'pull_request'
+        run: |
+          # The merge commit's first parent is the base this PR was merged onto. The
+          # base branch's tip can move while CI runs, so don't fetch it by name.
+          git fetch --depth=2 origin "$GITHUB_SHA"
+          tools/upgrade-check.sh HEAD^1
 
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
+
+      - name: Check chat, claim and PvP rules with two players
+        run: |
+          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm

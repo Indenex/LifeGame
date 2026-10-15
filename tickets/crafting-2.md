@@ -1,7 +1,7 @@
 # crafting-2: Roast mutton, stone knife, digging stick, basket
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-cook
 PR: #20
 
@@ -14,9 +14,11 @@ Also a stone knife (haft.knife), a digging stick (carve.digging_stick) and a wov
 - 2026-10-15: shared items and `Roasting` timings, server `Roast` table with TakeOffFire (server/spacetimedb/Cooking.cs), roasts drawn on the campfire, take-off rows in the panel. CraftCheck has an optional roast step (CRAFTCHECK_ROAST=1, mutton seeded by hand) and it passes locally: early take-off refused, roast mutton quality 80 at 30 s.
 
 - 2026-10-15: knife, digging stick and basket added; PR #20 opened. Reworked to D-041/D-042: no gather-all basket, the digging stick reaches one more level. CraftCheck covers all three tools and the deep dig.
+- 2026-10-15: merged main (Skills, Animals, Use key); G takes meat off the fire; tools are not fuel. CI green at e600b3e, sent to the PM to merge.
+- 2026-10-15: merged main again for #18 (roast query in net/Subscriptions.cs); CI green at 310d8ba (run 38820022479); PR #20 merged by the PM.
 
 ## Open questions / blockers
 - Eating roast mutton needs a Nourishment entry in Survival.cs (Survival lane, asked).
 
 ## Next step
-Send the PM the meat-on-fire screenshot and the green head sha of PR #20; switch Dig to ClayRules.DugClayQuality once Ceramics lands it on main.
+Done: PR #20 merged 2026-10-15. Ceramics folds ClayRules.DugClayQuality into GiveDugClay in #21.

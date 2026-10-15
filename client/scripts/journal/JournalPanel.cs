@@ -97,7 +97,7 @@ public partial class JournalPanel : Control
         }
     }
 
-    public void SetData(List<JournalEntry> entries, List<SkillLevel> levels)
+    public void SetData(List<JournalEntry> entries, List<SkillLevel> levels, List<Taught> taught)
     {
         if (!IsInsideTree()) return;
         var bySpec = levels.ToDictionary(s => s.Spec);
@@ -120,6 +120,9 @@ public partial class JournalPanel : Control
         var known = entries.Select(e => e.ProcessId).ToHashSet();
         int left = Skills.AllProcessIds().Count(id => !known.Contains(id));
         undiscovered.Text = left > 0 ? $"{left} more {(left == 1 ? "thing" : "things")} to discover." : "You have found everything there is, for now.";
+        int pupils = taught.Select(t => t.LearnerName).Distinct().Count();
+        if (pupils > 0)
+            undiscovered.Text += $"  You have taught {pupils} {(pupils == 1 ? "person" : "people")} {taught.Count} {(taught.Count == 1 ? "thing" : "things")}.";
     }
 
     Control SkillRow(Specialization spec, SkillLevel? level)

@@ -1,7 +1,7 @@
 # ceramics-1: Clay to fired pot
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session cse_017sscCMDfHcyeZNqGW22GBE)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-kfr4kr (from crafting-core, with crafting-core e165799 merged in)
 PR: #11 (base crafting-core; retarget to main after #4)
 
@@ -39,4 +39,4 @@ Milestone 1 (this ticket's first PR): dig, clean, temper, shape, dry, pit-fire, 
 PM approved #11. Merge it myself as a merge commit once crafting #4, skills #7 and claims #8 are on main. Merge main in first, regenerate bindings, wait for green CI, then send the PM the merge commit.
 
 ## Next step
-Get PR #11 CI green and send it to the PM for Justin's merge; then milestone 2 (updraft kiln).
+Done: PR #11 merged into main at 8b96a02. Follow-up work continues in tickets/ceramics-2.md.

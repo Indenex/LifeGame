@@ -40,6 +40,14 @@ namespace LifeGame.Shared
                 RainCover = 1f, Warmth = 0.75f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
+            // A land claim's marker post (Claims.cs makes the claim when it is finished).
+            new StructureShape
+            {
+                Name = "Claim marker",
+                Round = true, Radius = 0.5f,
+                Clearance = 1.2f,
+                Stages = new[] { "Marker post" },
+            },
         };
 
         // How far from the player a footprint may be laid out.

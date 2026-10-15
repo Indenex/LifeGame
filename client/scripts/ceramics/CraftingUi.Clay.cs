@@ -120,18 +120,20 @@ public partial class CraftingUi
     }
 
     // Build a coil pot: roll a coil and lay it on as the turning pot brings the
-    // seam round. Press Space as the mark crosses the bright spot; five coils.
+    // seam round. Press Space as the mark crosses the bright spot; five coils (fewer with skill).
     sealed class CoilGame : Minigame_
     {
-        const int Coils = 5;
+        readonly int total;
         readonly List<float> coils = new();
         readonly ColorRect zone = new() { Color = new Color(1f, 0.92f, 0.6f, 0.45f), MouseFilter = Control.MouseFilterEnum.Ignore };
         readonly PotSketch sketch = new(ClayForm.CoilPot);
         float angle, speed = 0.45f;
         const float Seam = 0.5f;
 
-        public CoilGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot to lay each coil. Five coils.")
+        public CoilGame(ProcessDef process) : base(process, "Press Space as the mark crosses the bright spot to lay each coil.")
         {
+            total = Steps(process, 5);
+            Hint.Text = $"Press Space as the mark crosses the bright spot to lay each coil. {Times(total, "coil", "coils")}.    Esc gives up.";
             Bar.AddChild(zone);
             float w = Bar.CustomMinimumSize.X;
             zone.Position = new Vector2((Seam - 0.06f) * w, 0);
@@ -148,10 +150,10 @@ public partial class CraftingUi
             float score = Math.Clamp(1f - Math.Abs(mark - Seam) / 0.3f, 0f, 1f);
             coils.Add(score);
             sketch.Coils = coils.Count;
-            sketch.Height = coils.Count / (float)Coils;
+            sketch.Height = coils.Count / (float)total;
             Title.Text = score > 0.8f ? "The coil joins cleanly" : score > 0.4f ? "A little off the seam" : "Lumpy. Smooth it in";
             speed += 0.12f;
-            if (coils.Count >= Coils)
+            if (coils.Count >= total)
             {
                 Score = coils.Average();
                 Done = true;
