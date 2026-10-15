@@ -20,6 +20,8 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - 2026-10-15 21:10: first version pushed and PR #7 opened; tested locally with three scripted players (experimenting, watching, reading a note all work).
 - 2026-10-15 21:35: merged main and `crafting-core`; switched to Crafting's partial hooks, dotted ids and the PM's skill families; `tools/CraftCheck` passes locally with the quality cap active.
 
+- 2026-10-15 21:45: "R  Read <name>'s note" prompt appears only near a note; HUD controls just add "J journal". Reported to PM: Main.RefreshInventory throws when two stacks of one item share a grade label (Crafting's file).
+
 ## Open questions / blockers
 - Sent to PM for Justin (design): a novice's crafted items are capped at quality 35 ("rough") and the cap reaches 100 at Master. Default: keep 35, since crafted quality was 50 on average before skills.
 - Sent to PM for Justin (design): skill gain speed, about rank 10 after 6 uses and rank 50 after about 50. Default: keep.

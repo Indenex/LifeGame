@@ -17,6 +17,7 @@ public partial class Journal : CanvasLayer
     public readonly Node3D Notes = new() { Name = "JournalNotes" };
 
     readonly JournalPanel panel = new();
+    readonly Label prompt = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
     DbConnection? conn;
@@ -33,6 +34,18 @@ public partial class Journal : CanvasLayer
     {
         Layer = 2;
         AddChild(panel);
+
+        // Shown only while a note is within reach.
+        prompt.AddThemeFontSizeOverride("font_size", 16);
+        prompt.AddThemeColorOverride("font_color", new Color(Look.Cream, 0.9f));
+        prompt.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
+        prompt.AddThemeConstantOverride("shadow_offset_y", 1);
+        prompt.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);
+        prompt.GrowHorizontal = Control.GrowDirection.Both;
+        prompt.HorizontalAlignment = HorizontalAlignment.Center;
+        prompt.Position += new Vector2(0, -120);
+        prompt.Visible = false;
+        AddChild(prompt);
         panel.WriteNote = id =>
         {
             if (conn == null) return;
@@ -93,6 +106,10 @@ public partial class Journal : CanvasLayer
         if (conn == null) return;
         var at = playerPos();
         Follow(World.ChunkOf(at.X), World.ChunkOf(at.Z));
+
+        var near = NearestNote(at);
+        prompt.Visible = near != null && !panel.IsOpen;
+        if (near != null) prompt.Text = $"R  Read {near.AuthorName}'s note";
 
         // Notes stir a little, as if the breeze catches them.
         bob += (float)delta;
@@ -159,19 +176,20 @@ public partial class Journal : CanvasLayer
     void ReadNearestNote()
     {
         if (conn == null) return;
-        var at = playerPos();
-        var nearest = conn.Db.JournalNote.Iter()
-            .Select(n => (note: n, d: new Vector2(n.X - at.X, n.Z - at.Z).Length()))
-            .Where(t => t.d <= World.Reach)
-            .OrderBy(t => t.d)
-            .FirstOrDefault();
-        if (nearest.note == null)
+        if (NearestNote(playerPos()) is not { } note)
         {
             say("No note within reach");
             return;
         }
-        conn.Reducers.ReadNote(nearest.note.Id);
+        conn.Reducers.ReadNote(note.Id);
     }
+
+    JournalNote? NearestNote(Vector3 at) => conn?.Db.JournalNote.Iter()
+        .Select(n => (note: n, d: new Vector2(n.X - at.X, n.Z - at.Z).Length()))
+        .Where(t => t.d <= World.Reach)
+        .OrderBy(t => t.d)
+        .Select(t => t.note)
+        .FirstOrDefault();
 
     void AddNote(JournalNote n)
     {
