@@ -13,8 +13,10 @@ A player whose saved position is 48 m or more from the origin (for example woken
 
 - 2026-10-15 22:50: PR #18 opened (draft). Checked in the real client (Godot 4.6.2, llvmpipe): a player saved at x=-56 now wakes there with bushes and stones loaded (screenshots/bugfix-01-after-far-spawn.png); main's client leaves them at the origin unable to walk (screenshots/bugfix-01-before-stuck-at-spawn.png).
 
+- 2026-10-15 22:45: merged main (bindings no longer committed, #15; animal query moved into Subscriptions.Area). SpawnCheck passes again locally.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on PR #18; when green, mark it ready and send the PM the head sha.
+Wait for CI on PR #18 after the main merge; when green, mark it ready and send the PM the head sha.

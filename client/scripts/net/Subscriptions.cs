@@ -23,6 +23,7 @@ public static class Subscriptions
         "SELECT * FROM player WHERE online = true",
         $"SELECT * FROM player_pos WHERE {range}",
         $"SELECT * FROM world_item WHERE {range}",
+        $"SELECT * FROM animal WHERE {range}",
         $"SELECT * FROM terrain_edit WHERE {range}",
         $"SELECT * FROM fire WHERE {range}",
         $"SELECT * FROM clay_piece WHERE {range}",
