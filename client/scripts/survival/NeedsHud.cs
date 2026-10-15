@@ -115,6 +115,7 @@ public partial class NeedsHud : CanvasLayer
             "cold" => "You froze to death.",
             "thirst" => "You died of thirst.",
             "hunger" => "You starved.",
+            "slain" => "You were struck down.",
             _ => "You died.",
         };
         deathLine.Text = "You wake at the edge of the wilderness with nothing.\nWhat you learned stays with you.";

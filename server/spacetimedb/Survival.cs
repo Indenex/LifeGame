@@ -277,6 +277,23 @@ public static partial class Module
 
     // --- Needs math --------------------------------------------------------
 
+    // --- For other lanes ----------------------------------------------------
+
+    // Kills a player the same way hunger or cold does: everything carried drops and
+    // they wake at the wilderness edge. Claims calls this with "slain" for PvP.
+    static void KillPlayer(ReducerContext ctx, Player player, string cause)
+    {
+        if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is not { } v) return;
+        if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) return;
+        Die(ctx, player, Snapshot(ctx, v), pos, cause);
+    }
+
+    // A player's needs as of now (each 0 to 1), or null if they have no vitals yet.
+    static (float food, float water, float warmth)? NeedsNow(ReducerContext ctx, uint playerId) =>
+        ctx.Db.Vitals.PlayerId.Find(playerId) is { } v && Snapshot(ctx, v) is var now
+            ? (now.Food, now.Water, now.Warmth)
+            : null;
+
     static Vitals RequireVitals(ReducerContext ctx, Player player) =>
         Snapshot(ctx, ctx.Db.Vitals.PlayerId.Find(player.PlayerId) ?? throw new Exception("No vitals"));
 
