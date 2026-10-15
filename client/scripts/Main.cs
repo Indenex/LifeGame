@@ -22,6 +22,7 @@ public partial class Main : Node3D
     readonly SocialLayer social = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
+    CeramicsView clay = null!;
     readonly Atmosphere atmosphere = new();
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
@@ -54,6 +55,8 @@ public partial class Main : Node3D
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
+        clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
+        AddChild(clay);
         AddChild(hud);
         AddChild(social);
         AddChild(crafting);
@@ -63,6 +66,7 @@ public partial class Main : Node3D
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
         cameraRig.Camera.MakeCurrent();
+        if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
         ScheduleScreenshot();
     }
@@ -273,6 +277,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
+        clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
     }
@@ -311,6 +316,8 @@ public partial class Main : Node3D
                 $"SELECT * FROM world_item WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 $"SELECT * FROM fire WHERE {range}",
+                $"SELECT * FROM clay_piece WHERE {range}",
+                "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
                 $"SELECT * FROM structure WHERE {range}",
