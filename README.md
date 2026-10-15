@@ -113,6 +113,15 @@ cd tools/BuildTest
 dotnet run -- both        # or lean-to, or clay-hut
 ```
 
+## Spawn check
+
+A player walks well past the area around the origin, logs off and logs back in, using the client's own subscriptions (`client/scripts/net/Subscriptions.cs`). It checks they get their own position back and the area around it. Run it against a freshly published local server:
+
+```sh
+cd tools/SpawnCheck
+dotnet run
+```
+
 ## Screenshots without a display
 
 The client can render one frame and quit, which is handy on servers and in CI:
