@@ -22,6 +22,7 @@ public partial class Main : Node3D
     readonly SurvivalClient survival = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
+    CeramicsView clay = null!;
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
@@ -49,12 +50,15 @@ public partial class Main : Node3D
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
+        clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
+        AddChild(clay);
         AddChild(hud);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
         AddChild(crafting);
         crafting.Notice += hud.Note;
         cameraRig.Camera.MakeCurrent();
+        if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
         Connect();
         ScheduleScreenshot();
     }
@@ -265,6 +269,7 @@ public partial class Main : Node3D
         survival.Attach(conn);
         crafting.Attach(conn);
         fires.Attach(conn);
+        clay.Attach(conn);
     }
 
     void OnConnected(DbConnection c, Identity identity, string token)
@@ -300,6 +305,8 @@ public partial class Main : Node3D
                 $"SELECT * FROM world_item WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 $"SELECT * FROM fire WHERE {range}",
+                $"SELECT * FROM clay_piece WHERE {range}",
+                "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
             }.Concat(SurvivalClient.Queries(range)).ToArray());

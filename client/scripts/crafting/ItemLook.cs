@@ -12,7 +12,7 @@ public static class ItemLook
     public static Mesh MeshFor(Item item)
     {
         if (Meshes.TryGetValue(item, out var mesh)) return mesh;
-        mesh = item switch
+        mesh = ClayItemLook.MeshFor(item) ?? item switch
         {
             Item.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
             Item.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
