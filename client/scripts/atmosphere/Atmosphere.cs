@@ -114,6 +114,10 @@ public partial class Atmosphere : Node3D
         conn.Db.WorldClock.OnUpdate += (_, _, c) => OnClock(c);
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
+        // Sheep bleat; Herd subscribes to the animal rows near the player.
+        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
+        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
+        conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather" });

@@ -17,8 +17,10 @@ From the PM after atmosphere-1: soft sheep bleats, with a startled bleat when th
 
 - 2026-10-15 22:45: Justin (D-036, via PM): smoother fade, rain intensity levels so it's not always hard to see, sound scaling with rain; immersion is top priority. Merge held. Reworked: trees in the way are now drawn by a transparent "ghost" MultiMesh (Look.TreeFoliage/TreeBark + Look.GhostOf, hook in Terrain.AddMulti) with a soft screen-space window around the player, no dither. Server rain fronts are now drizzle 38%, light 34%, steady 21%, storm 7%, building/clearing at 0.05 per 20 s tick and capped by cloud. Client: fog/mist mostly only thicken in storms; near veils only in heavy rain; lightning flashes with thunder in storms; rain audio layers patter/hiss/roar, branch drips, muffled rain and roof drumming under shelter (Main hook: atmosphere.Sheltered). F6 steps clear, drizzle, light, steady, storm.
 
+- 2026-10-15 22:55: Ghost shader fixed (no `return` in vertex; `#define GHOST` after shader_type). Renders sent to PM: atmosphere-09-fade-before/after, atmosphere-10..13 rain drizzle/light/steady/storm, audio/atmosphere-02-rain-tiers.mp3. Merged main 5adb2c1 (bindings regenerated with tools/gen-bindings.sh); Animals is on main, so Atmosphere.Connect now feeds conn.Db.Animal to SheepVoices.
+
 ## Open questions / blockers
-- Sheep bleats need the `animal` table from Animals PR #13 (claude/animals-sheep-5gkntn) on main before they can be hooked.
+- Waiting for Justin's OK on the reworked fade and rain tiers (via PM) before merging.
 
 ## Next step
-Once Justin has seen atmosphere-07 rain and CI is green, merge PR #16 (D-032). When Animals PR #13 is on main, merge main, regenerate bindings, and in Atmosphere.Connect feed conn.Db.Animal OnInsert/OnUpdate to Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run) and OnDelete to Sheep.Gone(a.Id).
+When the PM relays Justin's OK on the fade and rain tiers and CI is green, merge PR #16 as a merge commit and send the commit to the PM.
