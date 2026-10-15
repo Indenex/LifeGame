@@ -45,11 +45,13 @@ Run two clients side by side with separate identities using `--profile=a` and `-
 
 Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up.
 
+Survival: G picks berries from a ripe bush, C eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+
 ### Day, night and weather
 
 An in-game day lasts 90 real minutes. The server keeps the clock and the weather (`server/spacetimedb/WorldClock.cs`), so every player sees the same sky. The client draws it in `client/scripts/atmosphere/`, and synthesizes all the sound as it plays: wind, rain, birds, crickets, footsteps and the music.
 
-Preview keys change only what you see and hear: hold T to fast-forward time (a whole day in about 45 seconds), press R to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
+Preview keys change only what you see and hear: hold T to fast-forward time (a whole day in about 45 seconds), press Y to cycle rain, clear and the server's weather, and M to turn the music off or on. The same can be set from the command line, which is handy for screenshots: `--time-of-day=0.75` (0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset), `--rain=1`, `--wetness=1`, `--cloud=0.6`, `--wind=0.5`, and `--day-minutes=4` for a shorter day.
 
 To listen to the soundscape without the game, render it to a file: `cd tools/SoundPreview && dotnet run -- out.wav` (day, rain, dusk and night, with footsteps).
 

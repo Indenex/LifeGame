@@ -10,7 +10,7 @@ namespace LifeGame;
 // and the weather; this node turns them into sun, sky, fog, rain and ambience.
 //
 // Preview keys (only change what you see and hear): hold T to fast-forward time,
-// R to cycle rain / clear / the server's weather, M to mute or unmute music.
+// Y to cycle rain / clear / the server's weather, M to mute or unmute music.
 // Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5
 // --day-minutes=4 (a shorter day, for watching the whole cycle).
 public partial class Atmosphere : Node3D
@@ -59,7 +59,7 @@ public partial class Atmosphere : Node3D
         AddChild(sound);
 
         Bind("preview_time", Key.T);
-        Bind("preview_weather", Key.R);
+        Bind("preview_weather", Key.Y);
         Bind("toggle_music", Key.M);
 
         fixedTime = ArgFloat("time-of-day");

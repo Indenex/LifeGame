@@ -36,6 +36,7 @@ public static partial class Module
             ctx.Db.Player.Identity.Update(existing with { Online = true });
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
+            SurvivalConnected(ctx, existing with { Online = true });
             return;
         }
 
@@ -65,13 +66,17 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
+        SurvivalConnected(ctx, player);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]
     public static void PlayerDisconnected(ReducerContext ctx)
     {
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
+        {
             ctx.Db.Player.Identity.Update(player with { Online = false });
+            SurvivalDisconnected(ctx, player);
+        }
     }
 
     [SpacetimeDB.Reducer]
