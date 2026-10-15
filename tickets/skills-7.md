@@ -3,7 +3,7 @@ Lane: Journal and skills
 Owner: Journal and skills thread
 Status: in_progress
 Branch: claude/journal-skills-iseewg
-PR: (none yet)
+PR: #34 (merged 2026-10-15 23:41)
 
 ## Goal
 New processes from other lanes train the right skill and read well in the journal, and count toward "still to discover" once they exist.
@@ -13,9 +13,10 @@ New processes from other lanes train the right skill and read well in the journa
 
 ## Progress log
 - 2026-10-15 23:35: names and to-discover entries for animal.kill/butcher; `weave` mapped to Toolmaking. Bow drill confirmed by Crafting.
+- 2026-10-15 23:41: #34 merged; door and lock still waiting on Building.
 
 ## Open questions / blockers
 - Building: exact ids for the door and lock, and whether they're structure stages (`build.*`, reported) or crafting jobs.
 
 ## Next step
-Build, push, open the skills-7 PR; add door and lock names when Building confirms the ids.
+Add door and lock names when Building confirms the ids (then a small follow-up PR).
