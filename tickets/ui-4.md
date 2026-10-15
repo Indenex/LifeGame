@@ -19,6 +19,8 @@ Also carries the KEYMAP note for Survival's "drink from your pot" (priority 1) a
 - 2026-10-15 23:50: pushed ed4c8bc: inventory shrinks to 0.8 then wraps (HFlowContainer) clear of 430 px corners, notes lift above it; Hints.Done + S/A/D/E/right-drag count; Panels.Open fades hints, G prompt, inventory. (b) checked: UseKey sits 214 px above the bottom, below the player; the boxed "G  pick berries" in the playtest is Survival's old NeedsHud prompt, which Survival's branch drops. Claims will fade the land chip and Survival the rings on Panels.Open.
 - 2026-10-15 23:55: Use.Best ranks facing first (UseOffer.Target); feed fire passes its fire.
 
+- 2026-10-15 23:55: KEYMAP adds Building's doors (Shift+G bar, G hang/open/shut at 28) and the basket panel keys. The F1 row for Shift+G waits until building-3 is on main, so F1 never lists a key that does nothing.
+
 ## Open questions / blockers
 - (none)
 
