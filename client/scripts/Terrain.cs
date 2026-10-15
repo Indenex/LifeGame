@@ -6,13 +6,11 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Builds the ground, trees, rocks and grass for the chunks around the player.
-// The ground is a grid of one-meter tiles at stepped heights, so slopes read
-// as terraces with earthy sides, like a painted isometric tileset. Everything
-// comes from the shared seed; only dug tiles come from the server.
+// The ground is a smooth heightfield with one vertex per one-meter cell, so
+// digging a cell leaves a soft hollow. Everything comes from the shared seed;
+// only dug cells come from the server.
 public partial class Terrain : Node3D
 {
-    public const float Step = 0.75f;
-
     readonly Dictionary<(int, int), Node3D> chunks = new();
     readonly Dictionary<long, short> depths = new();
     readonly HashSet<(int, int)> dirty = new();
@@ -20,17 +18,24 @@ public partial class Terrain : Node3D
 
     static Mesh? trunkMesh, leafyMesh, pineMesh, rockMesh, tuftMesh;
 
-    // Height of the tile under a world position.
-    public float HeightAt(float x, float z) => TileHeight(World.CellOf(x), World.CellOf(z));
+    // Ground height at a world position, blended between the four nearest cells.
+    public float HeightAt(float x, float z)
+    {
+        int x0 = (int)MathF.Floor(x), z0 = (int)MathF.Floor(z);
+        float fx = x - x0, fz = z - z0;
+        float a = Mathf.Lerp(TileHeight(x0, z0), TileHeight(x0 + 1, z0), fx);
+        float b = Mathf.Lerp(TileHeight(x0, z0 + 1), TileHeight(x0 + 1, z0 + 1), fx);
+        return Mathf.Lerp(a, b, fz);
+    }
 
     public float TileHeight(int x, int z)
     {
-        // Terraces follow only the broad shape of the land, so steps stay few and calm.
-        float broad = World.Noise(x, z, 32f, 1u) * 3.0f - 1.2f;
-        float baseStep = MathF.Round(broad / Step) * Step;
         short depth = depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
-        return baseStep - depth * World.DigStep;
+        return World.Height(x, z, depth);
     }
+
+    Vector3 NormalAt(int x, int z) =>
+        new Vector3(TileHeight(x - 1, z) - TileHeight(x + 1, z), 2f, TileHeight(x, z - 1) - TileHeight(x, z + 1)).Normalized();
 
     public void SetDepth(int x, int z, short depth)
     {
@@ -88,12 +93,10 @@ public partial class Terrain : Node3D
     Node3D BuildChunk(int cx, int cz)
     {
         var root = new Node3D { Name = $"Chunk_{cx}_{cz}" };
-        root.AddChild(new MeshInstance3D { Mesh = BuildGround(cx, cz), MaterialOverride = Look.Painted });
+        root.AddChild(new MeshInstance3D { Mesh = BuildGround(cx, cz), MaterialOverride = Look.Ground });
         AddVegetation(root, cx, cz);
         return root;
     }
-
-    static readonly (int dx, int dz)[] Sides = { (1, 0), (-1, 0), (0, 1), (0, -1) };
 
     Mesh BuildGround(int cx, int cz)
     {
@@ -101,33 +104,21 @@ public partial class Terrain : Node3D
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
 
+        void Corner(int x, int z)
+        {
+            float h = TileHeight(x, z);
+            st.SetNormal(NormalAt(x, z));
+            st.SetColor(TileColor(x, z, h));
+            st.AddVertex(new Vector3(x, h, z));
+        }
+
+        // One vertex per cell; neighboring chunks share their edge row.
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
-                float top = TileHeight(x, z);
-                var color = TileColor(x, z, top);
-                Quad(st, Vector3.Up, color,
-                    new Vector3(x - 0.5f, top, z - 0.5f), new Vector3(x + 0.5f, top, z - 0.5f),
-                    new Vector3(x + 0.5f, top, z + 0.5f), new Vector3(x - 0.5f, top, z + 0.5f));
-
-                // Earth walls wherever this tile stands above its neighbor.
-                foreach (var (dx, dz) in Sides)
-                {
-                    float below = TileHeight(x + dx, z + dz);
-                    if (below >= top - 0.01f) continue;
-                    var normal = new Vector3(dx, 0, dz);
-                    var along = new Vector3(-dz, 0, dx) * 0.5f;
-                    var edge = new Vector3(x + dx * 0.5f, 0, z + dz * 0.5f);
-                    float lip = Mathf.Min(0.08f, top - below);
-                    var earth = WallColor(x, z);
-                    Quad(st, normal, color.Darkened(0.15f),
-                        edge - along + Vector3.Up * top, edge + along + Vector3.Up * top,
-                        edge + along + Vector3.Up * (top - lip), edge - along + Vector3.Up * (top - lip));
-                    Quad(st, normal, earth,
-                        edge - along + Vector3.Up * (top - lip), edge + along + Vector3.Up * (top - lip),
-                        edge + along + Vector3.Up * below, edge - along + Vector3.Up * below);
-                }
+                Corner(x, z); Corner(x + 1, z); Corner(x + 1, z + 1);
+                Corner(x, z); Corner(x + 1, z + 1); Corner(x, z + 1);
             }
 
         return st.Commit();
@@ -160,9 +151,6 @@ public partial class Terrain : Node3D
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
 
-    Color WallColor(int x, int z) =>
-        (World.IsClay(x, z) ? Look.Clay.Darkened(0.2f) : Look.Earth).Lightened((Hash01(x, z, 8) - 0.5f) * 0.08f);
-
     void AddVegetation(Node3D root, int cx, int cz)
     {
         EnsureMeshes();
@@ -185,7 +173,7 @@ public partial class Terrain : Node3D
                 float roll = Hash01(x, z, 11);
                 float fx = x + (Hash01(x, z, 12) - 0.5f) * 0.5f, fz = z + (Hash01(x, z, 13) - 0.5f) * 0.5f;
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
-                float scale = 0.8f + Hash01(x, z, 15) * 0.4f;
+                float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
                 var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
                 var at = new Transform3D(basis, new Vector3(fx, top, fz));
 
@@ -202,7 +190,7 @@ public partial class Terrain : Node3D
                 }
                 else if (roll < forest + 0.006f)
                 {
-                    rocks.Add((at, Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f)));
+                    rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f)));
                     continue;
                 }
 
@@ -211,16 +199,19 @@ public partial class Terrain : Node3D
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
                 if (grassy && Hash01(x, z, 40) < 0.93f)
                 {
-                    var g = new Transform3D(new Basis(Vector3.Up, MathF.Floor(Hash01(x, z, 41) * 4f) * Mathf.Pi / 2f)
-                        .Scaled(new Vector3(1f, 0.75f + Hash01(x, z, 42) * 0.5f, 1f)), new Vector3(x, top, z));
+                    // Shear the patch onto the slope so every blade stays rooted.
+                    float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
+                    float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
+                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, 0.75f + Hash01(x, z, 42) * 0.5f, 0), new Vector3(0, sz, 1));
+                    var g = new Transform3D(slope, new Vector3(x, top, z));
                     tufts.Add((g, TileColor(x, z, top)));
                 }
             }
 
-        AddMulti(root, trunkMesh!, trunks, Look.Painted);
-        AddMulti(root, leafyMesh!, leafy, Look.Swaying);
-        AddMulti(root, pineMesh!, pines, Look.Swaying);
-        AddMulti(root, rockMesh!, rocks, Look.Painted);
+        AddMulti(root, trunkMesh!, trunks, Look.BarkSurface);
+        AddMulti(root, leafyMesh!, leafy, Look.Foliage);
+        AddMulti(root, pineMesh!, pines, Look.Foliage);
+        AddMulti(root, rockMesh!, rocks, Look.RockSurface);
         AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
     }
 
@@ -260,15 +251,15 @@ public partial class Terrain : Node3D
         // A broadleaf canopy built from clumps of leaves, lighter on top.
         var leafy = new SurfaceTool();
         leafy.Begin(Mesh.PrimitiveType.Triangles);
-        Append(leafy, Blob(1.05f), Xf(0, 3.6f, 0), new Color(1.12f, 1.1f, 1f));
+        Append(leafy, Blob(1.05f), Xf(0, 3.6f, 0), new Color(1.12f, 1.1f, 1f), 0.14f);
         for (int k = 0; k < 6; k++)
         {
             float a = k * Mathf.Tau / 6f + 0.4f;
             float r = 0.85f + 0.1f * (k % 2);
             Append(leafy, Blob(0.8f + 0.1f * (k % 3)), Xf(Mathf.Cos(a) * r, 3.0f + 0.15f * (k % 2), Mathf.Sin(a) * r),
-                new Color(0.95f, 0.97f, 0.95f));
+                new Color(0.95f, 0.97f, 0.95f), 0.14f);
         }
-        Append(leafy, Blob(0.75f), Xf(0.2f, 2.4f, -0.1f), new Color(0.8f, 0.82f, 0.85f));
+        Append(leafy, Blob(0.75f), Xf(0.2f, 2.4f, -0.1f), new Color(0.8f, 0.82f, 0.85f), 0.12f);
         leafyMesh = leafy.Commit();
 
         // A pine of stacked tiers.
@@ -280,10 +271,13 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
+        // A weathered boulder: lumpy, with flat facets that catch the light.
         var rock = new SurfaceTool();
         rock.Begin(Mesh.PrimitiveType.Triangles);
-        Append(rock, new SphereMesh { Radius = 0.45f, Height = 0.6f, RadialSegments = 9, Rings = 5 }, Xf(0, 0.12f, 0), Colors.White);
-        Append(rock, new SphereMesh { Radius = 0.28f, Height = 0.4f, RadialSegments = 8, Rings = 4 }, Xf(0.42f, 0.06f, 0.15f), Colors.White);
+        Append(rock, new SphereMesh { Radius = 0.45f, Height = 0.6f, RadialSegments = 11, Rings = 6 }, Xf(0, 0.12f, 0), Colors.White, 0.09f);
+        Append(rock, new SphereMesh { Radius = 0.28f, Height = 0.4f, RadialSegments = 9, Rings = 5 }, Xf(0.42f, 0.06f, 0.15f), Colors.White, 0.06f);
+        rock.Deindex();
+        rock.GenerateNormals();
         rockMesh = rock.Commit();
 
         tuftMesh = BuildTuft();
@@ -294,7 +288,7 @@ public partial class Terrain : Node3D
     static Transform3D Xf(float x, float y, float z) => Transform3D.Identity.Translated(new Vector3(x, y, z));
 
     // Appends a primitive with its smooth normals, so the banded light gives soft, painted forms.
-    static void Append(SurfaceTool target, PrimitiveMesh mesh, Transform3D offset, Color shade)
+    static void Append(SurfaceTool target, PrimitiveMesh mesh, Transform3D offset, Color shade, float lumps = 0f)
     {
         var arrays = mesh.GetMeshArrays();
         var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
@@ -302,11 +296,17 @@ public partial class Terrain : Node3D
         var indices = (int[])arrays[(int)Mesh.ArrayType.Index];
         foreach (int idx in indices)
         {
+            var v = offset * verts[idx];
             target.SetNormal(normals[idx]);
             target.SetColor(shade);
-            target.AddVertex(offset * verts[idx]);
+            target.AddVertex(v + normals[idx] * Lump(v) * lumps);
         }
     }
+
+    // Smooth pseudo-random relief in 3D, the same at every shared vertex.
+    static float Lump(Vector3 p) =>
+        Mathf.Sin(p.X * 3.1f + p.Y * 1.7f) * Mathf.Sin(p.Z * 2.7f + p.Y * 2.3f) * 0.6f
+        + Mathf.Sin(p.X * 7.3f - p.Z * 5.9f + p.Y * 4.1f) * 0.4f;
 
     // A one-meter patch of thin blades that fills its tile edge to edge. UV.y runs
     // from root to tip so the grass shader can color and bend each blade.
