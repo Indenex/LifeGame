@@ -188,3 +188,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-045 — 2026-10-15 — Quieter HUD
 **Decision:** The UX/UI lane builds the quieter HUD from its mockup: round slots with real item pictures, minimal text and panels.
 **Who:** Justin ("Build it", which the PM recommended)
+
+## D-046 — 2026-10-15 — Doors, storage baskets, and weathering outside claims
+**Decision:** Anyone can open a hut door. Anyone can take from a storage basket, except inside a claim, where only members can. All player-crafted things (buildings, storage baskets, crafted items left on the ground) that sit outside a claim weather away if no player has touched them for a while. Inside a claim nothing weathers. PM default timing: weathering starts after 3 real days untouched and the thing is gone 24 hours later; any interaction resets it. One server sweep per hour checks a last-touched timestamp, which keeps the cost low. Building owns `Weathering.cs`; Claims supplies the in-claim check.
+**Who:** Justin (weathering rule in his words; timing is the PM's default, his to change)
