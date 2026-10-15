@@ -67,3 +67,8 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-015 — 2026-10-15 — Cracked pots become grog
 **Decision:** A pot fired while damp cracks into potsherds, which can be crushed into grog, a temper that improves the next clay. Failure feeds the next try.
 **Who:** Justin
+
+## D-016 — 2026-10-15 — Item id ranges per lane
+**Context:** Lanes add items in parallel on separate branches.
+**Decision:** Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
+**Who:** PM (technical)
