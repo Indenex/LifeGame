@@ -88,3 +88,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-020 — 2026-10-15 — Slower skill gain
 **Decision:** About double the proposed uses: roughly rank 10 after 12 uses, rank 50 after about 100, Master after about 800. Novice quality cap stays 35, Master 100; failures teach at half rate; Earthwork raises dug clay quality 50 to 85 with up to a 50% second lump at Master.
 **Who:** Justin ("Slower"; PM had recommended faster)
+
+## D-021 — 2026-10-15 — Night and rain cold
+**Decision:** Cold drain scales from 1x at 15 °C to 2x at 0 °C; rain adds 50% unless under cover (about 8 minutes to freeze on a freezing night, 16 by day).
+**Who:** Justin
+
+## D-022 — 2026-10-15 — Merge Claims and chat
+**Decision:** PR #8 (proximity chat, claims, decay, in-claim PvP toggle) merges into the playtest build.
+**Who:** Justin
