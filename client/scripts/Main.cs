@@ -76,6 +76,7 @@ public partial class Main : Node3D
         useKey.Player = () => me.Position;
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
+        herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();

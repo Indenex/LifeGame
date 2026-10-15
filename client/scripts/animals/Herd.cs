@@ -24,6 +24,8 @@ public partial class Herd : Node3D
     Func<Vector3> player = () => Vector3.Zero;
     // True while something else owns the mouse (crafting, placing a building).
     public Func<bool> Blocked = () => false;
+    // Which way the player faces, flat and unit length.
+    public Func<Vector3> Facing = () => Vector3.Forward;
     double lastStrike, lastStrikeHint = -1000;
 
     public override void _Ready()
@@ -61,6 +63,7 @@ public partial class Herd : Node3D
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
+        Strike.Register("animals.animal", OfferStrike);
     }
 
     const float BoltHintRange = 10f;
@@ -78,24 +81,35 @@ public partial class Herd : Node3D
         carcasses[c.Id] = sheep;
     }
 
-    // Strike the nearest animal in reach with a spear or blade. The server checks
-    // reach and weapon again; a struck sheep bolts, so a kill is a short chase.
+    // The strike key runs the nearest target any lane offers (see Strike.cs); this
+    // lane offers the nearest animal ahead in reach. The server checks reach and
+    // weapon again; a struck sheep bolts, so a kill is a short chase.
     public override void _UnhandledInput(InputEvent e)
     {
         if (conn == null || Blocked() || !e.IsActionPressed("strike")) return;
         double now = Time.GetTicksMsec() / 1000.0;
         if (now - lastStrike < 0.5 || !(Carrying(ItemTags.Piercing) || Carrying(ItemTags.Cutting))) return;
-        var me = player();
+        if (Strike.Best(player(), Facing()) is not { } offer) return;
+        lastStrike = now;
+        offer.Strike();
+    }
+
+    StrikeOffer? OfferStrike(Vector3 at, Vector3 facing)
+    {
+        if (conn == null) return null;
         Animal? nearest = null;
         float best = World.Reach + 1.5f;
         foreach (var a in conn.Db.Animal.Iter())
         {
-            float d = DistanceTo(a, me);
-            if (d <= best) (nearest, best) = (a, d);
+            var to = new Vector3(a.X - at.X, 0, a.Z - at.Z);
+            float d = to.Length();
+            // Ahead of the player, or so close that facing doesn't matter.
+            if (d <= best && (d < 1.2f || to.Dot(facing) > -0.2f * d))
+                (nearest, best) = (a, d);
         }
-        if (nearest == null) return;
-        lastStrike = now;
-        conn.Reducers.StrikeAnimal(nearest.Id);
+        if (nearest == null) return null;
+        ulong id = nearest.Id;
+        return new StrikeOffer(best, () => conn.Reducers.StrikeAnimal(id));
     }
 
     public override void _Process(double delta)
