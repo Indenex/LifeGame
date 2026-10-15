@@ -69,14 +69,14 @@ namespace LifeGame.Shared
         // The updraft kiln (ceramics-2). Built from bricks and daub, loaded with dry
         // pots, then fired with fuel from your bag. It heats evenly, so pots rarely
         // crack and come out a little better than from a pit.
+        // Building gives this process to everyone who helps finish a kiln stage.
         public const string KilnProcess = "clay.kiln";
+        // StructureKind.Kiln once Building and Claims are on main: kinds are appended,
+        // after LeanTo, ClayHut and ClaimMarker (D-035).
+        public const int KilnStructureKind = 3;
         public const string KilnFireProcess = "clay.kiln_fire";
         public const int KilnCapacity = 6;
-        public const int MaxKilnsPerPlayer = 2;
         public const int KilnQualityBonus = 10;
-        // How far in front of the builder a new kiln stands, and how close two may be.
-        public const float KilnSetBack = 1.4f;
-        public const float KilnSpacing = 2.2f;
 
         // Clay grades by depth (D-041). Hand digging stops at World.MaxDigDepth; a
         // digging stick reaches one level further, into the deep clay: purer, with

@@ -1,11 +1,11 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// The updraft kiln (ceramics-2). Built from sun-dried bricks and daub with the
-// clay.kiln process, it stands where it was built. Dry pots from your bag go in
-// through the door; fuel from your bag lights it; three minutes later the load
-// comes out beside it. The load lives on the kiln row, so pots in a kiln aren't
-// ClayPieces and nothing about drying or pit firing changes.
+// The updraft kiln (ceramics-2). Built as a blueprint from Building's B menu
+// (StructureKind.Kiln, D-035) out of sun-dried bricks and daub. Dry pots from
+// your bag go in through the door; fuel from your bag lights it; three minutes
+// later the load comes out beside it. The load lives on the kiln row, so pots in
+// a kiln aren't ClayPieces and nothing about drying or pit firing changes.
 public static partial class Module
 {
     public enum KilnState : byte
@@ -22,15 +22,15 @@ public static partial class Module
         public uint Owner;      // player id of whoever loaded it; gets the news
     }
 
+    // Firing state for a finished kiln structure (StructureKind.Kiln), made the
+    // first time someone uses it. Position and facing are copied so a load still
+    // comes out where the kiln stood if it is taken down mid-firing.
     [SpacetimeDB.Table(Accessor = "Kiln", Public = true)]
     [SpacetimeDB.Index.BTree(Accessor = "ByChunk", Columns = new[] { nameof(ChunkX), nameof(ChunkZ) })]
     public partial struct Kiln
     {
         [PrimaryKey]
-        [AutoInc]
-        public ulong Id;
-        [SpacetimeDB.Index.BTree]
-        public uint BuiltBy;
+        public ulong StructureId;
         public float X;
         public float Z;
         // Radians about +Y; the door faces +Z.
@@ -54,50 +54,30 @@ public static partial class Module
         public ulong KilnId;
     }
 
-    // Called from OnPlaced in Ceramics.cs when clay.kiln finishes.
-    static void PlaceKiln(ReducerContext ctx, CraftJob job, ProcessDef def)
-    {
-        string? refuse = null;
-        if (ctx.Db.Kiln.BuiltBy.Filter(job.PlayerId).Count() >= ClayRules.MaxKilnsPerPlayer)
-            refuse = $"You already have {ClayRules.MaxKilnsPerPlayer} kilns.";
-        else if (NearestKiln(ctx, job.X, job.Z, ClayRules.KilnSpacing) is not null)
-            refuse = "There is a kiln right there already.";
-        if (refuse != null)
-        {
-            foreach (var input in def.Consumes)
-                AddToInventory(ctx, job.Owner, input.Item, input.Count, Items.RawQuality);
-            News(ctx, job.PlayerId, $"{refuse} The bricks and daub go back in your bag.");
-            return;
-        }
-
-        // Door toward the builder.
-        var crafter = ctx.Db.PlayerPos.PlayerId.Find(job.PlayerId);
-        float yaw = crafter is { } c ? MathF.Atan2(c.X - job.X, c.Z - job.Z) : 0f;
-        ctx.Db.Kiln.Insert(new Kiln
-        {
-            Id = 0,
-            BuiltBy = job.PlayerId,
-            X = job.X,
-            Z = job.Z,
-            Yaw = yaw,
-            ChunkX = World.ChunkOf(job.X),
-            ChunkZ = World.ChunkOf(job.Z),
-            State = (byte)KilnState.Cold,
-            Load = new List<KilnPot>(),
-        });
-        News(ctx, job.PlayerId, "Your kiln is built. Load dry pots with V, then V again with 2 sticks to fire it.");
-    }
-
     // The one kiln action. A cold kiln takes the dry pots from your bag; if it's
     // already loaded and you have no more pots to add (or it's full), it burns fuel
     // from your bag and fires.
     [SpacetimeDB.Reducer]
-    public static void UseKiln(ReducerContext ctx, ulong kilnId)
+    public static void UseKiln(ReducerContext ctx, ulong structureId)
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
-        var kiln = ctx.Db.Kiln.Id.Find(kilnId) ?? throw new Exception("That kiln is gone");
-        RequireReach(pos, kiln.X, kiln.Z);
+        var site = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That kiln is gone");
+        if ((int)site.Kind != ClayRules.KilnStructureKind) throw new Exception("That isn't a kiln");
+        if (!site.Complete) throw new Exception("The kiln isn't finished yet");
+        if (!Structures.Contains((int)site.Kind, site.X, site.Z, site.Yaw, pos.X, pos.Z, Structures.WorkReach))
+            throw new Exception("Too far away");
+        var kiln = ctx.Db.Kiln.StructureId.Find(structureId) ?? ctx.Db.Kiln.Insert(new Kiln
+        {
+            StructureId = site.Id,
+            X = site.X,
+            Z = site.Z,
+            Yaw = site.Yaw,
+            ChunkX = World.ChunkOf(site.X),
+            ChunkZ = World.ChunkOf(site.Z),
+            State = (byte)KilnState.Cold,
+            Load = new List<KilnPot>(),
+        });
         if (kiln.State == (byte)KilnState.Firing)
             throw new Exception("The kiln is firing");
 
@@ -122,7 +102,7 @@ public static partial class Module
                 }
                 if (used > 0) RemoveFromStack(ctx, stack, used);
             }
-            ctx.Db.Kiln.Id.Update(kiln with { Load = load });
+            ctx.Db.Kiln.StructureId.Update(kiln with { Load = load });
             return;
         }
 
@@ -130,22 +110,26 @@ public static partial class Module
             throw new Exception("The kiln is empty. Bring dry pots to load it.");
         BurnFuel(ctx, ClayRules.KilnFireSeconds);
         var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.KilnFireSeconds * 1_000_000));
-        ctx.Db.Kiln.Id.Update(kiln with
+        ctx.Db.Kiln.StructureId.Update(kiln with
         {
             State = (byte)KilnState.Firing,
             LitBy = player.PlayerId,
             FireStart = ctx.Timestamp,
             FireFinish = finish,
         });
-        ctx.Db.KilnTimer.Insert(new KilnTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), KilnId = kiln.Id });
+        ctx.Db.KilnTimer.Insert(new KilnTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), KilnId = kiln.StructureId });
     }
 
     [SpacetimeDB.Reducer]
     public static void FinishKiln(ReducerContext ctx, KilnTimer timer)
     {
-        if (ctx.Db.Kiln.Id.Find(timer.KilnId) is not { } kiln) return;
+        if (ctx.Db.Kiln.StructureId.Find(timer.KilnId) is not { } kiln) return;
         var load = kiln.Load ?? new List<KilnPot>();
-        ctx.Db.Kiln.Id.Update(kiln with { State = (byte)KilnState.Cold, Load = new List<KilnPot>() });
+        // Taken down while firing: the pots still come out, and the state goes.
+        if (ctx.Db.Structure.Id.Find(kiln.StructureId) is null)
+            ctx.Db.Kiln.StructureId.Delete(kiln.StructureId);
+        else
+            ctx.Db.Kiln.StructureId.Update(kiln with { State = (byte)KilnState.Cold, Load = new List<KilnPot>() });
 
         // Pots come out in a row in front of the door.
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
@@ -196,19 +180,18 @@ public static partial class Module
         }
     }
 
-    static Kiln? NearestKiln(ReducerContext ctx, float x, float z, float within)
+    // Building calls this after a structure is taken down. A cold kiln's load
+    // comes back out where it stood; a firing one finishes on its timer.
+    // TODO(after #10): becomes Building's `static partial void CeramicsStructureRemoved`.
+    static void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
     {
-        Kiln? best = null;
-        float bestD = within * within;
-        int chunkX = World.ChunkOf(x), chunkZ = World.ChunkOf(z);
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++)
-                foreach (var k in ctx.Db.Kiln.ByChunk.Filter((chunkX + dx, chunkZ + dz)))
-                {
-                    float d = (k.X - x) * (k.X - x) + (k.Z - z) * (k.Z - z);
-                    if (d < bestD) { bestD = d; best = k; }
-                }
-        return best;
+        if ((int)s.Kind != ClayRules.KilnStructureKind || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
+        if (kiln.State == (byte)KilnState.Firing) return;
+        float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
+        int slot = 0;
+        foreach (var pot in kiln.Load ?? new List<KilnPot>())
+            DropAt(ctx, kiln.X, kiln.Z, side, across, slot++, ClayRules.UnfiredItem((ClayForm)pot.Form), pot.Quality);
+        ctx.Db.Kiln.StructureId.Delete(kiln.StructureId);
     }
 
     static void DropAt(ReducerContext ctx, float ox, float oz, float side, float across, int slot, Item item, byte quality)

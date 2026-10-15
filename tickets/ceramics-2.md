@@ -3,7 +3,7 @@ Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session cse_017sscCMDfHcyeZNqGW22GBE)
 Status: in_progress
 Branch: claude/clay-ceramics-kfr4kr (restarted from main 8b96a02 after #11 merged)
-PR: (none yet)
+PR: (milestone A, opening now: kiln firing logic, kiln look, deep clay grade)
 
 ## Goal
 A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots into it, fuels and lights it, and gets back pots that rarely crack and come out a little better than pit-fired ones. Done when the kiln works end to end on a local server (ClayCheck extended), with screenshots of the kiln cold, firing, and unloaded.
@@ -21,9 +21,13 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 2026-10-15 22:10: ticket created; branch restarted from main.
 - 22:20: server Kiln.cs (load, fire, unload) and client KilnView (brick beehive, glow, smoke) pushed (ace271e); ClayCheck --kiln running. Justin chose blueprint placement (D-035); restructuring around Building's structures.
 
+- 22:35: ClayCheck --kiln passed with the interim crafted kiln: 8 bricks dried by a fire, kiln built, empty kiln refused, 2 pots loaded, 2 sticks burned, 180 s firing, both whole at quality 80 (shaped at 70).
+- 22:40: D-041 deep clay: ClayRules.DugClayQuality (80 at the stick-only depth); Crafting wires it into Dig. Kiln moved to the structure model (Kiln row keyed by StructureId, made on first use); crafted clay.kiln removed. Kind index is ClayRules.KilnStructureKind = 3 until StructureKind.Kiln exists.
+- Prepared (local, on top of #8 and #10): StructureKind.Kiln + StageCosts (Base 4 bricks; Dome 4 bricks + 2 daub), Structures.Shapes entry (Radius 0.85, Solid, Warmth 0), StageProcess 3 => clay.kiln, StructureModel dispatch to KilnModel.Pieces(), CeramicsStructureRemoved partial, bot builds the blueprint.
+
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
 - After Claims PR #8 is on main: RequireClaimAccess in TendClay, FirePots, OnPlaced and kiln use.
 
 ## Next step
-Check ClayCheck --kiln result; then move the kiln onto StructureKind.Kiln (KilnModel pieces, lazy Kiln row keyed by StructureId) once #8 and #10 are on main.
+After #8 and #10 merge: merge main, add the prepared Building/Structures/StructureModel hooks and KilnModel.Pieces, make CeramicsStructureRemoved the partial, run ClayCheck --kiln, take in-game kiln screenshots.

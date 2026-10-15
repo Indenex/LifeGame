@@ -43,11 +43,19 @@ public partial class CeramicsView : Node
         {
             if (pieces.Remove(p.Id, out var view)) view.QueueFree();
         };
-        conn.Db.Kiln.OnInsert += (_, k) => UpsertKiln(k);
-        conn.Db.Kiln.OnUpdate += (_, _, k) => UpsertKiln(k);
+        // A finished kiln structure gets the fire, smoke and label; the bricks
+        // themselves are Building's StructureView.
+        conn.Db.Structure.OnInsert += (_, s) => KilnSite(s);
+        conn.Db.Structure.OnUpdate += (_, _, s) => KilnSite(s);
+        conn.Db.Structure.OnDelete += (_, s) =>
+        {
+            if (kilns.Remove(s.Id, out var view)) view.QueueFree();
+        };
+        conn.Db.Kiln.OnInsert += (_, k) => KilnState(k);
+        conn.Db.Kiln.OnUpdate += (_, _, k) => KilnState(k);
         conn.Db.Kiln.OnDelete += (_, k) =>
         {
-            if (kilns.Remove(k.Id, out var view)) view.QueueFree();
+            if (kilns.TryGetValue(k.StructureId, out var view)) view.Show(0, false, 0, 0);
         };
         conn.Db.ClayNews.OnInsert += (_, n) =>
         {
@@ -86,17 +94,19 @@ public partial class CeramicsView : Node
             view.Firing(Seconds(p.FireStart), Seconds(p.FireFinish));
     }
 
-    void UpsertKiln(Kiln k)
+    void KilnSite(Structure s)
     {
-        if (!kilns.TryGetValue(k.Id, out var view))
-        {
-            view = new KilnView(withBricks: true);
-            kilns[k.Id] = view;
-            world.AddChild(view);
-        }
-        view.Position = new Vector3(k.X, heightAt(k.X, k.Z), k.Z);
-        view.Rotation = new Vector3(0, k.Yaw, 0);
-        view.Show(k.Load?.Count ?? 0, k.State == 1, Seconds(k.FireStart), Seconds(k.FireFinish));
+        if ((int)s.Kind != ClayRules.KilnStructureKind || !s.Complete || kilns.ContainsKey(s.Id)) return;
+        var view = new KilnView { Position = new Vector3(s.X, heightAt(s.X, s.Z), s.Z), Rotation = new Vector3(0, s.Yaw, 0) };
+        kilns[s.Id] = view;
+        world.AddChild(view);
+        if (conn?.Db.Kiln.StructureId.Find(s.Id) is { } k) KilnState(k);
+    }
+
+    void KilnState(Kiln k)
+    {
+        if (kilns.TryGetValue(k.StructureId, out var view))
+            view.Show(k.Load?.Count ?? 0, k.State == 1, Seconds(k.FireStart), Seconds(k.FireFinish));
     }
 
     // Show a kiln without a server, for the offline demo.

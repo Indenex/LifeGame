@@ -7,7 +7,8 @@
 //
 // Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame]
 //        dotnet run -- <uri> <db> --token=path --goto=x,z   (walk that player somewhere and stop)
-//        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln, load and fire it; about 12 minutes)
+//        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln blueprint, load and fire it;
+//        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -42,6 +43,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM clay_piece",
                 "SELECT * FROM clay_news",
                 "SELECT * FROM kiln",
+                "SELECT * FROM structure",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
@@ -247,14 +249,28 @@ int KilnCheck()
     Log($"Bricks dry after {watch.Elapsed.TotalSeconds:F0} s");
     Gather(Item.Brick, 8);
 
-    // Build the kiln a few steps from the fire, facing it.
+    // Lay out a kiln blueprint a few steps from the fire, door toward us, and
+    // build it brick by brick.
     WalkTo(fx + 4f, fz + 1f, 0.3f);
-    conn.Reducers.Move(x, z, MathF.Atan2(1f, 0f));
-    Pump(() => false, 0.5f, null);
-    Craft(ClayRules.KilnProcess, 0, null);
-    Pump(() => conn.Db.Kiln.Iter().Any(k => k.BuiltBy == myId), 5, "the kiln");
-    var kiln = conn.Db.Kiln.Iter().First(k => k.BuiltBy == myId);
-    Log($"Kiln built at {kiln.X:F1}, {kiln.Z:F1}; {CountOf(Item.Brick)} bricks left");
+    float kx = x + 1.8f, kz = z;
+    lastError = null;
+    conn.Reducers.PlaceStructure((StructureKind)ClayRules.KilnStructureKind, kx, kz, MathF.Atan2(x - kx, z - kz));
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me), 5, "the kiln blueprint");
+    if (lastError != null) Fail($"placing the kiln: {lastError}");
+    var site = conn.Db.Structure.Iter().First(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me);
+    Log("STAGE kiln-blueprint");
+    for (int i = 0; i < 20 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
+    {
+        lastError = null;
+        var before = conn.Db.Structure.Id.Find(site.Id)!;
+        conn.Reducers.Build(site.Id);
+        Pump(() => lastError != null || !ReferenceEquals(conn.Db.Structure.Id.Find(site.Id), before), 3, "a brick to go on");
+        if (lastError != null) Fail($"building: {lastError}");
+        Pump(() => false, 0.3f, null);
+    }
+    if (conn.Db.Structure.Id.Find(site.Id) is not { Complete: true }) Fail("kiln never finished");
+    var kiln = conn.Db.Structure.Id.Find(site.Id)!;
+    Log($"Kiln built at {kiln.X:F1}, {kiln.Z:F1}; {CountOf(Item.Brick)} bricks and {CountOf(Item.Daub)} daub left");
     Log("STAGE kiln-built");
 
     // Lighting an empty kiln is refused.
@@ -285,7 +301,7 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    Pump(() => lastError != null || (conn.Db.Kiln.Id.Find(kiln.Id)?.Load?.Count ?? 0) == 2, 3, "the kiln to be loaded");
+    Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == 2, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
     Log("Loaded 2 pots");
     Log("STAGE kiln-loaded");
@@ -295,13 +311,13 @@ int KilnCheck()
     uint sticks = CountOf(Item.Stick);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    Pump(() => lastError != null || conn.Db.Kiln.Id.Find(kiln.Id)?.State == 1, 3, "the kiln to light");
+    Pump(() => lastError != null || conn.Db.Kiln.StructureId.Find(kiln.Id)?.State == 1, 3, "the kiln to light");
     if (lastError != null) Fail($"lighting: {lastError}");
     Log($"Kiln lit, burned {sticks - CountOf(Item.Stick)} sticks");
     Log("STAGE kiln-firing");
 
     watch.Restart();
-    while (conn.Db.Kiln.Id.Find(kiln.Id)?.State == 1)
+    while (conn.Db.Kiln.StructureId.Find(kiln.Id)?.State == 1)
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(5)) Fail("kiln never finished");
         Pump(() => false, 2, null);
