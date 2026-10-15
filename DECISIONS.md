@@ -55,3 +55,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Context:** Justin moves work between two Claude accounts; chat history and project memory don't carry across.
 **Decision:** `CLAUDE.md`, `STATUS.md`, `tickets/`, `DECISIONS.md` and git are the source of truth. Every lane follows `WORKER_LOOP.md` and writes state as it goes.
 **Who:** Justin
+
+## D-013 — 2026-10-15 — Clay pot timings
+**Decision:** Drying a pot takes about 8 real minutes in the open (about twice as long in rain, faster beside a fire); pit firing about 4 minutes; kiln firing about 3.
+**Who:** Justin
