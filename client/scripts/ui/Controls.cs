@@ -36,7 +36,7 @@ public static class Controls
         new("dig", new[] { Key.F }, "Dig", "F digs the ground in front of you"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
         // with these keys; they join the key list once those lanes land.
-        new("strike", None, "Strike"),
+        new("strike", None, "Strike", "Click to strike", OnRequest: true),
         new("craft", new[] { Key.C }, "Make things", "C to make things from what you carry"),
         new("craft_play_minigame", None, "Work a craft by hand (hold while starting)"),
         new("eat", new[] { Key.X }, "Eat", "X eats the best food you carry"),
