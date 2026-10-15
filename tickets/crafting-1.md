@@ -14,6 +14,7 @@ Data-driven materials and processes (materials with properties and state, timed 
 - 2026-10-15: tools/CraftCheck bot runs every process end to end; passes locally and runs in CI. PR #4 first CI run green (run 38806744447).
 - 2026-10-15: merged main; added DurationFor speed hook, item id range comment, dropped macOS from CI; crafting panel grouped into tier tabs (Tab cycles). Screenshots 07-campfire.png and 08-crafting-panel-tabs.png sent to Justin.
 - 2026-10-15: fixed HUD crash on duplicate inventory labels. Merged Survival (#5): berries are item 160, Eat takes an item id, crafted fires feed survival warmth via FireWarmthAt (verified near_heat on a live server). Key clash resolved: C craft, V eat, G forage, T feed fire. CraftCheck and the 20-bot load test pass on a wiped server.
+- 2026-10-15: merged main again (House building #6): building costs, refunds and BuildTest moved to item ids; feed fire (T) ignored while placing a building (T rotates there). CraftCheck, BuildTest and load test pass on a wiped server. Next per D-025: crafting-2 shared Use key on G, after #4 merges.
 
 ## Open questions / blockers
 - Crafting panel layout (tier tabs on the right, Tab cycles, number keys within a tab): sent to the PM for Justin, default is what's in the PR.

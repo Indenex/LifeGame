@@ -27,6 +27,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
+    BuildingSystem building = null!;
 
     DbConnection? conn;
     Identity? myIdentity;
@@ -55,6 +56,8 @@ public partial class Main : Node3D
         AddChild(hud);
         AddChild(crafting);
         crafting.Notice += hud.Note;
+        building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
         cameraRig.Camera.MakeCurrent();
@@ -269,6 +272,7 @@ public partial class Main : Node3D
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
+        building.Bind(conn);
         survival.Attach(conn);
     }
 
@@ -309,6 +313,7 @@ public partial class Main : Node3D
                 "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                $"SELECT * FROM structure WHERE {range}",
             }.Concat(SurvivalClient.Queries(range)).ToArray());
     }
 
@@ -411,7 +416,7 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire")) FeedFire();
+        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
     }
 
     public override void _Process(double delta)
@@ -447,7 +452,7 @@ public partial class Main : Node3D
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = me.Position + velocity * dt;
+        var pos = building.Collide(me.Position, me.Position + velocity * dt);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);

@@ -1,0 +1,479 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using LifeGame.Shared;
+using SpacetimeDB.Types;
+
+namespace LifeGame;
+
+// House building on the client: laying out footprints with a ghost preview,
+// adding materials to nearby sites, drawing every structure at its current
+// stage, keeping people out of hut walls, and saying when you are sheltered.
+//
+// B opens placement (Tab picks what, T turns it, click lays it out, Esc cancels).
+// Hold H next to an unfinished site to add what you carry.
+public partial class BuildingSystem : Node
+{
+    const float WorkInterval = 0.65f;
+
+    readonly Terrain terrain;
+    readonly Hud hud;
+    readonly Node3D me;
+    readonly CameraRig cameraRig;
+    readonly SubViewport view;
+    readonly Func<DbConnection?> conn;
+
+    readonly Node3D root = new() { Name = "Structures" };
+    readonly Dictionary<ulong, StructureView> views = new();
+    readonly Dictionary<ulong, Structure> rows = new();
+    readonly HashSet<long> cleared = new();
+
+    readonly Label prompt = new();
+    PanelContainer promptPanel = null!;
+
+    bool placing;
+    public bool Placing => placing;
+    int placeKind;
+    float ghostYawTarget, ghostYaw;
+    Vector3 ghostPos;
+    bool ghostPlaced;
+    StructureView? ghost;
+    string? placeProblem;
+    readonly StandardMaterial3D ghostMaterial = new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        AlbedoColor = new Color(0.85f, 1f, 0.8f, 0.35f),
+    };
+
+    float workTimer;
+    ulong noteShownFor;
+
+    public BuildingSystem(Terrain terrain, Hud hud, Node3D me, CameraRig cameraRig, SubViewport view, Func<DbConnection?> conn)
+    {
+        this.terrain = terrain;
+        this.hud = hud;
+        this.me = me;
+        this.cameraRig = cameraRig;
+        this.view = view;
+        this.conn = conn;
+        terrain.Cleared = (x, z) => cleared.Contains(World.CellKey(x, z));
+    }
+
+    public override void _Ready()
+    {
+        view.AddChild(root);
+        BindKey("build_mode", Key.B);
+        BindKey("build_next", Key.Tab);
+        BindKey("build_rotate", Key.T);
+        BindKey("build_work", Key.H);
+        BindKey("build_cancel", Key.Escape);
+
+        var layer = new CanvasLayer { Layer = 1 };
+        AddChild(layer);
+        var ui = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        ui.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        layer.AddChild(ui);
+
+        Hud.Style(prompt, 16, 1f);
+        prompt.HorizontalAlignment = HorizontalAlignment.Center;
+        promptPanel = Hud.Panel(prompt, Vector2.Zero);
+        promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        promptPanel.GrowHorizontal = Control.GrowDirection.Both;
+        promptPanel.GrowVertical = Control.GrowDirection.Begin;
+        // Above the inventory and the survival prompt.
+        promptPanel.Position = new Vector2(0, -160);
+        promptPanel.Visible = false;
+        ui.AddChild(promptPanel);
+
+        var hint = Hud.Text("B build    H help build", 14);
+        hint.Modulate = new Color(1, 1, 1, 0.7f);
+        var hintPanel = Hud.Panel(hint, Vector2.Zero);
+        // Just above the controls line; the bottom-right corner holds the survival rings.
+        hintPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        hintPanel.Position = new Vector2(20, -100);
+        ui.AddChild(hintPanel);
+
+        var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
+        if (args.Contains("--building-showcase")) Showcase();
+        if (args.Contains("--building-closeup")) cameraRig.Zoom(-8f);
+    }
+
+    // --building-showcase lays out local, finished and half-built structures in
+    // front of the starting camera, for checking the look without a server.
+    void Showcase()
+    {
+        var f = cameraRig.Forward;
+        var r = cameraRig.Right;
+        float yaw = Mathf.Atan2(-f.X, -f.Z);
+        ulong id = ulong.MaxValue;
+        void Put(StructureKind kind, float forward, float right, int stage, float fraction, float turn = 0f)
+        {
+            var at = f * forward + r * right;
+            int stages = Structures.Shape((int)kind).Stages.Length;
+            var needs = stage >= stages ? new List<MaterialNeed>() : new List<MaterialNeed> { new((ushort)Item.Stick, (uint)(fraction * 10), 10) };
+            Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
+                (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
+        }
+        Put(StructureKind.ClayHut, 8f, -3.2f, 4, 1f, 0.3f);
+        Put(StructureKind.LeanTo, 6f, 3.4f, 4, 1f, -2.3f);
+        Put(StructureKind.ClayHut, 14f, 5.5f, 2, 0.5f, -0.5f);
+        Put(StructureKind.LeanTo, 13.5f, -1.5f, 3, 0.4f, 0.7f);
+        Put(StructureKind.LeanTo, 4f, -4.5f, 0, 0.5f, 2.6f);
+    }
+
+    public void Bind(DbConnection c)
+    {
+        c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
+        c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
+        c.Db.Structure.OnDelete += (_, s) => Remove(s);
+    }
+
+    // --- Rows to views ----------------------------------------------------
+
+    void Upsert(Structure s, bool fresh)
+    {
+        bool existed = rows.TryGetValue(s.Id, out var before);
+        rows[s.Id] = s;
+        if (!views.TryGetValue(s.Id, out var v))
+        {
+            v = new StructureView((int)s.Kind)
+            {
+                Position = new Vector3(s.X, terrain.HeightAt(s.X, s.Z), s.Z),
+                Rotation = new Vector3(0, s.Yaw, 0),
+            };
+            views[s.Id] = v;
+            root.AddChild(v);
+            SetCleared(s, true);
+        }
+
+        int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
+        if (appeared > 0 && (existed || fresh))
+            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || s.Kind == StructureKind.ClayHut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
+
+        if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
+            hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
+    }
+
+    void Remove(Structure s)
+    {
+        rows.Remove(s.Id);
+        SetCleared(s, false);
+        if (views.Remove(s.Id, out var v)) v.QueueFree();
+    }
+
+    static float Fraction(Structure s)
+    {
+        uint need = 0, have = 0;
+        foreach (var n in s.Needs)
+        {
+            need += n.Need;
+            have += Math.Min(n.Have, n.Need);
+        }
+        return need == 0 ? 1f : have / (float)need;
+    }
+
+    static StructureShape ShapeOf(Structure s) => Structures.Shape((int)s.Kind);
+
+    // Trees and grass make way for the footprint, and the floor is trodden bare.
+    void SetCleared(Structure s, bool on)
+    {
+        int r = 3;
+        int cx = World.CellOf(s.X), cz = World.CellOf(s.Z);
+        for (int x = cx - r; x <= cx + r; x++)
+            for (int z = cz - r; z <= cz + r; z++)
+            {
+                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f)) continue;
+                long key = World.CellKey(x, z);
+                if (on) cleared.Add(key);
+                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f))) cleared.Remove(key);
+                terrain.Refresh(x, z);
+            }
+    }
+
+    // --- Shelter and walls ------------------------------------------------
+
+    // The finished structure sheltering this spot, if any. Matches the server's ShelterAt.
+    public Structure? ShelterAt(Vector3 p) =>
+        rows.Values.FirstOrDefault(s => s.Complete && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, -0.2f));
+
+    // Keeps a step from passing through a hut wall anywhere but the door.
+    public Vector3 Collide(Vector3 from, Vector3 to)
+    {
+        foreach (var s in rows.Values)
+        {
+            if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
+            const float wall = 1.7f, half = 0.32f, door = 0.42f;
+            var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
+            float r = Mathf.Sqrt(lx * lx + lz * lz);
+            if (Mathf.Abs(r - wall) > half || r < 0.01f) continue;
+            if (Mathf.Abs(Mathf.Atan2(lx, lz)) < door) continue;
+            var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
+            bool inside = fx * fx + fz * fz < wall * wall;
+            float target = inside ? wall - half : wall + half;
+            var (wx, wz) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx / r * target, lz / r * target);
+            to = new Vector3(wx, to.Y, wz);
+        }
+        return to;
+    }
+
+    // --- Input ------------------------------------------------------------
+
+    // Clicks are read before the GUI sees them, since the world view fills the screen.
+    public override void _Input(InputEvent e)
+    {
+        if (!placing || e is not InputEventMouseButton { Pressed: true } click) return;
+        if (click.ButtonIndex == MouseButton.Left) Place();
+        else if (click.ButtonIndex == MouseButton.Right) StopPlacing();
+        else return;
+        GetViewport().SetInputAsHandled();
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (e.IsActionPressed("build_mode"))
+        {
+            if (placing) StopPlacing();
+            else StartPlacing();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (!placing) return;
+
+        if (e.IsActionPressed("build_cancel"))
+        {
+            StopPlacing();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (e.IsActionPressed("build_next"))
+        {
+            placeKind = (placeKind + 1) % Structures.Shapes.Length;
+            MakeGhost();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (e.IsActionPressed("build_rotate"))
+        {
+            ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
+            GetViewport().SetInputAsHandled();
+        }
+        else if (e is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
+        {
+            Place();
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
+    void StartPlacing()
+    {
+        if (conn() == null)
+        {
+            hud.Note("Building needs the server");
+            return;
+        }
+        placing = true;
+        ghostPlaced = false;
+        // Face the open side toward the camera, so you look into what you build.
+        ghostYawTarget = ghostYaw = Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
+        MakeGhost();
+    }
+
+    void StopPlacing()
+    {
+        placing = false;
+        ghost?.QueueFree();
+        ghost = null;
+    }
+
+    void MakeGhost()
+    {
+        ghost?.QueueFree();
+        ghost = new StructureView(placeKind, ghostMaterial);
+        ghost.Show(StructureModel.StageCount(placeKind), 1f, complete: true, animate: false);
+        root.AddChild(ghost);
+        ghostPlaced = false;
+    }
+
+    void Place()
+    {
+        if (conn() is not { } c) return;
+        if (placeProblem != null)
+        {
+            hud.Note(placeProblem);
+            return;
+        }
+        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
+        StopPlacing();
+    }
+
+    // --- Frame loop -------------------------------------------------------
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        if (placing) UpdateGhost(dt);
+        UpdateWork(dt);
+        UpdatePrompt();
+    }
+
+    void UpdateGhost(float dt)
+    {
+        if (ghost == null) return;
+        var target = PointUnderMouse() ?? me.Position + cameraRig.Forward * 3.5f;
+        var offset = target - me.Position;
+        offset.Y = 0;
+        if (offset.Length() > Structures.PlaceRange - 0.3f)
+            target = me.Position + offset.Normalized() * (Structures.PlaceRange - 0.3f);
+        target.Y = terrain.HeightAt(target.X, target.Z);
+
+        // The ghost glides after the cursor rather than jumping cell to cell.
+        float ease = 1f - Mathf.Exp(-14f * dt);
+        ghostPos = ghostPlaced ? ghostPos.Lerp(target, ease) : target;
+        ghostPlaced = true;
+        ghostYaw = Mathf.LerpAngle(ghostYaw, ghostYawTarget, 1f - Mathf.Exp(-12f * dt));
+        ghost.Position = new Vector3(ghostPos.X, terrain.HeightAt(ghostPos.X, ghostPos.Z), ghostPos.Z);
+        ghost.Rotation = new Vector3(0, ghostYaw, 0);
+
+        placeProblem = PlaceProblem(ghostPos, ghostYawTarget);
+        var tint = placeProblem == null ? new Color(0.85f, 1f, 0.8f, 0.38f) : new Color(1f, 0.6f, 0.5f, 0.3f);
+        ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(tint, 1f - Mathf.Exp(-10f * dt));
+    }
+
+    string? PlaceProblem(Vector3 at, float yaw)
+    {
+        var mine = MyIdentity();
+        if (mine != null && rows.Values.Count(s => s.Owner == mine && !s.Complete) >= Structures.MaxOpenSites)
+            return "Finish one of your building sites first";
+        foreach (var s in rows.Values)
+            if (Structures.TooClose(placeKind, at.X, at.Z, (int)s.Kind, s.X, s.Z))
+                return "Too close to another building";
+        return Structures.GroundProblem(placeKind, at.X, at.Z, yaw, terrain.HeightAt);
+    }
+
+    // Where the mouse points on the ground, found by stepping along the camera ray.
+    Vector3? PointUnderMouse()
+    {
+        var camera = cameraRig.Camera;
+        var screen = GetViewport().GetVisibleRect().Size;
+        var mouse = GetViewport().GetMousePosition() * new Vector2(view.Size.X / screen.X, view.Size.Y / screen.Y);
+        var origin = camera.ProjectRayOrigin(mouse);
+        var dir = camera.ProjectRayNormal(mouse);
+        float prev = 0f;
+        for (float t = 0.5f; t < 120f; t += 0.5f)
+        {
+            var p = origin + dir * t;
+            if (p.Y > terrain.HeightAt(p.X, p.Z)) { prev = t; continue; }
+            // Narrow down between the last point above ground and this one below.
+            float lo = prev, hi = t;
+            for (int i = 0; i < 8; i++)
+            {
+                float mid = (lo + hi) / 2;
+                var m = origin + dir * mid;
+                if (m.Y > terrain.HeightAt(m.X, m.Z)) lo = mid; else hi = mid;
+            }
+            return origin + dir * hi;
+        }
+        return null;
+    }
+
+    Structure? NearestSite() =>
+        rows.Values
+            .Where(s => !s.Complete && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, Structures.WorkReach))
+            .OrderBy(s => new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared())
+            .FirstOrDefault();
+
+    void UpdateWork(float dt)
+    {
+        workTimer -= dt;
+        if (placing || !Input.IsActionPressed("build_work"))
+        {
+            if (!Input.IsActionPressed("build_work")) noteShownFor = 0;
+            return;
+        }
+        if (workTimer > 0f || conn() is not { } c) return;
+        workTimer = WorkInterval;
+
+        if (NearestSite() is not { } site)
+        {
+            if (noteShownFor != ulong.MaxValue) hud.Note("No building site within reach");
+            noteShownFor = ulong.MaxValue;
+            return;
+        }
+        // Say what's missing once per press instead of asking the server over and over.
+        var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
+        if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item)))
+        {
+            if (noteShownFor != site.Id) hud.Note("Needs " + Missing(site));
+            noteShownFor = site.Id;
+            return;
+        }
+        c.Reducers.Build(site.Id);
+    }
+
+    void UpdatePrompt()
+    {
+        string? text = null;
+        if (placing)
+        {
+            var shape = Structures.Shape(placeKind);
+            text = $"Lay out a {shape.Name.ToLowerInvariant()}    Tab change    T turn    click to place    Esc cancel";
+            if (placeProblem != null) text += $"\n{placeProblem}";
+            else text += $"\nNeeds {StageList(placeKind)}";
+        }
+        else if (NearestSite() is { } site)
+        {
+            var shape = ShapeOf(site);
+            string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
+            var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item)} {n.Have}/{n.Need}"));
+            text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}    hold H to add";
+        }
+        else if (ShelterAt(me.Position) is { } home)
+            text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
+
+        promptPanel.Visible = text != null;
+        if (text != null) prompt.Text = text;
+    }
+
+    // --- Helpers ----------------------------------------------------------
+
+    static string Missing(Structure s) =>
+        string.Join(", ", s.Needs.Where(n => n.Have < n.Need).Select(n => $"{n.Need - n.Have} {ItemName(n.Item)}"));
+
+    // The server owns the costs; the prompt only lists the stage names here.
+    static string StageList(int kind) => string.Join(", then ", Structures.Shape(kind).Stages).ToLowerInvariant();
+
+    static string ItemName(ushort item) => Items.IsKnown(item) ? Items.Def((Item)item).Plural.ToLowerInvariant() : "unknown";
+
+    SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
+
+    void Puff(Vector3 at, Color color)
+    {
+        var particles = new CpuParticles3D
+        {
+            Emitting = true,
+            OneShot = true,
+            Amount = 18,
+            Lifetime = 0.9f,
+            Explosiveness = 0.85f,
+            Direction = Vector3.Up,
+            Spread = 70f,
+            InitialVelocityMin = 0.8f,
+            InitialVelocityMax = 1.8f,
+            Gravity = new Vector3(0, -3f, 0),
+            ScaleAmountMin = 0.5f,
+            ScaleAmountMax = 1.1f,
+            Mesh = new BoxMesh { Size = Vector3.One * 0.06f, Material = Look.Solid(color) },
+            Position = at,
+        };
+        view.AddChild(particles);
+        GetTree().CreateTimer(1.4).Timeout += particles.QueueFree;
+    }
+
+    static void BindKey(string action, Key key)
+    {
+        if (InputMap.HasAction(action)) return;
+        InputMap.AddAction(action);
+        InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
+    }
+}
