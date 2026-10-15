@@ -80,3 +80,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-018 — 2026-10-15 — Merge Survival needs and House building
 **Decision:** PR #5 (survival needs) and PR #6 (house building with see-through blueprints) merge into the playtest build. Neither needs a world wipe.
 **Who:** Justin
+
+## D-019 — 2026-10-15 — House costs and limits
+**Decision:** Lean-to: 10 sticks, 11 fiber. Clay hut: 22 sticks, 2 stones, 17 fiber, 12 clay (bricks and daub replace raw clay once ceramics lands). 3 open building sites per player; holding G adds one item every 0.65 s.
+**Who:** Justin
