@@ -144,3 +144,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-034 — 2026-10-15 — One chat for updates
 **Decision:** Lanes send status updates and screenshots to the PM instead of posting them in their own threads; the PM posts them in the PM thread so Justin reads one chat. Lanes still answer Justin in their own thread when he writes there.
 **Who:** Justin
+
+## D-035 — 2026-10-15 — Kiln is a blueprint building
+**Decision:** The updraft kiln is placed from the B build menu as a see-through blueprint that anyone can add bricks and daub to (StructureKind.Kiln), not crafted and dropped. Firing: up to 6 dry pots, 2 sticks of fuel, 3 minutes, 2% crack, +10 quality. Ceramics owns the kiln logic in its own files via Building's completion hooks.
+**Who:** Justin ("Blueprint build", which the PM recommended)
