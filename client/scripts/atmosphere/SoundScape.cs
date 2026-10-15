@@ -18,6 +18,8 @@ public partial class SoundScape : Node
     public float Fire { set => mix.Fire = value; }
     public float FirePan { set => mix.FirePan = value; }
     public bool MusicOn { get => mix.MusicOn; set => mix.MusicOn = value; }
+    // 0 to 1; eases to the new level over a second or so.
+    public float MusicVolume { get => mix.MusicVolume; set => mix.MusicVolume = Mathf.Clamp(value, 0f, 1f); }
 
     public override void _Ready()
     {

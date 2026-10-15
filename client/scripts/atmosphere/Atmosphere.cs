@@ -24,6 +24,8 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly SoundScape sound = new();
+    // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
+    public SoundScape Sound => sound;
 
     // Report sheep here (position, running) and they bleat; see SheepVoices.
     public readonly SheepVoices Sheep = new();
