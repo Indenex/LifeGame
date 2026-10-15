@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -48,7 +48,8 @@ if (which is "lean-to" or "both")
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
 if (which is "clay-hut" or "both")
-    BuildTogether(StructureKind.ClayHut,
+{
+    ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
         new() { [Item.Stick] = 11, [Item.Fiber] = 14, [Item.Clay] = 12 },
         // B turns the clay into daub for the walls: clean it, then mix in fiber.
@@ -58,12 +59,24 @@ if (which is "clay-hut" or "both")
             for (int i = 0; i < 6; i++) b.Craft("clay.daub", Pump);
             Check(b.CountOf(Item.Daub) >= 12, $"mixed daub for the walls ({b.Carried()})");
         });
+    HangDoor(hut);
+}
+if (which is "basket" or "both")
+    StoreInBasket(BuildTogether(StructureKind.Basket,
+        new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
+        new() { [Item.Fiber] = 9 },
+        // B twists two cordage for the basket's stitching.
+        prepareB: () =>
+        {
+            for (int i = 0; i < 2; i++) b.Craft("cord.twist", Pump);
+            Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
+        }));
 
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
 
-void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null)
+ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null)
 {
     string name = Structures.Shape((int)kind).Name;
     Console.WriteLine($"--- {name}");
@@ -109,12 +122,61 @@ void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<I
     Check(b.Conn.Db.Structure.Id.Find(id) is { Complete: true }, "the other player sees it finished");
 
     // Walk in and check the spot counts as sheltered.
-    a.WalkTo(sx, sz, 0.3f, Pump);
-    Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
+    if (Structures.Shape((int)kind).RainCover > 0)
+    {
+        a.WalkTo(sx, sz, 0.3f, Pump);
+        Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
+    }
 
     // Reconnect and find it still there.
     a.Reconnect(Pump);
     WaitFor(() => a.Ready && a.Conn.Db.Structure.Id.Find(id) is { Complete: true }, 20, "still standing after reconnecting");
+    return id;
+}
+
+// A hangs a door in the hut's doorway; B, who didn't make it, opens and shuts it.
+void HangDoor(ulong hut)
+{
+    Console.WriteLine("--- Door");
+    a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
+    b.Wants = new();
+    var until = clock.Elapsed + TimeSpan.FromSeconds(120);
+    while (!a.HasWants && clock.Elapsed < until)
+    {
+        a.GatherStep(0.1f);
+        Pump(100);
+    }
+    Check(a.HasWants, $"gathered sticks and fiber for a door ({a.Carried()})");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 2.3f);
+    a.WalkTo(door.x - 0.4f, door.z, 0.3f, Pump);
+    b.WalkTo(door.x + 0.4f, door.z, 0.3f, Pump);
+    a.Conn.Reducers.HangDoor(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "door hung, shut");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the other player opened it");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "and shut it again");
+}
+
+// A puts sticks in the basket; B takes one out.
+void StoreInBasket(ulong basket)
+{
+    Console.WriteLine("--- Storing");
+    var s = a.Conn.Db.Structure.Id.Find(basket)!;
+    a.WalkTo(s.X + 0.9f, s.Z, 0.3f, Pump);
+    b.WalkTo(s.X - 0.9f, s.Z, 0.3f, Pump);
+    uint sticks = a.CountOf(Item.Stick);
+    Check(sticks >= 2, $"A carries sticks to store ({a.Carried()})");
+    var stack = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick);
+    a.Conn.Reducers.BasketPut(basket, stack.Item, stack.Quality, 2);
+    WaitFor(() => b.Conn.Db.BasketItem.Iter().Any(i => i.StructureId == basket && i.Count == 2), 10, "two sticks in the basket, seen by the other player");
+    Check(a.CountOf(Item.Stick) == sticks - 2, "they left A's hands");
+    uint bSticks = b.CountOf(Item.Stick);
+    var row = b.Conn.Db.BasketItem.Iter().First(i => i.StructureId == basket);
+    b.Conn.Reducers.BasketTake(row.Id, 1);
+    WaitFor(() => b.CountOf(Item.Stick) == bSticks + 1, 10, "B took one out");
+    WaitFor(() => a.Conn.Db.BasketItem.Iter().Any(i => i.StructureId == basket && i.Count == 1), 10, "one left inside");
 }
 
 sealed class Bot
@@ -167,6 +229,8 @@ sealed class Bot
                         "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit",
                         "SELECT * FROM structure",
+                        "SELECT * FROM structure_door",
+                        "SELECT * FROM basket_item",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
                     });

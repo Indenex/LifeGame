@@ -11,8 +11,12 @@ Ceramics can place an updraft kiln from the B menu as a blueprint (D-035): Build
 ## Progress log
 - 2026-10-15 22:40: kiln hooks landed in #10 (e43c0f3). Design questions on the door and basket sent to the PM.
 
+- 2026-10-15 23:00: Justin's answers (D-046): anyone opens doors; baskets open to anyone except in a claim (members only); player-made things outside claims weather after 72 h untouched, gone 24 h later. Built: HangDoor/ToggleDoor (closed door: warmth 0.9, blocks the doorway), Storage basket kind (6 fiber + 2 cordage, 12 stacks, BasketPut/BasketTake, G opens a panel), Weathering.cs (StructureTouch, GroundItemTouch, hourly sweep, darken and sag in the last day). BuildTest covers door and basket; passes locally in 196 s.
+
 ## Open questions / blockers
-- Sent to the PM for Justin: who can open a door (default anyone); who can take from a basket (default anyone, claim members only inside a claim); does a basket weather (default no).
+- Claims must implement `InClaimHook(ctx, x, z, ref bool inClaim)` (Weathering.cs) or nothing is ever treated as inside a claim.
+- Crafting must call `OnPlayerDroppedItem(ctx, row)` in Drop (Reducers.cs) with the inserted WorldItem, or dropped items never weather.
+- StructureKind.Basket is 2 here; Claims' ClaimMarker and Ceramics' Kiln also append. Whoever lands later renumbers its own entry (enum, StageCosts, Shapes and StructureModel kind switch together).
 
 ## Next step
-Add a StructureDoor table and ToggleDoor reducer for complete clay huts (default: anyone may open), door piece in StructureModel, warmth 0.9 when closed.
+After #10 merges: reset claude/house-building-8ueqz2 to main, cherry-pick the local building-3 commits (backup: /mnt/project-files/patches/building-3.patch), regenerate bindings, run BuildTest, push and open the building-3 PR.
