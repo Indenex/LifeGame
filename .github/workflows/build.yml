@@ -49,6 +49,14 @@ jobs:
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
           cd tools/LoadTest && dotnet run -c Release -- 20 20
 
+      # The compiled module, so a host can publish it without the .NET SDK:
+      # spacetime publish <name> --bin-path StdbModule.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LifeGame-Server
+          path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
+          if-no-files-found: error
+
   client:
     name: Client (${{ matrix.preset }})
     runs-on: ubuntu-latest
