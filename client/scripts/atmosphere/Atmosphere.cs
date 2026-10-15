@@ -229,13 +229,13 @@ public partial class Atmosphere : Node3D
     static readonly Mood[] Moods =
     {
         new(0.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
-        new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.45f, 1.25f),
+        new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.55f, 1.3f),
         new(0.26f, new(0.28f, 0.40f, 0.60f), new(0.88f, 0.74f, 0.68f), new(0.20f, 0.21f, 0.20f), new(0.58f, 0.61f, 0.67f), new(0.80f, 0.83f, 0.88f), new(0.15f, 0.17f, 0.21f), 0.007f, 0.006f, 0.48f, 1.08f),
         new(0.32f, new(0.30f, 0.47f, 0.68f), new(0.86f, 0.80f, 0.70f), new(0.24f, 0.28f, 0.22f), new(0.66f, 0.70f, 0.72f), new(0.90f, 0.90f, 0.88f), new(0.08f, 0.09f, 0.08f), 0.007f, 0.009f, 0.4f, 1.0f),
         new(0.50f, new(0.27f, 0.46f, 0.72f), new(0.76f, 0.82f, 0.86f), new(0.24f, 0.28f, 0.22f), new(0.64f, 0.71f, 0.77f), new(0.88f, 0.90f, 0.92f), new(0.06f, 0.07f, 0.07f), 0.005f, 0.005f, 0.4f, 0.95f),
         new(0.68f, new(0.30f, 0.45f, 0.62f), new(0.80f, 0.74f, 0.62f), new(0.24f, 0.28f, 0.22f), new(0.62f, 0.68f, 0.70f), new(0.86f, 0.88f, 0.86f), new(0.0f, 0.0f, 0.0f), 0.006f, 0.007f, 0.38f, 1.0f),
         new(0.745f, new(0.26f, 0.32f, 0.52f), new(0.92f, 0.64f, 0.46f), new(0.20f, 0.19f, 0.17f), new(0.66f, 0.58f, 0.54f), new(0.88f, 0.80f, 0.74f), new(0.12f, 0.11f, 0.14f), 0.007f, 0.008f, 0.42f, 1.05f),
-        new(0.79f, new(0.07f, 0.09f, 0.21f), new(0.34f, 0.22f, 0.32f), new(0.05f, 0.05f, 0.07f), new(0.22f, 0.20f, 0.30f), new(0.50f, 0.44f, 0.58f), new(0.18f, 0.20f, 0.32f), 0.008f, 0.008f, 0.45f, 1.25f),
+        new(0.79f, new(0.07f, 0.09f, 0.21f), new(0.34f, 0.22f, 0.32f), new(0.05f, 0.05f, 0.07f), new(0.22f, 0.20f, 0.30f), new(0.50f, 0.44f, 0.58f), new(0.18f, 0.20f, 0.32f), 0.008f, 0.008f, 0.55f, 1.3f),
         new(1.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
     };
 
@@ -274,8 +274,11 @@ public partial class Atmosphere : Node3D
         float sunUp = Mathf.SmoothStep(-0.06f, 0.1f, sunHeight);
         float moonUp = Mathf.SmoothStep(0.06f, 0.25f, -sunHeight);
         float azimuth = -40f + (t - 0.68f) * 360f;
-        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(-sunHeight * 40f, azimuth + 180f);
-        float elevation = Mathf.Max(isDay ? sunHeight * 55f : -sunHeight * 40f, 3f);
+        // The moon rides high enough as soon as it is up that early night isn't
+        // lit only by grazing light.
+        float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
+        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
+        float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
         sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
@@ -345,6 +348,17 @@ public partial class Atmosphere : Node3D
         }
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
+    }
+
+    // How bright a campfire burns from moment to moment: a slow breathing as the
+    // flames rise and settle, quicker licks over it, and now and then a dip as a
+    // log shifts. Around 1 on average. FireView drives its light with this.
+    public static float FireFlicker(float time)
+    {
+        float breathe = 0.08f * Mathf.Sin(time * 1.7f) + 0.05f * Mathf.Sin(time * 2.9f + 0.7f);
+        float licks = 0.06f * Mathf.Sin(time * 11.3f) + 0.05f * Mathf.Sin(time * 17.9f + 1.3f) + 0.03f * Mathf.Sin(time * 29.1f + 2.1f);
+        float shift = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(time * 0.37f + 1.1f) * Mathf.Sin(time * 0.53f)), 6f) * 0.25f;
+        return 0.92f + breathe + licks - shift;
     }
 
     float strikeAge = 10f, strikePeak;
