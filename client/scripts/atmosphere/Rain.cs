@@ -2,62 +2,110 @@ using Godot;
 
 namespace LifeGame;
 
-// Streaks of rain falling around the player, thick or thin with the weather and
-// slanted by the wind.
+// Rain as soft grey veils rather than individual streaks: three rings of falling
+// rain around the player, near, middle and far, each a faint scrolling curtain
+// that fades into the ground and the fog. Heavy rain closes the world in.
 public partial class Rain : Node3D
 {
-    readonly StandardMaterial3D material = new()
+    static readonly (float Radius, float Height, float Strength, float Scale, float Speed)[] Rings =
     {
-        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-        BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
-        AlbedoColor = new Color(0.78f, 0.82f, 0.88f, 0.3f),
-        DisableReceiveShadows = true,
-        // Drops right in front of the camera would read as thick sticks, so they
-        // fade in only a few meters out.
-        DistanceFadeMode = BaseMaterial3D.DistanceFadeModeEnum.PixelAlpha,
-        DistanceFadeMinDistance = 3f,
-        DistanceFadeMaxDistance = 10f,
+        (6f, 18f, 0.55f, 1.4f, 1.15f),
+        (12f, 26f, 0.8f, 1.0f, 1.0f),
+        (24f, 40f, 1.0f, 0.6f, 0.85f),
     };
-    readonly ParticleProcessMaterial process = new()
-    {
-        EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
-        EmissionBoxExtents = new Vector3(22f, 0.5f, 22f),
-        Direction = Vector3.Down,
-        Spread = 2f,
-        InitialVelocityMin = 17f,
-        InitialVelocityMax = 21f,
-        Gravity = new Vector3(0, -6f, 0),
-        ScaleMin = 0.7f,
-        ScaleMax = 1.2f,
-    };
-    readonly GpuParticles3D drops;
+
+    readonly ShaderMaterial[] materials = new ShaderMaterial[Rings.Length];
 
     public Rain()
     {
-        drops = new GpuParticles3D
+        var streaks = new NoiseTexture2D
         {
-            Amount = 9000,
-            Lifetime = 1.1f,
-            LocalCoords = false,
-            Emitting = false,
-            Preprocess = 1.2f,
-            VisibilityAabb = new Aabb(new Vector3(-30, -30, -30), new Vector3(60, 50, 60)),
-            ProcessMaterial = process,
-            DrawPass1 = new QuadMesh { Size = new Vector2(0.012f, 0.6f), Material = material },
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Width = 256,
+            Height = 256,
+            Seamless = true,
+            GenerateMipmaps = true,
+            Noise = new FastNoiseLite { NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex, Frequency = 0.08f, FractalOctaves = 2 },
         };
-        AddChild(drops);
+        for (int i = 0; i < Rings.Length; i++)
+        {
+            var (radius, height, strength, scale, speed) = Rings[i];
+            var material = new ShaderMaterial { Shader = VeilShader };
+            material.SetShaderParameter("streaks", streaks);
+            material.SetShaderParameter("strength", strength);
+            material.SetShaderParameter("scale", scale);
+            material.SetShaderParameter("speed", speed);
+            material.SetShaderParameter("half_height", height / 2f);
+            materials[i] = material;
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = height, RadialSegments = 48, Rings = 1, CapTop = false, CapBottom = false },
+                MaterialOverride = material,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(0, height / 2f - 4f, 0),
+            });
+        }
+        Visible = false;
     }
 
-    // amount and wind run from 0 to 1; light dims the drops at night.
-    public void Follow(Vector3 focus, float amount, float wind, float light)
+    // amount and wind run from 0 to 1; tint is the color of the air.
+    public void Follow(Vector3 focus, float amount, float wind, Color tint)
     {
-        GlobalPosition = focus + new Vector3(0, 14f, 0);
-        drops.Emitting = amount > 0.02f;
-        drops.AmountRatio = Mathf.Clamp(amount, 0f, 1f);
-        var slant = new Vector3(0.6f, 0f, 0.8f) * (0.04f + wind * 0.22f);
-        process.Direction = (Vector3.Down + slant).Normalized();
-        material.AlbedoColor = new Color(0.78f * light, 0.82f * light, 0.9f * light, 0.14f + 0.12f * amount);
+        GlobalPosition = focus;
+        Visible = amount > 0.02f;
+        foreach (var material in materials)
+        {
+            material.SetShaderParameter("amount", Mathf.Clamp(amount, 0f, 1f));
+            material.SetShaderParameter("slant", 0.05f + wind * 0.25f);
+            material.SetShaderParameter("tint", tint);
+        }
     }
+
+    static readonly Shader VeilShader = new()
+    {
+        Code = """
+            shader_type spatial;
+            render_mode unshaded, cull_front, depth_draw_never, shadows_disabled, fog_disabled;
+
+            uniform sampler2D streaks : repeat_enable, filter_linear_mipmap;
+            uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
+            uniform vec3 tint : source_color = vec3(0.7);
+            uniform float amount = 0.0;
+            uniform float strength = 1.0;
+            uniform float scale = 1.0;
+            uniform float speed = 1.0;
+            uniform float slant = 0.1;
+            uniform float half_height = 10.0;
+
+            varying vec3 local;
+
+            void vertex() {
+                local = VERTEX;
+            }
+
+            void fragment() {
+                // Measure around the ring from the side facing away from the camera,
+                // so the seam sits on the near side, which is never drawn.
+                vec2 away = normalize(NODE_POSITION_WORLD.xz - CAMERA_POSITION_WORLD.xz + vec2(0.0001));
+                vec2 l = local.xz;
+                float angle = atan(away.x * l.y - away.y * l.x, dot(away, l));
+                float around = angle * length(l);
+
+                vec2 uv = vec2(around * 0.22 * scale + local.y * slant * 0.22, local.y * 0.018 * scale + TIME * 0.55 * speed);
+                float a = texture(streaks, uv).r;
+                float b = texture(streaks, uv * vec2(1.9, 1.4) + vec2(0.37, TIME * 0.21 * speed)).r;
+                float rain = smoothstep(0.55, 0.85, a) * 0.6 + smoothstep(0.6, 0.9, b) * 0.4;
+
+                // Soft at the top and bottom of the ring, and wherever the ground or a
+                // tree is just behind it, so it never shows a hard edge.
+                float edge = smoothstep(-half_height, -half_height + 3.0, local.y) * (1.0 - smoothstep(half_height - 6.0, half_height, local.y));
+                float depth = texture(depth_texture, SCREEN_UV).r;
+                vec4 view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
+                float behind = -view.z / view.w - (-VERTEX.z);
+                float soft = clamp(behind / 3.0, 0.0, 1.0);
+
+                ALBEDO = tint;
+                ALPHA = amount * strength * (0.05 + rain * 0.16) * edge * soft;
+            }
+            """,
+    };
 }

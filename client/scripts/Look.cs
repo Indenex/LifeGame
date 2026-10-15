@@ -53,15 +53,14 @@ public static class Look
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
     public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
-    public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
+    public static ShaderMaterial BarkSurface => bark ??= SeeThrough(Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f)));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
-    public static ShaderMaterial Foliage => foliage ??= MakeFoliage();
+    public static ShaderMaterial Foliage => foliage ??= SeeThrough(Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f));
 
-    // Leaves (and thatch) between the camera and the player dissolve so you can
-    // always see yourself under the trees.
-    static ShaderMaterial MakeFoliage()
+    // Trees (and walls and thatch built from them) between the camera and the
+    // player dissolve, so you can always see yourself in the woods.
+    static ShaderMaterial SeeThrough(ShaderMaterial material)
     {
-        var material = Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
         material.SetShaderParameter("see_through", true);
         return material;
     }
@@ -210,7 +209,7 @@ public static class Look
                 vec3 seg = target - cam;
                 float t = clamp(dot(p - cam, seg) / dot(seg, seg), 0.0, 1.0);
                 if (t > 0.97) return false;
-                float radius = mix(3.2, 1.8, t);
+                float radius = mix(3.4, 2.4, t);
                 float keep = smoothstep(radius * 0.55, radius, distance(p, cam + seg * t));
                 ivec2 c = ivec2(frag) % 4;
                 int index = c.x + c.y * 4;
@@ -261,7 +260,7 @@ public static class Look
                 color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));
                 // Rain soaks upward-facing ground first; everything else darkens a little.
                 wet = wetness * mix(0.45, 1.0, smoothstep(0.4, 0.9, world_normal.y)) * mix(0.75, 1.0, h);
-                color *= mix(1.0, 0.58, wet);
+                color *= mix(1.0, 0.8, wet);
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
@@ -274,8 +273,8 @@ public static class Look
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
-                ROUGHNESS = mix(1.0, 0.3, wet);
-                SPECULAR = 0.45 * wet;
+                ROUGHNESS = mix(1.0, 0.75, wet);
+                SPECULAR = 0.08 * wet;
             }
 
             // Wrapped diffuse light, so forms turn softly into shadow, plus a soft
@@ -286,7 +285,7 @@ public static class Look
                 DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
                 if (wet > 0.01) {
                     vec3 half_dir = normalize(LIGHT + VIEW);
-                    float glint = pow(max(dot(NORMAL, half_dir), 0.0), 48.0) * wet * 0.5;
+                    float glint = pow(max(dot(NORMAL, half_dir), 0.0), 24.0) * wet * 0.06;
                     SPECULAR_LIGHT += LIGHT_COLOR * glint * ATTENUATION * sky;
                 }
             }
@@ -324,7 +323,7 @@ public static class Look
                 vec3 warm = tint * vec3(1.3, 1.3, 1.0) + vec3(0.02, 0.02, 0.0);
                 vec3 color = mix(tint, warm, smoothstep(0.0, 1.0, tip));
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
-                color *= mix(1.0, 0.7, wetness);
+                color *= mix(1.0, 0.88, wetness);
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
                 // Both faces of a blade are lit like the ground beneath it.

@@ -1,7 +1,7 @@
 # atmosphere-2: Sheep sounds, canopy fade, rain and dawn polish
 Lane: World atmosphere and sound
 Owner: World atmosphere and sound thread
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-sound-hlqfke
 PR: (none yet)
 
@@ -11,8 +11,10 @@ From the PM after atmosphere-1: soft sheep bleats, with a startled bleat when th
 ## Progress log
 - 2026-10-15 21:50: started from main a4ce058.
 
+- 2026-10-15 22:05: Justin: rain too shiny and white streaks look awful, wants it closer to WoW Forever's new rain. Replaced streak particles with soft rain veils (three rings of scrolling curtains, depth-faded) and thicker rain fog and mist; wet ground now only slightly darker with barely any sheen. Canopy and trunk fade toward the player, cooler dawn, synthesized sheep bleat (not yet hooked to Animals). Justin: open PRs without waiting on renders.
+
 ## Open questions / blockers
 - Sheep table field names: coordinate with Animals (cse_01XS7M1yLy2fLaFdE3HWnisM).
 
 ## Next step
-Canopy dither in the foliage shader (Look.cs), with the player position as a global uniform set by Atmosphere.
+Get the PR green and merge it (D-032); then hook bleats to the Animals sheep table once its fields are known.
