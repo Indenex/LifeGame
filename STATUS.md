@@ -13,22 +13,22 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Item | State |
 |---|---|
 | Waiting on Justin | nothing open |
-| Next merge | `crafting-core` #4 (approved, world wipe); then skills #7 and claims #8 (both approved, merging main after #4); then ceramics #11, building-2 #10, survival-2 #12 |
+| Next merge | skills #7 and claims #8 (merging main after #4); then ceramics #11; then building #10, survival #12; sheep #13 anytime. The PM merges (D-032); Justin wipes once after #12 |
 | Next PM action | Record lane branch names as lanes report them; bring `crafting-core` merge plus world wipe to Justin when green |
 
 ## Lanes
 
 | Lane | Ticket | Status | Branch | Owns |
 |---|---|---|---|---|
-| Crafting (integration owner) | `tickets/crafting-1.md` | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
+| Crafting (integration owner) | `tickets/crafting-1.md` (done, PR #4 merged 64812e0); next: CI speedups | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
 | Survival needs | `tickets/survival-2.md` | in_progress (draft PR #12, lands after #4 and #11) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | `tickets/skills-1.md` | in_progress (PR #7, merges with or after crafting-core) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules | `tickets/claims-1.md` | in_review (PR #8 green) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere and sound | `tickets/atmosphere-2.md` (atmosphere-1 done, PR #9 merged a4ce058) | in_progress (sheep bleats, canopy fade, rain and dawn tweaks) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
 | House building | `tickets/building-2.md` (building-1 done, PR #6 merged bae255c) | in_progress (draft PR #10, lands after #4 and #11) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
-| Animals | `tickets/animals-1.md` | in_progress (sheep AI working, screenshots posted) | lane to record | `Animals.cs`, `client/scripts/animals/` |
+| Animals | `tickets/animals-1.md` | in_progress (draft PR #13) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics | `tickets/ceramics-1.md` | in_review (PR #11, CI running) | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
-| UX and UI | `tickets/ui-1.md` | todo (thread starting) | lane to record | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
+| UX and UI | `tickets/ui-1.md` | in_progress | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 
