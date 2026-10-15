@@ -16,11 +16,11 @@ Proximity text chat; land claims via a marker structure (placed with House build
 - 2026-10-15: merged main (house building #6). Added CheckClaimAccess, so placing or dismantling a structure in someone's claim is refused. Keys moved off building's B/T: K opens the claim panel, L raises a marker for now. BuildTest and SocialTest both pass locally.
 - 2026-10-15: Justin approved merging PR #8. Merged main again (survival); claim keys moved to B/T since survival uses C/R. Claim radius set to 20 m (D-023); spawn keep-out is now 20 m + radius so no claim reaches the clearing.
 - 2026-10-15: merged main (state files). CI green on 959721b, SocialTest included: https://github.com/Indenex/LifeGame/actions/runs/38809337277. PR marked ready; merge asked of PM.
+- 2026-10-15 22:20: merged main (ceramics #11, PM #14) as d367547; CI run https://github.com/Indenex/LifeGame/actions/runs/38815757226 green (server, Linux, Windows); PR #8 merged as a merge commit under D-032.
 
 ## Decisions / defaults
 - Keys follow KEYMAP.md (D-025): Enter chat, K claim panel. The marker is laid out from House building's B menu.
 - Marker cost 4 sticks + 2 fiber; claim radius 20 m (Justin, D-023); 1 claim per player; no claims within 20 m of spawn; marker stands 3 days untended; PvP off inside claims unless owner allows; wild is open PvP; chat range 24 m.
-- 2026-10-15 22:20: merged main (ceramics #11, PM #14) as d367547; CI run https://github.com/Indenex/LifeGame/actions/runs/38815757226 green (server, Linux, Windows); PR #8 merged as a merge commit under D-032.
 
 ## Open questions / blockers
 
