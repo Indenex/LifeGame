@@ -200,3 +200,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-048 — 2026-10-15 — Doors are lockable (amends D-046)
 **Decision:** Doors can be locked. The PM's defaults: the player who built the door, or inside a claim any member, can lock and unlock it with Use. A locked door opens only for them; to everyone else it stays shut. Unlocked doors open for anyone, as in D-046. There is no lock-breaking yet.
 **Who:** Justin ("Doors should be lockable."); the details are PM defaults and his to change
+
+## D-049 — 2026-10-15 — Husbandry is a basic skill
+**Decision:** A new Husbandry skill covers shearing now and butchering and herding later. It is a survival basic outside the 300-point cap, like Foraging and Firecraft. Process ids `animal.*` map to it.
+**Who:** Justin ("Husbandry, basic"; the PM had recommended a capped specialty)
