@@ -39,7 +39,11 @@ public partial class InventoryBar : Control
         bool changed = now.Count != last.Count || now.Any(kv => !last.TryGetValue(kv.Key, out var c) || c != kv.Value);
         last = now;
 
-        foreach (var child in row.GetChildren()) child.QueueFree();
+        foreach (var child in row.GetChildren())
+        {
+            row.RemoveChild(child);
+            child.QueueFree();
+        }
         int index = 0, gainedAt = -1;
         foreach (var item in items)
         {
@@ -70,6 +74,7 @@ public partial class InventoryBar : Control
         name.Modulate = new Color(1, 1, 1, Mathf.Clamp(nameTime, 0f, 1f));
         // Centred along the bottom edge as slots come and go; the name floats above.
         var size = row.GetCombinedMinimumSize();
+        row.Size = size;
         row.Position = new Vector2((Size.X - size.X) / 2, Size.Y - size.Y - 22);
         var nameSize = name.GetCombinedMinimumSize();
         name.Size = nameSize;
