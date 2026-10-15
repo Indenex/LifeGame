@@ -19,6 +19,8 @@ public partial class CraftingUi : CanvasLayer
     DbConnection? conn;
     readonly PanelContainer panel;
     readonly VBoxContainer list = new();
+    // The list scrolls once it would run past the bottom of the screen (the clay tier is long).
+    readonly ScrollContainer scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     readonly HBoxContainer tabs = new();
     // Processes are grouped into tabs by tier, so the list stays short as tiers grow.
     static readonly string[] TierNames = { "Bare hands", "Fire and stone", "Cord and haft", "Clay", "Tier 4", "Tier 5" };
@@ -32,16 +34,18 @@ public partial class CraftingUi : CanvasLayer
 
     public CraftingUi()
     {
-        Layer = 2;
+        Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         panel = Card(new Vector2(380, 0));
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
         box.AddChild(Text("Crafting", 20));
-        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C closes.", 13, 0.65f));
+        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C or Esc closes.", 13, 0.65f));
         tabs.AddThemeConstantOverride("separation", 4);
         box.AddChild(tabs);
         list.AddThemeConstantOverride("separation", 6);
-        box.AddChild(list);
+        list.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scroll.AddChild(list);
+        box.AddChild(scroll);
         panel.AddChild(box);
         panel.Visible = false;
 
@@ -125,7 +129,12 @@ public partial class CraftingUi : CanvasLayer
             }
             return;
         }
-        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Key0 })
+        if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape })
+        {
+            panel.Visible = false;
+            GetViewport().SetInputAsHandled();
+        }
+        else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Key0 })
         {
             TakeOffFire();
             GetViewport().SetInputAsHandled();
@@ -152,6 +161,12 @@ public partial class CraftingUi : CanvasLayer
     {
         minigame?.Tick((float)delta);
         if (minigame is { Done: true } done) EndMinigame(done.Score);
+        if (panel.Visible)
+        {
+            // The panel's top sits 200 px above the middle; keep its foot clear of the HUD.
+            float room = Math.Max(160f, GetViewport().GetVisibleRect().Size.Y / 2 - 50);
+            scroll.CustomMinimumSize = new Vector2(0, Math.Min(list.GetCombinedMinimumSize().Y, room));
+        }
 
         // Roasts change from browning to ready to burnt while you watch.
         roastRefresh -= delta;
@@ -207,6 +222,15 @@ public partial class CraftingUi : CanvasLayer
     // with this score, and how many steps (strikes, coils, strokes) it takes.
     static partial void SkipMinigame(ProcessDef def, ref float? score);
     static partial void StepsFor(ProcessDef def, ref int steps);
+    static partial void Mastered(ProcessDef def, ref bool mastered);
+    // The row's note on the minigame: a Master does it by heart (D-047).
+    static string HandsOn(ProcessDef def)
+    {
+        if (def.Minigame == Minigame.None) return "";
+        bool mastered = false;
+        Mastered(def, ref mastered);
+        return mastered ? "  ·  by heart. Hold Ctrl to work it by hand" : "  ·  hands-on";
+    }
     static int Steps(ProcessDef def, int baseSteps)
     {
         StepsFor(def, ref baseSteps);
@@ -238,7 +262,7 @@ public partial class CraftingUi : CanvasLayer
                 return "You need a second stone to strike with";
         }
         else if (def.NeedsTool != ItemTags.None && !HasTool(def.NeedsTool))
-            return "You need the right tool";
+            return $"You need {ToolName(def.NeedsTool)}";
         return null;
     }
 
@@ -251,6 +275,23 @@ public partial class CraftingUi : CanvasLayer
 
     bool HasTool(ItemTags tags) =>
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && (Items.Def((Item)i.Item).Tags & tags) == tags) ?? false;
+
+    // What a tool tag reads as in a sentence: "using a cutting edge".
+    static string ToolName(ItemTags tags) => string.Join(" and ", Enum.GetValues<ItemTags>()
+        .Where(t => t != ItemTags.None && tags.HasFlag(t))
+        .Select(t => t switch
+        {
+            ItemTags.Hammer => "a hammer",
+            ItemTags.Cutting => "a cutting edge",
+            ItemTags.Chopping => "a chopping tool",
+            ItemTags.Piercing => "a sharp point",
+            ItemTags.Binding => "something to bind with",
+            ItemTags.Kindling => "kindling",
+            ItemTags.Digging => "a digging tool",
+            ItemTags.FireBow => "a bow drill",
+            ItemTags.Container => "a container",
+            _ => t.ToString().ToLowerInvariant(),
+        }));
 
     static List<int> Tiers() => Processes.List.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
 
@@ -300,11 +341,11 @@ public partial class CraftingUi : CanvasLayer
         foreach (var def in InTier())
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
-            if (def.NeedsTool != ItemTags.None) inputs += $", using a {def.NeedsTool.ToString().ToLowerInvariant()}";
+            if (def.NeedsTool != ItemTags.None) inputs += $", using {ToolName(def.NeedsTool)}";
             bool ready = Missing(def) == null;
             var button = new Button
             {
-                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{(def.Minigame != Minigame.None ? "  ·  hands-on" : "")}",
+                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}",
                 Alignment = HorizontalAlignment.Left,
                 Disabled = !ready,
                 Flat = true,
@@ -415,8 +456,11 @@ public partial class CraftingUi : CanvasLayer
         float heat, peak, elapsed;
         Key last;
 
-        public DrillGame(ProcessDef process) : base(process, "Alternate A and D to spin the drill. Keep the rhythm.") =>
-            stroke = 1.05f / Steps(process, 14);
+        // A bow drill turns the spindle several times a stroke, so it needs half as many.
+        public DrillGame(ProcessDef process) : base(process, process.NeedsTool.HasFlag(ItemTags.FireBow)
+            ? "Alternate A and D to saw the bow. Keep the rhythm."
+            : "Alternate A and D to spin the drill. Keep the rhythm.") =>
+            stroke = 1.05f / Steps(process, process.NeedsTool.HasFlag(ItemTags.FireBow) ? 7 : 14);
 
         public override void Key(Key key)
         {

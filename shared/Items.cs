@@ -24,6 +24,7 @@ namespace LifeGame.Shared
         StoneKnife = 11,
         DiggingStick = 12,
         Basket = 13,
+        BowDrill = 14,
 
         // Clay and ceramics (tier 3) use 100 to 129.
         CleanClay = 100,
@@ -77,6 +78,7 @@ namespace LifeGame.Shared
         Kindling = 32,  // catches a spark
         Digging = 64,   // breaks ground faster than hands
         Container = 128, // carries loose things
+        FireBow = 256,   // spins a fire drill with a bowstring
     }
 
     public static class Items
@@ -111,6 +113,7 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
+            new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
             new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true },
