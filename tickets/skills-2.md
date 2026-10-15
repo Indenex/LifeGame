@@ -2,7 +2,7 @@
 Lane: Journal and skills
 Owner: Journal and skills thread
 Status: in_progress
-Branch: claude/journal-skills-iseewg (restarted from main after #7 merged; local branch `skills-2` until then)
+Branch: claude/journal-skills-iseewg (restarted from main after #7 merged)
 PR: (none yet)
 
 ## Goal
@@ -16,4 +16,4 @@ Every process that has landed since skills-1 trains a skill and appears in the j
 - `cook.meat` doesn't exist yet. Its prefix needs a skill: default is Foraging (survival basic) unless Justin wants a Cook skill.
 
 ## Next step
-Once #7 merges, restart the branch from main, cherry-pick the local `skills-2` commits, push and open the skills-2 PR.
+Open the skills-2 PR as a draft; mark it ready once Survival's `gather.berries` hook is on main (or ship without it if the PM prefers).
