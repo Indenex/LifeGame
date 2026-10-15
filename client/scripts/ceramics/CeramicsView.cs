@@ -86,13 +86,13 @@ public partial class CeramicsView : Node
         // --camera-zoom=-8 starts the camera closer, for screenshots of small things.
         var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--camera-zoom="));
         if (arg != null && float.TryParse(arg[14..], out var zoom))
-            foreach (var rig in GetTree().Root.FindChildren("*", nameof(CameraRig), true, false).OfType<CameraRig>())
+            foreach (var rig in GetTree().Root.FindChildren("*", "", true, false).OfType<CameraRig>())
                 rig.Zoom(zoom);
     }
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.X })
+        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.V })
         {
             Tend();
             GetViewport().SetInputAsHandled();
@@ -143,7 +143,7 @@ public partial class CeramicsView : Node
                 {
                     confirmPiece = piece.id;
                     confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
-                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press X again to fire it anyway.");
+                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press V again to fire it anyway.");
                     return;
                 }
                 confirmPiece = 0;
@@ -166,7 +166,7 @@ public partial class CeramicsView : Node
             return;
         }
         note(carryingUnfired
-            ? "Take your dry pots to a burning fire and press X to fire them."
+            ? "Take your dry pots to a burning fire and press V to fire them."
             : "Nothing to tend here. Shape clay from the crafting panel (C).");
     }
 
