@@ -1,7 +1,7 @@
 # skills-1: Discovery journal and capped skills
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_review
+Status: done
 Branch: claude/journal-skills-iseewg (includes a merge of `crafting-core`, so it lands after or with that branch)
 PR: #7
 
@@ -32,4 +32,4 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - D-025: one Use key. Once Crafting's crafting-2 Use registry is on main, move reading a note from N to a G Use handler. J for the journal stays.
 
 ## Next step
-Justin approved merging #4 then #7 (D-028). After #4 merges: merge main into this branch, regenerate client/module_bindings, wait for CI green, merge #7 as a merge commit, send the PM the merge commit.
+Done: PR #7 merged into main at eb19852 on 2026-10-15 22:29. Follow-up work is in tickets/skills-2.md.
