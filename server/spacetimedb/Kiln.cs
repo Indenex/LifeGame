@@ -67,6 +67,7 @@ public static partial class Module
         if (!site.Complete) throw new Exception("The kiln isn't finished yet");
         if (!Structures.Contains((int)site.Kind, site.X, site.Z, site.Yaw, pos.X, pos.Z, Structures.WorkReach))
             throw new Exception("Too far away");
+        RequireClaimAccess(ctx, site.X, site.Z);
         var kiln = ctx.Db.Kiln.StructureId.Find(structureId) ?? ctx.Db.Kiln.Insert(new Kiln
         {
             StructureId = site.Id,

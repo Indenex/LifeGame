@@ -27,10 +27,11 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 
 - 2026-10-15 23:30: merged main 0c3964b (#20 digging stick, #18 subscriptions) at aa47c20. Kiln query now in net/Subscriptions.cs Area; GiveDugClay(ctx, player, depth) grades max(ClayRules.DugClayQuality(depth), Skills.DugClayQuality(rank)); kiln Use priority 26. Server, client, ClayCheck build.
 - 2026-10-15 23:31: CI run https://github.com/Indenex/LifeGame/actions/runs/38823236524 green on 4716d4e; sha sent to PM for merge.
+- 2026-10-15 23:40: #21 merged (85a1572). Claims is on main: TendClay, FirePots and UseKiln now call RequireClaimAccess; server builds. Rides with the blueprint PR. #10 still open.
 
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
 - After Claims PR #8 is on main: RequireClaimAccess in TendClay, FirePots, OnPlaced and kiln use.
 
 ## Next step
-Wait for the PM to merge #21; then port the blueprint hooks from the kiln-structure-prep notes above once #8 and #10 merge.
+When #10 merges, merge main and port the blueprint hooks from the kiln-structure-prep notes above once #8 and #10 merge.
