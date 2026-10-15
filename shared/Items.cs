@@ -1,6 +1,10 @@
 // Every material and made thing in the game, shared by the server and the client.
 // Tables store an item as its numeric id, so new items only ever get new numbers:
 // never renumber or reuse one.
+//
+// Id ranges per lane, so lanes can add items in parallel without colliding:
+//   Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189,
+//   Animals 190-219, Claims 220-239, Journal and skills 240-259.
 using System.Collections.Generic;
 
 namespace LifeGame.Shared
