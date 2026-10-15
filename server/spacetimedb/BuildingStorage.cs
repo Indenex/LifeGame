@@ -83,13 +83,8 @@ public static partial class Module
     static bool CanLock(ReducerContext ctx, Structure s, StructureDoor door)
     {
         if (door.HungBy == ctx.Sender) return true;
-        bool member = false;
-        ClaimMemberHook(ctx, s.X, s.Z, ref member);
-        return member;
+        return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
     }
-
-    // Claims implements this: true when the point is inside a claim the sender is a member of.
-    static partial void ClaimMemberHook(ReducerContext ctx, float x, float z, ref bool member);
 
     // Puts carried items of one kind and quality into a basket.
     [SpacetimeDB.Reducer]
