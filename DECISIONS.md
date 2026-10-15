@@ -192,3 +192,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-046 — 2026-10-15 — Doors, storage baskets, and weathering outside claims
 **Decision:** Anyone can open a hut door. Anyone can take from a storage basket, except inside a claim, where only members can. All player-crafted things (buildings, storage baskets, crafted items left on the ground) that sit outside a claim weather away if no player has touched them for a while. Inside a claim nothing weathers. PM default timing: weathering starts after 3 real days untouched and the thing is gone 24 hours later; any interaction resets it. One server sweep per hour checks a last-touched timestamp, which keeps the cost low. Building owns `Weathering.cs`; Claims supplies the in-claim check.
 **Who:** Justin (weathering rule in his words; timing is the PM's default, his to change)
+
+## D-047 — 2026-10-15 — Masters skip minigames but can play them
+**Decision:** At Master rank, crafting minigames are skipped by default and score a steady 0.8. Holding a key while starting the craft plays the shortest version instead, for a chance at a better result. The UX/UI lane picks the key and adds it to KEYMAP.md.
+**Who:** Justin ("Skip, can play", which the PM recommended)
