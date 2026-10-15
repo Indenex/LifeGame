@@ -81,6 +81,21 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
+        // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
+        Use.Register(new UseHandler
+        {
+            Id = "crafting.take_roast",
+            Priority = 25,
+            Find = at =>
+            {
+                var (roast, seconds) = MyRoasts().FirstOrDefault(r => Roasting.Done(r.seconds));
+                if (roast == null) return null;
+                float d = new Vector2(roast.X - at.X, roast.Z - at.Z).Length();
+                if (d > World.Reach) return null;
+                return new UseOffer(Roasting.Burnt(seconds) ? "Take the burnt meat off" : "Take the meat off the fire", d,
+                    () => conn.Reducers.TakeOffFire(roast.Id));
+            },
+        });
     }
 
     // Opens the panel on a tier; used by --screenshot-craft.
@@ -329,7 +344,7 @@ public partial class CraftingUi : CanvasLayer
         else if (def.Outcome == Outcome.Fire)
             Notice?.Invoke("The tinder catches. You have fire.");
         else if (def.Outcome == Outcome.Roast)
-            Notice?.Invoke($"It's over the fire. Take it off with C then 0 once it's browned ({Roasting.BestSeconds:0}s is about right)");
+            Notice?.Invoke($"It's over the fire. Press G by the fire once it's browned ({Roasting.BestSeconds:0}s is about right)");
         else if (def.Outcome != Outcome.Placed)
             Notice?.Invoke($"Made: {ItemLook.Label(def.Makes, j.Quality, def.MakesCount)}");
         Refresh();

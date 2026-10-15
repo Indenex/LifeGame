@@ -6,7 +6,7 @@ Branch: crafting-cook
 PR: #20
 
 ## Goal
-Per D-039: raw mutton (Animals drops it when butchering) roasts over a burning fire. "Roast mutton" in the crafting panel (Fire and stone tab) sets it on the nearest fire in reach, where it browns visibly. After 20 s it can come off (C, then 0) as roast mutton, best at about 30 s; after 60 s it is burnt. If the fire dies, the meat drops beside it as it was. Process id `cook.meat`; items RawMutton 190, CookedMutton 191, BurntMutton 192 (agreed with Animals, who start at 193).
+Per D-039: raw mutton (Animals drops it when butchering) roasts over a burning fire. "Roast mutton" in the crafting panel (Fire and stone tab) sets it on the nearest fire in reach, where it browns visibly. After 20 s it can come off (G by the fire, or C then 0) as roast mutton, best at about 30 s; after 60 s it is burnt. If the fire dies, the meat drops beside it as it was. Process id `cook.meat`; items RawMutton 190, CookedMutton 191, BurntMutton 192 (agreed with Animals, who start at 193).
 
 Also a stone knife (haft.knife), a digging stick (carve.digging_stick) and a woven basket (weave.basket). Justin's calls: D-041 the digging stick digs one level deeper than hands, to finer clay (quality 80, matching Ceramics' ClayRules.DugClayQuality); D-042 the basket raises a carry limit that Survival adds, so here it is only a craftable item with the Container tag; D-043 cooking trains Firecraft (Skills' mapping).
 
