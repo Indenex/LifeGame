@@ -37,6 +37,8 @@ namespace SpacetimeDB.Types
             AddTable(PlayerPos = new(conn));
             AddTable(Structure = new(conn));
             AddTable(TerrainEdit = new(conn));
+            AddTable(Weather = new(conn));
+            AddTable(WorldClock = new(conn));
             AddTable(WorldItem = new(conn));
         }
     }
@@ -544,6 +546,8 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.PlayerPos().ToSql(),
             new QueryBuilder().From.Structure().ToSql(),
             new QueryBuilder().From.TerrainEdit().ToSql(),
+            new QueryBuilder().From.Weather().ToSql(),
+            new QueryBuilder().From.WorldClock().ToSql(),
             new QueryBuilder().From.WorldItem().ToSql(),
         }
         ;
@@ -561,6 +565,8 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
         public global::SpacetimeDB.Table<Structure, StructureCols, StructureIxCols> Structure() => new("structure", new StructureCols("structure"), new StructureIxCols("structure"));
         public global::SpacetimeDB.Table<TerrainEdit, TerrainEditCols, TerrainEditIxCols> TerrainEdit() => new("terrain_edit", new TerrainEditCols("terrain_edit"), new TerrainEditIxCols("terrain_edit"));
+        public global::SpacetimeDB.Table<Weather, WeatherCols, WeatherIxCols> Weather() => new("weather", new WeatherCols("weather"), new WeatherIxCols("weather"));
+        public global::SpacetimeDB.Table<WorldClock, WorldClockCols, WorldClockIxCols> WorldClock() => new("world_clock", new WorldClockCols("world_clock"), new WorldClockIxCols("world_clock"));
         public global::SpacetimeDB.Table<WorldItem, WorldItemCols, WorldItemIxCols> WorldItem() => new("world_item", new WorldItemCols("world_item"), new WorldItemIxCols("world_item"));
     }
 
