@@ -233,7 +233,12 @@ public static partial class Module
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
         ctx.Db.Structure.Id.Delete(structureId);
+        CeramicsStructureRemoved(ctx, s);
     }
+
+    // Ceramics implements this to hand back what was loaded in a kiln that is taken down.
+    // Partial methods allow one implementation each, so every lane that needs it gets its own hook.
+    static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s);
 
     // Claims implements this to refuse placing or taking down buildings inside a
     // claim the sender has no access to (throw to refuse). Adding materials is

@@ -16,6 +16,8 @@ namespace LifeGame.Shared
         public float Clearance;
         // Shelter given to someone standing inside once it is finished, 0 to 1.
         public float RainCover, Warmth;
+        // Round shapes only: players can't walk into the footprint once the first stage is done.
+        public bool Solid;
         public string[] Stages = Array.Empty<string>();
     }
 

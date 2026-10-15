@@ -204,6 +204,13 @@ public partial class BuildingSystem : Node
     {
         foreach (var s in rows.Values)
         {
+            var shape = ShapeOf(s);
+            if (shape.Solid && shape.Round && (s.Complete || s.Stage >= 1))
+            {
+                float dx = to.X - s.X, dz = to.Z - s.Z, d = Mathf.Sqrt(dx * dx + dz * dz), keep = shape.Radius + 0.3f;
+                if (d < keep && d > 0.01f) to = new Vector3(s.X + dx / d * keep, to.Y, s.Z + dz / d * keep);
+                continue;
+            }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
             const float wall = 1.7f, half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
