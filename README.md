@@ -4,6 +4,8 @@ An online multiplayer 2.5D survival game where players wake up in the woods with
 
 Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8
 
+Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md`](STATUS.md).
+
 ## Layout
 
 | Path | What it is |
