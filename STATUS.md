@@ -12,8 +12,8 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
-| Waiting on Justin | Claim size and PvP card; house costs card; skill pacing card |
-| Next merge | PR #6 (approved, merging when green); then `crafting-core` with PR #7; then #8, #9, ceramics |
+| Waiting on Justin | Keymap (one Use key) card; sheep sneak card; fleece colors card |
+| Next merge | PR #8 (approved; merging main, CheckClaimAccess, marker as StructureKind); then `crafting-core` (#4) with PR #7; then #9, ceramics |
 | Next PM action | Record lane branch names as lanes report them; bring `crafting-core` merge plus world wipe to Justin when green |
 
 ## Lanes
@@ -21,12 +21,12 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Lane | Ticket | Status | Branch | Owns |
 |---|---|---|---|---|
 | Crafting (integration owner) | `tickets/crafting-1.md` | in_progress | `crafting-core` | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
-| Survival needs | `tickets/survival-2.md` (survival-1 done, PR #5 merged a59b3cd) | blocked until crafting-core, ceramics or #9 merge | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
+| Survival needs | `tickets/survival-2.md` (survival-1 done, PR #5 merged a59b3cd) | in_progress (on crafting-core + ceramics; weather waits on #9) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | `tickets/skills-1.md` | in_progress (PR #7, merges with or after crafting-core) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules | `tickets/claims-1.md` | in_review (PR #8 green) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
-| World atmosphere and sound | `tickets/atmosphere-1.md` | in_progress (draft PR #9) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
-| House building | `tickets/building-1.md` | merging (PR #6, Justin approved) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
-| Animals | `tickets/animals-1.md` | in_progress | lane to record | `Animals.cs`, `client/scripts/animals/` |
+| World atmosphere and sound | `tickets/atmosphere-1.md` | in_progress (PR #9 green; next atmosphere-2: sheep bleats, canopy fade) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
+| House building | `tickets/building-2.md` (building-1 done, PR #6 merged bae255c) | in_progress (on crafting-core + ceramics, lands after them) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
+| Animals | `tickets/animals-1.md` | in_progress (sheep AI working, screenshots posted) | lane to record | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics | `tickets/ceramics-1.md` | in_progress | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
@@ -39,6 +39,7 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
 - Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building's `Module.ShelterAt(ctx, x, z)` / `ShelterFor(ctx, playerId)` return Shelter(RainCover, Warmth, StructureId); it implements Survival's `ShelterAtHook(ctx, x, z, ref rainCover, ref warmth)`.
+- Keys: every key goes in `KEYMAP.md` (proposed, awaiting Justin).
 - Placement: `PlaceStructure(kind, x, z, yaw)` and `shared/Structures.cs`; the claim marker is a new `StructureKind` with one stage.
 - Weather (`WorldClock.cs`, PR #9): `TimeOfDay`, `CurrentWeather` (Cloud, Rain, Wind, Wetness 0 to 1), `DryingRate`, `AirTemperature` in °C. `RainAt` one-liner goes in whichever of #9 or ceramics merges second.
 - Rain: Atmosphere implements `RainAt(ctx, x, z, ref rain)` (0 to 1), declared in `Ceramics.cs`.
