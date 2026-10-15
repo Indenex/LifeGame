@@ -314,6 +314,7 @@ public partial class Main : Node3D
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 $"SELECT * FROM fire WHERE {range}",
                 $"SELECT * FROM clay_piece WHERE {range}",
+                $"SELECT * FROM kiln WHERE {range}",
                 "SELECT * FROM clay_news",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",

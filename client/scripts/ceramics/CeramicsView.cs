@@ -20,6 +20,7 @@ public partial class CeramicsView : Node
     readonly Node3D me;
     readonly Action<string> note;
     readonly Dictionary<ulong, PotView> pieces = new();
+    readonly Dictionary<ulong, KilnView> kilns = new();
     DbConnection? conn;
     uint myId;
     ulong confirmPiece;
@@ -41,6 +42,12 @@ public partial class CeramicsView : Node
         conn.Db.ClayPiece.OnDelete += (_, p) =>
         {
             if (pieces.Remove(p.Id, out var view)) view.QueueFree();
+        };
+        conn.Db.Kiln.OnInsert += (_, k) => UpsertKiln(k);
+        conn.Db.Kiln.OnUpdate += (_, _, k) => UpsertKiln(k);
+        conn.Db.Kiln.OnDelete += (_, k) =>
+        {
+            if (kilns.Remove(k.Id, out var view)) view.QueueFree();
         };
         conn.Db.ClayNews.OnInsert += (_, n) =>
         {
@@ -79,6 +86,28 @@ public partial class CeramicsView : Node
             view.Firing(Seconds(p.FireStart), Seconds(p.FireFinish));
     }
 
+    void UpsertKiln(Kiln k)
+    {
+        if (!kilns.TryGetValue(k.Id, out var view))
+        {
+            view = new KilnView();
+            kilns[k.Id] = view;
+            world.AddChild(view);
+        }
+        view.Position = new Vector3(k.X, heightAt(k.X, k.Z), k.Z);
+        view.Rotation = new Vector3(0, k.Yaw, 0);
+        view.Show(k.Load?.Count ?? 0, k.State == 1, Seconds(k.FireStart), Seconds(k.FireFinish));
+    }
+
+    // Show a kiln without a server, for the offline demo.
+    public KilnView DemoKiln(Vector3 at, float yaw, int pots, bool firing)
+    {
+        var view = new KilnView { Position = at, Rotation = new Vector3(0, yaw, 0) };
+        world.AddChild(view);
+        view.Show(pots, firing, PotView.Now - 20, PotView.Now + 160);
+        return view;
+    }
+
     static double Seconds(SpacetimeDB.Timestamp t) => t.MicrosecondsSinceUnixEpoch / 1_000_000.0;
 
     public override void _Ready()
@@ -112,7 +141,13 @@ public partial class CeramicsView : Node
             float ground = heightAt(view.Position.X, view.Position.Z) + (view.Stage == ClayStage.Firing ? -0.03f : 0f);
             view.Position = new Vector3(view.Position.X, ground, view.Position.Z);
         }
-        foreach (var view in pieces.Values) view.ShowLabel = view == nearest;
+        foreach (var view in kilns.Values)
+            view.Position = new Vector3(view.Position.X, heightAt(view.Position.X, view.Position.Z), view.Position.Z);
+        // A kiln's label shows when it is the closest thing to tend.
+        var kiln = NearestKiln(new Vector2(me.Position.X, me.Position.Z));
+        bool kilnFirst = kiln.view != null && kiln.d < nearestDist;
+        foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst;
+        foreach (var view in kilns.Values) view.ShowLabel = kilnFirst && view == kiln.view;
     }
 
     void Tend()
@@ -124,13 +159,26 @@ public partial class CeramicsView : Node
         }
         var at = new Vector2(me.Position.X, me.Position.Z);
 
+        // A kiln within reach comes first unless a piece of clay is closer.
+        var kiln = NearestKiln(at);
         // The nearest piece of drying clay within reach.
+
         var piece = pieces
             .Where(kv => kv.Value.Stage == ClayStage.Drying)
             .Select(kv => (id: kv.Key, view: kv.Value, d: new Vector2(kv.Value.Position.X, kv.Value.Position.Z).DistanceTo(at)))
             .Where(t => t.d <= World.Reach)
             .OrderBy(t => t.d)
             .FirstOrDefault();
+        if (kiln.view != null && (piece.view == null || kiln.d < piece.d))
+        {
+            if (kiln.view.IsFiring)
+                note("The kiln is firing. The pots come out when it cools.");
+            else if (kiln.view.Load == 0 && !Carrying(i => ClayRules.FormOfUnfired(i) != null))
+                note("The kiln is empty. Bring dry pots: pick up a bone-dry pot with V.");
+            else
+                conn.Reducers.UseKiln(kiln.id);
+            return;
+        }
         if (piece.view != null)
         {
             var row = conn.Db.ClayPiece.Id.Find(piece.id);
@@ -169,6 +217,14 @@ public partial class CeramicsView : Node
             ? "Take your dry pots to a burning fire and press V to fire them."
             : "Nothing to tend here. Shape clay from the crafting panel (C).");
     }
+
+    // Kilns are measured from their wall, not their center.
+    (ulong id, KilnView? view, float d) NearestKiln(Vector2 at) =>
+        kilns
+            .Select(kv => (id: kv.Key, view: (KilnView?)kv.Value, d: Math.Max(0f, new Vector2(kv.Value.Position.X, kv.Value.Position.Z).DistanceTo(at) - 0.8f)))
+            .Where(t => t.d <= World.Reach - 0.8f)
+            .OrderBy(t => t.d)
+            .FirstOrDefault();
 
     bool Carrying(Func<Item, bool> match) =>
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && match((Item)i.Item)) ?? false;
