@@ -14,6 +14,7 @@ public partial class SoundScape : Node
     public float Rain { set => mix.Rain = value; }
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
+    public float Cover { set => mix.Cover = value; }
     public bool MusicOn { get => mix.MusicOn; set => mix.MusicOn = value; }
 
     public override void _Ready()
@@ -25,6 +26,8 @@ public partial class SoundScape : Node
     }
 
     public void Step(Ground ground, float wetness) => mix.Step(ground, wetness);
+    public void Bleat(float pan, float gain, bool startled) => mix.Bleat(pan, gain, startled);
+    public void Thunder(float delay, float gain, float near) => mix.Thunder(delay, gain, near);
 
     public override void _Process(double delta)
     {
