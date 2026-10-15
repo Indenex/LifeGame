@@ -72,3 +72,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Context:** Lanes add items in parallel on separate branches.
 **Decision:** Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 **Who:** PM (technical)
+
+## D-017 — 2026-10-15 — Gentler survival needs
+**Decision:** Full to empty takes about 90 minutes for food, 60 for water, and 16 minutes of cold away from a fire (3 times faster standing in water). Needs pause while offline; after a respawn you have 60% food and water and full warmth.
+**Who:** Justin ("Gentler" over the proposed 45/30/8)
