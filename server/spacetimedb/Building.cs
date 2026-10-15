@@ -111,6 +111,7 @@ public static partial class Module
             if (Structures.TooClose(k, x, z, (int)other.Kind, other.X, other.Z))
                 throw new Exception("Too close to another building");
 
+        CheckClaimAccess(ctx, x, z);
         yaw = MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
@@ -185,6 +186,7 @@ public static partial class Module
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
         if (s.Owner != ctx.Sender)
             throw new Exception("Only whoever laid it out can take it down");
+        CheckClaimAccess(ctx, s.X, s.Z);
         var pos = RequirePos(ctx, RequirePlayer(ctx));
         if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, pos.X, pos.Z, Structures.WorkReach))
             throw new Exception("Out of reach");
@@ -218,6 +220,11 @@ public static partial class Module
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
         ctx.Db.Structure.Id.Delete(structureId);
     }
+
+    // Claims implements this to refuse placing or taking down buildings inside a
+    // claim the sender has no access to (throw to refuse). Adding materials is
+    // never gated: anyone can help build.
+    static partial void CheckClaimAccess(ReducerContext ctx, float x, float z);
 
     // For other systems (survival needs, weather): how sheltered a spot is. Only
     // finished structures shelter, and only when you are well inside.
