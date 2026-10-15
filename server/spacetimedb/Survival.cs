@@ -300,7 +300,9 @@ public static partial class Module
             return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0 };
         float heat = HeatAt(ctx, pos.X, pos.Z);
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - ShelterAt(ctx, pos.X, pos.Z));
+        float rainCover = 0, shelter = 0;
+        ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f));
         return v with
         {
             FoodRate = -Needs.FoodDrain,
@@ -340,9 +342,10 @@ public static partial class Module
         return best;
     }
 
-    // How much a spot shelters from the cold, 0 (open sky) to 1 (fully). Nothing
-    // can be built yet; huts and caves will plug in here.
-    static float ShelterAt(ReducerContext ctx, float x, float z) => 0f;
+    // Shelter: House building implements this with its ShelterAt. Warmth (0 open
+    // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
+    // when weather arrives.
+    static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
     static (float food, float water) Nourishment(ItemKind kind) => kind switch
     {
