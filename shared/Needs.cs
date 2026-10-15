@@ -28,6 +28,14 @@ namespace LifeGame.Shared
         public const float BerryFood = 0.12f;
         public const float BerryWater = 0.02f;
         public const float SipWater = 0.2f;
+        // A pot of water quenches more than a sip from the river: carry one away from water.
+        public const float PinchPotWater = 0.35f;
+        public const float CoilPotWater = 0.7f;
+
+        // Weather (Justin, 2026-10-15): the cold drain doubles from a mild 15 °C
+        // down to 0 °C, and rain adds half again unless you are under cover.
+        public const float MildCelsius = 15f;
+        public const float RainChill = 0.5f;
 
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;

@@ -36,6 +36,9 @@ namespace LifeGame.Shared
         Daub = 110,
         UnfiredPinchPot = 111,
         UnfiredCoilPot = 112,
+
+        // Survival 160-189
+        Berries = 160,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -94,7 +97,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks" },
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
-            new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true });
+            new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
+            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" });
 
         public static ItemDef Def(Item item) => All[item];
 

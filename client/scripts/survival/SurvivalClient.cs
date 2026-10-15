@@ -9,13 +9,12 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // The client side of survival: reads your needs from the server's snapshot,
-// draws fires and berry bushes, and handles foraging, eating and drinking.
-// G picks berries, C eats, R drinks.
+// draws berry bushes, and handles foraging, eating and drinking.
+// G picks berries, C eats, R drinks from water or from a pot you carry.
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
-    readonly Dictionary<ulong, Node3D> fires = new();
 
     Node world = null!;
     Terrain terrain = null!;
@@ -31,7 +30,6 @@ public partial class SurvivalClient : Node
     public static IEnumerable<string> Queries(string range) => new[]
     {
         "SELECT * FROM my_vitals",
-        $"SELECT * FROM heat_source WHERE {range}",
         $"SELECT * FROM forage_bush WHERE {range}",
     };
 
@@ -56,8 +54,6 @@ public partial class SurvivalClient : Node
         conn = connection;
         conn.Db.MyVitals.OnInsert += (_, v) => OnVitals(v);
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
-        conn.Db.HeatSource.OnInsert += (_, h) => AddFire(h);
-        conn.Db.HeatSource.OnDelete += (_, h) => RemoveNode(fires, h.Id);
         conn.Db.ForageBush.OnInsert += (_, b) => AddBush(b);
         conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) n.Ripe = IsRipe(b); };
         conn.Db.ForageBush.OnDelete += (_, b) => RemoveNode(bushes, b.Id);
@@ -144,12 +140,13 @@ public partial class SurvivalClient : Node
         }
         if (e.IsActionPressed("eat"))
         {
-            if (Carrying(ItemKind.Berries)) conn.Reducers.Eat(ItemKind.Berries);
+            if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
             else hud.Note("You have nothing to eat");
         }
         if (e.IsActionPressed("drink"))
         {
             if (WaterNearby()) conn.Reducers.Drink();
+            else if (PotOfWater() is { } pot) conn.Reducers.DrinkFrom((ushort)pot);
             else hud.Note("No water within reach");
         }
     }
@@ -161,11 +158,17 @@ public partial class SurvivalClient : Node
         if (NearestRipeBush() != null) parts.Add("G  pick berries");
         var (food, water, _) = Current();
         if (water < 0.97f && WaterNearby()) parts.Add("R  drink");
-        if (food < 0.95f && Carrying(ItemKind.Berries)) parts.Add("C  eat berries");
+        else if (water < 0.9f && PotOfWater() != null) parts.Add("R  drink from your pot");
+        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("C  eat berries");
         return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
 
-    bool Carrying(ItemKind kind) => conn?.Db.MyInventory.Iter().Any(i => i.Kind == kind && i.Count > 0) == true;
+    bool Carrying(Item item) => conn?.Db.MyInventory.Iter().Any(i => i.Item == (ushort)item && i.Count > 0) == true;
+
+    // The smallest pot of water you carry, so the big one is saved for later.
+    Item? PotOfWater() =>
+        Carrying(Item.PinchPotOfWater) ? Item.PinchPotOfWater :
+        Carrying(Item.CoilPotOfWater) ? Item.CoilPotOfWater : null;
 
     ForageBush? NearestRipeBush()
     {
@@ -200,14 +203,6 @@ public partial class SurvivalClient : Node
     static bool IsRipe(ForageBush b) => NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch;
 
     // --- World objects -----------------------------------------------------
-
-    void AddFire(HeatSource h)
-    {
-        if (fires.ContainsKey(h.Id)) return;
-        var fire = new Campfire(h.Id) { Position = new Vector3(h.X, terrain.HeightAt(h.X, h.Z), h.Z) };
-        fires[h.Id] = fire;
-        world.AddChild(fire);
-    }
 
     void AddBush(ForageBush b)
     {

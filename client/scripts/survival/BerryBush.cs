@@ -6,7 +6,7 @@ namespace LifeGame;
 // it is just leaves until they grow back.
 public partial class BerryBush : Node3D
 {
-    static readonly Color BerryColor = new(0.55f, 0.08f, 0.16f);
+    public static readonly Color BerryColor = new(0.55f, 0.08f, 0.16f);
     static readonly Color BushLeaf = new(0.20f, 0.33f, 0.14f);
 
     static Mesh? lobeMesh, berryMesh;
