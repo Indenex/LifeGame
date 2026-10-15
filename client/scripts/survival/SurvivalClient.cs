@@ -45,10 +45,14 @@ public partial class SurvivalClient : Node
 
     public override void _Ready()
     {
-        Bind("forage", Key.G);
-        Bind("eat", Key.V);
+        Bind("eat", Key.X);
         Bind("drink", Key.R);
         AddChild(needsHud);
+        // Picking berries is on the shared Use key (G).
+        UseTargets.Register(new Usable(1, (_, _) =>
+            conn != null && NearestRipeBush() is { } bush
+                ? new UseTarget(new Vector3(bush.X, player.Position.Y, bush.Z), "Pick berries", () => conn?.Reducers.Forage(bush.Id))
+                : null));
     }
 
     public void Attach(DbConnection connection)
@@ -137,11 +141,6 @@ public partial class SurvivalClient : Node
     public override void _UnhandledInput(InputEvent e)
     {
         if (conn == null) return;
-        if (e.IsActionPressed("forage"))
-        {
-            if (NearestRipeBush() is { } bush) conn.Reducers.Forage(bush.Id);
-            else hud.Note("No ripe berries within reach");
-        }
         if (e.IsActionPressed("eat"))
         {
             if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
@@ -158,10 +157,9 @@ public partial class SurvivalClient : Node
     {
         if (conn == null || vitals == null) return null;
         var parts = new List<string>();
-        if (NearestRipeBush() != null) parts.Add("G  pick berries");
         var (food, water, _) = Current();
         if (water < 0.97f && WaterNearby()) parts.Add("R  drink");
-        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("V  eat berries");
+        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("X  eat berries");
         return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
 

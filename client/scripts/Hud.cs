@@ -10,6 +10,8 @@ public partial class Hud : CanvasLayer
     readonly Label status = new();
     readonly HBoxContainer inventory = new();
     readonly Label toast = new();
+    readonly Label usePrompt = new();
+    PanelContainer usePanel = null!;
     float toastTime;
 
     public override void _Ready()
@@ -25,7 +27,7 @@ public partial class Hud : CanvasLayer
         Style(status, 15, 0.85f);
         root.AddChild(statusPanel);
 
-        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up    C craft    T feed fire", 14);
+        var controls = Text("WASD walk    Q/E turn    scroll zoom    F dig    Space pick up    G use    C craft", 14);
         controls.Modulate = new Color(1, 1, 1, 0.7f);
         var controlsPanel = Panel(controls, Vector2.Zero);
         controlsPanel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
@@ -38,6 +40,15 @@ public partial class Hud : CanvasLayer
         inventory.Position = new Vector2(0, -64);
         root.AddChild(inventory);
 
+        Style(usePrompt, 17, 1f);
+        usePanel = Panel(usePrompt, Vector2.Zero);
+        usePanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        usePanel.GrowHorizontal = Control.GrowDirection.Both;
+        usePanel.GrowVertical = Control.GrowDirection.Begin;
+        usePanel.Position = new Vector2(0, -118);
+        usePanel.Visible = false;
+        root.AddChild(usePanel);
+
         Style(toast, 18, 1f);
         toast.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
         toast.GrowHorizontal = Control.GrowDirection.Both;
@@ -49,6 +60,13 @@ public partial class Hud : CanvasLayer
     }
 
     public void SetStatus(string text) => status.Text = text;
+
+    // What the Use key would do right now, such as "G  Feed the fire", or null to hide.
+    public void SetUsePrompt(string? text)
+    {
+        usePanel.Visible = text != null;
+        if (text != null && usePrompt.Text != text) usePrompt.Text = text;
+    }
 
     public void Note(string text)
     {

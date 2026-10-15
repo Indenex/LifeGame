@@ -58,6 +58,7 @@ public partial class Main : Node3D
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         AddChild(building);
+        UseTargets.Register(new Usable(0, FireTarget));
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);
         cameraRig.Camera.MakeCurrent();
@@ -226,7 +227,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("feed_fire", Key.T);
+        Bind("use", Key.G);
     }
 
     // --- Networking -------------------------------------------------------
@@ -413,7 +414,7 @@ public partial class Main : Node3D
         if (e.IsActionPressed("dig")) Dig();
         if (e.IsActionPressed("pick_up")) PickUp();
         if (e.IsActionPressed("craft")) crafting.Toggle();
-        if (e.IsActionPressed("feed_fire") && !building.Placing) FeedFire();
+        if (e.IsActionPressed("use") && UsableNow() is { } target) target.Use();
     }
 
     public override void _Process(double delta)
@@ -422,6 +423,7 @@ public partial class Main : Node3D
         conn?.FrameTick();
 
         if (spawned && !crafting.CapturesInput) Walk(dt);
+        hud.SetUsePrompt(UsableNow() is { } use ? $"G  {use.Prompt}" : null);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
         cameraRig.Focus = me.Position + new Vector3(0, 0.9f, 0);
@@ -492,20 +494,23 @@ public partial class Main : Node3D
     }
 
     // Puts the cheapest fuel you carry on the nearest fire.
-    void FeedFire()
+    // What G would do now. Nothing while placing a building or busy in a minigame.
+    UseTarget? UsableNow() =>
+        conn == null || !spawned || building.Placing || crafting.CapturesInput ? null : UseTargets.Best(me.Position, heading);
+
+    // Feeding a fire: offered when one is in reach and you carry something that
+    // burns. Sticks go first; fiber and tinder are a last resort.
+    UseTarget? FireTarget(Vector3 at, float _)
     {
-        if (conn == null) return;
-        if (fires.NearestWithin(conn, me.Position, World.Reach) is not { } fire)
-        {
-            hud.Note("No fire within reach");
-            return;
-        }
+        if (conn == null || fires.NearestWithin(conn, at, World.Reach) is not { } fire) return null;
         var fuel = conn.Db.MyInventory.Iter()
             .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
             .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds > 30 ? 0 : 1)
             .FirstOrDefault();
-        if (fuel == null) hud.Note("You have nothing that burns");
-        else conn.Reducers.FeedFire(fire.Id, fuel.Item);
+        if (fuel == null) return null;
+        var name = Items.Def((Item)fuel.Item).Name.ToLowerInvariant();
+        return new UseTarget(new Vector3(fire.X, at.Y, fire.Z), $"Feed the fire ({name})",
+            () => conn?.Reducers.FeedFire(fire.Id, fuel.Item));
     }
 
     void Dust(Vector3 at, Color color)
