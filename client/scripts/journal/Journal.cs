@@ -29,9 +29,18 @@ public partial class Journal : CanvasLayer
     bool caughtUp;
     float bob;
     static Mesh? noteMesh;
+    static Journal? current;
+
+    // The player's rank, 0 to 100, in the skill a process trains. Crafting asks this
+    // to shorten minigames (see CraftingUi.Skills.cs).
+    public static int RankFor(string processId) =>
+        current?.conn is { } c && Skills.SpecFor(processId) is { } spec
+            ? c.Db.MySkills.Iter().Where(s => s.Spec == spec.Id).Select(s => Skills.Rank(s.Points)).FirstOrDefault()
+            : 0;
 
     public override void _Ready()
     {
+        current = this;
         Layer = 2;
         AddChild(panel);
 
