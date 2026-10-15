@@ -13,6 +13,11 @@ public partial class Rain : Node3D
         BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
         AlbedoColor = new Color(0.78f, 0.82f, 0.88f, 0.3f),
         DisableReceiveShadows = true,
+        // Drops right in front of the camera would read as thick sticks, so they
+        // fade in only a few meters out.
+        DistanceFadeMode = BaseMaterial3D.DistanceFadeModeEnum.PixelAlpha,
+        DistanceFadeMinDistance = 3f,
+        DistanceFadeMaxDistance = 10f,
     };
     readonly ParticleProcessMaterial process = new()
     {
@@ -39,7 +44,7 @@ public partial class Rain : Node3D
             Preprocess = 1.2f,
             VisibilityAabb = new Aabb(new Vector3(-30, -30, -30), new Vector3(60, 50, 60)),
             ProcessMaterial = process,
-            DrawPass1 = new QuadMesh { Size = new Vector2(0.022f, 0.75f), Material = material },
+            DrawPass1 = new QuadMesh { Size = new Vector2(0.012f, 0.6f), Material = material },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(drops);
@@ -53,6 +58,6 @@ public partial class Rain : Node3D
         drops.AmountRatio = Mathf.Clamp(amount, 0f, 1f);
         var slant = new Vector3(0.6f, 0f, 0.8f) * (0.04f + wind * 0.22f);
         process.Direction = (Vector3.Down + slant).Normalized();
-        material.AlbedoColor = new Color(0.78f * light, 0.82f * light, 0.9f * light, 0.18f + 0.14f * amount);
+        material.AlbedoColor = new Color(0.78f * light, 0.82f * light, 0.9f * light, 0.14f + 0.12f * amount);
     }
 }

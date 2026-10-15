@@ -3,7 +3,7 @@
 //
 //   dotnet run -- out.wav [scene:seconds ...] [--no-music]
 //
-// Scenes: day, rain, dusk, night. Each scene walks on grass for its first half.
+// Scenes: day, rain, dusk, night, sheep (a grazing flock that bolts halfway). Each scene walks on grass for its first half.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
@@ -46,6 +46,11 @@ foreach (var scene in scenes)
             mix.Step(Ground.Grass, mix.Wetness);
             nextStep = t + 0.36;
         }
+        // Sheep scenes: a calm flock, then it bolts halfway through.
+        if (parts[0] == "sheep" && Random.Shared.NextDouble() < n / (double)rate * 0.4)
+            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false);
+        if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
+            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true);
         mix.Render(left, right, n);
         for (int i = 0; i < n; i++)
         {

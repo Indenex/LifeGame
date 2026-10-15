@@ -46,6 +46,8 @@ public static class Look
         Add("wind_strength", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
         Add("cloud_cover", RenderingServer.GlobalShaderParameterType.Float, 0.2f);
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
+        Add("player_position", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1000, 0));
+        Add("view_camera_position", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.Zero);
     }
 
     // Each surface family gets the same shader with its own detail: how fine the
@@ -53,7 +55,16 @@ public static class Look
     public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
     public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
-    public static ShaderMaterial Foliage => foliage ??= Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
+    public static ShaderMaterial Foliage => foliage ??= MakeFoliage();
+
+    // Leaves (and thatch) between the camera and the player dissolve so you can
+    // always see yourself under the trees.
+    static ShaderMaterial MakeFoliage()
+    {
+        var material = Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
+        material.SetShaderParameter("see_through", true);
+        return material;
+    }
 
     // Kept for callers that only need a plain painted surface.
     public static ShaderMaterial Painted => Ground;
@@ -186,6 +197,26 @@ public static class Look
             uniform vec3 detail_stretch = vec3(1.0);
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
+            uniform bool see_through = false;
+            global uniform vec3 player_position;
+            global uniform vec3 view_camera_position;
+
+            // Fades out surfaces close to the line from the camera to the player,
+            // with an ordered dither so it needs no transparency. Only the main
+            // camera does this, so shadows stay whole.
+            bool dissolved(vec3 p, vec3 cam, vec2 frag) {
+                if (distance(cam, view_camera_position) > 0.5) return false;
+                vec3 target = player_position + vec3(0.0, 1.0, 0.0);
+                vec3 seg = target - cam;
+                float t = clamp(dot(p - cam, seg) / dot(seg, seg), 0.0, 1.0);
+                if (t > 0.97) return false;
+                float radius = mix(3.2, 1.8, t);
+                float keep = smoothstep(radius * 0.55, radius, distance(p, cam + seg * t));
+                ivec2 c = ivec2(frag) % 4;
+                int index = c.x + c.y * 4;
+                const float bayer[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+                return keep < (bayer[index] + 0.5) / 16.0;
+            }
 
             varying vec3 tint;
             varying vec3 world_pos;
@@ -218,6 +249,7 @@ public static class Look
             }
 
             void fragment() {
+                if (see_through && dissolved(world_pos, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
                 vec2 uv = world_pos.xz * brush_scale + vec2(world_pos.y * 0.21);
                 float a = texture(brush, uv).r;
                 float b = texture(brush, uv * 2.7 + vec2(0.31, 0.77)).r;

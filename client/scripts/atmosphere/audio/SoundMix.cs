@@ -24,6 +24,7 @@ public sealed class SoundMix
     readonly Birds birds;
     readonly NightVoices night;
     readonly Steps steps;
+    readonly Sheep sheep;
     readonly Music music;
     readonly Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
@@ -38,11 +39,16 @@ public sealed class SoundMix
         birds = new Birds(rate, rng);
         night = new NightVoices(rate, rng);
         steps = new Steps(rate, noise, rng);
+        sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
     }
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+
+    // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
+    // gain from distance, startled when the flock bolts.
+    public void Bleat(float pan, float gain, bool startled) => sheep.Trigger(pan, gain, startled);
 
     public void Render(float[] left, float[] right, int count)
     {
@@ -62,6 +68,7 @@ public sealed class SoundMix
         birds.Render(left, right, sendL, sendR, count, Daylight * (1f - 0.9f * Rain) * (1f - 0.5f * Wind));
         night.Render(left, right, sendL, sendR, count, night01 * (1f - 0.9f * Rain));
         steps.Render(left, right, count);
+        sheep.Render(left, right, sendL, sendR, count);
         music.Render(left, right, sendL, sendR, count, MusicOn, night01);
         reverb.Process(sendL, sendR, left, right, count);
 
@@ -531,6 +538,71 @@ public sealed class SoundMix
                     step.Age += dt;
                 }
                 if (step.Age > 0.4f) active.RemoveAt(k);
+            }
+        }
+    }
+
+    // --- Sheep ------------------------------------------------------------------
+
+    // A buzzy voice shaped by two vowel formants ("baa"), with the quick warble
+    // that makes it a bleat. Startled bleats are higher, shorter and sharper.
+    sealed class Sheep
+    {
+        readonly int rate;
+        readonly Random rng;
+        readonly List<Voice> voices = new();
+
+        sealed class Voice
+        {
+            public float Pitch, Length, Gain, Pan, Warble, Age, Phase;
+            public BandPass Low, High;
+        }
+
+        public Sheep(int rate, Random rng)
+        {
+            this.rate = rate;
+            this.rng = rng;
+        }
+
+        public void Trigger(float pan, float gain, bool startled)
+        {
+            if (voices.Count > 5 || gain < 0.01f) return;
+            voices.Add(new Voice
+            {
+                Pitch = startled ? Range(rng, 380f, 470f) : Range(rng, 230f, 330f),
+                Length = startled ? Range(rng, 0.3f, 0.45f) : Range(rng, 0.6f, 1.0f),
+                Gain = gain * (startled ? 0.11f : 0.075f),
+                Pan = Math.Clamp(pan, -1f, 1f),
+                Warble = Range(rng, 6f, 8.5f),
+            });
+        }
+
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
+        {
+            float dt = 1f / rate;
+            for (int v = voices.Count - 1; v >= 0; v--)
+            {
+                var voice = voices[v];
+                float pl = Pan(voice.Pan, true), pr = Pan(voice.Pan, false);
+                for (int i = 0; i < n && voice.Age < voice.Length; i++)
+                {
+                    float u = voice.Age / voice.Length;
+                    // The pitch sags a little through the call.
+                    float freq = voice.Pitch * (1.05f - 0.12f * u) * (1f + 0.02f * MathF.Sin(voice.Age * 2f * MathF.PI * voice.Warble));
+                    voice.Phase += freq * dt;
+                    voice.Phase -= MathF.Floor(voice.Phase);
+                    float saw = 2f * voice.Phase - 1f;
+                    float tremolo = 0.6f + 0.4f * MathF.Sin(voice.Age * 2f * MathF.PI * voice.Warble);
+                    float env = MathF.Min(1f, voice.Age / 0.05f) * MathF.Min(1f, (voice.Length - voice.Age) / 0.15f);
+                    float formants = voice.Low.Process(saw, 750f, 0.5f, rate) + 0.6f * voice.High.Process(saw, 1650f, 0.6f, rate);
+                    float s = formants * tremolo * env * voice.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    sl[i] += s * pl * 0.4f;
+                    sr[i] += s * pr * 0.4f;
+                    voice.Age += dt;
+                }
+                if (voice.Age >= voice.Length) voices.RemoveAt(v);
             }
         }
     }

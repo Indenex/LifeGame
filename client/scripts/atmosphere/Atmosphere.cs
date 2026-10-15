@@ -12,7 +12,8 @@ namespace LifeGame;
 // Preview keys in debug builds (only change what you see and hear): hold F5 to
 // fast-forward time, F6 to cycle rain / clear / the server's weather, M to mute or unmute music.
 // Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5
-// --day-minutes=4 (a shorter day, for watching the whole cycle).
+// --day-minutes=4 (a shorter day, for watching the whole cycle), and
+// --debug-position=x,z to hold the player somewhere for screenshots.
 public partial class Atmosphere : Node3D
 {
     public Node3D? Player;
@@ -38,6 +39,7 @@ public partial class Atmosphere : Node3D
     int previewWeather;
     Vector2 cloudOffset;
 
+    Vector2? debugPosition;
     float stepPhase;
     Vector3 lastPlayerPos;
 
@@ -72,6 +74,10 @@ public partial class Atmosphere : Node3D
         argRain = ArgFloat("rain");
         argWind = ArgFloat("wind");
         argWetness = ArgFloat("wetness");
+        if (Arg("debug-position")?.Split(',') is [var px, var pz]
+            && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
+            && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
+            debugPosition = new Vector2(x, z);
         if (argRain is > 0f)
         {
             argCloud ??= 0.95f;
@@ -127,6 +133,8 @@ public partial class Atmosphere : Node3D
         float dt = (float)delta;
         // A whole day in about 45 seconds while T is held.
         if (InputMap.HasAction("preview_time") && Input.IsActionPressed("preview_time")) previewDays += dt / 45f;
+        if (debugPosition is { } d && Player != null)
+            Player.Position = new Vector3(d.X, Player.Position.Y, d.Y);
         Update(dt, false);
         Footsteps();
     }
@@ -168,6 +176,9 @@ public partial class Atmosphere : Node3D
         ApplyLight();
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
+        RenderingServer.GlobalShaderParameterSet("player_position", focus);
+        if (GetViewport()?.GetCamera3D() is { } camera)
+            RenderingServer.GlobalShaderParameterSet("view_camera_position", camera.GlobalPosition);
         float daylight = WorldTime.Daylight(timeOfDay);
         rain.Follow(focus, rainAmount, wind, 0.25f + 0.75f * daylight);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
@@ -189,7 +200,7 @@ public partial class Atmosphere : Node3D
     {
         new(0.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
         new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.45f, 1.25f),
-        new(0.26f, new(0.26f, 0.36f, 0.55f), new(0.88f, 0.70f, 0.58f), new(0.20f, 0.20f, 0.18f), new(0.62f, 0.60f, 0.62f), new(0.86f, 0.84f, 0.84f), new(0.14f, 0.15f, 0.18f), 0.008f, 0.008f, 0.45f, 1.05f),
+        new(0.26f, new(0.28f, 0.40f, 0.60f), new(0.88f, 0.74f, 0.68f), new(0.20f, 0.21f, 0.20f), new(0.58f, 0.61f, 0.67f), new(0.80f, 0.83f, 0.88f), new(0.15f, 0.17f, 0.21f), 0.007f, 0.006f, 0.48f, 1.08f),
         new(0.32f, new(0.30f, 0.47f, 0.68f), new(0.86f, 0.80f, 0.70f), new(0.24f, 0.28f, 0.22f), new(0.66f, 0.70f, 0.72f), new(0.90f, 0.90f, 0.88f), new(0.08f, 0.09f, 0.08f), 0.007f, 0.009f, 0.4f, 1.0f),
         new(0.50f, new(0.27f, 0.46f, 0.72f), new(0.76f, 0.82f, 0.86f), new(0.24f, 0.28f, 0.22f), new(0.64f, 0.71f, 0.77f), new(0.88f, 0.90f, 0.92f), new(0.06f, 0.07f, 0.07f), 0.005f, 0.005f, 0.4f, 0.95f),
         new(0.68f, new(0.30f, 0.45f, 0.62f), new(0.80f, 0.74f, 0.62f), new(0.24f, 0.28f, 0.22f), new(0.62f, 0.68f, 0.70f), new(0.86f, 0.88f, 0.86f), new(0.0f, 0.0f, 0.0f), 0.006f, 0.007f, 0.38f, 1.0f),
@@ -311,13 +322,16 @@ public partial class Atmosphere : Node3D
         InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
     }
 
-    static float? ArgFloat(string name)
+    static string? Arg(string name)
     {
         foreach (var arg in OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()))
-            if (arg.StartsWith($"--{name}=") && float.TryParse(arg[(name.Length + 3)..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
-                return v;
+            if (arg.StartsWith($"--{name}="))
+                return arg[(name.Length + 3)..];
         return null;
     }
+
+    static float? ArgFloat(string name) =>
+        float.TryParse(Arg(name), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
 
     static readonly Shader SkyShader = new()
     {
