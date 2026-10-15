@@ -13,6 +13,8 @@ namespace LifeGame.Shared
         None,
         Drill,  // spin a hand drill: alternate left and right to build heat
         Strike, // knap: strike when the mark is in the sweet spot
+        Shape,  // pinch a pot: hold to thin the wall, release in the sweet spot
+        Coil,   // build a coil pot: lay each coil as the turning pot comes round
     }
 
     // What a finished process makes.
@@ -20,6 +22,7 @@ namespace LifeGame.Shared
     {
         Item,  // an item into the crafter's inventory
         Fire,  // a campfire on the ground in front of the crafter
+        Placed, // something set down in front of the crafter; its lane's OnPlaced hook makes it
     }
 
     public sealed class Ingredient
@@ -98,6 +101,64 @@ namespace LifeGame.Shared
                 Id = "lash.stone_axe", Name = "Haft a stone axe", Doing = "Hafting a stone axe", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.HandAxe), new Ingredient(Item.Cordage) },
                 Seconds = 10, Makes = Item.StoneAxe,
+            },
+
+            // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
+            // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
+            new ProcessDef
+            {
+                Id = "clay.clean", Name = "Clean clay", Doing = "Picking stones and roots out of the clay", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.Clay, 2) },
+                Seconds = 4, Makes = Item.CleanClay,
+            },
+            new ProcessDef
+            {
+                Id = "clay.grit", Name = "Crush stone grit", Doing = "Crushing stone into grit", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
+                Seconds = 4, Makes = Item.Grit, MakesCount = 2,
+            },
+            new ProcessDef
+            {
+                Id = "clay.grog", Name = "Crush sherds into grog", Doing = "Crushing potsherds into grog", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.Potsherd) }, NeedsTool = ItemTags.Hammer,
+                Seconds = 3, Makes = Item.Grog, MakesCount = 2,
+            },
+            new ProcessDef
+            {
+                Id = "clay.temper_grit", Name = "Temper clay with grit", Doing = "Wedging grit into the clay", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Grit) },
+                Seconds = 5, Makes = Item.TemperedClay, MakesCount = 2,
+            },
+            // Old pots make the best temper: the clay goes further.
+            new ProcessDef
+            {
+                Id = "clay.temper_grog", Name = "Temper clay with grog", Doing = "Wedging grog into the clay", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Grog) },
+                Seconds = 5, Makes = Item.TemperedClay, MakesCount = 3,
+            },
+            new ProcessDef
+            {
+                Id = "clay.pinch_pot", Name = "Pinch a pot", Doing = "Pinching a pot", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = 6, Minigame = Minigame.Shape, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
+                Seconds = 12, Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                Id = "clay.brick", Name = "Mold a brick", Doing = "Molding a brick", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Fiber) },
+                Seconds = 5, Outcome = Outcome.Placed,
+            },
+            new ProcessDef
+            {
+                Id = "clay.daub", Name = "Mix daub", Doing = "Mixing clay and fiber into daub", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CleanClay), new Ingredient(Item.Fiber) },
+                Seconds = 4, Makes = Item.Daub, MakesCount = 2,
             },
         };
 

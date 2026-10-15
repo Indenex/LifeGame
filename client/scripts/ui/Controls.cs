@@ -25,6 +25,8 @@ public static class Controls
         new("craft", new[] { Key.C }, "C craft"),
         new("eat", new[] { Key.X }, "X eat"),
         new("build_mode", new[] { Key.B }, "B build"),
+        // Interim: Ceramics reads V directly until tending clay moves to G.
+        new("tend_clay", new[] { Key.V }, "V tend clay"),
         new("toggle_music", new[] { Key.M }, "M music"),
     };
 

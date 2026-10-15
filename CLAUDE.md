@@ -9,7 +9,7 @@ Working state does not live in chat. It lives in the repo, so a session on eithe
 - `DECISIONS.md`: append-only log of what Justin and the PM decided, and why.
 - `WORKER_LOOP.md`: the step-by-step loop every lane session runs.
 
-Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
+Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Game design doc (skills, skill trees, materials, crafting chains): https://claude.ai/code/artifact/50ab4888-c6e0-44b1-9408-f5a02f887c8f. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
 
 ## Roles
 
@@ -40,7 +40,7 @@ Each lane works in its own files so lanes don't collide:
 
 - Cloud sessions push to the branch the harness assigns (usually `claude/...`). Record the real branch name in your ticket and `STATUS.md` row.
 - Commit messages lead with the ticket id: `crafting-1: add hand-drill fire`.
-- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR, and merging needs Justin's OK through the PM.
+- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. The PM approves routine merges once CI is green and the PR matches decisions already in `DECISIONS.md` (D-032); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
 - Commit before any checkout, rebase or merge. Never stash and walk away.
 
 ## CI
