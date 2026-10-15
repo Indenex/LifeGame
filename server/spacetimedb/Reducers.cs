@@ -24,11 +24,13 @@ public static partial class Module
             ScheduledId = 0,
             ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(World.MoveTickMillis)),
         });
+        EnsureWorldClock(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
+        EnsureWorldClock(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
