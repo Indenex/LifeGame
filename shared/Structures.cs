@@ -50,6 +50,15 @@ namespace LifeGame.Shared
                 Clearance = 1.2f,
                 Stages = new[] { "Marker post" },
             },
+            new StructureShape
+            {
+                // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
+                Name = "Updraft kiln",
+                Round = true, Radius = 0.85f,
+                Clearance = 1.2f,
+                Solid = true,
+                Stages = new[] { "Base", "Dome" },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -71,6 +80,7 @@ namespace LifeGame.Shared
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
+            ClayRules.KilnStructureKind => ClayRules.KilnProcess,
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
