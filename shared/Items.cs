@@ -39,6 +39,9 @@ namespace LifeGame.Shared
 
         // Survival
         Berries = 160,
+
+        // Animals use 190 to 219 (Crafting holds 190-192 for mutton).
+        Wool = 193,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -98,7 +101,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
-            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" });
+            new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
+            new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 

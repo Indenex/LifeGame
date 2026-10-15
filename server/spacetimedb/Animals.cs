@@ -55,6 +55,9 @@ public static partial class Module
         public AnimalState State;
         public int ChunkX;
         public int ChunkZ;
+        // How much wool a sheep carries, 0 (just shorn) to 100 (full fleece).
+        [Default((byte)100)]
+        public byte Fleece;
     }
 
     // What each animal is thinking. Server only.
@@ -73,6 +76,9 @@ public static partial class Module
         public float FleeX;
         public float FleeZ;
         public long StateUntil;
+        // When the animal was last shorn, or 0 if never.
+        [Default(0L)]
+        public long ShornAt;
     }
 
     [SpacetimeDB.Table(Accessor = "Flock")]
@@ -155,6 +161,7 @@ public static partial class Module
                 State = AnimalState.Graze,
                 ChunkX = World.ChunkOf(ax),
                 ChunkZ = World.ChunkOf(az),
+                Fleece = 100,
             });
             ctx.Db.AnimalMind.Insert(new AnimalMind
             {
@@ -256,8 +263,10 @@ public static partial class Module
             AnimalSense(ref mind, body, before, watchers, out bool calmedByStillPlayer);
             AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
             AnimalMove(ref body, ref mind, before, i);
+            RegrowFleece(ref body, mind, now);
 
-            if (body.X != was.X || body.Z != was.Z || body.State != was.State || MathF.Abs(body.Heading - was.Heading) > 0.01f)
+            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece
+                || MathF.Abs(body.Heading - was.Heading) > 0.01f)
             {
                 body.ChunkX = World.ChunkOf(body.X);
                 body.ChunkZ = World.ChunkOf(body.Z);
