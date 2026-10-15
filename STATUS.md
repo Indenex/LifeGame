@@ -25,7 +25,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Journal and skills | `tickets/skills-1.md` | in_progress | lane to record | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules | `tickets/claims-1.md` | in_progress | lane to record | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere and sound | `tickets/atmosphere-1.md` | in_progress | lane to record | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
-| House building | `tickets/building-1.md` | in_progress | lane to record | `Building.cs`, `client/scripts/building/` |
+| House building | `tickets/building-1.md` | in_progress (draft PR #6) | lane to record | `Building.cs`, `client/scripts/building/` |
 | Animals | `tickets/animals-1.md` | in_progress | lane to record | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics | `tickets/ceramics-1.md` | in_progress | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
 
@@ -38,7 +38,8 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Warmth: `Module.WarmthAt(ctx, x, z)` returns 0 to 1 from burning fires within 5 m; raw data in the public `fire` table.
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
-- Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building implements `ShelterAt()` in `Survival.cs`.
+- Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building's `Module.ShelterAt(ctx, x, z)` / `ShelterFor(ctx, playerId)` return Shelter(RainCover, Warmth, StructureId); it implements Survival's `ShelterAtHook(ctx, x, z, ref rainCover, ref warmth)`.
+- Placement: `PlaceStructure(kind, x, z, yaw)` and `shared/Structures.cs`; the claim marker is a new `StructureKind` with one stage.
 - Rain: Atmosphere implements `RainAt(ctx, x, z, ref rain)` (0 to 1), declared in `Ceramics.cs`.
 - House building provides structure placement (Claims uses it for markers) and "is this player sheltered" (Survival reads it).
 
