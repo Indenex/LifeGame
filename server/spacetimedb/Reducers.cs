@@ -150,8 +150,10 @@ public static partial class Module
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        if (depth >= World.MaxDigDepth)
-            throw new Exception("Too deep to dig by hand");
+        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
+        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
+            throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
         if (edit is { } existing)
             ctx.Db.TerrainEdit.CellKey.Update(existing with { Depth = (short)(depth + 1) });
@@ -166,9 +168,9 @@ public static partial class Module
                 Depth = 1,
             });
 
-        // A digging stick loosens twice the clay a bare hand does.
+        // Same numbers as Ceramics' ClayRules.DugClayQuality(depth); switch to it once it is on main.
         if (World.IsClay(cellX, cellZ))
-            AddToInventory(ctx, ctx.Sender, Item.Clay, BestTool(ctx, ItemTags.Digging) is null ? 1u : 2u, Items.RawQuality);
+            AddToInventory(ctx, ctx.Sender, Item.Clay, 1, depth >= World.MaxDigDepth ? (byte)80 : Items.RawQuality);
 
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -178,28 +180,10 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
-        var pos = RequirePos(ctx, player);
-        RequireReach(pos, item.X, item.Z);
+        RequireReach(RequirePos(ctx, player), item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
-        // With a basket you scoop up every loose one of the same kind within reach.
-        if (BestTool(ctx, ItemTags.Container) is not null)
-            foreach (var other in WorldItemsNear(ctx, pos.X, pos.Z, World.Reach).Where(o => o.Item == item.Item).ToList())
-            {
-                ctx.Db.WorldItem.Id.Delete(other.Id);
-                AddToInventory(ctx, ctx.Sender, (Item)other.Item, 1, other.Quality);
-            }
-    }
-
-    static IEnumerable<WorldItem> WorldItemsNear(ReducerContext ctx, float x, float z, float reach)
-    {
-        int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++)
-                foreach (var w in ctx.Db.WorldItem.ByChunk.Filter((cx + dx, cz + dz)))
-                    if ((w.X - x) * (w.X - x) + (w.Z - z) * (w.Z - z) <= reach * reach)
-                        yield return w;
     }
 
     [SpacetimeDB.Reducer]
