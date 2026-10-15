@@ -10,6 +10,7 @@ Status: DECIDED by Justin on 2026-10-15 (D-025). Crafting builds the shared Use 
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Q / E | Turn | Crafting | same |
+| Hold Shift | Sneak (slow walk; sheep stay calm) | Animals (small hook in Main.cs) | new, D-026 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
 | G | **Use** what you're facing: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note | all | G forage (Survival), G feed fire (Crafting), R drink (Survival), H add materials (Building), R read note (Journal) |

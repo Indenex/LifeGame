@@ -108,3 +108,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-025 — 2026-10-15 — One Use key and a shared keymap
 **Decision:** G is a single Use key that acts on what the player faces: pick berries, feed a fire, drink at water, add materials to a blueprint, read a note. C crafting, X eat, B build menu (claim marker included), K claims, J journal, Enter chat, M music; time and weather previews move to debug-only F5/F6. `KEYMAP.md` is the one list of keys; lanes register keys there before binding.
 **Who:** Justin ("One Use key", which the PM recommended). Crafting (integration owner) builds the Use dispatcher; lanes register handlers.
+
+## D-026 — 2026-10-15 — Sneak walk
+**Decision:** Holding Shift walks slowly; sheep don't spook at a sneaking player. Animals implements it with a small movement hook in Main.cs, and the server reads the slower speed.
+**Who:** Justin ("Add sneak", which the PM recommended)
