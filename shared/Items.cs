@@ -37,7 +37,7 @@ namespace LifeGame.Shared
         UnfiredPinchPot = 111,
         UnfiredCoilPot = 112,
 
-        // Survival 160-189
+        // Survival
         Berries = 160,
     }
 

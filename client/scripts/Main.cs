@@ -19,11 +19,11 @@ public partial class Main : Node3D
     readonly Terrain terrain = new();
     readonly CameraRig cameraRig = new();
     readonly Hud hud = new();
-    readonly Atmosphere atmosphere = new();
-    readonly SurvivalClient survival = new();
     readonly CraftingUi crafting = new();
     FireView fires = null!;
     CeramicsView clay = null!;
+    readonly Atmosphere atmosphere = new();
+    readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();

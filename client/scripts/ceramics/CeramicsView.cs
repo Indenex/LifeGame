@@ -8,12 +8,11 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Clay in the world: draws every drying and firing piece the server knows about,
-// and handles T, the one clay action. T on a pot beside a burning fire puts it in
+// and handles X, the one clay action (until the shared Use key lands). X on a pot beside a burning fire puts it in
 // the fire; on a dry pot or brick picks it up; near a fire with dry pots in your
 // bag sets them in; at the water's edge fills your fired pots.
 public partial class CeramicsView : Node
 {
-    const float LabelDistance = 4.5f;
     const double ConfirmSeconds = 4;
 
     readonly Node3D world = new();
@@ -82,9 +81,18 @@ public partial class CeramicsView : Node
 
     static double Seconds(SpacetimeDB.Timestamp t) => t.MicrosecondsSinceUnixEpoch / 1_000_000.0;
 
+    public override void _Ready()
+    {
+        // --camera-zoom=-8 starts the camera closer, for screenshots of small things.
+        var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--camera-zoom="));
+        if (arg != null && float.TryParse(arg[14..], out var zoom))
+            foreach (var rig in GetTree().Root.FindChildren("*", "", true, false).OfType<CameraRig>())
+                rig.Zoom(zoom);
+    }
+
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.T })
+        if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.V })
         {
             Tend();
             GetViewport().SetInputAsHandled();
@@ -93,14 +101,18 @@ public partial class CeramicsView : Node
 
     public override void _Process(double delta)
     {
+        // Only the nearest piece within reach shows its label, so a camp of pots stays readable.
+        PotView? nearest = null;
+        float nearestDist = World.Reach;
         foreach (var view in pieces.Values)
         {
             float d = new Vector2(view.Position.X - me.Position.X, view.Position.Z - me.Position.Z).Length();
-            view.ShowLabel = d < LabelDistance;
+            if (d < nearestDist) { nearest = view; nearestDist = d; }
             // Follow the ground if someone digs beside it; pots in a fire sit in the embers.
             float ground = heightAt(view.Position.X, view.Position.Z) + (view.Stage == ClayStage.Firing ? -0.03f : 0f);
             view.Position = new Vector3(view.Position.X, ground, view.Position.Z);
         }
+        foreach (var view in pieces.Values) view.ShowLabel = view == nearest;
     }
 
     void Tend()
@@ -131,7 +143,7 @@ public partial class CeramicsView : Node
                 {
                     confirmPiece = piece.id;
                     confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
-                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press T again to fire it anyway.");
+                    note($"It is still {ClayRules.Describe(piece.view.Moisture)} and will crack. Press V again to fire it anyway.");
                     return;
                 }
                 confirmPiece = 0;
@@ -154,7 +166,7 @@ public partial class CeramicsView : Node
             return;
         }
         note(carryingUnfired
-            ? "Take your dry pots to a burning fire and press T to fire them."
+            ? "Take your dry pots to a burning fire and press V to fire them."
             : "Nothing to tend here. Shape clay from the crafting panel (C).");
     }
 
