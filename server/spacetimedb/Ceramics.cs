@@ -82,20 +82,31 @@ public static partial class Module
             News(ctx, job.PlayerId, "You have too much clay drying already. The clay goes back in your bag.");
             return;
         }
-        var piece = ctx.Db.ClayPiece.Insert(new ClayPiece
+        // Set down a step in front of the crafter, beside earlier pieces rather than
+        // on them, and never in the flames: at a fire, round its edge instead.
+        float x = job.X, z = job.Z;
+        if (NearestBurningFire(ctx, job.X, job.Z, ClayRules.FireEdge) is { } fire)
+        {
+            var crafter = ctx.Db.PlayerPos.PlayerId.Find(job.PlayerId);
+            float toward = crafter is { } c ? MathF.Atan2(c.X - fire.X, c.Z - fire.Z) : 0f;
+            (x, z) = FreeSpot(ctx, fire.X, fire.Z, ClayRules.FireEdge, toward);
+        }
+        else if (!SpotFree(ctx, x, z))
+            (x, z) = FreeSpot(ctx, job.X, job.Z, 0.45f, 0f);
+        ctx.Db.ClayPiece.Insert(new ClayPiece
         {
             Id = 0,
             Form = (byte)form,
             Stage = (byte)ClayStage.Drying,
             Quality = job.Quality,
             MadeBy = job.PlayerId,
-            X = job.X,
-            Z = job.Z,
-            ChunkX = World.ChunkOf(job.X),
-            ChunkZ = World.ChunkOf(job.Z),
+            X = x,
+            Z = z,
+            ChunkX = World.ChunkOf(x),
+            ChunkZ = World.ChunkOf(z),
             Moisture = 1f,
             MoistureAt = ctx.Timestamp,
-            DryRate = DryRateAt(ctx, job.X, job.Z),
+            DryRate = DryRateAt(ctx, x, z),
         });
         EnsureDryTimer(ctx);
     }
@@ -259,6 +270,30 @@ public static partial class Module
             DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0);
             News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} came out of the fire whole. It will hold water.");
         }
+    }
+
+    // A spot on a circle round a center, as close to the given direction as possible
+    // without sitting on another piece of clay.
+    static (float, float) FreeSpot(ReducerContext ctx, float cx, float cz, float radius, float angle)
+    {
+        for (int i = 0; i < 14; i++)
+        {
+            float a = angle + (i % 2 == 0 ? 1 : -1) * ((i + 1) / 2) * 0.45f;
+            float x = cx + MathF.Sin(a) * radius, z = cz + MathF.Cos(a) * radius;
+            if (SpotFree(ctx, x, z)) return (x, z);
+        }
+        return (cx + MathF.Sin(angle) * radius, cz + MathF.Cos(angle) * radius);
+    }
+
+    static bool SpotFree(ReducerContext ctx, float x, float z)
+    {
+        const float Gap = 0.4f;
+        int chunkX = World.ChunkOf(x), chunkZ = World.ChunkOf(z);
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                foreach (var p in ctx.Db.ClayPiece.ByChunk.Filter((chunkX + dx, chunkZ + dz)))
+                    if ((p.X - x) * (p.X - x) + (p.Z - z) * (p.Z - z) < Gap * Gap) return false;
+        return true;
     }
 
     static void StartFiring(ReducerContext ctx, ClayPiece piece, Fire fire, float moisture)

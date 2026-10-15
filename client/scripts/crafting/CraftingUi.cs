@@ -121,14 +121,23 @@ public partial class CraftingUi : CanvasLayer
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
         panel.Visible = false;
-        if (def.Minigame == Minigame.None)
+        minigame = def.Minigame switch
+        {
+            Minigame.Drill => new DrillGame(def),
+            Minigame.Strike => new StrikeGame(def),
+            _ => null,
+        };
+        if (minigame == null) MinigameFor(def, ref minigame);
+        if (minigame == null)
         {
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
             return;
         }
-        minigame = def.Minigame == Minigame.Drill ? new DrillGame(def) : new StrikeGame(def);
         AddChild(minigame.Root);
     }
+
+    // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
+    partial void MinigameFor(ProcessDef def, ref Minigame_? game);
 
     void EndMinigame(float? score)
     {
@@ -216,7 +225,7 @@ public partial class CraftingUi : CanvasLayer
             Notice?.Invoke(def.Outcome == Outcome.Fire ? "The ember dies before it catches" : "It breaks wrong. The material is lost");
         else if (def.Outcome == Outcome.Fire)
             Notice?.Invoke("The tinder catches. You have fire.");
-        else
+        else if (def.Outcome != Outcome.Placed)
             Notice?.Invoke($"Made: {ItemLook.Label(def.Makes, j.Quality, def.MakesCount)}");
         Refresh();
     }

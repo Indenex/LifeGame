@@ -42,6 +42,26 @@ public static class ClayLook
         return m;
     }
 
+    // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
+    // through. t is how far the firing has got, 0 to 1.
+    public static ShaderMaterial Firing(float t, ulong id)
+    {
+        int step = Mathf.RoundToInt(Mathf.Clamp(t, 0f, 1f) * 10f);
+        int seed = (int)(id % 3);
+        var key = (100, step, seed);
+        if (Materials.TryGetValue(key, out var m)) return m;
+        m = new ShaderMaterial { Shader = Shader };
+        float s = step / 10f;
+        m.SetShaderParameter("albedo", Dry.Darkened(0.55f).Lerp(PitFired.Darkened(0.2f), s));
+        m.SetShaderParameter("wetness", 0f);
+        m.SetShaderParameter("clouds", 0.9f);
+        m.SetShaderParameter("broken", 0f);
+        m.SetShaderParameter("glow", 0.4f + 1.4f * Mathf.Sin(s * Mathf.Pi));
+        m.SetShaderParameter("seed", seed * 7.3f);
+        Materials[key] = m;
+        return m;
+    }
+
     public static ShaderMaterial Water => water ??= MakeWater();
 
     static ShaderMaterial MakeWater()
@@ -77,6 +97,7 @@ public static class ClayLook
             uniform float clouds = 0.0;
             uniform float broken = 0.0;
             uniform float seed = 0.0;
+            uniform float glow = 0.0;
 
             varying vec3 local_pos;
             varying float height;
@@ -139,6 +160,12 @@ public static class ClayLook
                 ROUGHNESS = mix(0.95, 0.32, wetness);
                 SPECULAR = mix(0.15, 0.6, wetness);
                 AO = mix(1.0, 0.75, smoothstep(0.2, 0.0, height));
+                // Heat glowing through from the embers, strongest low down, flickering.
+                if (glow > 0.0) {
+                    float flicker = 0.75 + 0.25 * sin(TIME * 5.0 + seed + local_pos.y * 30.0);
+                    float heat = glow * flicker * mix(1.0, 0.35, height) * (0.6 + 0.4 * fbm(p * 0.5 + vec3(TIME * 0.3)));
+                    EMISSION = vec3(1.0, 0.36, 0.08) * heat;
+                }
             }
             """,
     };

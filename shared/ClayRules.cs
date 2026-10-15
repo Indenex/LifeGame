@@ -51,6 +51,8 @@ namespace LifeGame.Shared
 
         // A dry pot this close to a burning fire can be fired where it stands.
         public const float FireReach = 1.8f;
+        // Clay shaped right where a fire burns is set down at this distance from it.
+        public const float FireEdge = 1.0f;
         // Pots set into a fire sit on a ring this far from its center.
         public const float FireRing = 0.45f;
         public const int MaxPotsPerFire = 4;
