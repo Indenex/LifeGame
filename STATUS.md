@@ -28,6 +28,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | House building | `tickets/building-2.md` (building-1 done, PR #6 merged bae255c) | in_progress (draft PR #10, lands after #4 and #11) | `claude/house-building-8ueqz2` | `Building.cs`, `client/scripts/building/` |
 | Animals | `tickets/animals-1.md` | in_progress (sheep AI working, screenshots posted) | lane to record | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics | `tickets/ceramics-1.md` | in_review (PR #11, CI running) | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
+| UX and UI | `tickets/ui-1.md` | todo (thread starting) | lane to record | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 
