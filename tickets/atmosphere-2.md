@@ -12,9 +12,10 @@ From the PM after atmosphere-1: soft sheep bleats, with a startled bleat when th
 - 2026-10-15 21:50: started from main a4ce058.
 
 - 2026-10-15 22:05: Justin: rain too shiny and white streaks look awful, wants it closer to WoW Forever's new rain. Replaced streak particles with soft rain veils (three rings of scrolling curtains, depth-faded) and thicker rain fog and mist; wet ground now only slightly darker with barely any sheen. Canopy and trunk fade toward the player, cooler dawn, synthesized sheep bleat (not yet hooked to Animals). Justin: open PRs without waiting on renders.
+- 2026-10-15 22:10: PR #16 open; client builds green. Screenshots /mnt/project-files/screenshots/atmosphere-07-rain-veils.png and atmosphere-08-woods-fade.png sent to Justin via the PM.
 
 ## Open questions / blockers
 - Sheep table field names: coordinate with Animals (cse_01XS7M1yLy2fLaFdE3HWnisM).
 
 ## Next step
-Get the PR green and merge it (D-032); then hook bleats to the Animals sheep table once its fields are known.
+Once Justin has seen atmosphere-07 rain and CI is green, merge PR #16 (D-032); then hook bleats to the Animals sheep table once its fields are known.
