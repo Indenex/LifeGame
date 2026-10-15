@@ -224,10 +224,14 @@ public partial class Sheep : Node3D
         float ground = terrain.HeightAt(to.X, to.Y);
         Position = new Vector3(to.X, ground, to.Y);
         Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-4f * dt)), 0);
-        body.Position = new Vector3(0, -0.28f * t - 0.06f * roll, 0);
+        // The body pivots at the hooves, so rolling over needs a lift to keep the
+        // fleece resting on the grass rather than sinking into the ground.
+        body.Position = new Vector3(0, -0.12f * t * (1f - roll) + 0.24f * roll, 0);
         body.Rotation = new Vector3(0, 0, roll * 1.35f);
         body.Scale = Vector3.One;
-        foreach (var leg in legs) leg.Rotation = new Vector3(0, 0, -roll * 0.35f);
+        // Legs tuck in, front ones back and hind ones forward, like a sheep asleep.
+        for (int i = 0; i < 4; i++)
+            legs[i].Rotation = new Vector3((i < 2 ? -1.1f : 1.1f) * t, 0, -roll * 0.2f);
         pitch = Mathf.Lerp(pitch, 0.35f, 1f - Mathf.Exp(-3f * dt));
         head.Rotation = new Vector3(pitch, 0, 0);
         fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, woolTarget);
