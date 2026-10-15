@@ -77,6 +77,8 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing;
         AddChild(useKey);
         AddChild(new Hints());
+        AddChild(new KeyHelp());
+        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
@@ -408,12 +410,13 @@ public partial class Main : Node3D
     void RefreshInventory()
     {
         if (conn == null) return;
-        // Stacks whose qualities share a grade read the same, so they show as one line.
-        var counts = conn.Db.MyInventory.Iter()
+        // Stacks whose qualities share a grade read the same, so they show as one slot.
+        var stacks = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
             .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
-            .ToDictionary(g => ItemLook.Label((Item)g.Key.Item, g.First().Quality, (uint)g.Sum(i => i.Count)), g => (uint)g.Sum(i => i.Count));
-        hud.SetInventory(counts);
+            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n), n); })
+            .ToList();
+        hud.SetItems(stacks);
     }
 
     // --- Items on the ground ---------------------------------------------

@@ -14,7 +14,7 @@ public partial class Hints : CanvasLayer
 
     readonly ConfigFile seen = new();
     readonly Label label = new();
-    PanelContainer panel = null!;
+    Label panel = null!;
     Controls.Binding? showing;
     static readonly Queue<string> requested = new();
 
@@ -29,11 +29,12 @@ public partial class Hints : CanvasLayer
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
-        Hud.Style(label, 15, 0.9f);
-        panel = Hud.Panel(label, Vector2.Zero);
+        Hud.Soft(label, 15, 0.85f);
+        // Just words in the corner, no box (D-045).
+        panel = label;
         panel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         panel.GrowVertical = Control.GrowDirection.Begin;
-        panel.Position = new Vector2(20, -20);
+        panel.Position = new Vector2(26, -34);
         panel.Modulate = new Color(1, 1, 1, 0);
         root.AddChild(panel);
     }
