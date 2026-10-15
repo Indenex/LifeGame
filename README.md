@@ -12,7 +12,7 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | --- | --- |
 | `server/` | SpacetimeDB module in C#: tables and reducers for players, movement, digging and items |
 | `client/` | Godot 4.6 (.NET) game client |
-| `client/module_bindings/` | Client bindings generated from the server module; do not edit by hand |
+| `client/module_bindings/` | Client bindings generated from the server module by `tools/gen-bindings.sh`; not committed |
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
 | `tools/CraftCheck/` | One bot that gathers and runs every crafting process end to end (runs in CI) |
@@ -34,7 +34,11 @@ spacetime start
 cd server
 spacetime publish lifegame --server local --yes
 
-# 3. Open client/project.godot in Godot 4.6 .NET and press Play
+# 3. Generate the client bindings (not committed; rerun whenever the server module changes)
+cd ..
+tools/gen-bindings.sh
+
+# 4. Open client/project.godot in Godot 4.6 .NET and press Play
 ```
 
 The client connects to `http://127.0.0.1:3000`, database `lifegame`. To point it somewhere else, pass arguments after `--`:
@@ -74,9 +78,8 @@ Other server code can ask about the weather: `TimeOfDay(ctx)`, `CurrentWeather(c
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:
 
 ```sh
-cd server
-spacetime publish lifegame --server local --yes        # add --delete-data=always if the schema change is breaking
-spacetime generate --lang csharp --out-dir ../client/module_bindings --module-path ./spacetimedb
+(cd server && spacetime publish lifegame --server local --yes)   # add --delete-data=always if the schema change is breaking
+tools/gen-bindings.sh
 ```
 
 ## Load test
