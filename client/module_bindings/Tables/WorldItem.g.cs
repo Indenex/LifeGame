@@ -50,7 +50,8 @@ namespace SpacetimeDB.Types
     public sealed class WorldItemCols
     {
         public global::SpacetimeDB.Col<WorldItem, ulong> Id { get; }
-        public global::SpacetimeDB.Col<WorldItem, ItemKind> Kind { get; }
+        public global::SpacetimeDB.Col<WorldItem, ushort> Item { get; }
+        public global::SpacetimeDB.Col<WorldItem, byte> Quality { get; }
         public global::SpacetimeDB.Col<WorldItem, float> X { get; }
         public global::SpacetimeDB.Col<WorldItem, float> Z { get; }
         public global::SpacetimeDB.Col<WorldItem, int> ChunkX { get; }
@@ -59,7 +60,8 @@ namespace SpacetimeDB.Types
         public WorldItemCols(string tableName)
         {
             Id = new global::SpacetimeDB.Col<WorldItem, ulong>(tableName, "id");
-            Kind = new global::SpacetimeDB.Col<WorldItem, ItemKind>(tableName, "kind");
+            Item = new global::SpacetimeDB.Col<WorldItem, ushort>(tableName, "item");
+            Quality = new global::SpacetimeDB.Col<WorldItem, byte>(tableName, "quality");
             X = new global::SpacetimeDB.Col<WorldItem, float>(tableName, "x");
             Z = new global::SpacetimeDB.Col<WorldItem, float>(tableName, "z");
             ChunkX = new global::SpacetimeDB.Col<WorldItem, int>(tableName, "chunk_x");

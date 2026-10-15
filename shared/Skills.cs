@@ -1,6 +1,6 @@
-// The skill and journal rules, shared by the server module and the client so
-// both agree on names, ranks and what a rank is worth. Every number here is a
-// tunable starting value. Keep this file free of engine and SpacetimeDB types.
+// The skill rules, shared by the server module and the client so both agree on
+// names, ranks and what a rank is worth. Every number here is a tunable
+// starting value. Keep this file free of engine and SpacetimeDB types.
 using System;
 using System.Collections.Generic;
 
@@ -12,28 +12,16 @@ namespace LifeGame.Shared
     {
         public readonly string Id, Name, Blurb;
         public readonly bool Basic;
+        // Process ids starting with any of these ("knap" covers "knap.flake") train this skill.
+        public readonly string[] Prefixes;
 
-        public Specialization(string id, string name, bool basic, string blurb)
+        public Specialization(string id, string name, bool basic, string blurb, params string[] prefixes)
         {
             Id = id;
             Name = name;
             Basic = basic;
             Blurb = blurb;
-        }
-    }
-
-    // A process is something a player does that the journal can record:
-    // digging, knapping a flake, twisting cordage. Crafting code reports it by id.
-    public sealed class Process
-    {
-        public readonly string Id, Name, Spec, Hint;
-
-        public Process(string id, string name, string spec, string hint)
-        {
-            Id = id;
-            Name = name;
-            Spec = spec;
-            Hint = hint;
+            Prefixes = prefixes;
         }
     }
 
@@ -53,63 +41,78 @@ namespace LifeGame.Shared
         // Each player can leave this many notes lying around; older ones blow away.
         public const int NotesPerPlayer = 5;
 
+        // Processes that are not crafting jobs, reported by the base game.
+        public const string Dig = "earth.dig";
+        public const string Forage = "gather.forage";
+
         public static readonly Specialization[] Specializations =
         {
-            new("foraging", "Foraging", true, "Finding and gathering what the land offers."),
-            new("earthwork", "Earthwork", true, "Digging, shifting soil, finding clay."),
-            new("firecraft", "Firecraft", false, "Making fire and keeping it alive."),
-            new("knapping", "Knapping", false, "Shaping stone into edges and tools."),
-            new("cordage", "Cordage", false, "Twisting fiber into cord and lashing things together."),
-            new("pottery", "Pottery", false, "Shaping clay and firing it hard."),
+            new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
+            new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
+            new("firecraft", "Firecraft", true, "Making fire and keeping it alive.", "fire"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
+            new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
+            new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
         };
 
-        public static readonly Process[] Processes =
+        // Names for processes that are not in Processes.List.
+        static readonly Dictionary<string, string> ExtraNames = new()
         {
-            new("gather", "Gathering", "foraging", "Pick up what lies on the ground."),
-            new("dig", "Digging", "earthwork", "Dig into the earth with your hands. Low wet ground hides clay."),
-            new("fire_drill", "Hand-drill fire", "firecraft", "Spin a stick against dry wood until it smokes."),
-            new("knap_flake", "Knapping a flake", "knapping", "Strike stone on stone to break off a sharp flake."),
-            new("knap_tool", "Knapping a tool", "knapping", "Work a flake into a shaped edge."),
-            new("twist_cordage", "Twisting cordage", "cordage", "Twist plant fiber into cord."),
-            new("lash", "Lashing", "cordage", "Bind parts together with cord."),
-            new("shape_clay", "Shaping clay", "pottery", "Form a lump of clay into a vessel."),
-            new("fire_pottery", "Firing pottery", "pottery", "Harden shaped clay in a fire."),
+            [Dig] = "Digging",
+            [Forage] = "Foraging",
+            ["clay.pit_fire"] = "Pit firing",
+            ["clay.fill"] = "Filling a pot",
         };
 
-        static Dictionary<string, Specialization>? specsById;
-        static Dictionary<string, Process>? processesById;
+        // Everything the journal counts toward "still to discover".
+        public static IEnumerable<string> AllProcessIds()
+        {
+            yield return Forage;
+            yield return Dig;
+            foreach (var def in Processes.List) yield return def.Id;
+        }
 
         public static Specialization? Spec(string id)
         {
-            specsById ??= Index(Specializations, s => s.Id);
-            return specsById.TryGetValue(id, out var s) ? s : null;
+            foreach (var s in Specializations)
+                if (s.Id == id) return s;
+            return null;
         }
 
-        // Unknown ids are allowed: they still go in the journal but train nothing.
-        public static Process? ProcessById(string id)
+        // The skill a process trains, by the prefix before its first dot. Unknown
+        // processes still go in the journal but train nothing.
+        public static Specialization? SpecFor(string processId)
         {
-            processesById ??= Index(Processes, p => p.Id);
-            return processesById.TryGetValue(id, out var p) ? p : null;
+            int dot = processId.IndexOf('.');
+            string prefix = dot < 0 ? processId : processId[..dot];
+            foreach (var s in Specializations)
+                if (Array.IndexOf(s.Prefixes, prefix) >= 0) return s;
+            return null;
         }
 
-        public static Specialization? SpecFor(string processId) =>
-            ProcessById(processId) is { } p ? Spec(p.Spec) : null;
-
-        public static string ProcessName(string processId) => ProcessById(processId)?.Name ?? Humanize(processId);
+        public static string ProcessName(string processId)
+        {
+            if (Processes.Find(processId) is { } def) return def.Name;
+            if (ExtraNames.TryGetValue(processId, out var name)) return name;
+            string last = processId[(processId.LastIndexOf('.') + 1)..].Replace('_', ' ');
+            return last.Length == 0 ? processId : char.ToUpperInvariant(last[0]) + last[1..];
+        }
 
         public static int Rank(int points) => Math.Clamp(points / PointsPerRank, 0, MaxRank);
 
         // Points gained for finishing a process once. Fast at first so learning
         // feels good, slower near mastery, never zero: rank 10 after about 6 uses,
-        // rank 50 after about 50, Master after about 400.
-        public static int Gain(int points)
+        // rank 50 after about 50, Master after about 400. A failed attempt still
+        // teaches, at half the rate.
+        public static int Gain(int points, bool failed)
         {
             float left = 1f - Math.Clamp(points, 0, MaxPoints) / (float)MaxPoints;
-            return Math.Max(1, (int)MathF.Round(20f * left * left));
+            int gain = Math.Max(1, (int)MathF.Round(20f * left * left));
+            return failed ? Math.Max(1, gain / 2) : gain;
         }
 
-        // The best quality a player can produce: rough at first, anything at Master.
-        public static float QualityCap(int rank) => 0.35f + 0.65f * Math.Clamp(rank, 0, MaxRank) / MaxRank;
+        // The best quality, 1 to 100, a player can produce: 35 at first, anything at Master.
+        public static byte QualityCap(int rank) => (byte)MathF.Round(35f + 65f * Math.Clamp(rank, 0, MaxRank) / MaxRank);
 
         // Multiplier on how long a process takes: a Master works in 40% of the time.
         public static float DurationScale(int rank) => 1f - 0.6f * Math.Clamp(rank, 0, MaxRank) / MaxRank;
@@ -121,6 +124,12 @@ namespace LifeGame.Shared
             return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
         }
 
+        // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
+        // lumps and sometimes two at once.
+        // Steps of 5 keep a digger's clay in a few stacks instead of one per point.
+        public static byte DugClayQuality(int rank) => (byte)Math.Clamp(Items.RawQuality + rank * 35 / MaxRank / 5 * 5, 1, 100);
+        public static double SecondLumpChance(int rank) => rank / 200.0;
+
         public static string Title(int rank) => rank switch
         {
             >= 100 => "Master",
@@ -130,18 +139,5 @@ namespace LifeGame.Shared
             >= 20 => "Apprentice",
             _ => "Novice",
         };
-
-        static Dictionary<string, T> Index<T>(T[] items, Func<T, string> key)
-        {
-            var map = new Dictionary<string, T>();
-            foreach (var item in items) map[key(item)] = item;
-            return map;
-        }
-
-        static string Humanize(string id)
-        {
-            var words = id.Replace('_', ' ');
-            return words.Length == 0 ? id : char.ToUpperInvariant(words[0]) + words[1..];
-        }
     }
 }

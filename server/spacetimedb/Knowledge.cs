@@ -54,21 +54,28 @@ public static partial class Module
         public Timestamp WrittenAt;
     }
 
-    // Crafting code calls this once each time a player finishes a process.
-    // It records the process in their journal, teaches it to anyone watching,
-    // and trains the matching skill.
-    public static void PerformedProcess(ReducerContext ctx, Identity who, string processId, float x, float z)
+    // Crafting calls this when a job finishes, failed or not.
+    static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed)
     {
-        if (FindEntry(ctx, who, processId) is { } entry)
-            ctx.Db.JournalEntry.Id.Update(entry with { TimesPerformed = entry.TimesPerformed + 1 });
-        else
-            Learn(ctx, who, processId, LearnedBy.Experimenting, "", performed: 1);
-
-        TeachOnlookers(ctx, who, processId, x, z);
-        TrainSkill(ctx, who, processId);
+        if (ctx.Db.PlayerPos.PlayerId.Find(playerId) is not { } pos) return;
+        PerformedProcess(ctx, playerId, processId, pos.X, pos.Z, failed);
     }
 
-    public static bool KnowsProcess(ReducerContext ctx, Identity who, string processId) =>
+    // Records a finished process in the player's journal, teaches it to anyone
+    // watching, and trains the matching skill. x and z are where the work happened.
+    static void PerformedProcess(ReducerContext ctx, uint playerId, string processId, float x, float z, bool failed = false)
+    {
+        if (ctx.Db.Player.PlayerId.Find(playerId) is not { } player) return;
+        if (FindEntry(ctx, player.Identity, processId) is { } entry)
+            ctx.Db.JournalEntry.Id.Update(entry with { TimesPerformed = entry.TimesPerformed + 1 });
+        else
+            Learn(ctx, player.Identity, processId, LearnedBy.Experimenting, "", performed: 1);
+
+        TeachOnlookers(ctx, player, processId, x, z);
+        TrainSkill(ctx, player.Identity, processId, failed);
+    }
+
+    static bool KnowsProcess(ReducerContext ctx, Identity who, string processId) =>
         FindEntry(ctx, who, processId) is not null;
 
     // Leave a note about something you know at your feet, for others to find.
@@ -132,21 +139,19 @@ public static partial class Module
     }
 
     // Online players near the worker who don't know the process yet pick it up by watching.
-    static void TeachOnlookers(ReducerContext ctx, Identity who, string processId, float x, float z)
+    static void TeachOnlookers(ReducerContext ctx, Player worker, string processId, float x, float z)
     {
-        var worker = ctx.Db.Player.Identity.Find(who);
-        if (worker is null) return;
         int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
         for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++)
                 foreach (var pos in ctx.Db.PlayerPos.ByChunk.Filter(((short)(cx + dx), (short)(cz + dz))).ToList())
                 {
-                    if (pos.PlayerId == worker.Value.PlayerId) continue;
+                    if (pos.PlayerId == worker.PlayerId) continue;
                     float ox = pos.X - x, oz = pos.Z - z;
                     if (ox * ox + oz * oz > Skills.WatchRadius * Skills.WatchRadius) continue;
                     if (ctx.Db.Player.PlayerId.Find(pos.PlayerId) is not { Online: true } watcher) continue;
                     if (KnowsProcess(ctx, watcher.Identity, processId)) continue;
-                    Learn(ctx, watcher.Identity, processId, LearnedBy.Watching, worker.Value.Name, performed: 0);
+                    Learn(ctx, watcher.Identity, processId, LearnedBy.Watching, worker.Name, performed: 0);
                 }
     }
 }

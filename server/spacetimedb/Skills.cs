@@ -14,6 +14,7 @@ public enum SkillMode
 // Capped skills: 0 to 100 per specialization and 300 in total, with survival
 // basics outside the cap. Skill makes work faster and raises the quality you
 // can reach. Death never costs skill.
+// Crafting reaches this through the partial hooks declared in Crafting.cs.
 public static partial class Module
 {
     [SpacetimeDB.Table(Accessor = "SkillLevel")]
@@ -35,17 +36,28 @@ public static partial class Module
     public static List<SkillLevel> MySkills(ViewContext ctx) =>
         ctx.Db.SkillLevel.Owner.Filter(ctx.Sender).ToList();
 
-    // Rank 0 to 100 in the specialization that a process trains. 0 for processes no skill covers.
-    public static int SkillRank(ReducerContext ctx, Identity who, string processId) =>
-        Skills.SpecFor(processId) is { } spec && FindSkill(ctx, who, spec.Id) is { } row ? Skills.Rank(row.Points) : 0;
+    // Crafting asks for the best quality this player can make with a process.
+    static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap) =>
+        cap = Math.Min(cap, Skills.QualityCap(SkillRank(ctx, playerId, processId)));
 
-    // The highest quality, 0 to 1, this player can produce with a process.
-    public static float QualityCap(ReducerContext ctx, Identity who, string processId) =>
-        Skills.QualityCap(SkillRank(ctx, who, processId));
+    // Rank 0 to 100 in the skill a process trains. 0 for processes no skill covers.
+    static int SkillRank(ReducerContext ctx, uint playerId, string processId) =>
+        Skills.SpecFor(processId) is { } spec
+        && ctx.Db.Player.PlayerId.Find(playerId) is { } player
+        && FindSkill(ctx, player.Identity, spec.Id) is { } row
+            ? Skills.Rank(row.Points)
+            : 0;
 
     // Multiplier on how long a process takes this player: 1 for a novice, 0.4 for a master.
-    public static float DurationScale(ReducerContext ctx, Identity who, string processId) =>
-        Skills.DurationScale(SkillRank(ctx, who, processId));
+    static float DurationScale(ReducerContext ctx, uint playerId, string processId) =>
+        Skills.DurationScale(SkillRank(ctx, playerId, processId));
+
+    static void GiveDugClay(ReducerContext ctx, Player player)
+    {
+        int rank = SkillRank(ctx, player.PlayerId, Skills.Dig);
+        uint count = ctx.Rng.NextDouble() < Skills.SecondLumpChance(rank) ? 2u : 1u;
+        AddToInventory(ctx, player.Identity, Item.Clay, count, Skills.DugClayQuality(rank));
+    }
 
     [SpacetimeDB.Reducer]
     public static void SetSkillMode(ReducerContext ctx, string specId, SkillMode mode)
@@ -67,14 +79,14 @@ public static partial class Module
         return null;
     }
 
-    static void TrainSkill(ReducerContext ctx, Identity who, string processId)
+    static void TrainSkill(ReducerContext ctx, Identity who, string processId, bool failed)
     {
         if (Skills.SpecFor(processId) is not { } spec) return;
         var row = FindSkill(ctx, who, spec.Id)
             ?? ctx.Db.SkillLevel.Insert(new SkillLevel { Id = 0, Owner = who, Spec = spec.Id, Points = 0, Mode = SkillMode.Raise });
         if (row.Mode != SkillMode.Raise) return;
 
-        int gain = Math.Min(Skills.Gain(row.Points), Skills.MaxPoints - row.Points);
+        int gain = Math.Min(Skills.Gain(row.Points, failed), Skills.MaxPoints - row.Points);
         if (gain <= 0) return;
         if (!spec.Basic) gain = MakeRoom(ctx, who, spec.Id, gain);
         if (gain <= 0) return;

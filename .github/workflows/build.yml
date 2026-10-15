@@ -49,6 +49,9 @@ jobs:
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
           cd tools/LoadTest && dotnet run -c Release -- 20 20
 
+      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
+        run: cd tools/CraftCheck && dotnet run -c Release
+
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
       - uses: actions/upload-artifact@v4

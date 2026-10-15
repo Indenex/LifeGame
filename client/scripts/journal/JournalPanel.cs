@@ -118,7 +118,7 @@ public partial class JournalPanel : Control
             entryList.AddChild(EntryRow(e, bySpec));
 
         var known = entries.Select(e => e.ProcessId).ToHashSet();
-        int left = Skills.Processes.Count(p => !known.Contains(p.Id));
+        int left = Skills.AllProcessIds().Count(id => !known.Contains(id));
         undiscovered.Text = left > 0 ? $"{left} more {(left == 1 ? "thing" : "things")} to discover." : "You have found everything there is, for now.";
     }
 
@@ -171,8 +171,8 @@ public partial class JournalPanel : Control
 
     Control EntryRow(JournalEntry e, Dictionary<string, SkillLevel> bySpec)
     {
-        var process = Skills.ProcessById(e.ProcessId);
-        int rank = process != null && bySpec.TryGetValue(process.Spec, out var level) ? Skills.Rank(level.Points) : 0;
+        var spec = Skills.SpecFor(e.ProcessId);
+        int rank = spec != null && bySpec.TryGetValue(spec.Id, out var level) ? Skills.Rank(level.Points) : 0;
 
         var card = new PanelContainer();
         card.AddThemeStyleboxOverride("panel", Box(new Color(1, 1, 1, 0.04f), 10, 12));
@@ -199,12 +199,10 @@ public partial class JournalPanel : Control
         string times = e.TimesPerformed switch { 0 => "not tried yet", 1 => "done once", var n => $"done {n} times" };
         box.AddChild(Text($"{how}, {times}", 13, Faint));
 
-        if (process != null)
+        if (spec != null)
         {
             int speed = (int)MathF.Round(100f / Skills.DurationScale(rank));
-            int quality = (int)MathF.Round(Skills.QualityCap(rank) * 100f);
-            box.AddChild(Text($"Speed {speed}%    Best quality {quality}%", 13, Faint));
-            if (e.TimesPerformed == 0) box.AddChild(Wrapped(process.Hint, 13, Faint));
+            box.AddChild(Text($"{spec.Name}    Speed {speed}%    Best quality {Processes.Grade(Skills.QualityCap(rank))}", 13, Faint));
         }
         return card;
     }
