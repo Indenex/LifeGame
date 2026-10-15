@@ -3,7 +3,7 @@ Lane: Journal and skills
 Owner: Journal and skills thread
 Status: in_review
 Branch: claude/journal-skills-iseewg
-PR: (see STATUS / progress log)
+PR: #24
 
 ## Goal
 When someone learns from you, you find out. Watching: the worker gets a quiet toast, "Ana picked up digging from watching you". Notes: if you're online the author hears at once ("Ana learned digging from your note"), otherwise at their next login ("While you were away, Ana learned digging from your note", or a count when there were several). The journal adds "You have taught N people M things." under the discoveries list.
