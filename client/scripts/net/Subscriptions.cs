@@ -26,6 +26,7 @@ public static class Subscriptions
         $"SELECT * FROM animal WHERE {range}",
         $"SELECT * FROM terrain_edit WHERE {range}",
         $"SELECT * FROM fire WHERE {range}",
+        $"SELECT * FROM roast WHERE {range}",
         $"SELECT * FROM clay_piece WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",

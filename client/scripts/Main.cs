@@ -66,6 +66,7 @@ public partial class Main : Node3D
         AddChild(crafting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
         AddChild(survival);

@@ -215,9 +215,9 @@ public partial class Terrain : Node3D
                 }
             }
 
-        AddMulti(root, trunkMesh!, trunks, Look.BarkSurface);
-        AddMulti(root, leafyMesh!, leafy, Look.Foliage);
-        AddMulti(root, pineMesh!, pines, Look.Foliage);
+        AddMulti(root, trunkMesh!, trunks, Look.TreeBark);
+        AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
+        AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         AddMulti(root, rockMesh!, rocks, Look.RockSurface);
         AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
     }
@@ -243,6 +243,9 @@ public partial class Terrain : Node3D
             MaterialOverride = material,
             CastShadow = castShadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
         });
+        // Trees in the way of the camera fade; their ghost draws them see-through.
+        if (Look.GhostOf(material) is { } ghost)
+            root.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
 
     static void EnsureMeshes()

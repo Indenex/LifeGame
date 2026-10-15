@@ -1,7 +1,7 @@
 # atmosphere-1: Day and night, weather, lighting and sound
 Lane: World atmosphere and sound
 Owner: World atmosphere and sound thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #9
 
@@ -16,8 +16,10 @@ Day and night (about 90 real minutes per in-game day, synced from the server), r
 - 2026-10-15 21:42: merged main (survival), preview keys moved to F5/F6 debug-only (D-025). CI run https://github.com/Indenex/LifeGame/actions/runs/38811460203 green on a6b8239. Asked PM for merge.
 - Queued for atmosphere-2 (PM): sheep bleats driven by Animals state changes; canopy fade between camera and player (foliage shader dither in Look.cs). Ceramics RainAt one-liner goes in whichever PR merges second.
 
+- 2026-10-15 21:50: Justin approved (D-029); PR #9 merged as a4ce058. Survival and Ceramics told about the weather helpers.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for Justin's merge of PR #9 via the PM; then start atmosphere-2.
+Done. Continued in tickets/atmosphere-2.md.
