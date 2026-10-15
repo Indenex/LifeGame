@@ -16,6 +16,7 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
     readonly Label prompt = new();
+    readonly Label load = new();
     readonly PanelContainer promptPanel;
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -44,7 +45,15 @@ public partial class NeedsHud : CanvasLayer
         gauges.AddChild(food);
         gauges.AddChild(water);
         gauges.AddChild(warmth);
-        var gaugePanel = Hud.Panel(gauges, Vector2.Zero);
+        // The load you carry sits under the gauges, and turns amber when it slows you.
+        var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        column.AddThemeConstantOverride("separation", 4);
+        column.AddChild(gauges);
+        Hud.Style(load, 13, 0.8f);
+        load.HorizontalAlignment = HorizontalAlignment.Center;
+        load.Visible = false;
+        column.AddChild(load);
+        var gaugePanel = Hud.Panel(column, Vector2.Zero);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
@@ -82,6 +91,13 @@ public partial class NeedsHud : CanvasLayer
         warmth.Set(warmthValue, ColdColor.Lerp(WarmColor, Mathf.Clamp(warmthValue * 1.4f - 0.2f, 0f, 1f)));
         warmth.Glow = nearHeat;
         frostAmount = Mathf.Clamp((0.55f - warmthValue) / 0.5f, 0f, 1f);
+    }
+
+    public void SetLoad(float carried, float limit)
+    {
+        load.Visible = true;
+        load.Text = $"Load  {carried:0.#} / {limit:0}";
+        load.Modulate = carried > limit ? new Color(1f, 0.72f, 0.35f) : Colors.White;
     }
 
     public void SetPrompt(string? text)

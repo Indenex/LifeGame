@@ -23,8 +23,11 @@ public partial class SurvivalClient : Node
     DbConnection? conn;
     Vitals? vitals;
     uint deathsSeen = uint.MaxValue;
-    bool warnedCold, warnedFood, warnedWater, wasNearHeat;
+    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened;
     float ripenTimer;
+
+    // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
+    public float WalkFactor { get; private set; } = 1f;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
     public static IEnumerable<string> Queries(string range) => new[]
@@ -126,7 +129,20 @@ public partial class SurvivalClient : Node
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
 
+        UpdateLoad();
         needsHud.SetPrompt(Prompt());
+    }
+
+    // Carrying limit (D-042): too heavy a load slows your walk.
+    void UpdateLoad()
+    {
+        if (conn == null) return;
+        var (load, limit) = Carry.Of(conn.Db.MyInventory.Iter().Select(i => ((Item)i.Item, i.Count)));
+        WalkFactor = Carry.WalkFactor(load, limit);
+        needsHud.SetLoad(load, limit);
+        bool burdened = load > limit;
+        if (burdened && !wasBurdened) hud.Note("You are carrying too much and slow down");
+        wasBurdened = burdened;
     }
 
     // --- Actions -----------------------------------------------------------
