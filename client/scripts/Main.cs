@@ -74,10 +74,16 @@ public partial class Main : Node3D
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
         AddChild(useKey);
         AddChild(new Hints());
-        AddChild(new KeyHelp());
+        var keyHelp = new KeyHelp();
+        AddChild(keyHelp);
+        // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
+        var menu = new PauseMenu { Keys = keyHelp, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || GetViewport().GuiGetFocusOwner() != null };
+        AddChild(menu);
+        // First child, so Esc reaches it only after every lane panel had its turn.
+        MoveChild(menu, 0);
         AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
@@ -466,7 +472,7 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned && !crafting.CapturesInput) Walk(dt);
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
         social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));

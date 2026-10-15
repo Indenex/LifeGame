@@ -17,6 +17,8 @@ namespace LifeGame.Shared
         // A claim is a circle of land around a marker post.
         // 20 m so a group's huts and fire fit inside one claim (Justin, D-023).
         public const float ClaimRadius = 20f;
+        // The soft border line on the ground fades in within this distance of a claim's edge (D-044).
+        public const float BorderFadeDistance = 6f;
         public const int MaxClaimsPerPlayer = 1;
         // No claim may reach into the clearing where new players wake up.
         public const float SpawnClearRadius = 20f;

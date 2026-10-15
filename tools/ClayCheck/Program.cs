@@ -7,6 +7,8 @@
 //
 // Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame]
 //        dotnet run -- <uri> <db> --token=path --goto=x,z   (walk that player somewhere and stop)
+//        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln blueprint, load and fire it;
+//        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -16,8 +18,10 @@ string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
+bool kilnRun = args.Contains("--kiln");
 
 Identity? me = null;
+Fire fire = null!;
 uint myId = 0;
 bool subscribed = false;
 string? lastError = null;
@@ -38,6 +42,8 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM fire",
                 "SELECT * FROM clay_piece",
                 "SELECT * FROM clay_news",
+                "SELECT * FROM kiln",
+                "SELECT * FROM structure",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
@@ -73,14 +79,16 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 
 Gather(Item.Stone, 3);
 Gather(Item.Stick, 10);
-Gather(Item.Fiber, 4);
+Gather(Item.Fiber, kilnRun ? 12u : 4u);
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-while (CountOf(Item.Clay) < 12)
+uint clayWanted = kilnRun ? 38u : 12u;
+while (CountOf(Item.Clay) < clayWanted)
 {
-    int cx = clayX + cell % 3 - 1, cz = clayZ + cell / 3 % 3 - 1;
+    int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
+    if (cell >= 25 * 4) Fail("ran out of clay to dig");
     if (!World.IsClay(cx, cz) || DepthAt(cx, cz) >= World.MaxDigDepth - 1) { cell++; continue; }
     lastError = null;
     uint before = CountOf(Item.Clay);
@@ -91,6 +99,8 @@ while (CountOf(Item.Clay) < 12)
     Pump(() => false, 0.65f, null);
 }
 Log($"Dug {CountOf(Item.Clay)} clay");
+
+if (kilnRun) return KilnCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -108,7 +118,7 @@ Craft("gather.tinder", 0, Item.Tinder);
 int firesBefore = conn.Db.Fire.Count;
 Craft("fire.hand_drill", 1f, null);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
 KeepFireGoing();
 
@@ -199,6 +209,131 @@ foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
 Log(whole ? "Clay check passed: dug clay to a fired pot of water" : "Clay check passed (pot cracked; rerun to see the water)");
 conn.Disconnect();
 return 0;
+
+// The updraft kiln: bricks dry by a fire, the kiln is built from them, two pots
+// dried in the open are loaded and fired in it.
+int KilnCheck()
+{
+    while (CountOf(Item.CleanClay) < 19) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    // Two pots shaped in the open, away from any fire, so picking them up doesn't fire them.
+    WalkTo(-4f, 6f, 0.5f);
+    Craft("clay.pinch_pot", 0.9f, null);
+    Craft("clay.pinch_pot", 0.9f, null);
+    Craft("clay.daub", 0, Item.Daub);
+    var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
+    if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
+
+    // Eight bricks round a fire, where they dry twice as fast.
+    float fx = 2f, fz = 2f;
+    WalkTo(fx, fz, 1.2f);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesBefore = conn.Db.Fire.Count;
+    Craft("fire.hand_drill", 1f, null);
+    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
+    fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+    KeepFireGoing();
+    for (int i = 0; i < 8; i++) Craft("clay.brick", 0, null);
+    Log($"8 bricks drying round the fire; {CountOf(Item.Daub)} daub");
+    Log("STAGE bricks");
+
+    var watch = Stopwatch.StartNew();
+    while (conn.Db.ClayPiece.Iter().Any(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Brick))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("bricks never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    Log($"Bricks dry after {watch.Elapsed.TotalSeconds:F0} s");
+    Gather(Item.Brick, 8);
+
+    // Lay out a kiln blueprint a few steps from the fire, door toward us, and
+    // build it brick by brick.
+    WalkTo(fx + 4f, fz + 1f, 0.3f);
+    float kx = x + 1.8f, kz = z;
+    lastError = null;
+    conn.Reducers.PlaceStructure((StructureKind)ClayRules.KilnStructureKind, kx, kz, MathF.Atan2(x - kx, z - kz));
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me), 5, "the kiln blueprint");
+    if (lastError != null) Fail($"placing the kiln: {lastError}");
+    var site = conn.Db.Structure.Iter().First(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me);
+    Log("STAGE kiln-blueprint");
+    for (int i = 0; i < 20 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
+    {
+        lastError = null;
+        var before = conn.Db.Structure.Id.Find(site.Id)!;
+        conn.Reducers.Build(site.Id);
+        Pump(() => lastError != null || !ReferenceEquals(conn.Db.Structure.Id.Find(site.Id), before), 3, "a brick to go on");
+        if (lastError != null) Fail($"building: {lastError}");
+        Pump(() => false, 0.3f, null);
+    }
+    if (conn.Db.Structure.Id.Find(site.Id) is not { Complete: true }) Fail("kiln never finished");
+    var kiln = conn.Db.Structure.Id.Find(site.Id)!;
+    Log($"Kiln built at {kiln.X:F1}, {kiln.Z:F1}; {CountOf(Item.Brick)} bricks and {CountOf(Item.Daub)} daub left");
+    Log("STAGE kiln-built");
+
+    // Lighting an empty kiln is refused.
+    lastError = null;
+    conn.Reducers.UseKiln(kiln.Id);
+    Pump(() => lastError != null, 3, "an empty kiln to be refused");
+    Log($"Empty kiln: {lastError}");
+
+    // Wait for the pots, pick them up, load them.
+    watch.Restart();
+    while (kilnPots.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
+        Pump(() => false, 5, null);
+    }
+    foreach (var id in kilnPots)
+    {
+        var p = conn.Db.ClayPiece.Id.Find(id)!;
+        WalkTo(p.X, p.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(id) == null, 3, "picking up a dry pot");
+        if (lastError != null) Fail($"picking up: {lastError}");
+    }
+    if (CountOf(Item.UnfiredPinchPot) != 2) Fail($"expected 2 unfired pots, have {CountOf(Item.UnfiredPinchPot)}");
+    byte quality = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.UnfiredPinchPot).Quality;
+
+    WalkTo(kiln.X, kiln.Z, 1.6f);
+    lastError = null;
+    conn.Reducers.UseKiln(kiln.Id);
+    Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == 2, 3, "the kiln to be loaded");
+    if (lastError != null) Fail($"loading: {lastError}");
+    Log("Loaded 2 pots");
+    Log("STAGE kiln-loaded");
+
+    if (CountOf(Item.Stick) < 2) Gather(Item.Stick, 2);
+    WalkTo(kiln.X, kiln.Z, 1.6f);
+    uint sticks = CountOf(Item.Stick);
+    lastError = null;
+    conn.Reducers.UseKiln(kiln.Id);
+    Pump(() => lastError != null || conn.Db.Kiln.StructureId.Find(kiln.Id)?.State == 1, 3, "the kiln to light");
+    if (lastError != null) Fail($"lighting: {lastError}");
+    Log($"Kiln lit, burned {sticks - CountOf(Item.Stick)} sticks");
+    Log("STAGE kiln-firing");
+
+    watch.Restart();
+    while (conn.Db.Kiln.StructureId.Find(kiln.Id)?.State == 1)
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(5)) Fail("kiln never finished");
+        Pump(() => false, 2, null);
+    }
+    Pump(() => news.Any(n => n.Contains("kiln has cooled")), 5, "kiln news");
+    Log($"Kiln done after {watch.Elapsed.TotalSeconds:F0} s: {news.Last()}");
+    Pump(() => false, 1, null);
+    var fired = conn.Db.WorldItem.Iter().Where(w => w.Item == (ushort)Item.PinchPot && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2f).ToList();
+    foreach (var w in fired)
+        if (w.Quality != ClayRules.KilnFired(quality)) Fail($"kiln pot quality {w.Quality}, expected {ClayRules.KilnFired(quality)}");
+    Log($"{fired.Count} kiln-fired pots at quality {ClayRules.KilnFired(quality)} (shaped at {quality})");
+    Log("STAGE kiln-done");
+    Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
+    conn.Disconnect();
+    return 0;
+}
 
 void Feed(int sticks)
 {
