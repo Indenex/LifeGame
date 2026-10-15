@@ -12,7 +12,7 @@ Agents working on this repo: start with [`CLAUDE.md`](CLAUDE.md) and [`STATUS.md
 | --- | --- |
 | `server/` | SpacetimeDB module in C#: tables and reducers for players, movement, digging and items |
 | `client/` | Godot 4.6 (.NET) game client |
-| `client/module_bindings/` | Client bindings generated from the server module; do not edit by hand |
+| `client/module_bindings/` | Client bindings generated from the server module by `tools/gen-bindings.sh`; not committed |
 | `shared/` | C# shared by server and client: world generation, chunk layout, gameplay limits |
 | `tools/LoadTest/` | Simulated players for measuring server cost and bandwidth |
 | `tools/CraftCheck/` | One bot that gathers and runs every crafting process end to end (runs in CI) |
@@ -34,7 +34,11 @@ spacetime start
 cd server
 spacetime publish lifegame --server local --yes
 
-# 3. Open client/project.godot in Godot 4.6 .NET and press Play
+# 3. Generate the client bindings (not committed; rerun whenever the server module changes)
+cd ..
+tools/gen-bindings.sh
+
+# 4. Open client/project.godot in Godot 4.6 .NET and press Play
 ```
 
 The client connects to `http://127.0.0.1:3000`, database `lifegame`. To point it somewhere else, pass arguments after `--`:
@@ -45,7 +49,7 @@ godot --path client -- --server=http://my-server:3000 --db=lifegame
 
 Run two clients side by side with separate identities using `--profile=a` and `--profile=b`.
 
-Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire.
+Controls: WASD to walk, Q and E to turn the camera, mouse wheel to zoom, F to dig, Space to pick up, C to open crafting, T to put fuel on the nearest fire, J to open the journal, N to read a note on the ground.
 
 ## Crafting
 
@@ -57,7 +61,7 @@ Item ids are stored as numbers, so never renumber or reuse one; add new items at
 
 Building: press B to lay out a footprint (Tab picks a lean-to or clay hut, T turns it, click to place, Esc cancels). Stand next to a site and hold H to add what you carry; anyone can help. Each structure goes up in four stages, and a finished one shelters whoever stands inside. To look at the buildings without a server, run the client with `--building-showcase` (add `--building-closeup` to zoom in).
 
-Survival: G picks berries from a ripe bush, V eats, R drinks when you stand by water. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
+Survival: G picks berries from a ripe bush, X eats, R drinks when you stand by water or from a pot of water you carry. Food, water and warmth show as three rings in the bottom-right corner; stand by a fire to warm up. If any of them runs out you die, drop what you carry, and wake naked at the edge of the wilderness.
 
 ### Day, night and weather
 
@@ -74,9 +78,8 @@ Other server code can ask about the weather: `TimeOfDay(ctx)`, `CurrentWeather(c
 Tables and reducers live in `server/spacetimedb/`. After changing them, republish and regenerate the client bindings:
 
 ```sh
-cd server
-spacetime publish lifegame --server local --yes        # add --delete-data=always if the schema change is breaking
-spacetime generate --lang csharp --out-dir ../client/module_bindings --module-path ./spacetimedb
+(cd server && spacetime publish lifegame --server local --yes)   # add --delete-data=always if the schema change is breaking
+tools/gen-bindings.sh
 ```
 
 ## Load test
