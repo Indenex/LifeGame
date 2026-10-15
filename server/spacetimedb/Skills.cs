@@ -40,6 +40,10 @@ public static partial class Module
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap) =>
         cap = Math.Min(cap, Skills.QualityCap(SkillRank(ctx, playerId, processId)));
 
+    // Crafting asks how long a job takes this player: skill shortens it down to 40%.
+    static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds) =>
+        seconds *= DurationScale(ctx, playerId, processId);
+
     // Rank 0 to 100 in the skill a process trains. 0 for processes no skill covers.
     static int SkillRank(ReducerContext ctx, uint playerId, string processId) =>
         Skills.SpecFor(processId) is { } spec

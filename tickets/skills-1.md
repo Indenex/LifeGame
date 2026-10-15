@@ -12,7 +12,7 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - `shared/Skills.cs`: skill families, the prefix map from process ids to skills, and every tunable number (gain curve, cap, speed and quality per rank, dug clay quality).
 - Skills: Foraging (`gather.*`), Earthwork (`earth.*`), Firecraft (`fire.*`), Toolmaking (`knap.*`, `cord.*`, `lash.*`) sit outside the cap; Potter (`clay.*`) and Builder (`build.*`) are capped at 300 total.
 - `server/spacetimedb/Knowledge.cs`: journal entries (private, `my_journal` view), notes on the ground (`journal_note`, public by chunk), `WriteNote` / `ReadNote` reducers, watching within 8 m. Implements Crafting's `OnProcessPerformed`.
-- `server/spacetimedb/Skills.cs`: skill rows (private, `my_skills` view), `SetSkillMode`, cap and fade logic. Implements Crafting's `QualityCapFor` (35 at rank 0 up to 100 at Master).
+- `server/spacetimedb/Skills.cs`: skill rows (private, `my_skills` view), `SetSkillMode`, cap and fade logic. Implements Crafting's `QualityCapFor` (35 at rank 0 up to 100 at Master) and `DurationFor` (job time x1.0 down to x0.4).
 - Base-game hooks in `Reducers.cs`: digging reports `earth.dig` and its cooldown shrinks with Earthwork; dug clay quality and the chance of a second lump rise with Earthwork; picking up reports `gather.forage`.
 - Client: `client/scripts/journal/` (J opens the journal, R reads the nearest note); hooks in `Main.cs` and `Hud.cs`.
 
@@ -22,9 +22,10 @@ Journal records processes learned by experimenting, watching a nearby player, or
 - 2026-10-15 21:25: "R  Read <name>'s note" prompt appears only near a note; HUD controls just add "J journal". Reported to PM: Main.RefreshInventory throws when two stacks of one item share a grade label (Crafting's file).
 - 2026-10-15 21:30: Justin chose slower skill pacing (about double the uses): gain halved, now about rank 10 after 11 uses, rank 50 after 100, Master after about 540. He kept the novice cap of 35, half-rate learning from failures, and the dug clay quality and bonus lump.
 - 2026-10-15 21:35: Justin wants masters rare: skill is now stored in hundredths of a rank with a minimum gain of 0.05 ranks per use, so Master takes about 800 uses (rank 10 still after 11, rank 50 after 100).
+- 2026-10-15 21:35: merged crafting-core again and implemented its `DurationFor` speed hook.
 
 ## Open questions / blockers
-- Waiting on Crafting: a speed hook (`ref float seconds`) so skill also shortens crafting jobs. `Skills.DurationScale` is ready for it; digging already uses it.
+- (none)
 
 ## Next step
 Wait for CI on PR #7; when green, ask the PM for the merge (it must land with or after `crafting-core`).
