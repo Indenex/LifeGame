@@ -16,6 +16,11 @@ public partial class Hints : CanvasLayer
     readonly Label label = new();
     PanelContainer panel = null!;
     Controls.Binding? showing;
+    static readonly Queue<string> requested = new();
+
+    // Shows an OnRequest hint (or any hint) next, unless the player has seen it or
+    // already uses the key. Safe to call often, e.g. every time a flock bolts.
+    public static void Request(string action) => requested.Enqueue(action);
     float wait = FirstDelay, shownFor, alpha;
 
     public override void _Ready()
@@ -52,7 +57,10 @@ public partial class Hints : CanvasLayer
         }
         else if (alpha <= 0f && (wait -= dt) <= 0f)
         {
-            showing = Controls.World.FirstOrDefault(b => b.Hint != null && !Seen(b) && InputMap.HasAction(b.Action));
+            showing = null;
+            while (showing == null && requested.TryDequeue(out var action))
+                showing = Controls.World.FirstOrDefault(b => b.Action == action && b.Hint != null && !Seen(b));
+            showing ??= Controls.World.FirstOrDefault(b => b.Hint != null && !b.OnRequest && !Seen(b) && InputMap.HasAction(b.Action));
             if (showing != null) label.Text = showing.Hint;
             shownFor = 0f;
             wait = Gap;

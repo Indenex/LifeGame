@@ -11,7 +11,8 @@ public static class Controls
     // Hint is shown once, the first time a new player could use the key (ui/Hints.cs);
     // null means the key needs none. A row with no Keys only carries a hint for an
     // action a lane still binds itself; that hint waits until the lane's action exists.
-    public record Binding(string Action, Key[] Keys, string? Hint);
+    // OnRequest hints wait for a lane to call Hints.Request(action) at the right moment.
+    public record Binding(string Action, Key[] Keys, string? Hint, bool OnRequest = false);
 
     public static readonly Binding[] World =
     {
@@ -21,6 +22,8 @@ public static class Controls
         new("walk_right", new[] { Key.D, Key.Right }, null),
         new("turn_left", new[] { Key.Q }, "Q and E turn the view"),
         new("turn_right", new[] { Key.E }, null),
+        // Shown when animals take fright near you (Hints.Request), not in the opening sequence.
+        new("sneak", new[] { Key.Shift }, "Hold Shift to sneak up on animals", OnRequest: true),
         new("pick_up", new[] { Key.Space }, "Space picks up what lies at your feet"),
         new("use", new[] { Key.G }, null),
         new("craft", new[] { Key.C }, "C to make things from what you carry"),
@@ -30,7 +33,6 @@ public static class Controls
         new("toggle_music", new[] { Key.M }, null),
         // Interim: Ceramics reads V directly until tending clay moves to G.
         new("tend_clay", new[] { Key.V }, null),
-        new("sneak", Array.Empty<Key>(), "Hold Shift to move quietly"),
         new("journal", Array.Empty<Key>(), "J opens your journal"),
         new("claim_open", Array.Empty<Key>(), "K shows the land you claim"),
         new("chat", Array.Empty<Key>(), "Enter to speak"),

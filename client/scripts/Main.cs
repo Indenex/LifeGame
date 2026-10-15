@@ -26,6 +26,7 @@ public partial class Main : Node3D
     readonly Atmosphere atmosphere = new();
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
+    readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly Dictionary<ulong, Node3D> items = new();
     readonly Dictionary<uint, string> names = new();
@@ -52,6 +53,7 @@ public partial class Main : Node3D
         view.AddChild(atmosphere);
         view.AddChild(terrain);
         view.AddChild(me);
+        view.AddChild(herd);
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
@@ -238,6 +240,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
+        Bind("sneak", Key.Shift);
     }
 
     // --- Networking -------------------------------------------------------
@@ -278,6 +281,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
+        herd.Bind(conn, terrain);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         crafting.Attach(conn);
         fires.Attach(conn);
@@ -318,6 +322,7 @@ public partial class Main : Node3D
                 "SELECT * FROM player WHERE online = true",
                 $"SELECT * FROM player_pos WHERE {range}",
                 $"SELECT * FROM world_item WHERE {range}",
+                $"SELECT * FROM animal WHERE {range}",
                 $"SELECT * FROM terrain_edit WHERE {range}",
                 $"SELECT * FROM fire WHERE {range}",
                 $"SELECT * FROM clay_piece WHERE {range}",
@@ -458,7 +463,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * WalkSpeed;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
