@@ -10,7 +10,7 @@ namespace LifeGame;
 
 // The client side of survival: reads your needs from the server's snapshot,
 // draws berry bushes, and handles foraging, eating and drinking.
-// G picks berries, C eats, R drinks from water or from a pot you carry.
+// G picks berries, X eats, R drinks from water or from a pot you carry.
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
@@ -44,7 +44,7 @@ public partial class SurvivalClient : Node
     public override void _Ready()
     {
         Bind("forage", Key.G);
-        Bind("eat", Key.C);
+        Bind("eat", Key.X);
         Bind("drink", Key.R);
         AddChild(needsHud);
     }
@@ -135,8 +135,12 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         if (e.IsActionPressed("forage"))
         {
-            if (NearestRipeBush() is { } bush) conn.Reducers.Forage(bush.Id);
-            else hud.Note("No ripe berries within reach");
+            // G is shared with feeding a fire: berries win only when a ripe bush is in reach.
+            if (NearestRipeBush() is { } bush)
+            {
+                conn.Reducers.Forage(bush.Id);
+                GetViewport().SetInputAsHandled();
+            }
         }
         if (e.IsActionPressed("eat"))
         {
@@ -159,7 +163,7 @@ public partial class SurvivalClient : Node
         var (food, water, _) = Current();
         if (water < 0.97f && WaterNearby()) parts.Add("R  drink");
         else if (water < 0.9f && PotOfWater() != null) parts.Add("R  drink from your pot");
-        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("C  eat berries");
+        if (food < 0.95f && Carrying(Item.Berries)) parts.Add("X  eat berries");
         return parts.Count > 0 ? string.Join("     ", parts) : null;
     }
 
