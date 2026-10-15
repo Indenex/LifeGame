@@ -20,6 +20,7 @@ Done when Justin has seen screenshots of it in game and agrees.
 - 2026-10-15 22:35: Justin: "Build it" (D-045).
 - 2026-10-15 22:50: built. ui/ItemIcon.cs renders each item's ground mesh once into a small transparent viewport; ui/InventoryBar.cs is the slot row (dims to 45% after 6 s idle, name of a gained item floats up); Hud.cs drops the title and status panels (status is a fading line at top centre), notes are slanted boxless text above the row; G prompt and hints lose their boxes. Main.RefreshInventory passes item ids (hud.SetItems). `--screenshot-hud` fills sample items and a note offline. Screenshot /mnt/project-files/screenshots/ui-04-quiet-hud.png.
 - 2026-10-15 23:10: PR #26 opened. Justin asked for a list of all keys: hold F1 shows ui/KeyHelp.cs, built from Controls.World and the live input map (lane bindings show as bound), hidden otherwise; first-time hint "Hold F1 to see every key". Key decisions sent to lanes (cc PM): strike = left click or Z (Animals binds it); craft_play_minigame = hold Ctrl (Skills binds it). Screenshot /mnt/project-files/screenshots/ui-05-key-list.png.
+- 2026-10-15 23:12: D-050 right-drag turns the camera (ui/CameraDrag.cs, CameraRig.TurnBy hook; cursor captured while dragging; off while placing a building). Put in #26, not a separate PR: this session may only push claude/ux-ui-xlrh2s. Bug fixes' note: InventoryBar groups by label before the dictionary.
 
 ## Open questions / blockers
 - (none)

@@ -76,6 +76,7 @@ public partial class Main : Node3D
         AddChild(useKey);
         AddChild(new Hints());
         AddChild(new KeyHelp());
+        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));

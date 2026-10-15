@@ -34,7 +34,7 @@ public partial class InventoryBar : Control
 
     public void SetItems(IReadOnlyList<InventoryEntry> items)
     {
-        var now = items.ToDictionary(i => i.Label, i => i.Count);
+        var now = items.GroupBy(i => i.Label).ToDictionary(g => g.Key, g => (uint)g.Sum(i => i.Count));
         var gained = items.LastOrDefault(i => !last.TryGetValue(i.Label, out var before) || i.Count > before);
         bool changed = now.Count != last.Count || now.Any(kv => !last.TryGetValue(kv.Key, out var c) || c != kv.Value);
         last = now;

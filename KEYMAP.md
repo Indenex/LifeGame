@@ -12,6 +12,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Q / E | Turn | Crafting | same |
+| Hold right mouse + drag | Turn the view freely, eased (D-050) | UX/UI | new |
 | Hold Shift | Sneak (slow walk; sheep stay calm) | Animals (small hook in Main.cs) | new, D-026 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
