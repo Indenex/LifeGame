@@ -55,6 +55,16 @@ public partial class SurvivalClient : Node
     // G actions go through the shared Use registry (KEYMAP.md).
     void RegisterUse()
     {
+        // A ripe bush you face beats feeding a fire beside you (priority 20); one off
+        // to the side still yields to it.
+        Use.Register(new UseHandler
+        {
+            Id = "survival.forage_facing",
+            Priority = 25,
+            Find = at => conn != null && NearestRipeBush() is { } bush && Facing(bush.X, bush.Z)
+                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id))
+                : null,
+        });
         Use.Register(new UseHandler
         {
             Id = "survival.forage",
@@ -210,10 +220,19 @@ public partial class SurvivalClient : Node
         return conn.Db.ForageBush.Iter()
             .Where(IsRipe)
             .Select(b => (b, d: new Vector2(b.X - p.X, b.Z - p.Z).Length()))
-            .Where(t => t.d <= 2.3f)
+            .Where(t => t.d <= Needs.BushReach - 0.2f)
             .OrderBy(t => t.d)
             .Select(t => t.b)
             .FirstOrDefault();
+    }
+
+    // Whether the player faces a spot, within about 60 degrees either side.
+    bool Facing(float x, float z)
+    {
+        var to = new Vector2(x - player.Position.X, z - player.Position.Z);
+        if (to.LengthSquared() < 0.01f) return true;
+        float yaw = player.Rotation.Y;
+        return new Vector2(Mathf.Sin(yaw), Mathf.Cos(yaw)).Dot(to.Normalized()) > 0.5f;
     }
 
     // Mirrors the server: any ground below the water line within reach.

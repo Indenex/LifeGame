@@ -8,7 +8,6 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    const float BushReach = 2.5f;
     // Warmth per second from standing right by a fire at full strength.
     const float FireHeat = 1f / 30f;
 
@@ -165,7 +164,7 @@ public static partial class Module
         var bush = ctx.Db.ForageBush.Id.Find(bushId) ?? throw new Exception("That bush is gone");
         var pos = RequirePos(ctx, player);
         float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
-        if (dx * dx + dz * dz > BushReach * BushReach)
+        if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
             throw new Exception("Out of reach");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
             throw new Exception("No ripe berries yet");
