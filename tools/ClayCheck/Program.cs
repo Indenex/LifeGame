@@ -259,12 +259,14 @@ int KilnCheck()
     if (lastError != null) Fail($"placing the kiln: {lastError}");
     var site = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.Kiln && s.Owner == me);
     Log("STAGE kiln-blueprint");
-    for (int i = 0; i < 20 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
+    for (int i = 0; i < 80 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
     {
         lastError = null;
         var before = conn.Db.Structure.Id.Find(site.Id)!;
         conn.Reducers.Build(site.Id);
         Pump(() => lastError != null || !ReferenceEquals(conn.Db.Structure.Id.Find(site.Id), before), 3, "a brick to go on");
+        // Building paces each addition like any other action; wait and add again.
+        if (lastError == "Still working") { Pump(() => false, 0.5f, null); continue; }
         if (lastError != null) Fail($"building: {lastError}");
         Pump(() => false, 0.3f, null);
     }
