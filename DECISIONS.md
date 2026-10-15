@@ -112,3 +112,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-026 — 2026-10-15 — Sneak walk
 **Decision:** Holding Shift walks slowly; sheep don't spook at a sneaking player. Animals implements it with a small movement hook in Main.cs, and the server reads the slower speed.
 **Who:** Justin ("Add sneak", which the PM recommended)
+
+## D-027 — 2026-10-15 — Sheep fleece colors
+**Decision:** Most sheep are cream, some oat-colored, and about one in eight is a dark brown "black sheep". More colors may come with the wool and dye work.
+**Who:** Justin ("As shown")
