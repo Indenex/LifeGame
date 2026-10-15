@@ -1,7 +1,7 @@
 # skills-4: Teaching feels social, and a Husbandry skill
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_review
+Status: done
 Branch: claude/journal-skills-iseewg
 PR: #24
 
@@ -29,4 +29,4 @@ Also: shearing (`animal.shear`, Animals lane's Shearing.cs) trains a new Husband
 - Dug-clay fold-in (see tickets/skills-3.md) once Ceramics' PR lands.
 
 ## Next step
-Wait for CI on the skills-4 PR, then send the green sha to the PM.
+Done: PR #24 merged 2026-10-15 23:03. Follow-ups in tickets/skills-5.md.
