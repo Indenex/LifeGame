@@ -58,8 +58,8 @@ namespace LifeGame.Shared
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
-            // Default while Justin decides (PM 2026-10-15): animal work is its own capped skill.
-            new("husbandry", "Husbandry", false, "Keeping animals calm and shearing them cleanly.", "animal"),
+            // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
         };
 
         // Names for processes that are not in Processes.List.
