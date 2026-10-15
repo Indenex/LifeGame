@@ -1,7 +1,7 @@
 # survival-1: Hunger, thirst, cold, death and respawn
 Lane: Survival needs
 Owner: Survival needs thread (session cse_01EzhhyMEiXNWShq9e1gpQ4w)
-Status: in_review
+Status: done
 Branch: claude/survival-needs-g7yrhi
 PR: #5
 
@@ -15,6 +15,7 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - 2026-10-15 21:16: renamed the shelter hook to ShelterAtHook to avoid clashing with House building's ShelterAt (PM call)
 - 2026-10-15 21:17: CI green on e3e9b0b, run https://github.com/Indenex/LifeGame/actions/runs/38808400967 (server + load test, Linux/Windows/macOS clients)
 - 2026-10-15 21:20: Justin chose gentler needs: 90 min food, 60 min water, 16 min cold (3x in water); pause offline and 60% after respawn kept. Applied in shared/Needs.cs
+- 2026-10-15 21:21: Justin approved the merge (via PM); merging PR #5 into main once CI is green on this commit. No data wipe needed: a plain `spacetime publish` migrates an existing world.
 
 ## Interfaces for other lanes
 - Fire: Crafting implements `static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth)` (0..1). Once it does, delete the placeholder seeding in `EnsureSurvivalWorld` and the HeatSource table.
@@ -26,4 +27,4 @@ Hunger, thirst and body temperature, with cold as the first threat for a naked p
 - (none)
 
 ## Next step
-PR #5 is green and waits on Justin's merge OK via the PM. After it merges, wire the ceramics water pots and convert Berries to item 160 if crafting-core merged first.
+Next milestone (survival-2, ask the PM): drink from ceramics water pots (items 107/108 back to 105/106), convert Berries to item 160 when crafting-core lands, and swap placeholder campfires for crafted fires via FireWarmthAt.
