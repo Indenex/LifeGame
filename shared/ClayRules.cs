@@ -78,6 +78,15 @@ namespace LifeGame.Shared
         public const float KilnSetBack = 1.4f;
         public const float KilnSpacing = 2.2f;
 
+        // Clay grades by depth (D-041). Hand digging stops at World.MaxDigDepth; a
+        // digging stick reaches one level further, into the deep clay: purer, with
+        // fewer stones and roots, so it starts at "fine" quality. That quality
+        // carries through cleaning and tempering into the pots, which then crack
+        // less. depth is the cell's depth before this dig (0 = untouched ground).
+        public const byte DeepClayQuality = 80;
+        public static byte DugClayQuality(int depth) =>
+            depth >= World.MaxDigDepth ? DeepClayQuality : Items.RawQuality;
+
         public static byte KilnFired(byte quality) => (byte)Math.Min(100, quality + KilnQualityBonus);
 
         // rain and warmth are both 0..1.
