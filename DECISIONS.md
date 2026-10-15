@@ -152,3 +152,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-036 — 2026-10-15 — Immersion first; rain tiers and a smooth fade
 **Decision:** Immersion is a very high priority in every aspect of the game. Rain has intensity levels (mostly light and easy to see through; rare heavy storms), with sound scaling to match. The see-through fade for trees in front of the player must look smooth and natural, not dithered.
 **Who:** Justin
+
+## D-037 — 2026-10-15 — Use prompt placement
+**Decision:** The Use prompt (keycap plus verb, such as "G Feed the fire") sits fixed just below the player on a soft panel and fades in and out.
+**Who:** Justin ("Below player", which the PM recommended)
