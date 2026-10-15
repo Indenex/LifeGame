@@ -25,6 +25,9 @@ public partial class Atmosphere : Node3D
     readonly Fireflies fireflies = new();
     readonly SoundScape sound = new();
 
+    // Report sheep here (position, running) and they bleat; see SheepVoices.
+    public readonly SheepVoices Sheep = new();
+
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
     int dayLength = WorldTime.DayLengthSeconds;
@@ -59,6 +62,7 @@ public partial class Atmosphere : Node3D
         AddChild(rain);
         AddChild(fireflies);
         AddChild(sound);
+        Sheep.Bleat = sound.Bleat;
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -178,7 +182,10 @@ public partial class Atmosphere : Node3D
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
         RenderingServer.GlobalShaderParameterSet("player_position", focus);
         if (GetViewport()?.GetCamera3D() is { } camera)
+        {
             RenderingServer.GlobalShaderParameterSet("view_camera_position", camera.GlobalPosition);
+            Sheep.Tick(dt, focus, camera.GlobalBasis.X);
+        }
         float daylight = WorldTime.Daylight(timeOfDay);
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));

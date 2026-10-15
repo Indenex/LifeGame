@@ -25,6 +25,7 @@ public partial class SoundScape : Node
     }
 
     public void Step(Ground ground, float wetness) => mix.Step(ground, wetness);
+    public void Bleat(float pan, float gain, bool startled) => mix.Bleat(pan, gain, startled);
 
     public override void _Process(double delta)
     {
