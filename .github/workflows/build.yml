@@ -49,6 +49,7 @@ jobs:
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
           (cd tools/LoadTest && dotnet run -c Release -- 20 20)
           (cd tools/BuildTest && dotnet run -c Release)
+          (cd tools/SpawnCheck && dotnet run -c Release)
 
       - name: Crafting check (gathers, runs every process, lights and feeds a fire)
         run: cd tools/CraftCheck && dotnet run -c Release
