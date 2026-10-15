@@ -15,9 +15,10 @@ namespace LifeGame.Shared
         public const long ChatKeepMicros = 120_000_000;
 
         // A claim is a circle of land around a marker post.
-        public const float ClaimRadius = 10f;
+        // 20 m so a group's huts and fire fit inside one claim (Justin, D-023).
+        public const float ClaimRadius = 20f;
         public const int MaxClaimsPerPlayer = 1;
-        // Nobody can claim the clearing where new players wake up.
+        // No claim may reach into the clearing where new players wake up.
         public const float SpawnClearRadius = 20f;
         // You tend a marker by standing next to it.
         public const float MarkerReach = 3f;

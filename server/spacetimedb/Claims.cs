@@ -112,13 +112,15 @@ public static partial class Module
 
     // --- Rules other features call -----------------------------------------
 
-    // The standing claim covering a point, if any. Claims are smaller than a chunk,
-    // so only the chunks around the point need checking.
+    // How many chunks out from a point a claim's marker can stand and still cover it.
+    static readonly int ClaimChunkReach = (int)MathF.Ceiling(Social.ClaimRadius / (World.ChunkSize * World.CellSize));
+
+    // The standing claim covering a point, if any. Only markers in nearby chunks can reach it.
     public static Claim? ClaimAt(ReducerContext ctx, float x, float z)
     {
-        int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++)
+        int cx = World.ChunkOf(x), cz = World.ChunkOf(z), r = ClaimChunkReach;
+        for (int dx = -r; dx <= r; dx++)
+            for (int dz = -r; dz <= r; dz++)
                 foreach (var claim in ctx.Db.Claim.ByChunk.Filter((cx + dx, cz + dz)))
                     if (IsStanding(ctx, claim) && Social.InClaim(claim.X, claim.Z, x, z))
                         return claim;
@@ -164,7 +166,8 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
 
-        if (pos.X * pos.X + pos.Z * pos.Z < Social.SpawnClearRadius * Social.SpawnClearRadius)
+        float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
+        if (pos.X * pos.X + pos.Z * pos.Z < keepOut * keepOut)
             throw new Exception("This clearing is where newcomers wake up. Claim land further out");
 
         int owned = 0;
@@ -176,8 +179,9 @@ public static partial class Module
         // Claims may not overlap: no point of the new circle can fall inside another.
         int cx = World.ChunkOf(pos.X), cz = World.ChunkOf(pos.Z);
         float minGap = Social.ClaimRadius * 2f;
-        for (int dx = -2; dx <= 2; dx++)
-            for (int dz = -2; dz <= 2; dz++)
+        int reach = ClaimChunkReach * 2;
+        for (int dx = -reach; dx <= reach; dx++)
+            for (int dz = -reach; dz <= reach; dz++)
                 foreach (var other in ctx.Db.Claim.ByChunk.Filter((cx + dx, cz + dz)))
                 {
                     float ox = other.X - pos.X, oz = other.Z - pos.Z;

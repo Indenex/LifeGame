@@ -106,7 +106,7 @@ public partial class ClaimMarker : Node3D
     {
         foreach (var child in GetChildren())
             if (child.HasMeta("stake")) child.QueueFree();
-        const int count = 10;
+        const int count = 18;
         for (int i = 0; i < count; i++)
         {
             float a = i * Mathf.Tau / count;
@@ -158,7 +158,7 @@ public partial class ClaimMarker : Node3D
     void BuildRing()
     {
         lastRingBuiltFrom = new Vector3(claim.X, 0, claim.Z);
-        const int segments = 120;
+        const int segments = 200;
         const float width = 0.35f;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);

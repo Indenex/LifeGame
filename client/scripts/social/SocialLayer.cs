@@ -297,7 +297,8 @@ public partial class SocialLayer : Node
         var here = ClaimAt(myPos.X, myPos.Z);
         if (here == null)
         {
-            bool spawn = myPos.X * myPos.X + myPos.Z * myPos.Z < Social.SpawnClearRadius * Social.SpawnClearRadius;
+            float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
+            bool spawn = myPos.X * myPos.X + myPos.Z * myPos.Z < keepOut * keepOut;
             landLabel.Text = spawn ? "Waking clearing   ·   no claims here" : "Wild land   ·   fighting allowed";
             return;
         }
