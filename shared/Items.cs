@@ -17,6 +17,21 @@ namespace LifeGame.Shared
         Cordage = 8,
         Spear = 9,
         StoneAxe = 10,
+
+        // Clay and ceramics (tier 3) use 100 to 129.
+        CleanClay = 100,
+        Grit = 101,
+        TemperedClay = 102,
+        Potsherd = 103,
+        Grog = 104,
+        PinchPot = 105,
+        CoilPot = 106,
+        PinchPotOfWater = 107,
+        CoilPotOfWater = 108,
+        Brick = 109,
+        Daub = 110,
+        UnfiredPinchPot = 111,
+        UnfiredCoilPot = 112,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -62,7 +77,20 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
             new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true });
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.CleanClay, Name = "Clean clay", Plural = "Clean clay" },
+            new ItemDef { Id = Item.Grit, Name = "Stone grit", Plural = "Stone grit" },
+            new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
+            new ItemDef { Id = Item.Potsherd, Name = "Potsherd", Plural = "Potsherds" },
+            new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
+            new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true },
+            new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true },
+            new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true },
+            new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true },
+            new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks" },
+            new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
+            new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 

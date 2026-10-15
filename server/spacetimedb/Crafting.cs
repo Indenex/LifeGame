@@ -71,6 +71,10 @@ public static partial class Module
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
 
+    // Processes with Outcome.Placed set something down at the job's X and Z; the
+    // lane that owns the process implements this (Ceramics.cs for clay.*).
+    static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
+
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
     [SpacetimeDB.Reducer]
@@ -111,7 +115,7 @@ public static partial class Module
         QualityCapFor(ctx, player.PlayerId, def.Id, ref cap);
         bool failed = score < def.FailBelow;
 
-        // A fire is lit a step in front of the crafter.
+        // A fire is lit, or a placed thing set down, a step in front of the crafter.
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
         var finish = ctx.Timestamp + new TimeDuration((long)(def.Seconds * 1_000_000));
         ctx.Db.CraftJob.Insert(new CraftJob
@@ -142,6 +146,8 @@ public static partial class Module
 
         if (def.Outcome == Outcome.Fire)
             LightFire(ctx, job.PlayerId, job.X, job.Z);
+        else if (def.Outcome == Outcome.Placed)
+            OnPlaced(ctx, job, def);
         else
             AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
     }
