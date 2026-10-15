@@ -262,7 +262,7 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                return (1.0 - smoothstep(1.1 * size, 2.3 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                return (1.0 - smoothstep(0.9 * size, 1.9 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
             }
 
             varying vec3 tint;

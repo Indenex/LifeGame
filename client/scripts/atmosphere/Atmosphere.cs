@@ -101,8 +101,11 @@ public partial class Atmosphere : Node3D
             debugPosition = new Vector2(x, z);
         // --debug-clear=seconds bares the ground around the player after that long,
         // as placing a building does, to check that it eases over.
-        if (ArgFloat("debug-clear") is { } clearAfter && parent.GetChildren().OfType<Terrain>().FirstOrDefault() is { } terrain)
-            GetTree().CreateTimer(clearAfter).Timeout += () => DebugClear(terrain);
+        if (ArgFloat("debug-clear") is { } clearAfter)
+            GetTree().CreateTimer(clearAfter).Timeout += () =>
+            {
+                if (parent.GetChildren().OfType<Terrain>().FirstOrDefault() is { } terrain) DebugClear(terrain);
+            };
         if (argRain is > 0f)
         {
             argCloud ??= 0.95f;
