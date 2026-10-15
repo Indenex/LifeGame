@@ -9,7 +9,7 @@ Working state does not live in chat. It lives in the repo, so a session on eithe
 - `DECISIONS.md`: append-only log of what Justin and the PM decided, and why.
 - `WORKER_LOOP.md`: the step-by-step loop every lane session runs.
 
-Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
+Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111a8. Game design doc (skills, skill trees, materials, crafting chains): https://claude.ai/code/artifact/50ab4888-c6e0-44b1-9408-f5a02f887c8f. Server rules for SpacetimeDB are in `server/CLAUDE.md`.
 
 ## Roles
 
