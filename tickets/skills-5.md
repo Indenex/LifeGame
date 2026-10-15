@@ -1,9 +1,9 @@
 # skills-5: Crafting rows show what a Master does by heart
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_progress
+Status: done
 Branch: claude/journal-skills-iseewg
-PR: (opening 2026-10-15 23:05)
+PR: #28 (merged ff182d8)
 
 ## Goal
 The crafting panel tells a Master that a hands-on row is done "by heart" and that holding Ctrl (`craft_play_minigame`, UX/UI's Controls.cs) works it by hand (D-047).
@@ -18,4 +18,4 @@ The crafting panel tells a Master that a hands-on row is done "by heart" and tha
 - Dug clay in one place: skill-based on normal levels, 80 on the stick's extra level, folding `GiveDugClay` (Skills.cs), Ceramics' `ClayRules.DugClayQuality` and Crafting's stick depth together once #20/#21 are on main.
 
 ## Next step
-Wait for CI on the skills-5 PR and send the green sha to the PM.
+Done: #28 merged 2026-10-15 23:11. Dug-clay fold-in is tickets/skills-6.md.
