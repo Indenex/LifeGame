@@ -27,7 +27,7 @@ public static class Look
 
     public const float WaterLevel = -1.0f;
 
-    static Shader? paintedShader, grassShader;
+    static Shader? paintedShader, ghostShader, grassShader;
     static ShaderMaterial? ground, bark, rock, foliage, grass;
     static NoiseTexture2D? brush, detail, clouds;
 
@@ -53,16 +53,41 @@ public static class Look
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
     public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
-    public static ShaderMaterial BarkSurface => bark ??= SeeThrough(Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f)));
+    public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
-    public static ShaderMaterial Foliage => foliage ??= SeeThrough(Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f));
+    public static ShaderMaterial Foliage => foliage ??= Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
 
-    // Trees (and walls and thatch built from them) between the camera and the
-    // player dissolve, so you can always see yourself in the woods.
+    // Trees between the camera and the player fade softly, so you can always see
+    // yourself in the woods. A faded tree is drawn by its ghost: the same surface,
+    // transparent, drawn by a second instance that only shows trees in the way.
+    // Anything drawn with a see-through material needs its ghost drawn too, or a
+    // tree in the way would just vanish.
+    public static ShaderMaterial TreeBark => treeBark ??= SeeThrough(BarkSurface);
+    public static ShaderMaterial TreeFoliage => treeFoliage ??= SeeThrough(Foliage);
+
+    static ShaderMaterial? treeBark, treeFoliage, treeBarkGhost, treeFoliageGhost;
+
     static ShaderMaterial SeeThrough(ShaderMaterial material)
     {
-        material.SetShaderParameter("see_through", true);
-        return material;
+        var copy = (ShaderMaterial)material.Duplicate();
+        copy.SetShaderParameter("see_through", true);
+        return copy;
+    }
+
+    // The ghost to draw alongside a see-through material, if it has one.
+    public static ShaderMaterial? GhostOf(Material material) =>
+        material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
+        material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
+
+    static ShaderMaterial Ghost(ShaderMaterial source)
+    {
+        var ghost = new ShaderMaterial { Shader = GhostShader };
+        foreach (var uniform in source.Shader.GetShaderUniformList())
+        {
+            var name = new StringName(uniform.AsGodotDictionary()["name"].AsString());
+            ghost.SetShaderParameter(name, source.GetShaderParameter(name));
+        }
+        return ghost;
     }
 
     // Kept for callers that only need a plain painted surface.
@@ -181,7 +206,13 @@ public static class Look
         }
         """;
 
-    static Shader PaintedShader => paintedShader ??= MakeShader("""
+    static Shader PaintedShader => paintedShader ??= MakeShader(PaintedCode);
+
+    // The same surface drawn transparent, for trees fading out of the way.
+    static Shader GhostShader => ghostShader ??= MakeShader(PaintedCode
+        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;\n#define GHOST"));
+
+    const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
 
@@ -200,30 +231,42 @@ public static class Look
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
-            // Fades out surfaces close to the line from the camera to the player,
-            // with an ordered dither so it needs no transparency. Only the main
-            // camera does this, so shadows stay whole.
-            bool dissolved(vec3 p, vec3 cam, vec2 frag) {
-                if (distance(cam, view_camera_position) > 0.5) return false;
-                vec3 target = player_position + vec3(0.0, 1.0, 0.0);
-                vec3 seg = target - cam;
-                float t = clamp(dot(p - cam, seg) / dot(seg, seg), 0.0, 1.0);
-                if (t > 0.97) return false;
-                float radius = mix(3.4, 2.4, t);
-                float keep = smoothstep(radius * 0.55, radius, distance(p, cam + seg * t));
-                ivec2 c = ivec2(frag) % 4;
-                int index = c.x + c.y * 4;
-                const float bayer[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
-                return keep < (bayer[index] + 0.5) / 16.0;
+            // How far a tree has faded because it stands between the camera and the
+            // player: 0 solid, 1 fully in the way. Measured from the line of sight to
+            // the tree's own axis, so the whole tree eases in and out together as
+            // either moves. Only the main camera fades things, so shadows stay whole.
+            float fade_amount(mat4 model, vec3 cam) {
+                if (distance(cam, view_camera_position) > 0.5) return 0.0;
+                float size = length(model[1].xyz);
+                vec3 base = model[3].xyz;
+                vec3 p1 = cam, d1 = player_position + vec3(0.0, 1.0, 0.0) - cam;
+                vec3 p2 = base + vec3(0.0, 0.5 * size, 0.0), d2 = vec3(0.0, 3.5 * size, 0.0);
+                vec3 r = p1 - p2;
+                float a = dot(d1, d1), b = dot(d1, d2), c = dot(d1, r), e = dot(d2, d2), f = dot(d2, r);
+                float denom = a * e - b * b;
+                float s = denom > 1e-5 ? clamp((b * f - c * e) / denom, 0.0, 1.0) : 0.0;
+                float t = clamp((b * s + f) / e, 0.0, 1.0);
+                s = clamp((b * t - c) / a, 0.0, 1.0);
+                float d = distance(p1 + d1 * s, p2 + d2 * t);
+                return (1.0 - smoothstep(1.1 * size, 2.3 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
             }
 
             varying vec3 tint;
+            varying float fade;
             varying vec3 world_pos;
             varying vec3 world_normal;
             varying float shade;
             varying float wet;
 
             void vertex() {
+                fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+            #ifdef GHOST
+                // The ghost draws only trees in the way; the rest collapse to nothing.
+                if (fade < 0.002) { VERTEX = vec3(0.0); return; }
+            #else
+                // A tree in the way is drawn by its ghost instead.
+                if (fade >= 0.002) { VERTEX = vec3(0.0); return; }
+            #endif
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 if (sway > 0.0) {
                     float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);
@@ -248,7 +291,6 @@ public static class Look
             }
 
             void fragment() {
-                if (see_through && dissolved(world_pos, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
                 vec2 uv = world_pos.xz * brush_scale + vec2(world_pos.y * 0.21);
                 float a = texture(brush, uv).r;
                 float b = texture(brush, uv * 2.7 + vec2(0.31, 0.77)).r;
@@ -275,6 +317,14 @@ public static class Look
                 AO_LIGHT_AFFECT = 0.3;
                 ROUGHNESS = mix(1.0, 0.75, wet);
                 SPECULAR = 0.08 * wet;
+            #ifdef GHOST
+                // Faintly see-through all over, and clear in a soft circle around the
+                // player, measured on screen.
+                vec4 target = VIEW_MATRIX * vec4(player_position + vec3(0.0, 0.9, 0.0), 1.0);
+                float apart = length(VERTEX.xy / -VERTEX.z - target.xy / -target.z);
+                float window = 1.0 - smoothstep(0.07, 0.24, apart);
+                ALPHA = 1.0 - fade * (0.3 + 0.55 * window);
+            #endif
             }
 
             // Wrapped diffuse light, so forms turn softly into shadow, plus a soft
@@ -289,7 +339,7 @@ public static class Look
                     SPECULAR_LIGHT += LIGHT_COLOR * glint * ATTENUATION * sky;
                 }
             }
-            """);
+            """;
 
     static Shader GrassShader => grassShader ??= MakeShader("""
             shader_type spatial;

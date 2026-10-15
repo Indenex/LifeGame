@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace LifeGame;
@@ -52,9 +53,14 @@ public partial class Rain : Node3D
     {
         GlobalPosition = focus;
         Visible = amount > 0.02f;
-        foreach (var material in materials)
+        amount = Mathf.Clamp(amount, 0f, 1f);
+        // Light rain is a faint far-off veil you can see through; the nearer, denser
+        // curtains only fill in as the rain gets heavy.
+        Span<float> perRing = stackalloc float[] { amount * Mathf.SmoothStep(0.45f, 1f, amount), Mathf.Pow(amount, 1.5f), Mathf.Pow(amount, 1.2f) };
+        for (int i = 0; i < materials.Length; i++)
         {
-            material.SetShaderParameter("amount", Mathf.Clamp(amount, 0f, 1f));
+            var material = materials[i];
+            material.SetShaderParameter("amount", perRing[i]);
             material.SetShaderParameter("slant", 0.05f + wind * 0.25f);
             material.SetShaderParameter("tint", tint);
         }

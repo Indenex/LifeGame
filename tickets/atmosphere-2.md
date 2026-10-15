@@ -15,6 +15,8 @@ From the PM after atmosphere-1: soft sheep bleats, with a startled bleat when th
 - 2026-10-15 22:10: PR #16 open; client builds green. Screenshots /mnt/project-files/screenshots/atmosphere-07-rain-veils.png and atmosphere-08-woods-fade.png sent to Justin via the PM.
 - 2026-10-15 22:20: SheepVoices (client/scripts/atmosphere/SheepVoices.cs) decides bleats: calm sheep every 15-45 s each, one startled bleat per flock when it bolts (State turns Run), quieter with distance up to 35 m, panned to the camera. Atmosphere.Sheep is ready; not yet fed from the table.
 
+- 2026-10-15 22:45: Justin (D-036, via PM): smoother fade, rain intensity levels so it's not always hard to see, sound scaling with rain; immersion is top priority. Merge held. Reworked: trees in the way are now drawn by a transparent "ghost" MultiMesh (Look.TreeFoliage/TreeBark + Look.GhostOf, hook in Terrain.AddMulti) with a soft screen-space window around the player, no dither. Server rain fronts are now drizzle 38%, light 34%, steady 21%, storm 7%, building/clearing at 0.05 per 20 s tick and capped by cloud. Client: fog/mist mostly only thicken in storms; near veils only in heavy rain; lightning flashes with thunder in storms; rain audio layers patter/hiss/roar, branch drips, muffled rain and roof drumming under shelter (Main hook: atmosphere.Sheltered). F6 steps clear, drizzle, light, steady, storm.
+
 ## Open questions / blockers
 - Sheep bleats need the `animal` table from Animals PR #13 (claude/animals-sheep-5gkntn) on main before they can be hooked.
 

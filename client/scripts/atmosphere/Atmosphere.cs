@@ -40,6 +40,19 @@ public partial class Atmosphere : Node3D
     float targetCloud = 0.2f, targetRain, targetWind = 0.3f, targetWetness;
     float? argCloud, argRain, argWind, argWetness;
     int previewWeather;
+
+    // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
+    // then clear, drizzle, light rain, steady rain and a storm.
+    static readonly (float, float, float, float)[] PreviewWeathers =
+    {
+        default, (0.1f, 0f, 0.25f, 0f), (0.8f, 0.18f, 0.3f, 0.4f), (0.9f, 0.4f, 0.45f, 0.7f), (0.95f, 0.65f, 0.6f, 1f), (1f, 1f, 0.9f, 1f),
+    };
+
+    // Lightning: a flash lights the sky and the land, and thunder follows.
+    float flash, nextStrike = 20f;
+
+    // Whether a spot is under a roof; Main points this at the building system.
+    public Func<Vector3, bool>? Sheltered;
     Vector2 cloudOffset;
 
     Vector2? debugPosition;
@@ -128,7 +141,7 @@ public partial class Atmosphere : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (InputMap.HasAction("preview_weather") && e.IsActionPressed("preview_weather")) previewWeather = (previewWeather + 1) % 3;
+        if (InputMap.HasAction("preview_weather") && e.IsActionPressed("preview_weather")) previewWeather = (previewWeather + 1) % PreviewWeathers.Length;
         if (e.IsActionPressed("toggle_music")) sound.MusicOn = !sound.MusicOn;
     }
 
@@ -158,12 +171,9 @@ public partial class Atmosphere : Node3D
             timeOfDay = Mathf.Abs(diff) < 0.0005f ? target : Frac(timeOfDay + diff * (1f - Mathf.Exp(-3f * dt)));
         }
 
-        (float c, float r, float w, float wet) = previewWeather switch
-        {
-            1 => (1f, 1f, 0.85f, 1f),
-            2 => (0.1f, 0f, 0.25f, 0f),
-            _ => (argCloud ?? targetCloud, argRain ?? targetRain, argWind ?? targetWind, argWetness ?? targetWetness),
-        };
+        (float c, float r, float w, float wet) = previewWeather > 0
+            ? PreviewWeathers[previewWeather]
+            : (argCloud ?? targetCloud, argRain ?? targetRain, argWind ?? targetWind, argWetness ?? targetWetness);
         float k = snap ? 1f : 1f - Mathf.Exp(-dt / 6f);
         cloud = Mathf.Lerp(cloud, c, k);
         rainAmount = Mathf.Lerp(rainAmount, r, k);
@@ -193,6 +203,8 @@ public partial class Atmosphere : Node3D
         sound.Rain = rainAmount;
         sound.Wind = wind;
         sound.Wetness = wetness;
+        sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
+        Lightning(dt);
     }
 
     // --- Sun, sky and fog -----------------------------------------------------
@@ -241,7 +253,9 @@ public partial class Atmosphere : Node3D
         float sunHeight = WorldTime.SunHeight(t);
         float daylight = WorldTime.Daylight(t);
         float overcast = Mathf.Clamp(cloud * 1.1f - 0.1f, 0f, 1f);
-        float storm = rainAmount;
+        // How much the rain closes the world in: a little in light rain, a lot only
+        // in a storm.
+        float storm = 0.3f * rainAmount + 0.7f * Mathf.SmoothStep(0.6f, 1f, rainAmount);
 
         // The sun crosses the sky once a day; the moon follows on the opposite side.
         // The light swaps between them while both are below the horizon and dark.
@@ -278,7 +292,7 @@ public partial class Atmosphere : Node3D
         sky.SetShaderParameter("stars", (1f - daylight) * (1f - overcast));
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
-        env.FogDensity = mood.FogDensity * (1f + 2.6f * storm + 0.3f * overcast);
+        env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
         env.VolumetricFogAlbedo = Grey(mood.Mist, grey, 1f) * (1f - 0.25f * storm);
         env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm);
         env.AmbientLightColor = mood.Ambient;
@@ -286,6 +300,38 @@ public partial class Atmosphere : Node3D
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
         env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
+
+        if (flash > 0.001f)
+        {
+            var bolt = new Color(0.75f, 0.8f, 1f);
+            sky.SetShaderParameter("top_color", top.Lerp(bolt, flash * 0.6f));
+            sky.SetShaderParameter("horizon_color", horizon.Lerp(bolt, flash * 0.75f));
+            env.AmbientLightEnergy += flash * 1.6f;
+            env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
+        }
+    }
+
+    float strikeAge = 10f, strikePeak;
+
+    // Storms throw lightning every half minute or so. Most of it is far off: a dull
+    // glow in the clouds and a late, low rumble. Now and then a strike is close: a
+    // white double flash and a crack right after.
+    void Lightning(float dt)
+    {
+        float stormy = Mathf.SmoothStep(0.75f, 0.95f, rainAmount);
+        nextStrike -= dt * stormy;
+        if (stormy > 0.05f && nextStrike <= 0f)
+        {
+            nextStrike = (float)GD.RandRange(12.0, 40.0);
+            float near = Mathf.Pow(GD.Randf(), 2f);
+            strikePeak = (0.2f + 0.8f * near) * stormy;
+            strikeAge = 0f;
+            // Sound covers about 340 m a second; distant strikes are 2 to 6 km off.
+            sound.Thunder(0.3f + (1f - near) * 5f, (0.35f + 0.65f * near) * stormy, near);
+        }
+        strikeAge += dt;
+        float a = strikeAge;
+        flash = strikePeak * (Mathf.Exp(-a / 0.07f) + (a > 0.16f ? 0.7f * Mathf.Exp(-(a - 0.16f) / 0.12f) : 0f));
     }
 
     // A unit vector pointing at something this many degrees above the horizon,
