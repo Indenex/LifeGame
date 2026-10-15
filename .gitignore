@@ -1,0 +1,9 @@
+# .NET / Godot build output
+bin/
+obj/
+.godot/
+*.user
+# SpacetimeDB codegen scratch
+server/spacetimedb/SpacetimeDB.Codegen/
+# Exports
+builds/
