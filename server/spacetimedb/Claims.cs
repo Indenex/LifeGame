@@ -127,6 +127,9 @@ public static partial class Module
         return null;
     }
 
+    // House building asks this before placing or taking down a structure.
+    static partial void CheckClaimAccess(ReducerContext ctx, float x, float z) => RequireClaimAccess(ctx, x, z);
+
     public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who)
     {
         if (claim.Owner == who) return true;

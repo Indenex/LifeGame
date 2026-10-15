@@ -47,7 +47,8 @@ jobs:
           spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
           (cd server && spacetimedb-cli publish lifegame --server local --yes)
-          cd tools/LoadTest && dotnet run -c Release -- 20 20
+          (cd tools/LoadTest && dotnet run -c Release -- 20 20)
+          (cd tools/BuildTest && dotnet run -c Release)
 
       - name: Check chat, claim and PvP rules with two players
         run: |

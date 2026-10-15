@@ -12,7 +12,8 @@ namespace LifeGame;
 // fight where you stand. Main hands it the connection and, every frame, where the
 // player is; it keeps its own subscriptions so the rest of the client is untouched.
 //
-// Keys: Enter to talk, B to raise a claim marker, T at a marker to open it.
+// Keys (KEYMAP.md): Enter to talk, K at a marker to open it. L raises a marker
+// until the marker moves into the B build menu.
 public partial class SocialLayer : Node
 {
     DbConnection? conn;
@@ -65,8 +66,8 @@ public partial class SocialLayer : Node
     public override void _Ready()
     {
         Bind("chat", Key.Enter, Key.KpEnter);
-        Bind("claim_place", Key.B);
-        Bind("claim_open", Key.T);
+        Bind("claim_place", Key.L);
+        Bind("claim_open", Key.K);
 
         AddChild(chat);
         AddChild(panel);

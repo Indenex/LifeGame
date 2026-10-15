@@ -165,7 +165,7 @@ public partial class ClaimPanel : CanvasLayer
                 Conn.Reducers.LeaveClaim(claim.Id);
                 Close();
             }));
-        content.AddChild(Note("T or Esc to close"));
+        content.AddChild(Note("K or Esc to close"));
     }
 
     static string StandsFor(Claim claim)
