@@ -27,5 +27,8 @@ Journal records processes learned by experimenting, watching a nearby player, or
 ## Open questions / blockers
 - (none)
 
+## Follow-up (after #7, not in it)
+- D-025: one Use key. Once Crafting's crafting-2 Use registry is on main, move reading a note from R to a G Use handler. J for the journal stays.
+
 ## Next step
 Wait for CI on PR #7; when green, ask the PM for the merge (it must land with or after `crafting-core`).
