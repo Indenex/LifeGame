@@ -39,4 +39,4 @@ Repeat until the ticket's goal is met:
 
 - Session start: read `STATUS.md` and do `Next PM action`.
 - After assigning a lane, getting Justin's answer, or a merge: **[WRITE]** update `STATUS.md` and append to `DECISIONS.md`.
-- Bring Justin merges, design questions and anything irreversible, batched and answerable in a word.
+- Approve routine merges yourself once CI is green and they match `DECISIONS.md` (D-032). Bring Justin world wipes, design questions and anything irreversible or costly, batched and answerable in a word.

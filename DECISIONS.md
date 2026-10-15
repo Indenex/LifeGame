@@ -132,3 +132,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-031 — 2026-10-15 — Hut recipes on real materials
 **Decision:** Clay hut walls take 12 daub (12 clay + 6 fiber via clean-clay and mix-daub); the daub stage's extra 3 fiber is dropped. Wattle-and-daub huts use no bricks; bricks wait for a later mud-brick house. The lean-to keeps its 3 fiber lashing.
 **Who:** Justin ("As proposed")
+
+## D-032 — 2026-10-15 — PM approves routine merges
+**Decision:** The PM approves a PR once CI is green and it matches decisions already recorded here. Justin still approves world wipes, design changes he hasn't decided, and anything that costs money. Every merge is still reported in the PM thread.
+**Who:** Justin ("PM approves"), to speed up merging
