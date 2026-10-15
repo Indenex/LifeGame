@@ -29,6 +29,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Animals | `tickets/animals-1.md` | in_progress (draft PR #13) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics | `tickets/ceramics-1.md` | in_review (PR #11, CI running) | `claude/clay-ceramics-kfr4kr` (from `crafting-core`) | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI | `tickets/ui-1.md` | in_progress | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
+| Bug fixes | `tickets/bugfix-1.md` (stuck at spawn when saved far from origin) | todo (thread starting) | lane to record | any file, minimal diffs, PM assigns |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 

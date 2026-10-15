@@ -164,3 +164,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-039 — 2026-10-15 — Sheep for meat and hide
 **Decision:** Players can kill sheep (with a weapon or cutting tool; the flock flees) and butcher them for raw mutton and hide; flocks regrow slowly over in-game days and never vanish. Raw mutton is cooked at a fire (Crafting `cook.meat`); cooked mutton feeds about 40% hunger (Survival default). Shearing for wool comes first.
 **Who:** Justin ("Yes, slowly", which the PM recommended)
+
+## D-040 — 2026-10-15 — Bug fixes lane
+**Decision:** A Bug fixes lane takes cross-lane and integration bugs assigned by the PM, one small PR per bug from main, touching whatever files the fix needs and telling the owning lane. First bug: players saved far from the origin rejoin stuck at spawn. Crafting goes back to crafting content.
+**Who:** Justin
