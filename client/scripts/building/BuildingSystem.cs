@@ -13,6 +13,7 @@ namespace LifeGame;
 //
 // B opens placement (Tab picks what, T turns it, click lays it out, Esc cancels).
 // Hold G (the shared Use key) next to an unfinished site to add what you carry.
+// Using finished buildings (doors, baskets) and weathering are in BuildingSystem.Use.cs.
 public partial class BuildingSystem : Node
 {
     const float WorkInterval = 0.65f;
@@ -126,6 +127,9 @@ public partial class BuildingSystem : Node
         Put(StructureKind.ClayHut, 14f, 5.5f, 2, 0.5f, -0.5f);
         Put(StructureKind.LeanTo, 13.5f, -1.5f, 3, 0.4f, 0.7f);
         Put(StructureKind.LeanTo, 4f, -4.5f, 0, 0.5f, 2.6f);
+        Put(StructureKind.Basket, 4.5f, -1.2f, 1, 1f);
+        Put(StructureKind.Basket, 5.2f, -0.4f, 0, 0.5f, 1f);
+        SetDoor(ulong.MaxValue, closed: true, animate: false);
     }
 
     public void Bind(DbConnection c)
@@ -133,6 +137,7 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
+        BindUse(c);
     }
 
     // --- Rows to views ----------------------------------------------------
@@ -151,6 +156,7 @@ public partial class BuildingSystem : Node
             views[s.Id] = v;
             root.AddChild(v);
             SetCleared(s, true);
+            ApplyExtras(s, v);
         }
 
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
@@ -222,7 +228,7 @@ public partial class BuildingSystem : Node
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
             float r = Mathf.Sqrt(lx * lx + lz * lz);
             if (Mathf.Abs(r - wall) > half || r < 0.01f) continue;
-            if (Mathf.Abs(Mathf.Atan2(lx, lz)) < door) continue;
+            if (Mathf.Abs(Mathf.Atan2(lx, lz)) < door && !DoorShut(s.Id)) continue;
             var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
             bool inside = fx * fx + fz * fz < wall * wall;
             float target = inside ? wall - half : wall + half;
@@ -246,6 +252,11 @@ public partial class BuildingSystem : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
+        if (!placing && UseInput(e))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e.IsActionPressed("build_mode"))
         {
             if (placing) StopPlacing();
@@ -326,6 +337,8 @@ public partial class BuildingSystem : Node
     {
         float dt = (float)delta;
         if (placing) UpdateGhost(dt);
+        UpdateUse();
+        UpdateWeathering(dt);
         UpdatePrompt();
     }
 
@@ -412,6 +425,8 @@ public partial class BuildingSystem : Node
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
         }
+        else if (UsePrompt() is { } use)
+            text = use;
         else if (ShelterAt(me.Position) is { } home)
             text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
 

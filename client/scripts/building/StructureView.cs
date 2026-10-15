@@ -101,6 +101,76 @@ public partial class StructureView : Node3D
         return appeared;
     }
 
+    // --- Door (clay huts) ---------------------------------------------------
+
+    // The doorway in the hut's frame: hinged on one jamb, swinging inward when open.
+    const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.45f, DoorOpenAngle = 1.75f;
+    Node3D? doorHinge;
+    bool? doorClosed;
+
+    // closed: null takes the door away (none hung yet).
+    public void SetDoor(bool? closed, bool animate)
+    {
+        if (closed == doorClosed) return;
+        if (closed == null)
+        {
+            doorHinge?.QueueFree();
+            doorHinge = null;
+            doorClosed = null;
+            return;
+        }
+        bool fresh = doorHinge == null;
+        if (doorHinge == null)
+        {
+            var a = new Vector3(Mathf.Sin(DoorHalfAngle), 0, Mathf.Cos(DoorHalfAngle)) * DoorRadius;
+            var b = new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius;
+            doorHinge = new Node3D { Position = a, Rotation = new Vector3(0, Mathf.Atan2(-(b - a).Z, (b - a).X), 0) };
+            doorHinge.AddChild(new MeshInstance3D
+            {
+                Mesh = StructureModel.Door(a.DistanceTo(b), DoorHeight),
+                MaterialOverride = StructureModel.Wood,
+            });
+            AddChild(doorHinge);
+            if (animate && IsInsideTree()) Settle(doorHinge, doorHinge.Position);
+        }
+        doorClosed = closed;
+        float baseYaw = Mathf.Atan2(-(DoorEnd() - doorHinge.Position).Z, (DoorEnd() - doorHinge.Position).X);
+        float yaw = baseYaw - (closed.Value ? 0f : DoorOpenAngle);
+        if (animate && !fresh && IsInsideTree())
+            CreateTween().TweenProperty(doorHinge, "rotation:y", yaw, 0.6).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        else
+            doorHinge.Rotation = new Vector3(0, yaw, 0);
+    }
+
+    static Vector3 DoorEnd() => new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius;
+
+    // --- Weathering ---------------------------------------------------------
+
+    // 0 is sound; toward 1 it darkens and sags, in the last day before it is gone (D-046).
+    float weathered;
+    static readonly StandardMaterial3D Grime = new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        BlendMode = BaseMaterial3D.BlendModeEnum.Mul,
+        AlbedoColor = new Color(0.55f, 0.5f, 0.45f),
+    };
+
+    public void SetWeathered(float amount)
+    {
+        amount = Mathf.Clamp(amount, 0f, 1f);
+        if (Mathf.Abs(amount - weathered) < 0.02f) return;
+        weathered = amount;
+        var grime = amount > 0 ? Grime.Duplicate() as StandardMaterial3D : null;
+        if (grime != null)
+            grime.AlbedoColor = Colors.White.Lerp(new Color(0.55f, 0.5f, 0.45f), amount);
+        foreach (var (_, _, mesh) in pieces)
+            mesh.MaterialOverlay = grime;
+        // Sag: it settles and leans a little as it gives way.
+        Scale = new Vector3(1f, 1f - 0.12f * amount, 1f);
+        RotationDegrees = new Vector3(4f * amount, RotationDegrees.Y, -3f * amount);
+    }
+
     void Settle(Node3D holder, Vector3 anchor)
     {
         var tween = CreateTween();

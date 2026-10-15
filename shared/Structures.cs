@@ -50,6 +50,14 @@ namespace LifeGame.Shared
                 Clearance = 1.2f,
                 Stages = new[] { "Marker post" },
             },
+            new StructureShape
+            {
+                Name = "Storage basket",
+                Round = true, Radius = 0.35f,
+                Clearance = 0.6f,
+                Solid = true,
+                Stages = new[] { "Weave" },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -65,12 +73,23 @@ namespace LifeGame.Shared
 
         // The skill each stage practices, for the journal and skills (build.* process ids).
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
-            DaubProcess = "build.daub", RoofProcess = "build.roof";
+            DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave";
+
+        // A hurdle door on a finished clay hut: what hanging it takes, and the warmth it keeps in when shut.
+        public const int DoorSticks = 4, DoorFiber = 2;
+        public const float ClosedDoorWarmth = 0.9f;
+        // Stacks a storage basket holds.
+        public const int BasketStacks = 12;
+
+        // Weathering (D-046): outside claims, anything players made that nobody has
+        // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
+        public const double WeatherAfterHours = 72, WeatherForHours = 24;
 
         public static string StageProcess(int kind, int stage) => kind switch
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
+            3 => WeaveProcess,
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
