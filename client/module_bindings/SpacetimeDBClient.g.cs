@@ -27,6 +27,8 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(Fire = new(conn));
+            AddTable(MyCraftJob = new(conn));
             AddTable(MyInventory = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerPos = new(conn));
@@ -528,6 +530,8 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.Fire().ToSql(),
+            new QueryBuilder().From.MyCraftJob().ToSql(),
             new QueryBuilder().From.MyInventory().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerPos().ToSql(),
@@ -539,6 +543,8 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<Fire, FireCols, FireIxCols> Fire() => new("fire", new FireCols("fire"), new FireIxCols("fire"));
+        public global::SpacetimeDB.Table<CraftJob, MyCraftJobCols, MyCraftJobIxCols> MyCraftJob() => new("my_craft_job", new MyCraftJobCols("my_craft_job"), new MyCraftJobIxCols("my_craft_job"));
         public global::SpacetimeDB.Table<InventoryItem, MyInventoryCols, MyInventoryIxCols> MyInventory() => new("my_inventory", new MyInventoryCols("my_inventory"), new MyInventoryIxCols("my_inventory"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerPos, PlayerPosCols, PlayerPosIxCols> PlayerPos() => new("player_pos", new PlayerPosCols("player_pos"), new PlayerPosIxCols("player_pos"));
@@ -627,9 +633,11 @@ namespace SpacetimeDB.Types
             {
                 Reducer.Dig args => Reducers.InvokeDig(eventContext, args),
                 Reducer.Drop args => Reducers.InvokeDrop(eventContext, args),
+                Reducer.FeedFire args => Reducers.InvokeFeedFire(eventContext, args),
                 Reducer.Move args => Reducers.InvokeMove(eventContext, args),
                 Reducer.PickUp args => Reducers.InvokePickUp(eventContext, args),
                 Reducer.SetName args => Reducers.InvokeSetName(eventContext, args),
+                Reducer.StartCraft args => Reducers.InvokeStartCraft(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }
