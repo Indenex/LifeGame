@@ -1,7 +1,7 @@
 # building-3: Kiln support, hut door, storage basket
 Lane: House building
 Owner: House building thread
-Status: in_progress
+Status: in_review
 Branch: claude/house-building-8ueqz2 (restarted from main 58d50e0 after #10 merged)
 PR: #41
 
@@ -24,4 +24,4 @@ Ceramics can place an updraft kiln from the B menu as a blueprint (D-035): Build
 - Ceramics' Kiln appends after Basket (4).
 
 ## Next step
-Wait for CI on the building-3 PR, fix anything red, then send the PM the green sha.
+In the PM merge queue (after #23). The PM updates the branch from main and merges once CI is green, and asks Building only if that conflicts.
