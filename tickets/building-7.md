@@ -15,8 +15,11 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 ## Progress log
 - 2026-10-16 05:10: all four done. Stage costs moved from Building.cs to `shared/Structures.cs` (`Structures.StageCosts`) so the client can show them; the server reads the same table. New showcases `--building-leanto` and `--building-placing`. Screenshots: /mnt/project-files/screenshots/building-12-lean-to-both-sides.png, building-13-layout-costs.png. Patch: /mnt/project-files/patches/building-7/.
 
+- 2026-10-16 05:36: CI green on 56d830c (run https://github.com/Indenex/LifeGame/actions/runs/38855592389).
+- 2026-10-16: D-061, Justin keeps the mat, so #61 merges with building-5 as is. Merged main in (clean, no conflicts); all local checks green. Pushed for a fresh CI run.
+
 ## Open questions / blockers
 - None. Note for Ceramics: the jar's stage costs now go in `Structures.StageCosts` in shared/Structures.cs, not Building.cs.
 
 ## Next step
-Wait for CI on #61. If Justin turns down the mat, revert the building-5 commits on this branch and #61 merges as fixes only.
+Wait for CI on #61's new head, then send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
