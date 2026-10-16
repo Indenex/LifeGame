@@ -313,7 +313,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
-        conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
@@ -327,6 +327,11 @@ public partial class Main : Node3D
         myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
+        ServerCheck.Warn = hud.Warn;
+        c.SubscriptionBuilder()
+            .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
+            .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
+            .Subscribe(new[] { "SELECT * FROM server_info" });
         SubscribeSelf();
         atmosphere.Connect(c);
     }
@@ -352,7 +357,7 @@ public partial class Main : Node3D
             })
             .OnError((_, e) =>
             {
-                hud.Note($"Subscription error: {e.Message}");
+                ServerCheck.Failed(e.Message, hud.Note);
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
@@ -376,7 +381,12 @@ public partial class Main : Node3D
                 old?.Unsubscribe();
                 if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
             })
-            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+            .OnError((_, e) =>
+            {
+                ServerCheck.Failed(e.Message, hud.Note);
+                // Still wake up and walk: one failed subscription must not freeze the player.
+                if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
+            })
             .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
