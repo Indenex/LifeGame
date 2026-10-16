@@ -537,3 +537,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-131 — 2026-10-16 — Release & Launcher lane
 **Decision:** A new Opus Release & Launcher lane builds one-button updating. Every green merge to main becomes a versioned GitHub Release (clients and server module). A launcher for Linux and Windows downloads the latest client and has a server button that publishes the module over the existing world without wiping (refusing world-wipe releases unless Justin confirms). Fully automatic server updates from CI are proposed as options if they need setup or cost. Justin wants zero setup work.
 **Who:** Justin ("New Release & Launcher worker"; "I want to be able to open the game, hit button, and it update the game/server")
+
+## D-132 — 2026-10-16 — Raised hearth
+**Decision:** A raised hearth is built inside a finished hut or house (4 stone, then 3 daub). A fire lit on it burns 1.5x as long per stick, can't be put out by rain, and makes a hut fully warm, as a fire already does in a house. Smoke rises through the roof. Crafting adds one small hook to read the hearth.
+**Who:** Justin ("Better fire", as recommended)
