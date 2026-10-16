@@ -1,9 +1,9 @@
 # claims-6: Speech you can see
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
-PR: (not opened yet)
+PR: https://github.com/Indenex/LifeGame/pull/71
 
 ## Goal
 Chat feels like people talking nearby (immersion, D-036). When someone close by says something, a soft bubble rises above their head and fades after a few seconds; if they say more, the older lines drift up and dim instead of vanishing (at most three). In the chat log, a line from farther away fades in dimmer. "/me waves" is an action: it shows in italics, as "Mira waves" in the log and "waves" in a slanted bubble. Nothing pops in or out.
