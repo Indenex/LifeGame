@@ -14,7 +14,8 @@
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
 // Work scenes stand still on a calm morning and work for all but the last second:
 // knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
-// (knap-fail).
+// (knap-fail). others: you knap while another player drills 8 m to your left
+// and a third carves 20 m to the right.
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -61,6 +62,14 @@ foreach (var scene in scenes)
         "pat" => "clay.brick", "rasp" => "hide.scrape", "carve" => "carve.digging_stick", _ => "",
     });
     if (work != Work.None) (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
+    if (name == "others")
+    {
+        (work, day, rain, wind, wet, time) = (Work.Knap, 0.9f, 0f, 0.15f, 0f, 0.33f);
+        mix.OtherWorking(2, Work.Drill);
+        mix.OtherPlace(2, 0.4f * 0.93f, -0.8f);
+        mix.OtherWorking(3, Work.Carve);
+        mix.OtherPlace(3, 0.4f * 0.34f, 0.9f);
+    }
     mix.Working(work);
     bool workEnded = false;
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
@@ -91,6 +100,9 @@ foreach (var scene in scenes)
         {
             mix.Working(Work.None);
             mix.WorkDone(work, parts[0].EndsWith("-fail"));
+            mix.OtherWorking(2, Work.None);
+            mix.OtherWorkDone(2, Work.Drill, false);
+            mix.OtherWorking(3, Work.None);
             workEnded = true;
         }
         if (walks && t >= nextStep)

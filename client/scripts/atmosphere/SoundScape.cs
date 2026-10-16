@@ -88,6 +88,9 @@ public partial class SoundScape : Node
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
     public void Working(Work kind) => events.Enqueue(m => m.Working(kind));
     public void WorkDone(Work kind, bool failed) => events.Enqueue(m => m.WorkDone(kind, failed));
+    public void OtherWorking(uint player, Work kind) => events.Enqueue(m => m.OtherWorking(player, kind));
+    public void OtherWorkDone(uint player, Work kind, bool failed) => events.Enqueue(m => m.OtherWorkDone(player, kind, failed));
+    public void OtherPlace(uint player, float gain, float pan) => events.Enqueue(m => m.OtherPlace(player, gain, pan));
 
     void Synthesize()
     {

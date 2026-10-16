@@ -49,6 +49,9 @@ public sealed class SoundMix
     readonly Frogs frogs;
     readonly Steps steps;
     readonly WorkVoice work;
+    // Other players at work nearby, by player id (D-072).
+    readonly Dictionary<uint, WorkVoice> others = new();
+    readonly List<uint> quiet = new();
     readonly Sheep sheep;
     readonly Music music;
     readonly Reverb reverb;
@@ -91,6 +94,30 @@ public sealed class SoundMix
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
     public void Working(Work kind) => work.Set(kind);
     public void WorkDone(Work kind, bool failed) => work.Done(kind, failed);
+
+    // The same for another player's work, placed by OtherPlace: gain from distance
+    // (already well under your own) and pan from -1 (left) to 1 (right).
+    public void OtherWorking(uint player, Work kind)
+    {
+        if (!others.TryGetValue(player, out var voice))
+        {
+            if (kind == Work.None) return;
+            others[player] = voice = new WorkVoice(Rate, noise, new Random(unchecked((int)player * 7919 + 13)));
+        }
+        voice.Set(kind);
+    }
+
+    public void OtherWorkDone(uint player, Work kind, bool failed)
+    {
+        if (others.TryGetValue(player, out var voice)) voice.Done(kind, failed);
+    }
+
+    public void OtherPlace(uint player, float gain, float pan)
+    {
+        if (!others.TryGetValue(player, out var voice)) return;
+        voice.Gain = gain;
+        voice.Side = pan;
+    }
 
     // Which sound a craft process makes, from its id ("knap.flake" -> Knap).
     public static Work WorkFor(string processId) => processId switch
@@ -172,6 +199,13 @@ public sealed class SoundMix
         Array.Clear(stepR, 0, count);
         steps.Render(stepL, stepR, count);
         work.Render(stepL, stepR, count);
+        foreach (var (player, voice) in others)
+        {
+            voice.Render(stepL, stepR, count);
+            if (voice.Idle) quiet.Add(player);
+        }
+        foreach (var player in quiet) others.Remove(player);
+        quiet.Clear();
         for (int i = 0; i < count; i++)
         {
             left[i] += stepL[i] * stepGain;
@@ -1083,6 +1117,8 @@ public sealed class SoundMix
         readonly Random rng;
         readonly List<Hit> hits = new();
         Work kind, sounding;
+        // Whose hands: 1 and centred for your own, quieter and placed for others.
+        public float Gain = 1f, Side;
         float level, time, nextHit, strokePhase;
         BandPass friction, hiss;
         Lowpass smokeLow;
@@ -1103,6 +1139,8 @@ public sealed class SoundMix
             this.noise = noise;
             this.rng = rng;
         }
+
+        public bool Idle => kind == Work.None && level < 0.0005f && hits.Count == 0;
 
         public void Set(Work work)
         {
@@ -1168,6 +1206,7 @@ public sealed class SoundMix
             float dt = 1f / rate;
             float fade = 1f - MathF.Exp(-dt / 0.08f);
             float smoke = Lowpass.Coef(2500f, rate);
+            float pl0 = Pan(Side, true), pr0 = Pan(Side, false);
             for (int i = 0; i < n; i++)
             {
                 level += fade * ((kind != Work.None ? 1f : 0f) - level);
@@ -1200,15 +1239,16 @@ public sealed class SoundMix
                     float b = hiss.Process(x, 1700f + 700f * stroke, 0.55f, rate);
                     s += b * stroke * (0.65f + 0.35f * MathF.Sin(2f * MathF.PI * 37f * time)) * 0.2f;
                 }
-                s *= level;
-                l[i] += s * 0.707f;
-                r[i] += s * 0.707f;
+                s *= level * Gain;
+                l[i] += s * pl0;
+                r[i] += s * pr0;
             }
 
             for (int k = hits.Count - 1; k >= 0; k--)
             {
                 var hit = hits[k];
-                float pl = Pan(hit.Pan, true), pr = Pan(hit.Pan, false);
+                float hp = Math.Clamp(hit.Pan + Side, -1f, 1f);
+                float pl = Pan(hp, true), pr = Pan(hp, false);
                 for (int i = 0; i < n; i++)
                 {
                     if (hit.Delay > 0f)
@@ -1308,7 +1348,7 @@ public sealed class SoundMix
                             break;
                         }
                     }
-                    s *= hit.Gain;
+                    s *= hit.Gain * Gain;
                     l[i] += s * pl;
                     r[i] += s * pr;
                     hit.Age += dt;
