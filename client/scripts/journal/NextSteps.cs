@@ -49,6 +49,8 @@ public static class NextSteps
         ["build.table"] = "A crafting table in your claim, of sticks, cord and a log, is where finer things are made.",
         ["build.spindle"] = "A spindle station in your claim is where fleece is spun into yarn and yarn woven into cloth.",
         ["build.rack"] = "A drying rack in your claim is where hides are scraped and stretched into leather.",
+        ["clay.lamp"] = "A little bowl of fired clay, filled with rendered fat, gives light that needs no tending.",
+        ["cook.tallow"] = "Mutton fat melted down in a pot of water sets into something that burns.",
         ["clay.storage_jar"] = "A big coiled jar, fired in a kiln, keeps a lot safe at home.",
         ["weave.mat"] = "A thick weave of fiber makes a mat to sleep on, off the cold ground.",
         [Claim] = "A marker of sticks and fiber, raised away from the waking clearing, makes the land around it yours.",
@@ -118,6 +120,7 @@ public static class NextSteps
     {
         ["clay.pinch_pot"] = new[] { new[] { Bench } },
         ["clay.coil_pot"] = new[] { new[] { Bench } },
+        ["clay.lamp"] = new[] { new[] { Bench }, new[] { ClayRules.PitFireProcess } },
         // The jar is fired only in a kiln (D-076).
         ["clay.storage_jar"] = new[] { new[] { Bench }, new[] { "clay.coil_pot" }, new[] { ClayRules.KilnProcess } },
     };
