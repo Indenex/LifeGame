@@ -21,7 +21,10 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 
 - 2026-10-16 19:15: Crafting pushed the hooks in #122 (crafting-fire-cap). On a scratch merge of building-9 with #122, BuildTest clay-hut passes: the fire sits on the hearth with 1800 s of fuel (#122's StartSeconds × 1.5).
 
+- 2026-10-16 19:36: Justin decided D-149 (principle D-148): a fire on a hearth pulls sticks and logs from nearby storage by itself and never needs tending. Proposed `FireTopUpHook(ctx, Fire fire, ref Timestamp fuelUntil)` to Crafting, called in BurnOutFires. Building's side: when a fire on a finished hearth has under 60 s left, take one log, else one stick, from a basket or jar within 3 m, and add FuelSeconds × 1.5 up to the fuel cap.
+
 ## Open questions / blockers
+- Crafting: the FireTopUpHook call in BurnOutFires, and access to the fuel cap (D-121). Asked 19:36.
 - Crafting's #122 declares and calls both hooks; tested. Building-9 waits for #122 and #153 to merge. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
