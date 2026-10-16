@@ -96,6 +96,9 @@ public static partial class Module
         public ulong AnimalId;
         public float X;
         public float Z;
+        // Where the hitter stood, so the client can flinch the animal away from it.
+        public float FromX;
+        public float FromZ;
         public bool Crit;
         public bool Killed;
     }
@@ -105,7 +108,7 @@ public static partial class Module
     static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
     {
         bool kills = damage >= mind.Health;
-        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, Crit = crit, Killed = kills });
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills });
         if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
