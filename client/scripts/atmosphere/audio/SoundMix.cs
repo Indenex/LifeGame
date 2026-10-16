@@ -54,28 +54,29 @@ public sealed class SoundMix
     // Master level. Raised from 1.3 (audio-1): Justin heard the mix as quiet.
     public float Volume = 1.7f;
 
-    readonly Noise noise;
-    readonly WindVoice wind;
-    readonly FoliageVoice foliage;
-    readonly RainVoice rain;
-    readonly ThunderVoice thunder;
-    readonly FireVoice fire;
-    readonly Birds birds;
-    readonly NightVoices night;
-    readonly WaterVoice water;
-    readonly Frogs frogs;
-    readonly DayInsects insects;
-    readonly Cues cues;
-    readonly StreamVoice stream;
-    readonly Deer deer;
-    readonly Steps steps;
-    readonly WorkVoice work;
+    Noise noise = null!;
+    WindVoice wind;
+    FoliageVoice foliage;
+    RainVoice rain;
+    ThunderVoice thunder;
+    FireVoice fire;
+    Birds birds;
+    NightVoices night;
+    WaterVoice water;
+    Frogs frogs;
+    DayInsects insects;
+    Cues cues;
+    StreamVoice stream;
+    Deer deer;
+    Steps steps;
+    WorkVoice work;
     // Other players at work nearby, by player id (D-072).
     readonly Dictionary<uint, WorkVoice> others = new();
+    int seed;
     readonly List<uint> quiet = new();
-    readonly Sheep sheep;
-    readonly Music music;
-    readonly Reverb reverb;
+    Sheep sheep;
+    Music music;
+    Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
     float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
     float[] stepL = Array.Empty<float>(), stepR = Array.Empty<float>();
@@ -90,6 +91,15 @@ public sealed class SoundMix
     public SoundMix(int rate, int seed = 1)
     {
         Rate = rate;
+        this.seed = seed;
+        Build();
+    }
+
+    // Makes every voice and filter from scratch. Called at the start, and again if the
+    // output ever goes non-finite, so one bad value can never silence the game for good.
+    void Build()
+    {
+        var rate = Rate;
         var rng = new Random(seed);
         noise = new Noise((uint)seed * 2654435761u + 1u);
         wind = new WindVoice(rate, noise);
@@ -110,19 +120,59 @@ public sealed class SoundMix
         sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
+        others.Clear();
+        quiet.Clear();
+        wallL = default;
+        wallR = default;
+        cover = 0f;
+        ambience = 0.01f;
+    }
+
+    // Reports a fault in the synth (an exception, or a block that went non-finite and
+    // was silenced and rebuilt). The game logs it; SoundPreview's soak test prints it.
+    public static Action<string>? Fault;
+    public int Faults { get; private set; }
+    // For the soak test: make the next block bad, to prove the mix recovers.
+    internal bool InjectNaN, InjectThrow;
+
+    void Report(string what)
+    {
+        Faults++;
+        if (Faults <= 5) Fault?.Invoke(what);
+    }
+
+    static float Fin(float x, float fallback = 0f) => float.IsFinite(x) ? x : fallback;
+    static float Unit(float x) => Math.Clamp(Fin(x), 0f, 1f);
+    static float Side(float x) => Math.Clamp(Fin(x), -1f, 1f);
+
+    // Inputs come from the game; a NaN or a wild value must not get into a filter.
+    void Sane()
+    {
+        Daylight = Unit(Daylight); Rain = Unit(Rain); Wind = Unit(Wind); Wetness = Unit(Wetness); Cover = Unit(Cover);
+        TimeOfDay = Fin(TimeOfDay, 0.5f); TimeOfDay -= MathF.Floor(TimeOfDay);
+        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan);
+        Water = Unit(Water); WaterPan = Side(WaterPan); Stream = Unit(Stream); StreamPan = Side(StreamPan);
+        Year = Fin(Year, 0.3f); SnowCover = Unit(SnowCover);
+        MasterLevel = Unit(MasterLevel); MusicLevel = Unit(MusicLevel); EffectsLevel = Unit(EffectsLevel); AmbienceLevel = Unit(AmbienceLevel);
+    }
+
+    static bool Finite(float[] a, int n)
+    {
+        for (int i = 0; i < n; i++) if (!float.IsFinite(a[i])) return false;
+        return true;
     }
 
     // How hard the wind is gusting right now, 0 to 1, so grass and trees can move
     // with what is heard. Written by the synth thread; a stale read is harmless.
     public float Gust => wind.Gust;
 
-    public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+    public void Step(Ground ground, float wetness) => steps.Trigger(ground, Unit(wetness));
 
     // Coming down from a jump: both feet at once on whatever is underfoot, heavier
     // and lower the harder the landing (strength 0 to 1).
     public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f)
     {
-        strength = Math.Clamp(strength, 0f, 1f);
+        strength = Unit(strength); gain = Math.Clamp(Fin(gain), 0f, 4f); pan = Side(pan);
         steps.Trigger(ground, Wetness, (1.1f + 0.9f * strength) * gain, 0.85f - 0.2f * strength, Math.Clamp(pan - 0.2f, -1f, 1f));
         steps.Trigger(ground, Wetness, (1.0f + 0.8f * strength) * gain, 0.95f - 0.2f * strength, Math.Clamp(pan + 0.2f, -1f, 1f));
     }
@@ -130,7 +180,7 @@ public sealed class SoundMix
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, gain, pan);
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -158,8 +208,8 @@ public sealed class SoundMix
     public void OtherPlace(uint player, float gain, float pan)
     {
         if (!others.TryGetValue(player, out var voice)) return;
-        voice.Gain = gain;
-        voice.Side = pan;
+        voice.Gain = Math.Clamp(Fin(gain), 0f, 4f);
+        voice.Side = Side(pan);
     }
 
     // Which sound a craft process makes, from its id ("knap.flake" -> Knap).
@@ -180,16 +230,39 @@ public sealed class SoundMix
 
     // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
     // gain from distance, startled when the flock bolts.
-    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(Side(pan), Math.Clamp(Fin(gain), 0f, 4f), startled, lamb);
 
     // A deer somewhere around the listener (pan -1 to 1, gain from distance, far 0 to 1).
-    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, pan, gain, far);
+    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, Side(pan), Math.Clamp(Fin(gain), 0f, 4f), Unit(far));
 
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
-    public void Thunder(float delay, float gain, float near) => thunder.Trigger(delay, gain, near);
+    public void Thunder(float delay, float gain, float near) => thunder.Trigger(Math.Clamp(Fin(delay), 0f, 30f), Math.Clamp(Fin(gain), 0f, 2f), Unit(near));
 
+    // Never throws and never returns a non-finite sample: a fault is reported once, the
+    // block is silenced and the whole mix is rebuilt, so the sound comes back by itself.
     public void Render(float[] left, float[] right, int count)
+    {
+        Sane();
+        string stage = "start";
+        try
+        {
+            RenderCore(left, right, count, ref stage);
+            if (InjectThrow) { InjectThrow = false; throw new InvalidOperationException("injected"); }
+            if (InjectNaN) { InjectNaN = false; left[0] = float.NaN; }
+            if (Finite(left, count) && Finite(right, count)) return;
+            Report($"SoundMix produced a non-finite block after stage '{stage}'; rebuilt the mix");
+        }
+        catch (Exception e)
+        {
+            Report($"SoundMix.Render threw after stage '{stage}': {e}");
+        }
+        Array.Clear(left, 0, count);
+        Array.Clear(right, 0, count);
+        Build();
+    }
+
+    void RenderCore(float[] left, float[] right, int count, ref string stage)
     {
         if (sendL.Length < count)
         {
@@ -261,6 +334,7 @@ public sealed class SoundMix
             sendL[i] *= ambienceGain;
             sendR[i] *= ambienceGain;
         }
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "ambience (wind, foliage, rain, thunder, fire, birds, night, insects, sheep, deer, water, stream, frogs)"; throw new InvalidOperationException("non-finite ambience"); }
         float stepGain = StepGain(ambience) * effectsGain, workGain = WorkGain(ambience) * effectsGain;
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
@@ -281,8 +355,11 @@ public sealed class SoundMix
             left[i] += stepL[i] * stepGain + workL[i] * workGain;
             right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "effects (steps, work, cues, others)"; throw new InvalidOperationException("non-finite mix before music"); }
         music.Render(left, right, sendL, sendR, count, MusicOn, SliderGain(MusicLevel), night01);
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "music"; throw new InvalidOperationException("non-finite after music"); }
         reverb.Process(sendL, sendR, left, right, count);
+        stage = "reverb and master";
 
         for (int i = 0; i < count; i++)
         {
@@ -398,7 +475,11 @@ public sealed class SoundMix
         }
     }
 
-    static float Pan(float pan, bool left) => left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    static float Pan(float pan, bool left)
+    {
+        pan = Side(pan);
+        return left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    }
 
     static float Range(Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
 
@@ -408,7 +489,7 @@ public sealed class SoundMix
     sealed class WindVoice
     {
         readonly int rate;
-        readonly Noise noise;
+        Noise noise = null!;
         BandPass bandL, bandR;
         Lowpass rumbleL, rumbleR, gustSmooth;
         float gust = 0.5f, gustTarget = 0.5f, level;
