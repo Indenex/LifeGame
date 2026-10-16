@@ -224,3 +224,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-054 — 2026-10-16 — A new fire burns 15 minutes
 **Decision:** A newly lit fire burns for 15 minutes before it needs feeding (was 60 s; Crafting had proposed 180 s). Each stick fed still adds 90 s.
 **Who:** Justin ("15 minutes for the fire length")
+
+## D-055 — 2026-10-16 — Skill titles stay every 20 ranks
+**Decision:** Titles stay Apprentice 20, Journeyman 40, Expert 60, Artisan 80, Master 100 (the design doc's 25/50/75/90 is not used). The Journeyman focus choice opens at rank 50.
+**Who:** Justin ("Keep the game's"; the PM had recommended the doc's)
