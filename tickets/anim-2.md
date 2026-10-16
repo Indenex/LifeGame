@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
 Status: in_progress
 Branch: claude/anim-2
-PR: (opening: chop swing + breath scaffold)
+PR: #187 (chop swing + breath scaffold)
 
 ## Goal
 After anim-1 (#100): (1) the standing "working at a station" pose plays for station crafts (D-098, Crafting #160) and the player faces the station; (2) chop.log plays a two-handed axe swing facing the tree; (3) a visible breath puff from players in cold air (D-144, with Survival); (4) smoother sheep motion (with Animals, who own Sheep.cs). Cheap for 32 players. Justin sees clips via Render (renders never hold up merges, D-142).
@@ -20,4 +20,4 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 - Sheep: asked Animals what they want smoothed and how to hook into Sheep.cs.
 
 ## Next step
-Build the breath puff (Survival's cold signal), then sheep motion with Animals; open the chop PR once #100 merges.
+Wait for CI on #187, send the green sha to the PM; then wire Breath to SurvivalClient.AirColdness after #185 merges, and the station pose after #160 merges.
