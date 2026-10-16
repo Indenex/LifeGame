@@ -34,6 +34,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 (new Sonnet session): added Roast venison 205, Burnt venison 206, `cook.venison`, food values and roast mapping (Cooking.cs RoastResult). Not built locally (no dotnet in this container): CI is the check. Subscribed to #195 and #219; #195 CI was queued at d6aa968.
 
+- 2026-10-16 (Sonnet): Q13 implemented, unbuilt (no dotnet here; CI checks): StrikeScale removed; deer and sheep both Health 100. A spear strike kills a deer outright only if the hunter is sneaking (PlayerSneaking), the deer isn't running, and Husbandry rank (animal.kill trains it) >= SneakKillRank 20 (Hunting.cs). There is no separate sneak skill in shared/Skills.cs, so Husbandry stands in; asked PM whether Journal and skills should add one. Otherwise the strike wounds; deer run speed scales 0.3+0.7*health, and deer under 45 health tire (extra calm) so they bolt then rest and can be chased down.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.

@@ -48,8 +48,6 @@ public static partial class Module
         public float WoodPref;
         // Will walk up to someone who stands still for a while.
         public bool Curious;
-        // How hard a strike lands on it, relative to a sheep.
-        public float StrikeScale = 1f;
         // Inside this, anyone moving at all unsettles it, however slowly; 0 for none.
         public float Wary;
     }
@@ -61,16 +59,20 @@ public static partial class Module
     };
 
     // Deer notice you from far off and even a careful approach unsettles them; they
-    // keep to the woodland edge and bolt far into the trees. A light body: a strike
-    // does more to a deer than to a sheep.
+    // keep to the woodland edge and bolt far into the trees. Health 100 like a sheep:
+    // an ordinary spear strike wounds; only a sneaking hunter of some skill kills in
+    // one (Hunting.cs SneakKillRank).
     static readonly AnimalTraits DeerTraits = new()
     {
         Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
-        HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false, StrikeScale = 1.6f,
+        HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false,
         // Sneaking gets you close but not into spear reach: a hunter waits, still, for
         // deer to graze near (a still player never alarms them).
         Wary = 10f,
     };
+
+    // Below this health a deer stops to rest as soon as nothing close is pressing it.
+    const int WoundedRestBelow = 45;
 
     static AnimalTraits Traits(AnimalSpecies species) => species == AnimalSpecies.Deer ? DeerTraits : SheepTraits;
 
@@ -407,6 +409,8 @@ public static partial class Module
 
         // Fear builds faster than it fades, but a slow, careful approach never adds up to panic.
         float calm = (calmedByStillPlayer ? 0.45f : 0.3f) * AnimalDt;
+        // A badly hurt deer tires: it bolts, then stops to rest, and gives chase again when pressed.
+        if (body.Species == AnimalSpecies.Deer && mind.Health < WoundedRestBelow && fear < 0.3f) calm += 0.5f * AnimalDt;
         mind.Nervous = Math.Clamp(mind.Nervous + fear * 0.7f - calm, 0f, 1f);
 
         float len = MathF.Sqrt(awayX * awayX + awayZ * awayZ);
@@ -548,7 +552,8 @@ public static partial class Module
         float speed = body.State == AnimalState.Run ? t.Run : d > 5f ? t.Trot : t.Walk;
         // A wounded animal can't keep up its full gallop, and lambs are a bit slower.
         if (body.State == AnimalState.Run)
-            speed *= (0.6f + 0.4f * mind.Health / 100f) * (body.Growth < 100 ? 0.85f : 1f);
+            speed *= (body.Species == AnimalSpecies.Deer ? 0.3f + 0.7f * mind.Health / 100f : 0.6f + 0.4f * mind.Health / 100f)
+                * (body.Growth < 100 ? 0.85f : 1f);
         float step = MathF.Min(speed * AnimalDt, d);
         float nx = body.X + dx / d * step, nz = body.Z + dz / d * step;
 

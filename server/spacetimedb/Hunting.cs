@@ -11,6 +11,9 @@ using SpacetimeDB;
 public static partial class Module
 {
     const string HuntProcess = "animal.kill";
+    // Rank in the hunting skill (Husbandry, Apprentice) at which a sneaking spear strike kills a deer outright.
+    // There is no separate sneak skill yet; Journal and skills may swap this for one.
+    const int SneakKillRank = 20;
     const string ButcherProcess = "animal.butcher";
     // A lamb is born this grown and reaches 100 after LambGrowMicros.
     const byte LambGrowth = 35;
@@ -64,9 +67,14 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         if (now - mind.StruckAt < StrikeEveryMicros) return;
 
-        // A spear takes two good strikes, a stone blade about three.
+        // A spear takes two good strikes, a stone blade about three. A deer is only
+        // killed in one strike by a hunter who sneaks up on it unalarmed and is skilled
+        // enough (Justin, Q13); otherwise the strike wounds and the chase begins.
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
-        damage = (int)(damage * Traits(animal.Species).StrikeScale);
+        if (spear != null && animal.Species == AnimalSpecies.Deer && animal.State != AnimalState.Run
+            && ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null
+            && SkillRank(ctx, player.PlayerId, HuntProcess) >= SneakKillRank)
+            damage = mind.Health;
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
         if (damage >= mind.Health)
         {
