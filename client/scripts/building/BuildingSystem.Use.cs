@@ -9,8 +9,9 @@ namespace LifeGame;
 
 // Using finished buildings, all through the shared Use key (G): at a hut's doorway
 // G hangs a door (4 sticks, 2 fiber) or opens and shuts it, and Shift+G bars or
-// unbars it (D-048); at a storage basket G opens it. Also shows weathering on
-// things left untouched outside a claim (D-046).
+// unbars it (D-048); a gate opens, shuts and bars the same way; at a storage
+// basket G opens it. Also shows weathering on things left untouched outside a
+// claim (D-046).
 public partial class BuildingSystem
 {
     readonly Dictionary<ulong, StructureDoor> doors = new();
@@ -109,8 +110,11 @@ public partial class BuildingSystem
 
     static bool Usable(Structure s, Vector3 p)
     {
+        // Just inside the server's reach, so a store opens wherever putting into it works.
         if (Structures.IsStore((int)s.Kind))
-            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
+            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, Structures.WorkReach - 0.2f);
+        if (Structures.IsGate((int)s.Kind))
+            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.0f);
         if (!Structures.HasDoorway((int)s.Kind)) return false;
         // Within a step of the doorway, inside or out.
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, p.X, p.Z);
@@ -133,8 +137,9 @@ public partial class BuildingSystem
                 // The doorway, so the hut you face wins over a basket beside you.
                 var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ);
                 var doorway = new Vector3(dx, at.Y, dz);
+                bool gate = Structures.IsGate((int)s.Kind);
                 if (!doors.TryGetValue(s.Id, out var door))
-                    return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
+                    return gate ? null : Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
                         ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
                 // Whoever hung it, or a member of the claim it stands in, may bar it, as the server's CanLock (bugfix-15).
@@ -146,7 +151,8 @@ public partial class BuildingSystem
                     else c.Reducers.ToggleDoor(s.Id);
                 };
                 if (door.Locked && !mine) return new UseOffer("Barred", d, act, Target: doorway);
-                string verb = door.Closed ? (door.Locked ? "Unbar and open" : "Open the door") : "Shut the door";
+                string what = gate ? "gate" : "door";
+                string verb = door.Closed ? (door.Locked ? "Unbar and open" : $"Open the {what}") : $"Shut the {what}";
                 if (mine) verb += door.Locked ? "    Shift unbar" : "    Shift bar";
                 return new UseOffer(verb, d, act, Target: doorway);
             },

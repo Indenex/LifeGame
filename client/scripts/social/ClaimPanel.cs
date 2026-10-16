@@ -15,13 +15,16 @@ public partial class ClaimPanel : CanvasLayer
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
     // True while the owner is typing a name, so Main stops walking.
-    public bool Typing => nameBox.HasFocus();
+    public bool Typing => nameBox.HasFocus() || placeBox.HasFocus();
 
     readonly PanelContainer box = new();
     readonly VBoxContainer content = new();
     readonly Label standing = new();
     readonly HBoxContainer addRow = new();
     readonly LineEdit nameBox = new();
+    // claims-9: the owner names the place.
+    readonly LineEdit placeBox = new();
+    readonly HBoxContainer placeRow = new();
     bool owner, dirty, confirmAbandon;
     float clock;
 
@@ -53,6 +56,7 @@ public partial class ClaimPanel : CanvasLayer
         root.AddChild(box);
         Hud.Style(standing, 14, 0.75f);
         ReadyNameBox();
+        ReadyPlaceBox();
     }
 
     // claims-4: the owner adds someone by name, near or far, online or not.
@@ -91,6 +95,38 @@ public partial class ClaimPanel : CanvasLayer
         addRow.AddChild(Small("Add", AddByName));
     }
 
+    void ReadyPlaceBox()
+    {
+        placeBox.PlaceholderText = "Name this place";
+        placeBox.MaxLength = Social.ClaimNameMax;
+        placeBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        placeBox.AddThemeFontSizeOverride("font_size", 14);
+        placeBox.AddThemeColorOverride("font_color", Look.Cream);
+        placeBox.AddThemeColorOverride("font_placeholder_color", new Color(Look.Cream, 0.45f));
+        placeBox.AddThemeColorOverride("caret_color", Look.Cream);
+        foreach (var state in new[] { "normal", "focus" })
+            placeBox.AddThemeStyleboxOverride(state, nameBox.GetThemeStylebox(state));
+        placeBox.TextSubmitted += _ => SaveName();
+        placeBox.GuiInput += e =>
+        {
+            if (e.IsActionPressed("ui_cancel"))
+            {
+                placeBox.ReleaseFocus();
+                GetViewport().SetInputAsHandled();
+            }
+        };
+        placeRow.AddThemeConstantOverride("separation", 6);
+        placeRow.AddChild(placeBox);
+        placeRow.AddChild(Small("Name", SaveName));
+    }
+
+    void SaveName()
+    {
+        if (Conn == null) return;
+        Conn.Reducers.NameClaim(placeBox.Text);
+        placeBox.ReleaseFocus();
+    }
+
     void AddByName()
     {
         string name = nameBox.Text.Trim();
@@ -117,6 +153,7 @@ public partial class ClaimPanel : CanvasLayer
         confirmAbandon = false;
         nameBox.Text = "";
         nameBox.ReleaseFocus();
+        placeBox.ReleaseFocus();
     }
 
     public void MarkDirty() => dirty = true;
@@ -141,10 +178,12 @@ public partial class ClaimPanel : CanvasLayer
         foreach (var child in content.GetChildren())
         {
             content.RemoveChild(child);
-            if (child != standing && child != addRow) child.QueueFree();
+            if (child != standing && child != addRow && child != placeRow) child.QueueFree();
         }
 
-        content.AddChild(Heading(owner ? "Your claim" : $"{claim.OwnerName}'s claim", 20));
+        string? place = Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name;
+        content.AddChild(Heading(place ?? (owner ? "Your claim" : $"{claim.OwnerName}'s claim"), 20));
+        if (place != null) content.AddChild(Note(owner ? "Your claim" : $"{claim.OwnerName}'s claim"));
         standing.Text = StandsFor(claim);
         content.AddChild(standing);
         content.AddChild(Button("Tend the marker", () => Conn.Reducers.TendClaim(claim.Id)));
@@ -152,6 +191,10 @@ public partial class ClaimPanel : CanvasLayer
 
         if (owner)
         {
+            bool naming = placeBox.HasFocus();
+            if (!naming) placeBox.Text = place ?? "";
+            content.AddChild(placeRow);
+            if (naming) placeBox.CallDeferred(Control.MethodName.GrabFocus);
             content.AddChild(Button(claim.AllowPvp ? "Fighting: allowed   (turn off)" : "Fighting: not allowed   (allow)",
                 () => Conn.Reducers.SetClaimPvp(claim.Id, !claim.AllowPvp)));
         }
