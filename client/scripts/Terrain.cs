@@ -12,6 +12,8 @@ namespace LifeGame;
 public partial class Terrain : Node3D
 {
     readonly Dictionary<(int, int), Node3D> chunks = new();
+    // Each chunk's node of see-through tree copies, looked up once when it is built.
+    readonly Dictionary<(int, int), Node3D> ghostHolders = new();
     readonly Dictionary<long, short> depths = new();
     readonly HashSet<(int, int)> dirty = new();
     (int, int) center = (int.MinValue, int.MinValue);
@@ -77,6 +79,7 @@ public partial class Terrain : Node3D
                 {
                     chunks[key].QueueFree();
                     chunks.Remove(key);
+                    ghostHolders.Remove(key);
                 }
             foreach (var key in keep)
                 if (!chunks.ContainsKey(key))
@@ -100,6 +103,8 @@ public partial class Terrain : Node3D
             var node = BuildChunk(key.Item1, key.Item2);
             AddChild(node);
             chunks[key] = node;
+            if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
+            else ghostHolders.Remove(key);
         }
 
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
@@ -345,12 +350,12 @@ public partial class Terrain : Node3D
         int n = World.ChunkSize;
         var a = new Vector2(camera.X, camera.Z);
         var b = new Vector2(player.X, player.Z);
-        foreach (var ((cx, cz), node) in chunks)
+        foreach (var ((cx, cz), ghosts) in ghostHolders)
         {
-            if (node.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts) continue;
             var min = new Vector2(cx * n - 0.5f - Margin, cz * n - 0.5f - Margin);
             var max = new Vector2((cx + 1) * n - 0.5f + Margin, (cz + 1) * n - 0.5f + Margin);
-            ghosts.Visible = SegmentHitsBox(a, b, min, max);
+            bool show = SegmentHitsBox(a, b, min, max);
+            if (ghosts.Visible != show) ghosts.Visible = show;
         }
     }
 
