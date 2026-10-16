@@ -228,8 +228,8 @@ Craft("weave.basket", 0, Item.Basket);
 Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
 Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
 
-// Crafting-23: a batch device (D-195). A settling tub cleans clay on its own, but poorly;
-// stay and work it and it does better work and more of it.
+// Crafting-23: a batch device (D-195, D-209). A settling tub cleans a loaded batch of clay
+// on its own; a process with no minigame by hand is a plain queue.
 {
     if (CountOf(Item.Clay) < 12) Fail($"only {CountOf(Item.Clay)} clay for the tub check");
     Gather(Item.Stick, 6);
@@ -259,33 +259,32 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     Pump(() => lastError != null, 5, "the wrong process to be refused");
     Console.WriteLine($"Empty tub: {lastError}");
 
-    // Unattended: one unit.
+    // Clean clay has no minigame by hand, so the tub is a plain queue (D-209): the same
+    // output as by hand, loaded and left, and nothing to play.
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
     Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start");
     lastError = null;
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
     Pump(() => lastError != null, 5, "loading a working tub to be refused");
-    Pump(() => Waiting().Length > 0, 40, "the unattended unit to finish");
-    var plain = Waiting().Single();
-    conn.Reducers.CollectDevice(tub.Id);
-    Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the unattended clay to be collected");
-    Console.WriteLine($"Unattended unit: {plain.Count} clean clay at quality {plain.Quality}");
-
-    // Attended: five units, worked at once with a perfect score.
-    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
-    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
-    conn.Reducers.WorkDevice(tub.Id, 1f);
-    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) is { Attended: true }, 5, "the round to be worked");
     lastError = null;
     conn.Reducers.WorkDevice(tub.Id, 1f);
-    Pump(() => lastError != null, 5, "working a round twice to be refused");
-    Pump(() => Waiting().Length > 0, 60, "the attended round to finish");
-    var worked = Waiting().Single();
+    Pump(() => lastError != null, 5, "working a plain queue to be refused");
+    Console.WriteLine($"Working a plain queue: {lastError}");
+    Pump(() => Waiting().Length > 0, 40, "the first unit to finish");
+    var one = Waiting().Single();
     conn.Reducers.CollectDevice(tub.Id);
-    Pump(() => CleanClay() == 1 + worked.Count, 5, "the attended clay to be collected");
-    if (worked.Count != 6) Fail($"five units worked with a perfect score made {worked.Count} clean clay, not 6");
-    if (worked.Quality <= plain.Quality) Fail($"working the tub ({worked.Quality}) was no better than leaving it ({plain.Quality})");
-    Console.WriteLine($"Attended round: {worked.Count} clean clay at quality {worked.Quality} (left alone: 1 at {plain.Quality})");
+    Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the first clay to be collected");
+    if (one.Count != 1 || one.Quality != Items.RawQuality) Fail($"one unit made {one.Count} at quality {one.Quality}, not 1 at {Items.RawQuality}");
+
+    // Five units in a batch: five come out, at the by-hand quality, with no bonus.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
+    Pump(() => Waiting().Length > 0, 60, "the batch to finish");
+    var batch = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 + batch.Count, 5, "the batch to be collected");
+    if (batch.Count != 5 || batch.Quality != Items.RawQuality) Fail($"five units made {batch.Count} at quality {batch.Quality}, not 5 at {Items.RawQuality}");
+    Console.WriteLine($"Plain batch: {batch.Count} clean clay at quality {batch.Quality}, same as by hand");
 }
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1

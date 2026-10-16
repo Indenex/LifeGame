@@ -6,7 +6,7 @@ Branch: crafting-devices
 PR: (to open)
 
 ## Goal
-Justin (D-195): cleaning clay, crushing stone, tempering and similar simple hand processes get dedicated devices you load up so you don't have to do them one at a time. A loaded device runs on its own, but unattended output takes a large quality penalty; if you stay and play the minigame you get quality and quantity bonuses, so playing is worth it. Doing it by hand, one at a time, stays exactly as it is. Package A picked: batch cap 10; unattended x0.6 quality, 1.5x hand time, 25% skill gain; attended up to x1.1 quality, +20% quantity, 0.8x time, full skill gain.
+Justin (D-195, revised by D-209): cleaning clay, crushing stone, tempering and similar simple hand processes get dedicated devices you load up so you don't have to do them one at a time. A loaded device runs on its own, but unattended output takes a large quality penalty; if you stay and play the minigame you get quality and quantity bonuses, so playing is worth it. Doing it by hand, one at a time, stays exactly as it is. Package A picked: batch cap 10; unattended x0.6 quality, 1.5x hand time, 25% skill gain; attended up to x1.1 quality, +20% quantity, 0.8x time, full skill gain.
 
 ## Design
 - Devices (first three): settling tub (clay.clean), crushing block (clay.grit, clay.grog; a hammer in the bag), tempering trough (clay.temper_grit, clay.temper_grog, clay.daub). Later: cordage frame (cord.twist), brick mould frame (clay.brick), Animals' hide frames.
@@ -18,6 +18,8 @@ Justin (D-195): cleaning clay, crushing stone, tempering and similar simple hand
 - 2026-10-16: PM relayed Justin's D-195 and package A. Branch created off main.
 
 - 2026-10-16: built and verified locally on crafting-devices: shared/Devices.cs, server/spacetimedb/Devices.cs (DeviceJob, DeviceTimer, DeviceOutput; LoadDevice, WorkDevice, FinishDeviceRound, CollectDevice), StationKind ClayTub/CrushBlock/TemperTrough and StructureKind SettlingTub/CrushingBlock/TemperingTrough with shapes and costs, client DeviceUse.cs (Use key loads, works, collects) and CraftingUi.Devices.cs (plays the minigame for a device), subscriptions. CraftCheck builds a tub, runs one unit unattended (quality 30) and five attended with a perfect score (6 clean clay at 55), and checks the refusals. Upgrade check passes.
+
+- 2026-10-16: Justin's D-209 (via PM): processes with no minigame by hand (clean clay, grit, grog, temper, daub; all three first devices) are plain batch queues: same output, quality and time as by hand, full skill, nothing to play (WorkDevice refuses). Package A's penalty and bonuses (shared/Devices.cs) stay in the code for future processes that have a minigame. Kinds merge order per PM: #271 LogCabin, then #267 RepairTable, then #285; each re-appends after the last kind. Ceramics blessed the costs; Modeling's meshes are #287.
 
 ## Open questions / blockers
 - Quality on flat-quality materials: clean clay, grit, grog, tempered clay and daub have no quality of their own (they always come out of the hands at 50), so the device's penalty and bonus are measured against 50 and carry into the pots made from them (unattended 30, attended up to 55) but no grade shows on the item. Making them show a grade (HasQuality) would also change what hand-crafting gives new players (the rank-0 skill cap is 35, below today's flat 50), so it needs Ceramics and the PM first. Asked the PM.

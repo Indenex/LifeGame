@@ -35,21 +35,28 @@ namespace LifeGame.Shared
         // The minigame played at a device: the block strikes, the tub and trough knead.
         public static Minigame MinigameOf(StationKind kind) => kind == StationKind.CrushBlock ? Minigame.Strike : Minigame.Shape;
 
+        // A process with no minigame by hand makes a plain batch queue (Justin, D-209): load
+        // it and leave it, with the same output and time as by hand, and nothing to play.
+        // The penalty and bonuses below apply only to processes that have a minigame.
+        public static bool Plain(ProcessDef def) => def.Minigame == Minigame.None;
+
         // Seconds one unit takes at a device against the same process by hand.
-        public static float UnitSeconds(float handSeconds, bool attended) =>
-            handSeconds * (attended ? AttendedTime : UnattendedTime);
+        public static float UnitSeconds(float handSeconds, bool attended, bool plain) =>
+            plain ? handSeconds : handSeconds * (attended ? AttendedTime : UnattendedTime);
 
         // Quality of a round's output: unattended work loses a large share; attended work
         // matches hand quality and gains up to AttendedQualityBonus with the score.
-        public static byte Quality(byte handQuality, bool attended, float score) =>
-            (byte)Math.Clamp((int)MathF.Round(handQuality * (attended ? 1f + AttendedQualityBonus * Math.Clamp(score, 0f, 1f) : UnattendedQuality)), 1, 100);
+        public static byte Quality(byte handQuality, bool attended, float score, bool plain) =>
+            plain ? handQuality
+                : (byte)Math.Clamp((int)MathF.Round(handQuality * (attended ? 1f + AttendedQualityBonus * Math.Clamp(score, 0f, 1f) : UnattendedQuality)), 1, 100);
 
         // Items a round makes: attended work gains up to AttendedQuantityBonus with the score.
-        public static uint Quantity(uint baseCount, bool attended, float score) =>
-            attended ? (uint)MathF.Floor(baseCount * (1f + AttendedQuantityBonus * Math.Clamp(score, 0f, 1f))) : baseCount;
+        public static uint Quantity(uint baseCount, bool attended, float score, bool plain) =>
+            !plain && attended ? (uint)MathF.Floor(baseCount * (1f + AttendedQuantityBonus * Math.Clamp(score, 0f, 1f))) : baseCount;
 
-        // How many times a round reports the process to the skills system (full share when attended).
-        public static int SkillReports(int units, bool attended) =>
-            attended ? units : (int)MathF.Ceiling(units * UnattendedSkillShare);
+        // How many times a round reports the process to the skills system (full share when
+        // attended or plain).
+        public static int SkillReports(int units, bool attended, bool plain) =>
+            attended || plain ? units : (int)MathF.Ceiling(units * UnattendedSkillShare);
     }
 }

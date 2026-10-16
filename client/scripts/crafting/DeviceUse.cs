@@ -6,8 +6,9 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Batch devices on the Use key (crafting-23, D-195): stand at a settling tub, crushing
-// block or tempering trough and the key loads it, works it, or collects from it. A
-// fuller panel (choose the process and the count) is UX's.
+// block or tempering trough and the key loads it, collects from it, or, for a process
+// that has a minigame by hand, works it for better and more. Processes with no minigame
+// are plain queues (D-209). A fuller panel (choose the process and the count) is UX's.
 public static class DeviceUse
 {
     public static void Register(DbConnection conn, CraftingUi crafting)
@@ -38,8 +39,8 @@ public static class DeviceUse
                     return new UseOffer($"Collect from the {name}", bestD, () => conn.Reducers.CollectDevice(device.Id));
                 if (job != null)
                 {
-                    if (job.Attended) return null;
                     var process = Processes.Find(job.ProcessId)!;
+                    if (job.Attended || Devices.Plain(process)) return null;
                     return new UseOffer($"Work the {name} (better and more)", bestD,
                         () => crafting.PlayDeviceGame(process, Devices.MinigameOf(kind), score => conn.Reducers.WorkDevice(device.Id, score)));
                 }

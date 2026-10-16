@@ -136,7 +136,7 @@ public static partial class Module
         uint units = Math.Min(job.Remaining, (uint)Devices.RoundUnits);
         float seconds = def.Seconds;
         DurationFor(ctx, job.PlayerId, def.Id, ref seconds);
-        seconds = Math.Max(seconds, 0.5f) * Devices.UnattendedTime * units;
+        seconds = Devices.UnitSeconds(Math.Max(seconds, 0.5f), false, Devices.Plain(def)) * units;
         job.RoundUnits = units;
         job.Attended = false;
         job.Score = 0f;
@@ -158,6 +158,8 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         RequireDevice(ctx, structureId, pos);
         var job = ctx.Db.DeviceJob.StructureId.Find(structureId) ?? throw new Exception("There is nothing to work");
+        if (Processes.Find(job.ProcessId) is { } running && Devices.Plain(running))
+            throw new Exception("It just runs. There's nothing to do but leave it");
         if (!float.IsFinite(score)) throw new Exception("Invalid score");
         if (job.Attended) throw new Exception("You're already working it");
 
@@ -185,14 +187,15 @@ public static partial class Module
         byte handQuality = Items.Def(def.Makes).HasQuality
             ? Processes.Quality(job.InputQuality, job.Attended ? job.Score : Processes.DefaultScore, job.Cap)
             : Items.RawQuality;
-        byte quality = Devices.Quality(handQuality, job.Attended, job.Score);
-        uint made = Devices.Quantity(def.MakesCount * job.RoundUnits, job.Attended, job.Score);
+        bool plain = Devices.Plain(def);
+        byte quality = Devices.Quality(handQuality, job.Attended, job.Score, plain);
+        uint made = Devices.Quantity(def.MakesCount * job.RoundUnits, job.Attended, job.Score, plain);
         // A device taken down mid-batch hands what it made straight to the owner.
         if (ctx.Db.Structure.Id.Find(job.StructureId) is null)
             AddToInventory(ctx, job.Owner, def.Makes, made, quality);
         else
             AddDeviceOutput(ctx, job.StructureId, def.Makes, quality, made);
-        for (int i = 0; i < Devices.SkillReports((int)job.RoundUnits, job.Attended); i++)
+        for (int i = 0; i < Devices.SkillReports((int)job.RoundUnits, job.Attended, plain); i++)
             OnProcessPerformed(ctx, job.PlayerId, def.Id, quality, false);
 
         job.Remaining -= job.RoundUnits;
