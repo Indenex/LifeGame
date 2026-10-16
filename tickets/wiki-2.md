@@ -22,9 +22,11 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16 18:45: #146 merged. PM: send green shas to the PM, who merges. Dropped "quickly" from fire warmth (D-103 is about a minute); rides the next wiki PR.
 - 2026-10-16 19:05: PM: merged #111 trade window, #144 trade bubble, #128 Options sound sliders, #125 better tools faster; added wiki lines. #120 work sounds and #115 fences hold sheep (fence building not merged): no text yet. Still pending: run on Shift (#119), equipment panel on I, Firecraft fire length (D-090), fence building.
 - 2026-10-16 19:15: PM: merged #119 run on Shift with stamina bar, #105 storage jar (kiln only, quality sets size), #136 forest light (looks only, no text); added wiki lines to PR #163.
+- 2026-10-16 19:30: #163 merged. PM: merged #167 (new-arrival slower cold with sprout badge; Endurance skill trained by running) and #108 (pot and fire fixes, no text); added wiki lines. Pending: #175 new land with hills, stream and ponds (world wipe).
+- 2026-10-16 20:05: PM: #175 new land and #173 seasons merged; moved the new-land and seasons drafts into getting-started, needs and tips, checked against shared/Land.cs and shared/Seasons.cs. Fauna does not change by season yet, so no animals text.
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).
 
 ## Next step
-When the PM reports a merge from the pending list (equipment panel on I, Firecraft fire length D-090, fence building), add its wiki lines on claude/wiki-2 restarted from main, no numbers, and send the PM the PR link and green sha.
+Open the PR for this branch and send the PM the link and green sha; then, when the PM reports a merge from the pending list (#175 new land, equipment panel on I, Firecraft fire length D-090, fence building), add its wiki lines on claude/wiki-2 restarted from main, no numbers.

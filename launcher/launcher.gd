@@ -12,6 +12,11 @@ extends Control
 # `spacetime` command and the login already on this computer. A build labelled world-wipe
 # (D-130) is never published without the player saying so.
 #
+# release-2: the launcher also puts a shortcut on the desktop and in the app menu on first
+# run, updates itself when a release carries a different launcher (release.json "launcher"),
+# starts the world server before Play, and offers SpacetimeDB's official installer when the
+# `spacetime` command is missing.
+#
 # Options, after "--" on the command line (all optional):
 #   --repo=Owner/Name    where releases come from (Indenex/LifeGame)
 #   --api=URL            GitHub API base (tests point it at a local fake)
@@ -26,6 +31,8 @@ extends Control
 #   --press              click the main button once at start (unlike --auto, a wipe question
 #                        stays open; for screenshots)
 #   --screenshot=PATH    save the window to PATH once the launcher is idle, then quit
+#   --no-shortcut        don't create the desktop and menu shortcuts
+#   --no-self-update     never replace the launcher itself
 
 const WIPE_MARK := "<!-- world-wipe -->"
 
@@ -46,7 +53,8 @@ var server_url := "http://127.0.0.1:3000"
 var db := "lifegame"
 var manage_server := true
 
-var state := {"client_build": 0, "server_build": 0}
+var state := {"client_build": 0, "server_build": 0, "shortcut": 0}
+var my_version := "dev"    # stamped by CI into res://version.txt; "dev" never self-updates
 var releases: Array = []   # newest first: {build, tag, wipe, assets: {name: url}, title}
 var latest := {}
 var busy := false
@@ -65,6 +73,7 @@ var log_box: TextEdit
 var wipe_overlay: Control
 var wipe_text: Label
 var keep_button: Button
+var need_spacetime := false  # the `spacetime` command is missing; the main button installs it first
 
 signal wipe_answered(go: bool)
 
@@ -72,12 +81,20 @@ func _ready() -> void:
 	_parse_args()
 	_build_ui()
 	_load_state()
-	_log("Launcher home: " + home)
+	if FileAccess.file_exists("res://version.txt"):
+		my_version = FileAccess.get_file_as_string("res://version.txt").strip_edges()
+	_log("Launcher %s, home: %s" % [my_version, home])
+	_remove_old_launcher()
+	if state.shortcut == 0 and not OS.has_feature("editor") and not opts.has("no-shortcut"):
+		_make_shortcuts()
 	await _refresh()
 	if opts.has("press"):
 		_on_main()  # like a click: a wipe question stays open, for screenshots
 	if opts.has("auto"):
-		await _update_and_play()
+		if need_spacetime and manage_server and not await _install_spacetime():
+			exit_code = 1
+		else:
+			await _update_and_play()
 		if opts.has("quit"):
 			get_tree().quit(exit_code)
 	if opts.has("screenshot"):
@@ -343,7 +360,11 @@ func _update_buttons() -> void:
 	main_button.disabled = busy or (latest.is_empty() and not have_game)
 	play_button.visible = have_game and not up_to_date
 	play_button.disabled = busy
-	world_button.visible = manage_server and not latest.is_empty() and state.server_build != latest.build
+	world_button.visible = manage_server and not need_spacetime and not latest.is_empty() and state.server_build != latest.build
+	if need_spacetime and manage_server:
+		main_button.text = "Install SpacetimeDB and play"
+		main_button.disabled = busy
+		play_button.visible = false
 	world_button.disabled = busy
 	game_label.text = "Game: " + _build_name(state.client_build)
 	world_label.text = ("World: " + _build_name(state.server_build)) if manage_server else "World: " + server_url
@@ -375,6 +396,8 @@ func _refresh() -> void:
 				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets})
 		releases.sort_custom(func(a, b): return a.build > b.build)
 	latest = releases[0] if not releases.is_empty() else {}
+	if not latest.is_empty() and await _self_update():
+		return  # a new launcher is starting in our place
 	_set_busy(false)
 	if latest.is_empty():
 		if list == null:
@@ -388,6 +411,8 @@ func _refresh() -> void:
 		if _wipe_ahead():
 			d += "  It wipes the world; you'll be asked first."
 		_set_status("An update is ready.", d)
+	if manage_server and _find_spacetime() == "":
+		_needs_spacetime()
 
 func _wipe_ahead() -> bool:
 	if not manage_server or latest.is_empty():
@@ -476,6 +501,9 @@ func _fetch(rel: Dictionary, names: Array, from: float, to: float) -> Dictionary
 # --- Actions ----------------------------------------------------------------------
 
 func _on_main() -> void:
+	if need_spacetime and manage_server:
+		if not await _install_spacetime():
+			return
 	if main_button.text == "Play":
 		_play()
 	else:
@@ -587,26 +615,63 @@ func _ping() -> bool:
 	req.queue_free()
 	return res[0] == HTTPRequest.RESULT_SUCCESS and res[1] < 500
 
+# Starts the local world server when it isn't answering. True once it answers.
+func _ensure_server() -> bool:
+	if await _ping():
+		return true
+	var cli := _find_spacetime()
+	if cli == "":
+		_needs_spacetime()
+		return false
+	_set_status("Starting the world server...")
+	var pid := OS.create_process(cli, ["start"])
+	_log("Started `%s start` (pid %d)" % [cli, pid])
+	for i in 60:
+		await get_tree().create_timer(0.5).timeout
+		if await _ping():
+			return true
+	_set_status("The world server didn't start.", "Details has what the launcher tried.", WARN)
+	return false
+
+func _needs_spacetime() -> void:
+	_set_status("SpacetimeDB isn't installed on this computer.",
+		"The world runs on it. The button below installs it (about a minute), then carries on.", WARN)
+	need_spacetime = true
+	_update_buttons()
+
+# Runs SpacetimeDB's official installer (https://spacetimedb.com/install). On Windows its own
+# installer window opens and asks once; on Linux it installs to ~/.local/bin without asking.
+func _install_spacetime() -> bool:
+	if busy:
+		return false
+	_set_busy(true)
+	_set_status("Installing SpacetimeDB...", "Downloading the official installer.")
+	var res: Dictionary
+	if _is_windows():
+		res = await _run("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+			"irm https://windows.spacetimedb.com | iex"])
+	else:
+		res = await _run("sh", ["-c", "curl -sSf https://install.spacetimedb.com | sh -s -- --yes"])
+	_log(res.output)
+	spacetime = ""
+	_set_busy(false)
+	if _find_spacetime() == "":
+		_set_status("SpacetimeDB didn't install.", "Details has the installer's message.", WARN)
+		log_box.visible = true
+		return false
+	need_spacetime = false
+	_update_buttons()
+	_set_status("SpacetimeDB is installed.")
+	return true
+
 func _publish_world(wasm: String, wipe: bool) -> bool:
 	var cli := _find_spacetime()
 	if cli == "":
-		_set_status("SpacetimeDB isn't installed on this computer.",
-			"The world can't be updated. Install it from spacetimedb.com/install, then try again.", WARN)
+		_needs_spacetime()
 		return false
 	bar.value = 0.82
-	if not await _ping():
-		_set_status("Starting the world server...")
-		var pid := OS.create_process(cli, ["start"])
-		_log("Started `%s start` (pid %d)" % [cli, pid])
-		var up := false
-		for i in 60:
-			await get_tree().create_timer(0.5).timeout
-			if await _ping():
-				up = true
-				break
-		if not up:
-			_set_status("The world server didn't start.", "Run `spacetime start` in a terminal and try again.", WARN)
-			return false
+	if not await _ensure_server():
+		return false
 	bar.value = 0.86
 	_set_status("Updating the world to build %d..." % latest.build, "Your world is kept." if not wipe else "Starting a fresh world.")
 	var args := ["publish", db, "--server", stdb_server, "--bin-path", wasm,
@@ -703,6 +768,12 @@ func _play() -> void:
 	if not FileAccess.file_exists(exe):
 		_set_status("The game isn't installed yet.", "", WARN)
 		return
+	if manage_server:
+		_set_busy(true)
+		var up := await _ensure_server()
+		_set_busy(false)
+		if not up:
+			return
 	var args := ["--", "--server=" + server_url, "--db=" + db]
 	var pid := OS.create_process(exe, args)
 	if pid <= 0:
@@ -720,3 +791,121 @@ func _screenshot(path: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(path)
 	get_tree().quit()
+
+# --- The launcher itself ----------------------------------------------------------
+
+func _launcher_exe_name() -> String:
+	return "LifeGameLauncher.exe" if _is_windows() else "LifeGameLauncher.x86_64"
+
+# Windows can rename a running exe but not delete it, so the swap leaves the old one behind.
+func _remove_old_launcher() -> void:
+	if OS.has_feature("editor"):
+		return
+	var old := OS.get_executable_path().get_basename() + ".old" + ("." + OS.get_executable_path().get_extension() if _is_windows() else "")
+	if FileAccess.file_exists(old):
+		DirAccess.remove_absolute(old)
+
+# Replaces this launcher with the release's when their versions differ, then starts the new
+# one with the same options. Returns true when the new launcher has been started.
+func _self_update() -> bool:
+	if my_version == "dev" or opts.has("no-self-update") or opts.has("updated-from") or OS.has_feature("editor"):
+		return false
+	var dir := home.path_join("downloads").path_join(latest.tag)
+	DirAccess.make_dir_recursive_absolute(dir)
+	var manifest_path := dir.path_join("release.json")
+	if not latest.assets.has("release.json") or not await _download(latest.assets["release.json"], manifest_path, "release.json", 0, 0):
+		return false
+	var manifest = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
+	if not (manifest is Dictionary and manifest.has("launcher")):
+		return false
+	var info: Dictionary = manifest.launcher
+	if str(info.get("version", "")) in ["", "unknown", my_version]:
+		return false
+	var entry: Dictionary = info.windows if _is_windows() else info.linux
+	var zip := dir.path_join(entry.file)
+	_set_status("Updating the launcher...", "It restarts by itself.")
+	if not (FileAccess.file_exists(zip) and FileAccess.get_sha256(zip) == entry.sha256):
+		if not latest.assets.has(entry.file) or not await _download(latest.assets[entry.file], zip, "Downloading the new launcher", 0, 1):
+			_log("Launcher update skipped: download failed")
+			return false
+		if FileAccess.get_sha256(zip) != entry.sha256:
+			_log("Launcher update skipped: download damaged")
+			return false
+	var fresh := home.path_join("launcher.new")
+	_remove_tree(fresh)
+	if not _unzip(zip, fresh, {"done": 0, "total": 1}):
+		return false
+	var new_exe := fresh.path_join(entry.exe)
+	var exe := OS.get_executable_path()
+	var old := exe.get_basename() + ".old" + ("." + exe.get_extension() if _is_windows() else "")
+	DirAccess.remove_absolute(old)
+	if DirAccess.rename_absolute(exe, old) != OK:
+		_log("Launcher update skipped: can't move " + exe)
+		return false
+	if DirAccess.rename_absolute(new_exe, exe) != OK and DirAccess.copy_absolute(new_exe, exe) != OK:
+		DirAccess.rename_absolute(old, exe)
+		_log("Launcher update skipped: can't place the new launcher")
+		return false
+	_remove_tree(fresh)
+	if not _is_windows():
+		OS.execute("chmod", ["+x", exe])
+		DirAccess.remove_absolute(old)  # Linux keeps the running file alive without its name
+	# Engine options such as --headless aren't in get_cmdline_args, so carry that one over.
+	var args: Array = ["--headless"] if DisplayServer.get_name() == "headless" else []
+	args.append_array(Array(OS.get_cmdline_args()).filter(func(x): return x != "--headless"))
+	args.append_array(["--"] + Array(OS.get_cmdline_user_args()) + ["--updated-from=" + my_version])
+	_log("Restarting with " + " ".join(args))
+	var pid := OS.create_process(exe, args)
+	if pid <= 0:
+		_log("The new launcher didn't start")
+		return false
+	_log("Launcher %s -> %s (pid %d)" % [my_version, info.version, pid])
+	get_tree().quit()
+	return true
+
+# First run: a LifeGame shortcut on the desktop and in the app menu, pointing at this launcher.
+func _make_shortcuts() -> void:
+	var exe := OS.get_executable_path()
+	var icon := home.path_join("icon.png")
+	var tex := load("res://icon.png") as Texture2D
+	if tex:
+		tex.get_image().save_png(icon)
+	var ok := false
+	if _is_windows():
+		var ico := exe  # the exe carries the icon
+		var ps := ("$w = New-Object -ComObject WScript.Shell; " +
+			"foreach ($d in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('Programs')) ''))) { " +
+			"$s = $w.CreateShortcut((Join-Path $d 'LifeGame.lnk')); $s.TargetPath = '%s'; " +
+			"$s.WorkingDirectory = '%s'; $s.IconLocation = '%s,0'; $s.Description = 'LifeGame'; $s.Save() }") % [
+			exe.replace("/", "\\").replace("'", "''"), exe.get_base_dir().replace("/", "\\").replace("'", "''"),
+			ico.replace("/", "\\").replace("'", "''")]
+		ok = OS.execute("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps]) == 0
+	else:
+		var entry := "[Desktop Entry]\nType=Application\nName=LifeGame\nComment=Update and play LifeGame\n" + \
+			"Exec=\"%s\"\nPath=%s\nIcon=%s\nTerminal=false\nCategories=Game;\n" % [exe, exe.get_base_dir(), icon]
+		var home_dir := OS.get_environment("HOME")
+		var apps := OS.get_environment("XDG_DATA_HOME")
+		apps = (apps if apps != "" else home_dir.path_join(".local/share")).path_join("applications")
+		var out := []
+		OS.execute("xdg-user-dir", ["DESKTOP"], out)
+		var desktop: String = "".join(out).strip_edges()
+		if desktop == "" or desktop == home_dir:
+			desktop = home_dir.path_join("Desktop")
+		for d in [apps, desktop]:
+			if not DirAccess.dir_exists_absolute(d):
+				if d == desktop:
+					continue
+				DirAccess.make_dir_recursive_absolute(d)
+			var path: String = d.path_join("lifegame.desktop")
+			var f := FileAccess.open(path, FileAccess.WRITE)
+			if f == null:
+				continue
+			f.store_string(entry)
+			f.close()
+			OS.execute("chmod", ["+x", path])
+			OS.execute("gio", ["set", path, "metadata::trusted", "true"])  # GNOME: allow launching
+			ok = true
+	_log("Shortcuts: " + ("made" if ok else "couldn't be made"))
+	if ok:
+		state.shortcut = 1
+		_save_state()

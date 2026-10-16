@@ -626,3 +626,92 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-153 — 2026-10-16 — Foot wraps train Leatherwork; the drop spindle stays Toolmaking
 **Decision:** Leather foot wraps train Leatherwork; making the drop spindle trains Toolmaking.
 **Who:** Justin (wraps: "Leatherwork", as recommended; spindle: Journal's default)
+
+## D-154 — 2026-10-16 — Crucial look-and-feel choices wait for Justin's pick
+**Decision:** Crucial look-and-feel choices (player/creature model style, overall art style, UI look, world palette) are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145 never idle). D-142 (merges don't wait on renders) does not cover these choices. Context: #172 merged style A as a default without Justin's pick; that pick is now being taken.
+**Who:** Justin ("For something as crucial as a player model style I want at least the proposed descriptions of things even if a render isn't available.")
+
+## D-155 — 2026-10-16 — Chore check: campfires need feeding, hand tools wear
+**Decision:** A follow-up to D-148. Open campfires keep needing feeding (sticks 90 s, logs 6 min). Building tools/stations and structures have no durability, but hand tools and worn equipment do have durability (new; Crafting will propose how it plays, with Animals for clothing).
+**Who:** Justin ("open fires need feeding, building tools don't have durability, but hand tools and equipment does.")
+
+## D-156 — 2026-10-16 — Next animal: red deer
+**Decision:** The next animal is the red deer (animals-14): shy woodland-edge herds that bolt at 30 m, hunted for venison, hide and antler.
+**Who:** Justin (picked "Red deer (Recommended)")
+
+## D-157 — 2026-10-16 — Claim fences
+**Decision:** claims-12: members fence the soft border of a claim with a members-only gate, built with House building's Fence/Gate (Building owns the structure and model, Claims owns the membership rule and placement). The lived-in marker was not chosen.
+**Who:** Justin (picked "Claim fences")
+
+## D-158 — 2026-10-16 — Model style: Justin picks from renders
+**Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
+**Who:** Justin ("I've seen renders of these, go find them since they've already been made.")
+**Pick (2026-10-16):** Style A, "Carved", for people. Sheep: "I like a carved, but I want the sheep to be shorter, legs are too long, and I dont like the fluff. It has too much depth/texture and stands out from everything. It should be softer, cartoonier, fluffier. More stylized with our aesthetic."
+
+## D-159 — 2026-10-16 — Sonnet workers do the coding; Opus for player-visual work
+**Decision:** Coding can be done by Sonnet workers, and lanes start transitioning over to them. Anything related to modelling, texture work or player-visual things stays with Opus. This replaces D-058's "Opus for any session that writes code". Applied split. Sonnet: Integration, Release, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio (the Scribe is already Sonnet). Opus: Modeling, Animation, Environment, Atmosphere, UX/UI (player-visual), Wiki (writing voice, D-064), and the PM. Lanes hand off at a checkpoint (ticket current, `HANDOFF READY` to the PM), then the PM starts a fresh Sonnet session on the ticket. Sonnet lanes may still use an Opus helper for player-visual parts.
+**Who:** Justin ("Let's update that coding can be done by sonnet workers, and start transitioning them over to it. Anything that's related to modelling, texture work, or player-visual things can be opus.")
+
+## D-160 — 2026-10-16 — Claim gates are members only
+**Decision:** Only the owner and members of a claim can open, bar or unbar a gate in it (claims-12).
+**Who:** Justin ("Members only")
+
+## D-161 — 2026-10-16 — Every pickup has a sound
+**Decision:** Every pickup plays a soft rustle and knock (audio-3).
+**Who:** Justin ("Yes, every pickup")
+
+## D-162 — 2026-10-16 — Claim fences snap to the border
+**Decision:** Claim fences snap onto the claim circle (claims-12; extends D-157).
+**Who:** Justin ("Snap to border")
+
+## D-163 — 2026-10-16 — Lapsed claim fences stay as ruins
+**Decision:** When a claim lapses, its fences stay as ruins: they become ordinary fences, gates open to anyone, and they weather per D-046.
+**Who:** Justin ("Stay as ruins")
+
+## D-164 — 2026-10-16 — Heather blooms purple in late summer
+**Decision:** Heather blooms purple in late summer (Atmosphere and Environment seasonal visuals).
+**Who:** Justin ("Yes, purple bloom")
+
+## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
+**Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
+**Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
+
+## D-166 — 2026-10-16 — env-5 landmarks and trails vary per instance
+**Decision:** env-5 builds landmarks and trails. A general design principle: repeated world features vary strongly per instance. If a landmark or feature appears in the world several times, each instance should look quite different (randomized a bit every time), so a player doesn't instantly recognise a pre-made, tiny-zone landmark.
+**Who:** Justin ("I don't want things like it to be repeated constantly. If they go into the world multiple times they should look quite different/randomized a bit every time, so a player doesn't instantly recognize that this is a pre-done rendered type of area/tiny zone landmark.")
+
+## D-167 — 2026-10-16 — Slower thirst at first (survival-10 spawn water)
+**Decision:** For survival-10 (spawn water), thirst falls 20% slower in the first hour.
+**Who:** Justin ("Slower thirst at first")
+
+## D-168 — 2026-10-16 — Playtest fixes: see yourself under trees, smaller frost
+**Decision:** Any time the player is rendered underneath something (trees, forest canopy, structures), the see-through effect should happen. Trees: #223 (Environment); structures pending with House building. The frost overlay is shrunk about 30 to 45% and made more transparent: #218 (Survival).
+**Who:** Justin ("it's very difficult to see yourself in forests/trees. Any time the player is rendered underneath something, the see-through effect should happen." And on frost: "the freezing effect is nice, but waaay too big. It needs more transparency and shrunk by like ~30-45%.")
+
+## D-169 — 2026-10-16 — Durability and repair (follow-up to D-155)
+**Decision:** Hand tools and worn equipment have durability (D-155). At zero durability, Justin chose option 2, "Stops until repaired: the tool stays in your bag but won't work until mended.", with repair mechanics added. Repairing should always be better than crafting brand new; the suggested balance is repair costing about 60% of the resources (or 40% needed with 60% already there), number not fixed. Wear should not be a chore to repair; the proposed 40 felt too little, to be judged once quality items are in. Repair happens at a dedicated repair table, and quality loss per repair scales down over time to a floor of 50%. Repair should stay easier than a brand-new item for a good while. Durability shows in words and as a worn look.
+**Who:** Justin ("2, but we need repair mechanics. System wise, repairing should always be better than crafting brand new. Not sure what a good number would be, 60% of the resources required? swapped around at 40% needed, 60% already there?" Wear: "It shouldn't be a total chore to have to repair. 40 seems like too little, but im not sure how hard having quality items is yet." Repair: "dedicated repair table, and quality loss scales down over time to 50%. It should balance out with the ease of crafting a new one. It should be easier to repair for a good bit vs. brand new." Shows: words and worn look.)
+
+## D-170 — 2026-10-16 — Trees, rocks and structures collide
+**Decision:** Trees collide at the trunk, rocks by their footprint, and every structure collides. Client side for now (no server physics yet).
+**Who:** Justin ("do we have physics work yet? I want trees and houses etc. to have collision.")
+
+## D-171 — 2026-10-16 — Red deer hunting: spear strike and bow
+**Decision:** One spear strike kills a red deer if your sneak skill is high enough. A bow and arrow is a new tool, with automatic targeting. It can take a few arrows, since damage depends on bow type and quality and arrow type and quality; Justin asked for a simple equation that won't overload the server. The worst, first bow takes 3 to 6 arrows and means chasing the creature down, so a lower sneak skill is enough.
+**Who:** Justin ("One spear strike kills if your sneak skill is high enough. However, a bow and arrow would be a fun new tool. I would want it to be automatic targeting or something. It can take a few times though as arrows would do damage based on a lot of factors; bow type/quality, arrow type/quality, etc. What's a simple equation that won't overload the server with that? Like, I'd want the worst/first bow to take 3-6 arrows and have to chase the creature down kinda thing, so you don't have to have as high of a sneak skill.")
+
+## D-172 — 2026-10-16 — Red deer sounds
+**Decision:** Deer sounds are a bark plus an autumn roar.
+**Who:** Justin (as relayed by the PM)
+
+## D-173 — 2026-10-16 — Antler is a plain material
+**Decision:** Antler is a plain material for other recipes, and it can also be built into a hammer or pickaxe.
+**Who:** Justin ("I like that it's just a plain material for other recipes, but building it into a hammer or pickaxe is cool.")
+
+## D-174 — 2026-10-16 — Durability numbers: Steady (follow-up to D-169)
+**Decision:** Tool durability is "Steady": a crude tool lasts about 150 uses, an excellent one about 400. Repair costs about 40% of a new item. Each repair loses 20% of the remaining gap to the 50% quality floor.
+**Who:** Justin ("Steady")
+
+## D-175 — 2026-10-16 — One shared formula for all skill gains and rank effects
+**Decision:** A single shared progression formula handles all skill gains and how much ranks help (D-075). Lanes declare only start and end values, and no skill gets its own formula unless absolutely necessary, so things always have the right scaling feel and sense of progression. The effect curve is front-loaded: the first ~15% of ranks give ~40% of the benefit. Owner: Journal & skills (skills-12).
+**Who:** Justin ("I think we also need a formula that handles all skill gains, how much they help certain things, etc. I don't want each skill to have its own formulas unless absolutely necessary, so that things always have the right scaling feel and sense of progression." Effect curve: "Front-loaded")

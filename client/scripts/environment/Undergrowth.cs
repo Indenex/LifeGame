@@ -16,14 +16,8 @@ public static class Undergrowth
     public static Mesh Flowers => flowers ??= BuildFlowers();
     public static Mesh Bush => bush ??= BuildBush();
 
-    // Wildflower colors until the Atmosphere lane adds them to the Look palette.
-    public static readonly Color[] FlowerColors =
-    {
-        new(0.95f, 0.93f, 0.84f), // white
-        new(0.93f, 0.78f, 0.25f), // buttercup yellow
-        new(0.62f, 0.50f, 0.80f), // violet
-        new(0.88f, 0.55f, 0.62f), // pink
-    };
+    // Wildflower colors, from the Look palette.
+    public static readonly Color[] FlowerColors = { Look.FlowerWhite, Look.FlowerButtercup, Look.FlowerViolet, Look.FlowerPink };
 
     // A fern: fronds arching up and out from the middle, about half a meter across.
     static Mesh BuildFern()
