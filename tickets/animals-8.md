@@ -2,8 +2,8 @@
 Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
 Status: in_progress
-Branch: claude/animals-wool-cloth-5gkntn (stacked on claude/animals-sheep-5gkntn / PR #76; rebuild was needed because the first animals-8 local branch was lost with an old container)
-PR: (to open after #76 merges)
+Branch: claude/animals-wool-cloth-5gkntn (from main after #76 merged; rebuild was needed because the first animals-8 local branch was lost with an old container)
+PR: (to open)
 
 ## Goal
 Raw wool from shearing becomes cloth with plain tier-2 crafting: make a drop spindle (stick + stone, using a blade), spin 2 raw wool into wool yarn with it, then weave 4 yarn over 2 sticks into wool cloth. Quality flows through as for other crafts. Done when Justin can shear a sheep and end up with wool cloth in a build. Cloth is the input for animals-9 (clothing).
