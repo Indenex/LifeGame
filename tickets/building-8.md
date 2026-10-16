@@ -18,9 +18,12 @@ Default costs, starting low per D-075 (sent to the PM): fence posts 2 sticks, ra
   - BuildTest `fence` mode (also in "both"): builds a fence and a gate together, then opens, shuts and bars the gate. It passed locally in 27 s. A scratch geometry check of the crossing helpers passed.
 - StructureKind order: Ceramics' storage jar (#105) takes 6. Fence and Gate are appended after it, so whichever merges second, the enum, `Shapes` and `StageCosts` must all keep the same order. Code uses `Structures.IsFence`/`IsGate`, never kind numbers.
 
+- 2026-10-16 18:25: StructureStepHook implemented. Tested on a scratch merge with #115: builds, BuildTest fence passes twice, no server errors with sheep ticking. Fixed a BuildTest flake: builders stood 1.9 m off a 0.3 m-thin fence, and a walk can stop 1 m short, which left them out of reach. They now stand 0.9 m off (70f5850). Backed up on claude/house-building-8ueqz2-fence.
+- Sent the PM the cost options and the D-075 shelter options (see building-7).
+
 ## Open questions / blockers
-- Animals (session_01SAcVBUUfPFFk1rdXuiQZRU): asked them to add `if (StructureBlocksStep(ctx, fromX, fromZ, toX, toZ)) return true;` in AnimalFires.cs `AnimalStepBlocked`. Waiting for a reply.
+- Animals agreed and declared `StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref bool blocked)` in AnimalFires.cs (PR #115, claude/animals-fence-5gkntn 22c0a61). BuildingFence.cs implements it (8ebc64b). A partial implementation without its declaration won't compile, so this PR must merge after #115 (merge main once #115 is in). Animals will live-test sheep at a fence.
 - PM: fence and gate costs (defaults above), to confirm with Justin.
 
 ## Next step
-Once #61 is merged, merge main, push, run the full local checks and open the building-8 PR. Then send a render request for a fenced yard with a gate, open and shut.
+Once #61 and #115 are merged, on claude/house-building-8ueqz2 merge main and claude/house-building-8ueqz2-fence, push, run the full local checks and open the building-8 PR. Then send a render request for a fenced yard with a gate, open and shut.
