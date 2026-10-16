@@ -27,8 +27,9 @@ public static partial class StructureModel
 
     public enum PieceRole { Fixed, Wall, Roof }
 
-    // Anything reaching above the walls of a house, hut or cabin (3 m ridges, 2.0 m wall tops)
-    // belongs to the roof, and so does all thatch.
+    // A piece centred above the walls of a house, hut or cabin (3 m ridges, 2.0 m wall tops)
+    // belongs to the roof, and so does all thatch. Anything ending below 0.6 m (footings,
+    // sills, hearth, site pegs) stays solid.
     const float RoofFromY = 2.15f;
 
     static readonly Dictionary<int, List<Piece>> Cache = new();
@@ -50,6 +51,11 @@ public static partial class StructureModel
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
         pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(), _ => LeanTo() };
+        // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
+        // the near slope fades and the far slope stays rather than the whole thing clearing.
+        if (kind == (int)SpacetimeDB.Types.StructureKind.LeanTo)
+            foreach (var piece in pieces)
+                if (piece.Role == PieceRole.Roof) piece.Role = PieceRole.Wall;
         Cache[kind] = pieces;
         return pieces;
     }
@@ -236,7 +242,7 @@ public static partial class StructureModel
             Mesh = mesh,
             Material = material,
             Anchor = new Vector3(aabb.GetCenter().X, aabb.Position.Y, aabb.GetCenter().Z),
-            Role = stage < 1 ? PieceRole.Fixed : material == Thatch || aabb.End.Y > RoofFromY ? PieceRole.Roof : PieceRole.Wall,
+            Role = material == Thatch || aabb.GetCenter().Y > RoofFromY ? PieceRole.Roof : aabb.End.Y < 0.6f ? PieceRole.Fixed : PieceRole.Wall,
         });
     }
 

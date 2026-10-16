@@ -121,8 +121,9 @@ public partial class StructureView : Node3D
         float roofTarget = inside ? 1f : 0f, wallTarget = hides || inside ? 1f : 0f;
         // Solid and staying solid: nothing to do. Anything else keeps ticking, since the cut follows the camera.
         if (roofFade <= 0f && wallFade <= 0f && roofTarget <= 0f && wallTarget <= 0f) return;
-        roofFade = Mathf.MoveToward(roofFade, roofTarget, dt * 3f);
-        wallFade = Mathf.MoveToward(wallFade, wallTarget, dt * 3f);
+        // In a little quicker than out, so leaving reads calmer.
+        roofFade = Mathf.MoveToward(roofFade, roofTarget, dt * (roofTarget > roofFade ? 3.5f : 2.5f));
+        wallFade = Mathf.MoveToward(wallFade, wallTarget, dt * (wallTarget > wallFade ? 3.5f : 2.5f));
 
         for (int i = 0; i < pieces.Count; i++)
         {
@@ -138,7 +139,9 @@ public partial class StructureView : Node3D
             if (!fade)
             {
                 if (ghostMeshes.TryGetValue(i, out var off)) off.Visible = false;
+                // The solid goes back to casting its own shadow and being drawn.
                 if (!mesh.Visible) mesh.Visible = true;
+                if (solid.Contains(i)) mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
                 continue;
             }
             if (!ghostMeshes.TryGetValue(i, out var ghostMesh))
@@ -156,15 +159,19 @@ public partial class StructureView : Node3D
             // A roof that has cleared away completely isn't drawn at all.
             bool gone = piece.Role == StructureModel.PieceRole.Roof && amount > 0.97f;
             ghostMesh.Visible = !gone;
-            mesh.Visible = false;
+            // The solid stays only for its shadow, so the room doesn't flood with sun.
+            mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly;
         }
 
         var toCamera = new Vector2(camera.X - GlobalPosition.X, camera.Z - GlobalPosition.Z);
         var direction = toCamera.LengthSquared() > 0.0001f ? toCamera.Normalized() : new Vector2(0, 1);
         foreach (var ((_, role), material) in seeThroughMaterials)
         {
-            material.SetShaderParameter("fade_override", role == StructureModel.PieceRole.Roof ? roofFade : wallFade);
+            float linear = role == StructureModel.PieceRole.Roof ? roofFade : wallFade;
+            material.SetShaderParameter("fade_override", linear * linear * (3f - 2f * linear));
             material.SetShaderParameter("cam_dir", direction);
+            // Seen from inside the near walls clear almost entirely; from outside only round the player.
+            material.SetShaderParameter("cut_floor", inside ? 0.85f : 0.45f);
         }
     }
 

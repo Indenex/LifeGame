@@ -39,7 +39,7 @@ public static class Look
 
     public const float WaterLevel = -1.0f;
 
-    static Shader? paintedShader, ghostShader, grassShader;
+    static Shader? paintedShader, ghostShader, structureGhostShader, grassShader;
     static ShaderMaterial? ground, bark, rock, foliage, grass;
     static NoiseTexture2D? brush, detail, clouds;
 
@@ -114,11 +114,13 @@ public static class Look
 
     // A see-through copy of any painted surface for a building to fade by hand: set its
     // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
-    public static ShaderMaterial StructureGhost(ShaderMaterial source) => Ghost(source);
+    public static ShaderMaterial StructureGhost(ShaderMaterial source) => Ghost(source, StructureGhostShader);
 
-    static ShaderMaterial Ghost(ShaderMaterial source)
+    static ShaderMaterial Ghost(ShaderMaterial source) => Ghost(source, GhostShader);
+
+    static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
     {
-        var ghost = new ShaderMaterial { Shader = GhostShader };
+        var ghost = new ShaderMaterial { Shader = shader };
         foreach (var uniform in source.Shader.GetShaderUniformList())
         {
             var name = new StringName(uniform.AsGodotDictionary()["name"].AsString());
@@ -307,6 +309,12 @@ public static class Look
         .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
+    // A building's ghost: open faces stay visible as on the solid, and an opaque depth pass first,
+    // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
+    static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
+        .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+
     const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
@@ -333,6 +341,9 @@ public static class Look
             uniform float cut_mode = 0.0;
             uniform vec3 cut_origin = vec3(0.0);
             uniform vec2 cam_dir = vec2(0.0, 1.0);
+            // How much of a wall facing the camera fades: nearly all from inside, less from
+            // outside, where only a soft circle round the player should clear.
+            uniform float cut_floor = 0.85;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -493,8 +504,8 @@ public static class Look
                     ALPHA = 1.0 - fade;
                 } else if (cut_mode > 0.5) {
                     vec2 out_dir = world_pos.xz - cut_origin.xz;
-                    float facing = smoothstep(-0.1, 0.35, dot(normalize(out_dir + vec2(1e-4)), cam_dir));
-                    ALPHA = 1.0 - fade * facing * (0.85 + 0.15 * window);
+                    float facing = smoothstep(0.05, 0.45, dot(normalize(out_dir + vec2(1e-4)), cam_dir));
+                    ALPHA = 1.0 - fade * facing * mix(cut_floor, 1.0, window);
                 } else {
                     ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
                 }
