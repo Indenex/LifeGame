@@ -4,21 +4,20 @@ The one list of every key the game uses. Before binding a key, add it here on yo
 
 Status: DECIDED by Justin on 2026-10-15 (D-025). The UX/UI lane owns this file, the input map and the shared Use key (D-033); each lane moves its keys to this table after that lands.
 
-The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does. There is no controls line (D-038): players learn keys from the G prompt, hints inside panels, and a one-time hint per key that `Controls.cs` also holds (shown once per install, skipped if the player finds the key first). Don't add key lists to the HUD; ask the UX/UI lane for a hint instead. Holding F1 shows every world key, built from that table and the live input map. Give your action a row there (with its help text) so it appears. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
+The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them before any lane does. There is no controls line (D-038): players learn keys from the Use prompt (E), hints inside panels, and a one-time hint per key that `Controls.cs` also holds (shown once per install, skipped if the player finds the key first). Don't add key lists to the HUD; ask the UX/UI lane for a hint instead. Holding F1 shows every world key, built from that table and the live input map. Give your action a row there (with its help text) so it appears. To add or change a world key, change that table and this file together (ask the UX/UI lane, or the PM if the key is taken).
 
 ## In the world
 
 | Key | Action | Lane | Today |
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
-| Q / E | Turn | Crafting | same |
-| Hold right mouse + drag | Turn the view freely, eased (D-050) | UX/UI | new |
+| Hold right mouse + drag | Turn the view, eased (D-050). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
-| Space | Pick up | Crafting | same |
+| Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
 | F | Dig | Crafting | same |
-| G | **Use** what you're facing: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, ask a player to trade or say yes when one asks (Esc says no; ui-9) | all | G forage (Survival), G feed fire (Crafting), G drink (Survival, R gone), H add materials (Building), R read note (Journal) |
-| Shift+G | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (also in the F1 list as "Shift G") |
+| E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, ask a player to trade or say yes when one asks (Esc says no; ui-9) | all | Was G (Use) and Space (Pick up) until ui-17 |
+| Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |
@@ -38,8 +37,8 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Crafting panel | Tab next tier, 1-9 pick a row, Esc close |
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
-| Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
-| Trade window (ui-9) | Click something you carry to offer one, Shift+click all; click your offer to take one back; Esc calls the trade off. When asked: G says yes, Esc says no |
+| Basket panel | Click moves one item, Shift+click moves all, E (Use) or Esc close |
+| Trade window (ui-9) | Click something you carry to offer one, Shift+click all; click your offer to take one back; Esc calls the trade off. When asked: E (Use) says yes, Esc says no |
 
 
 ## Chat commands
@@ -67,9 +66,9 @@ The publisher is always an admin. To make your in-game player an admin, run once
 | F5 | Hold to fast-forward time | Atmosphere | T |
 | F6 | Cycle weather | Atmosphere | Y |
 
-## How to add a Use action (G)
+## How to add a Use action (E)
 
-Don't bind G. Register a handler from your own lane's files (once, e.g. in `_Ready` or after you get the connection); the Use key shows its prompt and runs it.
+Don't bind E (the Use key) or G. Register a handler from your own lane's files (once, e.g. in `_Ready` or after you get the connection); the Use key shows its prompt and runs it.
 
 ```csharp
 Use.Register(new UseHandler
@@ -87,14 +86,15 @@ Use.Register(new UseHandler
 ```
 
 - The prompt is a short verb phrase with a capital first letter: "Pick berries", "Drink", "Feed the fire".
-- Return an offer only when G would actually do something (e.g. feed fire needs fuel in hand), so the prompt never promises what G can't do.
-- Pass `Target` (where the thing is) so G picks what the player faces: an offer with a Target within 60° of the player's facing beats one with no Target, which beats one with a Target off to the side; priority and distance decide within that. So a bush in front of you wins over a fire beside you, without a special priority.
-- Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while G is held.
-- G is ignored while the crafting minigame runs or a building is being placed.
-- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Ceramics take a pot of broth or stew off the fire 25, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire or fire a dry pot beside one 22, Crafting feed fire 20, Animals shear 15, Ceramics pick up a dry pot or brick 12, Ceramics fill pots 11, Ceramics pick up a fired pot, sherd or dry brick on the ground 10, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
+- With no offer, the Use key falls through to picking up what lies at your feet (ui-17).
+- Return an offer only when Use would actually do something (e.g. feed fire needs fuel in hand), so the prompt never promises what it can't do.
+- Pass `Target` (where the thing is) so Use picks what the player faces: an offer with a Target within 60° of the player's facing beats one with no Target, which beats one with a Target off to the side; priority and distance decide within that. So a bush in front of you wins over a fire beside you, without a special priority.
+- Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while the Use key is held.
+- Use is ignored while the crafting minigame runs or a building is being placed.
+- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire or fire a dry pot beside one 22, Crafting feed fire 20, Animals shear 15, Ceramics pick up a dry pot or brick 12, Ceramics fill pots 11, Ceramics pick up a fired pot, sherd or dry brick on the ground 10, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
 - Players can change any key on the Controls page of the Esc menu (ui/ControlsPage.cs); the keys in this file are the defaults. So never write a key into on-screen text: hints use `{key}` in Controls.cs, and lanes call `Controls.KeyFor("journal")` for prompts like "J to close". Read keys through input actions (`IsActionPressed`), not raw keycodes, or the player's choice won't reach you.
 - A one-off tip that isn't about a key: `Hints.Tip("ceramics.dry_by_fire", "Clay dries twice as fast beside a burning fire")` at the moment it matters. It shows once per install, in the same corner. Keep it to one short sentence.
 - If the player does a hinted thing without its key (the server saw them pick berries, eat, open a panel by clicking), call `Hints.Done("eat")` so the hint is never taught after the fact. S, A and D count as walking; E and a right-drag count as turning.
-- A full panel (journal, claim panel, Esc menu) hides the world HUD while it is open. `Panels.Open()` (client/scripts/ui/Panels.cs) says whether one is; HUD pieces outside the UX/UI lane (the land chip, the needs rings) fade out while it is true. A new full panel is added to `Panels.Open` in Main. A side panel that leaves the world in view (crafting) goes in `Panels.Side` instead: the G prompt steps aside, the inventory row stays.
+- A full panel (journal, claim panel, Esc menu) hides the world HUD while it is open. `Panels.Open()` (client/scripts/ui/Panels.cs) says whether one is; HUD pieces outside the UX/UI lane (the land chip, the needs rings) fade out while it is true. A new full panel is added to `Panels.Open` in Main. A side panel that leaves the world in view (crafting) goes in `Panels.Side` instead: the Use prompt steps aside, the inventory row stays.
 - After migrating, remove your old key from your lane's `Bind` and from your own prompt text.

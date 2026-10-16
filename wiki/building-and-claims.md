@@ -22,6 +22,7 @@ Inside a claim:
 - Buildings and items do not weather away.
 - Players cannot fight unless the owner allows it.
 - Only members can take from storage.
+- You can build crafting stations.
 - The owner can invite members and take down any building; its materials drop on the spot.
 
 The claim border appears as a line on the ground when you get close to it. The marker must be tended (Use) now and then. A claim left untended for too long decays.
