@@ -1,7 +1,7 @@
 # building-5: Sleeping mat respawn point
 Lane: House building
 Owner: House building thread
-Status: in_review
+Status: done
 Branch: claude/house-building-8ueqz2
 PR: #61
 
@@ -28,4 +28,4 @@ Survival's wilderness edge. Justin sees a woven grass mat on the floor by the he
 - (none) Survival approved the `RespawnPointHook` call in `Survival.cs` (2026-10-16); their survival-5 adds `Wetness = 0,` a few lines below, which should merge cleanly.
 
 ## Next step
-Wait for CI on #61's new head (main merged in), then send the PM the green sha.
+Done (merged as #61, D-061).

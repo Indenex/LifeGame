@@ -25,6 +25,13 @@ public static class Look
     public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
     public static readonly Color FlowerViolet = new(0.62f, 0.50f, 0.80f);
     public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
+    // Heath on the hilltops and birch wetland by the water (Environment's env-4).
+    public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
+    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
+    public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
+    public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
+    public static readonly Color Moss = new(0.20f, 0.31f, 0.12f);
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);

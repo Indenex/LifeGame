@@ -33,8 +33,15 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 19:15: #136 merged; merged main (one conflict: Audio's craft_work subscription on the same line, kept both). Server, bindings, client build; upgrade check over origin/main, LoadTest 5x5, SpawnCheck, CraftCheck pass locally. Opening the PR.
 
-## Open questions
-- (answered) D-134: falling snow wets you at half rain's rate; Survival wires it from Module.Snowfall (told them). Justin is fine with the -16 C winter. / blockers
+- 2026-10-16 19:30: Survival's #167 merged; merged main and added `SnowfallAt` body in WorldClock.cs (D-134 done). Upgrade check, LoadTest 5x5, SpawnCheck, CraftCheck pass locally.
+
+- 2026-10-16 19:36: Atmosphere.AirCelsius (server SeasonState.Temperature, eased) for Survival's visible breath (D-144). 6cd0a18 pushed with a compile error (field shadowed by a parameter); fixed in dca3538, which builds. CI on 6cd0a18 will be red; dca3538 is the head to judge. Audio (audio-2) will move Footsteps()/WaterSound() into atmosphere/audio/AtmosphereSound.cs after #173; names Year, Season, SeasonWarmth, SnowCover, Snowfall, AirCelsius promised stable.
+
+- 2026-10-16 19:40: AirCelsius now has a user: Animation (anim-2, session_019roNRWQBPw4ozNLDhzseig) draws breath puffs from Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius)) (helpers in Survival's #185); review Animation's sha for the look. Added Environment's env-4 palette to Look (BirchBark, Heather, Gorse, Sedge, HeathGround, Moss).
+
+## Open questions / blockers
+- (answered) D-134: falling snow wets you at half rain's rate; wired via Survival's SnowfallAt hook. Justin is fine with the cold winter nights (D-136 retune).
+- Idea for the PM's next batch (D-059): heather blooms purple in late summer. A (rec) yes: Environment gives heather bushes w=3 and Look tints them purple through late summer; B no, heather stays evergreen.
 
 ## Next step
-Wait for #173 CI; send the green sha to the PM and Integration (D-095). When Survival's PR with the SnowfallAt declaration merges, add the one-line body in WorldClock.cs.
+Wait for #173 CI on the new head; send the green sha to the PM (D-119).

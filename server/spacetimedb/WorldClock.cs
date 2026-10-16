@@ -299,6 +299,9 @@ public static partial class Module
     // How hard it is snowing right now, 0 to 1 (Weather.Rain is the rain).
     public static float Snowfall(ReducerContext ctx) => ctx.Db.SeasonState.Id.Find(0)?.Snow ?? 0f;
 
+    // Survival's hook: falling snow wets you at half rain's rate (D-134).
+    static partial void SnowfallAt(ReducerContext ctx, ref float snow) => snow = Snowfall(ctx);
+
     // How far through the day it is: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset.
     public static float TimeOfDay(ReducerContext ctx)
     {
