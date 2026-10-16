@@ -191,7 +191,9 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         if (e.IsActionPressed("eat"))
         {
-            if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
+            var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
+            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
+            else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }
     }
