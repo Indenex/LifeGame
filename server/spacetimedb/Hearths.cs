@@ -77,17 +77,17 @@ public static partial class Module
             for (int j = cz - 2; j <= cz + 2; j++)
             {
                 if (DepthAt(ctx, i, j) != 0) continue;
-                // A building clears the ground under it (the client draws no boulder or tree there).
-                if (UnderStructure(ctx, i, j)) continue;
+                // A building clears the ground under it (the client draws no boulder or tree
+                // there), so the structure lookup runs only for a cell that has one.
                 if (Rocks.LiesAt(i, j))
                 {
                     var (rx, rz) = Rocks.Center(i, j);
-                    if (Dist(rx, rz, x, z) < Rocks.Radius(i, j) + Fires.RingRadius) return false;
+                    if (Dist(rx, rz, x, z) < Rocks.Radius(i, j) + Fires.RingRadius && !UnderStructure(ctx, i, j)) return false;
                 }
                 else if (Trees.GrowsAt(i, j))
                 {
                     var (tx, tz) = Trees.Trunk(i, j);
-                    if (Dist(tx, tz, x, z) < 0.4f + Fires.RingRadius) return false;
+                    if (Dist(tx, tz, x, z) < 0.4f + Fires.RingRadius && !UnderStructure(ctx, i, j)) return false;
                 }
             }
 
