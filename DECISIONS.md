@@ -260,3 +260,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-063 — 2026-10-16 — A player wiki, light on spoilers
 **Decision:** A Wiki lane (a Sonnet worker) writes and keeps current a player wiki under `wiki/`. It gives direction, basic tips and the spirit of play (e.g. "being wet chills you faster; there are ways to dry off quicker") without exact numbers, full recipes or solutions to discoveries. It follows `main`: when a merged decision or PR changes what players experience, the wiki is updated.
 **Who:** Justin
+
+## D-064 — 2026-10-16 — The wiki moves to Opus, in a plainer voice (amends D-063)
+**Decision:** The Wiki lane runs on Opus, not Sonnet. The wiki is rewritten in a plain, direct voice like a good game manual: no cosy or affectionate tone, no "be kind", no cute one-liners. The spoiler rule from D-063 stays.
+**Who:** Justin ("the sonnet worker's writing style is weird and oddly affectionate")
