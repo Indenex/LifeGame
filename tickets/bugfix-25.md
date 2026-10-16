@@ -1,7 +1,7 @@
 # bugfix-25: jump (Space)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: todo
+Status: in_progress
 Branch: claude/bugfix-25
 PR: (none yet)
 
@@ -31,6 +31,9 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 - 2026-10-16: ticket and plan written from the PM's message; no code yet. Waiting for #228 (collision) and #221 to land, since this builds on #228's `CollideVegetation`.
 
 - 2026-10-16: Claims confirmed: a claim fence is any Fence or Gate inside a standing claim's radius (Social.InClaim); no flag or table. Client: `SocialLayer.HasRightsAt(x, z)` (owner or member of the standing claim there) is public and already passed to Building as `building.MayBar`. Careful: it returns false both with no claim and with a claim you don't belong to, so a fence is a claim fence only if a standing claim covers it (the private claim lookup near SocialLayer.cs line 361; ask Claims to make it public or add `ClaimStandingAt(x, z)`). Server: `ClaimAt(ctx, x, z)` plus `HasClaimRights(ctx, claim, ctx.Sender)`; lapsed claims are ignored, so after a lapse fences count as ordinary.
+
+- 2026-10-16: Justin's picks (via PM): apex 1.1 m (clears fences); 8% of the stamina bar per jump; no air control (keep takeoff direction); NO jumping while sneaking (so the sneak-lower-apex default is dropped). Still open: whether other players see your jump (asked PM; v1 shows your own only).
+- 2026-10-16: lane hooks ready: Audio `Sfx.Play(Cue.Jump)` at takeoff and `Sfx.Land(strength, atmosphere.GroundAt(feet))` at landing (PR #242); Survival `SurvivalClient.TrySpendStamina(float fraction)` (PR #261); Animation `me.SetJump(airborne, rising, landing)` each frame from Main.Walk (branch claude/anim-2-jump). UX binds the `jump` action on Space (ui-16). Build after #228 merges, then add each hook as its PR reaches main.
 
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
