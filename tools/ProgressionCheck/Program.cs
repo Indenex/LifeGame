@@ -21,5 +21,6 @@ Console.WriteLine($"Fires.MaxSecondsFor 0/100: {Fires.MaxSecondsFor(0)}/{Fires.M
 if (Skills.QualityCap(0) != 35 || Skills.QualityCap(100) != 100) failures++;
 if (Skills.SpecFor(Skills.Kill)?.Id != "stalking" || Skills.SpecFor(Skills.Sneak)?.Id != "stalking") { Console.WriteLine("FAIL: stalking mapping"); failures++; }
 if (Progression.Pace != 1f) Console.WriteLine($"Pace {Progression.Pace}: first gain {Skills.Gain(0, false)} points");
+if (Skills.SpecFor(Skills.Shoot)?.Id != "archery") { Console.WriteLine("FAIL: archery mapping"); failures++; }
 Console.WriteLine(failures == 0 ? "OK" : $"{failures} failure(s)");
 return failures == 0 ? 0 : 1;

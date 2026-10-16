@@ -23,6 +23,9 @@ namespace LifeGame.Shared
         SneakDistance,    // meters a sneaking player can get to a wary animal before it bolts (Stalking)
         SneakCritChance,  // chance a sneak attack crits, 0 to 1 (Stalking)
         SneakCritBonus,   // extra damage on a sneak crit, as a multiple of normal damage (Stalking)
+        ArcheryDamage,    // damage multiplier for arrows (Archery)
+        ArcheryHitChance, // multiplier on the chance an arrow hits (Archery)
+        ArcheryDrawTime,  // seconds between shots (Archery)
     }
 
     public sealed class EffectDef
@@ -92,6 +95,10 @@ namespace LifeGame.Shared
             // novice crit adds ~18 (wounded) and a Master crit ~72 (kills).
             new(EffectKind.SneakCritChance, "Sneak crit chance", 0.03f, 0.4f, "chance"),
             new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.5f, 2f, "x damage"),
+            // Animals' proposal for Archery (values go to Justin through the PM).
+            new(EffectKind.ArcheryDamage, "Arrow damage", 0.6f, 2.4f, "x"),
+            new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, 1f, "x"),
+            new(EffectKind.ArcheryDrawTime, "Draw time", 2f, 0.8f, "s"),
         };
 
         public static EffectDef Get(EffectKind kind)

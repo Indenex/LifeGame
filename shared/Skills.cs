@@ -51,6 +51,9 @@ namespace LifeGame.Shared
         public const string Kill = "animal.kill";
         // Moving at sneak speed near a wary animal that has not bolted (Animals lane reports it).
         public const string Sneak = "animal.sneak";
+        // Loosing an arrow, reported on every shot by the Animals lane (Bow.cs); a miss
+        // reports it as failed, so a hit teaches twice as much (Skills.Gain).
+        public const string Shoot = "animal.shoot";
         public const string Butcher = "animal.butcher";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
@@ -73,6 +76,8 @@ namespace LifeGame.Shared
             new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
             // Sneaking up on wary animals and striking before they bolt (skills-12).
             new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", "stalk"),
+            // The bow (skills-12): a capped specialty, so it competes for the 300 total.
+            new("archery", "Archery", false, "Shooting a bow true and quickly.", "shoot"),
             // Specialties for the crafts that grew out of animals (D-065, D-071, skills-11).
             new("leatherwork", "Leatherwork", false, "Scraping and drying hides into leather, and working it.", "hide"),
             new("weaver", "Weaver", false, "Spinning wool into yarn, weaving cloth and sewing it to wear.", "sew"),
@@ -88,6 +93,7 @@ namespace LifeGame.Shared
             ["sew.leather_wraps"] = "leatherwork",
             [Kill] = "stalking",
             [Sneak] = "stalking",
+            [Shoot] = "archery",
         };
 
         // Names for processes that are not in Processes.List.
@@ -109,6 +115,7 @@ namespace LifeGame.Shared
             [Shear] = "Shearing a sheep",
             [Kill] = "Hunting",
             [Sneak] = "Sneaking up on an animal",
+            [Shoot] = "Shooting a bow",
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
             [Run] = "Running",
@@ -135,6 +142,7 @@ namespace LifeGame.Shared
             yield return Shear;
             yield return Kill;
             yield return Sneak;
+            yield return Shoot;
             yield return Butcher;
             yield return DryHide;
             yield return Run;

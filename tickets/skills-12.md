@@ -18,6 +18,8 @@ Justin: one formula handles all skill gains and effects, front-loaded (first ~15
 - Sneak distance 10 -> 3 m and one-strike chance 0 -> 0.9 are proposals; Animals swaps its Husbandry >= 20 stand-in and reports `animal.sneak`.
 - Merging with #193 will conflict in shared/Skills.cs (Specializations array, SpecOverrides): keep both sets.
 
+- 2026-10-16 21:20: Archery skill (non-basic, capped) trained by animal.shoot (Animals reports it; a miss reports failed=true so a hit teaches double); effects ArcheryDamage 0.6->2.4, ArcheryHitChance 0.8->1.0, ArcheryDrawTime 2.0->0.8 s per Animals. Journal hint prereq is hunting until lash.bow exists on main.
+
 ## Queued for a follow-up PR (after #237 merges, so CI is not restarted)
 - Things to try lines from Crafting (D-105): lash.bow "A green stick bent and strung with cord will throw a light shaft a long way."; carve.arrows "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks."; tool repair (no process id; Repair table, StructureKind.RepairTable, G at the table) "A tool gone soft in the hand is made good again at a table with a length of cord." Add to client/scripts/journal/NextSteps.cs once the ids exist on main (#266); repair needs an id from Crafting first.
 
