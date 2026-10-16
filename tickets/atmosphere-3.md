@@ -1,7 +1,7 @@
 # atmosphere-3: Campfire sound
 Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #27
 
@@ -11,8 +11,10 @@ Campfires sound alive: a soft breathing roar under quick crackles and the odd sa
 ## Progress log
 - 2026-10-15 23:05: started (PM asked lanes to pick up their next ticket while #16 waits). FireVoice in SoundMix; Atmosphere listens to conn.Db.Fire (own handlers, FireView untouched) and mixes fires within 18 m, panned to the nearest. SoundPreview scenes `fire` and `firerain`.
 
+- 2026-10-15 23:09: PR #27 merged by the PM (04886d7).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Get PR #27 green (CI), then merge it (D-032: sound only, no look change) and send the commit to the PM.
+None; done. Firelight polish continues in atmosphere-4.

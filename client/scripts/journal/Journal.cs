@@ -131,7 +131,7 @@ public partial class Journal : CanvasLayer
                 if (!caughtUp) WhileYouWereAway();
                 caughtUp = true;
             })
-            .OnError((_, e) => say($"Journal subscription error: {e.Message}"))
+            .OnError((_, e) => ServerCheck.Failed(e.Message, say, "Journal subscription error: "))
             .Subscribe(new[]
             {
                 "SELECT * FROM my_journal",
@@ -216,13 +216,28 @@ public partial class Journal : CanvasLayer
     static string Article(string word) => "AEIOU".Contains(word[0]) ? "an" : "a";
 
     // The nearest note within reach that teaches something you don't know yet.
-    JournalNote? NearestNote(Vector3 at) => conn?.Db.JournalNote.Iter()
-        .Where(n => !conn.Db.MyJournal.Iter().Any(e => e.ProcessId == n.ProcessId))
-        .Select(n => (note: n, d: new Vector2(n.X - at.X, n.Z - at.Z).Length()))
-        .Where(t => t.d <= World.Reach)
-        .OrderBy(t => t.d)
-        .Select(t => t.note)
-        .FirstOrDefault();
+    // A plain loop: this runs every frame for the Use key (bugfix-8).
+    JournalNote? NearestNote(Vector3 at)
+    {
+        if (conn == null) return null;
+        JournalNote? best = null;
+        float bestD = float.MaxValue;
+        foreach (var n in conn.Db.JournalNote.Iter())
+        {
+            float d = new Vector2(n.X - at.X, n.Z - at.Z).Length();
+            if (d > World.Reach || d >= bestD || Knows(n.ProcessId)) continue;
+            best = n;
+            bestD = d;
+        }
+        return best;
+    }
+
+    bool Knows(string processId)
+    {
+        foreach (var e in conn!.Db.MyJournal.Iter())
+            if (e.ProcessId == processId) return true;
+        return false;
+    }
 
     void AddNote(JournalNote n)
     {

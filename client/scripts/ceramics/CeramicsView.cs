@@ -267,15 +267,25 @@ public partial class CeramicsView : Node
             .Sum(i => Items.Def((Item)i.Item).FuelSeconds * i.Count) ?? 0f;
 
     // Kilns are measured from their wall, not their center.
-    (ulong id, KilnView? view, float d) NearestKiln(Vector2 at) =>
-        kilns
-            .Select(kv => (id: kv.Key, view: (KilnView?)kv.Value, d: Math.Max(0f, new Vector2(kv.Value.Position.X, kv.Value.Position.Z).DistanceTo(at) - 0.8f)))
-            .Where(t => t.d <= World.Reach - 0.8f)
-            .OrderBy(t => t.d)
-            .FirstOrDefault();
+    // Plain loops: these run every frame for the Use key, and LINQ here made garbage (bugfix-8).
+    (ulong id, KilnView? view, float d) NearestKiln(Vector2 at)
+    {
+        (ulong id, KilnView? view, float d) best = default;
+        foreach (var (id, view) in kilns)
+        {
+            float d = Math.Max(0f, new Vector2(view.Position.X, view.Position.Z).DistanceTo(at) - 0.8f);
+            if (d <= World.Reach - 0.8f && (best.view == null || d < best.d)) best = (id, view, d);
+        }
+        return best;
+    }
 
-    bool Carrying(Func<Item, bool> match) =>
-        conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && match((Item)i.Item)) ?? false;
+    bool Carrying(Func<Item, bool> match)
+    {
+        if (conn == null) return false;
+        foreach (var i in conn.Db.MyInventory.Iter())
+            if (Items.IsKnown(i.Item) && match((Item)i.Item)) return true;
+        return false;
+    }
 
     Fire? BurningFireNear(Vector2 at, float reach)
     {

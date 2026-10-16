@@ -91,7 +91,7 @@ public partial class Hints : CanvasLayer
             while (showing == null && tips.TryDequeue(out var tip))
                 if (!Seen(tip)) showing = tip;
             showing ??= Controls.World.FirstOrDefault(b => b.Hint != null && !b.OnRequest && !Seen(b) && InputMap.HasAction(b.Action));
-            if (showing != null) label.Text = showing.Hint;
+            if (showing != null) label.Text = Controls.HintText(showing);
             shownFor = 0f;
             wait = Gap;
         }

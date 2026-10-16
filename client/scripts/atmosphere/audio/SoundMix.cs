@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LifeGame;
 
-public enum Ground { Grass, Earth, Water }
+public enum Ground { Grass, Earth, Water, Clay, Floor }
 
 // The whole soundscape, synthesized as it plays: wind, rain, birds by day,
 // crickets and owls by night, footsteps, and a slow generative score in a
@@ -15,16 +15,25 @@ public sealed class SoundMix
 
     // Set by the atmosphere every frame. All run from 0 to 1.
     public float Daylight = 1f, Rain, Wind = 0.3f, Wetness;
-    // 1 when the listener is under a roof.
+    // 1 when the listener is under a roof. Everything outdoors is heard through
+    // the walls, duller and quieter, easing over about a second.
     public float Cover;
+    // 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset: when the birds sing.
+    public float TimeOfDay = 0.5f;
+    // How wooded it is around the listener, 0 open grass to 1 deep woods: how
+    // much of the wind is heard in leaves rather than grass.
+    public float Foliage;
     // The nearest campfires: how loud (0 to 1, from distance and how well it burns)
     // and where (pan -1 left to 1 right).
     public float Fire, FirePan;
     public bool MusicOn = true;
+    // The music's own level, 0 to 1, under the master volume (the menu's music slider).
+    public float MusicVolume = 1f;
     public float Volume = 1.3f;
 
     readonly Noise noise;
     readonly WindVoice wind;
+    readonly FoliageVoice foliage;
     readonly RainVoice rain;
     readonly ThunderVoice thunder;
     readonly FireVoice fire;
@@ -35,6 +44,9 @@ public sealed class SoundMix
     readonly Music music;
     readonly Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
+    float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
+    Lowpass wallL, wallR;
+    float cover;
 
     public SoundMix(int rate, int seed = 1)
     {
@@ -42,6 +54,7 @@ public sealed class SoundMix
         var rng = new Random(seed);
         noise = new Noise((uint)seed * 2654435761u + 1u);
         wind = new WindVoice(rate, noise);
+        foliage = new FoliageVoice(rate, noise);
         rain = new RainVoice(rate, noise, rng);
         thunder = new ThunderVoice(rate, noise, rng);
         fire = new FireVoice(rate, noise, rng);
@@ -57,7 +70,7 @@ public sealed class SoundMix
 
     // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
     // gain from distance, startled when the flock bolts.
-    public void Bleat(float pan, float gain, bool startled) => sheep.Trigger(pan, gain, startled);
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
 
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
@@ -69,22 +82,41 @@ public sealed class SoundMix
         {
             sendL = new float[count];
             sendR = new float[count];
+            outL = new float[count];
+            outR = new float[count];
         }
         Array.Clear(left, 0, count);
         Array.Clear(right, 0, count);
         Array.Clear(sendL, 0, count);
         Array.Clear(sendR, 0, count);
+        Array.Clear(outL, 0, count);
+        Array.Clear(outR, 0, count);
 
+        // The world outside: wind, leaves, animals, thunder and fire. Rain muffles
+        // itself under a roof; footsteps and music are always close.
         float night01 = 1f - Daylight;
-        wind.Render(left, right, count, Wind, Rain);
+        (float birdLevel, float chorus) = BirdActivity(TimeOfDay);
+        wind.Render(outL, outR, count, Wind, Rain);
+        foliage.Render(outL, outR, count, Wind, Rain, Foliage, wind.Gust);
+        thunder.Render(outL, outR, count);
+        fire.Render(outL, outR, count, Fire, FirePan, Rain);
+        birds.Render(outL, outR, sendL, sendR, count, birdLevel * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), chorus);
+        night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind));
+        sheep.Render(outL, outR, sendL, sendR, count);
+        float coverCoef = Lowpass.Coef(1.2f, Rate), wall = Lowpass.Coef(650f, Rate);
+        for (int i = 0; i < count; i++)
+        {
+            cover += coverCoef * (Cover - cover);
+            float ml = wallL.Process(outL[i], wall), mr = wallR.Process(outR[i], wall);
+            left[i] += outL[i] * (1f - cover) + ml * cover * 0.55f;
+            right[i] += outR[i] * (1f - cover) + mr * cover * 0.55f;
+            sendL[i] *= 1f - 0.7f * cover;
+            sendR[i] *= 1f - 0.7f * cover;
+        }
+
         rain.Render(left, right, count, Rain, Wetness, Cover);
-        thunder.Render(left, right, count);
-        fire.Render(left, right, count, Fire, FirePan, Rain);
-        birds.Render(left, right, sendL, sendR, count, Daylight * (1f - 0.9f * Rain) * (1f - 0.5f * Wind));
-        night.Render(left, right, sendL, sendR, count, night01 * (1f - 0.9f * Rain));
         steps.Render(left, right, count);
-        sheep.Render(left, right, sendL, sendR, count);
-        music.Render(left, right, sendL, sendR, count, MusicOn, night01);
+        music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
         reverb.Process(sendL, sendR, left, right, count);
 
         for (int i = 0; i < count; i++)
@@ -92,6 +124,25 @@ public sealed class SoundMix
             left[i] = SoftClip(left[i] * Volume);
             right[i] = SoftClip(right[i] * Volume);
         }
+    }
+
+    // How busy the birds are at this time of day (0 to 1), and how much of that is
+    // the dawn chorus. A full chorus just after sunrise, a quiet midday, a smaller
+    // burst of evening song that thins out into dusk, and nothing at night.
+    public static (float Level, float Chorus) BirdActivity(float t)
+    {
+        float awake = Smooth(0.215f, 0.245f, t) * (1f - Smooth(0.765f, 0.795f, t));
+        float dawn = MathF.Exp(-Sq((t - 0.27f) / 0.03f));
+        float dusk = MathF.Exp(-Sq((t - 0.725f) / 0.025f));
+        return (awake * Math.Min(1f, 0.35f + 0.65f * dawn + 0.35f * dusk), awake * dawn);
+    }
+
+    static float Sq(float x) => x * x;
+
+    static float Smooth(float a, float b, float x)
+    {
+        float t = Math.Clamp((x - a) / (b - a), 0f, 1f);
+        return t * t * (3f - 2f * t);
     }
 
     static float SoftClip(float x)
@@ -155,6 +206,8 @@ public sealed class SoundMix
         float gust = 0.5f, gustTarget = 0.5f, level;
         int counter;
 
+        public float Gust => gust;
+
         public WindVoice(int rate, Noise noise)
         {
             this.rate = rate;
@@ -188,6 +241,46 @@ public sealed class SoundMix
         }
     }
 
+    // --- Leaves and grass -------------------------------------------------------
+
+    // The wind heard in what it moves: a dry, fluttering rustle of leaves in the
+    // woods, a softer hiss through open grass. Both swell with the gusts.
+    sealed class FoliageVoice
+    {
+        readonly int rate;
+        readonly Noise noise;
+        BandPass leafL, leafR, grassL, grassR;
+        Lowpass flutterL, flutterR, level, wooded;
+
+        public FoliageVoice(int rate, Noise noise)
+        {
+            this.rate = rate;
+            this.noise = noise;
+        }
+
+        public void Render(float[] l, float[] r, int n, float wind, float rain, float foliage, float gust)
+        {
+            float flutterCoef = Lowpass.Coef(14f, rate), levelCoef = Lowpass.Coef(0.4f, rate), woodCoef = Lowpass.Coef(0.3f, rate);
+            float strength = Math.Clamp(wind + rain * 0.15f, 0f, 1f);
+            float target = MathF.Pow(strength, 1.4f) * (0.35f + 0.65f * gust);
+            for (int i = 0; i < n; i++)
+            {
+                float lv = level.Process(target, levelCoef);
+                float w = wooded.Process(foliage, woodCoef);
+                // Leaves flicker: the rustle comes in quick uneven bursts.
+                float fl = Math.Max(0f, 0.5f + 6f * flutterL.Process(noise.Next(), flutterCoef));
+                float fr = Math.Max(0f, 0.5f + 6f * flutterR.Process(noise.Next(), flutterCoef));
+                float leafA = leafL.Process(noise.Next(), 3400f + 900f * gust, 0.9f, rate) * fl;
+                float leafB = leafR.Process(noise.Next(), 3700f + 900f * gust, 0.9f, rate) * fr;
+                float grassA = grassL.Process(noise.Next(), 1500f + 700f * gust, 1.1f, rate);
+                float grassB = grassR.Process(noise.Next(), 1650f + 700f * gust, 1.1f, rate);
+                float leaves = lv * w * 0.16f, grass = lv * (1f - 0.6f * w) * 0.07f;
+                l[i] += leafA * leaves + grassA * grass;
+                r[i] += leafB * leaves + grassB * grass;
+            }
+        }
+    }
+
     // --- Rain -------------------------------------------------------------------
 
     // Rain is layered by how hard it falls: a soft patter of single drops in a
@@ -212,12 +305,6 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        static float Smooth(float a, float b, float x)
-        {
-            float t = Math.Clamp((x - a) / (b - a), 0f, 1f);
-            return t * t * (3f - 2f * t);
-        }
-
         public void Render(float[] l, float[] r, int n, float rain, float wetness, float covered)
         {
             float low = Lowpass.Coef(1400f, rate), top = Lowpass.Coef(7000f, rate), wash = Lowpass.Coef(350f, rate);
@@ -238,8 +325,8 @@ public sealed class SoundMix
                 float openL = hl * hiss * 0.09f + wl * hiss * 0.06f + rl * roar * 0.1f;
                 float openR = hr * hiss * 0.09f + wr * hiss * 0.06f + rr * roar * 0.1f;
                 // Under cover the open rain is heard through the walls: duller and quieter.
-                l[i] += openL * (1f - cover) + muffleL.Process(openL, muffle) * cover * 0.6f;
-                r[i] += openR * (1f - cover) + muffleR.Process(openR, muffle) * cover * 0.6f;
+                l[i] += openL * (1f - cover) + muffleL.Process(openL, muffle) * cover * 0.5f;
+                r[i] += openR * (1f - cover) + muffleR.Process(openR, muffle) * cover * 0.5f;
 
                 // Patter: single drops on leaves, sparse in a drizzle, a crowd in a storm
                 // where the hiss carries them.
@@ -252,9 +339,10 @@ public sealed class SoundMix
                 if (rng.NextDouble() < drips * (1f - cover * 0.7f) * dt)
                     drops.Add(new Drop(Range(rng, 500f, 1100f), Range(rng, 0.02f, 0.04f), Range(rng, 0.03f, 0.07f), Range(rng, -0.8f, 0.8f), 0f, 0f, 0.6f));
                 // On the roof: low, close taps that thicken into a drumming.
-                float roof = cover * (30f + 420f * level) * Smooth(0.02f, 0.1f, level);
+                // Softer than the open rain, so stepping inside always quietens it.
+                float roof = cover * (20f + 200f * level) * Smooth(0.02f, 0.1f, level);
                 if (rng.NextDouble() < roof * dt)
-                    drops.Add(new Drop(Range(rng, 180f, 520f), Range(rng, 0.006f, 0.016f), Range(rng, 0.03f, 0.08f), Range(rng, -0.6f, 0.6f), 0f, 0f, 0.2f));
+                    drops.Add(new Drop(Range(rng, 180f, 480f), Range(rng, 0.006f, 0.014f), Range(rng, 0.015f, 0.04f), Range(rng, -0.6f, 0.6f), 0f, 0f, 0.2f));
             }
 
             for (int d = drops.Count - 1; d >= 0; d--)
@@ -443,14 +531,15 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, float level)
+        // At the dawn chorus (chorus near 1) many more birds sing at once.
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, float level, float chorus)
         {
             float dt = 1f / rate;
             untilNext -= n * dt;
             if (untilNext <= 0f)
             {
-                untilNext = Range(rng, 1.5f, 7f) / (0.3f + level);
-                if (level > 0.05f && songs.Count < 3) songs.Add(MakeSong(level));
+                untilNext = Range(rng, 1.5f, 7f) / (0.3f + level) / (1f + 2.5f * chorus);
+                if (level > 0.05f && songs.Count < 3 + (int)(4f * chorus)) songs.Add(MakeSong(level));
             }
 
             for (int s = songs.Count - 1; s >= 0; s--)
@@ -535,20 +624,24 @@ public sealed class SoundMix
 
     // --- Night ------------------------------------------------------------------
 
-    // A few crickets chirping out of step with each other, and now and then an owl.
+    // Crickets chirping out of step with each other over a faint shimmer of
+    // insects in the grass, and now and then an owl.
     sealed class NightVoices
     {
         readonly int rate;
         readonly Random rng;
         readonly (float Freq, float Pan, float Period, float Gain)[] crickets;
         readonly float[] cricketTime, cricketPhase;
-        float owlTime = -1f, owlPhase, untilOwl = 12f, owlPan;
+        float owlTime = -1f, owlPhase, untilOwl = 12f, owlPan, shimmerTime;
+        BandPass shimmerL, shimmerR;
+        Lowpass swellL, swellR;
+        readonly Noise noise = new(97u);
 
         public NightVoices(int rate, Random rng)
         {
             this.rate = rate;
             this.rng = rng;
-            crickets = new (float, float, float, float)[4];
+            crickets = new (float, float, float, float)[6];
             cricketTime = new float[crickets.Length];
             cricketPhase = new float[crickets.Length];
             for (int c = 0; c < crickets.Length; c++)
@@ -563,10 +656,25 @@ public sealed class SoundMix
             float dt = 1f / rate;
             if (level > 0.01f)
             {
+                // The shimmer: high, buzzing, slowly swelling on each side.
+                float swell = Lowpass.Coef(0.2f, rate);
+                for (int i = 0; i < n; i++)
+                {
+                    shimmerTime += dt;
+                    float buzz = 0.55f + 0.45f * MathF.Sin(shimmerTime * 2f * MathF.PI * 38f);
+                    float a = Math.Max(0f, 0.6f + 8f * swellL.Process(noise.Next(), swell));
+                    float b = Math.Max(0f, 0.6f + 8f * swellR.Process(noise.Next(), swell));
+                    float g = 0.02f * level * buzz;
+                    l[i] += shimmerL.Process(noise.Next(), 6300f, 0.25f, rate) * a * g;
+                    r[i] += shimmerR.Process(noise.Next(), 6700f, 0.25f, rate) * b * g;
+                }
+                // The first crickets start at dusk; the rest join as it gets dark.
                 for (int c = 0; c < crickets.Length; c++)
                 {
                     var (freq, pan, period, gain) = crickets[c];
-                    float pl = Pan(pan, true) * gain * level, pr = Pan(pan, false) * gain * level;
+                    float join = Smooth(c / (float)crickets.Length * 0.8f, c / (float)crickets.Length * 0.8f + 0.2f, level);
+                    if (join <= 0f) continue;
+                    float pl = Pan(pan, true) * gain * join, pr = Pan(pan, false) * gain * join;
                     for (int i = 0; i < n; i++)
                     {
                         float t = cricketTime[c] = (cricketTime[c] + dt) % period;
@@ -628,8 +736,9 @@ public sealed class SoundMix
 
     // --- Footsteps --------------------------------------------------------------
 
-    // Soft swishes on grass, duller thuds on bare earth, a squelch when the ground
-    // is wet and a splash in water. Every step is a little different.
+    // Soft swishes on grass, duller thuds on bare earth, a heavy sticky press on
+    // clay, a hollow knock on a hut's floor, a squelch when the ground is wet and a
+    // splash in water. Every step is a little different.
     sealed class Steps
     {
         readonly int rate;
@@ -641,7 +750,7 @@ public sealed class SoundMix
         sealed class Step
         {
             public Ground Ground;
-            public float Wet, Age, Gain, Pitch, Pan, Phase, BubblePhase;
+            public float Wet, Age, Gain, Pitch, Pan, Phase, BubblePhase, Phase2;
             public BandPass Swish, Squelch;
             public Lowpass Dull, SplashLow;
         }
@@ -688,9 +797,18 @@ public sealed class SoundMix
                         step.BubblePhase += 2f * MathF.PI * (320f + 9000f * Math.Min(t, 0.06f)) * step.Pitch * dt;
                         s += MathF.Sin(step.BubblePhase) * MathF.Exp(-t / 0.05f) * 0.05f;
                     }
+                    else if (step.Ground == Ground.Floor)
+                    {
+                        // Packed boards: two body resonances and a short click.
+                        step.Phase += 2f * MathF.PI * 185f * step.Pitch * dt;
+                        step.Phase2 += 2f * MathF.PI * 455f * step.Pitch * dt;
+                        float body = MathF.Sin(step.Phase) * MathF.Exp(-t / 0.055f) + 0.5f * MathF.Sin(step.Phase2) * MathF.Exp(-t / 0.025f);
+                        float click = (x - step.Dull.Process(x, dull)) * MathF.Exp(-t / 0.004f);
+                        s = (body * 0.2f + click * 0.12f) * attack;
+                    }
                     else
                     {
-                        step.Phase += 2f * MathF.PI * 80f * step.Pitch * dt;
+                        step.Phase += 2f * MathF.PI * (step.Ground == Ground.Clay ? 62f : 80f) * step.Pitch * dt;
                         float thump = MathF.Sin(step.Phase) * MathF.Exp(-t / 0.028f) * attack;
                         if (step.Ground == Ground.Grass)
                         {
@@ -699,12 +817,22 @@ public sealed class SoundMix
                             float env = MathF.Exp(-t / 0.035f) + 0.4f * MathF.Exp(-MathF.Max(0f, t - 0.05f) / 0.03f) * (t > 0.05f ? 1f : 0f);
                             s = swish * env * attack * 0.22f + thump * 0.16f;
                         }
+                        else if (step.Ground == Ground.Clay)
+                        {
+                            // Heavier and softer than earth, and the foot pulls free
+                            // with a small sucking sound, louder when the clay is wet.
+                            float d = step.Dull.Process(x, dull * 0.6f);
+                            s = d * MathF.Exp(-t / 0.045f) * attack * 0.45f + thump * 0.3f;
+                            float pull = t > 0.11f ? MathF.Exp(-(t - 0.11f) / 0.04f) : 0f;
+                            float suck = step.Squelch.Process(x, (500f + 3000f * Math.Max(0f, t - 0.11f)) * step.Pitch, 0.3f, rate);
+                            s += suck * pull * (0.03f + 0.08f * step.Wet);
+                        }
                         else
                         {
                             float d = step.Dull.Process(x, dull);
                             s = d * MathF.Exp(-t / 0.03f) * attack * 0.5f + thump * 0.22f;
                         }
-                        if (step.Wet > 0.15f)
+                        if (step.Wet > 0.15f && step.Ground != Ground.Clay)
                         {
                             float center = (1300f - 9000f * Math.Min(t, 0.09f)) * step.Pitch;
                             float squelch = step.Squelch.Process(x, Math.Max(center, 400f), 0.22f, rate);
@@ -733,7 +861,7 @@ public sealed class SoundMix
 
         sealed class Voice
         {
-            public float Pitch, Length, Gain, Pan, Warble, Age, Phase;
+            public float Pitch, Length, Gain, Pan, Warble, Age, Phase, Formant;
             public BandPass Low, High;
         }
 
@@ -743,16 +871,18 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(float pan, float gain, bool startled)
+        // Lambs bleat higher, shorter and softer, through a smaller throat.
+        public void Trigger(float pan, float gain, bool startled, bool lamb = false)
         {
             if (voices.Count > 5 || gain < 0.01f) return;
             voices.Add(new Voice
             {
-                Pitch = startled ? Range(rng, 380f, 470f) : Range(rng, 230f, 330f),
-                Length = startled ? Range(rng, 0.3f, 0.45f) : Range(rng, 0.6f, 1.0f),
-                Gain = gain * (startled ? 0.11f : 0.075f),
+                Pitch = (startled ? Range(rng, 380f, 470f) : Range(rng, 230f, 330f)) * (lamb ? Range(rng, 1.55f, 1.8f) : 1f),
+                Length = (startled ? Range(rng, 0.3f, 0.45f) : Range(rng, 0.6f, 1.0f)) * (lamb ? 0.7f : 1f),
+                Gain = gain * (startled ? 0.11f : 0.075f) * (lamb ? 0.65f : 1f),
                 Pan = Math.Clamp(pan, -1f, 1f),
-                Warble = Range(rng, 6f, 8.5f),
+                Warble = Range(rng, 6f, 8.5f) * (lamb ? 1.25f : 1f),
+                Formant = lamb ? 1.35f : 1f,
             });
         }
 
@@ -773,7 +903,7 @@ public sealed class SoundMix
                     float saw = 2f * voice.Phase - 1f;
                     float tremolo = 0.6f + 0.4f * MathF.Sin(voice.Age * 2f * MathF.PI * voice.Warble);
                     float env = MathF.Min(1f, voice.Age / 0.05f) * MathF.Min(1f, (voice.Length - voice.Age) / 0.15f);
-                    float formants = voice.Low.Process(saw, 750f, 0.5f, rate) + 0.6f * voice.High.Process(saw, 1650f, 0.6f, rate);
+                    float formants = voice.Low.Process(saw, 750f * voice.Formant, 0.5f, rate) + 0.6f * voice.High.Process(saw, 1650f * voice.Formant, 0.6f, rate);
                     float s = formants * tremolo * env * voice.Gain;
                     l[i] += s * pl;
                     r[i] += s * pr;
@@ -836,7 +966,7 @@ public sealed class SoundMix
 
         static float Hz(int semitones) => RootHz * MathF.Pow(2f, semitones / 12f);
 
-        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, bool on, float night)
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, bool on, float volume, float night)
         {
             float dt = 1f / rate;
             float block = n * dt;
@@ -856,7 +986,7 @@ public sealed class SoundMix
             // Fade in over about six seconds and out over eight.
             float wantFade = playing && untilChange > 8f ? 1f : 0f;
             fade += Math.Clamp(wantFade - fade, -block / 8f, block / 6f);
-            gain += Math.Clamp((on ? 1f : 0f) - gain, -block / 1.5f, block / 1.5f);
+            gain += Math.Clamp((on ? Math.Clamp(volume, 0f, 1f) : 0f) - gain, -block / 1.5f, block / 1.5f);
 
             float beat = night > 0.5f ? 1.25f : 0.95f;
             if (playing && untilChange > 8f)

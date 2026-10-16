@@ -101,6 +101,91 @@ public partial class StructureView : Node3D
         return appeared;
     }
 
+    // --- Door (clay huts and brick houses) -------------------------------
+
+    // The doorway in the building's frame: the door hangs from jamb a and closes
+    // onto jamb b, swinging inward when open.
+    const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.45f, DoorOpenAngle = 1.75f;
+    Node3D? doorHinge, doorBar;
+    bool? doorClosed;
+
+    (Vector3 a, Vector3 b, float height) DoorFrame() => Kind == 5
+        ? StructureModel.HouseDoor
+        : (new Vector3(Mathf.Sin(DoorHalfAngle), 0, Mathf.Cos(DoorHalfAngle)) * DoorRadius,
+           new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius, DoorHeight);
+
+    // closed: null takes the door away (none hung yet). locked shows the bar across it.
+    public void SetDoor(bool? closed, bool locked, bool animate)
+    {
+        if (doorBar != null && doorBar.Visible != locked)
+        {
+            doorBar.Visible = locked;
+            if (locked && animate && IsInsideTree()) Settle(doorBar, doorBar.Position);
+        }
+        if (closed == doorClosed) return;
+        if (closed == null)
+        {
+            doorHinge?.QueueFree();
+            doorHinge = null;
+            doorBar = null;
+            doorClosed = null;
+            return;
+        }
+        var (a, b, height) = DoorFrame();
+        float baseYaw = Mathf.Atan2(-(b - a).Z, (b - a).X);
+        bool fresh = doorHinge == null;
+        if (doorHinge == null)
+        {
+            doorHinge = new Node3D { Position = a, Rotation = new Vector3(0, baseYaw, 0) };
+            doorHinge.AddChild(new MeshInstance3D
+            {
+                Mesh = StructureModel.Door(a.DistanceTo(b), height),
+                MaterialOverride = StructureModel.Wood,
+            });
+            // The bar: a stout pole dropped into two pegs across the middle of the door, outside
+            // (the hinge's -Z faces out of the building).
+            float width = a.DistanceTo(b);
+            doorBar = new Node3D { Position = new Vector3(0, height * 0.52f, -0.08f), Visible = locked };
+            doorBar.AddChild(new MeshInstance3D { Mesh = StructureModel.Bar(width), MaterialOverride = StructureModel.PaleWood });
+            doorHinge.AddChild(doorBar);
+            AddChild(doorHinge);
+            if (animate && IsInsideTree()) Settle(doorHinge, doorHinge.Position);
+        }
+        doorClosed = closed;
+        float yaw = baseYaw - (closed.Value ? 0f : DoorOpenAngle);
+        if (animate && !fresh && IsInsideTree())
+            CreateTween().TweenProperty(doorHinge, "rotation:y", yaw, 0.6).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        else
+            doorHinge.Rotation = new Vector3(0, yaw, 0);
+    }
+
+    // --- Weathering ---------------------------------------------------------
+
+    // 0 is sound; toward 1 it darkens and sags, in the last day before it is gone (D-046).
+    float weathered;
+    static readonly StandardMaterial3D Grime = new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        BlendMode = BaseMaterial3D.BlendModeEnum.Mul,
+        AlbedoColor = new Color(0.55f, 0.5f, 0.45f),
+    };
+
+    public void SetWeathered(float amount)
+    {
+        amount = Mathf.Clamp(amount, 0f, 1f);
+        if (Mathf.Abs(amount - weathered) < 0.02f) return;
+        weathered = amount;
+        var grime = amount > 0 ? Grime.Duplicate() as StandardMaterial3D : null;
+        if (grime != null)
+            grime.AlbedoColor = Colors.White.Lerp(new Color(0.55f, 0.5f, 0.45f), amount);
+        foreach (var (_, _, mesh) in pieces)
+            mesh.MaterialOverlay = grime;
+        // Sag: it settles and leans a little as it gives way.
+        Scale = new Vector3(1f, 1f - 0.12f * amount, 1f);
+        RotationDegrees = new Vector3(4f * amount, RotationDegrees.Y, -3f * amount);
+    }
+
     void Settle(Node3D holder, Vector3 anchor)
     {
         var tween = CreateTween();

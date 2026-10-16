@@ -8,6 +8,16 @@ namespace LifeGame;
 // that fades into the ground and the fog. Heavy rain closes the world in.
 public partial class Rain : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NStreaks = "streaks";
+    static readonly StringName NStrength = "strength";
+    static readonly StringName NScale = "scale";
+    static readonly StringName NSpeed = "speed";
+    static readonly StringName NHalfHeight = "half_height";
+    static readonly StringName NAmount = "amount";
+    static readonly StringName NSlant = "slant";
+    static readonly StringName NTint = "tint";
+
     static readonly (float Radius, float Height, float Strength, float Scale, float Speed)[] Rings =
     {
         (6f, 18f, 0.55f, 1.4f, 1.15f),
@@ -31,11 +41,11 @@ public partial class Rain : Node3D
         {
             var (radius, height, strength, scale, speed) = Rings[i];
             var material = new ShaderMaterial { Shader = VeilShader };
-            material.SetShaderParameter("streaks", streaks);
-            material.SetShaderParameter("strength", strength);
-            material.SetShaderParameter("scale", scale);
-            material.SetShaderParameter("speed", speed);
-            material.SetShaderParameter("half_height", height / 2f);
+            material.SetShaderParameter(NStreaks, streaks);
+            material.SetShaderParameter(NStrength, strength);
+            material.SetShaderParameter(NScale, scale);
+            material.SetShaderParameter(NSpeed, speed);
+            material.SetShaderParameter(NHalfHeight, height / 2f);
             materials[i] = material;
             AddChild(new MeshInstance3D
             {
@@ -60,9 +70,9 @@ public partial class Rain : Node3D
         for (int i = 0; i < materials.Length; i++)
         {
             var material = materials[i];
-            material.SetShaderParameter("amount", perRing[i]);
-            material.SetShaderParameter("slant", 0.05f + wind * 0.25f);
-            material.SetShaderParameter("tint", tint);
+            material.SetShaderParameter(NAmount, perRing[i]);
+            material.SetShaderParameter(NSlant, 0.05f + wind * 0.25f);
+            material.SetShaderParameter(NTint, tint);
         }
     }
 

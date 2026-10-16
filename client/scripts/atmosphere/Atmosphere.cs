@@ -16,6 +16,23 @@ namespace LifeGame;
 // --debug-position=x,z to hold the player somewhere for screenshots.
 public partial class Atmosphere : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NClouds = "clouds";
+    static readonly StringName NWetness = "wetness";
+    static readonly StringName NWindStrength = "wind_strength";
+    static readonly StringName NCloudCover = "cloud_cover";
+    static readonly StringName NCloudOffset = "cloud_offset";
+    static readonly StringName NPlayerPosition = "player_position";
+    static readonly StringName NViewCameraPosition = "view_camera_position";
+    static readonly StringName NTopColor = "top_color";
+    static readonly StringName NHorizonColor = "horizon_color";
+    static readonly StringName NGroundColor = "ground_color";
+    static readonly StringName NSunColor = "sun_color";
+    static readonly StringName NSunDir = "sun_dir";
+    static readonly StringName NMoonDir = "moon_dir";
+    static readonly StringName NDaylight = "daylight";
+    static readonly StringName NStars = "stars";
+
     public Node3D? Player;
 
     DirectionalLight3D sun = null!;
@@ -24,6 +41,8 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly SoundScape sound = new();
+    // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
+    public SoundScape Sound => sound;
 
     // Report sheep here (position, running) and they bleat; see SheepVoices.
     public readonly SheepVoices Sheep = new();
@@ -71,7 +90,7 @@ public partial class Atmosphere : Node3D
         env.Sky.SkyMaterial = sky;
         env.Sky.ProcessMode = Sky.ProcessModeEnum.Incremental;
         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
-        sky.SetShaderParameter("clouds", Look.Clouds);
+        sky.SetShaderParameter(NClouds, Look.Clouds);
         sun.ShadowEnabled = true;
 
         AddChild(rain);
@@ -97,6 +116,20 @@ public partial class Atmosphere : Node3D
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
             debugPosition = new Vector2(x, z);
+        // --debug-clear=seconds bares the ground around the player after that long,
+        // as placing a building does, to check that it eases over.
+        // --render-stats prints draw calls and objects once the world has loaded.
+        if (Arg("render-stats") != null)
+            GetTree().CreateTimer(9).Timeout += () => GD.Print(
+                $"render-stats draw_calls={Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)} " +
+                $"objects={Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame)} " +
+                $"primitives={Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame)} " +
+                RenderBreakdown());
+        if (ArgFloat("debug-clear") is { } clearAfter)
+            GetTree().CreateTimer(clearAfter).Timeout += () =>
+            {
+                if (parent.GetChildren().OfType<Terrain>().FirstOrDefault() is { } terrain) DebugClear(terrain);
+            };
         if (argRain is > 0f)
         {
             argCloud ??= 0.95f;
@@ -117,8 +150,8 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         // Sheep bleat; Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
-        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
+        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
+        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
         conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -126,7 +159,8 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
+        KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
     }
 
     void OnClock(WorldClock c)
@@ -158,6 +192,7 @@ public partial class Atmosphere : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
+        Look.Tick(dt);
         // A whole day in about 45 seconds while T is held.
         if (InputMap.HasAction("preview_time") && Input.IsActionPressed("preview_time")) previewDays += dt / 45f;
         if (debugPosition is { } d && Player != null)
@@ -192,18 +227,20 @@ public partial class Atmosphere : Node3D
 
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
-        RenderingServer.GlobalShaderParameterSet("wetness", wetness);
-        RenderingServer.GlobalShaderParameterSet("wind_strength", wind);
-        RenderingServer.GlobalShaderParameterSet("cloud_cover", cloud);
-        RenderingServer.GlobalShaderParameterSet("cloud_offset", cloudOffset);
+        RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
+        RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
+        RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
 
         ApplyLight();
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
-        RenderingServer.GlobalShaderParameterSet("player_position", focus);
+        RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
         if (GetViewport()?.GetCamera3D() is { } camera)
         {
-            RenderingServer.GlobalShaderParameterSet("view_camera_position", camera.GlobalPosition);
+            RenderingServer.GlobalShaderParameterSet(NViewCameraPosition, camera.GlobalPosition);
+            terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
+            terrain?.ShowGhosts(camera.GlobalPosition, focus);
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
@@ -214,6 +251,8 @@ public partial class Atmosphere : Node3D
         sound.Wind = wind;
         sound.Wetness = wetness;
         sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
+        sound.TimeOfDay = timeOfDay;
+        sound.Foliage = Woodedness(focus);
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear) FireSound(focus, ear.GlobalBasis.X);
     }
@@ -229,13 +268,13 @@ public partial class Atmosphere : Node3D
     static readonly Mood[] Moods =
     {
         new(0.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
-        new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.45f, 1.25f),
+        new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.55f, 1.3f),
         new(0.26f, new(0.28f, 0.40f, 0.60f), new(0.88f, 0.74f, 0.68f), new(0.20f, 0.21f, 0.20f), new(0.58f, 0.61f, 0.67f), new(0.80f, 0.83f, 0.88f), new(0.15f, 0.17f, 0.21f), 0.007f, 0.006f, 0.48f, 1.08f),
         new(0.32f, new(0.30f, 0.47f, 0.68f), new(0.86f, 0.80f, 0.70f), new(0.24f, 0.28f, 0.22f), new(0.66f, 0.70f, 0.72f), new(0.90f, 0.90f, 0.88f), new(0.08f, 0.09f, 0.08f), 0.007f, 0.009f, 0.4f, 1.0f),
         new(0.50f, new(0.27f, 0.46f, 0.72f), new(0.76f, 0.82f, 0.86f), new(0.24f, 0.28f, 0.22f), new(0.64f, 0.71f, 0.77f), new(0.88f, 0.90f, 0.92f), new(0.06f, 0.07f, 0.07f), 0.005f, 0.005f, 0.4f, 0.95f),
         new(0.68f, new(0.30f, 0.45f, 0.62f), new(0.80f, 0.74f, 0.62f), new(0.24f, 0.28f, 0.22f), new(0.62f, 0.68f, 0.70f), new(0.86f, 0.88f, 0.86f), new(0.0f, 0.0f, 0.0f), 0.006f, 0.007f, 0.38f, 1.0f),
         new(0.745f, new(0.26f, 0.32f, 0.52f), new(0.92f, 0.64f, 0.46f), new(0.20f, 0.19f, 0.17f), new(0.66f, 0.58f, 0.54f), new(0.88f, 0.80f, 0.74f), new(0.12f, 0.11f, 0.14f), 0.007f, 0.008f, 0.42f, 1.05f),
-        new(0.79f, new(0.07f, 0.09f, 0.21f), new(0.34f, 0.22f, 0.32f), new(0.05f, 0.05f, 0.07f), new(0.22f, 0.20f, 0.30f), new(0.50f, 0.44f, 0.58f), new(0.18f, 0.20f, 0.32f), 0.008f, 0.008f, 0.45f, 1.25f),
+        new(0.79f, new(0.07f, 0.09f, 0.21f), new(0.34f, 0.22f, 0.32f), new(0.05f, 0.05f, 0.07f), new(0.22f, 0.20f, 0.30f), new(0.50f, 0.44f, 0.58f), new(0.18f, 0.20f, 0.32f), 0.008f, 0.008f, 0.55f, 1.3f),
         new(1.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
     };
 
@@ -274,8 +313,11 @@ public partial class Atmosphere : Node3D
         float sunUp = Mathf.SmoothStep(-0.06f, 0.1f, sunHeight);
         float moonUp = Mathf.SmoothStep(0.06f, 0.25f, -sunHeight);
         float azimuth = -40f + (t - 0.68f) * 360f;
-        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(-sunHeight * 40f, azimuth + 180f);
-        float elevation = Mathf.Max(isDay ? sunHeight * 55f : -sunHeight * 40f, 3f);
+        // The moon rides high enough as soon as it is up that early night isn't
+        // lit only by grazing light.
+        float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
+        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
+        float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
         sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
@@ -291,16 +333,16 @@ public partial class Atmosphere : Node3D
         float grey = overcast * 0.75f;
         float dim = 1f - 0.35f * storm;
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
-        sky.SetShaderParameter("top_color", top);
-        sky.SetShaderParameter("horizon_color", horizon);
-        sky.SetShaderParameter("ground_color", Grey(mood.Ground, grey, 1f) * dim);
-        sky.SetShaderParameter("sun_color", sunColor * (1f - overcast * 0.8f));
-        sky.SetShaderParameter("sun_dir", sunDir);
-        sky.SetShaderParameter("moon_dir", moonDir);
-        sky.SetShaderParameter("daylight", daylight);
-        sky.SetShaderParameter("cloud_cover", cloud);
-        sky.SetShaderParameter("cloud_offset", cloudOffset);
-        sky.SetShaderParameter("stars", (1f - daylight) * (1f - overcast));
+        sky.SetShaderParameter(NTopColor, top);
+        sky.SetShaderParameter(NHorizonColor, horizon);
+        sky.SetShaderParameter(NGroundColor, Grey(mood.Ground, grey, 1f) * dim);
+        sky.SetShaderParameter(NSunColor, sunColor * (1f - overcast * 0.8f));
+        sky.SetShaderParameter(NSunDir, sunDir);
+        sky.SetShaderParameter(NMoonDir, moonDir);
+        sky.SetShaderParameter(NDaylight, daylight);
+        sky.SetShaderParameter(NCloudCover, cloud);
+        sky.SetShaderParameter(NCloudOffset, cloudOffset);
+        sky.SetShaderParameter(NStars, (1f - daylight) * (1f - overcast));
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
@@ -315,8 +357,8 @@ public partial class Atmosphere : Node3D
         if (flash > 0.001f)
         {
             var bolt = new Color(0.75f, 0.8f, 1f);
-            sky.SetShaderParameter("top_color", top.Lerp(bolt, flash * 0.6f));
-            sky.SetShaderParameter("horizon_color", horizon.Lerp(bolt, flash * 0.75f));
+            sky.SetShaderParameter(NTopColor, top.Lerp(bolt, flash * 0.6f));
+            sky.SetShaderParameter(NHorizonColor, horizon.Lerp(bolt, flash * 0.75f));
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
@@ -345,6 +387,29 @@ public partial class Atmosphere : Node3D
         }
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
+    }
+
+    // How bright a campfire burns from moment to moment: a slow breathing as the
+    // flames rise and settle, quicker licks over it, and now and then a dip as a
+    // log shifts. Around 1 on average. FireView drives its light with this.
+    public static float FireFlicker(float time)
+    {
+        float breathe = 0.08f * Mathf.Sin(time * 1.7f) + 0.05f * Mathf.Sin(time * 2.9f + 0.7f);
+        float licks = 0.06f * Mathf.Sin(time * 11.3f) + 0.05f * Mathf.Sin(time * 17.9f + 1.3f) + 0.03f * Mathf.Sin(time * 29.1f + 2.1f);
+        float shift = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(time * 0.37f + 1.1f) * Mathf.Sin(time * 0.53f)), 6f) * 0.25f;
+        return 0.92f + breathe + licks - shift;
+    }
+
+    void DebugClear(Terrain terrain)
+    {
+        if (Player == null) return;
+        int cx = Mathf.RoundToInt(Player.GlobalPosition.X), cz = Mathf.RoundToInt(Player.GlobalPosition.Z);
+        int r = Mathf.RoundToInt(ArgFloat("debug-clear-radius") ?? 3f);
+        var before = terrain.Cleared;
+        terrain.Cleared = (x, z) => before?.Invoke(x, z) == true || (x - cx) * (x - cx) + (z - cz) * (z - cz) <= r * r;
+        for (int x = cx - r; x <= cx + r; x++)
+            for (int z = cz - r; z <= cz + r; z++)
+                terrain.Refresh(x, z);
     }
 
     float strikeAge = 10f, strikePeak;
@@ -392,10 +457,35 @@ public partial class Atmosphere : Node3D
         if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
 
         int cx = World.CellOf(pos.X), cz = World.CellOf(pos.Z);
-        var ground = pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
-            : World.IsClay(cx, cz) ? Ground.Earth
+        terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
+        var ground = Sheltered?.Invoke(pos) == true ? Ground.Floor
+            : pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
+            : World.IsClay(cx, cz) ? Ground.Clay
+            : terrain?.Cleared?.Invoke(cx, cz) == true ? Ground.Earth
             : Ground.Grass;
         sound.Step(ground, wetness);
+    }
+
+    Terrain? terrain;
+
+    // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
+    // density the terrain plants its trees by. Sampled every few metres out to
+    // about 12 m; the mixer eases between values, so walking into the trees fades
+    // the leaves in.
+    static float Woodedness(Vector3 at)
+    {
+        int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);
+        float sum = 0f;
+        int count = 0;
+        for (int dx = -12; dx <= 12; dx += 4)
+            for (int dz = -12; dz <= 12; dz += 4)
+            {
+                int x = cx + dx, z = cz + dz;
+                count++;
+                if (x * x + z * z < 12 * 12 || World.IsClay(x, z)) continue;
+                sum += World.Noise(x, z, 24f, 33);
+            }
+        return Mathf.SmoothStep(0.3f, 0.7f, sum / count);
     }
 
     // --- Helpers ----------------------------------------------------------------
@@ -409,6 +499,28 @@ public partial class Atmosphere : Node3D
         if (InputMap.HasAction(action)) return;
         InputMap.AddAction(action);
         InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
+    }
+
+    // Visible meshes, lights and particles grouped by which top-level node they sit
+    // under, for finding where draw calls come from.
+    string RenderBreakdown()
+    {
+        var counts = new System.Collections.Generic.Dictionary<string, int>();
+        if (GetParent() is not { } main) return "";
+        foreach (var top in main.GetChildren())
+        {
+            int n = 0;
+            var stack = new System.Collections.Generic.Stack<Node>();
+            stack.Push(top);
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+                if (node is VisualInstance3D v && v.IsVisibleInTree()) n++;
+                foreach (var c in node.GetChildren()) stack.Push(c);
+            }
+            if (n > 0) { string key = top.Name + ":" + top.GetType().Name; counts[key] = (counts.TryGetValue(key, out int had) ? had : 0) + n; }
+        }
+        return string.Join(" ", counts.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}={kv.Value}"));
     }
 
     static string? Arg(string name)

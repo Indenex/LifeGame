@@ -1,0 +1,20 @@
+<Project>
+  <!-- Writes BuildStamp.Commit (the short git commit, or "dev" outside a checkout)
+       into the client and the server module, so each can say which build it is. -->
+  <Target Name="WriteBuildStamp" BeforeTargets="CoreCompile">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="BuildStampCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="BuildStampExit" />
+    </Exec>
+    <PropertyGroup>
+      <BuildStampCommit Condition="'$(BuildStampExit)' != '0' Or '$(BuildStampCommit)' == ''">dev</BuildStampCommit>
+      <BuildStampFile>$(IntermediateOutputPath)BuildStamp.g.cs</BuildStampFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BuildStampFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+      Lines="namespace LifeGame.Shared%3B&#10;public static class BuildStamp { public const string Commit = &quot;$(BuildStampCommit)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(BuildStampFile)" />
+      <FileWrites Include="$(BuildStampFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

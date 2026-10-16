@@ -43,7 +43,7 @@ public partial class Hud : CanvasLayer
         toast.GrowHorizontal = Control.GrowDirection.Both;
         toast.GrowVertical = Control.GrowDirection.Begin;
         toast.HorizontalAlignment = HorizontalAlignment.Center;
-        toast.Position = new Vector2(0, -122);
+        toast.Position = new Vector2(0, -NoteLane);
         root.AddChild(toast);
 
         // --screenshot-hud fills the HUD with sample things, for screenshots without a server.
@@ -79,6 +79,13 @@ public partial class Hud : CanvasLayer
         statusTime = 6f;
     }
 
+    // A status line that stays until replaced, for something the player must act on.
+    public void Warn(string text)
+    {
+        status.Text = text;
+        statusTime = float.PositiveInfinity;
+    }
+
     public void Note(string text)
     {
         toast.Text = text;
@@ -92,10 +99,37 @@ public partial class Hud : CanvasLayer
         float dt = (float)delta;
         toastTime -= dt;
         // A note sits clear of the inventory, even when the row wraps onto two lines.
-        toast.Position = new Vector2(toast.Position.X, toast.GetParentAreaSize().Y - 122 - Mathf.Max(0f, inventory.Top - 76f));
+        toast.Position = new Vector2(toast.Position.X, toast.GetParentAreaSize().Y - NoteLane - Mathf.Max(0f, inventory.Top - 76f));
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
+    }
+
+    // The lanes along the bottom, from the edge up: the inventory row, the name of a
+    // gained item just above its slot, notes (toasts), then boxes you work in
+    // (minigames) and the G prompt. Each sits clear of the one below, and all stay in
+    // the lower third so the player in the middle is never covered.
+    public const float NoteLane = 150f, WorkLane = 156f;
+
+    // Puts a box (a minigame card) in the work lane: centred, its foot WorkLane above
+    // the bottom edge, growing upward. A box too tall for the lower third shrinks
+    // (down to 70%) so its top stays below the player.
+    public static void PlaceLow(Control box)
+    {
+        box.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        box.GrowHorizontal = Control.GrowDirection.Both;
+        box.GrowVertical = Control.GrowDirection.Begin;
+        box.OffsetLeft = box.OffsetRight = 0;
+        box.OffsetTop = box.OffsetBottom = -WorkLane;
+        void Fit()
+        {
+            float room = box.GetParentAreaSize().Y * 0.33f - WorkLane;
+            float scale = box.Size.Y > 0 ? Mathf.Clamp(room / box.Size.Y, 0.7f, 1f) : 1f;
+            box.PivotOffset = new Vector2(box.Size.X / 2, box.Size.Y);
+            box.Scale = new Vector2(scale, scale);
+        }
+        box.ItemRectChanged += Fit;
+        box.Ready += Fit;
     }
 
     // Text with a wide, faint shadow instead of a box behind it.
