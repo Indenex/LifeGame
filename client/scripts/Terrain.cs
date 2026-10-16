@@ -21,6 +21,12 @@ public partial class Terrain : Node3D
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
 
+    // When a cell is cleared or grows back, its grass flattens or regrows and the
+    // ground color shifts over a second or two instead of popping (D-036).
+    const float ClearFadeSeconds = 1.6f;
+    readonly HashSet<long> wasCleared = new();
+    readonly Dictionary<long, (float At, bool Cleared)> clearChanges = new();
+
     public void Refresh(int x, int z) => dirty.Add((World.ChunkOfCell(x), World.ChunkOfCell(z)));
 
     // Ground height at a world position, blended between the four nearest cells.
@@ -85,7 +91,9 @@ public partial class Terrain : Node3D
         {
             dirty.Remove(key);
             if (Math.Abs(key.Item1 - chunkX) > r || Math.Abs(key.Item2 - chunkZ) > r) continue;
-            if (chunks.Remove(key, out var old)) old.QueueFree();
+            bool rebuilt = chunks.Remove(key, out var old);
+            if (rebuilt) old!.QueueFree();
+            NoteClearing(key.Item1, key.Item2, rebuilt);
             var node = BuildChunk(key.Item1, key.Item2);
             AddChild(node);
             chunks[key] = node;
@@ -94,6 +102,28 @@ public partial class Terrain : Node3D
 
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
     }
+
+    // Notes which cells of a chunk just became cleared or uncleared, so the rebuild
+    // can ease them over. A chunk loading for the first time just records them.
+    void NoteClearing(int cx, int cz, bool rebuilt)
+    {
+        float now = Look.Clock;
+        int n = World.ChunkSize;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+            {
+                int x = cx * n + i, z = cz * n + j;
+                long key = World.CellKey(x, z);
+                bool cleared = Cleared?.Invoke(x, z) == true;
+                bool was = cleared ? !wasCleared.Add(key) : wasCleared.Remove(key);
+                if (rebuilt && was != cleared) clearChanges[key] = (now, cleared);
+                else if (clearChanges.TryGetValue(key, out var c) && now - c.At > ClearFadeSeconds + 1f) clearChanges.Remove(key);
+            }
+    }
+
+    // When this cell's clearing changed, if it is still easing over.
+    (float At, bool Cleared)? ClearChange(int x, int z) =>
+        clearChanges.TryGetValue(World.CellKey(x, z), out var c) && Look.Clock - c.At < ClearFadeSeconds + 1f ? c : null;
 
     Node3D BuildChunk(int cx, int cz)
     {
@@ -108,12 +138,18 @@ public partial class Terrain : Node3D
         int n = World.ChunkSize;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
+        st.SetCustomFormat(0, SurfaceTool.CustomFormat.RgbaFloat);
 
         void Corner(int x, int z)
         {
             float h = TileHeight(x, z);
             st.SetNormal(NormalAt(x, z));
             st.SetColor(TileColor(x, z, h));
+            // A cell whose clearing just changed carries its old color and when it
+            // changed, and the ground shader blends from one to the other.
+            st.SetCustom(0, ClearChange(x, z) is { } c
+                ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
+                : new Color(0, 0, 0, 0));
             st.AddVertex(new Vector3(x, h, z));
         }
 
@@ -139,7 +175,7 @@ public partial class Terrain : Node3D
         }
     }
 
-    Color TileColor(int x, int z, float top)
+    Color TileColor(int x, int z, float top, bool? cleared = null)
     {
         float lush = World.Noise(x, z, 14f, 31);
         var color = Look.GrassLow.Lerp(Look.GrassHigh, Mathf.Clamp(lush * 1.1f - 0.1f, 0f, 1f));
@@ -153,7 +189,7 @@ public partial class Terrain : Node3D
         if (depths.TryGetValue(World.CellKey(x, z), out var d) && d > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
 
-        if (Cleared?.Invoke(x, z) == true) color = color.Lerp(Look.Earth, 0.6f);
+        if (cleared ?? Cleared?.Invoke(x, z) == true) color = color.Lerp(Look.Earth, 0.6f);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
@@ -166,13 +202,17 @@ public partial class Terrain : Node3D
         var pines = new List<(Transform3D, Color)>();
         var rocks = new List<(Transform3D, Color)>();
         var tufts = new List<(Transform3D, Color)>();
+        var tuftChanges = new List<Color>();
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
-                if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) continue;
+                // A cell cleared a moment ago keeps its grass just long enough to flatten.
+                var change = ClearChange(x, z);
+                bool flattening = change is { Cleared: true };
+                if (depths.ContainsKey(World.CellKey(x, z)) || (Cleared?.Invoke(x, z) == true && !flattening)) continue;
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
 
@@ -186,7 +226,7 @@ public partial class Terrain : Node3D
 
                 // A forest that thins out into a clearing where new players wake up.
                 float forest = World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
-                if (!nearSpawn && roll < forest)
+                if (!nearSpawn && roll < forest && !flattening)
                 {
                     trunks.Add((at, Look.Bark));
                     if (Hash01(x, z, 16) < 0.4f)
@@ -195,7 +235,7 @@ public partial class Terrain : Node3D
                         leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
                             .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f)));
                 }
-                else if (roll < forest + 0.006f)
+                else if (roll < forest + 0.006f && !flattening)
                 {
                     rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f)));
                     continue;
@@ -211,7 +251,9 @@ public partial class Terrain : Node3D
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, 0.75f + Hash01(x, z, 42) * 0.5f, 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts.Add((g, TileColor(x, z, top)));
+                    tufts.Add((g, TileColor(x, z, top, cleared: false)));
+                    // Custom data: when the grass started to flatten (+1) or regrow (-1).
+                    tuftChanges.Add(change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0));
                 }
             }
 
@@ -219,16 +261,17 @@ public partial class Terrain : Node3D
         AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         AddMulti(root, rockMesh!, rocks, Look.RockSurface);
-        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
+        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false, custom: tuftChanges);
     }
 
-    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color)> items, Material material, bool castShadow = true)
+    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color)> items, Material material, bool castShadow = true, List<Color>? custom = null)
     {
         if (items.Count == 0) return;
         var mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
+            UseCustomData = custom != null,
             Mesh = mesh,
             InstanceCount = items.Count,
         };
@@ -236,6 +279,7 @@ public partial class Terrain : Node3D
         {
             mm.SetInstanceTransform(i, items[i].Item1);
             mm.SetInstanceColor(i, items[i].Item2);
+            if (custom != null) mm.SetInstanceCustomData(i, custom[i]);
         }
         root.AddChild(new MultiMeshInstance3D
         {

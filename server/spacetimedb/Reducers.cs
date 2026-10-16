@@ -107,7 +107,7 @@ public static partial class Module
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
         float dt = Math.Min(SecondsBetween(state.LastMoveAt, ctx.Timestamp), 1f);
-        float allowed = World.MaxSpeed * dt + World.MoveSlack;
+        float allowed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender) * dt + World.MoveSlack;
         float dx = x - fromX, dz = z - fromZ;
         float dist = MathF.Sqrt(dx * dx + dz * dz);
         if (dist > allowed)
@@ -201,7 +201,7 @@ public static partial class Module
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
-        ctx.Db.WorldItem.Insert(new WorldItem
+        var dropped = ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
             Item = item,
@@ -211,6 +211,7 @@ public static partial class Module
             ChunkX = pos.ChunkX,
             ChunkZ = pos.ChunkZ,
         });
+        OnPlayerDroppedItem(ctx, dropped);
     }
 
     // Tops up loose sticks, stones and fiber in the seeded area.
