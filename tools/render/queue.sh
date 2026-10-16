@@ -32,6 +32,6 @@ job anim-1-turn env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-turn 4afbb
 job anim-1-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-work 4afbb2b tools/render/scenes/anim-1-work.txt
 # Live scenes last: they wait for the Render lane to append steps to $RENDER_WORK/live.txt.
 job animals-8-spin tools/render/scene.sh animals-8-spin 4233255 tools/render/scenes/animals-8-spin.txt
-job ui-9-liveA tools/render/scene.sh ui-9-liveA ffdabf3 tools/render/scenes/ui-9-live-a.txt
-job ui-9-liveB tools/render/scene.sh ui-9-liveB ffdabf3 tools/render/scenes/ui-9-live-b.txt
+job ui-9-liveA tools/render/scene.sh ui-9-liveA 0d7a326 tools/render/scenes/ui-9-live-a.txt
+job ui-9-liveB tools/render/scene.sh ui-9-liveB 0d7a326 tools/render/scenes/ui-9-live-b.txt
 echo "== queue empty"
