@@ -24,6 +24,7 @@
 //   craftloop knap.flake +72   (movie scenes) start the same job again and again
 //                     until the camera client has written 72 more frames: the
 //                     server works in real time while the movie crawls
+//   pickup 1 3        walk to and pick up the 3 nearest loose items of id 1
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
@@ -79,7 +80,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure"
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure", "SELECT * FROM world_item"
 #if HAS_TRADE
                 , "SELECT * FROM my_trade"
 #endif
@@ -267,6 +268,22 @@ bool Step(string line)
                 jobs++;
             }
             Console.WriteLine($"puppet: {c[0]} ran {jobs} times");
+            break;
+        }
+        case "pickup":
+        {
+            var p = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            ushort item = ushort.Parse(p[0]);
+            int count = p.Length > 1 ? int.Parse(p[1]) : 1;
+            for (int i = 0; i < count; i++)
+            {
+                var near = conn.Db.WorldItem.Iter().Where(w => w.Item == item)
+                    .OrderBy(w => (w.X - x) * (w.X - x) + (w.Z - z) * (w.Z - z)).FirstOrDefault();
+                if (near == null) { Console.WriteLine($"puppet: server said no loose item {item} nearby"); break; }
+                WalkTo(near.X, near.Z);
+                conn.Reducers.PickUp(near.Id);
+                Pump(0.6);
+            }
             break;
         }
         case "drop":

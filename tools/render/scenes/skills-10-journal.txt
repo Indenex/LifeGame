@@ -1,0 +1,21 @@
+# skills-10 (PR #112): the journal's "Things to try" hints for a fresh player who picked
+# up sticks, stones and fiber and lit a hand-drill fire; then again after a pinch pot.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+pickup 1 3
+pickup 2 2
+pickup 3 4
+craft gather.tinder
+face 0
+craft fire.hand_drill
+wait 3
+key j
+burst 3 1.5
+key j
+give 102 1 60
+craft clay.pinch_pot
+wait 3
+key j
+burst 3 1.5
+key j
