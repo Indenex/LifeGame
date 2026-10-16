@@ -795,3 +795,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
 **Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
 **Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")
+
+## D-196 — 2026-10-16 — Bow power: Archery skill, much harder at rank 0 (revises D-178)
+**Decision:** The bow numbers in D-178 are at level 1 too strong. A new Archery skill, on the shared curve (D-175, D-177), scales bow damage. At rank 0 with crude gear a red deer takes 6 to 7 hits. With maxed Archery, top gear and a crit, a one-shot becomes possible.
+**Who:** Justin ("Is this at level 1 Archery? I would say make it much harder. Like 6-7 shots, and when maxed out or with crits you could 1 shot at some point.")
