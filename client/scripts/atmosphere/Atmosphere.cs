@@ -44,6 +44,7 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
+    readonly FallingLeaves leaves = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -113,6 +114,7 @@ public partial class Atmosphere : Node3D
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
+        AddChild(leaves);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
@@ -299,6 +301,7 @@ public partial class Atmosphere : Node3D
         sound.TimeOfDay = timeOfDay;
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        leaves.Follow(focus, Year, wind, woods, WindDirection);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
