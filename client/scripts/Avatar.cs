@@ -14,6 +14,7 @@ public partial class Avatar : Node3D
     readonly Node3D figure;
     readonly PlayerAnimator animator;
     readonly Label3D nameplate;
+    readonly MeshInstance3D heldR = new() { Scale = Vector3.One * 0.75f }, heldL = new() { Scale = Vector3.One * 0.75f };
     float speed, turnRate, lastHeading, creepTime;
     Vector3 lastPosition;
 
@@ -25,6 +26,9 @@ public partial class Avatar : Node3D
         figure = BuildFigure();
         AddChild(figure);
         animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        // Hand attach points (Node3D or BoneAttachment3D): tool shaft along -Y out of the fist.
+        (figure.FindChild("ToolR", true, false) ?? figure).AddChild(heldR);
+        (figure.FindChild("ToolL", true, false) ?? figure).AddChild(heldL);
 
         nameplate = new Label3D
         {
@@ -61,7 +65,8 @@ public partial class Avatar : Node3D
         Mesh(head, new SphereMesh { Radius = 0.17f, Height = 0.34f, RadialSegments = 14, Rings = 7 }, skin, new Vector3(0, 0.06f, 0));
         Mesh(head, new SphereMesh { Radius = 0.18f, Height = 0.22f, RadialSegments = 14, Rings = 5 }, hair, new Vector3(0, 0.14f, -0.02f));
 
-        Arm(spine, Joint.ShoulderL, Joint.ElbowL, Joint.HandL, 1f);
+        var handL = Arm(spine, Joint.ShoulderL, Joint.ElbowL, Joint.HandL, 1f);
+        handL.AddChild(new Node3D { Name = "ToolL", Position = new Vector3(0, -0.05f, 0) });
         var handR = Arm(spine, Joint.ShoulderR, Joint.ElbowR, Joint.HandR, -1f);
         handR.AddChild(new Node3D { Name = "ToolR", Position = new Vector3(0, -0.05f, 0) });
 
@@ -103,6 +108,14 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
+
+    // Items shown in the hands (null: empty hand). Today's ground meshes until the
+    // Modeling lane's held models land.
+    public void Hold(Shared.Item? right, Shared.Item? left)
+    {
+        heldR.Mesh = right is { } r ? ItemLook.MeshFor(r) : null;
+        heldL.Mesh = left is { } l ? ItemLook.MeshFor(l) : null;
+    }
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 

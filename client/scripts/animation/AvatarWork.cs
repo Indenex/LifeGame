@@ -10,7 +10,14 @@ public static class AvatarWork
 {
     public static void Attach(DbConnection conn, Avatar me, Func<uint, Avatar?> other)
     {
-        conn.Db.MyCraftJob.OnInsert += (_, j) => me.Work = WorkMotions.For(j.ProcessId);
-        conn.Db.MyCraftJob.OnDelete += (_, _) => me.Work = WorkMotion.None;
+        conn.Db.MyCraftJob.OnInsert += (_, j) => Start(me, j.ProcessId);
+        conn.Db.MyCraftJob.OnDelete += (_, _) => Start(me, null);
+    }
+
+    static void Start(Avatar avatar, string? processId)
+    {
+        avatar.Work = WorkMotions.For(processId);
+        var (right, left) = HeldItems.For(processId);
+        avatar.Hold(right, left);
     }
 }
