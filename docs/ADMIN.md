@@ -12,7 +12,9 @@ spacetime call <database> make_admin '"Character Name"'
 
 That player is now an admin. Admins can add others the same way (`make_admin` needs an admin). There is no way to add an admin from a game client without being one.
 
-## What an admin can do
+## What an admin can do (chat commands)
 
-- F10 opens the item panel: search every item, set a quantity (and a quality for made things) and press Give. The items go into the admin's own bag (`admin_give`, logged on the server with the admin's identity).
-- The time and season commands (`/time`, `/season`, `/season-speed`).
+- `/give` opens the item menu: search every item, set a quantity (and a quality for made things) and press Give. `/give <item> [n]` gives straight away, e.g. `/give stone knife 3`. The items go into the admin's own bag (`admin_give`, logged on the server with the admin's identity).
+- `/time hh:mm` (06:30), `/time dawn|noon|dusk|night`, or `/time 0-1`; `/day`, `/night`.
+- `/season spring|summer|autumn|winter` (or 0 to 1 through the year); `/season-speed days`.
+- Every one is checked by the server; a player who isn't an admin gets "Only the world's admin can...".

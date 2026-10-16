@@ -6,7 +6,7 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// The admin item panel (admin-1). F10 opens a searchable list of every item; pick one,
+// The admin item menu (admin-1). /give opens a searchable list of every item; pick one,
 // set how many (and how good, for made things) and press Give. The server decides who
 // may (admin_give) and the panel only appears for players the server says are admins.
 // The list comes from the item registry, so new items show up by themselves.
@@ -27,8 +27,6 @@ public partial class AdminPanel : CanvasLayer
     ItemDef? selected;
 
     public void Attach(DbConnection c) => conn = c;
-
-    bool IsAdmin => conn != null && TimeCommands.IsAdmin(conn);
 
     public override void _Ready()
     {
@@ -71,7 +69,7 @@ public partial class AdminPanel : CanvasLayer
         quantity = new SpinBox { MinValue = 1, MaxValue = AdminRules.GiveMax, Value = 1, Step = 1 };
         line.AddChild(quantity);
         line.AddChild(new Label { Text = "Quality" });
-        quality = new SpinBox { MinValue = 1, MaxValue = 100, Value = 50, Step = 1 };
+        quality = new SpinBox { MinValue = 1, MaxValue = 100, Value = 80, Step = 1 };
         line.AddChild(quality);
         give = new Button { Text = "Give", Disabled = true };
         give.Pressed += Give;
@@ -81,24 +79,18 @@ public partial class AdminPanel : CanvasLayer
 
     public override void _UnhandledKeyInput(InputEvent e)
     {
-        if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
-        if (key.Keycode == Key.F10)
-        {
-            if (IsOpen) Close();
-            else if (IsAdmin) Open();
-            GetViewport().SetInputAsHandled();
-        }
-        else if (key.Keycode == Key.Escape && IsOpen)
+        if (IsOpen && e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             Close();
             GetViewport().SetInputAsHandled();
         }
     }
 
-    void Open()
+    // Opens the menu (the /give command; the caller has checked the player is an admin).
+    public void Show(string prefill = "")
     {
         window.Visible = true;
-        search.Text = "";
+        search.Text = prefill;
         Refill();
         search.GrabFocus();
     }

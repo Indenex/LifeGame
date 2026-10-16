@@ -98,6 +98,7 @@ public partial class Main : Node3D
         AddChild(trade);
         AddChild(admin);
         admin.Note = hud.Note;
+        AdminCommands.Menu = admin;
         // The panel at a crafting station (ui-13, D-098).
         station.Conn = () => conn;
         station.Crafting = crafting;

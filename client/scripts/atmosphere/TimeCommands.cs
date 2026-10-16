@@ -18,7 +18,8 @@ public static class TimeCommands
     {
         ("/day", "Admin: set the time to mid-morning"),
         ("/night", "Admin: set the time to night"),
-        ("/time 0-1", "Admin: set the time (0.25 sunrise, 0.5 noon, 0.75 sunset)"),
+        ("/time hh:mm", "Admin: set the time: 06:30, or dawn, noon, dusk, night (or 0-1 through the day)"),
+        ("/give item n", "Admin: give yourself items; /give alone opens the list"),
         ("/season name", "Admin: jump to spring, summer, autumn or winter (or 0-1 through the year)"),
         ("/season-speed days", "Admin: in-game days each season lasts"),
     };
@@ -34,9 +35,9 @@ public static class TimeCommands
         else if (t == "/night") to = Night;
         else if (t == "/time" || t.StartsWith("/time "))
         {
-            if (!float.TryParse(t.Length > 6 ? t[6..] : "", NumberStyles.Float, CultureInfo.InvariantCulture, out float f) || f < 0f || f > 1f)
+            if (ParseTime(t.Length > 6 ? t[6..].Trim() : "") is not { } f)
             {
-                note("Use /time with 0 to 1: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset");
+                note("Use /time with hh:mm (06:30), dawn, noon, dusk or night, or 0 to 1 through the day");
                 return true;
             }
             to = f;
@@ -50,6 +51,24 @@ public static class TimeCommands
         conn.Reducers.SetTimeOfDay(value);
         note(value == Morning ? "Morning comes" : value == Night ? "Night falls" : "The time changes");
         return true;
+    }
+
+    // hh:mm on the day clock (06:00 is sunrise), a word, or 0 to 1 through the day.
+    public static float? ParseTime(string arg)
+    {
+        switch (arg)
+        {
+            case "dawn": case "sunrise": return 0.25f;
+            case "noon": case "midday": return 0.5f;
+            case "dusk": case "sunset": return 0.75f;
+            case "midnight": return 0f;
+            case "night": return Night;
+            case "morning": return Morning;
+        }
+        var parts = arg.Split(':');
+        if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m) && h >= 0 && h < 24 && m >= 0 && m < 60)
+            return (h * 60 + m) / 1440f;
+        return float.TryParse(arg, NumberStyles.Float, CultureInfo.InvariantCulture, out float f) && f >= 0f && f <= 1f ? f : null;
     }
 
     static bool Season(DbConnection conn, string t, Action<string> note)

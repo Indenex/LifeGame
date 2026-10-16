@@ -1,4 +1,4 @@
-# admin-1: admin item panel
+# admin-1: admin chat commands (give, time, season, fly)
 Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
@@ -6,7 +6,7 @@ Branch: claude/admin-1
 PR: (see below)
 
 ## Goal
-Justin (the world's admin) presses a hidden key (F10), sees a searchable list of every item with its icon, picks one, sets a quantity (and a quality for made things) and presses Give; the items land in his bag. The server decides who may (D-182): the admin list is private and only the server's `admin_give` reducer adds items, refusing non-admins.
+Justin (the world's admin) types chat commands: `/give` (item menu with search, or `/give <item> [n]`), `/time hh:mm|dawn|noon|dusk|night`, `/season <name or 0-1>`, and `/fly` (free 3D movement, no gravity or collision, super fast). The server decides who may (D-182): the admin list is private and only the server's `admin_give` reducer adds items, refusing non-admins.
 
 ## Progress log
 - 2026-10-16: PM asked for it (after #254). Built on main:
@@ -16,8 +16,10 @@ Justin (the world's admin) presses a hidden key (F10), sees a searchable list of
   - Verified with a scratch bot against a local server: non-admin give refused; after the publisher's `make_admin`, the bot sees its `my_admin` row and the give works; unknown item and 5000 refused. Upgrade check: publishing over a database from main works (access of world_admin public to private).
   - NOT verified: the look of the panel in the running game (no display here). UX asked for a quick look review.
 
+- 2026-10-16: Justin refined it to chat commands (PM): F10 key dropped. `/give` opens the same menu (AdminPanel.Show) or gives directly; `/time` takes hh:mm or dawn/noon/dusk/night (TimeCommands.ParseTime; /season already took names); hook is one line in SocialLayer's chat send (Claims' file). `/fly` comes after #254 merges: it needs a private admin-only flag the server's Move speed budget respects (admin_fly reducer + table), plus client 3D movement (Space up, sneak down, no collision).
+
 ## Open questions / blockers
-- F10 is not in Controls.cs (hidden, admin-only). UX decides whether KEYMAP.md should mention it.
+- (none)
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha.
+Wait for CI on #335; after #254 merges, add /fly (admin_fly reducer, Move allowance for flyers, client 3D movement).
