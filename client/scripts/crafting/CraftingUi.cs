@@ -289,6 +289,7 @@ public partial class CraftingUi : CanvasLayer
         return item switch
         {
             Item.Stick => $"Pick them up under the trees{Key("pick_up")}.",
+            Item.Log => $"Chop one from a tree with a stone axe{Key("use")}.",
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
             Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
             Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
