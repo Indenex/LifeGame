@@ -53,16 +53,19 @@ public static partial class Module
         float speed = animal.State == AnimalState.Run ? t.Run * (0.3f + 0.7f * mind.Health / 100f)
             : animal.State == AnimalState.Walk ? t.Walk : 0f;
         float hit = BowHitChance(d, speed);
-        OnProcessPerformed(ctx, player.PlayerId, ShootProcess, (byte)Math.Clamp((int)(shot.BowQ * 100f), 1, 100), false);
+        byte shotQuality = (byte)Math.Clamp((int)(shot.BowQ * 100f), 1, 100);
 
         if (ctx.Rng.NextDouble() >= hit)
         {
+            // A miss still teaches, at half the rate (Skills.Gain).
+            OnProcessPerformed(ctx, player.PlayerId, ShootProcess, shotQuality, true);
             // A miss still frightens it: the arrow lands close by.
             ctx.Db.AnimalMind.AnimalId.Update(mind with { Nervous = 1f, FleeX = dx / MathF.Max(d, 0.01f), FleeZ = dz / MathF.Max(d, 0.01f), StruckAt = now });
             ctx.Db.Animal.Id.Update(animal with { State = AnimalState.Run });
             return;
         }
 
+        OnProcessPerformed(ctx, player.PlayerId, ShootProcess, shotQuality, false);
         int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble())));
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0);
