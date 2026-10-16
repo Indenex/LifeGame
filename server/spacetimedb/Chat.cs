@@ -74,7 +74,7 @@ public static partial class Module
     public static void SendChat(ReducerContext ctx, string text)
     {
         InitChat(ctx);
-        text = text.Trim();
+        text = Social.StripControl(text).Trim();
         if (text.Length == 0) return;
         if (text.Length > Social.ChatMaxLength) text = text[..Social.ChatMaxLength];
         // claims-6: "/me" on its own says nothing; "/ME waves" is stored as "/me waves".

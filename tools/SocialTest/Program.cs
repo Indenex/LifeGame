@@ -174,6 +174,7 @@ a.LastError = null;
 a.Conn.Reducers.SendChat("/me");
 Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != null, 1.5);
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
 // claims-12: a fence near the border snaps onto it, both ends on the circle.
