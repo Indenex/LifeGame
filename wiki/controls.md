@@ -8,6 +8,7 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 |---|---|
 | W A S D | Walk |
 | Q / E, or hold right mouse and drag | Turn the view |
+| Hold Shift | Run (uses stamina) |
 | Hold Ctrl | Sneak (walk slowly) |
 | Space | Pick up |
 | F | Dig |

@@ -11,6 +11,9 @@ You lose warmth at night, in rain, and when standing in water. Colder air makes 
 ## Wetness
 Rain and wading make you wet. Heavy rain soaks you faster than drizzle, and wading soaks you very quickly. The wetter you are, the faster you lose warmth. Cold, rain and wetness add up only to a point, so even the worst weather gives you time to find shelter. You dry off over time, faster under cover and faster still beside a fire.
 
+## Stamina
+Hold Shift to run. Running uses stamina, shown as a small bar under your character while you are short of breath. When it runs out you walk until it refills. It refills after you stop running. A good meal lets you run longer for a while.
+
 ## Carrying
 You can only carry so much. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
 
