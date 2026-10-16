@@ -148,8 +148,21 @@ public static partial class Module
     // Anything that digs, builds or removes items in the world should call this.
     public static void RequireClaimAccess(ReducerContext ctx, float x, float z)
     {
-        if (ClaimAt(ctx, x, z) is { } claim && !HasClaimRights(ctx, claim, ctx.Sender))
+        if (ClaimAt(ctx, x, z) is not { } claim) return;
+        if (!HasClaimRights(ctx, claim, ctx.Sender))
             throw new Exception($"This land is claimed by {claim.OwnerName}");
+        TendByWork(ctx, claim);
+    }
+
+    // claims-5: owners and members keep their claim standing just by working on it.
+    // At most one write a minute (or a quarter of the lifetime, if shorter), so
+    // busy work doesn't churn the claim row.
+    static void TendByWork(ReducerContext ctx, Claim claim)
+    {
+        long life = ClaimLifetimeSeconds(ctx);
+        long every = Math.Min(Social.WorkTendEverySeconds, Math.Max(1, life / 4)) * 1_000_000;
+        if (ctx.Timestamp.MicrosecondsSinceUnixEpoch - claim.TendedAt.MicrosecondsSinceUnixEpoch < every) return;
+        ctx.Db.Claim.Id.Update(claim with { TendedAt = ctx.Timestamp, ExpiresAt = After(ctx.Timestamp, life) });
     }
 
     // Fighting is allowed in the wild, and inside a standing claim only when its

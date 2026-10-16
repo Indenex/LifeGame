@@ -141,6 +141,21 @@ namespace LifeGame.Shared
                 Seconds = 3, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.2f,
             },
 
+            // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
+            // little stick rack to dry into leather (see Leather.cs).
+            new ProcessDef
+            {
+                Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
+            },
+            new ProcessDef
+            {
+                Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
+                Seconds = 6, Outcome = Outcome.Placed,
+            },
+
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
             new ProcessDef
