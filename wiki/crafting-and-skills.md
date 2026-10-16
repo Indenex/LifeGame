@@ -1,7 +1,7 @@
 # Crafting and skills
 
 ## Crafting
-Open the crafting panel with C. It lists what you can make, grouped in tiers. The first tier uses bare hands and found materials. Each tool you make unlocks more recipes; a sharp stone edge, for example, does things your hands cannot.
+Open the crafting panel with C. It lists what you can make, grouped in tiers. The first tier uses bare hands and found materials. Each tool you make unlocks more recipes; a sharp stone edge, for example, does things your hands cannot. With the right tool you can chop logs from trees; a tree falls after a few logs and grows back in time.
 
 Some crafts are minigames, such as knapping stone and shaping clay. Your result depends on how well you play them. Press Esc to quit a minigame.
 
@@ -14,7 +14,7 @@ Every craft trains a skill. Higher skill gives better results and faster work. F
 - **Master rank** skips crafting minigames and gives a steady result. Hold Ctrl when starting a craft to play the minigame anyway, for a chance at a better result.
 
 ## The journal
-Press J to open the journal. It records the materials you have found and the processes you know.
+Press J to open the journal. It records the materials you have found and the processes you know. Each process you know has a one-line reminder of how to do it again.
 
 You can also learn a process from other players: by watching them do it, or by reading a note they have left on the ground (Use to read).
 

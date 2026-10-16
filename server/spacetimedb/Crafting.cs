@@ -101,6 +101,8 @@ public static partial class Module
 
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
             throw new Exception("You need the right tool");
+        // Find the fire's spot before anything is used up, in case there is none.
+        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
@@ -123,8 +125,10 @@ public static partial class Module
         QualityCapFor(ctx, player.PlayerId, def.Id, ref cap);
         bool failed = score < def.FailBelow;
 
-        // A fire is lit, or a placed thing set down, a step in front of the crafter.
+        // A placed thing is set down a step in front of the crafter; a fire goes on
+        // clear ground near there, or into a cold hearth within reach (Hearths.cs).
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
+        if (fireSpot is { } spot) (fx, fz) = spot;
         // Roasting goes over a fire already burning within reach.
         if (def.Outcome == Outcome.Roast)
         {
@@ -206,7 +210,7 @@ public static partial class Module
         ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
     }
 
-    // Clears away fires that have burned out.
+    // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
     [SpacetimeDB.Reducer]
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
@@ -216,7 +220,9 @@ public static partial class Module
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
+                LeaveColdHearth(ctx, fire);
             }
+        ClearOldHearths(ctx);
     }
 
     // How warm a spot is from nearby burning fires, 0 (none) to 1 (right beside
@@ -240,6 +246,7 @@ public static partial class Module
 
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {
+        RekindleAt(ctx, x, z);
         ctx.Db.Fire.Insert(new Fire
         {
             Id = 0,
