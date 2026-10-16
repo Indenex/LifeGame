@@ -417,3 +417,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-101 — 2026-10-16 — Stamina shown as a bar; running is free; food unchanged
 **Decision:** Stamina shows as a small bar under your character, only while not full. Running costs no food or water. Food values stay: berries 12% each, roast mutton 40%, burnt 10%. Stamina duration and refill are set from researched "carrot on a stick" progression curves (see `docs/PROGRESSION.md`, being written), which all lanes then use as the base for number suggestions.
 **Who:** Justin ("Small bar under your character"; the PM had recommended an arc by the rings. "No"; "Keep as is". Stamina: "Research common logarithms for fun/invested 'carrot on a stick' values and use them for suggestion bases.")
+
+## D-102 — 2026-10-16 — Scribe lane keeps the decision log
+**Decision:** A Sonnet Scribe lane (session_01He77u9z8pt5DtP7it3NMAQ) records Justin's decisions in `DECISIONS.md` and applies the `STATUS.md` changes the PM sends, merging its own docs-only PRs. The PM keeps asking Justin and relaying decisions to the lanes.
+**Who:** Justin ("pass decision logging work off to a dedicated sonnet worker, and keep my questions coming")
