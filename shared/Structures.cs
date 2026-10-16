@@ -97,6 +97,24 @@ namespace LifeGame.Shared
                 Station = StationKind.Table,
                 Stages = new[] { "Table" },
             },
+            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
+            new StructureShape
+            {
+                Name = "Spindle station",
+                HalfWidth = 0.6f, HalfDepth = 0.4f,
+                Clearance = 1.0f,
+                Station = StationKind.Spindle,
+                Stages = new[] { "Distaff stand" },
+            },
+            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
+            new StructureShape
+            {
+                Name = "Leather drying rack",
+                HalfWidth = 1.2f, HalfDepth = 0.35f,
+                Clearance = 1.0f,
+                Station = StationKind.DryingRack,
+                Stages = new[] { "Posts and bar" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -148,6 +166,16 @@ namespace LifeGame.Shared
             new[]
             {
                 new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+            },
+            // Spindle station: your drop spindle becomes part of it (Q10 a, pending Justin)
+            new[]
+            {
+                new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
+            },
+            // Leather drying rack
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
             },
         };
 

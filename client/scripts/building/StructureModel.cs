@@ -39,7 +39,7 @@ public static partial class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => CraftingTableModel.Pieces(), _ => LeanTo() };
+        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => CraftingTableModel.Pieces(), 7 => StationModels.Spindle(), 8 => StationModels.DryingRack(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }
