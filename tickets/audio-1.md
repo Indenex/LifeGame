@@ -1,8 +1,8 @@
 # audio-1: Take over audio; finish work sounds
 Lane: Audio
-Owner: Audio session (Opus)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Owner: Audio session (session_01LeXCWTFVBQcCNVEDdhPek3, Opus)
+Status: in_progress
+Branch: claude/audio-1-work-sounds (continues claude/atmosphere-12-work-sounds 9965c81, merged with main 1ade969; stacked on #66)
 PR: (once opened)
 
 ## Goal
@@ -10,9 +10,10 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-079).
+- 2026-10-16 17:30: Audio session started. Took atmosphere-12 at 9965c81 (its ticket state carries over: CraftWork table, WorkVoice, others at 0.4 gain; crafting-12 declares the OnCraftStarted/OnCraftEnded hooks). Branched claude/audio-1-work-sounds, merged main 1ade969. Asked Atmosphere to stop committing to atmosphere-12 and confirm its final sha.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Get the atmosphere-12 branch and ticket from the Atmosphere lane, build it, and continue its Next step.
+Install dotnet 8 + SpacetimeDB 2.12.0, build server and client, then raise the work-sound levels (Justin found the first clip quiet) and re-render via SoundPreview.
