@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-14-weather-ahead
-PR: (none yet)
+PR: #217
 
 ## Goal
 Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you see coming (atmosphere-14), then the cosy night (atmosphere-15). Rain curtains hanging under distant clouds, the sky darkening on the side a storm comes from before it arrives, and a soft rainbow opposite a low sun when rain clears. Mostly the sky shader and Rain.cs; cheap. Done: Render lane shots of a storm approaching, rain in the distance seen from a dry spot, and a rainbow after rain; a PR green. Pair with Environment (D-078) where a change crosses both lanes. Sounds for it go to the Audio lane as requests (D-079).
