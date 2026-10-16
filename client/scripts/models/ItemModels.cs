@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Godot;
 using LifeGame.Shared;
@@ -153,7 +154,16 @@ public static class ItemModels
     static readonly Color TunicWool = new(0.78f, 0.74f, 0.64f);
     static readonly Color Bone = new(0.92f, 0.88f, 0.80f);
 
-    static (Action<Kit>? Build, bool Upright) Recipe(Item item) => item switch
+    // The bow and arrow (animals-15) wait for Crafting's Item ids; until then
+    // BowItem / ArrowItem name them, and ArrowFlight is the shot in the air.
+    public static Item? BowItem, ArrowItem;
+
+    static (Action<Kit>? Build, bool Upright) Recipe(Item item) =>
+        BowItem.HasValue && item == BowItem.Value ? (Bow, false)
+        : ArrowItem.HasValue && item == ArrowItem.Value ? (Arrow, false)
+        : KnownRecipe(item);
+
+    static (Action<Kit>? Build, bool Upright) KnownRecipe(Item item) => item switch
     {
         Item.Stick => (Stick, false),
         Item.Stone => (Stone, true),
@@ -484,6 +494,68 @@ public static class ItemModels
         k.Plain.Paint(new Color(0.78f, 0.72f, 0.60f)).Tube(new[] { new Vector3(0, 0.0f, 0.02f), new Vector3(0.0f, -0.05f, 0.13f) }, 0.012f, 4, 0.004f);
         k.Plain.Tube(new[] { new Vector3(0.005f, -0.2f, 0.035f), new Vector3(0.01f, -0.24f, 0.14f) }, 0.011f, 4, 0.004f);
         k.Plain.Tube(new[] { new Vector3(0.02f, -0.52f, 0.08f), new Vector3(0.025f, -0.6f, 0.04f) }, 0.009f, 4, 0.003f);
+    }
+
+    // A crude self bow: one stave of wood, thick at the grip and tapering to each
+    // tip, bent back by a twisted cord; a wrap of cord at the grip. Held frame:
+    // the grip at the origin, the stave along Y, the back of the bow toward +Z
+    // (the target), the string behind it toward -Z (the archer).
+    static void Bow(Kit k)
+    {
+        const float half = 0.62f, bend = 0.13f;
+        var stave = new Vector3[13];
+        for (int i = 0; i < stave.Length; i++)
+        {
+            float t = i / (stave.Length - 1f) * 2f - 1f;
+            stave[i] = new Vector3(0, t * half, -bend * t * t);
+        }
+        // Thick in the middle, thin at the tips: two tubes from the grip outward.
+        k.Wood.Paint(BarkLight.Lightened(0.1f)).Tube(stave[6..], 0.02f, 6, 0.009f);
+        k.Wood.Paint(BarkLight.Lightened(0.1f)).Tube(stave[..7].Reverse().ToArray(), 0.02f, 6, 0.009f);
+        k.Plant.Paint(Cord).Tube(new[] { stave[0], stave[^1] }, 0.003f, 3);
+        k.Plant.Paint(Cord, 0.9f).Tube(MeshKit.Circle(new Vector3(0, -0.05f, 0), Vector3.Up, 0.023f, 30, 4f, 0.1f), 0.004f, 4);
+        foreach (var tip in new[] { stave[0], stave[^1] })
+            k.Plant.Paint(Cord, 0.85f).Tube(MeshKit.Circle(tip - Vector3.Up * Mathf.Sign(tip.Y) * 0.025f, Vector3.Up, 0.012f, 12, 2f, 0.015f), 0.003f, 3);
+    }
+
+    // A crude arrow: a straight shaft, a knapped flint point bound on with cord,
+    // and three split feathers at the nock. Held frame: grip at the middle, the
+    // point toward -Y.
+    static void Arrow(Kit k) => ArrowParts(k, new Vector3(0, 0.36f, 0), new Vector3(0, -0.36f, 0));
+
+    static void ArrowParts(Kit k, Vector3 nock, Vector3 point)
+    {
+        var dir = (point - nock).Normalized();
+        k.Wood.Paint(Whittled).Tube(new[] { nock, point - dir * 0.04f }, 0.006f, 5);
+        var (side, front) = MeshKit.Frame(dir);
+        k.Stone.Paint(Flint).Loft(point - dir * 0.05f, point + dir * 0.03f, new MeshKit.Ring[]
+        {
+            new(0f, 0.005f, 0.012f), new(0.3f, 0.007f, 0.018f), new(1f, 0.001f, 0.002f),
+        }, 4, 0.2f, 0f);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(point - dir * 0.06f, dir, 0.008f, 12, 3f, 0.02f), 0.002f, 3);
+        for (int i = 0; i < 3; i++)
+        {
+            float a = i * Mathf.Tau / 3f;
+            var outward = side * Mathf.Cos(a) + front * Mathf.Sin(a);
+            var root = nock + dir * 0.02f;
+            k.Plant.Paint(i == 0 ? new Color(0.30f, 0.26f, 0.22f) : new Color(0.82f, 0.78f, 0.70f))
+                .Blade(root + outward * 0.006f, root + dir * 0.13f + outward * 0.006f, outward.Cross(dir), 0.028f, 0.0f);
+        }
+    }
+
+    // The arrow as it flies: point toward +Z, origin at its middle, plain shaded.
+    public static Mesh ArrowFlight => arrowFlight ??= BuildArrowFlight();
+    static Mesh? arrowFlight;
+
+    static Mesh BuildArrowFlight()
+    {
+        var kit = new Kit(PlayerModel.Style.Flat, Transform3D.Identity);
+        ArrowParts(kit, new Vector3(0, 0, -0.36f), new Vector3(0, 0, 0.36f));
+        EnsureMaterials();
+        var mesh = new ArrayMesh();
+        foreach (var k in new[] { kit.Wood, kit.Stone, kit.Plant, kit.Plain })
+            if (!k.Empty) k.Commit(mesh, plain!);
+        return mesh;
     }
 
     // A wool tunic folded in a square, its cord belt coiled on top.

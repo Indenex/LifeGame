@@ -25,6 +25,7 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-17 01:15: Justin (via Environment, env-5): landmarks placed many times must look different each time. PropMeshes now has seeded shape variants: `Outcrop(int)` x6 (3 to 5 layers, dip and direction, size, step-back, split block, fallen blocks, moss ledges), `RiverStone(int)` x6 (round, long, wedge, split pair, notched, domed), `Birch(int)`, `Heather(int)`, `Gorse(int)` x3 each; counts in `PropMeshes.*Variants`; any int wraps. Showcase `env --variants` shows them all.
 - 2026-10-17 01:30: Environment asked for more variants: `Rock(int)` x4 (worn lumps, tall split stone, low slab, cracked round stone, all ~1 m with moss) and `FallenLog(int)` x2 (straight with splintered end; uprooted, broken in two with a forked crown). Trunk and Stump stay single (Environment varies them by scale, lean, tint).
 - 2026-10-17 01:40: #197 merged (green on d4640a5, run 38959597611). Merged main into claude/model-2-env; build and smoke renders (items, deer, cooking, env, stations) fine. Opening the follow-up PR.
+- 2026-10-17 01:55: Animals (animals-15, Justin picked the standard bow): crude self bow and arrow in ItemModels (ground, icon, held) plus `ItemModels.ArrowFlight` (point +Z, origin mid-shaft). Crafting owns the ids; until they exist, `ItemModels.BowItem` / `ArrowItem` name them (set them, or I add switch arms when the ids reach main). Showcase `held` shows them.
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.

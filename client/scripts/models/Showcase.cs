@@ -146,7 +146,10 @@ public partial class Showcase : Node3D
     // The player figure holding tools in its right hand, arm raised a little.
     void HeldTools()
     {
-        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.Basket };
+        // Stand-in ids for the bow and arrow until Crafting's reach main.
+        ItemModels.BowItem ??= (LifeGame.Shared.Item)9001;
+        ItemModels.ArrowItem ??= (LifeGame.Shared.Item)9002;
+        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, ItemModels.BowItem.Value, ItemModels.ArrowItem.Value, LifeGame.Shared.Item.Basket };
         for (int i = 0; i < tools.Length; i++)
         {
             var figure = PlayerModel.Build();
@@ -158,6 +161,10 @@ public partial class Showcase : Node3D
             var hand = figure.FindChild("ToolR", true, false);
             hand.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(tools[i]) });
         }
+        // An arrow in flight, and the bow and arrow lying on the grass.
+        AddChild(new MeshInstance3D { Mesh = ItemModels.ArrowFlight, Position = new Vector3(0.6f, 1.6f, 0.8f), Rotation = new Vector3(0, -1.2f, 0) });
+        AddChild(new MeshInstance3D { Mesh = ItemModels.GroundMesh(ItemModels.BowItem.Value)!, Position = new Vector3(-0.6f, 0, 1.3f), Rotation = new Vector3(0, 0.3f, 0) });
+        AddChild(new MeshInstance3D { Mesh = ItemModels.GroundMesh(ItemModels.ArrowItem.Value)!, Position = new Vector3(0.6f, 0, 1.4f), Rotation = new Vector3(0, -0.4f, 0) });
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
