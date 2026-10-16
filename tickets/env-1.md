@@ -11,10 +11,12 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-078).
 - 2026-10-16 17:30: Environment session (session_012hVejTxLoxBpZyX3GQmNL9) started on `claude/environment-env-1` (harness assigned none).
+- 2026-10-16 17:40: Render requested 1ade969 (baseline: spawn, pond at (-28,0), dense forest (-46,-46), overhead; noon and dusk). Directions sent to PM. Atmosphere messaged.
 - 2026-10-16 17:35: read the world code. Findings: `shared/World.cs` gives height (`BaseHeight`, two value-noise octaves) and clay; `client/scripts/Terrain.cs` plants everything per 1 m cell in `AddVegetation`: trees by `roll < 0.03 + 0.10*Noise(24,33)` (even-ish scatter, no clusters), a 12 m bare spawn clearing, rare boulders (0.6%), a grass tuft on nearly every dry tile, nothing at water edges. Trees and boulders are client-only visuals; the server does not know them (gatherable sticks/stones/clay are server items, untouched). Atmosphere's `Woodedness()` in `client/scripts/atmosphere/Atmosphere.cs` copies the forest density formula for ambience: any density change must keep both in sync, so plan a shared `ForestDensity(x, z)` both call.
 
 ## Open questions / blockers
-- (none)
+- Sent to PM 2026-10-16 for Justin: scope of the pass. A (recommended, default) groves and glades, visual only; B dress today's layout only; C A plus reshaped land (more ponds, stream) needing a world wipe. Working on A.
+- Sent to Atmosphere 2026-10-16: working agreement (I stay out of `Look.cs`/atmosphere files; wind global shader param; shared `Forest.Density` replacing their `Woodedness` copy; I do shore only, not water surface; canopy tint split). Awaiting reply.
 
 ## Next step
-Read `client/scripts/Terrain.cs`, `shared/World.cs` and how trees/resources are placed; ask the Render lane for current shots of spawn, a clearing and a pond; send the PM 2 to 3 directions as options.
+Build direction A: add `client/scripts/environment/Forest.cs` (deterministic grove/glade density) and switch `Terrain.AddVegetation` tree placement to it; then undergrowth, logs, rocks, reeds.
