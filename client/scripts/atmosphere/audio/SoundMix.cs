@@ -5,6 +5,9 @@ namespace LifeGame;
 
 public enum Ground { Grass, Earth, Water, Clay, Floor }
 
+// What your hands are doing, for the work sounds (SoundMix.Working).
+public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
+
 // The whole soundscape, synthesized as it plays: wind, rain, birds by day,
 // crickets and owls by night, footsteps, and a slow generative score in a
 // forest-sized reverb. Plain C# with no engine types, so tools/SoundPreview can
@@ -45,6 +48,7 @@ public sealed class SoundMix
     readonly WaterVoice water;
     readonly Frogs frogs;
     readonly Steps steps;
+    readonly WorkVoice work;
     readonly Sheep sheep;
     readonly Music music;
     readonly Reverb reverb;
@@ -71,6 +75,7 @@ public sealed class SoundMix
         water = new WaterVoice(rate, rng);
         frogs = new Frogs(rate, rng);
         steps = new Steps(rate, noise, rng);
+        work = new WorkVoice(rate, noise, rng);
         sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
@@ -81,6 +86,27 @@ public sealed class SoundMix
     public float Gust => wind.Gust;
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+
+    // The work in your hands: its sound runs until Working(Work.None). WorkDone
+    // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
+    public void Working(Work kind) => work.Set(kind);
+    public void WorkDone(Work kind, bool failed) => work.Done(kind, failed);
+
+    // Which sound a craft process makes, from its id ("knap.flake" -> Knap).
+    public static Work WorkFor(string processId) => processId switch
+    {
+        "hide.scrape" => Work.Rasp,
+        _ => processId.Split('.')[0] switch
+        {
+            "knap" => Work.Knap,
+            "fire" => Work.Drill,
+            "cord" or "weave" or "gather" => Work.Fibre,
+            "lash" or "haft" or "hide" => Work.Lash,
+            "clay" => Work.Clay,
+            "carve" => Work.Carve,
+            _ => Work.None,
+        },
+    };
 
     // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
     // gain from distance, startled when the flock bolts.
@@ -134,8 +160,9 @@ public sealed class SoundMix
 
         rain.Render(left, right, count, Rain, Wetness, Cover);
 
-        // Footsteps sit a little above whatever surrounds them: soft on a still
-        // dawn, firmer in a storm, never louder than they need to be.
+        // Footsteps and the work in your hands sit a little above whatever
+        // surrounds them: soft on a still dawn, firmer in a storm, never louder
+        // than they need to be.
         double power = 0;
         for (int i = 0; i < count; i++) power += left[i] * left[i] + right[i] * right[i];
         float rms = (float)Math.Sqrt(power / (2.0 * count));
@@ -144,6 +171,7 @@ public sealed class SoundMix
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
         steps.Render(stepL, stepR, count);
+        work.Render(stepL, stepR, count);
         for (int i = 0; i < count; i++)
         {
             left[i] += stepL[i] * stepGain;
@@ -1037,6 +1065,255 @@ public sealed class SoundMix
                     step.Age += dt;
                 }
                 if (step.Age > 0.4f) active.RemoveAt(k);
+            }
+        }
+    }
+
+    // --- Work -------------------------------------------------------------------
+
+    // The sound of your own hands at work while a craft runs: stone clicking on
+    // stone, a drill whirring into a hiss of smoke, fibres rustling, cord creaking
+    // tight, wet pats of clay, a scraper rasping on hide, shavings curling off wood.
+    // It ends in a soft thunk when the work comes good, a dull snap when it fails,
+    // and a breath of flame when a drill's ember catches.
+    sealed class WorkVoice
+    {
+        readonly int rate;
+        readonly Noise noise;
+        readonly Random rng;
+        readonly List<Hit> hits = new();
+        Work kind, sounding;
+        float level, time, nextHit, strokePhase;
+        BandPass friction, hiss;
+        Lowpass smokeLow;
+
+        enum HitKind { Knap, Flake, Pat, Rustle, Creak, Shave, Thunk, Snap, Ember }
+
+        sealed class Hit
+        {
+            public HitKind Kind;
+            public float Age, Delay, Gain, Pitch, Pan, Length, Phase, Phase2, Pulse;
+            public BandPass Band;
+            public Lowpass Low;
+        }
+
+        public WorkVoice(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        public void Set(Work work)
+        {
+            if (work == kind) return;
+            kind = work;
+            if (work == Work.None) return;
+            sounding = work;
+            time = 0f;
+            nextHit = Range(rng, 0.05f, 0.2f);
+        }
+
+        public void Done(Work work, bool failed)
+        {
+            if (work == Work.None) return;
+            if (failed) Add(HitKind.Snap, 0f, 1f);
+            else if (work == Work.Drill) Add(HitKind.Ember, 0f, 1f);
+            else Add(HitKind.Thunk, 0f, 1f);
+        }
+
+        void Add(HitKind k, float delay, float gain)
+        {
+            if (hits.Count > 12) hits.RemoveAt(0);
+            hits.Add(new Hit
+            {
+                Kind = k,
+                Delay = delay,
+                Gain = gain * Range(rng, 0.8f, 1.15f),
+                Pitch = Range(rng, 0.88f, 1.12f),
+                Pan = Range(rng, -0.15f, 0.15f),
+                Length = k == HitKind.Creak ? Range(rng, 0.15f, 0.3f) : k == HitKind.Ember ? 0.9f : 0.5f,
+            });
+        }
+
+        // The next stroke of whatever is being worked, and how long until the one after.
+        float Schedule()
+        {
+            switch (kind)
+            {
+                case Work.Knap:
+                    Add(HitKind.Knap, 0f, 1f);
+                    if (rng.NextDouble() < 0.35) Add(HitKind.Flake, Range(rng, 0.07f, 0.16f), 1f);
+                    return Range(rng, 0.7f, 1.3f);
+                case Work.Clay:
+                    Add(HitKind.Pat, 0f, 1f);
+                    return Range(rng, 0.42f, 0.8f);
+                case Work.Fibre:
+                    Add(HitKind.Rustle, 0f, 1f);
+                    return Range(rng, 0.22f, 0.55f);
+                case Work.Lash:
+                    if (rng.NextDouble() < 0.45) Add(HitKind.Creak, 0f, 1f);
+                    else Add(HitKind.Rustle, 0f, 0.7f);
+                    return Range(rng, 0.35f, 0.8f);
+                case Work.Carve:
+                    Add(HitKind.Shave, 0f, 1f);
+                    return Range(rng, 0.5f, 0.9f);
+                default:
+                    return 1f;
+            }
+        }
+
+        public void Render(float[] l, float[] r, int n)
+        {
+            float dt = 1f / rate;
+            float fade = 1f - MathF.Exp(-dt / 0.08f);
+            float smoke = Lowpass.Coef(2500f, rate);
+            for (int i = 0; i < n; i++)
+            {
+                level += fade * ((kind != Work.None ? 1f : 0f) - level);
+                if (kind != Work.None)
+                {
+                    time += dt;
+                    nextHit -= dt;
+                    if (nextHit <= 0f) nextHit = Schedule();
+                }
+                if (level < 0.0005f) continue;
+                float s = 0f;
+                if (sounding == Work.Drill)
+                {
+                    // A shaft twirled back and forth: friction rises and falls with
+                    // its speed, and a hiss of smoke grows as the hearth heats up.
+                    strokePhase += 2f * MathF.PI * 2.3f * dt;
+                    float speed = MathF.Abs(MathF.Sin(strokePhase));
+                    float x = noise.Next();
+                    float f = friction.Process(x, 600f + 900f * speed, 0.5f, rate);
+                    float heat = Math.Min(1f, time / 3f);
+                    float h = x - smokeLow.Process(x, smoke);
+                    s += f * MathF.Pow(speed, 0.8f) * (0.16f + 0.06f * heat) + h * heat * speed * 0.025f;
+                }
+                else if (sounding == Work.Rasp)
+                {
+                    // A scraper drawn over a hide: strokes forward, a lift back.
+                    strokePhase += 2f * MathF.PI * 1.1f * dt;
+                    float stroke = MathF.Pow(MathF.Max(0f, MathF.Sin(strokePhase)), 1.5f);
+                    float x = noise.Next();
+                    float b = hiss.Process(x, 1700f + 700f * stroke, 0.55f, rate);
+                    s += b * stroke * (0.65f + 0.35f * MathF.Sin(2f * MathF.PI * 37f * time)) * 0.2f;
+                }
+                s *= level;
+                l[i] += s * 0.707f;
+                r[i] += s * 0.707f;
+            }
+
+            for (int k = hits.Count - 1; k >= 0; k--)
+            {
+                var hit = hits[k];
+                float pl = Pan(hit.Pan, true), pr = Pan(hit.Pan, false);
+                for (int i = 0; i < n; i++)
+                {
+                    if (hit.Delay > 0f)
+                    {
+                        hit.Delay -= dt;
+                        continue;
+                    }
+                    float t = hit.Age, x = noise.Next(), s = 0f;
+                    float attack = Math.Min(1f, t / 0.002f);
+                    switch (hit.Kind)
+                    {
+                        case HitKind.Knap:
+                        {
+                            // A hard click, the core ringing high for a moment, a knock underneath.
+                            float click = (x - hit.Low.Process(x, 0.35f)) * MathF.Exp(-t / 0.003f);
+                            hit.Phase += 2f * MathF.PI * 2400f * hit.Pitch * dt;
+                            hit.Phase2 += 2f * MathF.PI * 3650f * hit.Pitch * dt;
+                            float ring = (MathF.Sin(hit.Phase) + 0.6f * MathF.Sin(hit.Phase2)) * MathF.Exp(-t / 0.022f);
+                            float knock = hit.Band.Process(x, 320f * hit.Pitch, 0.4f, rate) * MathF.Exp(-t / 0.02f);
+                            s = (click * 0.5f + ring * 0.07f + knock * 0.5f) * attack;
+                            break;
+                        }
+                        case HitKind.Flake:
+                        {
+                            // A chip skittering away.
+                            hit.Phase += 2f * MathF.PI * 4800f * hit.Pitch * dt;
+                            s = MathF.Sin(hit.Phase) * MathF.Exp(-t / 0.008f) * 0.05f * attack;
+                            break;
+                        }
+                        case HitKind.Pat:
+                        {
+                            // Palm on wet clay: a soft slap, a body thump and a little squelch.
+                            float slap = hit.Low.Process(x, 0.08f) * MathF.Exp(-t / 0.03f);
+                            hit.Phase += 2f * MathF.PI * 95f * hit.Pitch * dt;
+                            float thump = MathF.Sin(hit.Phase) * MathF.Exp(-t / 0.04f);
+                            float sq = hit.Band.Process(x, Math.Max(450f, (1400f - 9000f * t) * hit.Pitch), 0.25f, rate) * MathF.Exp(-t / 0.05f);
+                            s = (slap * 0.9f + thump * 0.18f + sq * 0.07f) * Math.Min(1f, t / 0.004f);
+                            break;
+                        }
+                        case HitKind.Rustle:
+                        {
+                            // Fibres drawn through the fingers: a swell and a fall.
+                            float env = Math.Min(1f, t / 0.03f) * MathF.Exp(-MathF.Max(0f, t - 0.03f) / 0.1f);
+                            s = hit.Band.Process(x, 3400f * hit.Pitch, 1.1f, rate) * env * 0.1f;
+                            break;
+                        }
+                        case HitKind.Creak:
+                        {
+                            // Cord pulled tight: a slow train of tiny clicks through a woody
+                            // resonance, speeding up as the knot bites.
+                            hit.Pulse += (70f + 80f * t / hit.Length) * hit.Pitch * dt;
+                            float impulse = 0f;
+                            if (hit.Pulse >= 1f)
+                            {
+                                hit.Pulse -= 1f;
+                                impulse = 1f;
+                            }
+                            float body = hit.Band.Process(impulse + 0.05f * x, 850f * hit.Pitch, 0.12f, rate);
+                            float env = t < hit.Length ? MathF.Sin(MathF.PI * t / hit.Length) : 0f;
+                            s = body * env * 0.5f;
+                            break;
+                        }
+                        case HitKind.Shave:
+                        {
+                            // A blade lifting a curl of wood: a tick, then a falling scrape.
+                            float tick = (x - hit.Low.Process(x, 0.3f)) * MathF.Exp(-t / 0.002f);
+                            float env = Math.Min(1f, t / 0.01f) * MathF.Exp(-MathF.Max(0f, t - 0.01f) / 0.08f);
+                            float b = hit.Band.Process(x, (4200f - 20000f * Math.Min(t, 0.13f)) * hit.Pitch, 0.7f, rate);
+                            s = tick * 0.15f + b * env * 0.16f;
+                            break;
+                        }
+                        case HitKind.Thunk:
+                        {
+                            // Set down, done.
+                            hit.Phase += 2f * MathF.PI * 120f * dt;
+                            float body = MathF.Sin(hit.Phase) * MathF.Exp(-t / 0.06f);
+                            float click = hit.Low.Process(x, 0.25f) * MathF.Exp(-t / 0.008f);
+                            s = (body * 0.22f + click * 0.3f) * attack;
+                            break;
+                        }
+                        case HitKind.Snap:
+                        {
+                            // It cracked wrong: a sharp snap, a short crack and a dull drop.
+                            float snap = (x - hit.Low.Process(x, 0.3f)) * MathF.Exp(-t / 0.006f);
+                            float crack = hit.Band.Process(x, 1200f, 0.35f, rate) * MathF.Exp(-t / 0.04f);
+                            hit.Phase += 2f * MathF.PI * 70f * dt;
+                            float drop = t > 0.06f ? MathF.Sin(hit.Phase) * MathF.Exp(-(t - 0.06f) / 0.1f) : 0f;
+                            s = (snap * 0.4f + crack * 0.25f + drop * 0.16f) * attack;
+                            break;
+                        }
+                        case HitKind.Ember:
+                        {
+                            // The ember catches in the tinder: a soft breath of flame.
+                            float swell = Math.Min(1f, t / 0.25f) * MathF.Exp(-MathF.Max(0f, t - 0.25f) / 0.25f);
+                            float low = hit.Low.Process(x, Lowpass.Coef(300f + 1500f * Math.Min(1f, t / 0.3f), rate));
+                            s = low * swell * 0.55f;
+                            break;
+                        }
+                    }
+                    s *= hit.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    hit.Age += dt;
+                }
+                if (hit.Age > hit.Length) hits.RemoveAt(k);
             }
         }
     }

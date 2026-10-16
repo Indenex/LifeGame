@@ -165,6 +165,7 @@ public partial class Atmosphere : Node3D
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
+        WorkSounds.Connect(conn, sound);
     }
 
     void OnClock(WorldClock c)

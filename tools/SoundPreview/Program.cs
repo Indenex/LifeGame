@@ -12,6 +12,9 @@
 // on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
+// Work scenes stand still on a calm morning and work for all but the last second:
+// knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
+// (knap-fail).
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -51,6 +54,15 @@ foreach (var scene in scenes)
         "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
+    string name = parts[0].Replace("-fail", "");
+    var work = SoundMix.WorkFor(name switch
+    {
+        "knap" => "knap.flake", "drill" => "fire.hand_drill", "fibre" => "cord.twist", "lash" => "lash.spear",
+        "pat" => "clay.brick", "rasp" => "hide.scrape", "carve" => "carve.digging_stick", _ => "",
+    });
+    if (work != Work.None) (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
+    mix.Working(work);
+    bool workEnded = false;
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
     int total = (int)(seconds * rate), done = 0;
@@ -74,7 +86,13 @@ foreach (var scene in scenes)
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && t < seconds / 2;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && work == Work.None && t < seconds / 2;
+        if (work != Work.None && !workEnded && t >= seconds - 1)
+        {
+            mix.Working(Work.None);
+            mix.WorkDone(work, parts[0].EndsWith("-fail"));
+            workEnded = true;
+        }
         if (walks && t >= nextStep)
         {
             mix.Step(ground, ground == Ground.Floor ? 0f : mix.Wetness);
