@@ -161,7 +161,8 @@ public static partial class Module
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
         // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        var stickTool = BestTool(ctx, ItemTags.Digging);
+        bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
@@ -182,6 +183,7 @@ public static partial class Module
         if (World.IsClay(cellX, cellZ))
             GiveDugClay(ctx, player, depth);
 
+        if (stickTool is { } digger) WearTool(ctx, digger);
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -195,7 +197,7 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
+        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
     }
 
@@ -211,6 +213,7 @@ public static partial class Module
             Id = 0,
             Item = item,
             Quality = quality,
+            Wear = stack.Wear,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -285,20 +288,53 @@ public static partial class Module
     static float SecondsBetween(Timestamp a, Timestamp b) =>
         (b.MicrosecondsSinceUnixEpoch - a.MicrosecondsSinceUnixEpoch) / 1_000_000f;
 
+    // The stack of this item and quality to move or use. Tools of the same quality can
+    // differ in wear (shared/Durability.cs); the most worn goes first, so a player
+    // never loses their best tool by dropping, storing or trading "a stone axe".
     static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
+        InventoryItem? found = null;
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
-            if (row.Quality == quality)
+            if (row.Quality == quality && (found is null || Durability.Used(row.Wear) > Durability.Used(found.Value.Wear)))
+                found = row;
+        return found;
+    }
+
+    static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality, uint wear)
+    {
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality && row.Wear == wear)
                 return row;
         return null;
     }
 
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality)
+    // How many of an item and quality are carried, whatever their wear.
+    static uint CarriedCount(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
-        if (FindStack(ctx, owner, item, quality) is { } stack)
+        uint n = 0;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality) n += row.Count;
+        return n;
+    }
+
+    // Moves carried items from one player to another, the most worn first, wear and all.
+    static void MoveCarried(ReducerContext ctx, Identity from, Identity to, Item item, byte quality, uint count)
+    {
+        while (count > 0 && FindStack(ctx, from, item, quality) is { } stack)
+        {
+            uint n = Math.Min(count, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            AddToInventory(ctx, to, item, n, quality, stack.Wear);
+            count -= n;
+        }
+    }
+
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0)
+    {
+        if (FindStack(ctx, owner, item, quality, wear) is { } stack)
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count + count });
         else
-            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count });
+            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count, Wear = wear });
     }
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)

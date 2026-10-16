@@ -61,6 +61,8 @@ public static partial class Module
         public ushort Item;
         public byte Quality;
         public uint Count;
+        [Default(0u)]
+        public uint Wear;
     }
 
     // Owners and members see their claims' stashes; nobody else does.
@@ -361,10 +363,10 @@ public static partial class Module
         var claim = RequireStashAccess(ctx, claimId);
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
-        if (FindStash(ctx, claim.Id, item, quality) is { } row)
+        if (FindStash(ctx, claim.Id, item, quality, stack.Wear) is { } row)
             ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + 1 });
         else
-            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = 1 });
+            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = 1, Wear = stack.Wear });
         LogStash(ctx, claim.Id, item, 1);
     }
 
@@ -377,7 +379,7 @@ public static partial class Module
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         else
             ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - 1 });
-        AddToInventory(ctx, ctx.Sender, (Item)item, 1, quality);
+        AddToInventory(ctx, ctx.Sender, (Item)item, 1, quality, row.Wear);
         LogStash(ctx, claim.Id, item, -1);
     }
 
@@ -420,7 +422,7 @@ public static partial class Module
                 float angle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
                 float r = 0.4f + (float)ctx.Rng.NextDouble() * 1.2f;
                 float x = claim.X + MathF.Cos(angle) * r, z = claim.Z + MathF.Sin(angle) * r;
-                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
+                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
             }
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         }
@@ -476,10 +478,20 @@ public static partial class Module
             throw new Exception("Walk up to the marker first");
     }
 
+    // The stash row of this item and quality; the most worn first, as FindStack does.
     static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality)
     {
+        ClaimStash? found = null;
         foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
-            if (row.Quality == quality)
+            if (row.Quality == quality && (found is null || Durability.Used(row.Wear) > Durability.Used(found.Value.Wear)))
+                found = row;
+        return found;
+    }
+
+    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear)
+    {
+        foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
+            if (row.Quality == quality && row.Wear == wear)
                 return row;
         return null;
     }

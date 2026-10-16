@@ -18,7 +18,8 @@ WL = -1.0  # World.WaterLevel
 RiverSpacing = 300.0
 
 def river(x, z):
-    warp = (VN(x, z, 120, 71) - 0.5) * 70 + (VN(x, z, 40, 74) - 0.5) * 18
+    warp = (VN(x, z, 120, 71) - 0.5) * 70 + (VN(x, z, 40, 74) - 0.5) * 18 \
+        + (VN(x + 2741, z - 5167, 22, 77) - 0.5) * 18 + (VN(x - 6211, z + 3343, 11, 78) - 0.5) * 3
     return x + 66 + warp  # the first stream passes about 66 m west of spawn
 
 def river_distance(x, z):
@@ -35,7 +36,8 @@ def land(x, z):
     # channel ~3 m wide is cut to a fixed bed below water.
     meters = river_distance(x, z)
     valley = 1 - ss(4, 26, meters)
-    bed = 1 - ss(1.0, 6.0, meters)
+    width = 0.85 + 0.5 * VN(x + 3907, z - 1613, 30, 76)
+    bed = 1 - ss(1.0 * width, 6.0 * width, meters)
     h = hills * (1 - 0.85 * valley) - 0.55 * 0.85 * valley
     h = h * (1 - bed) + (WL - 0.22) * bed  # wadeable, see Land.cs
     # Ponds: round hollows filled to a fixed depth, in a wider dip so banks slope

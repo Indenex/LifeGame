@@ -89,6 +89,14 @@ public static partial class Module
         public float Z;
         public int ChunkX;
         public int ChunkZ;
+        // Tool wear (shared/Durability.cs); 0 for anything that does not wear.
+        [Default(0u)]
+        public uint Wear;
+        // Set down on purpose with PlaceItem (crafting-21): it keeps the way it was turned.
+        [Default(false)]
+        public bool Placed;
+        [Default(0f)]
+        public float Yaw;
     }
 
     // What each player carries: one stack per item and quality.
@@ -104,6 +112,9 @@ public static partial class Module
         public ushort Item;
         public byte Quality;
         public uint Count;
+        // Tool wear (shared/Durability.cs). Worn and fresh tools are separate stacks.
+        [Default(0u)]
+        public uint Wear;
     }
 
     // Clients read their own inventory through this view; the table itself is private.

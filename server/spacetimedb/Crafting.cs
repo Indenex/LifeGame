@@ -102,7 +102,7 @@ public static partial class Module
         score = Math.Clamp(score, 0f, 1f);
 
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
-            throw new Exception("You need the right tool");
+            throw new Exception(NoToolMessage(ctx, def.NeedsTool, "You need the right tool"));
         // Station crafts are made at a finished station in a claim (Stations.cs).
         Structure? station = null;
         if (def.Station != StationKind.None)
@@ -160,9 +160,12 @@ public static partial class Module
             seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
-        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
-            && Items.Def((Item)tool.Item).HasQuality)
-            seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
+        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool)
+        {
+            if (Items.Def((Item)tool.Item).HasQuality)
+                seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
+            WearTool(ctx, tool);
+        }
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
@@ -331,13 +334,16 @@ public static partial class Module
         return sum;
     }
 
-    // The best carried item with all of these properties.
+    // The best carried item with all of these properties that still works. A spent tool
+    // is skipped (shared/Durability.cs); between equals the more worn one goes first.
     static InventoryItem? BestTool(ReducerContext ctx, ItemTags tags)
     {
         InventoryItem? best = null;
         foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
             if (Items.IsKnown(row.Item) && (Items.Def((Item)row.Item).Tags & tags) == tags
-                && (best is null || row.Quality > best.Value.Quality))
+                && !(Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
+                && (best is null || row.Quality > best.Value.Quality
+                    || (row.Quality == best.Value.Quality && Durability.Used(row.Wear) > Durability.Used(best.Value.Wear))))
                 best = row;
         return best;
     }

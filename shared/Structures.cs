@@ -27,6 +27,8 @@ namespace LifeGame.Shared
         // A straight run along the local X axis (FenceHalfLength each side) that people
         // and animals can't step across. A gate is a fence whose middle opens like a door.
         public bool Fence, Gate;
+        // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
+        public bool Indoor;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         public string[] Stages = Array.Empty<string>();
@@ -60,6 +62,7 @@ namespace LifeGame.Shared
                 Name = "Claim marker",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
+                Solid = true,
                 Stages = new[] { "Marker post" },
             },
             new StructureShape
@@ -133,6 +136,25 @@ namespace LifeGame.Shared
                 Station = StationKind.Table,
                 Stages = new[] { "Table" },
             },
+            // A raised hearth inside a hut or house: a ring of stones with a clay surround.
+            // A fire on it burns longer per stick and warms a whole hut (building-9, D-132).
+            new StructureShape
+            {
+                Name = "Raised hearth",
+                Round = true, Radius = HearthRadius, Solid = true,
+                Clearance = 0.6f,
+                Indoor = true,
+                Stages = new[] { "Stone ring", "Clay surround" },
+            },
+            // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
+            new StructureShape
+            {
+                Name = "Repair table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Repair,
+                Stages = new[] { "Table" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -202,6 +224,17 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
+            // Raised hearth: Stone ring, Clay surround
+            new[]
+            {
+                new[] { (Item.Stone, 4u) },
+                new[] { (Item.Daub, 3u) },
+            },
+            // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -259,7 +292,15 @@ namespace LifeGame.Shared
         // Half a fence length; fences meet end to end every 2 m.
         public const float FenceHalfLength = 1.0f;
 
+        // A raised hearth's ring, and how much longer fuel lasts on it (D-132).
+        public const float HearthRadius = 0.45f, HearthFuelScale = 1.5f;
+        // How far inside a home's walls a hearth's middle must be.
+        public const float HearthWallGap = 0.6f;
+
         public static bool IsFence(int kind) => Shape(kind).Fence;
+        public static bool IsIndoor(int kind) => Shape(kind).Indoor;
+        // Huts and houses (the kinds with a doorway): where indoor things like a hearth may go.
+        public static bool IsHome(int kind) => HasDoorway(kind);
         public static bool IsGate(int kind) => Shape(kind).Gate;
 
         public static string StageProcess(int kind, int stage) => kind switch
@@ -273,6 +314,8 @@ namespace LifeGame.Shared
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
+            // Hearth: laying the stone ring is framing; the clay surround is daub work.
+            _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             // Each crafting station reports its own id, so the journal knows it is built.
             _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
@@ -365,6 +408,8 @@ namespace LifeGame.Shared
             float min = Shape(kindA).Clearance + Shape(kindB).Clearance;
             // Fences join end to end and at corners; only stop two on the same spot.
             if (IsFence(kindA) && IsFence(kindB)) min = FenceHalfLength * 0.5f;
+            // A hearth goes inside a home; PlaceStructure keeps it within the walls instead.
+            if (IsIndoor(kindA) && IsHome(kindB) || IsIndoor(kindB) && IsHome(kindA)) return false;
             float dx = ax - bx, dz = az - bz;
             return dx * dx + dz * dz < min * min;
         }

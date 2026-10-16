@@ -33,6 +33,8 @@ public static partial class Module
         public ushort Item;
         public byte Quality;
         public uint Count;
+        [Default(0u)]
+        public uint Wear;
     }
 
     // Weaves a door into a finished clay hut's doorway from carried sticks and fiber.
@@ -66,6 +68,12 @@ public static partial class Module
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
         if (door.Locked && !CanLock(ctx, s, door))
             throw new Exception(Structures.IsGate((int)s.Kind) ? "The gate is barred" : "The door is barred");
+        if (Structures.IsGate((int)s.Kind))
+        {
+            bool allowed = true;
+            GateOpenHook(ctx, s, ref allowed);
+            if (!allowed) throw new Exception("Only the claim's members can open this gate");
+        }
         // Opening a locked door unbars it; it stays unbarred until someone locks it again.
         ctx.Db.StructureDoor.StructureId.Update(door with { Closed = !door.Closed, Locked = false });
         TouchStructure(ctx, structureId);
@@ -84,8 +92,14 @@ public static partial class Module
         TouchStructure(ctx, structureId);
     }
 
+    // Claims implements this for gates on a claim's fence line (claims-12): set allowed
+    // to false to keep a non-member from opening or shutting the gate.
+    static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed);
+
     static bool CanLock(ReducerContext ctx, Structure s, StructureDoor door)
     {
+        // Claim gates are members only (D-160); outside a claim, whoever hung the gate keeps the right.
+        if (Structures.IsGate((int)s.Kind) && ClaimAt(ctx, s.X, s.Z) is { } gateClaim) return HasClaimRights(ctx, gateClaim, ctx.Sender);
         if (door.HungBy == ctx.Sender) return true;
         return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
     }
@@ -97,19 +111,24 @@ public static partial class Module
         var (s, _) = RequireFinishedInReach(ctx, structureId);
         if (!Structures.IsStore((int)s.Kind))
             throw new Exception("You can't store things in that");
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
-        count = Math.Min(count, stack.Count);
-        if (count == 0) return;
+        count = Math.Min(count, CarriedCount(ctx, ctx.Sender, (Item)item, quality));
+        if (count == 0) throw new Exception("You are not carrying that");
 
-        var inside = ctx.Db.BasketItem.StructureId.Filter(structureId).ToList();
-        var same = inside.Where(b => b.Item == item && b.Quality == quality).Select(b => (BasketItem?)b).FirstOrDefault();
-        if (same is { } match)
-            ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + count });
-        else if (inside.Count >= Structures.StoreStacksFor((int)s.Kind, ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? Items.RawQuality))
-            throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
-        else
-            ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = count });
-        RemoveFromStack(ctx, stack, count);
+        // Worn tools go in first, one wear level at a time (shared/Durability.cs).
+        while (count > 0 && FindStack(ctx, ctx.Sender, (Item)item, quality) is { } stack)
+        {
+            uint n = Math.Min(count, stack.Count);
+            var inside = ctx.Db.BasketItem.StructureId.Filter(structureId).ToList();
+            var same = inside.Where(b => b.Item == item && b.Quality == quality && b.Wear == stack.Wear).Select(b => (BasketItem?)b).FirstOrDefault();
+            if (same is { } match)
+                ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + n });
+            else if (inside.Count >= Structures.StoreStacksFor((int)s.Kind, ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? Items.RawQuality))
+                throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
+            else
+                ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = n, Wear = stack.Wear });
+            RemoveFromStack(ctx, stack, n);
+            count -= n;
+        }
         TouchStructure(ctx, structureId);
     }
 
@@ -124,7 +143,7 @@ public static partial class Module
         if (count == 0) return;
         if (count == row.Count) ctx.Db.BasketItem.Id.Delete(row.Id);
         else ctx.Db.BasketItem.Id.Update(row with { Count = row.Count - count });
-        AddToInventory(ctx, ctx.Sender, (Item)row.Item, count, row.Quality);
+        AddToInventory(ctx, ctx.Sender, (Item)row.Item, count, row.Quality, row.Wear);
         TouchStructure(ctx, s.Id);
     }
 
@@ -160,6 +179,7 @@ public static partial class Module
                     Id = 0,
                     Item = row.Item,
                     Quality = row.Quality,
+                    Wear = row.Wear,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),

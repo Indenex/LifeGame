@@ -612,7 +612,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("Hearths only", as recommended), applying D-148
 
 ## D-150 — 2026-10-16 — First-time tips
-**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with E (was G, changed by D-188). (3) Your claim keeps what you build; press B. (4) The crafting table: press E at it (was G, changed by D-188).
 **Who:** Justin ("All four", as recommended)
 
 ## D-151 — 2026-10-16 — Log cabin
@@ -779,3 +779,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
 **Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
 **Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
+
+## D-192 — 2026-10-16 — Jump details (extends D-190)
+**Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
+**Who:** Justin (as relayed by the PM)
+
+## D-193 — 2026-10-16 — Other players see your jump
+**Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
+**Who:** Justin ("Yes, pose and sound")
+
+## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
+**Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
+**Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
+
+## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
+**Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
+**Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")

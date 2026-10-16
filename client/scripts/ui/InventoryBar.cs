@@ -30,6 +30,8 @@ public partial class InventoryBar : Control
     Dictionary<string, uint> last = new();
     float sinceChange = IdleAfter, nameTime, alpha = 1f, cover;
     int nameAt = -1;
+    // When item sounds may start; set on the first update after login.
+    double quietUntil = -1;
 
     // How far above the bottom edge the row reaches; notes sit above it.
     public float Top => Size.Y - row.Position.Y;
@@ -51,6 +53,11 @@ public partial class InventoryBar : Control
     {
         var now = items.GroupBy(i => i.Label).ToDictionary(g => g.Key, g => (uint)g.Sum(i => i.Count));
         var gained = items.LastOrDefault(i => !last.TryGetValue(i.Label, out var before) || i.Count > before);
+        // A soft pickup sound for every item gained (Audio, audio-3). The rows that arrive
+        // at login come one by one over a moment, so the first two seconds stay quiet.
+        double now0 = Time.GetTicksMsec() / 1000.0;
+        if (quietUntil < 0) quietUntil = now0 + 2.0;
+        if (gained != null && now0 > quietUntil) Sfx.Play(Cue.Pickup);
         bool changed = now.Count != last.Count || now.Any(kv => !last.TryGetValue(kv.Key, out var c) || c != kv.Value);
         last = now;
 

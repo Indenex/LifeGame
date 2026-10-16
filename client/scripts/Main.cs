@@ -111,6 +111,8 @@ public partial class Main : Node3D
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
+        // The crit cue over an animal (HitPop.Show, called by Animals).
+        AddChild(new HitPop());
         // First-evening tips for a brand-new player (ui-14, M2).
         AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
@@ -464,8 +466,8 @@ public partial class Main : Node3D
         // Stacks whose qualities share a grade read the same, so they show as one slot.
         var stacks = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
-            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n), n); })
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : "", Worn: ItemLook.Condition(i.Item, i.Quality, i.Wear)))
+            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n, g.Key.Worn), n); })
             .ToList();
         hud.SetItems(stacks);
     }
@@ -475,7 +477,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.Has(item.Id)) return;
-        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
@@ -541,6 +543,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         var pos = building.Collide(me.Position, me.Position + velocity * dt);
+        pos = terrain.CollideVegetation(pos);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);
