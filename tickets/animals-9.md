@@ -1,7 +1,7 @@
-# animals-9: Clothing from wool cloth and leather
+# animals-9: Wool tunic (follows #90 and the Spindle station)
 Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
-Status: in_progress
+Status: blocked
 Branch: claude/animals-clothing-5gkntn (stacked on claude/animals-wool-cloth-5gkntn / PR #90; merge main in after #90 merges)
 PR: (to open after #90 merges)
 
@@ -20,6 +20,7 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 ## Progress log
 - 2026-10-16 17:30: questions Q3-Q5 and the hook asks sent to the PM; started.
 - 2026-10-16 19:10: D-074/D-075 relayed. Reworked to worn slots: worn_item table, my_worn, Wear/TakeOff, BeforeDeathDrop; numbers lowered to 0.08/0.03 with quality share. Local bot test: carried clothes change nothing; wearing the q35 tunic gives x0.9356 (matches), + wraps x0.9115, a stick is refused, taking the tunic off goes back to wraps only. Upgrade check passed.
+- 2026-10-16 21:15: D-128: the leather foot wraps and the worn-slots server side shipped separately as animals-12 (PR #149, claude/animals-wraps-5gkntn, from main). This branch now only adds the wool tunic on top; after #149 merges, merge main in (take #149's Clothing.cs/Survival.cs, re-add the tunic row to Clothing.All and WoolTunic 200 to Items.cs).
 - 2026-10-16 20:45: D-100 applied (0.10 / 0.04). Journal 'Things to try' lines sent to Skills.
 - 2026-10-16 20:10: Modeling added ground/icon/held models for spindle, yarn, cloth (claude/model-1-style 8502136, ItemModels.cs); leather and scraped hide already done. Fixes the default lump UX saw in the panel shots once Modeling merges.
 - 2026-10-16 19:55: merged main cc75409 (#75 in): the insulation factor now sits on the wetness cold line `... * Chill(ctx, v.Wetness)`. Server + client build, ClothCheck passes (same ratios, death drop), upgrade check passed.
@@ -35,4 +36,4 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 - Survival's #75 reworks the cold line: after it merges, merge main in and re-apply `* (1f - Math.Clamp(insulation, 0f, 1f))` on the new `cold` line only.
 
 ## Next step
-After #90 merges, merge main in, open the animals-9 PR and send its number to UX (session_01V6qgbNbvTwniqW946KACLr).
+After #149 merges, merge main into this branch and keep only the tunic; ship it with #90 once the Spindle station exists (D-120).
