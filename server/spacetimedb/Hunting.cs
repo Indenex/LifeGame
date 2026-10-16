@@ -184,9 +184,10 @@ public static partial class Module
             ctx.Db.AnimalCarcass.Id.Delete(c.Id);
     }
 
-    // A flock below its size gains a lamb about once a day, born beside one of the
-    // adults. Lambs need two grown animals; a flock down to one or none instead gets
-    // a stray adult wandering in, so the meadows never empty for good.
+    // A flock below its size gains lambs in spring only (D-135), at most two a
+    // spring, born beside one of the adults. Lambs need two grown animals; a flock
+    // down to one or none instead gets a stray adult wandering in about once a day,
+    // whatever the season, so the meadows never empty for good.
     // Returns true when the flock changed and should think next tick.
     static bool FlockRegrow(ReducerContext ctx, Flock flock, System.Collections.Generic.List<FlockMember> members, long now)
     {
@@ -196,19 +197,27 @@ public static partial class Module
             ctx.Db.Flock.FlockId.Update(flock with { Size = (byte)Math.Max(members.Count, 2) });
             return true;
         }
-        if (members.Count >= flock.Size || now - flock.LastBirthAt < BirthEveryMicros) return false;
+        if (members.Count >= flock.Size) return false;
 
         var adults = members.Where(m => m.Body.Growth >= 100).ToList();
         if (adults.Count >= 2)
         {
+            if (SeasonNow(ctx).Season != Season.Spring || now - flock.LastBirthAt < LambGapMicros(ctx)) return false;
             var mother = adults[ctx.Rng.Next(0, adults.Count)].Body;
             SpawnAnimal(ctx, flock, mother.X + 0.6f, mother.Z + 0.4f, false, LambGrowth, now, mother.Id);
         }
         else
+        {
+            if (now - flock.LastBirthAt < BirthEveryMicros) return false;
             SpawnAnimal(ctx, flock, flock.HomeX, flock.HomeZ, !members.Any(m => m.Mind.Leader), 100, now);
+        }
         ctx.Db.Flock.FlockId.Update(flock with { LastBirthAt = now });
         return true;
     }
+
+    // Two lambs fit in one spring: the gap is a little under half a season.
+    static long LambGapMicros(ReducerContext ctx) =>
+        ctx.Db.SeasonClock.Id.Find(0) is { } clock ? (long)(YearMicros(ctx, clock) / 4.0 * 0.45) : BirthEveryMicros / 2;
 
     // Lambs grow in steps of 5 (so they aren't resent every tick). A wound heals a
     // point a tick, starting 10 s after the last strike if the animal isn't running.

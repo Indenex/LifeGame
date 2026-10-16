@@ -17,6 +17,7 @@ public partial class Atmosphere
     static readonly StringName NSeasonAutumn = "season_autumn";
     static readonly StringName NSnowCover = "snow_cover";
     static readonly StringName NSnowing = "snowing";
+    static readonly StringName NSeasonYear = "season_year";
 
     long yearStartMicros;
     float daysPerSeason = Seasons.DaysPerSeason;
@@ -87,6 +88,7 @@ public partial class Atmosphere
         RenderingServer.GlobalShaderParameterSet(NSeasonAutumn, Seasons.Autumn(Year));
         RenderingServer.GlobalShaderParameterSet(NSnowCover, snowCover);
         RenderingServer.GlobalShaderParameterSet(NSnowing, snow);
+        RenderingServer.GlobalShaderParameterSet(NSeasonYear, Year);
         // Snow drifts down pale and slow, lit like the air around it.
         snowfall.Follow(focus, snow, windNow, air.Lerp(new Color(0.95f, 0.96f, 1f), 0.6f));
     }
