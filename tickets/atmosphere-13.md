@@ -3,7 +3,7 @@ Lane: World atmosphere and sound (visual side; audio moved to the Audio lane, D-
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-13-forest-light (stacked on claude/atmosphere-sound-hlqfke / #66)
-PR: (after #66)
+PR: #136 (draft until the shots are in)
 
 ## Goal
 Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings and evenings in the woods get visible sun shafts slanting between the trunks and dappled light on the ground, strongest at low sun on fair days, gone under overcast or rain. Built on the volumetric fog Main.cs already enables (Forward+): fog density and anisotropy rise at low sun in wooded places (Atmosphere.Woodedness), with the sun's volumetric energy following. Compatibility has no volumetric fog, so it gets a cheap fallback (a few soft additive light-shaft cards toward the sun near the player) or nothing, decided by cost. Paired with Environment (D-078), whose tree density shapes the shafts. Done means Render lane shots of the same woods spot at dawn, mid-morning, noon and evening, fair and overcast, plus a PR green after #66.
@@ -19,8 +19,10 @@ Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings a
 
 - 2026-10-16 17:46: #66 approved by Justin (D-083); CI green on 7bf58e8 (https://github.com/Indenex/LifeGame/actions/runs/38940107818); PM merges. Not pushing more to that branch (its atmosphere-11 ticket gets this note once merged, from this branch).
 
+- 2026-10-16 18:32: #66 merged; merged main (incl. Environment's #113 Forest.Density in Woodedness), builds clean. Opened draft PR #136.
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
 ## Next step
-Wait for the Render lane's dc26f57 shots; tune the shaft numbers from them; then decide the Compatibility fallback.
+Wait for #136 CI and the Render lane's dc26f57 shots; tune shaft numbers, then mark #136 ready and send the PM the green sha.
