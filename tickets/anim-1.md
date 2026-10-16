@@ -15,8 +15,11 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 - 2026-10-16 17:55: 94e645a: Avatar.cs now builds the figure as named joint pivots (thigh/shin/foot, upper arm/forearm/hand, spine, neck, head) and `client/scripts/animation/PlayerRig.cs` + `PlayerAnimator.cs` pose it procedurally: idle (breathing, weight shifting foot to foot with a relaxed knee, glancing around) and walk (stride length from speed, knee fold, heel-toe, hip drop/sway/twist, chest counter-twist, arm swing, lean into turns), blended by speed; stroll-to-brisk gait by speed. Remote players drive it from their smoothed position. No allocations per frame; hidden avatars skip it. Client builds locally.
 - Render requested 94e645a.
 
+- 2026-10-16 18:10: 6c06fec: sneak crouch (knees bent with feet planted, chest forward, head up, hands ready), added over idle and walk. Local player: Shift. Other players: inferred when they keep moving at about sneak speed for 0.4 s (server has no sneak flag), so a remote sneaker stands up when they stop.
+
 ## Open questions / blockers
 - Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
+- Sent PM 2026-10-16: (a) walk speed 4.2 m/s is jogging pace, animated as a brisk walk-jog (default) vs slow walk to ~3 m/s; (b) sync a sneak flag for other players (default: infer from speed).
 
 ## Next step
-Wait for Render clips of the idle/walk; meanwhile add sneak (crouched walk) driven by speed.
+Wait for Render clips; meanwhile build work poses (gather/pick up first) driven by the player's CraftJob/process id.
