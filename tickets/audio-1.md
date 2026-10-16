@@ -16,6 +16,7 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 18:00: levels. Measured (SoundPreview, no music): calm bed -41.5 rms; work rose only 0 to 5 dB over it, music about 11 dB above work, so work was nearly lost. Changes: work gets its own bus, WorkGain = 0.55 + 5 x ambience (was StepGain, 0.2 on a calm bed), per-kind trims (drill friction down 3.5 dB, pat 0.6, creak 2, lash rustle 1.3, shave 1.25), master Volume 1.3 -> 1.7 (+2.3 dB). Now: bed -39.7, loudest 50 ms of each work -30.4 to -27.6 dBFS, storm peak -4.9 dBFS. New SoundPreview scene `still`. Wrote audio/AUDIO.md (requests + mix table). Client and SoundPreview build locally.
 - 2026-10-16 18:05: Render requested b7fde7a (SoundPreview still, each craft, knap-fail, others, midday with music). Asked PM for Justin: own work vs music, A level with music (default, in use) / B under / C over.
 - 2026-10-16 18:10: Render delivered the old af3bd67 clip to the PM (renders/audio/atmosphere-12-af3bd67-work-sounds.mp3 on claude/render-1-013qe8, -38 to -40 dBFS rms). Told the PM it is superseded by the b7fde7a clip.
+- 2026-10-16 18:15: Render delivered b7fde7a clip to the PM: renders/audio/audio-1-b7fde7a-work-sounds.mp3 on claude/render-1-013qe8 (87 s, peak -9.7 dBFS; crafts -25 to -28 rms, knap -30.9). Knap's lower rms is intended: sparse clicks every 0.7-1.3 s; its loudest 50 ms (-28.8) matches the others.
 
 ## Open questions / blockers
 - Justin: own work level vs music, A level (default) / B under / C over. Sent to PM 18:05.
