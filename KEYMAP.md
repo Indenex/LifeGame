@@ -26,7 +26,6 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
-| P | Set down something you made (a pot, bricks): opens a ghost from the bag. Out of F1 until crafting-20 lands | UX/UI | new, ui-16 (crafting-20) |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
@@ -40,7 +39,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
-| Placing a made thing (ui-16) | Click, Enter or G sets it down; T / Shift+T turn; Tab next thing; P or Esc puts it back |
+| Placing a made thing (ui-16, D-187) | Drag it out of the bag onto the ground; let go (or click) to set it down; T / Shift+T or the scroll wheel turn it; Tab next thing; Esc or dropping it back on the bag puts it back. After a craft, Use (E) offers "Place the ..." for a few seconds |
 | Trade window (ui-9) | Click something you carry to offer one, Shift+click all; click your offer to take one back; Esc calls the trade off. When asked: G says yes, Esc says no |
 
 

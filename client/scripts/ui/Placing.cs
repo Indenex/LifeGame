@@ -50,12 +50,14 @@ public sealed class MockPlaceLink : IPlaceLink
     public void PretendCrafted() => Crafted?.Invoke(bag[0].thing);
 }
 
-// Setting crafted things down (crafting-20, D-?): right after a placeable craft the G
-// prompt offers "Place the coil pot" for a while, and the Place key (P) takes the first
-// placeable thing in the bag (Tab cycles). Both open the same ghost: the item's own
-// model, see-through and pale green like Building's placement ghost, amber where it
-// can't go. T and Shift+T turn it, click, Enter or G sets it down, and Esc puts it back.
-// Main sets the scene references and Note.
+// Setting crafted things down (crafting-20, D-187). Two ways in, both opening the same
+// ghost: drag a made thing out of the bag row onto the ground (Justin: "drag and drop
+// it out of your inventory, and the ghost placement can lock onto your cursor"), or,
+// right after a placeable craft, the Use prompt offers "Place the coil pot" for a few
+// seconds. The ghost is the item's own model, see-through and pale green like
+// Building's placement ghost, amber where it can't go, and follows the cursor on the
+// ground within reach. Release (or click) sets it down; T, Shift+T or the scroll wheel
+// turn it; Esc, or dropping it back on the bag, puts it back. Main sets the references.
 public partial class Placing : Node
 {
     public IPlaceLink Link = new MockPlaceLink();
@@ -65,7 +67,7 @@ public partial class Placing : Node
     public SubViewport View = null!;
     public Action<string> Note = _ => { };
 
-    static readonly StringName NPlace = "place_item", NUse = "use", NRotate = "build_rotate", NNext = "build_next";
+    static readonly StringName NUse = "use", NRotate = "build_rotate", NNext = "build_next";
     const float Reach = 3f, OfferFor = 10f;
     static readonly Color Fits = new(0.85f, 1f, 0.8f, 0.38f), Blocked = new(1f, 0.6f, 0.5f, 0.3f);
 
@@ -79,7 +81,8 @@ public partial class Placing : Node
     Placeable? offer;
     float offerLeft;
     Label hint = null!;
-    bool hinted;
+    // True from a drag out of the bag until the mouse is released.
+    bool dragging;
 
     readonly StandardMaterial3D ghostMaterial = new()
     {
@@ -96,6 +99,13 @@ public partial class Placing : Node
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-place"))) Link = new MockPlaceLink(filled: true);
         Attach(Link);
         Use.Register(new UseHandler { Id = "ui.place", Priority = 90, Find = FindUse });
+        InventoryBar.CanDrag = item => Link.InBag().Any(p => p.Item == item);
+        InventoryBar.DraggedOut += item =>
+        {
+            if (Active || Panels.Open() || Link.InBag().FirstOrDefault(p => p.Item == item) is not { } t) return;
+            Start(t);
+            dragging = true;
+        };
 
         // One quiet line where the G prompt sits, while placing.
         var layer = new CanvasLayer { Layer = 2 };
@@ -148,6 +158,7 @@ public partial class Placing : Node
     void Stop()
     {
         thing = null;
+        dragging = false;
         ghost?.QueueFree();
         ghost = null;
         hint.Visible = false;
@@ -161,25 +172,32 @@ public partial class Placing : Node
         Stop();
     }
 
+    // The mouse while placing goes here first: a drag out of the bag keeps the mouse on
+    // its slot, so the release and the wheel must be caught before the GUI sees them.
+    public override void _Input(InputEvent e)
+    {
+        if (!Active || e is not InputEventMouseButton b) return;
+        if (b.ButtonIndex == MouseButton.Left && !b.Pressed && dragging)
+        {
+            dragging = false;
+            if (InventoryBar.RowRect.HasPoint(b.Position)) Stop();
+            else SetDown();
+        }
+        else if (b.ButtonIndex == MouseButton.Left && b.Pressed && !dragging) SetDown();
+        else if (b.Pressed && b.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
+            yawTarget += Mathf.Pi / 8f * (b.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
+        else return;
+        GetViewport().SetInputAsHandled();
+    }
+
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!Active)
-        {
-            if (InputMap.HasAction(NPlace) && e.IsActionPressed(NPlace) && !e.IsEcho() && !Panels.Open())
-            {
-                if (Link.InBag().FirstOrDefault() is { } first) Start(first);
-                else Note("You carry nothing to set down");
-                GetViewport().SetInputAsHandled();
-            }
-            return;
-        }
+        if (!Active) return;
         bool handled = true;
         if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape }) Stop();
-        else if (e.IsActionPressed(NUse) || e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Enter or Key.KpEnter }
-                 || e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) SetDown();
+        else if (e.IsActionPressed(NUse) || e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Enter or Key.KpEnter }) SetDown();
         else if (e.IsActionPressed(NRotate)) yawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
         else if (e.IsActionPressed(NNext)) Next();
-        else if (e.IsActionPressed(NPlace)) Stop();
         else handled = false;
         if (handled) GetViewport().SetInputAsHandled();
     }
@@ -195,12 +213,6 @@ public partial class Placing : Node
     {
         float dt = (float)delta;
         offerLeft -= dt;
-        // The first time you carry something to set down, the one-time hint teaches P.
-        if (!hinted && !Active && Link.InBag().Any())
-        {
-            hinted = true;
-            Hints.Request(NPlace);
-        }
         if (thing is not { } t || ghost == null) return;
         // Put back when it's gone from the bag (traded, dropped) or a panel opens.
         if (!Link.InBag().Contains(t) || Panels.Open()) { Stop(); return; }
@@ -212,6 +224,8 @@ public partial class Placing : Node
         ghostPos = ghostPos.Lerp(target, 1f - Mathf.Exp(-14f * dt));
         yaw = Mathf.LerpAngle(yaw, yawTarget, 1f - Mathf.Exp(-12f * dt));
         ghost.Position = new Vector3(ghostPos.X, Terrain.HeightAt(ghostPos.X, ghostPos.Z), ghostPos.Z);
+        // Over the bag row it would go back, so the ghost hides.
+        ghost.Visible = !InventoryBar.RowRect.HasPoint(GetViewport().GetMousePosition());
         ghost.Rotation = new Vector3(0, yaw, 0);
 
         problem = Link.Fits(t, ghostPos.X, ghostPos.Z, yawTarget);
@@ -222,9 +236,10 @@ public partial class Placing : Node
     void UpdateHint()
     {
         if (thing is not { } t) return;
-        string use = Controls.KeyFor("use") ?? "G";
         string more = Link.InBag().Count() > 1 ? "    Tab next" : "";
-        hint.Text = problem ?? $"{Capital(Name(t))}: click or {use} sets it down    T turns{more}    Esc puts it back";
+        hint.Text = problem ?? (dragging
+            ? $"{Capital(Name(t))}: let go to set it down    T or the wheel turns it    drop it on your bag to put it back"
+            : $"{Capital(Name(t))}: click to set it down    T or the wheel turns it{more}    Esc puts it back");
     }
 
     Vector3? PointUnderMouse()

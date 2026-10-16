@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -13,6 +14,13 @@ public record InventoryEntry(Item Item, string Label, uint Count);
 // gain or use something; a newly gained item's name floats up and fades.
 public partial class InventoryBar : Control
 {
+    // Dragging a made thing out of the bag sets it down in the world (ui-16, D-187).
+    // Placing says which items can be dragged and is told when a drag leaves a slot.
+    public static Func<Item, bool> CanDrag = _ => false;
+    public static event Action<Item>? DraggedOut;
+    // Where the row is on screen, so dropping a thing back on it puts it away.
+    public static Rect2 RowRect { get; private set; }
+
     const float Slot = 54f, IdleAlpha = 0.45f, IdleAfter = 6f;
     // Kept clear on each side: the needs rings bottom right, the hint line bottom left.
     const float SideRoom = 430f, MinScale = 0.8f, Gap = 14f;
@@ -78,6 +86,7 @@ public partial class InventoryBar : Control
         // Steps aside while a panel covers the world.
         cover = Mathf.MoveToward(cover, Panels.Open() ? 1f : 0f, dt * 6f);
         row.Modulate = new Color(1, 1, 1, alpha * (1f - cover));
+        RowRect = row.GetGlobalRect();
         nameTime -= dt;
         name.Modulate = new Color(1, 1, 1, Mathf.Clamp(nameTime, 0f, 1f) * (1f - cover));
         // Centred along the bottom edge as slots come and go; the name floats above.
@@ -101,6 +110,22 @@ public partial class InventoryBar : Control
     static Control SlotFor(InventoryEntry entry)
     {
         var slot = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(Slot, Slot) };
+        if (CanDrag(entry.Item))
+        {
+            // Press on the slot and drag a little way out: the thing comes out as a ghost.
+            slot.MouseFilter = MouseFilterEnum.Stop;
+            slot.MouseDefaultCursorShape = CursorShape.Drag;
+            Vector2? down = null;
+            slot.GuiInput += e =>
+            {
+                if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } b) down = b.Pressed ? b.GlobalPosition : null;
+                else if (e is InputEventMouseMotion m && down is { } from && m.GlobalPosition.DistanceTo(from) > 10f)
+                {
+                    down = null;
+                    DraggedOut?.Invoke(entry.Item);
+                }
+            };
+        }
         var style = new StyleBoxFlat
         {
             BgColor = new Color(0.09f, 0.10f, 0.07f, 0.62f),
