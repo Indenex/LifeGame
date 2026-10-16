@@ -27,6 +27,12 @@ public partial class Hints : CanvasLayer
     public static void Done(string action) => done.Enqueue(action);
     static readonly Queue<string> done = new();
 
+    // A one-off tip that isn't about a key ("Clay dries twice as fast beside a burning
+    // fire"): queued like Request, shown once per install in the same corner.
+    public static void Tip(string id, string text) =>
+        tips.Enqueue(new Controls.Binding($"tip.{id}", System.Array.Empty<Key>(), null, text, OnRequest: true));
+    static readonly Queue<Controls.Binding> tips = new();
+
     // Keys that teach the same thing as a row with a hint: S, A or D is walking, and
     // E or a right-drag is turning the view.
     static readonly Dictionary<string, string> Teaches = new()
@@ -48,6 +54,9 @@ public partial class Hints : CanvasLayer
         panel.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         panel.GrowVertical = Control.GrowDirection.Begin;
         panel.Position = new Vector2(26, -34);
+        // Long tips wrap upward rather than run under the inventory row.
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        label.CustomMinimumSize = new Vector2(380, 0);
         panel.Modulate = new Color(1, 1, 1, 0);
         root.AddChild(panel);
     }
@@ -79,6 +88,8 @@ public partial class Hints : CanvasLayer
             showing = null;
             while (showing == null && requested.TryDequeue(out var action))
                 showing = Controls.World.FirstOrDefault(b => b.Action == action && b.Hint != null && !Seen(b));
+            while (showing == null && tips.TryDequeue(out var tip))
+                if (!Seen(tip)) showing = tip;
             showing ??= Controls.World.FirstOrDefault(b => b.Hint != null && !b.OnRequest && !Seen(b) && InputMap.HasAction(b.Action));
             if (showing != null) label.Text = showing.Hint;
             shownFor = 0f;

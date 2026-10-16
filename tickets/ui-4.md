@@ -23,6 +23,8 @@ Also carries the KEYMAP note for Survival's "drink from your pot" (priority 1) a
 
 - 2026-10-16 00:10: PM follow-up from Crafting's playtest: the pick up and make things hints now come right after walking. The crafting panel covering the rings and the Clay tier running off screen are fixed by Bug fixes' #36 (scroll container, foot kept clear of the HUD); checking with a screenshot.
 
+- 2026-10-16 00:15: Hints.Tip(id, text) for one-off tips not tied to a key (Ceramics asked for it); hint label wraps at 380 px. The tend_clay V row in Controls goes once ceramics-3 (all clay on G) is on main.
+
 ## Open questions / blockers
 - (none)
 
