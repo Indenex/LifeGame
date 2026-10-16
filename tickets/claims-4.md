@@ -1,9 +1,9 @@
 # claims-4: Add claim members by name
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
-PR: (not opened yet)
+PR: https://github.com/Indenex/LifeGame/pull/56
 
 ## Goal
 A claim owner can add a member by typing their name in the claim panel, whether that person is nearby, far away or offline. Members can already build on the claim and lock and unlock its doors (D-048). When someone is added, a calm chat line appears near the marker ("Tobin now shares Justin's land"), and the new member hears it too wherever they are. The nearby "Invite" buttons stay.
