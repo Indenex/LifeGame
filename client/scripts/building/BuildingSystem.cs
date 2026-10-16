@@ -432,6 +432,7 @@ public partial class BuildingSystem : Node
             return;
         }
         c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
+        Sfx.Play(Cue.Place);
         StopPlacing();
     }
 
