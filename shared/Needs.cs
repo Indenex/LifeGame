@@ -32,6 +32,10 @@ namespace LifeGame.Shared
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
+        // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than
+        // the same food eaten raw or roasted, and it quenches some thirst too.
+        public const float BrothFood = 0.45f, BrothWater = 0.3f;
+        public const float StewFood = 0.65f, StewWater = 0.3f;
         // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
         public const float PinchPotWater = 0.5f;
         public const float CoilPotWater = 1f;
@@ -102,16 +106,21 @@ namespace LifeGame.Shared
             Item.Berries => (BerryFood, BerryWater),
             Item.CookedMutton => (RoastMuttonFood, 0f),
             Item.BurntMutton => (BurntMuttonFood, 0f),
+            Item.PotOfBroth => (BrothFood, BrothWater),
+            Item.PotOfStew => (StewFood, StewWater),
             Item.CookedVenison => (RoastMuttonFood, 0f),
             Item.BurntVenison => (BurntMuttonFood, 0f),
             _ => (0f, 0f),
         };
 
+        // The container a food is eaten from, which goes back in your hands; null for none.
+        public static Item? EatenFrom(Item item) => item is Item.PotOfBroth or Item.PotOfStew ? Item.CoilPot : null;
+
         public static bool Edible(Item item) => Nourishment(item).food > 0f;
 
         // A cooked meal, which lets you run longer for a while (D-111). Berries and
         // burnt food don't count.
-        public static bool GoodMeal(Item item) => item is Item.CookedMutton or Item.CookedVenison;
+        public static bool GoodMeal(Item item) => item is Item.CookedMutton or Item.CookedVenison or Item.PotOfBroth or Item.PotOfStew;
 
         // Which of the foods you carry to eat at this hunger: the most filling one
         // that doesn't waste much, or else the smallest, so a roast isn't spent on a

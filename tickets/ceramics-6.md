@@ -1,7 +1,7 @@
 # ceramics-6: Storage jar
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
-Status: in_review
+Status: done
 Branch: claude/clay-ceramics-kfr4kr
 PR: #105
 
@@ -17,6 +17,7 @@ Justin sees screenshots via the Render lane: wet jar drying, the fired jar, the 
 Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed by the PM 2026-10-16 17:11). As built: 4 tempered clay, kiln only (D-076), 4 to 8 stacks by jar quality (D-093), weathers after 336 h.
 
 ## Progress log
+- 2026-10-16 19:05: PR #105 MERGED (green on c238c87, CI run https://github.com/Indenex/LifeGame/actions/runs/38948604345). Includes the #61 main merge, D-093 capacity by quality, store panel "In the jar" and stack amounts.
 - 2026-10-16: ceramics-2/3/5 closed (merged as #44); kiln blueprint (D-035) was already shipped there. Asked the PM for the next milestone with 4 options; started on the recommended one, this ticket. Toolchain (dotnet 8, spacetimedb-cli, Godot 4.6.2 mono) being installed in the container.
 - 2026-10-16: items 1-4 done in cf5cc32; server, client build. Bindings: tools/gen-bindings.sh was refused by the sandbox (its rm -rf); ran its generate line directly on a fresh clone.
 - 2026-10-16: ClayCheck --jar added (implies --kiln); --ceramics-demo=jar row (wet, leather-hard, dry, kiln-fired jar, coil pot for scale). Running ClayCheck --jar on scratch db c6jar1.
@@ -34,4 +35,4 @@ Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed
 - Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Messaged House building (session_01RrKHUxWRH973Ndnxsad9nv) 2026-10-16; they OK'd the hooks and take StructureKind 7+. When main has #61 (stage costs move to `Structures.StageCosts` in shared/Structures.cs), move the jar's row there on the main merge and drop it from Building.cs.
 
 ## Next step
-Wait for the PM to merge PR #105 (green on f9c7f56; later head commits are ticket-only). If main gets Building's #61 first, merge main and move the jar's StageCosts row into Structures.StageCosts. Then ask the PM for the next ceramics milestone.
+None; done. The lane continues in ceramics-7 (cooking pot) and ceramics-8 (Potter's bench), one PR from claude/clay-ceramics-8-kfr4kr.
