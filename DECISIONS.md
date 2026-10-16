@@ -759,3 +759,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-186 — 2026-10-16 — Hardening behind a dev flag
 **Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
 **Who:** PM (technical decision)
+
+## D-187 — 2026-10-16 — Crafted items: bag first, real-world items can be placed
+**Decision:** Finished crafts go to the bag. Real-world items (bricks and the like) also get an optional "Place it now" prompt, and can be placed from the bag with a Place key and a ghost preview. Small items such as tinder go straight to the bag. Owner: Crafting (crafting-20), with UX.
+**Who:** Justin ("when items like bricks and things are crafted, they should either go into your inventory and then allow them to be placed, or allow you to simply choose where to put them when done crafting (real world items only, things like tinder etc. just auto inventory)"), who chose "Both"
