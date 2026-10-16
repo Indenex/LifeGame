@@ -344,11 +344,21 @@ b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // A member may lay out a building on the claim.
+// The land is hilly now, so the first spot may be too steep or wet: try spots round the claim's
+// middle until the server accepts one. Any other refusal (rights, reach) still fails the check.
 float hx = claim.X + 6, hz = claim.Z + 5;
-Walk(b, hx - 2, hz);
-b.LastError = null;
-b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
-Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+for (int ring = 0, tries = 0; ring < 3 && tries < 20; ring++)
+    for (int k = 0; k < 8; k++, tries++)
+    {
+        float r = 6f + 4f * ring, ang = MathF.Tau * k / 8f + 0.6f;
+        hx = claim.X + MathF.Cos(ang) * r;
+        hz = claim.Z + MathF.Sin(ang) * r;
+        Walk(b, hx - 2, hz);
+        b.LastError = null;
+        b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
+        Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+        if (b.LastError == null || !(b.LastError.Contains("steep") || b.LastError.Contains("wet"))) { ring = 99; break; }
+    }
 var hut = b.Conn.Db.Structure.Iter().FirstOrDefault(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity);
 Check(hut != null, $"member B can lay out a building in the claim ({b.LastError ?? "ok"})");
 
