@@ -3,7 +3,7 @@ Lane: Integration
 Owner: Integration session session_01Rf5965nk4Lvd3f2QDteZSq
 Status: in_review
 Branch: claude/integration-sneak
-PR: (once opened)
+PR: #121
 
 ## Goal
 Other players see you crouch while you sneak (Animation lane, anim-1, PR #100; PM decision "sneak flag through Integration"). Server side only: a public `player_sneaking` table (one row per sneaking player, `PlayerId` primary key), a `SetSneaking(bool)` reducer the client calls only when Shift changes, the row cleared on disconnect, and `SELECT * FROM player_sneaking` in `Subscriptions.Area`. No change to `Move` or `player_pos`; new table only, so it publishes over Justin's world without a wipe. The Animation lane writes the client side in `AvatarWork.cs`.
