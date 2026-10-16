@@ -675,3 +675,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
 **Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
 **Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
+
+## D-166 — 2026-10-16 — env-5 landmarks and trails vary per instance
+**Decision:** env-5 builds landmarks and trails. A general design principle: repeated world features vary strongly per instance. If a landmark or feature appears in the world several times, each instance should look quite different (randomized a bit every time), so a player doesn't instantly recognise a pre-made, tiny-zone landmark.
+**Who:** Justin ("I don't want things like it to be repeated constantly. If they go into the world multiple times they should look quite different/randomized a bit every time, so a player doesn't instantly recognize that this is a pre-done rendered type of area/tiny zone landmark.")
+
+## D-167 — 2026-10-16 — Slower thirst at first (survival-10 spawn water)
+**Decision:** For survival-10 (spawn water), thirst falls 20% slower in the first hour.
+**Who:** Justin ("Slower thirst at first")
