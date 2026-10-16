@@ -53,7 +53,7 @@ Items stay in the owner's inventory until the swap; they are not reserved.
 | `AskTrade(uint playerId)` | anyone | creates a Trade in state Asked, with you as A | "You can't trade with yourself", "They are not here" (offline or unknown), "Step closer to trade" (> TradeReach + 1 m slack), "You are already trading", "They are busy trading" |
 | `AnswerTrade(ulong tradeId, bool accept)` | B, while Asked | accept: state Open. decline: deletes it, TradeEnded "declined" | "That trade is gone" |
 | `SetTradeItem(ulong tradeId, ushort item, byte quality, uint count)` | A or B, while Open | sets your side's count for that stack (0 removes it); clears both accepts; Version++ | "That trade is gone", "You are not carrying that many", "That's as much as a trade can hold" (more than TradeMaxStacks) |
-| `AcceptTrade(ulong tradeId, uint version)` | A or B, while Open | sets your Accept if version matches. When both have accepted: the swap (below) | "That trade is gone", "The offer changed; look again" (version mismatch), "Nothing to trade" (both sides empty) |
+| `AcceptTrade(ulong tradeId, uint version, bool accept)` | A or B, while Open | accept true: sets your Accept if version matches; when both have accepted, the swap (below). accept false: clears only your own Accept, Version unchanged (asked by ui-9) | "That trade is gone", "The offer changed; look again" (version mismatch), "Nothing to trade" (both sides empty) |
 | `CancelTrade(ulong tradeId)` | A or B, any state | deletes it, TradeEnded "cancelled" | none (no-op if gone) |
 
 The swap: in one transaction, recheck reach and that each side still carries every listed stack. If anything is short, the second Accept fails with "<Name> no longer has <item>" and nothing changes. The trade stays open, and the short side fixes it by changing their offer, which clears both accepts. Otherwise the items move, the trade and its items are deleted, TradeEnded "done" is sent, and one chat line goes to everyone nearby: "Mira and Tam trade" when both sides gave something, "Mira hands Tam a flint" when only one side did (a gift).
@@ -66,6 +66,7 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - `SocialLayer.PanelOpen` (already hooked into Main's `Panels.Open` and the PauseMenu `OthersOpen`) can include ui-9's window if UX/UI wants that.
 
 ## Progress log
+- 2026-10-16 17:35: ui-9 asked for un-accept, so AcceptTrade now takes `bool accept`. Integration set Priority 5. D-077 recorded.
 - 2026-10-16 18:50: server side built to the contract: server/spacetimedb/Trading.cs, Social trade constants, and the claims.trade G handler in SocialLayer.Trading.cs (my_trade, my_trade_items and trade_ended are subscribed there for ui-9). The one-way hand-over code is removed. Local build passes; SocialTest passes all checks (14 trade checks: reach, one at a time, decline, empty, carried only, version, both accept, gift line, change clears accepts, walking apart).
 - 2026-10-16 18:20: PM repurposed claims-7 from the one-way hand-over to the server side of trading (D-069). Wrote the contract above first. The earlier hand-over code (Giving.cs, GivePanel, SocialLayer.Giving.cs) will be replaced.
 - 2026-10-16 17:55: (one-way hand-over) built, and SocialTest passed locally. Main hook made, with Integration's OK.
@@ -73,12 +74,12 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 
 ## Decisions / defaults
 - PM defaults from D-069 are as in Goal.
-- Carry limit: survival-3's limit only slows you down; there is no hard cap. Default: a trade may overload you, as picking things up can (sent to the PM as a question).
+- D-077: a trade may overload a player; they walk slower (no hard cap).
 - Bystanders see that a trade happened, not what was traded (sent to the PM as a question).
 
 ## Open questions / blockers
-- To PM 2026-10-16: carry limit (allow overload [recommended] / refuse a trade that overloads), chat line detail (who traded only [recommended] / list the items), ask lapse 30 s.
-- To Integration 2026-10-16: does trading need a Use-on-player hook beyond `Use.Register` with a Target? (Claims' own handler works today.)
+- With Justin via PM: chat line detail (who traded only [recommended] / list the items), ask lapse 30 s.
+- (resolved) Integration: no new hook; claims.trade uses Use.Register with a Target at Priority 5.
 
 ## Next step
 When PR #71 merges: merge main in, open the claims-7 PR (server side; ui-9 builds the window on it), tell Integration and UX/UI the PR number, then send the PM the green sha.

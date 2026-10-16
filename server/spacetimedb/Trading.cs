@@ -147,11 +147,17 @@ public static partial class Module
         ctx.Db.Trade.Id.Update(trade with { AAccepted = false, BAccepted = false, Version = trade.Version + 1 });
     }
 
-    // Accept the offer as you saw it (version). Once both have, the swap happens.
+    // Accept the offer as you saw it (version); once both have, the swap happens.
+    // accept false takes back only your own Accept and leaves the version alone.
     [SpacetimeDB.Reducer]
-    public static void AcceptTrade(ReducerContext ctx, ulong tradeId, uint version)
+    public static void AcceptTrade(ReducerContext ctx, ulong tradeId, uint version, bool accept)
     {
         var trade = RequireOpenTrade(ctx, tradeId);
+        if (!accept)
+        {
+            ctx.Db.Trade.Id.Update(trade.A == ctx.Sender ? trade with { AAccepted = false } : trade with { BAccepted = false });
+            return;
+        }
         if (version != trade.Version) throw new Exception("The offer changed; look again");
         var items = ctx.Db.TradeItem.TradeId.Filter(trade.Id).ToList();
         if (items.Count == 0) throw new Exception("Nothing to trade");
