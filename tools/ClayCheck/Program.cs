@@ -132,18 +132,8 @@ Craft("clay.temper_grit", 0, Item.TemperedClay);
 Craft("clay.temper_grit", 0, Item.TemperedClay);
 if (CountOf(Item.TemperedClay) != 4) Fail($"expected 4 tempered clay, have {CountOf(Item.TemperedClay)}");
 
-// A fire near the spawn clearing, fed well enough for a firing.
-float fireX = 2f, fireZ = 2f;
-WalkTo(fireX, fireZ, 1.2f);
-Craft("gather.tinder", 0, Item.Tinder);
-int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
-Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
-Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
-KeepFireGoing();
-
-// Shape two pinch pots. They are set down at the fire's edge if shaped onto it.
+// Shape two pinch pots at the bench; they are set down beside it, on our side.
+AtBench();
 int piecesBefore = conn.Db.ClayPiece.Count;
 Craft("clay.pinch_pot", 0.9f, null);
 Craft("clay.pinch_pot", 0.9f, null);
@@ -151,6 +141,11 @@ Pump(() => conn.Db.ClayPiece.Count >= piecesBefore + 2, 5, "two pots set down to
 var pots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).ToList();
 var damp = pots[0];
 var good = pots[1];
+
+// A fire right beside the wet pots, off the bench, fed well enough for a firing.
+LightFireNear(pots.Average(p => p.X) + 1.3f, pots.Average(p => p.Z));
+Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
+KeepFireGoing();
 Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate {good.DryRate * 480:F2}x");
 if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
 
@@ -245,8 +240,8 @@ int KilnCheck()
         Craft("clay.temper_grit", 0, Item.TemperedClay);
     }
 
-    // Two pots shaped in the open, away from any fire, so picking them up doesn't fire them.
-    WalkTo(-4f, 6f, 0.5f);
+    // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
+    AtBench();
     Craft("clay.pinch_pot", 0.9f, null);
     Craft("clay.pinch_pot", 0.9f, null);
     Craft("clay.daub", 0, Item.Daub);
@@ -255,22 +250,22 @@ int KilnCheck()
     ulong jarPiece = 0;
     if (jarRun)
     {
-        WalkTo(-5.5f, 6f, 0.5f);
+        AtBench();
         Craft("clay.storage_jar", 0.9f, null);
         jarPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.StorageJar)?.Id ?? 0;
         if (jarPiece == 0) Fail("no storage jar drying");
         Log("STAGE jar-drying");
     }
 
-    // Eight bricks round a fire, where they dry twice as fast.
-    float fx = 2f, fz = 2f;
-    WalkTo(fx, fz, 1.2f);
-    Craft("gather.tinder", 0, Item.Tinder);
-    int firesBefore = conn.Db.Fire.Count;
-    Craft("fire.hand_drill", 1f, null);
-    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-    fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+    // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
+    // the fire is well clear of the pots by the bench.
+    LightFireNear(bench.X + 4f, bench.Z + 1.3f);
+    foreach (var id in kilnPots.Append(jarPiece).Where(id => id != 0))
+        if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
+            Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
+    WalkTo(fire.X, fire.Z + 1.2f, 0.2f);
+    Face(fire.X, fire.Z);
     for (int i = 0; i < 8; i++) Craft("clay.brick", 0, null);
     Log($"8 bricks drying round the fire; {CountOf(Item.Daub)} daub");
     Log("STAGE bricks");
@@ -287,8 +282,12 @@ int KilnCheck()
 
     // Lay out a kiln blueprint a few steps from the fire, door toward us, and
     // build it brick by brick.
-    WalkTo(fx + 4f, fz + 1f, 0.3f);
-    float kx = x + 1.8f, kz = z;
+    var kilnSite = FindSite(StructureKind.Kiln, fire.X + 3.5f, fire.Z, -MathF.PI / 2, (sx, sz) =>
+        DistanceTo(sx, sz, fire.X, fire.Z) >= 3f
+        && conn.Db.ClayPiece.Iter().All(p => DistanceTo(sx, sz, p.X, p.Z) >= 2.5f)
+        && InMyClaim(sx, sz, 2f) && ClearGround(sx, sz, -2, 2, -2, 2)) ?? FailAt("no ground for the kiln");
+    WalkTo(kilnSite.X - 1.8f, kilnSite.Z, 0.2f);
+    float kx = kilnSite.X, kz = kilnSite.Z;
     lastError = null;
     conn.Reducers.PlaceStructure(StructureKind.Kiln, kx, kz, MathF.Atan2(x - kx, z - kz));
     Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.Kiln && s.Owner == me), 5, "the kiln blueprint");
@@ -405,18 +404,16 @@ int PotCheck()
     Craft("clay.grit", 0, Item.Grit);
     for (int i = 0; i < 3; i++) Craft("clay.temper_grit", 0, Item.TemperedClay);
 
-    float fx = 2f, fz = 2f;
-    WalkTo(fx, fz, 1.2f);
-    Craft("gather.tinder", 0, Item.Tinder);
-    int firesBefore = conn.Db.Fire.Count;
-    Craft("fire.hand_drill", 1f, null);
-    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-    fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
-    KeepFireGoing();
+    // Shaped at the bench, then a fire lit right beside them so they dry by it.
+    AtBench();
     Craft("clay.coil_pot", 0.9f, null);
     Craft("clay.coil_pot", 0.9f, null);
-    var coils = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).Select(p => p.Id).ToList();
+    var coilPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).ToList();
+    var coils = coilPieces.Select(p => p.Id).ToList();
     if (coils.Count != 2) Fail($"expected 2 coil pots drying, have {coils.Count}");
+    LightFireNear(coilPieces.Average(p => p.X) + 1.3f, coilPieces.Average(p => p.Z));
+    if (coilPieces.Any(p => DistanceTo(p.X, p.Z, fire.X, fire.Z) > ClayRules.FireReach)) Fail("coil pot set down out of the fire's reach");
+    KeepFireGoing();
     var watch = Stopwatch.StartNew();
     while (coils.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
@@ -526,8 +523,11 @@ void JarCheck(Structure kiln)
     Log($"Fired jar at quality {jar.Quality}");
     Log("STAGE jar-fired");
 
-    WalkTo(kiln.X - 3f, kiln.Z - 3f, 0.4f);
-    float jx = x + 1.2f, jz = z;
+    var jarSite = FindSite(StructureKind.StorageJar, kiln.X, kiln.Z - 3f, 0f, (sx, sz) =>
+        DistanceTo(sx, sz, kiln.X, kiln.Z) >= 2.5f && DistanceTo(sx, sz, fire.X, fire.Z) >= 2f
+        && InMyClaim(sx, sz, 1f) && ClearGround(sx, sz, -1, 1, -1, 1)) ?? FailAt("no ground for the jar");
+    WalkTo(jarSite.X - 1.2f, jarSite.Z, 0.2f);
+    float jx = jarSite.X, jz = jarSite.Z;
     lastError = null;
     conn.Reducers.PlaceStructure(StructureKind.StorageJar, jx, jz, 0f);
     Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.StorageJar && s.Owner == me), 5, "the jar site");
