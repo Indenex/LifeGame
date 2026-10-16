@@ -25,6 +25,7 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 - 2026-10-16 21:50: Modeling's #197 (new sheep) is on main. Branch claude/anim-2-sheep: Sheep._Process only. The gait cycle now advances by distance over the legs' reach (hip height x scale; walk and bound reaches), so hooves stop skating at a trot. Turns are rate-limited to 4.5 rad/s instead of snapping, the body leans into turns with speed, and the head leads the turn. Species-neutral: leg height comes from the leg bone rest x Scale, so deer (#219, DeerHips 0.82 m) stride on their own legs. Flinch fill-in waits for #219's stub to be on main. Client builds.
 
 - 2026-10-16 22:10: docs/CONTENT.md (content is data). Branch claude/anim-2-motion-data: WorkMotion enum moved to shared/WorkMotion.cs (append-only), `ProcessDef.Motion` added; the client reads def.Motion first and falls back to the old id-prefix guess. No behaviour change. CONTENT.md Process row updated. Client and server build.
+- 2026-10-16 23:05: #274 and #302 merged. Branch claude/anim-2-clothes: everyone's clothes from worn_item (Clothing.cs, public). Subscribes `SELECT * FROM worn_item` (one line in net/Subscriptions.cs); AvatarWork re-reads a player's worn rows on every insert/delete and on their first position, and Avatar.Wear(slot, item) calls PlayerModel.Wear only when the slot changes (item 0 = leaf wrap / bare feet). Client builds.
 
 ## Open questions / blockers
 - Breath puff: single source now (Survival 19:36): read `Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius))` (0 at >=6 °C, 1 at 0 °C; shared/Needs.cs in #185 cefba1f; Atmosphere.AirCelsius in #173). Needs both on main. Atmosphere asks the puff fade in heavy snow / at night if too bright (`Atmosphere.Snowfall`); they'll review the look.
@@ -32,4 +33,4 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 - Sheep: Animals OK (a) 20:08: small PR on Sheep.cs _Process only, species-neutral (deer from #219 share skeleton and _Process; deer run 6.5 m/s, sheep 4.4, longer strides). Build after Modeling #197 (new sheep mesh, lower rest heights). Fix: feet skate at trot (stride from speed), turns snap via LerpAngle (add lean, head leads). Animals now a Sonnet session; follow-ups via tickets/animals-14.md and PM.
 
 ## Next step
-Get the remote-work PR green and send the sha to the PM; then breath after #173, station pose after #160, PlayerModel swap PR (claude/anim-2-playermodel) after Justin picks a style, sheep after Animals replies.
+Get claude/anim-2-clothes green and send the sha to the PM; fill in Sheep.Flinch once Animals #219 is on main.

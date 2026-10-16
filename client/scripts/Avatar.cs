@@ -71,6 +71,15 @@ public partial class Avatar : Node3D
     // frame, which would pull a raised Y straight back down.
     public void SetAirHeight(float metres) => figure.Position = new Vector3(0, Mathf.Max(metres, 0f), 0);
 
+    // Shows a garment in a clothing slot (item 0: the slot's default), from worn_item.
+    public void Wear(byte slot, ushort item)
+    {
+        if (slot >= worn.Length || worn[slot] == item) return;
+        worn[slot] = item;
+        PlayerModel.Wear((Skeleton3D)figure, slot, item);
+    }
+    readonly ushort[] worn = new ushort[2];
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.
