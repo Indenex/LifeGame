@@ -6,7 +6,7 @@
 // Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
 // from under a roof), rain (same as storm), fire (a campfire at night), firerain
 // (a campfire in light rain), dusk, night, sheep (a grazing flock that
-// bolts halfway). Each scene walks on grass for its first half.
+// bolts halfway; about a third are lambs). Each scene walks on grass for its first half.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
@@ -59,9 +59,9 @@ foreach (var scene in scenes)
         }
         // Sheep scenes: a calm flock, then it bolts halfway through.
         if (parts[0] == "sheep" && Random.Shared.NextDouble() < n / (double)rate * 0.4)
-            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false);
+            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false, Random.Shared.NextDouble() < 0.35);
         if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
-            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true);
+            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true, b == 3);
         // Storms: a strike every 10 seconds or so, some close, most far off.
         if (parts[0] is "storm" or "rain" && Random.Shared.NextDouble() < n / (double)rate * 0.1)
         {
