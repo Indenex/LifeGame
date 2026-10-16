@@ -341,3 +341,55 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-082 — 2026-10-16 — Modeling order: player figure, then every item
 **Decision:** Modeling does the player figure first, then every item (early-game items first) as one model used on the ground, for the inventory icon and held in hand. Animation adds holding tools and items in hand.
 **Who:** Justin ("Player figure first"; the PM had recommended items first)
+
+## D-083 — 2026-10-16 — Ship the water and sky
+**Decision:** Atmosphere's water and sky (#66: shimmer, lapping, rain rings, frogs, wind sway, clouds and cloud shadows, dawn mist) ships as rendered.
+**Who:** Justin ("Ship it", which the PM recommended)
+
+## D-084 — 2026-10-16 — Groves and glades now, reshaped land after
+**Decision:** Environment builds groves and glades first (visual only, no wipe): clustered trees with open glades, undergrowth at grove edges, logs, mossy rocks, flowers, reeds and stones at the pond. After that it reshapes the land: more ponds, a stream, gentler hills. The reshape needs a world wipe; Justin chose it, and the PM confirms the timing with him before any wipe runs.
+**Who:** Justin ("1 and 3")
+
+## D-085 — 2026-10-16 — Forest light first, the other skies later
+**Decision:** Atmosphere does light through the forest next (sun shafts, dappled light at morning and evening), then weather you can see coming (rain curtains, darkening sky, rainbow), then the cosy night (firelight on trunks, starrier sky, softer moonlight).
+**Who:** Justin ("One, but I want all of these eventually")
+
+## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
+**Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
+**Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours
+
+## D-087 — 2026-10-16 — Building order: fence, hearth, cabin
+**Decision:** House building does a stick fence and gate next (building-8), then a raised hearth, then a log cabin from felled trees.
+**Who:** Justin ("All of these, but the first one first")
+
+## D-088 — 2026-10-16 — Brisk walk, run on Shift, with stamina
+**Decision:** Normal movement stays at 4.2 m/s, animated as a brisk walk-jog. Holding Shift runs faster and spends stamina; stamina refills when not running. Stamina is a light need (D-081): it shows only while it is not full, and running out just drops you back to walking. Survival builds stamina; UX/UI moves sneak off Shift (key to be confirmed with Justin); Animation adds the run. Numbers start low per D-075.
+**Who:** Justin ("Keep the brisk jog, and add a run tied to shift. It should have a stamina system though.")
+
+## D-089 — 2026-10-16 — Better tools work up to about 15-20% faster
+**Decision:** Tool quality speeds work, from 0% for a crude tool to about 15-20% for an excellent one (PM default 15% at the top, open to 20% later), on the D-075 curve.
+**Who:** Justin ("Yes, but not 25% ... Maybe 15-20%?")
+
+## D-090 — 2026-10-16 — Full fires refuse fuel; fire length grows with skill (amends D-054)
+**Decision:** Feeding a fire at its cap is refused ("The fire is burning as high as it will") and the stick is kept. A newly lit fire burns 20 minutes (was 15, D-054). The most a fire can hold grows with Firecraft from 20 minutes up to 40 minutes (+100%) at Master.
+**Who:** Justin ("Refuse. Fires should start at 20 minutes and last longer maybe up to 100% more scaled with skill.")
+
+## D-091 — 2026-10-16 — Sneak moves to held Ctrl
+**Decision:** Sneak is held Ctrl (Shift is now run, D-088). Holding Ctrl while starting a craft still plays the minigame at Master (D-047); the two happen at different moments.
+**Who:** Justin ("Hold Ctrl", which the PM recommended)
+
+## D-092 — 2026-10-16 — Craft times scale with the item and the skill
+**Decision:** Base craft times scale: cheap, simple items are quick; higher-tier items and higher-quality results take incrementally longer. Rising skill shortens craft times, noticeably as you first learn a skill (fast early, per D-075). Crafting proposes the formula and a table of examples to the PM before shipping.
+**Who:** Justin ("easier/cheaper items should be faster, and take incrementally longer ... on higher quality items ... Increases in skill level should also lower craft times")
+
+## D-093 — 2026-10-16 — Storage jar holds 4 to 8 stacks by quality
+**Decision:** A storage jar holds 4 stacks at low quality, rising to 8 at high quality, faster through the first part of the quality range (D-075).
+**Who:** Justin ("4 rising to 8 with quality"; the PM had recommended a flat 6)
+
+## D-094 — 2026-10-16 — I opens the equipment panel
+**Decision:** The equipment panel (D-074) opens with I.
+**Who:** Justin ("I", which the PM recommended)
+
+## D-095 — 2026-10-16 — Integration executes merges
+**Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
+**Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin

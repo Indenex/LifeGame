@@ -245,15 +245,7 @@ public partial class Main : Node3D
         water = new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = new Vector2(260, 260) },
-            MaterialOverride = new StandardMaterial3D
-            {
-                AlbedoColor = Look.Water,
-                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                Roughness = 0.08f,
-                MetallicSpecular = 0.6f,
-                ProximityFadeEnabled = true,
-                ProximityFadeDistance = 0.6f,
-            },
+            MaterialOverride = Look.WaterSurface,
             Position = new Vector3(0, Look.WaterLevel, 0),
         };
         view.AddChild(water);
