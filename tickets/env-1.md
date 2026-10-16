@@ -17,8 +17,8 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 - 2026-10-16 18:20: Atmosphere agreed the split (I own world contents, meshes, materials, shore, forest-floor tint, ShowGhosts tree selection; they own time/weather, Look.cs colours, ghost shader, water surface). Switched their `Woodedness()` to average `Forest.Density` (their OK). Wind: use globals `wind_strength`, `wind_gust`, and `wind_dir` once atmosphere-13 lands (fallback vec2(0.6,0.8)). Reeds must stay opaque (they use Look.Grass, opaque).
 
 ## Open questions / blockers
-- Sent to PM 2026-10-16 for Justin: scope of the pass. A (recommended, default) groves and glades, visual only; B dress today's layout only; C A plus reshaped land (more ponds, stream) needing a world wipe. Working on A.
+- Answered (D-084, via PM 2026-10-16): Justin chose A then C. env-1 = groves and glades, visual only, no wipe (milestone M1, D-081). Reshaping the land (more ponds, a stream, gentler hills) follows as env-2 through Integration for `shared/World.cs`; it wipes the world, so nothing that wipes is run or merged until the PM confirms timing with Justin, and the wipe lands in one PR with an upgrade-check note.
 - Atmosphere working agreement: settled 2026-10-16. Flower colours added as Look.FlowerWhite/FlowerButtercup/FlowerViolet/FlowerPink on claude/atmosphere-13-forest-light (1e65d96); switch `Undergrowth.FlowerColors` to them once atmosphere-13 is on main. Combined shafts render at a glade edge (36,-36) once both branches are on main.
 
 ## Next step
-Wait for Render's 0eaba8b shots and Atmosphere's reply; meanwhile check per-chunk instance counts / draw calls against the CI load test and tune from the shots.
+Open the env-1 PR, record its CI run here; tune from Render's 0eaba8b shots when they arrive; draft `tickets/env-2.md` (land reshape plan).
