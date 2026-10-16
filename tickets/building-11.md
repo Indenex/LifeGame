@@ -2,7 +2,7 @@
 Lane: House building
 Owner: House building thread (Sonnet)
 Status: in_review
-Branch: claude/house-building-8ueqz2-seethrough (stacked on building-10, #271)
+Branch: claude/house-building-8ueqz2-seethrough (was stacked on building-10; #271 squash-merged as d9f0f395, main merged in, base is main)
 PR: (not yet)
 
 ## Goal
