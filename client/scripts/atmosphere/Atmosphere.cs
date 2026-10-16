@@ -101,6 +101,13 @@ public partial class Atmosphere : Node3D
             debugPosition = new Vector2(x, z);
         // --debug-clear=seconds bares the ground around the player after that long,
         // as placing a building does, to check that it eases over.
+        // --render-stats prints draw calls and objects once the world has loaded.
+        if (Arg("render-stats") != null)
+            GetTree().CreateTimer(9).Timeout += () => GD.Print(
+                $"render-stats draw_calls={Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)} " +
+                $"objects={Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame)} " +
+                $"primitives={Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame)} " +
+                RenderBreakdown());
         if (ArgFloat("debug-clear") is { } clearAfter)
             GetTree().CreateTimer(clearAfter).Timeout += () =>
             {
@@ -214,6 +221,8 @@ public partial class Atmosphere : Node3D
         if (GetViewport()?.GetCamera3D() is { } camera)
         {
             RenderingServer.GlobalShaderParameterSet("view_camera_position", camera.GlobalPosition);
+            terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
+            terrain?.ShowGhosts(camera.GlobalPosition, focus);
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
@@ -472,6 +481,28 @@ public partial class Atmosphere : Node3D
         if (InputMap.HasAction(action)) return;
         InputMap.AddAction(action);
         InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
+    }
+
+    // Visible meshes, lights and particles grouped by which top-level node they sit
+    // under, for finding where draw calls come from.
+    string RenderBreakdown()
+    {
+        var counts = new System.Collections.Generic.Dictionary<string, int>();
+        if (GetParent() is not { } main) return "";
+        foreach (var top in main.GetChildren())
+        {
+            int n = 0;
+            var stack = new System.Collections.Generic.Stack<Node>();
+            stack.Push(top);
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+                if (node is VisualInstance3D v && v.IsVisibleInTree()) n++;
+                foreach (var c in node.GetChildren()) stack.Push(c);
+            }
+            if (n > 0) { string key = top.Name + ":" + top.GetType().Name; counts[key] = (counts.TryGetValue(key, out int had) ? had : 0) + n; }
+        }
+        return string.Join(" ", counts.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}={kv.Value}"));
     }
 
     static string? Arg(string name)
