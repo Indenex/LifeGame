@@ -859,3 +859,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-211 — 2026-10-16 — Storms are seasonal
 **Decision:** Storm frequency follows the season. About 1 in 45 weather fronts becomes a thunderstorm in summer, 1 in 50 in spring and autumn, and 1 in 150 in winter.
 **Who:** Justin, picking "Seasonal".
+
+## D-212 — 2026-10-16 — Rain sounds like natural steady rain
+**Decision:** Rain must sound like natural, steady rain (hiss and patter), with no bouncy, pulsing or creature-like element. The bouncy part is taken out. Owner: Audio (#291).
+**Who:** Justin ("I don't like the weird bouncy animal sound of the rain in general, I just want it to sound like normal rain. can that part be taken out?")
