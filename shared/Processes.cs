@@ -135,6 +135,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // Mutton fat rendered in a pot of water by a fire (ceramics-9): lamp fuel.
+                Id = "cook.tallow", Name = "Render tallow", Doing = "Setting a pot of mutton fat by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = 5, Makes = Item.DiggingStick,
@@ -257,6 +264,12 @@ namespace LifeGame.Shared
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
                 Seconds = 12, Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
