@@ -14,7 +14,7 @@ wait 2
 firepots
 # a pinch pot lands 1 m from the fire, between it and me; dry it at once
 craft clay.pinch_pot
-sql UPDATE clay_piece SET moisture = 0.0
+sql UPDATE clay_piece SET moisture = 0.0 WHERE fire_id = 0
 wait 3
 face 0
 burst 3 1.5
@@ -22,7 +22,7 @@ key g
 burst 3 1.5
 # (b) a second dry pot, then wait for the fire to drop under 4 min of fuel
 craft clay.pinch_pot
-sql UPDATE clay_piece SET moisture = 0.0
+sql UPDATE clay_piece SET moisture = 0.0 WHERE fire_id = 0
 wait 600
 face 0
 burst 3 1.5

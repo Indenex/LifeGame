@@ -51,6 +51,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 19:35: crafting-11 sent to the PM (cold + lit, 7bfdd25).
 - 2026-10-16 19:45: ui-9 mock re-shoot at 88d7cf2 sent to the PM (2ffc161): fixes confirmed. ui-10 re-shoot at 62d68db running.
 - 2026-10-16 19:55: PR #103 green at 4326fdf (run https://github.com/Indenex/LifeGame/actions/runs/38942837902), merge asked of the PM. Lane keeps taking render requests via the queue.
+- 2026-10-16 20:05: bugfix-18 run 1: my SQL dried the 4 pots in the fire too and they finished at once, so shot (a) had no full fire (prompt read Feed the fire; setup error, not a finding). Scene now dries only `WHERE fire_id = 0`; bugfix-18b queued. Jar scene rerun queued (first run: jar placed and filled, but behind the player, no prompt).
 
 ## Open questions / blockers
 - (none)

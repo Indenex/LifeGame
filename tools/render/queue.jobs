@@ -11,6 +11,7 @@ ceramics-6-demo tools/render/render.sh ceramics-6 e9544db "--time-of-day=0.45 --
 ceramics-6-jar tools/render/scene.sh ceramics-6-jar e9544db tools/render/scenes/ceramics-6-jar.txt
 bugfix-18 tools/render/scene.sh bugfix-18 e80c6cf tools/render/scenes/bugfix-18-pot.txt
 ceramics-6-jar2 tools/render/scene.sh ceramics-6-jar e9544db tools/render/scenes/ceramics-6-jar.txt
+bugfix-18b tools/render/scene.sh bugfix-18b e80c6cf tools/render/scenes/bugfix-18-pot.txt
 bugfix-19 tools/render/scene.sh bugfix-19 1877b88 tools/render/scenes/bugfix-19-pot.txt
 claims-7 tools/render/scene.sh claims-7 f85c3b9 tools/render/scenes/claims-7-ask.txt
 skills-10 tools/render/scene.sh skills-10 origin/claude/journal-skills-10 tools/render/scenes/skills-10-journal.txt
