@@ -28,9 +28,10 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations")
         {
             if (view == "hearth") Hearth();
+            else if (view == "stations") Stations();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -142,6 +143,26 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // Work stations side by side (model-2), with a player for scale.
+    void Stations()
+    {
+        var stations = new[] { ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()) };
+        for (int i = 0; i < stations.Length; i++)
+        {
+            var root = new Node3D { Position = new Vector3((i - (stations.Length - 1) / 2f) * 2.2f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) };
+            AddChild(root);
+            foreach (var piece in stations[i].Item2)
+                if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            Label(stations[i].Item1, root.Position + new Vector3(0, -0.9f, 0));
+        }
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(-2.3f, 0, 0.4f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.0f, 4.2f), new Vector3(0, 0.5f, 0), Vector3.Up);
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
