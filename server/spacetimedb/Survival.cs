@@ -37,6 +37,22 @@ public static partial class Module
         // the area their client is watching, so the client moves itself there.
         public float WokeX;
         public float WokeZ;
+        // How soaked the player is (0 dry, 1 soaked) at AsOf, and its rate (survival-5).
+        [Default(0f)]
+        public float Wetness;
+        [Default(0f)]
+        public float WetnessRate;
+    }
+
+    // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
+    // can see it (D-036). Coarse on purpose: it changes only a few times as a
+    // player soaks or dries. A dry player has no row.
+    [SpacetimeDB.Table(Accessor = "Drenched", Public = true)]
+    public partial struct Drenched
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public byte Level;
     }
 
     [SpacetimeDB.View(Accessor = "MyVitals", Public = true)]
@@ -95,7 +111,8 @@ public static partial class Module
     static void SurvivalDisconnected(ReducerContext ctx, Player player)
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
-            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0 });
+            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 });
+        ctx.Db.Drenched.PlayerId.Delete(player.PlayerId);
     }
 
     // --- Reducers ----------------------------------------------------------
@@ -196,9 +213,25 @@ public static partial class Module
 
             var next = WithSurroundings(ctx, now, pos, online: true);
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
-            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet)
+            if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
+                || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f)
                 ctx.Db.Vitals.PlayerId.Update(next);
+            ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
+    }
+
+    static void ShowWetness(ReducerContext ctx, uint playerId, float wetness)
+    {
+        byte level = (byte)MathF.Round(Math.Clamp(wetness, 0f, 1f) * 10f);
+        var row = ctx.Db.Drenched.PlayerId.Find(playerId);
+        if (level == 0)
+        {
+            if (row != null) ctx.Db.Drenched.PlayerId.Delete(playerId);
+        }
+        else if (row is not { } r)
+            ctx.Db.Drenched.Insert(new Drenched { PlayerId = playerId, Level = level });
+        else if (r.Level != level)
+            ctx.Db.Drenched.PlayerId.Update(r with { Level = level });
     }
 
     // --- Death -------------------------------------------------------------
@@ -250,6 +283,7 @@ public static partial class Module
             Food = Needs.RespawnFood,
             Water = Needs.RespawnWater,
             Warmth = Needs.RespawnWarmth,
+            Wetness = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,
@@ -305,6 +339,7 @@ public static partial class Module
             Food = Needs.At(v.Food, v.FoodRate, s),
             Water = Needs.At(v.Water, v.WaterRate, s),
             Warmth = Needs.At(v.Warmth, v.WarmthRate, s),
+            Wetness = Needs.At(v.Wetness, v.WetnessRate, s),
             AsOf = ctx.Timestamp,
         };
     }
@@ -313,14 +348,15 @@ public static partial class Module
     static Vitals WithSurroundings(ReducerContext ctx, Vitals v, PlayerPos pos, bool online)
     {
         if (!online)
-            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0 };
+            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 };
         float heat = HeatAt(ctx, pos.X, pos.Z);
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, pos.X, pos.Z, rainCover);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, v.Wetness);
         return v with
         {
+            WetnessRate = Needs.WetnessRate(CurrentWeather(ctx).Rain, rainCover, wet, heat > 0),
             FoodRate = -Needs.FoodDrain,
             WaterRate = -Needs.WaterDrain,
             WarmthRate = heat - cold,
@@ -343,11 +379,13 @@ public static partial class Module
 
     // How much faster the cold bites than on a mild day: 1x at 15 °C, rising to
     // 2x at 0 °C and below; rain adds half again unless you are under cover.
-    static float Chill(ReducerContext ctx, float x, float z, float rainCover)
+    // How much harder the cold bites: down to freezing it doubles, and being
+    // soaked adds half again (rain itself only matters by making you wet).
+    static float Chill(ReducerContext ctx, float wetness)
     {
-        float celsius = AirTemperature(ctx), rain = CurrentWeather(ctx).Rain;
+        float celsius = AirTemperature(ctx);
         float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
-        float wet = 1f + Needs.RainChill * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
+        float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
         return cold * wet;
     }
 
