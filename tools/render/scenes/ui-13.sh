@@ -41,10 +41,10 @@ sleep 45
 cam=$(spacetimedb-cli sql --server "http://127.0.0.1:$port" lifegame "SELECT identity, player_id FROM player" 2>/dev/null | grep -o '0x[0-9a-f]*' | tail -1)
 sql "INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, $cam, 3, 50, 2)"
 sleep 4
-snap                      # 1. the G prompt at the table
-key g; sleep 5; snap      # 3. too little fiber: amber line, Make greyed
+snap                      # 1. the E prompt at the table
+key e; sleep 5; snap      # 3. too little fiber: amber line, Make greyed
 key Escape; sleep 2
 sql "INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, $cam, 3, 50, 10)"
 sleep 4
-key g; sleep 5; snap      # 2. enough fiber: counts and Make
+key e; sleep 5; snap      # 2. enough fiber: counts and Make
 cat "$botlog" >>"$log"

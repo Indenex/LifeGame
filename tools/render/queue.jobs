@@ -76,7 +76,7 @@ survival-7 env RENDER_SIZE=1280x720 tools/render/scene.sh survival-7 8a03451 too
 ui-10c env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 36e6c09 "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
 building-8 tools/render/scene.sh building-8 969a7ae tools/render/scenes/building-8-fence.txt
 crafting-15 tools/render/scenes/crafting-15.sh 859f25e
-ui-13 tools/render/scenes/ui-13.sh 8724789
+ui-13 tools/render/scenes/ui-13.sh origin/main
 animals-11 tools/render/scene.sh animals-11 de48c3f tools/render/scenes/animals-11-stations.txt
 claims-9 tools/render/scene.sh claims-9 baecf02 tools/render/scenes/claims-9-name.txt
 claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
