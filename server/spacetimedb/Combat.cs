@@ -5,7 +5,7 @@ using SpacetimeDB;
 
 // claims-3: players striking players. Open in the wild; refused on claimed land
 // unless its owner allows fighting, in the waking clearing, and for newcomers.
-// Being struck down is the same death as hunger or cold (Survival's Die).
+// Being struck down is the same death as hunger or cold (Survival's KillPlayer).
 public static partial class Module
 {
     [SpacetimeDB.Table(Accessor = "PlayerHealth", Public = true)]
@@ -75,9 +75,7 @@ public static partial class Module
     }
 
     static bool IsFed(ReducerContext ctx, Player player) =>
-        ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v
-        && Snapshot(ctx, v) is var now
-        && now.Food > Social.WellFed && now.Water > Social.WellFed;
+        NeedsNow(ctx, player.PlayerId) is { } n && n.food > Social.WellFed && n.water > Social.WellFed;
 
     // Health brought up to now.
     static PlayerHealth HealthNow(ReducerContext ctx, PlayerHealth h, bool fed)
@@ -133,8 +131,8 @@ public static partial class Module
         }
 
         ctx.Db.PlayerHealth.PlayerId.Update(theirs with { Health = Social.MaxHealth, LastHitAt = new Timestamp(0) });
-        var vitals = ctx.Db.Vitals.PlayerId.Find(victim.PlayerId);
-        if (vitals is { } v) Die(ctx, victim, Snapshot(ctx, v), b, $"struck down by {attacker.Name}");
+        // Survival's death screen reads "You were struck down" for this cause.
+        KillPlayer(ctx, victim, "slain");
         SayNearby(ctx, b.X, b.Z, $"{victim.Name} was struck down by {attacker.Name}");
     }
 }
