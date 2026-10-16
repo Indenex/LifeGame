@@ -2,7 +2,7 @@
 Lane: Modeling
 Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
 Status: in_progress
-Branch: claude/model-2 (PR #197); env-4 props on claude/model-2-env (stacked, follow-up PR)
+Branch: claude/model-2 (PR #197, merged); claude/model-2-env (PR #235); worn tools on claude/model-2-worn (stacked on #235)
 PR: #197 (send green shas to the PM, D-119)
 
 ## Goal
@@ -27,6 +27,7 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-17 01:40: #197 merged (green on d4640a5, run 38959597611). Merged main into claude/model-2-env; build and smoke renders (items, deer, cooking, env, stations) fine. Opening the follow-up PR.
 - 2026-10-17 01:55: Animals (animals-15, Justin picked the standard bow): crude self bow and arrow in ItemModels (ground, icon, held) plus `ItemModels.ArrowFlight` (point +Z, origin mid-shaft). Crafting owns the ids; until they exist, `ItemModels.BowItem` / `ArrowItem` name them (set them, or I add switch arms when the ids reach main). Showcase `held` shows them.
 - 2026-10-17 02:10: Crafting reserved Item.Bow = 16, Item.Arrow = 17 (PR #266, branch crafting-bow-ids); models keyed by number. Repair table (crafting-19, D-155, StructureKind.RepairTable, Station Repair, 1.6 x 0.9 m): `StationMeshes.RepairTable()`, a thick split log on two log rounds with a whetstone, hammerstone, cord coil, a worn axe and spare shafts, distinct from the crafting table. Later: a worn look for hand tools (Durability.Condition worn / nearly spent / spent, on crafting-durability).
+- 2026-10-17 02:30: worn tools (D-155, Crafting): condition comes from `ItemLook.Condition(item, quality, wear)` / `Durability.Condition` ("", worn, nearly spent, spent), per stack. `ItemModels.GroundMesh(item, wear)` / `HeldMesh(item, wear)` with wear 0 new, 1 worn, 2 spent; `ItemModels.WearLevel(condition)` maps the strings. Only wearing tools change (stone axe, stone knife, spear, digging stick, bow drill, bow 16): wood and cord darken and desaturate with use, pale chip scars on stone edges, loose then frayed binding ends, a crack when spent; the digging stick's hardened tip scuffs back to pale wood. Showcase view `wear`. On claude/model-2-worn.
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.
