@@ -1,9 +1,9 @@
 # skills-9: The journal remembers recipes
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_progress
+Status: in_review
 Branch: claude/journal-skills-iseewg
-PR: (not yet)
+PR: #43
 
 ## Goal
 In the playtest, new players spent most of their time working out what to do. Once you have discovered something, the journal now tells you how to do it again. Each discovery card gets a short "how" line:
@@ -16,9 +16,10 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 ## Progress log
 - 2026-10-16 00:15: PM approved (skills-9). Started.
 - 2026-10-16 00:30: Recipes.cs (how-to line per discovery card, keys from InputMap); carve/haft train Toolmaking; kiln names. Client and server build. CraftingUi.ToolName made internal (one-word hook). Screenshot rendering.
+- 2026-10-16 00:35: screenshot /mnt/project-files/screenshots/journal-recipes.png; PR #43 opened.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Check the screenshot of the journal with how-to lines, send it to the PM, open the PR.
+Wait for CI on #43, then send the green head sha to the PM.
