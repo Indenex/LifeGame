@@ -31,7 +31,7 @@ public partial class Sheep : Node3D
     readonly float seed;
 
     Vector2 from, to;
-    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate;
+    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
     Color woolColor;
@@ -199,7 +199,9 @@ public partial class Sheep : Node3D
         float run = Mathf.Clamp((speed - 2f) / 1.5f, 0f, 1f);
         // The cycle advances by ground covered, not time, so hooves don't skate: one cycle
         // is the distance two swings of the legs reach, longer in the bound's flight.
-        float leg = Hips[0].Y * Scale.Y;
+        // Hip height from the leg bone's rest, so any species strides on its own legs.
+        if (hipHeight <= 0f) hipHeight = skeleton.GetBoneRest(FirstLegBone).Origin.Y;
+        float leg = hipHeight * Scale.Y;
         float reach = 4f * leg * Mathf.Lerp(Mathf.Sin(0.45f * Mathf.Max(walk, 0.2f)), Mathf.Sin(0.7f) * 1.6f, run);
         gait += speed * dt * Mathf.Tau / Mathf.Max(reach, 0.05f);
 
