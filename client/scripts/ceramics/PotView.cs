@@ -83,6 +83,7 @@ public partial class PotView : Node3D
     }
 
     public float Moisture => ClayRules.MoistureAt(moisture, rate, (float)(Now - moistureAt));
+    public float SecondsUntilDry => ClayRules.SecondsUntilDry(Moisture, rate);
 
     public ClayStage Stage => stage;
 

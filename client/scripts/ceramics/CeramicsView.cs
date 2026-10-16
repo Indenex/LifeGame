@@ -65,9 +65,12 @@ public partial class CeramicsView : Node
         conn.Db.MyCraftJob.OnDelete += (_, j) =>
         {
             if (!j.Failed && ClayRules.FormFor(j.ProcessId) is { } form)
+            {
                 note(form == ClayForm.Brick
                     ? "The brick is drying. It turns pale when it is ready."
                     : "Your pot is drying. It turns pale when it is ready to fire.");
+                Tip("clay_dry_fire", "Clay dries twice as fast beside a burning fire.");
+            }
         };
     }
 
@@ -142,6 +145,7 @@ public partial class CeramicsView : Node
 
     public override void _Process(double delta)
     {
+        ShowTips(delta);
         // Only the nearest piece within reach shows its label, so a camp of pots stays readable.
         PotView? nearest = null;
         float nearestDist = World.Reach;
@@ -202,13 +206,48 @@ public partial class CeramicsView : Node
         bool dry = !ClayRules.TooWetToFire(moisture);
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
         ulong id = piece.id;
-        if (besideFire)
-            return dry
-                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
-                : new UseOffer("Fire it wet (it will crack)", piece.d, () => FireDamp(id, moisture));
+        if (row?.MadeBy == MyId)
+            Tip("clay_tend", "Press G by your clay to see how long it has left. Once it turns pale, G picks it up, or fires it beside a fire.");
         if (dry)
-            return new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false));
-        return null;
+            return besideFire
+                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
+                : new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false));
+        // Still wet: say how long it has left. Beside a fire, pressing G twice fires it
+        // anyway (it cracks); away from one, G says where it would dry faster.
+        string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
+        if (besideFire)
+            return new UseOffer($"{wait} (G twice fires it wet)", piece.d, () => FireDamp(id, moisture));
+        bool warm = BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
+        return new UseOffer(wait, piece.d, () => note(warm
+            ? $"It is {ClayRules.Describe(moisture)}. It turns pale when it is dry enough."
+            : $"It is {ClayRules.Describe(moisture)}. Beside a burning fire it would dry twice as fast."));
+    }
+
+    // First-time tips, each shown once per install, one at a time a few seconds
+    // apart so they don't cover the note that prompted them.
+    // TODO: becomes Hints.Tip(id, text) once UX adds free-text hints.
+    const string TipsPath = "user://ceramics_tips.cfg";
+    const double TipGap = 4.5;
+    readonly ConfigFile tips = new();
+    readonly Queue<string> tipQueue = new();
+    bool tipsLoaded;
+    double tipWait = TipGap;
+
+    void Tip(string id, string text)
+    {
+        if (!tipsLoaded) { tips.Load(TipsPath); tipsLoaded = true; }
+        if ((bool)tips.GetValue("seen", id, false)) return;
+        tips.SetValue("seen", id, true);
+        tips.Save(TipsPath);
+        tipQueue.Enqueue(text);
+    }
+
+    void ShowTips(double delta)
+    {
+        if (tipQueue.Count == 0) { tipWait = TipGap; return; }
+        if ((tipWait -= delta) > 0) return;
+        note(tipQueue.Dequeue());
+        tipWait = TipGap;
     }
 
     // Firing a damp pot cracks it: the first press warns, a second within a few seconds fires it.

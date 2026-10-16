@@ -328,7 +328,10 @@ public static partial class Module
     {
         float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f;
         if (left < ClayRules.PitFireSeconds)
-            throw new Exception($"Feed the fire first: a firing needs about {ClayRules.PitFireSeconds / 60f:0} minutes of fuel");
+        {
+            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds);
+            throw new Exception($"Feed the fire first: {sticks} more {(sticks == 1 ? "stick" : "sticks")} to last the {ClayRules.PitFireSeconds / 60f:0} minute firing");
+        }
     }
 
     // The first free place in a fire's ring of pots, or null when it is full.
