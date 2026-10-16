@@ -1,8 +1,8 @@
 # atmosphere-5: No pops when ground is cleared; canopy fade under Compatibility
 Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
-Status: in_progress
-Branch: claude/atmosphere-sound-hlqfke (after #32 merges)
+Status: in_review
+Branch: claude/atmosphere-sound-hlqfke
 PR: (none yet)
 
 ## Goal
