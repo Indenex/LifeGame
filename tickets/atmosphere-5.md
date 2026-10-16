@@ -10,9 +10,10 @@ From the Bug fixes playtest (via PM): placing a blueprint made the grass vanish 
 
 ## Progress log
 - 2026-10-15 23:45: Terrain notes which cells' clearing changed on a chunk rebuild; tufts on those cells carry (start time, flatten/regrow) as MultiMesh custom data, and ground vertices carry their old color plus start time in CUSTOM0. Look.Clock / global `world_seconds` drives the blend. Debug arg --debug-clear=seconds bares a 3 m circle around the player for screenshots. Compatibility render of the woods in progress.
+- 2026-10-16 00:30: Compatibility fade checked: it works and looks close to Forward+; the grey distant trees are Compatibility's missing volumetric fog, not the fade. Fade radius tightened (0.9/1.9). Clearing renders verified: ground eases to bare earth and grass thins over ~1.6 s (screenshots/atmosphere-16-clearing-midway.png, -done.png). Branch kept local as atmosphere-5-wip until #32 merges; a backup copy was pushed by mistake to claude/atmosphere-5-hlqfke and can be deleted.
 
 ## Open questions / blockers
 - Trees and rocks on a newly cleared cell still disappear at once.
 
 ## Next step
-Check the clearmid/clearafter renders and the Compatibility woods render; fix the Compatibility fade if it's real; open the PR once #32 is merged.
+After #32 merges: merge main into atmosphere-5-wip, push it to claude/atmosphere-sound-hlqfke, open the PR.
