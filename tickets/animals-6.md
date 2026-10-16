@@ -1,8 +1,8 @@
 # animals-6: Sheep keep clear of burning fires
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
-Branch: developed locally as animals-6-local on top of animals-5 (#63); goes to claude/animals-sheep-5gkntn once #63 merges
+Status: in_review
+Branch: claude/animals-sheep-5gkntn (restarted from main 47cc6e5 after #63 merged)
 PR: (after #63)
 
 ## Goal
@@ -18,9 +18,10 @@ Playtest found sheep wandering onto and standing in a lit fire. Sheep should kee
 
 ## Progress log
 - 2026-10-16 04:35: written, builds. Local test: two fires, one lit at the flock's home spot; over 2 minutes the closest any sheep came to a fire was 1.64 m. Screenshot screenshots/animals-08-sheep-shy-of-fire.png.
+- 2026-10-16 04:30: #63 merged; branch restarted from main 47cc6e5 with animals-6 merged in.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-When #63 merges, restart claude/animals-sheep-5gkntn from main, merge animals-6-local, build, upgrade check, push, open the PR.
+Wait for CI on the animals-6 PR, then send the PM the green sha.
