@@ -20,13 +20,17 @@ public static class LandmarkProps
     static float H(int x, int z, uint salt) => Terrain.Hash01(x, z, 1000u + salt);
     static float Range(int x, int z, uint salt, float from, float to) => from + H(x, z, salt) * (to - from);
 
+    // How broad a giant tree's trunk is, as a multiple of an ordinary tree (collision
+    // reads it too).
+    public static float GiantGirth(int x, int z) => Range(x, z, 2, 2.4f, 3.6f);
+
     // A huge old tree standing alone in a glade: most are oaks with a broad,
     // lumpy crown of several lobes; some are ancient pines. Each has its own girth,
     // height and lean, and a few stones and fallen limbs round its foot.
     public static void GiantTree(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
         float yaw = H(x, z, 1) * Mathf.Tau;
-        float girth = Range(x, z, 2, 2.4f, 3.6f), height = Range(x, z, 3, 2.0f, 3.0f);
+        float girth = GiantGirth(x, z), height = Range(x, z, 3, 2.0f, 3.0f);
         // A lean of up to about eight degrees, in its own direction.
         float leanDir = H(x, z, 4) * Mathf.Tau, lean = Range(x, z, 5, 0f, 0.14f);
         var tilt = new Basis(new Vector3(Mathf.Cos(leanDir), 0, Mathf.Sin(leanDir)), lean);

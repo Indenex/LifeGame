@@ -48,7 +48,23 @@ namespace LifeGame.Shared
             && World.BaseHeight(x, z) > World.WaterLevel + 0.4f && Trail(x, z) < 0.3f;
 
         // The middle of a rock outcrop, one at most in each 48 m square, on the heath.
-        public static bool OutcropAt(int x, int z) => IsChosen(x, z, 48, 1u, OutcropFits);
+        public const int OutcropSquare = 48;
+        public static bool OutcropAt(int x, int z) => IsChosen(x, z, OutcropSquare, 1u, OutcropFits);
+
+        // The outcrop in a given 48 m square, if it has one (for collision, which needs
+        // the stones round a point without testing every cell).
+        public static bool OutcropIn(int sx, int sz, out int x, out int z)
+        {
+            for (int k = 0; k < Candidates; k++)
+            {
+                (x, z) = Candidate(sx, sz, OutcropSquare, 1u, k);
+                if (OutcropFits(x, z)) return true;
+            }
+            x = z = 0;
+            return false;
+        }
+
+        public static int SquareOf(int cell, int size) => FloorDiv(cell, size);
 
         static bool OutcropFits(int x, int z) => Forest.Heath(x, z) > 0.55f && x * x + z * z > 20 * 20;
 
