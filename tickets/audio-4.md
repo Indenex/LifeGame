@@ -15,6 +15,8 @@ Deer are quiet except: a short hoarse alarm bark when a deer starts to run (one 
 
 - 2026-10-16: Animals (session_015wozcQSFB48cUjQ9p676zf) also wants hit and crit sounds: the server emits a public event table `AnimalHit {AnimalId, X, Z, Crit, Killed}` (#219), one row per hit, Crit true for the sneak-attack bonus. Added `Cue.Hit` (dull thud + slap) and `Cue.Crit` (thud + sharp crack + short bright ring), appended to the Cue enum. SoundPreview `cues:26` plays them last. Loudest 50 ms: Hit -25.3, Crit -23.5 dBFS (other cues -26 to -28). Wiring waits for #219.
 
+- 2026-10-16: Bug fixes (bugfix-25, tickets/bugfix-25.md on claude/bugfix-25) asked for jump sounds. Added `Cue.Jump` (push-off scuff + breath), `Sfx.Land(float strength, Ground ground)` (both feet, heavier and lower with strength; SoundMix.Land) and public `Atmosphere.GroundAt(Vector3)` (the ground-type logic from Footsteps, moved). SoundPreview `jump:12`: push -30.2, hop landing -31.1, big landing -27.5, sand landing -29.1, normal step -33.2 dBFS.
+
 ## Open questions / blockers
 - Wiring waits for #219 (AnimalSpecies.Deer, Sheep.IsStag) and #217 (Atmosphere sheep-only bleats).
 

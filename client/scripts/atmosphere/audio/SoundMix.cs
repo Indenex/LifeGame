@@ -6,7 +6,7 @@ namespace LifeGame;
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
-public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit }
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -117,6 +117,15 @@ public sealed class SoundMix
     public float Gust => wind.Gust;
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+
+    // Coming down from a jump: both feet at once on whatever is underfoot, heavier
+    // and lower the harder the landing (strength 0 to 1).
+    public void Land(Ground ground, float strength)
+    {
+        strength = Math.Clamp(strength, 0f, 1f);
+        steps.Trigger(ground, Wetness, 1.1f + 0.9f * strength, 0.85f - 0.2f * strength, -0.2f);
+        steps.Trigger(ground, Wetness, 1.0f + 0.8f * strength, 0.95f - 0.2f * strength, 0.2f);
+    }
 
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
@@ -1285,17 +1294,20 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(Ground ground, float wetness)
+        public void Trigger(Ground ground, float wetness) => Trigger(ground, wetness, 1f, 1f, leftFoot ? 0.12f : -0.12f, true);
+
+        // A landing sets both feet down at once: heavier (gain) and lower (pitch).
+        public void Trigger(Ground ground, float wetness, float weight, float pitch, float pan, bool walking = false)
         {
-            leftFoot = !leftFoot;
+            if (walking) leftFoot = !leftFoot;
             if (active.Count > 6) active.RemoveAt(0);
             active.Add(new Step
             {
                 Ground = ground,
                 Wet = wetness,
-                Gain = Range(rng, 0.8f, 1.15f),
-                Pitch = Range(rng, 0.85f, 1.15f),
-                Pan = leftFoot ? -0.12f : 0.12f,
+                Gain = Range(rng, 0.8f, 1.15f) * weight,
+                Pitch = Range(rng, 0.85f, 1.15f) * pitch,
+                Pan = pan,
             });
         }
 
@@ -1461,7 +1473,7 @@ public sealed class SoundMix
             for (int k = active.Count - 1; k >= 0; k--)
             {
                 var v = active[k];
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, _ => 0.4f };
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1527,6 +1539,15 @@ public sealed class SoundMix
                             float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
                             s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
                             send = ring * 0.024f;
+                            break;
+                        }
+                        case Cue.Jump:
+                        {
+                            // Pushing off: a quick scuff of the ground and cloth, and a small
+                            // lift of breath.
+                            float scuff = v.Band.Process(x, 1500f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
+                            float breath = v.Low.Process(x, Lowpass.Coef(2200f, rate)) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.25f));
+                            s = scuff * 0.3f + breath * 0.05f;
                             break;
                         }
                         case Cue.Learn:

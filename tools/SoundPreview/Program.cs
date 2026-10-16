@@ -147,6 +147,19 @@ foreach (var scene in scenes)
             mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false, Random.Shared.NextDouble() < 0.35);
         if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
             for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true, b == 3);
+        // Jump scene: hop on grass, a big jump on grass, then a jump on sand.
+        if (parts[0] == "jump")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(Cue.Jump);
+            if (At(1.65)) mix.Land(Ground.Grass, 0.2f);
+            if (At(4)) mix.Play(Cue.Jump);
+            if (At(4.65)) mix.Land(Ground.Grass, 1f);
+            if (At(7)) mix.Play(Cue.Jump);
+            if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
+            if (At(10)) mix.Step(Ground.Grass, 0f);
+        }
         // Deer scene (autumn dusk): bark close, bark far, roar far, roar near, then a herd bolting.
         if (parts[0] == "deer")
         {

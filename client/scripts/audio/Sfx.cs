@@ -12,4 +12,7 @@ public static class Sfx
     internal static void Attach(SoundScape? soundScape) => scape = soundScape;
 
     public static void Play(Cue cue) => scape?.Play(cue);
+
+    // Touching down after a jump: strength 0 (a hop) to 1 (a long fall), and the ground underfoot.
+    public static void Land(float strength, Ground ground) => scape?.Land(ground, strength);
 }
