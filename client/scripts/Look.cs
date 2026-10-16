@@ -270,7 +270,8 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                return (1.0 - smoothstep(0.9 * size, 1.9 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                // Wide enough that neighboring crowns overlapping the player fade too.
+                return (1.0 - smoothstep(1.2 * size, 2.6 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
             }
 
             varying vec3 tint;
@@ -374,8 +375,10 @@ public static class Look
                 // player, measured on screen.
                 vec4 target = VIEW_MATRIX * vec4(player_position + vec3(0.0, 0.9, 0.0), 1.0);
                 float apart = length(VERTEX.xy / -VERTEX.z - target.xy / -target.z);
-                float window = 1.0 - smoothstep(0.07, 0.24, apart);
-                ALPHA = 1.0 - fade * (0.3 + 0.55 * window);
+                float window = 1.0 - smoothstep(0.09, 0.3, apart);
+                // Fully clear right around the player, so even several layers of
+                // canopy never hide them.
+                ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
             #endif
             }
 
