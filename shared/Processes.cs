@@ -258,6 +258,13 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
+        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // a fire beside it rekindles it in place.
+        public const float ColdSeconds = 60 * 60;
+        // The stone ring's reach from the fire's middle, in meters, and how far apart
+        // two fires (or a fire and a cold hearth) must be.
+        public const float RingRadius = 0.6f;
+        public const float Spacing = 1.5f;
 
         // 0 to 1: how warm a spot is from one burning fire.
         public static float WarmthFrom(float fireX, float fireZ, float x, float z)
