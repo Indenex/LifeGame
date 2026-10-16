@@ -23,6 +23,8 @@ namespace LifeGame.Shared
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
         public int StoreStacks;
+        // A crafting station of this kind once finished (D-098); None for anything else.
+        public StationKind Station;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -86,6 +88,15 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
+            new StructureShape
+            {
+                Name = "Crafting table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Table,
+                Stages = new[] { "Table" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -132,6 +143,11 @@ namespace LifeGame.Shared
                 new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
+            },
+            // Crafting table (D-112): Table
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
         };
 
