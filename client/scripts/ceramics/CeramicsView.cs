@@ -73,6 +73,7 @@ public partial class CeramicsView : Node
                 note(form switch
                 {
                     ClayForm.Brick => "The brick is drying. It turns pale when it is ready.",
+                    ClayForm.Tile => "Your roof tile is drying. It is too fine for a campfire: once it is pale, fire it in a kiln.",
                     ClayForm.StorageJar => "Your storage jar is drying. It is too big for a campfire: once it is pale, fire it in a kiln.",
                     _ => "Your pot is drying. It turns pale when it is ready to fire.",
                 });
@@ -336,7 +337,8 @@ public partial class CeramicsView : Node
 
     static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
         or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar
-        or Item.PotOfBroth or Item.PotOfStew or Item.ClayLamp or Item.Tallow;
+        or Item.PotOfBroth or Item.PotOfStew or Item.ClayLamp or Item.Tallow
+        or Item.UnfiredRoofTile or Item.RoofTile;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()
