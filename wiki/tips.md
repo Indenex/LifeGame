@@ -1,12 +1,12 @@
-# Small tips
+# Tips
 
-- Keep a few sticks in your pocket for the fire.
-- Dusk is a good time to be home.
-- Rain is a good time to work indoors.
-- If a prompt appears, someone built it for you to press.
-- Try picking up *everything* at least once.
-- A cracked pot is a lesson.
-- Look at the sheep; they look at you too.
-- If a page here is out of date, tell someone.
+- Carry spare fuel. A fire goes out if you stop feeding it.
+- Get to shelter before night or rain.
+- Try picking up everything you see at least once. Many materials are not obvious.
+- A Use prompt means there is an action available. Read it before pressing.
+- Dry clay fully before firing it.
+- Sneak near sheep.
+- Keep your important buildings and storage inside a claim, or visit them regularly.
+- A cracked pot is still useful material.
 
 Back to the [wiki home](README.md)

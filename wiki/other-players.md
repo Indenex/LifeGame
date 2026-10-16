@@ -1,12 +1,23 @@
 # Other players
 
-The world is shared. Up to a few dozen people live in it at once.
+The world is shared by up to a few dozen players at once.
 
-- **Chat.** Press Enter. Chat is local: you hear people who are near you. Use `/name` to change your name.
-- **Build together.** Anyone can add to a blueprint. Share a claim with friends.
-- **Trade hints.** Nobody knows everything.
-- **Conflict.** Fighting is possible out in the wild. It is blocked near the starting area and inside claims, unless the owner says otherwise. New players are protected for a while. Be aware that a player who kills another is marked, so others can see it.
+## Chat
+Press Enter to chat. Only players near you see your messages. Type `/name YourName` to change your name.
 
-Be kind. It is a small world.
+## Working together
+- Anyone can add materials to a blueprint.
+- A claim owner can invite others as members.
+- Other players can learn a process by watching you work or by reading a note you leave.
+- Players who choose different specialities can make things for each other.
 
-Next: [Small tips](tips.md)
+## Fighting
+Left click strikes a player in reach. A weapon hits harder than bare hands.
+
+- Fighting is allowed in the wild.
+- Fighting is blocked near the spawn area, and inside claims unless the owner allows it.
+- New players are protected for a short time after they first join.
+- Dying to a player works like any other death: you drop what you carry and keep your skills.
+- Each hit is announced in chat. A player who kills another has their name shown in red to everyone for a while.
+
+Next: [Tips](tips.md)
