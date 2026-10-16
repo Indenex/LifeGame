@@ -32,6 +32,8 @@ First fired pot still reachable in about 1 to 2 hours of play.
 
 - 2026-10-16 20:50: PM: #197 is merged. Merged main (4696cf7); bench now uses Modeling's StationMeshes.PottersBench() and client/scripts/ceramics/BenchModel.cs is deleted. CookingMeshes is not on main yet (only on claude/model-2-env); asked Modeling when it lands. Hearth (#202) also appends kind 10: whichever of #202 and #256 merges second merges main and re-appends, then re-runs upgrade-check.
 
+- 2026-10-16 21:27: #202 (Hearth) merged first. Merged main: PottersBench is now kind 11 (after Hearth 10). Server, ClayCheck build; upgrade-check vs origin/main PASSED; ClayCheck --pot PASSED (c8f2). Head af05862. CI on 94bedff was green. Sent PM the sha.
+
 ## Open questions / blockers
 - Modeling's `CookingMeshes` (client/scripts/models/CookingMeshes.cs, claude/model-2-env, after #197): once on main, in SimmerView.Show add `new MeshInstance3D { Mesh = CookingMeshes.Under }` as a sibling of the pot body (unscaled) and `CookingMeshes.Floaters(dish, PotMesh.WaterLine(CoilPot).X * PotView.Size)` at the liquid disc's height + 0.002 (PotOfBroth->Broth, PotOfStew->Stew, Tallow->Tallow). Materials are baked in.
 - Modeling PR #197 has `StationMeshes.PottersBench()`, a fuller bench model (all stage 0, pegs -1, +Z edge kept clear). Whichever of #197 and this PR merges second switches the StructureModel `PottersBench` case from `BenchModel.Pieces()` to `StationMeshes.PottersBench()`; if it's us, delete client/scripts/ceramics/BenchModel.cs.
