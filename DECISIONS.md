@@ -582,3 +582,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-142 — 2026-10-16 — Renders never block merges
 **Decision:** A PR that is green and matches decisions merges without waiting for Render shots or for Justin to see them. Renders still get made and shown to Justin afterwards, and any changes he asks for come as follow-up PRs. Wipes still need his confirmation of the date (D-129).
 **Who:** Justin ("Don't hold up merges waiting on rendering, they can go in before I see them, but the work should continue and be logged correctly")
+
+## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
+**Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
+**Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
