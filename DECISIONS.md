@@ -545,3 +545,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-133 — 2026-10-16 — Releases and launcher
 **Decision:** Justin's world runs on a local SpacetimeDB server on his own PC. Every green merge to main becomes a public GitHub Release (Linux and Windows clients plus the server module). The launcher has one button: it updates the client, publishes the new module over his local world without wiping (refusing world-wipe releases unless he confirms), starts the server if it's down, then offers Play. No cloud hosting, no cost, no setup.
 **Who:** Justin ("Public GitHub Releases" and "Launcher button on your PC", both as recommended)
+
+## D-134 — 2026-10-16 — Snow wets you at half rain's rate
+**Decision:** Falling snow makes you wet at half the rate of rain. Seasons run about +8 °C in summer and −16 °C in winter (winter days near freezing, nights about −8 °C), with Survival's chill still capped.
+**Who:** Justin ("Half as fast as rain", as recommended)
