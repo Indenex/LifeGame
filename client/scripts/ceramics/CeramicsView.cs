@@ -224,7 +224,10 @@ public partial class CeramicsView : Node
         bool isPot = row != null && row.Form != (byte)ClayForm.Brick;
         float moisture = piece.view.Moisture;
         bool dry = !ClayRules.TooWetToFire(moisture);
-        bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
+        // A dry pot counts as beside a fire only if that fire can take it, as the server
+        // decides; otherwise G picks it up, and Feed the fire outranks it (bugfix-18).
+        var fire = isPot ? BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) : null;
+        bool besideFire = fire != null && (!dry || FireCanTakePot(fire));
         if (besideFire != firing) return null;
         ulong id = piece.id;
         var target = new Vector3(piece.view.Position.X, 0, piece.view.Position.Z);
@@ -325,6 +328,15 @@ public partial class CeramicsView : Node
         foreach (var i in conn.Db.MyInventory.Iter())
             if (Items.IsKnown(i.Item) && match((Item)i.Item)) return true;
         return false;
+    }
+
+    bool FireCanTakePot(Fire fire)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        int potsIn = 0;
+        foreach (var p in conn!.Db.ClayPiece.Iter())
+            if (p.Stage == (byte)ClayStage.Firing && p.FireId == fire.Id) potsIn++;
+        return ClayRules.FireCanTakePot((fire.FuelUntil.MicrosecondsSinceUnixEpoch - now) / 1_000_000f, potsIn);
     }
 
     Fire? BurningFireNear(Vector2 at, float reach)
