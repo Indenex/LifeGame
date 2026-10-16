@@ -110,6 +110,17 @@ namespace LifeGame.Shared
         public const byte TradeAsked = 0, TradeOpen = 1;
         public const byte SideA = 0, SideB = 1;
 
+        // claims-9: a claim's name, as the owner gave it: trimmed, single-spaced, at
+        // most ClaimNameMax characters. Empty means unnamed.
+        public const int ClaimNameMax = 28;
+
+        public static string CleanClaimName(string name)
+        {
+            var words = (name ?? "").Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            string clean = string.Join(" ", words);
+            return clean.Length > ClaimNameMax ? clean[..ClaimNameMax].TrimEnd() : clean;
+        }
+
         // "a stone flake", "an axe", "some clay", "3 sticks": how a gift reads in a line.
         public static string GiftPhrase(ItemDef def, uint count)
         {
