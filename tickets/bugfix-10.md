@@ -1,7 +1,7 @@
 # bugfix-10: SocialTest copes with a claim that already fell
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #59 (rides with bugfix-8 and bugfix-9, per the PM)
 
@@ -15,4 +15,4 @@ CI's claim and PvP check stops crashing at random. CI sets the claim lifetime to
 - (none)
 
 ## Next step
-Wait for CI on PR #59 and send the PM the green sha.
+None; merged.

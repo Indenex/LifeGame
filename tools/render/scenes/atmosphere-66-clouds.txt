@@ -1,0 +1,9 @@
+# #66 (dca2a0f): cloud shadows sliding over the spawn meadow. Movie at 12 fps of game
+# time; 15 s clip after the world has loaded.
+client-movie 12
+client --time-of-day=0.5 --rain=0 --cloud=0.35 --wind=0.6
+name watcher
+frames 240
+mark clouds-start
+frames +180
+mark clouds-end
