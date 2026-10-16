@@ -7,6 +7,9 @@ namespace LifeGame;
 // ("G  Pick berries") and does it on press, or every Repeat seconds while held.
 public partial class UseKey : CanvasLayer
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NUse = "use";
+
     // Where the player stands; set by Main.
     public Func<Vector3> Player = () => Vector3.Zero;
     // Which way the player faces (flat); set by Main so G picks what's in front.
@@ -15,6 +18,7 @@ public partial class UseKey : CanvasLayer
     public Func<bool> Blocked = () => false;
 
     readonly Label verb = new();
+    Label keyLabel = null!;
     Control panel = null!;
     UseOffer? offer;
     float repeatTimer, alpha;
@@ -28,7 +32,7 @@ public partial class UseKey : CanvasLayer
 
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 12);
-        row.AddChild(KeyCap("G"));
+        row.AddChild(KeyCap("G", out keyLabel));
         Hud.Soft(verb, 18, 1f);
         verb.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(verb);
@@ -53,13 +57,18 @@ public partial class UseKey : CanvasLayer
     {
         float dt = (float)delta;
         offer = Blocked() ? null : Use.Best(Player(), Facing());
-        if (offer != null) verb.Text = offer.Prompt;
+        if (offer != null)
+        {
+            verb.Text = offer.Prompt;
+            // The player's own Use key, if they moved it.
+            keyLabel.Text = Controls.KeyFor("use") ?? "G";
+        }
 
         // Fade rather than pop, so walking past things stays calm.
         alpha = Mathf.MoveToward(alpha, offer != null ? 1f : 0f, dt * 6f);
         panel.Modulate = new Color(1, 1, 1, alpha);
 
-        if (offer is { Repeat: > 0f } held && Input.IsActionPressed("use"))
+        if (offer is { Repeat: > 0f } held && Input.IsActionPressed(NUse))
         {
             repeatTimer -= dt;
             if (repeatTimer <= 0f)
@@ -80,9 +89,9 @@ public partial class UseKey : CanvasLayer
     }
 
     // A small rounded key, like a keyboard cap.
-    static Control KeyCap(string key)
+    internal static Control KeyCap(string key, out Label label)
     {
-        var label = Hud.Text(key, 16);
+        label = Hud.Text(key, 16);
         Hud.Soft(label, 16, 1f);
         label.HorizontalAlignment = HorizontalAlignment.Center;
         label.VerticalAlignment = VerticalAlignment.Center;

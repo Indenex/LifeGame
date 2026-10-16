@@ -10,6 +10,9 @@ namespace LifeGame;
 // flickering flames, drifting sparks and a warm light that dims as the fuel runs low.
 public partial class FireView : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NAlbedo = "albedo";
+
     readonly Dictionary<ulong, Campfire> fires = new();
     readonly Dictionary<ulong, RoastView> roasts = new();
     readonly Func<float, float, float> heightAt;
@@ -111,7 +114,7 @@ public partial class FireView : Node3D
             var color = t < Roasting.BestSeconds
                 ? Raw.Lerp(Cooked, Mathf.Clamp(t / Roasting.BestSeconds, 0f, 1f))
                 : Cooked.Lerp(Charred, Mathf.Clamp((t - Roasting.BestSeconds) / (Roasting.BurnSeconds - Roasting.BestSeconds), 0f, 1f));
-            meat.SetShaderParameter("albedo", color);
+            meat.SetShaderParameter(NAlbedo, color);
         }
     }
 
@@ -132,11 +135,11 @@ public partial class FireView : Node3D
         readonly OmniLight3D light = new()
         {
             LightColor = new Color(1.0f, 0.58f, 0.24f),
-            OmniRange = 7f,
-            OmniAttenuation = 1.4f,
+            OmniRange = 10f,
+            OmniAttenuation = 1.15f,
             ShadowEnabled = true,
             Position = new Vector3(0, 0.6f, 0),
-            LightVolumetricFogEnergy = 2f,
+            LightVolumetricFogEnergy = 4f,
         };
         readonly CpuParticles3D flames = Particles(26, 0.7f, new Color(1f, 0.62f, 0.2f), 0.32f, 0.9f, 1.6f);
         readonly CpuParticles3D sparks = Particles(10, 1.8f, new Color(1f, 0.75f, 0.35f), 0.05f, 1.6f, 2.8f);
@@ -176,7 +179,7 @@ public partial class FireView : Node3D
             float left = Math.Clamp((FuelUntilMicros - now) / 1_000_000f, 0f, Fires.MaxSeconds);
             // Full strength with a minute or more of fuel, fading to embers as it runs out.
             float strength = Math.Clamp(left / 60f, 0.15f, 1f);
-            float flicker = 0.85f + 0.1f * Mathf.Sin(time * 13.1f) + 0.06f * Mathf.Sin(time * 23.7f + 1.3f);
+            float flicker = Atmosphere.FireFlicker(time);
             light.LightEnergy = 2.6f * strength * flicker;
             flames.ScaleAmountMax = 1.6f * strength;
             flames.Emitting = left > 0;

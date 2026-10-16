@@ -40,6 +40,19 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
 
 
+## Chat commands
+
+Typed into chat (Enter). Admin commands show in F1 only for admins.
+
+| Command | Action | Who | Lane |
+|---|---|---|---|
+| /name Name | Change your name | everyone | Claims |
+| /day | Set the time to mid-morning; the light eases over a second or two | admin | Atmosphere |
+| /night | Set the time to night | admin | Atmosphere |
+| /time 0-1 | Set the time of day (0.25 sunrise, 0.5 noon, 0.75 sunset) | admin | Atmosphere |
+
+The publisher is always an admin. To make your in-game player an admin, run once from the machine that published: `spacetime call lifegame make_admin '"YourName"'`.
+
 ## Debug only (not in player builds)
 
 | Key | Action | Lane | Today |
@@ -73,6 +86,7 @@ Use.Register(new UseHandler
 - G is ignored while the crafting minigame runs or a building is being placed.
 - Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire 22, Crafting feed fire 20, Animals shear 15, Ceramics fire or pick up a pot 12, Ceramics fill pots 11, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
+- Players can change any key on the Controls page of the Esc menu (ui/ControlsPage.cs); the keys in this file are the defaults. So never write a key into on-screen text: hints use `{key}` in Controls.cs, and lanes call `Controls.KeyFor("journal")` for prompts like "J to close". Read keys through input actions (`IsActionPressed`), not raw keycodes, or the player's choice won't reach you.
 - A one-off tip that isn't about a key: `Hints.Tip("ceramics.dry_by_fire", "Clay dries twice as fast beside a burning fire")` at the moment it matters. It shows once per install, in the same corner. Keep it to one short sentence.
 - If the player does a hinted thing without its key (the server saw them pick berries, eat, open a panel by clicking), call `Hints.Done("eat")` so the hint is never taught after the fact. S, A and D count as walking; E and a right-drag count as turning.
 - A full panel (journal, claim panel, Esc menu) hides the world HUD while it is open. `Panels.Open()` (client/scripts/ui/Panels.cs) says whether one is; HUD pieces outside the UX/UI lane (the land chip, the needs rings) fade out while it is true. A new full panel is added to `Panels.Open` in Main.

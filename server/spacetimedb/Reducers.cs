@@ -27,12 +27,14 @@ public static partial class Module
         InitChat(ctx);
         InitClaims(ctx);
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
@@ -40,6 +42,7 @@ public static partial class Module
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
+            EnsureHealth(ctx, existing.PlayerId);
             return;
         }
 
@@ -70,6 +73,7 @@ public static partial class Module
             LastActionAt = ctx.Timestamp,
         });
         SurvivalConnected(ctx, player);
+        EnsureHealth(ctx, player.PlayerId);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]
@@ -201,7 +205,7 @@ public static partial class Module
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
-        ctx.Db.WorldItem.Insert(new WorldItem
+        var dropped = ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
             Item = item,
@@ -211,6 +215,7 @@ public static partial class Module
             ChunkX = pos.ChunkX,
             ChunkZ = pos.ChunkZ,
         });
+        OnPlayerDroppedItem(ctx, dropped);
     }
 
     // Tops up loose sticks, stones and fiber in the seeded area.

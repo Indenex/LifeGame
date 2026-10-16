@@ -14,10 +14,14 @@ public partial class ClaimPanel : CanvasLayer
     public DbConnection? Conn;
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
+    // True while the owner is typing a name, so Main stops walking.
+    public bool Typing => nameBox.HasFocus();
 
     readonly PanelContainer box = new();
     readonly VBoxContainer content = new();
     readonly Label standing = new();
+    readonly HBoxContainer addRow = new();
+    readonly LineEdit nameBox = new();
     bool owner, dirty, confirmAbandon;
     float clock;
 
@@ -48,6 +52,52 @@ public partial class ClaimPanel : CanvasLayer
         box.Visible = false;
         root.AddChild(box);
         Hud.Style(standing, 14, 0.75f);
+        ReadyNameBox();
+    }
+
+    // claims-4: the owner adds someone by name, near or far, online or not.
+    void ReadyNameBox()
+    {
+        nameBox.PlaceholderText = "Add someone by name";
+        nameBox.MaxLength = 24;
+        nameBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        nameBox.AddThemeFontSizeOverride("font_size", 14);
+        nameBox.AddThemeColorOverride("font_color", Look.Cream);
+        nameBox.AddThemeColorOverride("font_placeholder_color", new Color(Look.Cream, 0.45f));
+        nameBox.AddThemeColorOverride("caret_color", Look.Cream);
+        var field = new StyleBoxFlat
+        {
+            BgColor = new Color(Look.Cream, 0.08f),
+            ContentMarginLeft = 10,
+            ContentMarginRight = 10,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4,
+        };
+        field.SetCornerRadiusAll(10);
+        nameBox.AddThemeStyleboxOverride("normal", field);
+        nameBox.AddThemeStyleboxOverride("focus", field);
+        nameBox.TextSubmitted += _ => AddByName();
+        nameBox.GuiInput += e =>
+        {
+            // Esc while typing just stops typing; a second Esc closes the panel.
+            if (e.IsActionPressed("ui_cancel"))
+            {
+                nameBox.ReleaseFocus();
+                GetViewport().SetInputAsHandled();
+            }
+        };
+        addRow.AddThemeConstantOverride("separation", 6);
+        addRow.AddChild(nameBox);
+        addRow.AddChild(Small("Add", AddByName));
+    }
+
+    void AddByName()
+    {
+        string name = nameBox.Text.Trim();
+        if (name.Length == 0 || Conn == null) return;
+        Conn.Reducers.AddClaimMemberByName(name);
+        nameBox.Text = "";
+        nameBox.ReleaseFocus();
     }
 
     public void Open(Claim claim, bool isOwner)
@@ -65,6 +115,8 @@ public partial class ClaimPanel : CanvasLayer
         box.Visible = false;
         Claim = null;
         confirmAbandon = false;
+        nameBox.Text = "";
+        nameBox.ReleaseFocus();
     }
 
     public void MarkDirty() => dirty = true;
@@ -85,16 +137,18 @@ public partial class ClaimPanel : CanvasLayer
     {
         dirty = false;
         if (Conn == null || Claim is not { } claim) return;
+        bool typing = nameBox.HasFocus();
         foreach (var child in content.GetChildren())
         {
             content.RemoveChild(child);
-            if (child != standing) child.QueueFree();
+            if (child != standing && child != addRow) child.QueueFree();
         }
 
         content.AddChild(Heading(owner ? "Your claim" : $"{claim.OwnerName}'s claim", 20));
         standing.Text = StandsFor(claim);
         content.AddChild(standing);
         content.AddChild(Button("Tend the marker", () => Conn.Reducers.TendClaim(claim.Id)));
+        content.AddChild(Note("Working on the land keeps it tended too."));
 
         if (owner)
         {
@@ -128,6 +182,8 @@ public partial class ClaimPanel : CanvasLayer
                 row.AddChild(Small("Invite", () => Conn.Reducers.AddClaimMember(p.PlayerId)));
                 content.AddChild(row);
             }
+            content.AddChild(addRow);
+            if (typing) nameBox.CallDeferred(Control.MethodName.GrabFocus);
         }
 
         // The shared stash at the foot of the marker.
@@ -176,16 +232,9 @@ public partial class ClaimPanel : CanvasLayer
         return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
     }
 
-    static string StandsFor(Claim claim)
-    {
-        long left = (claim.ExpiresAt.MicrosecondsSinceUnixEpoch - SocialLayer.NowMicros) / 1_000_000;
-        if (left <= 0) return "The marker is falling.";
-        var span = TimeSpan.FromSeconds(left);
-        string time = span.TotalDays >= 1 ? $"{(int)span.TotalDays} d {span.Hours} h"
-            : span.TotalHours >= 1 ? $"{span.Hours} h {span.Minutes} min"
-            : span.TotalMinutes >= 1 ? $"{span.Minutes} min {span.Seconds} s" : $"{span.Seconds} s";
-        return $"Stands for {time} unless tended";
-    }
+    // claims-5: "Tended 2 days ago · stands 1 more day".
+    static string StandsFor(Claim claim) =>
+        Social.TendedLine(claim.TendedAt.MicrosecondsSinceUnixEpoch, claim.ExpiresAt.MicrosecondsSinceUnixEpoch, SocialLayer.NowMicros);
 
     static Label Heading(string text, int size)
     {

@@ -13,6 +13,7 @@ namespace LifeGame;
 //
 // B opens placement (Tab picks what, T turns it, click lays it out, Esc cancels).
 // Hold G (the shared Use key) next to an unfinished site to add what you carry.
+// Using finished buildings (doors, baskets) and weathering are in BuildingSystem.Use.cs.
 public partial class BuildingSystem : Node
 {
     const float WorkInterval = 0.65f;
@@ -96,7 +97,7 @@ public partial class BuildingSystem : Node
                 var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
                 if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item))) return null;
                 float d = new Vector2(site.X - at.X, site.Z - at.Z).Length();
-                return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval);
+                return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval, Target: new Vector3(site.X, at.Y, site.Z));
             },
         });
 
@@ -121,11 +122,28 @@ public partial class BuildingSystem : Node
             Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
                 (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
         }
+        // --building-house: a finished brick house and one going up, without the rest.
+        if (OS.GetCmdlineUserArgs().Contains("--building-house"))
+        {
+            Put(StructureKind.BrickHouse, 7f, -3.2f, 4, 1f, 0.25f);
+            Put(StructureKind.BrickHouse, 8.5f, 4.2f, 1, 0.6f, -0.3f);
+            return;
+        }
+        // --building-door: just a finished hut with its door barred, close up.
+        if (OS.GetCmdlineUserArgs().Contains("--building-door"))
+        {
+            Put(StructureKind.ClayHut, 5.5f, 0f, 4, 1f, 0f);
+            SetDoor(new StructureDoor(ulong.MaxValue, true, true, default), animate: false);
+            return;
+        }
         Put(StructureKind.ClayHut, 8f, -3.2f, 4, 1f, 0.3f);
         Put(StructureKind.LeanTo, 6f, 3.4f, 4, 1f, -2.3f);
         Put(StructureKind.ClayHut, 14f, 5.5f, 2, 0.5f, -0.5f);
         Put(StructureKind.LeanTo, 13.5f, -1.5f, 3, 0.4f, 0.7f);
         Put(StructureKind.LeanTo, 4f, -4.5f, 0, 0.5f, 2.6f);
+        Put(StructureKind.Basket, 4.5f, -1.2f, 1, 1f);
+        Put(StructureKind.Basket, 5.2f, -0.4f, 0, 0.5f, 1f);
+        SetDoor(new StructureDoor(ulong.MaxValue, true, true, default), animate: false);
     }
 
     public void Bind(DbConnection c)
@@ -133,6 +151,7 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
+        BindUse(c);
     }
 
     // --- Rows to views ----------------------------------------------------
@@ -151,6 +170,7 @@ public partial class BuildingSystem : Node
             views[s.Id] = v;
             root.AddChild(v);
             SetCleared(s, true);
+            ApplyExtras(s, v);
         }
 
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
@@ -217,12 +237,17 @@ public partial class BuildingSystem : Node
                 if (d < keep && d > 0.01f) to = new Vector3(s.X + dx / d * keep, to.Y, s.Z + dz / d * keep);
                 continue;
             }
+            if (s.Kind == StructureKind.BrickHouse && (s.Complete || s.Stage >= 2))
+            {
+                to = HouseWalls(s, from, to);
+                continue;
+            }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
             const float wall = 1.7f, half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
             float r = Mathf.Sqrt(lx * lx + lz * lz);
             if (Mathf.Abs(r - wall) > half || r < 0.01f) continue;
-            if (Mathf.Abs(Mathf.Atan2(lx, lz)) < door) continue;
+            if (Mathf.Abs(Mathf.Atan2(lx, lz)) < door && !DoorShut(s.Id)) continue;
             var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
             bool inside = fx * fx + fz * fz < wall * wall;
             float target = inside ? wall - half : wall + half;
@@ -230,6 +255,24 @@ public partial class BuildingSystem : Node
             to = new Vector3(wx, to.Y, wz);
         }
         return to;
+    }
+
+    // A brick house's four straight walls, open at the doorway unless the door is shut.
+    Vector3 HouseWalls(Structure s, Vector3 from, Vector3 to)
+    {
+        const float half = 0.3f, door = 0.48f;
+        float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
+        var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
+        // Side walls at x = ±wx.
+        if (Mathf.Abs(lz) < wz + half && Mathf.Abs(Mathf.Abs(lx) - wx) < half)
+            lx = Mathf.Sign(lx) * (Mathf.Abs(fx) < wx ? wx - half : wx + half);
+        // Back and front walls at z = ±wz; the front has the doorway.
+        bool doorway = lz > 0 && Mathf.Abs(lx) < door && !DoorShut(s.Id);
+        if (!doorway && Mathf.Abs(lx) < wx + half && Mathf.Abs(Mathf.Abs(lz) - wz) < half)
+            lz = Mathf.Sign(lz) * (Mathf.Abs(fz) < wz ? wz - half : wz + half);
+        var (x, z) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+        return new Vector3(x, to.Y, z);
     }
 
     // --- Input ------------------------------------------------------------
@@ -246,6 +289,11 @@ public partial class BuildingSystem : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
+        if (!placing && UseInput(e))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e.IsActionPressed("build_mode"))
         {
             if (placing) StopPlacing();
@@ -326,6 +374,8 @@ public partial class BuildingSystem : Node
     {
         float dt = (float)delta;
         if (placing) UpdateGhost(dt);
+        UpdateUse();
+        UpdateWeathering(dt);
         UpdatePrompt();
     }
 
@@ -389,11 +439,19 @@ public partial class BuildingSystem : Node
         return null;
     }
 
-    Structure? NearestSite() =>
-        rows.Values
-            .Where(s => !s.Complete && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, Structures.WorkReach))
-            .OrderBy(s => new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared())
-            .FirstOrDefault();
+    // A plain loop: this runs every frame for the Use key and the prompt (bugfix-8).
+    Structure? NearestSite()
+    {
+        Structure? best = null;
+        float bestD = float.MaxValue;
+        foreach (var s in rows.Values)
+        {
+            if (s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, Structures.WorkReach)) continue;
+            float d = new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared();
+            if (d < bestD) { best = s; bestD = d; }
+        }
+        return best;
+    }
 
     void UpdatePrompt()
     {
@@ -412,6 +470,8 @@ public partial class BuildingSystem : Node
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
         }
+        else if (UsePrompt() is { } use)
+            text = use;
         else if (ShelterAt(me.Position) is { } home)
             text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
 
