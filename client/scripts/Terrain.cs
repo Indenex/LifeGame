@@ -272,7 +272,7 @@ public partial class Terrain : Node3D
                 var custom = change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0);
                 if (depths.ContainsKey(World.CellKey(x, z)) || (Cleared?.Invoke(x, z) == true && !flattening)) continue;
                 float top = TileHeight(x, z);
-                float fx = x + (Hash01(x, z, 12) - 0.5f) * 0.5f, fz = z + (Hash01(x, z, 13) - 0.5f) * 0.5f;
+                var (fx, fz) = Trees.Trunk(x, z);
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
                 // Reeds stand in the shallows and along the bank.
                 if (top < Look.WaterLevel + 0.1f)
@@ -283,17 +283,19 @@ public partial class Terrain : Node3D
                 }
                 bool shore = NearWater(x, z, top);
 
-                bool nearSpawn = x * x + z * z < 12 * 12;
+                bool nearSpawn = Trees.NearSpawn(x, z);
                 float roll = Hash01(x, z, 11);
                 float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
                 var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
                 var at = new Transform3D(basis, new Vector3(fx, top, fz));
 
                 // Groves with glades between them, thinning into the clearing where new
-                // players wake up (Forest.cs).
+                // players wake up (shared/Forest.cs). Full-grown trees follow
+                // shared/Trees.cs, so the server knows which tree is chopped; saplings
+                // are only scenery.
                 float density = Forest.Density(x, z);
                 float edge = Forest.Edge(density);
-                float tree = Forest.TreeChance(density);
+                float tree = Trees.Forest(x, z);
                 float sapling = tree + 0.03f * edge;
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
                 float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
@@ -556,15 +558,5 @@ public partial class Terrain : Node3D
         }
     }
 
-    public static float Hash01(int x, int z, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)x * 0x27D4EB2Du ^ (uint)z * 0x165667B1u ^ salt * 0x9E3779B9u;
-            h ^= h >> 15;
-            h *= 0x85EBCA6Bu;
-            h ^= h >> 13;
-            return (h & 0xFFFFFF) / 16777216f;
-        }
-    }
+    public static float Hash01(int x, int z, uint salt) => Trees.Hash01(x, z, salt);
 }

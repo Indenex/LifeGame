@@ -41,6 +41,24 @@ namespace LifeGame.Shared
         public const float MildCelsius = 15f;
         public const float RainChill = 0.5f;
 
+        // Getting wet (survival-5). Wetness runs from 0 (dry) to 1 (soaked). Full
+        // rain soaks you in two minutes and wading in about ten seconds; you dry
+        // in five minutes, twice as fast by a fire. Cover stops rain wetting you.
+        // Soaked, the cold bites RainChill (50%) harder: this replaces the old
+        // straight rain bonus rather than stacking on it.
+        public const float RainWetting = 1f / 120f;
+        public const float WadeWetting = 1f / 10f;
+        public const float Drying = 1f / 300f;
+        public const float FireDrying = 2f;
+
+        // How fast wetness changes: rain under the sky (0 to 1, less any cover),
+        // standing in water, and whether a fire is near.
+        public static float WetnessRate(float rain, float rainCover, bool wading, bool nearFire)
+        {
+            float wetting = (wading ? WadeWetting : 0f) + RainWetting * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
+            return wetting > 0f ? wetting : -Drying * (nearFire ? FireDrying : 1f);
+        }
+
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;
         public const int BushesPerChunk = 2;
