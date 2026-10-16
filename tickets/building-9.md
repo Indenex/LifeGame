@@ -23,8 +23,10 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 
 - 2026-10-16 19:36: Justin decided D-149 (principle D-148): a fire on a hearth pulls sticks and logs from nearby storage by itself and never needs tending. Proposed `FireTopUpHook(ctx, Fire fire, ref Timestamp fuelUntil)` to Crafting, called in BurnOutFires. Building's side: when a fire on a finished hearth has under 60 s left, take one log, else one stick, from a basket or jar within 3 m, and add FuelSeconds × 1.5 up to the fuel cap.
 
+- 2026-10-16 19:38: FireTopUpHook implemented (BuildingHearth.cs). Scratch test merged with #122, with the proposed BurnOutFires call patched in and a throwaway reducer setting up a hearth, a basket (3 sticks, 1 log) and a fire with 25 s left. On the next tick it took the log and fuel went +540 s (360 × 1.5); sticks untouched. The cap uses the lighter's Firecraft rank (Fires.MaxSecondsFor × 1.5), so nothing more is needed from Crafting.
+
 ## Open questions / blockers
-- Crafting: the FireTopUpHook call in BurnOutFires, and access to the fuel cap (D-121). Asked 19:36.
+- Crafting: declare FireTopUpHook and call it in BurnOutFires (asked 19:36; the cap is handled on my side).
 - Crafting's #122 declares and calls both hooks; tested. Building-9 waits for #122 and #153 to merge. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
