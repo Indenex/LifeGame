@@ -56,22 +56,14 @@ public partial class SurvivalClient : Node
     // G actions go through the shared Use registry (KEYMAP.md).
     void RegisterUse()
     {
-        // A ripe bush you face beats feeding a fire beside you (priority 20); one off
-        // to the side still yields to it.
-        Use.Register(new UseHandler
-        {
-            Id = "survival.forage_facing",
-            Priority = 25,
-            Find = at => conn != null && NearestRipeBush() is { } bush && Facing(bush.X, bush.Z)
-                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id))
-                : null,
-        });
+        // Target lets a bush you face beat a fire beside you (ui-4).
         Use.Register(new UseHandler
         {
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id))
+                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                    Target: new Vector3(bush.X, 0, bush.Z))
                 : null,
         });
         Use.Register(new UseHandler
@@ -192,7 +184,9 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         if (e.IsActionPressed("eat"))
         {
-            if (Carrying(Item.Berries)) conn.Reducers.Eat((ushort)Item.Berries);
+            var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
+            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
+            else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }
     }
@@ -215,15 +209,6 @@ public partial class SurvivalClient : Node
             .OrderBy(t => t.d)
             .Select(t => t.b)
             .FirstOrDefault();
-    }
-
-    // Whether the player faces a spot, within about 60 degrees either side.
-    bool Facing(float x, float z)
-    {
-        var to = new Vector2(x - player.Position.X, z - player.Position.Z);
-        if (to.LengthSquared() < 0.01f) return true;
-        float yaw = player.Rotation.Y;
-        return new Vector2(Mathf.Sin(yaw), Mathf.Cos(yaw)).Dot(to.Normalized()) > 0.5f;
     }
 
     // Mirrors the server: any ground below the water line within reach.
