@@ -586,3 +586,43 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
 **Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
 **Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
+
+## D-144 — 2026-10-16 — First-evening tuning; visible breath in the cold
+**Decision:** Survival's next milestone is a first-evening tuning pass on the new land (berries near spawn, water reach, early warmth) so nobody dies before their first fire. Players also show a visible breath puff in cold air; there is no camera shake.
+**Who:** Justin ("1, but when cold I do like the idea of seeing your breath")
+
+## D-145 — 2026-10-16 — Workers never sit idle
+**Decision:** When a lane finishes its ticket and has no assigned next work, it immediately picks the next most useful item for its lane from the current milestones (`STATUS.md`, D-081) or the design docs, starts it, and tells the PM what it picked. Any design choice Justin would notice goes to the PM as options while the lane works on the recommended one. Waiting on CI or on a merge is not a reason to idle; start the next ticket.
+**Who:** Justin ("Workers should not sit idle. If we don't have more work for them, pull from the design doc and figure some out, or ask me")
+
+## D-146 — 2026-10-16 — Streams are wadeable
+**Decision:** Streams are shallow enough to walk across (bed at water level minus 0.25 m; you get wet quickly per D-062); ponds stay deep. Every part of the land must be reachable on foot from spawn and from respawn points.
+**Who:** Justin ("Wade across", as recommended), after Bug fixes found env-2's stream blocked all crossing
+
+## D-147 — 2026-10-16 — Clay oil lamp
+**Decision:** ceramics-9 is a clay oil lamp, pinched at the Potter's bench and pit-fired, fuelled with tallow (1 tallow per 2 raw mutton, rendered at a fire), with a warm glow about 4 m across. Each tallow lasts 30 minutes (3x the proposed 10), and lamps refill automatically from tallow in nearby chests and storage.
+**Who:** Justin ("1, but lamp lights should auto-pull from chests if there's tallow in them, make them last 3* as long too")
+
+## D-148 — 2026-10-16 — Crafted things are not chores
+**Decision:** A design principle. Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Lanes check new features against this.
+**Who:** Justin ("I don't want things to feel 'chorish'. Once something is crafted it shouldn't become just one more thing to take care of all the time.")
+
+## D-149 — 2026-10-16 — Hearth fires feed themselves
+**Decision:** A fire on a built raised hearth (D-132) pulls sticks and logs from nearby chests and storage (baskets, jars, claim stash within reach) so it doesn't need tending. Open campfires still need feeding by hand.
+**Who:** Justin ("Hearths only", as recommended), applying D-148
+
+## D-150 — 2026-10-16 — First-time tips
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Who:** Justin ("All four", as recommended)
+
+## D-151 — 2026-10-16 — Log cabin
+**Decision:** The log cabin is a forest alternative to the brick house, with the same shelter, size and weathering. Costs: sill 4 stone + 4 logs; walls 16 logs; rafters 12 sticks + 2 cordage; roof 14 fiber.
+**Who:** Justin (as recommended)
+
+## D-152 — 2026-10-16 — Corners of the forest
+**Decision:** env-4 gives the region distinct moods: birch and alder wetland with sedge and cattails along streams, heath and meadow with heather, gorse and lone oaks on hilltops, mixed forest between. Visual only, no wipe.
+**Who:** Justin (as recommended)
+
+## D-153 — 2026-10-16 — Foot wraps train Leatherwork; the drop spindle stays Toolmaking
+**Decision:** Leather foot wraps train Leatherwork; making the drop spindle trains Toolmaking.
+**Who:** Justin (wraps: "Leatherwork", as recommended; spindle: Journal's default)

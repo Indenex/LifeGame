@@ -1,8 +1,8 @@
 # claims-10: Whisper and shout
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_progress
-Branch: claude/claims-10-voice (stacked on claude/claims-chat-pvp-vk2qak while PR #174 is open)
+Status: in_review
+Branch: claude/claims-10-voice
 PR: (not yet)
 
 ## Goal
@@ -15,6 +15,7 @@ Chat gets two more voices (PM, D-145; the runner-up Justin saw for claims-9).
 - The chat hint and KEYMAP list the commands.
 
 ## Progress log
+- 2026-10-16 19:45: #174 merged; merged main in. Opening the PR.
 - 2026-10-16 19:40: built.
   - Shared: `Social.Voice`, `VoiceOf`, `VoiceBody`, `RangeOf`, `WhisperRange` 4, `ShoutRange` 60, and `ChatDim(distance, range)`.
   - Server: SendChat normalises the prefix.
@@ -24,11 +25,11 @@ Chat gets two more voices (PM, D-145; the runner-up Justin saw for claims-9).
   - Local build passes; all social checks pass.
 
 ## Decisions / defaults
-- Whispers are filtered by the client, like all chat. The rows still reach clients subscribed to nearby chunks, so a modified client could read them. A truly private whisper would need a per-player view; that is fine for now.
+- Whispers are filtered by the client, like all chat. The rows still reach clients subscribed to nearby chunks, so a modified client could read them. A truly private whisper would need a per-player view. The PM agreed to leave whisper privacy for later (2026-10-16).
 - Shouts share the normal chat cooldown.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-When #174 merges, merge main in, open the claims-10 PR and send a render request (a shout bubble next to a normal one; a whisper).
+Wait for CI on the claims-10 PR; when it's green, send the head sha to the PM.

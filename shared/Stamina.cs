@@ -23,6 +23,13 @@ namespace LifeGame.Shared
         public const float WellFedBonus = 0.25f;
         public const long WellFedMicros = 10L * 60 * 1_000_000;
 
+        // Endurance (D-123): a basic skill trained by running. The client reports each
+        // stretch of RunPerUse seconds run, and the server counts it as one use of
+        // RunProcess, so Master (about 800 uses) takes roughly four and a half hours of running.
+        public const string Skill = "endurance";
+        public const string RunProcess = "move.run";
+        public const float RunPerUse = 20f;
+
         public static float RunSeconds(int rank, bool wellFed) =>
             Lerp(StartRunSeconds, MasterRunSeconds, rank) * (wellFed ? 1f + WellFedBonus : 1f);
 
