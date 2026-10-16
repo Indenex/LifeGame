@@ -875,3 +875,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
 **Decision:** The chat leak is fixed with private per-player delivery: each message is delivered only to its recipients. Owner: Claims (claims-13).
 **Who:** Justin, picking "Private per-player delivery".
+
+## D-216 — 2026-10-16 — Heather is sparse, patchy and muted (revises D-164's purple bloom)
+**Decision:** The hilltop heath's heather must be sparse, in irregular patches, and muted in colour: a soft desaturated mauve, only in bloom, close to the grass in brightness. This revises the purple bloom of D-164. Hotfix owner: Environment, with Atmosphere.
+**Who:** Justin ("I HATE this, the color, the quantity, it's crazy.")
