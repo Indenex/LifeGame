@@ -1,0 +1,9 @@
+# atmosphere-21 (bc23947): thunderstorm, day. A 20 s movie at 12 fps so a strike and the
+# frames after it can be cut out. Camera = puppet standing in the open.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.5 --rain=1 --wind=0.9 --cloud=1 --wetness=1 --lightning=6
+frames 120
+mark storm-start
+frames +240
+mark storm-end
