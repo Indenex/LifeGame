@@ -77,7 +77,8 @@ public partial class BuildingSystem
     float Weathered(ulong structureId)
     {
         if (!touched.TryGetValue(structureId, out var at)) return 0f;
-        double hours = (DateTimeOffset.UtcNow - at).TotalHours - Structures.WeatherAfterHours;
+        double hours = (DateTimeOffset.UtcNow - at).TotalHours
+            - (rows.TryGetValue(structureId, out var s) ? Structures.WeatherAfterFor((int)s.Kind) : Structures.WeatherAfterHours);
         return hours <= 0 ? 0f : (float)Math.Min(1.0, hours / Structures.WeatherForHours);
     }
 
@@ -104,12 +105,12 @@ public partial class BuildingSystem
 
     static bool Usable(Structure s, Vector3 p)
     {
-        if (s.Kind == StructureKind.Basket)
+        if (Structures.IsStore((int)s.Kind))
             return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
-        if (s.Kind != StructureKind.ClayHut) return false;
+        if (!Structures.HasDoorway((int)s.Kind)) return false;
         // Within a step of the doorway, inside or out.
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, p.X, p.Z);
-        return new Vector2(lx, lz - 1.7f).Length() < 1.2f;
+        return new Vector2(lx, lz - Structures.Shape((int)s.Kind).DoorwayZ).Length() < 1.2f;
     }
 
     // G on a finished hut's doorway or a basket. Priority sits just under adding materials (30).
@@ -123,10 +124,10 @@ public partial class BuildingSystem
             {
                 if (UsableNear() is not { } s) return null;
                 float d = new Vector2(s.X - at.X, s.Z - at.Z).Length();
-                if (s.Kind == StructureKind.Basket)
-                    return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
+                if (Structures.IsStore((int)s.Kind))
+                    return openBasket == s.Id ? null : new UseOffer($"Open the {Structures.Shape((int)s.Kind).Name.Split(' ')[^1].ToLowerInvariant()}", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
                 // The doorway, so the hut you face wins over a basket beside you.
-                var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 1.7f);
+                var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ);
                 var doorway = new Vector3(dx, at.Y, dz);
                 if (!doors.TryGetValue(s.Id, out var door))
                     return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
@@ -153,7 +154,7 @@ public partial class BuildingSystem
     // The door costs show beside the doorway when you can't hang one yet.
     string? UsePrompt()
     {
-        if (UsableNear() is not { } s || s.Kind != StructureKind.ClayHut || doors.ContainsKey(s.Id)) return null;
+        if (UsableNear() is not { } s || !Structures.HasDoorway((int)s.Kind) || doors.ContainsKey(s.Id)) return null;
         return $"A door takes {Structures.DoorSticks} sticks and {Structures.DoorFiber} fiber";
     }
 
@@ -216,7 +217,8 @@ public partial class BuildingSystem
         Fill(basketCarried, c.Db.MyInventory.Iter().Where(i => i.Count > 0)
             .Select(i => (ItemLook.Label((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
         int stacks = c.Db.BasketItem.Iter().Count(b => b.StructureId == id);
-        basketTitle.Text = $"Storage basket    {stacks} of {Structures.BasketStacks}";
+        var shape = rows.TryGetValue(id, out var s) ? Structures.Shape((int)s.Kind) : Structures.Shape((int)StructureKind.Basket);
+        basketTitle.Text = $"{shape.Name}    {stacks} of {shape.StoreStacks}";
     }
 
     static void Fill(VBoxContainer list, IEnumerable<(string label, Action<bool> move)> entries)

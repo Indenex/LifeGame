@@ -40,8 +40,8 @@ public static partial class Module
     public static void HangDoor(ReducerContext ctx, ulong structureId)
     {
         var (s, player) = RequireFinishedInReach(ctx, structureId);
-        if (s.Kind != StructureKind.ClayHut)
-            throw new Exception("Only a clay hut has a doorway");
+        if (!Structures.HasDoorway((int)s.Kind))
+            throw new Exception("That has no doorway");
         if (ctx.Db.StructureDoor.StructureId.Find(structureId) is not null)
             throw new Exception("It already has a door");
         if (CountOf(ctx, Item.Stick) < Structures.DoorSticks || CountOf(ctx, Item.Fiber) < Structures.DoorFiber)
@@ -95,8 +95,8 @@ public static partial class Module
     public static void BasketPut(ReducerContext ctx, ulong structureId, ushort item, byte quality, uint count)
     {
         var (s, _) = RequireFinishedInReach(ctx, structureId);
-        if (s.Kind != StructureKind.Basket)
-            throw new Exception("That isn't a basket");
+        if (!Structures.IsStore((int)s.Kind))
+            throw new Exception("You can't store things in that");
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         count = Math.Min(count, stack.Count);
         if (count == 0) return;
@@ -105,8 +105,8 @@ public static partial class Module
         var same = inside.Where(b => b.Item == item && b.Quality == quality).Select(b => (BasketItem?)b).FirstOrDefault();
         if (same is { } match)
             ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + count });
-        else if (inside.Count >= Structures.BasketStacks)
-            throw new Exception("The basket is full");
+        else if (inside.Count >= Structures.Shape((int)s.Kind).StoreStacks)
+            throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
         else
             ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = count });
         RemoveFromStack(ctx, stack, count);
@@ -126,6 +126,21 @@ public static partial class Module
         else ctx.Db.BasketItem.Id.Update(row with { Count = row.Count - count });
         AddToInventory(ctx, ctx.Sender, (Item)row.Item, count, row.Quality);
         TouchStructure(ctx, s.Id);
+    }
+
+    // A burning fire within a brick house's walls: the whole room is warm.
+    static bool FireInside(ReducerContext ctx, Structure s)
+    {
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        for (int cx = World.ChunkOf(s.X - 3f); cx <= World.ChunkOf(s.X + 3f); cx++)
+        for (int cz = World.ChunkOf(s.Z - 3f); cz <= World.ChunkOf(s.Z + 3f); cz++)
+        foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx, cz)))
+        {
+            if (fire.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
+            var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, fire.X, fire.Z);
+            if (MathF.Abs(lx) < Structures.HouseWallX && MathF.Abs(lz) < Structures.HouseWallZ) return true;
+        }
+        return false;
     }
 
     static bool DoorClosed(ReducerContext ctx, ulong structureId) =>

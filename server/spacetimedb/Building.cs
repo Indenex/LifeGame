@@ -10,6 +10,7 @@ public enum StructureKind
     ClaimMarker,
     Kiln,
     Basket,
+    BrickHouse,
 }
 
 // One material a structure's current stage still needs.
@@ -119,6 +120,14 @@ public static partial class Module
         new[]
         {
             new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+        },
+        // Brick house: Footings, Brick walls, Rafters, Thatch
+        new[]
+        {
+            new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+            new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+            new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+            new[] { (Item.Fiber, 14u) },
         },
     };
 
@@ -308,6 +317,7 @@ public static partial class Module
             if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
             var shape = Structures.Shape((int)s.Kind);
             float warmth = DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, Structures.ClosedDoorWarmth) : shape.Warmth;
+            if (s.Kind == StructureKind.BrickHouse && FireInside(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }
