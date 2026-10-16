@@ -12,8 +12,8 @@ namespace LifeGame;
 // Clicking a tile starts House building's ghost. The pictures are rendered from the real
 // structure models (StructureView) in an offscreen viewport when the menu first opens,
 // so a new kind gets its picture without anyone drawing one (D-206).
-// Prototype: opened by a --screenshot-buildmenu preview or Open(); B keeps opening the
-// ghost directly until Justin picks a layout (D-154).
+// Justin picked this layout (option 1). B opens it (BuildingSystem keeps B while its ghost
+// is up, so B there still cancels); Esc or B closes it.
 public partial class BuildMenu : CanvasLayer
 {
     // What you carry of an item (Main sets it); the mock counts sticks and fiber.
@@ -31,19 +31,13 @@ public partial class BuildMenu : CanvasLayer
     readonly Dictionary<int, Texture2D> pictures = new();
     bool rendering;
 
-    // Until House building gives each shape a Category (building-12), read one from its flags.
-    public static string CategoryOf(int kind)
-    {
-        var s = Structures.Shape(kind);
-        if (s.Fence || s.Gate) return "Fences and gates";
-        if (s.Station != StationKind.None) return "Crafting";
-        if (s.StoreStacks > 0) return "Storage";
-        if (s.Indoor) return "Fire";
-        if (s.RainCover > 0f) return "Shelter";
-        return "Other";
-    }
+    // Each shape names its own tab (House building's StructureShape.Category).
+    public static string CategoryOf(int kind) => Structures.Shape(kind).Category;
 
-    static readonly string[] Order = { "Shelter", "Storage", "Crafting", "Fences and gates", "Fire", "Other" };
+    // Tabs in this order; any category not listed comes after, so a new one still shows.
+    static readonly string[] Preferred = { "Shelter", "Storage", "Crafting", "Fire", "Fences and gates", "Claims" };
+    static IEnumerable<string> Order => Preferred
+        .Concat(Enumerable.Range(0, Structures.Shapes.Length).Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
 
     // Everything it takes, all stages together.
     public static List<(Item item, uint count)> Costs(int kind) =>
@@ -72,14 +66,18 @@ public partial class BuildMenu : CanvasLayer
 
     public void Close() => panel.Visible = false;
 
+    // While House building's ghost is up (or something else has the keys) B is theirs.
+    public Func<bool> Blocked = () => false;
+
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!IsOpen || e is not InputEventKey { Pressed: true, Echo: false }) return;
-        if (e.IsActionPressed("ui_cancel") || e.IsActionPressed("build_mode"))
-        {
+        if (e is not InputEventKey { Pressed: true, Echo: false }) return;
+        if (IsOpen && (e.IsActionPressed("ui_cancel") || e.IsActionPressed("build_mode")))
             Close();
-            GetViewport().SetInputAsHandled();
-        }
+        else if (!IsOpen && InputMap.HasAction("build_mode") && e.IsActionPressed("build_mode") && !Blocked())
+            Open();
+        else return;
+        GetViewport().SetInputAsHandled();
     }
 
     static IEnumerable<int> Kinds(string category) =>
