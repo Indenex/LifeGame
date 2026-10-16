@@ -224,6 +224,8 @@ public static partial class Module
         if (watchers.Count == 0) return;
         ClearOldCarcasses(ctx, now);
         DryHides(ctx, now);
+        // Snow on the ground (seasons, D-135): flocks bunch up, wander less and graze less.
+        float huddle = Math.Clamp(SnowCover(ctx), 0f, 1f);
 
         foreach (var flock in ctx.Db.Flock.Iter().ToList())
         {
@@ -238,7 +240,7 @@ public static partial class Module
 
             float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
             bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
-            if (awake) AnimalThinkFlock(ctx, flock, members, watchers, now);
+            if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
         }
     }
 
@@ -278,7 +280,7 @@ public static partial class Module
         return result;
     }
 
-    static void AnimalThinkFlock(ReducerContext ctx, Flock flock, List<FlockMember> members, List<AnimalWatcher> watchers, long now)
+    static void AnimalThinkFlock(ReducerContext ctx, Flock flock, List<FlockMember> members, List<AnimalWatcher> watchers, float huddle, long now)
     {
         // Everyone reacts to where the flock was at the start of this tick, so the
         // order sheep are processed in does not matter.
@@ -300,7 +302,7 @@ public static partial class Module
             if (mother is { } ewe)
                 LambDecide(ctx, ref body, ref mind, ewe, now);
             else
-                AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
+                AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, huddle, now);
             AnimalMove(ctx, ref body, ref mind, before, i);
             RegrowFleece(ref body, mind, now);
             AnimalGrowAndHeal(ref body, ref mind, now);
@@ -370,10 +372,13 @@ public static partial class Module
         }
     }
 
+    // huddle is how much snow lies (0 to 1): in snow a flock keeps close, wanders
+    // less and stands about more than it grazes.
     static void AnimalDecide(ReducerContext ctx, ref Animal body, ref AnimalMind mind, Flock flock, Animal leader, bool isLeader,
-        List<AnimalWatcher> watchers, bool calmedByStillPlayer, long now)
+        List<AnimalWatcher> watchers, bool calmedByStillPlayer, float huddle, long now)
     {
         const float RunAt = 0.5f, CalmAt = 0.2f;
+        double graze = 0.75 - 0.45 * huddle;
 
         if (mind.Nervous > RunAt || (body.State == AnimalState.Run && mind.Nervous > CalmAt))
         {
@@ -391,12 +396,12 @@ public static partial class Module
         }
 
         float fromLeader = AnimalDist(body.X, body.Z, leader.X, leader.Z);
-        bool straggling = !isLeader && fromLeader > 6.5f;
+        bool straggling = !isLeader && fromLeader > 6.5f - 3f * huddle;
 
         if (body.State == AnimalState.Walk)
         {
             if (AnimalDist(body.X, body.Z, mind.TargetX, mind.TargetZ) > 0.4f && !(straggling && now >= mind.StateUntil)) return;
-            body.State = ctx.Rng.NextDouble() < 0.75 ? AnimalState.Graze : AnimalState.Idle;
+            body.State = ctx.Rng.NextDouble() < graze ? AnimalState.Graze : AnimalState.Idle;
             mind.StateUntil = now + AnimalMicros(4f, 11f, ctx);
             return;
         }
@@ -418,7 +423,7 @@ public static partial class Module
 
         if (isLeader)
         {
-            if (ctx.Rng.NextDouble() < 0.55)
+            if (ctx.Rng.NextDouble() < 0.55 * (1f - 0.7f * huddle))
             {
                 // Wander somewhere new, preferring open grass to the woods, and
                 // drifting back toward home when far from it.
@@ -426,7 +431,7 @@ public static partial class Module
                 for (int k = 0; k < 3; k++)
                 {
                     float angle = (float)(ctx.Rng.NextDouble() * MathF.Tau);
-                    float r = 3f + (float)ctx.Rng.NextDouble() * 6f;
+                    float r = (3f + (float)ctx.Rng.NextDouble() * 6f) * (1f - 0.6f * huddle);
                     float cx = body.X + MathF.Sin(angle) * r, cz = body.Z + MathF.Cos(angle) * r;
                     if (AnimalWoodland(cx, cz) < best)
                         (tx, tz, best) = (cx, cz, AnimalWoodland(cx, cz));
@@ -441,31 +446,32 @@ public static partial class Module
             }
             else
             {
-                body.State = ctx.Rng.NextDouble() < 0.7 ? AnimalState.Graze : AnimalState.Idle;
+                body.State = ctx.Rng.NextDouble() < graze - 0.05 ? AnimalState.Graze : AnimalState.Idle;
                 mind.StateUntil = now + AnimalMicros(5f, 12f, ctx);
             }
             return;
         }
 
-        if (fromLeader > 3.5f)
+        if (fromLeader > 3.5f - 2f * huddle)
         {
             float angle = (float)(ctx.Rng.NextDouble() * MathF.Tau);
-            float r = 1f + (float)ctx.Rng.NextDouble() * 2f;
+            float r = (1f + (float)ctx.Rng.NextDouble() * 2f) * (1f - 0.5f * huddle);
             var (tx, tz) = AnimalNearestDry(leader.X + MathF.Sin(angle) * r, leader.Z + MathF.Cos(angle) * r);
             AnimalStartWalk(ref body, ref mind, tx, tz, ctx, now);
             return;
         }
 
         double roll = ctx.Rng.NextDouble();
-        if (roll < 0.15)
+        double shuffle = 0.15 * (1f - 0.6f * huddle);
+        if (roll < shuffle)
         {
             // Shuffle a step or two to a fresh patch of grass.
-            float angle = (float)(roll / 0.15 * MathF.Tau);
+            float angle = (float)(roll / shuffle * MathF.Tau);
             var (tx, tz) = AnimalNearestDry(body.X + MathF.Sin(angle) * 1.5f, body.Z + MathF.Cos(angle) * 1.5f);
             AnimalStartWalk(ref body, ref mind, tx, tz, ctx, now);
             return;
         }
-        body.State = roll < 0.75 ? AnimalState.Graze : AnimalState.Idle;
+        body.State = roll < graze ? AnimalState.Graze : AnimalState.Idle;
         mind.StateUntil = now + AnimalMicros(4f, 10f, ctx);
     }
 
