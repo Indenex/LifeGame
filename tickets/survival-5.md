@@ -26,7 +26,9 @@ Rain and wading make you wet; wetness builds and fades gradually. Being wet make
 - 2026-10-16: D-062: Justin approved the wetness numbers as proposed; no code change. PR #75 CI green on ccff739 (run https://github.com/Indenex/LifeGame/actions/runs/38855013374). Merged main 7c65c0f (ceramics/kiln/wiki; no file overlap with this PR; clean). No dotnet in this container, so CI is the build check.
 
 ## Open questions / blockers
-- (none)
+- Sent to PM 2026-10-16: next Survival milestone, options A) unsafe raw water, boil in a fired pot (recommended) B) tiredness and sleep C) food spoils D) first-20-minutes polish pass. Default until answered: A.
+- Sent to PM: should wet clothing insulate less (animals-9 clothing hook)? Default: no, clothing ignores wetness.
+- 2026-10-16: reviewed animals-9 hook plan (ClothingWarmthHook, cold x (1 - insulation)); told Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) where it goes.
 
 ## Next step
 Wait for CI on the newest head of #75, then send the green sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU).

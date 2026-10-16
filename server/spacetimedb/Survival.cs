@@ -8,8 +8,10 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    // Warmth per second from standing right by a fire at full strength.
-    const float FireHeat = 1f / 30f;
+    // Warmth per second from standing right by a fire at full strength: a basic
+    // campfire warms you from frozen to full in about a minute (Justin, D-103).
+    // Later hearths can be faster.
+    const float FireHeat = 1f / 60f;
 
     [SpacetimeDB.Table(Accessor = "Vitals")]
     public partial struct Vitals
@@ -262,6 +264,7 @@ public static partial class Module
         }
 
         var (sx, sz) = WildernessEdge(ctx);
+        RespawnPointHook(ctx, player.PlayerId, ref sx, ref sz);
         var spawn = new PlayerPos
         {
             PlayerId = player.PlayerId,
@@ -377,21 +380,23 @@ public static partial class Module
         return warmth * FireHeat;
     }
 
-    // How much faster the cold bites than on a mild day: 1x at 15 °C, rising to
-    // 2x at 0 °C and below; rain adds half again unless you are under cover.
     // How much harder the cold bites: down to freezing it doubles, and being
-    // soaked adds half again (rain itself only matters by making you wet).
+    // soaked adds half again (rain itself only matters by making you wet). The
+    // two together never pass Needs.MaxChill (D-099), so no weather kills fast.
     static float Chill(ReducerContext ctx, float wetness)
     {
         float celsius = AirTemperature(ctx);
         float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
         float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
-        return cold * wet;
+        return Math.Min(cold * wet, Needs.MaxChill);
     }
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
     // when weather arrives.
+    // House building implements this: a player with a sleeping mat laid out wakes on it.
+    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z);
+
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
     // What a pot of water gives back when drunk, and how much it quenches.

@@ -1,7 +1,7 @@
 # bugfix-14: "Lay out a updraft kiln"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #68
 
@@ -17,4 +17,4 @@ Fix in client/scripts/building/BuildingSystem.cs (UpdatePrompt): pick "a" or "an
 - (none)
 
 ## Next step
-Wait for CI on #68, then send the PM the green sha.
+None; merged.

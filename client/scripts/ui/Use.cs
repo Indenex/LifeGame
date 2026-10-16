@@ -39,6 +39,10 @@ public static class Use
 
     public static void Unregister(string id) => handlers.Remove(id);
 
+    // The offer the G prompt shows this frame (set by UseKey), so a lane can tell
+    // whether its own offer won (bugfix-19).
+    public static UseOffer? Shown { get; set; }
+
     // Within this angle of the way you face, a thing counts as in front of you.
     const float FrontAngle = 60f;
 
