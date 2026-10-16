@@ -147,8 +147,8 @@ public partial class Showcase : Node3D
     void HeldTools()
     {
         // Stand-in ids for the bow and arrow until Crafting's reach main.
-        ItemModels.BowItem ??= (LifeGame.Shared.Item)9001;
-        ItemModels.ArrowItem ??= (LifeGame.Shared.Item)9002;
+        ItemModels.BowItem ??= (LifeGame.Shared.Item)16;
+        ItemModels.ArrowItem ??= (LifeGame.Shared.Item)17;
         var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, ItemModels.BowItem.Value, ItemModels.ArrowItem.Value, LifeGame.Shared.Item.Basket };
         for (int i = 0; i < tools.Length; i++)
         {
@@ -304,10 +304,11 @@ public partial class Showcase : Node3D
         {
             ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()),
             ("Distaff stand", StationMeshes.Distaff()), ("Drying rack", StationMeshes.DryingRack()),
+            ("Repair table", StationMeshes.RepairTable()),
         };
         for (int i = 0; i < stations.Length; i++)
         {
-            var root = new Node3D { Position = new Vector3((i % 2 - 0.5f) * 2.6f, 0, (i / 2) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
+            var root = new Node3D { Position = new Vector3((i % 3 - 1f) * 2.6f, 0, (i / 3) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
             AddChild(root);
             foreach (var piece in stations[i].Item2)
                 if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });

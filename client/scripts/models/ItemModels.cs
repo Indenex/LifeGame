@@ -154,8 +154,9 @@ public static class ItemModels
     static readonly Color TunicWool = new(0.78f, 0.74f, 0.64f);
     static readonly Color Bone = new(0.92f, 0.88f, 0.80f);
 
-    // The bow and arrow (animals-15) wait for Crafting's Item ids; until then
-    // BowItem / ArrowItem name them, and ArrowFlight is the shot in the air.
+    // The bow and arrow (animals-15) are Crafting's Item 16 and 17; BowItem /
+    // ArrowItem can point other ids at the same models. ArrowFlight is the shot
+    // in the air.
     public static Item? BowItem, ArrowItem;
 
     static (Action<Kit>? Build, bool Upright) Recipe(Item item) =>
@@ -191,6 +192,9 @@ public static class ItemModels
         // Clothing (D-074), by number until the items reach main.
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
+        // Bow and arrow (Crafting's ids, PR #266; animals-15), by number until on main.
+        (Item)16 => (Bow, false),
+        (Item)17 => (Arrow, false),
         // Red deer (animals-14), by number until the items reach main.
         (Item)202 => (Venison, true),
         (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
