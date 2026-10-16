@@ -50,6 +50,9 @@ public sealed class SoundMix
     readonly Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
     float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
+    float[] stepL = Array.Empty<float>(), stepR = Array.Empty<float>();
+    // How loud the surroundings are (smoothed RMS), so footsteps sit just above them.
+    float ambience = 0.01f;
     Lowpass wallL, wallR;
     float cover;
 
@@ -95,6 +98,8 @@ public sealed class SoundMix
             sendR = new float[count];
             outL = new float[count];
             outR = new float[count];
+            stepL = new float[count];
+            stepR = new float[count];
         }
         Array.Clear(left, 0, count);
         Array.Clear(right, 0, count);
@@ -128,7 +133,22 @@ public sealed class SoundMix
         }
 
         rain.Render(left, right, count, Rain, Wetness, Cover);
-        steps.Render(left, right, count);
+
+        // Footsteps sit a little above whatever surrounds them: soft on a still
+        // dawn, firmer in a storm, never louder than they need to be.
+        double power = 0;
+        for (int i = 0; i < count; i++) power += left[i] * left[i] + right[i] * right[i];
+        float rms = (float)Math.Sqrt(power / (2.0 * count));
+        ambience += (1f - MathF.Exp(-count / (float)Rate / 1.5f)) * (rms - ambience);
+        float stepGain = StepGain(ambience);
+        Array.Clear(stepL, 0, count);
+        Array.Clear(stepR, 0, count);
+        steps.Render(stepL, stepR, count);
+        for (int i = 0; i < count; i++)
+        {
+            left[i] += stepL[i] * stepGain;
+            right[i] += stepR[i] * stepGain;
+        }
         music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
         reverb.Process(sendL, sendR, left, right, count);
 
@@ -149,6 +169,10 @@ public sealed class SoundMix
         float dusk = MathF.Exp(-Sq((t - 0.725f) / 0.025f));
         return (awake * Math.Min(1f, 0.35f + 0.65f * dawn + 0.35f * dusk), awake * dawn);
     }
+
+    // Footstep level for an ambience RMS: about 0.17 (-15 dB) over a still dawn bed
+    // near -45 dBFS, so steps land about 5 dB above it, rising to full in a storm.
+    public static float StepGain(float ambienceRms) => Math.Clamp(0.12f + 9f * ambienceRms, 0.12f, 1f);
 
     static float Sq(float x) => x * x;
 
@@ -998,7 +1022,7 @@ public sealed class SoundMix
                         else
                         {
                             float d = step.Dull.Process(x, dull);
-                            s = d * MathF.Exp(-t / 0.03f) * attack * 0.5f + thump * 0.22f;
+                            s = d * MathF.Exp(-t / 0.03f) * attack * 0.3f + thump * 0.18f;
                         }
                         if (step.Wet > 0.15f && step.Ground != Ground.Clay)
                         {
