@@ -109,6 +109,7 @@ public partial class Atmosphere : Node3D
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
         ReadyFronts();
+        ReadyLowEnd();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -390,6 +391,8 @@ public partial class Atmosphere : Node3D
         env.VolumetricFogAlbedo = Grey(mood.Mist, grey, 1f) * (1f - 0.25f * storm);
         env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm + 1.6f * shafts);
         env.VolumetricFogAnisotropy = 0.6f + 0.25f * shafts;
+        LowEndFog(mood.MistDensity, storm, shafts);
+        UpdateLowEndShafts(Player is { } shaftFocus && shaftFocus.IsInsideTree() ? shaftFocus.GlobalPosition : Vector3.Zero, sunDir, sunColor);
         env.AmbientLightColor = mood.Ambient;
         env.AmbientLightEnergy = mood.AmbientEnergy * (1f + 0.35f * overcast);
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
