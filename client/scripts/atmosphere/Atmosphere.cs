@@ -68,11 +68,14 @@ public partial class Atmosphere : Node3D
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
-    // then clear, drizzle, light rain, steady rain and a storm.
+    // then each kind in shared/Weathers.cs at the middle of its range, the ground
+    // as wet as that rain soon makes it.
     static readonly (float, float, float, float)[] PreviewWeathers =
-    {
-        default, (0.1f, 0f, 0.25f, 0f), (0.8f, 0.18f, 0.3f, 0.4f), (0.9f, 0.4f, 0.45f, 0.7f), (0.95f, 0.65f, 0.6f, 1f), (1f, 1f, 0.9f, 1f),
-    };
+        new[] { default((float, float, float, float)) }.Concat(Weathers.All.Select(k =>
+        {
+            float rain = (k.RainMin + k.RainMax) * 0.5f;
+            return ((k.CloudMin + k.CloudMax) * 0.5f, rain, (k.WindMin + k.WindMax) * 0.5f, Mathf.Min(1f, rain * 1.6f));
+        })).ToArray();
 
     // Lightning: a flash lights the sky and the land, and thunder follows.
     float flash, nextStrike = 20f;
@@ -113,6 +116,7 @@ public partial class Atmosphere : Node3D
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
         ReadyFronts();
+        ReadyStorms();
         ReadyHomes();
 
         // Previews are for testing, so release builds leave them out.
@@ -291,7 +295,7 @@ public partial class Atmosphere : Node3D
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         sound.Foliage = wooded;
-        Lightning(dt);
+        Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
             Sfx.Listen(focus, ear.GlobalBasis.X);
@@ -372,6 +376,7 @@ public partial class Atmosphere : Node3D
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
+        sun.LightEnergy *= 1f - 0.5f * storminess;
 
         // Sun shafts in the woods: at a low sun on a fair day the air between the
         // trunks thickens a little and scatters forward, so the light slants through
@@ -383,7 +388,8 @@ public partial class Atmosphere : Node3D
 
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
-        float dim = 1f - 0.35f * storm;
+        // A thunderstorm goes darker still, toward a cold slate.
+        float dim = (1f - 0.35f * storm) * (1f - 0.3f * storminess);
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
@@ -407,6 +413,8 @@ public partial class Atmosphere : Node3D
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
         env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
         env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
+        env.AmbientLightEnergy *= 1f - 0.3f * storminess;
+        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f) * dim, 0.35f * storminess);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         if (flash > 0.001f)
@@ -470,29 +478,6 @@ public partial class Atmosphere : Node3D
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
                 terrain.Refresh(x, z);
-    }
-
-    float strikeAge = 10f, strikePeak;
-
-    // Storms throw lightning every half minute or so. Most of it is far off: a dull
-    // glow in the clouds and a late, low rumble. Now and then a strike is close: a
-    // white double flash and a crack right after.
-    void Lightning(float dt)
-    {
-        float stormy = Mathf.SmoothStep(0.75f, 0.95f, rainAmount);
-        nextStrike -= dt * stormy;
-        if (stormy > 0.05f && nextStrike <= 0f)
-        {
-            nextStrike = (float)GD.RandRange(12.0, 40.0);
-            float near = Mathf.Pow(GD.Randf(), 2f);
-            strikePeak = (0.2f + 0.8f * near) * stormy;
-            strikeAge = 0f;
-            // Sound covers about 340 m a second; distant strikes are 2 to 6 km off.
-            sound.Thunder(0.3f + (1f - near) * 5f, (0.35f + 0.65f * near) * stormy, near);
-        }
-        strikeAge += dt;
-        float a = strikeAge;
-        flash = strikePeak * (Mathf.Exp(-a / 0.07f) + (a > 0.16f ? 0.7f * Mathf.Exp(-(a - 0.16f) / 0.12f) : 0f));
     }
 
     // A unit vector pointing at something this many degrees above the horizon,
@@ -590,6 +575,11 @@ public partial class Atmosphere : Node3D
             uniform float front_rain = 0.0;
             uniform float front_amount = 0.0;
             uniform float rainbow = 0.0;
+            // Thunderstorms (AtmosphereStorms): how stormy, and lightning inside
+            // the clouds toward flash_dir.
+            uniform float storm = 0.0;
+            uniform float flash = 0.0;
+            uniform vec3 flash_dir = vec3(0.0, 0.25, -1.0);
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -653,7 +643,13 @@ public partial class Atmosphere : Node3D
                     cloud_col *= 1.0 - 0.45 * cover * smoothstep(0.4, 0.8, n);
                     // Rain clouds on the way are darker underneath.
                     cloud_col *= 1.0 - 0.5 * front_rain * upwind;
+                    // Storm clouds hang heavy and dark, bruised blue-grey underneath.
+                    cloud_col = mix(cloud_col, cloud_col * vec3(0.55, 0.6, 0.68), storm * smoothstep(0.3, 0.7, n));
                     col = mix(col, cloud_col, c * 0.9);
+
+                    // Lightning lights the clouds from inside, brightest toward the strike.
+                    float toward = pow(max(dot(d, flash_dir), 0.0), 5.0);
+                    col += vec3(0.72, 0.78, 1.0) * flash * toward * (0.35 + 1.4 * c * n);
 
                     // Grey curtains of rain hanging from them down to the horizon.
                     float around = atan(d.x, d.z);
