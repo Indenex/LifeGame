@@ -1,7 +1,7 @@
 # bugfix-8: Plain loops for the Use-key finders
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #59
 
@@ -17,4 +17,4 @@ The Use-key finders that run every frame stop allocating garbage, which feeds th
 - (none)
 
 ## Next step
-Wait for CI on PR #59, then send the PM the green head sha.
+None; merged.
