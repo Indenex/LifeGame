@@ -1,4 +1,5 @@
 using System;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -10,7 +11,14 @@ public static class AvatarWork
 {
     public static void Attach(DbConnection conn, Avatar me, Func<uint, Avatar?> other)
     {
-        conn.Db.MyCraftJob.OnInsert += (_, j) => Start(me, j.ProcessId);
+        conn.Db.MyCraftJob.OnInsert += (_, j) =>
+        {
+            Start(me, j.ProcessId);
+            // Station crafts turn you to face the station you are working at (D-098).
+            if (Processes.Find(j.ProcessId) is { Station: not StationKind.None } def
+                && Stations.NearestOf(conn, def.Station, me.Position) is { } st)
+                me.Face(st.X, st.Z);
+        };
         conn.Db.MyCraftJob.OnDelete += (_, _) => Start(me, null);
 
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);

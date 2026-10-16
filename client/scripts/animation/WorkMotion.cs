@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -13,6 +14,7 @@ public static class WorkMotions
     public static WorkMotion For(string? processId)
     {
         if (string.IsNullOrEmpty(processId)) return WorkMotion.None;
+        if (Processes.Find(processId) is { Station: not StationKind.None }) return WorkMotion.Station;
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
         if (processId == "hide.scrape") return WorkMotion.Scrape;
         if (processId == "hide.stretch") return WorkMotion.Wrap;
