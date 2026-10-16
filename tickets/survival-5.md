@@ -1,8 +1,8 @@
 # survival-5: Getting wet
 Lane: Survival
 Owner: Survival thread (session_01EzhhyMEiXNWShq9e1gpQ4w)
-Status: in_progress
-Branch: claude/survival-needs-g7yrhi (work kept on local branch survival-5-local until PR #48 merges, then replayed onto a fresh branch from main)
+Status: in_review
+Branch: claude/survival-needs-g7yrhi (restarted from main cab7fe4 after #48 merged)
 PR: (not yet)
 
 ## Goal
@@ -21,9 +21,10 @@ Rain and wading make you wet; wetness builds and fades gradually. Being wet make
 
 - 2026-10-16: merged main (b3c6414). Locally: LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck, SocialTest pass; `tools/upgrade-check.sh origin/main` passes (no wipe). Screenshots sent to PM: screenshots/13-survival-wet-dry-vs-soaked.png, 14-survival-wet-in-rain.png. Soaked skin reads about 19% darker with a soft sheen and a few drops.
 - 2026-10-16: PM: don't add to #48; keep a backup patch at /mnt/project-files/survival/survival-5.patch (git diff origin/main HEAD) and open its own PR after #48 merges. Others should look wet too (D-036): public `Drenched` table (PlayerId, Level 0-10, row only while wet, removed on disconnect), updated by SurvivalTick; client puts WetLook on remote avatars via `SurvivalClient.AvatarOf` (one-line hook in Main). Waking after death resets wetness. Tested with LoadTest bots in rain: Drenched rows appear.- 2026-10-16: PM perf asks (Bug fixes profiling): Carrying, PotOfWater, NearestRipeBush and UpdateLoad use plain loops instead of LINQ; NeedGauge queues a redraw only when its arc or color changes, or while it glows or breathes.
+- 2026-10-16: #48 merged (main cab7fe4). Replayed the survival-5 commits onto claude/survival-needs-g7yrhi from main.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-When PR #48 merges: restart claude/survival-needs-g7yrhi from main, cherry-pick the survival-5 commits from local branch survival-5-local (skip the main merge), push, open the PR. If the local branch is lost, the code is described above; re-implement from this ticket.
+Push, open the survival-5 PR, wait for CI, send the green sha to the PM.
