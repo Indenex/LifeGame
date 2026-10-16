@@ -24,7 +24,8 @@ public partial class CeramicsView : Node
     DbConnection? conn;
     uint myId;
     ulong confirmPiece;
-    ulong dryingOfferFrame = ulong.MaxValue - 8;
+    // The last drying lines offered; the floating labels step aside while G shows one.
+    UseOffer? dryingOffer, dampFireOffer;
     double confirmUntil;
 
     public CeramicsView(Node parent3D, Func<float, float, float> heightAt, Node3D me, Action<string> note)
@@ -143,6 +144,9 @@ public partial class CeramicsView : Node
         // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
         Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
         Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = at => TendOffer(at, firing: false) });
+        // How long a wet piece has left is only news: drinking, filling, picking berries
+        // or anything else G can really do wins over it (bugfix-19).
+        Use.Register(new UseHandler { Id = "ceramics.drying", Priority = 0, Find = at => TendOffer(at, firing: false, info: true) });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
         Use.Register(new UseHandler { Id = "ceramics.pick_up", Priority = 10, Find = PickUpOffer });
     }
@@ -173,7 +177,7 @@ public partial class CeramicsView : Node
         bool kilnFirst = kiln.view != null && kiln.d < nearestDist;
         // The G drying line says what the label would, and sits where it would; so
         // while it shows, the floating labels step aside.
-        bool promptShowing = Engine.GetProcessFrames() - dryingOfferFrame <= 2;
+        bool promptShowing = Use.Shown is { } shown && (ReferenceEquals(shown, dryingOffer) || ReferenceEquals(shown, dampFireOffer));
         foreach (var view in pieces.Values)
         {
             view.ShowLabel = view == nearest && !kilnFirst && !promptShowing;
@@ -209,7 +213,7 @@ public partial class CeramicsView : Node
 
     // Pass a Target so G picks what you face (KEYMAP.md); without one, a fire you face
     // always won over the pot beside it (bugfix-13).
-    UseOffer? TendOffer(Vector3 me3, bool firing)
+    UseOffer? TendOffer(Vector3 me3, bool firing, bool info = false)
     {
         if (conn == null) return null;
         var at = new Vector2(me3.X, me3.Z);
@@ -225,7 +229,7 @@ public partial class CeramicsView : Node
         float moisture = piece.view.Moisture;
         bool dry = !ClayRules.TooWetToFire(moisture);
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
-        if (besideFire != firing) return null;
+        if (besideFire != firing || (!firing && info == dry)) return null;
         ulong id = piece.id;
         var target = new Vector3(piece.view.Position.X, 0, piece.view.Position.Z);
         if (row?.MadeBy == MyId)
@@ -237,13 +241,13 @@ public partial class CeramicsView : Node
         // Still wet: say how long it has left. Beside a fire, pressing G twice fires it
         // anyway (it cracks); away from one, G says where it would dry faster.
         string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
-        dryingOfferFrame = Engine.GetProcessFrames();
         if (besideFire)
-            return new UseOffer($"{wait} ({UseKey} twice fires it wet)", piece.d, () => FireDamp(id, moisture), Target: target);
+            return dampFireOffer = new UseOffer($"{wait} ({UseKey} twice fires it wet)", piece.d, () => FireDamp(id, moisture), Target: target);
         bool warm = BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
-        return new UseOffer(wait, piece.d, () => note(warm
+        // No Target: a thing you face that G can really use wins over this.
+        return dryingOffer = new UseOffer(wait, piece.d, () => note(warm
             ? $"It is {ClayRules.Describe(moisture)}. It turns pale when it is dry enough."
-            : $"It is {ClayRules.Describe(moisture)}. Beside a burning fire it would dry twice as fast."), Target: target);
+            : $"It is {ClayRules.Describe(moisture)}. Beside a burning fire it would dry twice as fast."));
     }
 
     // First-time tips go to UX's hint corner, which shows each once per install.
