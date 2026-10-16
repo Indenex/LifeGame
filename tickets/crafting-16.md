@@ -17,9 +17,10 @@ time = Base × QualityTimeScale × DurationScale(rank) × (1 − ToolSpeedup)
 
 ## Progress log
 - 2026-10-16 19:40: implemented on main. Server and client build; CraftCheck passes (4 min 16 s).
+- 2026-10-16 19:50: ClayCheck passes (dug clay to a fired pot of water). Merged main.
 
 ## Open questions / blockers
 - The sleeping mat (House building), hides (Animals) and clay (Ceramics) times change too, under the same formula. Lanes told.
 
 ## Next step
-Finish the ClayCheck run, open the PR, and send the PM the green sha.
+Wait for CI on the PR, then send the PM the green sha.
