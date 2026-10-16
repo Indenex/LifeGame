@@ -103,7 +103,7 @@ The Render lane makes every image, clip and audio file Justin sees (D-059). The 
 - In-game audio can't be recorded here (0.5 fps starves the synth; Movie Maker desyncs crafts). Audio requests use tools/SoundPreview (`dotnet run -c Release -- out.wav scene:secs ...`) then ffmpeg to mp3 in renders/audio/.
 
 ### Queue at handoff (in order; requester session in brackets; all results go to the PM)
-1. env-4 corners of the forest 36f6d1d (Environment session_012hVejTxLoxBpZyX3GQmNL9) - was running at handoff; if renders/env-4-36f6d1d-1..6.png exist, check and send them, else rerun.
+1. (done and sent 2026-10-16 23:55: env-4 36f6d1d, renders/env-4-36f6d1d-1..6.png.)
 2. env-2-pond 0abbc0c (Environment): clear pond from the bank at (30,76).
 3. model-172-walk, model-172-facefront, model-172-face34 on main 71f7c7c (PM priority: Modeling #172 new figure/items). Already captured and NOT yet sent: renders/model-172-71f7c7c-1,2.png (back views), model-172-items-71f7c7c-1..6.png (hotbar icons in frame 1, items on the ground in 4-6). Send all #172 together.
 4. atmosphere-16 seasons c41b1e6 (Atmosphere session_01KvVF5vpkYEHTKNRpHC18WN; PM priority #173), incl. shader-error grep and a snowfall clip.
@@ -121,9 +121,10 @@ The Render lane makes every image, clip and audio file Justin sees (D-059). The 
 14. Live scenes last (need someone appending steps to $RENDER_WORK/live.txt): animals-8-spin (spinning minigame: click "Spin wool yarn" in the panel, then `key space` every ~2 s with bursts), ui-9-liveA/B 88d7cf2 (two-player trade; puppet trade-ask/answer/add/accept steps).
 New requester sessions (PM, 2026-10-16 23:50): Journal session_013iTXrpndd1fMtDLqqBPgJ5, Claims session_01CAk6p7Z42GfVwi8QMfNMhZ, Audio session_01SXcxtoyeqDmypiHxkHedU6, Ceramics session_01Sc3N1RCsurSszfX5YwGzMU, Survival session_01RedPo6NfcLBPNHQNVhC4qf. Results still go to the PM.
 Many requested shas will have merged into main by now; if a branch moved, use the requester's latest sha.
+- 2026-10-16 23:55: handoff (D-159). Queue loop stopped after env-4 (sent). Everything committed and pushed; the Handoff section above has the queue and recipe.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Set up the container (Handoff, steps 1-3), send env-4 if its images exist (else let the queue rerun it), then work the queue in order, sending each result to the PM.
+Set up the container (Handoff, steps 1-3; add env-4 to queue.done) and start the queue at env-2-pond; send each result to the PM.
