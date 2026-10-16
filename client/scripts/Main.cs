@@ -46,6 +46,7 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     bool spawned;
     Vector3 velocity;
@@ -91,6 +92,9 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        // What you wear (ui-10, D-074).
+        equipment.Note = hud.Note;
+        AddChild(equipment);
         building.MayBar = social.HasRightsAt;
         building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
@@ -106,6 +110,7 @@ public partial class Main : Node3D
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
+            || equipment.IsOpen
             || station.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
@@ -333,6 +338,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
