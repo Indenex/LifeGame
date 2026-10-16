@@ -152,7 +152,7 @@ public static partial class Module
             throw new Exception("You are full");
 
         // Eaten from a pot, the pot goes back in your hands at its quality, as DrinkFrom does (ceramics-7).
-        if (Needs.EatenFrom((Item)item) is { } empty)
+        if (Foods.Find((Item)item)?.LeavesBehind is { } empty)
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
@@ -164,7 +164,7 @@ public static partial class Module
         {
             Food = Math.Min(1f, v.Food + food),
             Water = Math.Min(1f, v.Water + water),
-            WellFedUntil = Needs.GoodMeal((Item)item)
+            WellFedUntil = Foods.Find((Item)item)?.GoodMeal == true
                 ? ctx.Timestamp.MicrosecondsSinceUnixEpoch + Stamina.WellFedMicros
                 : v.WellFedUntil,
         });
@@ -483,12 +483,8 @@ public static partial class Module
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
     // What a pot of water gives back when drunk, and how much it quenches.
-    static (Item empty, float water) PotOfWater(Item item) => item switch
-    {
-        Item.PinchPotOfWater => (Item.PinchPot, Needs.PinchPotWater),
-        Item.CoilPotOfWater => (Item.CoilPot, Needs.CoilPotWater),
-        _ => (item, 0f),
-    };
+    static (Item empty, float water) PotOfWater(Item item) =>
+        Foods.FindPot(item) is { } pot ? (pot.Empty, pot.Water) : (item, 0f);
 
     // Any stack of an item the sender carries, whatever its quality.
     static InventoryItem? AnyStack(ReducerContext ctx, Item item)
