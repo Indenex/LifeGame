@@ -1,8 +1,8 @@
 # ceramics-8: Potter's bench
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
-Status: blocked
-Branch: (to be created, stacked on Crafting's `crafting-stations` / crafting-15)
+Status: in_progress
+Branch: claude/clay-ceramics-8-kfr4kr (stacked on crafting-stations #160; contains ceramics-7). One PR for ceramics-7 + -8 after #160 merges (PM).
 PR: (none yet)
 
 ## Goal
@@ -14,12 +14,12 @@ D-112 (Justin): shaping pots needs a Potter's bench inside a claim; clay prepara
 First fired pot still reachable in about 1 to 2 hours of play.
 
 ## Progress log
+- 2026-10-16 19:10: 08c862d bench (StructureKind 8 after jar 6 and table 7; D-127 cost 1 log + 2 stones; BenchModel; Station on pinch/coil/jar). 3b1f192: model by station flag, `build.bench` for the journal, CraftJob.VesselQuality (Crafting approved) so pots keep their quality. Upgrade check vs origin/main PASSED (no wipe). #105 merged first as agreed. ClayCheck adaptation (claim, axe, log, bench) in progress by a subagent; WIP 2fe3a89.
 - 2026-10-16 18:37: Crafting agreed option 1 (cost) and described the framework (crafting-15, branch crafting-stations, sha in a couple of hours): StationKind enum in Processes.cs, ProcessDef.Station, StructureShape.Station, generic claim check in PlaceStructure, ingredients from inventory, nearby stores, then the claim stash.
 
 ## Open questions / blockers
 - StructureKind order: jar is 6 (#105); Building's #153 appends Fence, Gate; whichever merges second goes after the other, keeping StructureKind, Structures.Shapes and Structures.StageCosts in the same order. The bench takes the next free number at merge time (and ClayRules has KilnStructureKind/JarStructureKind ints that must match).
-- Blocked on Crafting's crafting-stations sha (they ping). StructureKind number from Building (Crafting asked them: jar 6, Table 7, Bench 8, ...).
-- PM/Justin: bench cost (option 1 recommended, sent by Crafting).
+- Bench cost decided: 1 log + 2 stones (D-127).
 
 ## Next step
-When Crafting sends the crafting-stations sha: branch from it (merging in claude/clay-ceramics-7-kfr4kr if not on main yet), add the bench kind/shape/cost/model, set Station on the three shaping processes, extend ClayCheck with a claim + bench.
+Finish ClayCheck's bench setup and pass `--pot` on a scratch db; merge main; open one PR (ceramics-7 + -8) once #160 merges; render request.
