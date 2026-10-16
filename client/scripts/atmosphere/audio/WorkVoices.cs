@@ -248,7 +248,7 @@ public sealed partial class SoundMix
             // Friction for most of the work, then blowing the ember into flame.
             // (Once the work stops it just fades out as it was.)
             if (on) rubbing = 1f - Smooth(0.5f, 0.6f, progress);
-            float heat = Math.Min(1f, elapsed / (seconds * 0.5f));
+            float heat = Math.Min(1f, elapsed / Math.Min(seconds * 0.5f, 8f));
             stroke += 2f * MathF.PI * (bow ? 0.8f : 1.1f) * dt;
             float speed = MathF.Abs(MathF.Sin(stroke));
             float s = rub.Process(x, (bow ? 900f + 500f * heat : 500f + 600f * heat) + 300f * speed, 0.5f, rate)

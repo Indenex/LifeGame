@@ -64,8 +64,12 @@ public partial class SoundScape : Node
         config.Save(SettingsPath);
     }
 
+    // The soundscape playing now, for hooks in other lanes' code (CraftingUi.Sound.cs).
+    public static SoundScape? Current { get; private set; }
+
     public override void _Ready()
     {
+        Current = this;
         Load();
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
@@ -80,6 +84,7 @@ public partial class SoundScape : Node
     {
         running = false;
         synth?.Join(500);
+        if (Current == this) Current = null;
     }
 
     // One-off sounds go through a queue so the synth thread adds them between blocks.

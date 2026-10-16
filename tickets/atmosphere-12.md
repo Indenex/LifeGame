@@ -16,8 +16,10 @@ From the PM, 2026-10-16, for Crafting's chopping (#70): rhythmic axe thunks with
   - Levels (SoundPreview, woods by day): axe peaks about -16 dBFS over a -34 dBFS bed; a tree 3 m away peaks -8, 15 m -14, 40 m -23. Knap -18, drill -16, clay -15.
   - Clips: /mnt/project-files/audio/atmosphere-10-chop-and-fell.mp3, atmosphere-10-trees-falling-15m-40m.mp3, atmosphere-10-knap-drill-bowdrill-clay.mp3. SoundPreview scenes chop, fellfar, knap, drill, bowdrill, shape.
 
+- 2026-10-16 05:58: merged main (456b0cf, #74). New client/scripts/atmosphere/CraftingUi.Sound.cs implements MinigameSound: the process's work sound plays while any minigame is open (SoundScape.Current is a new static handle); drill heat now builds over at most 8 s so long minigames get gritty too. Builds.
+
 ## Open questions / blockers
-- The Drill, Strike, Shape and Coil minigames are Crafting's files and make no sound yet; the job sound plays after them (or for the whole work when a Master skips the minigame). Crafting could call Atmosphere.Sound.Working(...) while a minigame is open if Justin wants sound during it.
+- (none)
 
 - 2026-10-16 05:30: Crafting's #74 adds `static partial void MinigameSound(ProcessDef def, bool playing)` in CraftingUi (true when any minigame opens, false when it closes). Once #74 is on main, implement it in client/scripts/atmosphere/CraftingUi.Sound.cs: playing → Atmosphere's SoundScape.Working(Drill → HandDrill or BowDrill by def.Id, Strike → Knap, Shape/Coil → Clay, def.Seconds); else Working(Work.None, 0). It needs a static handle to the SoundScape (e.g. a static Atmosphere.Current set in _Ready).
 
