@@ -39,6 +39,10 @@ public partial class SoundScape : Node
     public float FirePan { set => mix.FirePan = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
+    // The time of year (0 to 1, Seasons.YearFraction) and the snow lying on the
+    // ground (0 to 1), for the seasonal ambience (audio-2).
+    public float Year { set => mix.Year = value; }
+    public float SnowCover { set => mix.SnowCover = value; }
     // How hard the wind is gusting in what is heard, 0 to 1.
     public float Gust => mix.Gust;
     // Music on or off, remembered between sessions.
