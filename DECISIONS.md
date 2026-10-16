@@ -919,3 +919,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
 **Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
 **Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
+
+## D-227 — 2026-10-16 — View distance is a four-step slider in Settings → Graphics (follows D-222)
+**Decision:** View distance is a slider with four steps: Short (48 m, today), Near (80 m), Far (128 m) and Very far (160 m and up). It lives in Settings → Graphics and is saved per player. The world edge always fades into haze, with no LoD pop-in. Far is the PM's proposed default, not yet confirmed by Justin.
+**Who:** Justin ("yeah, just make a slider of like short (today), near, far, very far for view distances. It can go in the settings menu -> graphics for people to adjust themselves.")
