@@ -77,6 +77,13 @@ public static partial class Module
         text = text.Trim();
         if (text.Length == 0) return;
         if (text.Length > Social.ChatMaxLength) text = text[..Social.ChatMaxLength];
+        // claims-6: "/me" on its own says nothing; "/ME waves" is stored as "/me waves".
+        if (Social.IsEmote(text))
+        {
+            string body = Social.EmoteBody(text);
+            if (body.Length == 0) return;
+            text = "/me " + body;
+        }
 
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);

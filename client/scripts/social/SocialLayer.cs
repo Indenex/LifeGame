@@ -209,16 +209,38 @@ public partial class SocialLayer : Node
             chat.Add("", m.Text, false);
             return;
         }
-        chat.Add(m.SenderId == myId ? "You" : m.SenderName, m.Text, m.SenderId == myId);
-        if (age < 8_000_000) Bubble(m);
+        bool mine = m.SenderId == myId;
+        bool emote = Social.IsEmote(m.Text);
+        string said = emote ? Social.EmoteBody(m.Text) : m.Text;
+        float dim = mine ? 1f : Social.ChatDim(new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length());
+        chat.Add(mine && !emote ? "You" : m.SenderName, said, mine, dim, emote);
+        if (age < 8_000_000) Bubble(m, said, emote);
     }
 
     // The words float above the speaker for a few seconds, then drift up and fade.
-    void Bubble(ChatMessage m)
+    const int BubbleStack = 3;
+    // In the bubble's own pixels (Label3D offset), not metres.
+    const float BubbleLineHeight = 38f, BubbleGap = 12f;
+    static FontVariation? slanted;
+    static FontVariation Slanted => slanted ??= new FontVariation { VariationTransform = new Transform2D(1f, 0f, 0.22f, 1f, 0f, 0f) };
+
+    static void FadeOut(Label3D bubble)
     {
+        bubble.RemoveMeta("bubble");
+        var fade = bubble.CreateTween();
+        fade.TweenProperty(bubble, "transparency", 1f, 0.8f).SetTrans(Tween.TransitionType.Sine);
+        fade.TweenCallback(Callable.From(bubble.QueueFree));
+    }
+
+    // claims-6: a soft line above the speaker's head. If they say more, older lines
+    // drift up and dim (up to three), and an action ("/me waves") is slanted.
+    void Bubble(ChatMessage m, string said, bool emote)
+    {
+        string text = Wrap(said, 34);
+        int lineCount = text.Split('\n').Length;
         var bubble = new Label3D
         {
-            Text = Wrap(m.Text, 34),
+            Text = text,
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             FontSize = 30,
             PixelSize = 0.0075f,
@@ -228,11 +250,20 @@ public partial class SocialLayer : Node
             NoDepthTest = true,
             VerticalAlignment = VerticalAlignment.Bottom,
         };
+        if (emote) bubble.Font = Slanted;
         if (avatarOf(m.SenderId) is { } avatar)
         {
-            // Only the newest line stays above a head.
-            foreach (var child in avatar.GetChildren())
-                if (child is Label3D old && old.HasMeta("bubble")) old.QueueFree();
+            // Older lines drift up by the new one's height and dim; the oldest beyond three go.
+            var older = avatar.GetChildren().OfType<Label3D>().Where(l => l.HasMeta("bubble") && !l.IsQueuedForDeletion()).ToList();
+            for (int i = 0; i < older.Count; i++)
+            {
+                var old = older[i];
+                if (older.Count - i >= BubbleStack) { FadeOut(old); continue; }
+                var lift = old.CreateTween().SetParallel();
+                lift.TweenProperty(old, "offset:y", old.Offset.Y + lineCount * BubbleLineHeight + BubbleGap, 0.6f)
+                    .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+                lift.TweenProperty(old, "transparency", 0.45f, 0.6f).SetTrans(Tween.TransitionType.Sine);
+            }
             bubble.SetMeta("bubble", true);
             bubble.Position = new Vector3(0, 2.35f, 0);
             avatar.AddChild(bubble);

@@ -135,6 +135,21 @@ Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "hello neighbour"), 5
 var heard = b.Conn.Db.ChatMessage.Iter().First(m => m.Text == "hello neighbour");
 Check(new Vector(heard.X - b.X, heard.Z - b.Z).Length <= Social.ChatRange, "B hears A's chat within range");
 
+// claims-6: "/me" actions are stored the same way whatever the case, and an empty one says nothing.
+var afterHello = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterHello, 2, "chat cooldown");
+a.Conn.Reducers.SendChat("/ME waves");
+Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/me waves"), 5, "emote");
+Check(Social.IsEmote("/me waves") && Social.EmoteBody("/me waves") == "waves", "an action reads as \"waves\"");
+var afterWave = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterWave, 2, "chat cooldown");
+int chatCount = b.Conn.Db.ChatMessage.Iter().Count();
+a.LastError = null;
+a.Conn.Reducers.SendChat("/me");
+Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != null, 1.5);
+Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
+
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
 a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
