@@ -14,8 +14,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 - 2026-10-16 20:35: firelight already exists (FireView's Campfire OmniLight, range 10, warmed in atmosphere-4; that file is Crafting's), and the night moods were approved in atmosphere-4, so this ticket is the sky. Sky shader: a faint mottled galaxy band across clear nights, denser stars inside it; stars twinkle at their own pace, tinted pale blue to warm white; a 22-degree halo round the moon behind thin cloud (cover 0.25 to 0.95). Possible follow-up for Crafting: fire light reaching a little further at night (offer as options).
 
+- 2026-10-16 20:37: pushed 6e85469 (client builds). Render request and the fire-reach idea (A: 10 m by day to about 14 m at night via an Atmosphere night value plus a one-line change in Crafting's FireView; B: keep) sent to the PM to route.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Read how FireView lights fires (OmniLight?) and Atmosphere's night mood; plan warmer firelight on nearby trunks and ground, capped to the nearest few fires.
+When #217 merges: merge main into this branch and open the atmosphere-15 PR; if Justin picks A, add Atmosphere.Night and ask Crafting for the FireView line.
