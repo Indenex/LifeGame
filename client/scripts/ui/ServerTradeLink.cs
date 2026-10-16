@@ -64,7 +64,7 @@ public sealed class ServerTradeLink : ITradeLink
 
     public void Answer(bool yes) { if (Row is { } t) conn.Reducers.AnswerTrade(t.Id, yes); }
     public void Set(TradeStack s) { if (Row is { } t) conn.Reducers.SetTradeItem(t.Id, (ushort)s.Item, s.Quality, s.Count); }
-    public void Accept(uint version) { if (Row is { } t) conn.Reducers.AcceptTrade(t.Id, version); }
+    public void Accept(bool on, uint version) { if (Row is { } t) conn.Reducers.AcceptTrade(t.Id, version, on); }
     public void Cancel() { if (Row is { } t) conn.Reducers.CancelTrade(t.Id); }
 
     void Ended(TradeEnded e)

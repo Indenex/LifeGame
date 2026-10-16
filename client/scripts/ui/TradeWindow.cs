@@ -142,7 +142,7 @@ public partial class TradeWindow : CanvasLayer
 
         accept = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
         accept.AddThemeFontSizeOverride("font_size", 17);
-        accept.Pressed += () => { if (Link.Current is { MineAccepted: false } t) Link.Accept(t.Version); };
+        accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted, t.Version); };
         box.AddChild(accept);
 
         // Said loudly when a change wipes the accepts, so nobody agrees to the old deal.
@@ -234,9 +234,7 @@ public partial class TradeWindow : CanvasLayer
         Fill(theirsList, trade.Theirs, null);
         Mark(mineBox, mineState, trade.MineAccepted, "You accept", "You haven't accepted");
         Mark(theirsBox, theirsState, trade.TheirsAccepted, $"{trade.Partner} accepts", $"{trade.Partner} hasn't accepted");
-        // Once accepted it stays until either offer changes; change yours to take it back.
-        accept.Text = trade.MineAccepted ? $"Accepted. Waiting for {trade.Partner}" : "Accept this trade";
-        accept.Disabled = trade.MineAccepted;
+        accept.Text = trade.MineAccepted ? $"Accepted, waiting for {trade.Partner} (click to take it back)" : "Accept this trade";
         accept.Modulate = trade.MineAccepted ? Agreed : Colors.White;
 
         // What you could still add: what you carry less what you already offer.

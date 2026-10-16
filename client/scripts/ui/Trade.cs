@@ -39,9 +39,8 @@ public interface ITradeLink
     void Answer(bool yes);
     // Sets how much of a stack your side offers (Count 0 takes it out).
     void Set(TradeStack stack);
-    // Accepts the offer at the version on screen. There is no taking it back: changing
-    // either offer clears both accepts.
-    void Accept(uint version);
+    // Accepts (or takes back) the offer at the version on screen.
+    void Accept(bool on, uint version);
     void Cancel();
 
     // A finished trade, a refusal, a cancel or a server error, as one line for the HUD.
@@ -108,10 +107,10 @@ public sealed class MockTradeLink : ITradeLink
         Changed();
     }
 
-    public void Accept(uint seen)
+    public void Accept(bool on, uint seen)
     {
         if (seen != version) { Said?.Invoke("The offer changed; look again"); return; }
-        mineAccepted = true;
+        mineAccepted = on;
         if (mineAccepted && theirsAccepted) Finish();
     }
 
