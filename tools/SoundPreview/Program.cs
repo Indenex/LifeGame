@@ -19,6 +19,8 @@
 // (knap-fail). others: you knap while another player drills 8 m to your left
 // and a third carves 20 m to the right. still: the same calm morning with no work,
 // the bed the work scenes are measured against.
+// cues: each feedback sound (Cue: Pickup, Eat, Drink, SkillUp, Learn, FireLit,
+// Place) in turn, 2.5 s apart, standing on a calm morning.
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -79,6 +81,9 @@ foreach (var scene in scenes)
         mix.OtherWorking(3, Work.Carve);
         mix.OtherPlace(3, 0.4f * 0.34f, 0.9f);
     }
+    // cues: each feedback sound in turn on a calm morning, one every 2.5 s.
+    var cueList = Enum.GetValues<Cue>();
+    if (name == "cues") (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
     mix.Working(work);
     bool workEnded = false;
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
@@ -110,7 +115,7 @@ foreach (var scene in scenes)
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -119,6 +124,11 @@ foreach (var scene in scenes)
             mix.OtherWorkDone(2, Work.Drill, false);
             mix.OtherWorking(3, Work.None);
             workEnded = true;
+        }
+        if (name == "cues")
+        {
+            int idx = (int)(t / 2.5), prev = (int)((t - n / (double)rate) / 2.5);
+            if (t > 0 && idx != prev && idx - 1 < cueList.Length) mix.Play(cueList[idx - 1]);
         }
         if (walks && t >= nextStep)
         {
