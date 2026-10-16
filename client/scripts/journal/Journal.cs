@@ -20,6 +20,9 @@ public partial class Journal : CanvasLayer
     readonly Chime chime = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
+    // What the journal already holds. my_journal has no primary key, so every
+    // TimesPerformed bump arrives as a delete and an insert (bugfix-12).
+    readonly HashSet<string> known = new();
     DbConnection? conn;
     SubscriptionHandle? subscription;
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
@@ -160,7 +163,7 @@ public partial class Journal : CanvasLayer
     // Quiet notes when you learn something new, but not for what you already knew at login.
     void Learned(JournalEntry e)
     {
-        if (!caughtUp) return;
+        if (!known.Add(e.ProcessId) || !caughtUp) return;
         panel.Fresh.Add(e.ProcessId);
         chime.Discovery();
         string name = Skills.ProcessName(e.ProcessId);
