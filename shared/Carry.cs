@@ -47,6 +47,8 @@ namespace LifeGame.Shared
             [Item.Daub] = 2f,
             [Item.UnfiredPinchPot] = 1f,
             [Item.UnfiredCoilPot] = 2f,
+            [Item.UnfiredStorageJar] = 8f,
+            [Item.StorageJar] = 8f,
             [Item.Berries] = 0.1f,
             [Basket] = 0.5f,
         };
