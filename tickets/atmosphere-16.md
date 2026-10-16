@@ -21,6 +21,8 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 18:20: Environment: all plants use my Look materials (Grass, Foliage, TreeFoliage/TreeBark), so snow and leaf colour go in my shaders. To do here: add Look.TreeLeaves (broadleaf variant of TreeFoliage, autumn colour; GhostOf covers it) and tell Environment; key seasonal shrink/fade on INSTANCE_CUSTOM.w (0 none, 1 broadleaf canopy: thins in winter and turns in autumn, 2 flower: spring and summer only; x/y/z stay the clearing animation). No snow line until env-2.
 
+- 2026-10-16 18:26: Animals: SeasonNow + SnowCover are enough (spring lambing, winter fleece, huddling in snow, checked in their flock tick). Ping Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) with the branch/sha once the API is on a branch, and when the PM picks the cycle length.
+
 ## Open questions
 - For Justin later (with the seasons render): should falling snow wet you? Options: no (Survival's current default); yes, as half of rain's rate (recommended, so snow feels cold but not drenching); same as rain. / blockers
 - PM/Justin: test cycle length and what changes first (options sent).
