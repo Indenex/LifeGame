@@ -21,6 +21,14 @@ namespace LifeGame.Shared
         // Holding Shift walks this fast; animals don't take fright at it.
         public const float SneakSpeed = 1.6f;
         public const float MoveSlack = 1.5f;
+        // A mover may bank this many seconds of walking (a lagging client catches up, bugfix-24).
+        public const float MoveBankSeconds = 1f;
+
+        // How far a player may step now: what they had banked plus what the time since the
+        // last report earned at `speed`, never more than a second of walking plus the slack.
+        // Each report spends from it, so many small reports can't add up to more than `speed`.
+        public static float MoveAllowance(float banked, float speed, float seconds) =>
+            Math.Min(Math.Max(banked, 0f) + speed * Math.Max(seconds, 0f), speed * MoveBankSeconds + MoveSlack);
         public const long DigCooldownMicros = 600_000;
 
         // Each dig lowers a height point by DigStep meters, down to MaxDigDepth steps.

@@ -14,6 +14,8 @@ public partial class SimmerView : Node3D
 
     readonly MeshInstance3D body = new();
     readonly MeshInstance3D surface = new();
+    readonly MeshInstance3D under = new() { Mesh = CookingMeshes.Under };
+    readonly MeshInstance3D floaters = new();
     readonly CpuParticles3D steam = Steam();
     readonly Label3D label = new()
     {
@@ -38,6 +40,8 @@ public partial class SimmerView : Node3D
         body.Scale = Vector3.One * PotView.Size;
         AddChild(body);
         AddChild(surface);
+        AddChild(under);
+        AddChild(floaters);
         AddChild(steam);
         AddChild(label);
     }
@@ -52,6 +56,8 @@ public partial class SimmerView : Node3D
         surface.Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.004f, RadialSegments = 24 };
         surface.MaterialOverride = Look.Solid(dish == Item.PotOfStew ? Stew : Broth);
         surface.Position = new Vector3(0, line.Y, 0);
+        floaters.Mesh = CookingMeshes.Floaters(dish == Item.PotOfStew ? CookingMeshes.Dish.Stew : CookingMeshes.Dish.Broth, line.X);
+        floaters.Position = new Vector3(0, line.Y + 0.002f, 0);
         steam.Position = new Vector3(0, PotMesh.Height(ClayForm.CoilPot) * PotView.Size, 0);
         steam.Emitting = true;
         label.Position = new Vector3(0, PotMesh.Height(ClayForm.CoilPot) * PotView.Size + 0.3f, 0);
