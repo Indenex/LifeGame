@@ -14,6 +14,7 @@ public enum StructureKind
     StorageJar,
     Fence,
     Gate,
+    CraftingTable,
 }
 
 // One material a structure's current stage still needs.
@@ -116,6 +117,7 @@ public static partial class Module
 
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
+        CheckStationSite(ctx, kind, x, z);
         yaw = MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);

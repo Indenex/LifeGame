@@ -31,16 +31,16 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-2; PR #205 | `claude/anim-2` | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
 | Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-4; PR #213 | `claude/environment-env-4` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
 | Audio (D-079) (session_01SXcxtoyeqDmypiHxkHedU6) | audio-2a+b, then audio-3 (Sonnet, D-159) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
-| Crafting (session_01N9APthjRDfjknUvCweqzzN) | #160, #203, crafting-19 durability (Sonnet, D-159) | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
+| Crafting (session_01N9APthjRDfjknUvCweqzzN) | #160, #203, crafting-19 durability (Sonnet, D-159) | `crafting-durability` (crafting-19) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_01RedPo6NfcLBPNHQNVhC4qf) | survival-12 PR #206, then survival-10 (Sonnet, D-159) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013iTXrpndd1fMtDLqqBPgJ5) | skills-11; PR #193 (Sonnet, D-159) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules (session_01CAk6p7Z42GfVwi8QMfNMhZ) | claims-12 fences; #191 and #196 merged (Sonnet, D-159) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); next visual ticket with Environment | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/` except audio |
 | House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) | #202, building-10 (Sonnet, D-159) | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
-| Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) | #23 shearing; then animals-3 kill and butcher (D-039) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
+| Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-deer-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Sc3N1RCsurSszfX5YwGzMU) | ceramics-7+8, lamp ceramics-9 (Sonnet, D-159) | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
-| Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
+| Bug fixes (session_01AeuMsF8LfzDsWW8jUh1Fkp) | #221, then bugfix-23 collision (Sonnet, D-159) | lane records | any file, minimal diffs, PM assigns |
 | Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
 | Release & Launcher (D-131) (session_01Jxp6a8KwCCg4DsFyCZHC9t) | release-2; PR #201 (Sonnet, D-159) | `claude/release-1` | `launcher/`, `tools/release/`, `.github/workflows/release.yml` (reviewed by Integration) |
 
