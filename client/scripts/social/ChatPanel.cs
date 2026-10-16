@@ -102,7 +102,9 @@ public partial class ChatPanel : CanvasLayer
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         string nameColor = mine ? "#e8d6a8" : "#cfe0b4";
-        label.Text = $"[color={nameColor}]{Escape(who)}[/color]  {Escape(text)}";
+        label.Text = who.Length == 0
+            ? $"[i][color=#d9c9a8]{Escape(text)}[/color][/i]"
+            : $"[color={nameColor}]{Escape(who)}[/color]  {Escape(text)}";
         label.AddThemeFontSizeOverride("normal_font_size", 15);
         label.AddThemeColorOverride("default_color", Look.Cream);
         label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
