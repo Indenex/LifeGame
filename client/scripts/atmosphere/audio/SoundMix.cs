@@ -32,6 +32,12 @@ public sealed class SoundMix
     // Open water nearby: how close and how much of it (0 none, 1 at the edge of a
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
+    // How far through the year it is, 0 to 1 (Seasons.YearFraction): 0 the first day
+    // of spring, 0.25 summer, 0.5 autumn, 0.75 winter. Sets which creatures are
+    // about, what the trees have on them and how cold the wind sounds (audio-2).
+    public float Year = 0.3f;
+    // Snow lying on the ground, 0 to 1: the grass goes quiet under it.
+    public float SnowCover;
     public bool MusicOn = true;
     // The sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
     // player starts, is the mix as designed; see SliderGain. Effects are your
@@ -52,6 +58,7 @@ public sealed class SoundMix
     readonly NightVoices night;
     readonly WaterVoice water;
     readonly Frogs frogs;
+    readonly DayInsects insects;
     readonly Steps steps;
     readonly WorkVoice work;
     // Other players at work nearby, by player id (D-072).
@@ -85,6 +92,7 @@ public sealed class SoundMix
         night = new NightVoices(rate, rng);
         water = new WaterVoice(rate, rng);
         frogs = new Frogs(rate, rng);
+        insects = new DayInsects(rate, noise, rng);
         steps = new Steps(rate, noise, rng);
         work = new WorkVoice(rate, noise, rng);
         sheep = new Sheep(rate, rng);
@@ -176,15 +184,18 @@ public sealed class SoundMix
         // itself under a roof; footsteps and music are always close.
         float night01 = 1f - Daylight;
         (float birdLevel, float chorus) = BirdActivity(TimeOfDay);
-        wind.Render(outL, outR, count, Wind, Rain);
-        foliage.Render(outL, outR, count, Wind, Rain, Foliage, wind.Gust);
+        var season = SeasonSound.Of(Year);
+        float winterWind = Math.Clamp(Wind + 0.05f * season.Cold, 0f, 1f);
+        wind.Render(outL, outR, count, winterWind, Rain, season.Cold);
+        foliage.Render(outL, outR, count, winterWind, Rain, Foliage, wind.Gust, season.Leaves, season.Dry, SnowCover);
         thunder.Render(outL, outR, count);
         fire.Render(outL, outR, count, Fire, FirePan, Rain);
-        birds.Render(outL, outR, sendL, sendR, count, birdLevel * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), chorus);
-        night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind));
+        birds.Render(outL, outR, sendL, sendR, count, birdLevel * season.Birds * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), Math.Min(1f, chorus * season.Chorus));
+        night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind), season.Insects);
+        insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
         sheep.Render(outL, outR, sendL, sendR, count);
         water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
-        frogs.Render(outL, outR, sendL, sendR, count, Water * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
+        frogs.Render(outL, outR, sendL, sendR, count, Water * season.Frogs * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
         float coverCoef = Lowpass.Coef(1.2f, Rate), wall = Lowpass.Coef(650f, Rate);
         for (int i = 0; i < count; i++)
         {
@@ -257,6 +268,35 @@ public sealed class SoundMix
         float dawn = MathF.Exp(-Sq((t - 0.27f) / 0.03f));
         float dusk = MathF.Exp(-Sq((t - 0.725f) / 0.025f));
         return (awake * Math.Min(1f, 0.35f + 0.65f * dawn + 0.35f * dusk), awake * dawn);
+    }
+
+    // What the time of year does to the ambience, from the year fraction (0 the
+    // first day of spring). Warmth matches Seasons.Warmth: -1 mid-winter to 1
+    // mid-summer.
+    public readonly record struct SeasonSound(float Cold, float Summer, float Leaves, float Dry, float Birds, float Chorus, float Insects, float Frogs)
+    {
+        public static SeasonSound Of(float year)
+        {
+            float y = year - MathF.Floor(year);
+            float warmth = MathF.Cos((y - 0.375f) * MathF.PI * 2f);
+            float spring = MathF.Exp(-Sq(Wrapped(y - 0.12f) / 0.09f));
+            // Bare from late autumn through winter, budding again in the first days of spring.
+            float bare = y >= 0.5f ? Smooth(0.62f, 0.74f, y) : 1f - Smooth(0f, 0.06f, y);
+            // Dry, crisp leaves through autumn, still on the trees and blowing about below.
+            float dry = MathF.Exp(-Sq((y - 0.64f) / 0.07f));
+            return new SeasonSound(
+                Cold: Math.Max(0f, -warmth),
+                Summer: Smooth(0.35f, 0.9f, warmth),
+                Leaves: 1f - bare,
+                Dry: dry,
+                // Busiest in spring, a few hardy birds in deep winter.
+                Birds: 0.12f + 0.88f * Smooth(-0.6f, 0.2f, warmth) * (1f - 0.45f * dry) + 0.6f * spring,
+                Chorus: 0.5f + 1.5f * spring,
+                Insects: Smooth(-0.25f, 0.65f, warmth),
+                Frogs: Smooth(-0.35f, 0.3f, warmth) * (1f + 0.5f * spring));
+        }
+
+        static float Wrapped(float d) => d - MathF.Round(d);
     }
 
     // Footstep level for an ambience RMS: about 0.17 (-15 dB) over a still dawn bed
@@ -350,7 +390,8 @@ public sealed class SoundMix
             this.noise = noise;
         }
 
-        public void Render(float[] l, float[] r, int n, float wind, float rain)
+        // Cold (0 to 1, deep winter): a thinner, higher, more restless wind.
+        public void Render(float[] l, float[] r, int n, float wind, float rain, float cold = 0f)
         {
             float rumbleCoef = Lowpass.Coef(120f, rate);
             float gustCoef = Lowpass.Coef(0.15f, rate);
@@ -360,13 +401,13 @@ public sealed class SoundMix
                 if (counter-- <= 0)
                 {
                     counter = rate / 2;
-                    gustTarget = Math.Clamp(gustTarget + noise.Next() * 0.35f, 0f, 1f);
+                    gustTarget = Math.Clamp(gustTarget + noise.Next() * (0.35f + 0.08f * cold), 0f, 1f);
                 }
                 gust = gustSmooth.Process(gustTarget, gustCoef);
                 float strength = Math.Clamp(wind + rain * 0.2f, 0f, 1f);
                 level += levelCoef * (strength - level);
                 float amp = (0.07f + level * 0.2f) * (0.45f + 0.55f * gust);
-                float center = 220f + 520f * gust * (0.4f + level);
+                float center = (220f + 520f * gust * (0.4f + level)) * (1f + 0.15f * cold);
                 float a = bandL.Process(noise.Next(), center, 1.3f, rate);
                 float b = bandR.Process(noise.Next(), center * 1.07f, 1.3f, rate);
                 float lowA = rumbleL.Process(noise.Next(), rumbleCoef) * 2.5f;
@@ -385,7 +426,7 @@ public sealed class SoundMix
     {
         readonly int rate;
         readonly Noise noise;
-        BandPass leafL, leafR, grassL, grassR;
+        BandPass leafL, leafR, grassL, grassR, twigL, twigR;
         Lowpass flutterL, flutterR, level, wooded;
 
         public FoliageVoice(int rate, Noise noise)
@@ -394,25 +435,38 @@ public sealed class SoundMix
             this.noise = noise;
         }
 
-        public void Render(float[] l, float[] r, int n, float wind, float rain, float foliage, float gust)
+        // Leaves on the trees (0 bare to 1 full) and how dry they are (autumn): dry
+        // leaves rattle higher and crisper. Bare winter branches whistle thinly
+        // instead, and snow lying on the ground hushes the grass.
+        public void Render(float[] l, float[] r, int n, float wind, float rain, float foliage, float gust, float leafCover = 1f, float dry = 0f, float snow = 0f)
         {
-            float flutterCoef = Lowpass.Coef(14f, rate), levelCoef = Lowpass.Coef(0.4f, rate), woodCoef = Lowpass.Coef(0.3f, rate);
+            float flutterCoef = Lowpass.Coef(14f + 26f * dry, rate), levelCoef = Lowpass.Coef(0.4f, rate), woodCoef = Lowpass.Coef(0.3f, rate);
             float strength = Math.Clamp(wind + rain * 0.15f, 0f, 1f);
             float target = MathF.Pow(strength, 1.4f) * (0.35f + 0.65f * gust);
+            float leafGain = 0.16f * (0.15f + 0.85f * leafCover) * (1f + 0.2f * dry), leafHz = 3400f + 1300f * dry;
+            float bare = 1f - leafCover, grassGain = 0.07f * (1f - 0.75f * snow);
             for (int i = 0; i < n; i++)
             {
                 float lv = level.Process(target, levelCoef);
                 float w = wooded.Process(foliage, woodCoef);
-                // Leaves flicker: the rustle comes in quick uneven bursts.
-                float fl = Math.Max(0f, 0.5f + 6f * flutterL.Process(noise.Next(), flutterCoef));
-                float fr = Math.Max(0f, 0.5f + 6f * flutterR.Process(noise.Next(), flutterCoef));
-                float leafA = leafL.Process(noise.Next(), 3400f + 900f * gust, 0.9f, rate) * fl;
-                float leafB = leafR.Process(noise.Next(), 3700f + 900f * gust, 0.9f, rate) * fr;
+                // Leaves flicker: the rustle comes in quick uneven bursts, sharper when dry.
+                float fl = Math.Max(0f, 0.5f - 0.3f * dry + (6f + 6f * dry) * flutterL.Process(noise.Next(), flutterCoef));
+                float fr = Math.Max(0f, 0.5f - 0.3f * dry + (6f + 6f * dry) * flutterR.Process(noise.Next(), flutterCoef));
+                float leafA = leafL.Process(noise.Next(), leafHz + 900f * gust, 0.9f, rate) * fl;
+                float leafB = leafR.Process(noise.Next(), leafHz + 300f + 900f * gust, 0.9f, rate) * fr;
                 float grassA = grassL.Process(noise.Next(), 1500f + 700f * gust, 1.1f, rate);
                 float grassB = grassR.Process(noise.Next(), 1650f + 700f * gust, 1.1f, rate);
-                float leaves = lv * w * 0.16f, grass = lv * (1f - 0.6f * w) * 0.07f;
-                l[i] += leafA * leaves + grassA * grass;
-                r[i] += leafB * leaves + grassB * grass;
+                float leaves = lv * w * leafGain, grass = lv * (1f - 0.6f * w) * grassGain;
+                float s = 0f, t = 0f;
+                if (bare > 0.01f)
+                {
+                    // Narrow and high: wind over bare twigs, rising with each gust.
+                    float twigs = lv * w * bare * gust * 0.005f;
+                    s = twigL.Process(noise.Next(), 1100f + 900f * gust, 0.15f, rate) * twigs;
+                    t = twigR.Process(noise.Next(), 1250f + 900f * gust, 0.15f, rate) * twigs;
+                }
+                l[i] += leafA * leaves + grassA * grass + s;
+                r[i] += leafB * leaves + grassB * grass + t;
             }
         }
     }
@@ -787,9 +841,13 @@ public sealed class SoundMix
             }
         }
 
-        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, float level)
+        // Insects (0 to 1) is how many are about this time of year: none in winter,
+        // so only the owls are left.
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, float level, float insects = 1f)
         {
             float dt = 1f / rate;
+            float owls = level;
+            level *= insects;
             if (level > 0.01f)
             {
                 // The shimmer: high, buzzing, slowly swelling on each side.
@@ -837,7 +895,7 @@ public sealed class SoundMix
             if (untilOwl <= 0f)
             {
                 untilOwl = Range(rng, 25f, 70f);
-                if (level > 0.5f)
+                if (owls > 0.5f)
                 {
                     owlTime = 0f;
                     owlPan = Range(rng, -0.8f, 0.8f);
@@ -847,7 +905,7 @@ public sealed class SoundMix
 
             // "Hoo... hoo-hoo-hoooo", soft and far away.
             ReadOnlySpan<(float Start, float Length)> hoots = stackalloc (float, float)[] { (0f, 0.45f), (0.85f, 0.18f), (1.1f, 0.18f), (1.35f, 0.6f) };
-            float gl = Pan(owlPan, true) * 0.045f * level, gr = Pan(owlPan, false) * 0.045f * level;
+            float gl = Pan(owlPan, true) * 0.045f * owls, gr = Pan(owlPan, false) * 0.045f * owls;
             for (int i = 0; i < n; i++)
             {
                 owlTime += dt;
@@ -867,6 +925,76 @@ public sealed class SoundMix
                 sr[i] += s * gr;
             }
             if (owlTime > 2.2f) owlTime = -1f;
+        }
+    }
+
+    // --- Summer insects -----------------------------------------------------------
+
+    // A warm summer day: a high, pulsing drone of insects in the grass that swells
+    // and fades in slow waves, and now and then a bee that hums past from one side
+    // to the other.
+    sealed class DayInsects
+    {
+        readonly int rate;
+        readonly Noise noise;
+        readonly Random rng;
+        BandPass droneL, droneR;
+        Lowpass swellL, swellR, level;
+        float time, untilBee = 6f, beeTime = -1f, beePhase, beeFrom, beePitch;
+
+        public DayInsects(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        public void Render(float[] l, float[] r, int n, float target)
+        {
+            float dt = 1f / rate;
+            float swell = Lowpass.Coef(0.12f, rate), ease = Lowpass.Coef(0.3f, rate);
+            for (int i = 0; i < n; i++)
+            {
+                float lv = level.Process(target, ease);
+                if (lv < 0.002f) continue;
+                time += dt;
+                // A fast buzz under slow uneven swells, a little different on each side.
+                float buzz = 0.5f + 0.5f * MathF.Sin(time * 2f * MathF.PI * 52f);
+                float a = Math.Max(0f, 0.4f + 9f * swellL.Process(noise.Next(), swell));
+                float b = Math.Max(0f, 0.4f + 9f * swellR.Process(noise.Next(), swell));
+                float g = 0.016f * lv * buzz;
+                l[i] += droneL.Process(noise.Next(), 5200f, 0.3f, rate) * a * g;
+                r[i] += droneR.Process(noise.Next(), 5600f, 0.3f, rate) * b * g;
+            }
+
+            untilBee -= n * dt;
+            if (untilBee <= 0f)
+            {
+                untilBee = Range(rng, 8f, 25f);
+                if (target > 0.3f)
+                {
+                    beeTime = 0f;
+                    beeFrom = rng.NextDouble() < 0.5 ? -0.9f : 0.9f;
+                    beePitch = Range(rng, 190f, 250f);
+                }
+            }
+            if (beeTime < 0f) return;
+            const float Pass = 2.2f;
+            for (int i = 0; i < n; i++)
+            {
+                beeTime += dt;
+                float u = beeTime / Pass;
+                if (u >= 1f) break;
+                // Louder as it passes closest; a slight drop in pitch as it goes by.
+                float near = MathF.Sin(MathF.PI * u);
+                beePhase += 2f * MathF.PI * beePitch * (1.03f - 0.06f * u) * dt;
+                float wob = 1f + 0.15f * MathF.Sin(beeTime * 2f * MathF.PI * 7f);
+                float sv = (MathF.Sin(beePhase) + 0.5f * MathF.Sin(2f * beePhase) + 0.25f * MathF.Sin(3f * beePhase)) * near * near * wob * 0.012f * target;
+                float pan = beeFrom * (1f - 2f * u);
+                l[i] += sv * Pan(pan, true);
+                r[i] += sv * Pan(pan, false);
+            }
+            if (beeTime >= Pass) beeTime = -1f;
         }
     }
 

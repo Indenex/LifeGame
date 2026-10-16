@@ -12,7 +12,7 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 - 2026-10-16: queued (D-085).
 
 ## Open questions / blockers
-- (none)
+- Idea to offer the PM with this ticket (D-059 options): after Environment's env-2 reshape (#175: stream 45 m west of spawn, ponds, gentler hills, water still at -1 m), mist that lies in valleys and over ponds and the stream at dawn and dusk, using World.BaseHeight and the existing atmosphere-11 Mist (which already pools in hollows by depth). Options to send: A (rec) extend Mist to read terrain height so valleys and water fill first; B leave dawn mist as is.
 
 ## Next step
 Start after atmosphere-13 is in review: create the branch, set Status in_progress, record it here.
