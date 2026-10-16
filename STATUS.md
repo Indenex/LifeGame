@@ -6,6 +6,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 **Phase:** 1, MVP. One forest region, crafting tiers 0 to 3, house building, sheep, up to 32 players, Linux and Windows.
 **Goal:** playtesters reach a fired clay pot on their own and want to keep going.
+**Milestones (D-081):** M1 Looks and feels real + M2 The first evening (in parallel) → M3 A place of your own → M4 The long road → M5 Pre-alpha playtest. Survival stays light.
 **Priority:** playable as soon as possible. Small milestones merge early; `main` is the running playtest build.
 
 ## PM
@@ -15,28 +16,31 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-068 |
+| Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-080 |
 | Next PM action | All lanes restarted 2026-10-16 17:04 (session ids in the lane table; reach them with send_message). Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds | session_01Rf5965nk4Lvd3f2QDteZSq records its branch | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds; in progress. Merge-readiness only: the PM merges (Integration's session can't merge) | `claude/integration-lane` | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
 | Render (D-059) (session_013qe8zPzzBHx9rFPEYoKMr5) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
-| Modeling (D-073) | model-1 model style and first upgrades | session records its branch | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
-| Animation (D-073) | anim-1 player animation pass | session records its branch | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
+| Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 player figure, items, clothes | `claude/model-1-style` | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
+| Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-1 player animation pass; PR #100 (draft until Justin sees clips) | `claude/anim-1-player-animation` | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
+| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-1 cosy forest pass with Atmosphere | `claude/environment-env-1` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
+| Audio (D-079) (session_01LeXCWTFVBQcCNVEDdhPek3) | audio-1 take over audio; finish work sounds (atmosphere-12, D-072) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
 | Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_014pHdaxJ7uESzsvWekpjvsH) | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013QuyGdXAWemhkois2ictmc) | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules (session_013ECn821EbTpbj4h7d3PepH) | #71 chat bubbles; claims-7 trading server side (D-069) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
-| World atmosphere and sound (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); atmosphere-12 work sounds incl. other players at -60% (D-072) | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
+| World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); next visual ticket with Environment | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/` except audio |
 | House building (session_01RrKHUxWRH973Ndnxsad9nv) | building-4 mud-brick house (D-057); building-3 merged as #41 | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
 | Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) | #23 shearing; then animals-3 kill and butcher (D-039) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Diab34HTvew38VmUaqhj5Q) | #21 kiln and deep clay; then kiln blueprint | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
+| Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 

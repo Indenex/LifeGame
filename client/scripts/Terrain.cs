@@ -255,16 +255,17 @@ public partial class Terrain : Node3D
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
 
-                bool nearSpawn = x * x + z * z < 12 * 12;
+                bool nearSpawn = Trees.NearSpawn(x, z);
                 float roll = Hash01(x, z, 11);
-                float fx = x + (Hash01(x, z, 12) - 0.5f) * 0.5f, fz = z + (Hash01(x, z, 13) - 0.5f) * 0.5f;
+                var (fx, fz) = Trees.Trunk(x, z);
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
                 float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
                 var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
                 var at = new Transform3D(basis, new Vector3(fx, top, fz));
 
-                // A forest that thins out into a clearing where new players wake up.
-                float forest = World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
+                // A forest that thins out into a clearing where new players wake up
+                // (shared/Trees.cs, so the server knows which tree is chopped).
+                float forest = Trees.Forest(x, z);
                 if (!nearSpawn && roll < forest)
                 {
                     trunks.Add((at, Look.Bark, custom));
@@ -485,15 +486,5 @@ public partial class Terrain : Node3D
         }
     }
 
-    public static float Hash01(int x, int z, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)x * 0x27D4EB2Du ^ (uint)z * 0x165667B1u ^ salt * 0x9E3779B9u;
-            h ^= h >> 15;
-            h *= 0x85EBCA6Bu;
-            h ^= h >> 13;
-            return (h & 0xFFFFFF) / 16777216f;
-        }
-    }
+    public static float Hash01(int x, int z, uint salt) => Trees.Hash01(x, z, salt);
 }

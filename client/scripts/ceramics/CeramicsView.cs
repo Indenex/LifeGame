@@ -144,7 +144,10 @@ public partial class CeramicsView : Node
         Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
         Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = at => TendOffer(at, firing: false) });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
-        Use.Register(new UseHandler { Id = "ceramics.pick_up", Priority = 10, Find = PickUpOffer });
+        Use.Register(new UseHandler { Id = "ceramics.pick_up", Priority = 10, Find = at => PickUpOffer(at, byFire: false) });
+        // A pot fired in a campfire lands on its ring: taking it out outranks feeding
+        // that fire, as taking a roast does, or G burns sticks instead (bugfix-17).
+        Use.Register(new UseHandler { Id = "ceramics.take_from_fire", Priority = 24, Find = at => PickUpOffer(at, byFire: true) });
     }
 
     // The player's Use key as prompts write it (rebindable on the Controls page).
@@ -282,8 +285,9 @@ public partial class CeramicsView : Node
         return null;
     }
 
-    // Fired pots and dry bricks on the ground: G picks them up, as Space does.
-    UseOffer? PickUpOffer(Vector3 me3)
+    // Fired pots and dry bricks on the ground: G picks them up, as Space does. byFire
+    // offers only goods lying within a fire's reach, and the other offer only the rest.
+    UseOffer? PickUpOffer(Vector3 me3, bool byFire)
     {
         if (conn == null) return null;
         WorldItem? best = null;
@@ -294,7 +298,7 @@ public partial class CeramicsView : Node
             float d = new Vector2(w.X - me3.X, w.Z - me3.Z).Length();
             if (d <= bestD) { best = w; bestD = d; }
         }
-        if (best == null) return null;
+        if (best == null || ByFire(best.X, best.Z) != byFire) return null;
         ulong id = best.Id;
         string name = Items.Def((Item)best.Item).Name.ToLowerInvariant();
         return new UseOffer($"Pick up the {name}", bestD, () => conn.Reducers.PickUp(id),
@@ -337,6 +341,14 @@ public partial class CeramicsView : Node
         foreach (var p in conn!.Db.ClayPiece.Iter())
             if (p.Stage == (byte)ClayStage.Firing && p.FireId == fire.Id) potsIn++;
         return ClayRules.FireCanTakePot((fire.FuelUntil.MicrosecondsSinceUnixEpoch - now) / 1_000_000f, potsIn);
+    }
+
+    // Any fire, lit or not yet cleared away; a plain loop, as this runs every frame.
+    bool ByFire(float x, float z)
+    {
+        foreach (var f in conn!.Db.Fire.Iter())
+            if (new Vector2(f.X - x, f.Z - z).Length() <= ClayRules.FireReach) return true;
+        return false;
     }
 
     Fire? BurningFireNear(Vector2 at, float reach)
