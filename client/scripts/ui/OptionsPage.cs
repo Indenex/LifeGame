@@ -34,10 +34,18 @@ public partial class OptionsPage : Control
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        var column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        column.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        // The same soft dark panel as the other windows (trade, equipment), centred (D-125).
+        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.AddThemeConstantOverride("separation", 12);
-        AddChild(column);
+        var panel = Hud.Panel(column, Vector2.Zero);
+        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
+        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
+        style.ContentMarginTop = style.ContentMarginBottom = 18;
+        style.ContentMarginLeft = style.ContentMarginRight = 28;
+        panel.SetAnchorsPreset(LayoutPreset.Center);
+        panel.GrowHorizontal = GrowDirection.Both;
+        panel.GrowVertical = GrowDirection.Both;
+        AddChild(panel);
 
         var title = new Label { Text = "Options", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 26, 1f);
@@ -72,7 +80,9 @@ public partial class OptionsPage : Control
             }
         }
 
-        column.AddChild(ControlsPage.TextButton("Back", () => Back()));
+        var back = ControlsPage.TextButton("Back", () => Back());
+        back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(back);
     }
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
