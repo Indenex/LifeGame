@@ -105,9 +105,9 @@ public partial class StructureView : Node3D
 
     // Like Project Zomboid: from inside, the roof and any upper parts clear away entirely and
     // the walls between the camera and the player fade (the far walls stay), so the room reads
-    // as a cutaway. From outside, behind the building, only the walls in the way fade, round a
-    // clear circle at the player, and the roof stays. Each fades over about a third of a second.
-    float roofFade, wallFade;
+    // as a cutaway. From outside, behind the building, the walls in the way and the roof fade
+    // only round a clear circle at the player. Each fades over about a third of a second.
+    float roofFade, wallFade, roofFloor, wallFloor;
     readonly Dictionary<(Material, StructureModel.PieceRole), ShaderMaterial> seeThroughMaterials = new();
     readonly Dictionary<int, MeshInstance3D> ghostMeshes = new();
 
@@ -118,12 +118,17 @@ public partial class StructureView : Node3D
     // and the player (always true when inside). camera: where the camera is, in the world.
     public void UpdateSeeThrough(bool inside, bool hides, Vector3 camera, float dt)
     {
-        float roofTarget = inside ? 1f : 0f, wallTarget = hides || inside ? 1f : 0f;
+        // The roof fades whenever the building hides the player: all of it from inside, only a soft
+        // circle round the player from behind (Justin picked this, D-168).
+        float roofTarget = hides || inside ? 1f : 0f, wallTarget = hides || inside ? 1f : 0f;
         // Solid and staying solid: nothing to do. Anything else keeps ticking, since the cut follows the camera.
         if (roofFade <= 0f && wallFade <= 0f && roofTarget <= 0f && wallTarget <= 0f) return;
         // In a little quicker than out, so leaving reads calmer.
         roofFade = Mathf.MoveToward(roofFade, roofTarget, dt * (roofTarget > roofFade ? 3.5f : 2.5f));
         wallFade = Mathf.MoveToward(wallFade, wallTarget, dt * (wallTarget > wallFade ? 3.5f : 2.5f));
+        // How far the fade reaches beyond the circle, eased too so stepping through the door doesn't pop.
+        roofFloor = Mathf.MoveToward(roofFloor, inside ? 1f : 0f, dt * 3f);
+        wallFloor = Mathf.MoveToward(wallFloor, inside ? 0.85f : 0.45f, dt * 1.5f);
 
         for (int i = 0; i < pieces.Count; i++)
         {
@@ -157,7 +162,7 @@ public partial class StructureView : Node3D
                 ghostMeshes[i] = ghostMesh;
             }
             // A roof that has cleared away completely isn't drawn at all.
-            bool gone = piece.Role == StructureModel.PieceRole.Roof && amount > 0.97f;
+            bool gone = piece.Role == StructureModel.PieceRole.Roof && amount > 0.97f && roofFloor > 0.97f;
             ghostMesh.Visible = !gone;
             // The solid stays only for its shadow, so the room doesn't flood with sun.
             mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly;
@@ -170,8 +175,9 @@ public partial class StructureView : Node3D
             float linear = role == StructureModel.PieceRole.Roof ? roofFade : wallFade;
             material.SetShaderParameter("fade_override", linear * linear * (3f - 2f * linear));
             material.SetShaderParameter("cam_dir", direction);
-            // Seen from inside the near walls clear almost entirely; from outside only round the player.
-            material.SetShaderParameter("cut_floor", inside ? 0.85f : 0.45f);
+            // Seen from inside the roof and near walls clear almost entirely; from outside the walls
+            // clear partly and the roof only round the player.
+            material.SetShaderParameter("cut_floor", role == StructureModel.PieceRole.Roof ? roofFloor : wallFloor);
         }
     }
 
