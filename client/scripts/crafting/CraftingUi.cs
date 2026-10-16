@@ -92,7 +92,7 @@ public partial class CraftingUi : CanvasLayer
             Priority = 25,
             Find = at =>
             {
-                var (roast, seconds) = MyRoasts().FirstOrDefault(r => Roasting.Done(r.seconds));
+                var (roast, seconds) = OldestDoneRoast();
                 if (roast == null) return null;
                 float d = new Vector2(roast.X - at.X, roast.Z - at.Z).Length();
                 if (d > World.Reach) return null;
@@ -393,6 +393,22 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // Your roasts on fires nearby, with how long each has been cooking.
+    // The roast that has been on longest among those done, as the panel orders them.
+    // A plain loop: the Use key asks every frame (bugfix-8).
+    (Roast? roast, float seconds) OldestDoneRoast()
+    {
+        (Roast? roast, float seconds) best = (null, 0f);
+        if (conn?.Identity is not { } me) return best;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        foreach (var r in conn.Db.Roast.Iter())
+        {
+            if (r.Owner != me) continue;
+            float seconds = (now - r.PutAt.MicrosecondsSinceUnixEpoch) / 1_000_000f;
+            if (Roasting.Done(seconds) && (best.roast == null || seconds > best.seconds)) best = (r, seconds);
+        }
+        return best;
+    }
+
     IEnumerable<(Roast roast, float seconds)> MyRoasts()
     {
         if (conn?.Identity is not { } me) return Enumerable.Empty<(Roast, float)>();

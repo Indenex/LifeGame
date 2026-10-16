@@ -9,7 +9,7 @@ namespace LifeGame;
 // appears, so you watch the frame, ribs and thatch go on one by one.
 // Pieces are built in the structure's own frame: +Z is the open front or door,
 // y = 0 is the ground at the footprint's center.
-public static class StructureModel
+public static partial class StructureModel
 {
     public sealed class Piece
     {
@@ -39,7 +39,7 @@ public static class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), _ => LeanTo() };
+        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }

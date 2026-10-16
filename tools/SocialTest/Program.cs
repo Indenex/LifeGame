@@ -262,13 +262,11 @@ a.X = woke.X; a.Z = woke.Z;
 
 if (decay)
 {
-    // CI gives claims a 30 s life, and the fighting checks above can outlast it on a
-    // slow runner, so the claim may already have fallen by now.
-    if (a.MyClaim() is { } standing)
-    {
-        long left = (standing.ExpiresAt.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000;
-        Console.WriteLine($"Waiting for the marker to fall ({left}s left plus up to 20s for the decay tick)...");
-    }
+    // CI gives the claim 30 s, which the fight above can already use up.
+    var expires = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch;
+    Console.WriteLine(expires is { } e
+        ? $"Waiting for the marker to fall ({(e - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)..."
+        : "The marker already fell");
     Pump(() => a.MyClaim() == null, 120, "decay");
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
