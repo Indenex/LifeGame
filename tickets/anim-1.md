@@ -12,8 +12,11 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 - 2026-10-16: ticket written by the PM (D-073).
 - 2026-10-16 17:30: started on claude/anim-1-player-animation. Sent Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm) the rig proposal: rigid segmented parts, no skinning; named pivots Avatar > Hips > Spine > Neck > Head, Shoulder/Elbow/Hand L/R (+ ToolR attach), Hip/Knee/Foot L/R; rest pose arms down, +Z forward; Animation writes only pivot rotations and Hips position. Modeling to supply `client/scripts/models/PlayerModel.cs`; until then Avatar.cs builds the same tree from capsules.
 
+- 2026-10-16 17:55: 94e645a: Avatar.cs now builds the figure as named joint pivots (thigh/shin/foot, upper arm/forearm/hand, spine, neck, head) and `client/scripts/animation/PlayerRig.cs` + `PlayerAnimator.cs` pose it procedurally: idle (breathing, weight shifting foot to foot with a relaxed knee, glancing around) and walk (stride length from speed, knee fold, heel-toe, hip drop/sway/twist, chest counter-twist, arm swing, lean into turns), blended by speed; stroll-to-brisk gait by speed. Remote players drive it from their smoothed position. No allocations per frame; hidden avatars skip it. Client builds locally.
+- Render requested 94e645a.
+
 ## Open questions / blockers
 - Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
 
 ## Next step
-Build the named-pivot rig in Avatar.cs plus procedural idle and walk in `client/scripts/animation/`.
+Wait for Render clips of the idle/walk; meanwhile add sneak (crouched walk) driven by speed.
