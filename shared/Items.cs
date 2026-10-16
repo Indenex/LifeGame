@@ -75,6 +75,9 @@ namespace LifeGame.Shared
         public ItemTags Tags;
         // Quality matters for made things; raw materials always come at a flat quality.
         public bool HasQuality;
+        // Shooting (animals-15): what a bow or an arrow is worth in the damage formula,
+        // bowPower x arrowPower x quality terms. Zero for everything else.
+        public float BowPower, ArrowPower;
 
         public string Count(uint n) => n == 1 ? Name : Plural;
     }
@@ -130,8 +133,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
-            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true },
-            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, BowPower = 60f },
+            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true, ArrowPower = 0.65f },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
