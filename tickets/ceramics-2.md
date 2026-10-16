@@ -1,7 +1,7 @@
 # ceramics-2: Updraft kiln
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session cse_017sscCMDfHcyeZNqGW22GBE)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-kfr4kr (restarted from main 8b96a02 after #11 merged)
 PR: #21, #40 (both merged)
 
@@ -32,9 +32,11 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 2026-10-15 23:52: Building says building-3 (after #10) adds Basket as StructureKind 3, so Kiln becomes 4 (set ClayRules.KilnStructureKind = 4, append every Kiln row after Basket's). Agreed with Building.
 - 2026-10-16 00:00: #40 merged (kiln blueprint as StructureKind 3, claim checks; also fixed main's CS0111). Kiln bot built the blueprint end to end locally. Remaining: in-game kiln screenshots for Justin.
 
+- 2026-10-16: merged into main via #44 (ca1ce9f); ticket closed.
+
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
 - After Claims PR #8 is on main: RequireClaimAccess in TendClay, FirePots, OnPlaced and kiln use.
 
 ## Next step
-Send the PM in-game kiln screenshots (blueprint, built, firing, done) via scratchpad kilnshots.sh-style run: bot builds and fires, a second player stands by the kiln and screenshots. Then mark this ticket done.
+None; done. Lane continues in the next ceramics ticket.

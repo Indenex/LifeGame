@@ -10,6 +10,7 @@ Press Enter to chat. Only players near you see your messages, and each line also
 - A claim owner can invite others as members.
 - Other players can learn a process by watching you work or by reading a note you leave.
 - Players who choose different specialities can make things for each other.
+- Other players can see when you are sneaking.
 
 ## Fighting
 Left click strikes a player in reach. A weapon hits harder than bare hands.
