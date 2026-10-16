@@ -437,3 +437,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-106 — 2026-10-16 — Ceramics makes a cooking pot next
 **Decision:** ceramics-7 is a cooking pot: a coil pot of water on a fire makes broth from berries or mutton. Hunger values are agreed with Survival and kept generous (D-081).
 **Who:** Justin ("Cooking pot", which the PM recommended)
+
+## D-107 — 2026-10-16 — Effect values stay hidden
+**Decision:** The game shows effects in words only ("Keeps a little of the cold off"), never numbers, in the equipment panel and elsewhere. The values live in shared code the client can read, so dataminers can find them; that is accepted, and hiding them from the UI is still the rule.
+**Who:** Justin ("I want values to remain hidden I think. If it's not reasonable against people datamining etc. then I suppose we could just show it."); the PM had recommended showing numbers
+
+## D-108 — 2026-10-16 — Interim training for hides and sewing
+**Decision:** Until Leatherwork and Weaver exist, hide work trains Husbandry and sewing trains Toolmaking.
+**Who:** Justin ("Hides: Husbandry, sewing: Toolmaking", which the PM recommended)
+
+## D-109 — 2026-10-16 — Cold hearths last 1 h outside claims
+**Decision:** A burned-out fire leaves a cold hearth that lasts 1 hour outside a claim; inside a claim it follows normal claim rules (it does not weather away).
+**Who:** Justin ("1 hour outside a claim, normal weathering inside a claim")
+
+## D-110 — 2026-10-16 — Chat bubbles stay about 3 s plus reading time
+**Decision:** Each speech bubble stays about 3 s plus time to read its length; up to 3 stacked.
+**Who:** Justin ("About 3 s plus reading time", which the PM recommended)
