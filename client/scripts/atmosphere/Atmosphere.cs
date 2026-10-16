@@ -20,6 +20,8 @@ public partial class Atmosphere : Node3D
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
     static readonly StringName NWindStrength = "wind_strength";
+    static readonly StringName NWindGust = "wind_gust";
+    static readonly StringName NRainAmount = "rain_amount";
     static readonly StringName NCloudCover = "cloud_cover";
     static readonly StringName NCloudOffset = "cloud_offset";
     static readonly StringName NPlayerPosition = "player_position";
@@ -229,6 +231,9 @@ public partial class Atmosphere : Node3D
         cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
+        // Grass and trees push harder exactly when the wind is heard to gust.
+        RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);
+        RenderingServer.GlobalShaderParameterSet(NRainAmount, rainAmount);
         RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
         RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
 
@@ -254,7 +259,11 @@ public partial class Atmosphere : Node3D
         sound.TimeOfDay = timeOfDay;
         sound.Foliage = Woodedness(focus);
         Lightning(dt);
-        if (GetViewport()?.GetCamera3D() is { } ear) FireSound(focus, ear.GlobalBasis.X);
+        if (GetViewport()?.GetCamera3D() is { } ear)
+        {
+            FireSound(focus, ear.GlobalBasis.X);
+            WaterSound(dt, focus, ear.GlobalBasis.X);
+        }
     }
 
     // --- Sun, sky and fog -----------------------------------------------------
@@ -472,6 +481,43 @@ public partial class Atmosphere : Node3D
     // density the terrain plants its trees by. Sampled every few metres out to
     // about 12 m; the mixer eases between values, so walking into the trees fades
     // the leaves in.
+    // Where the nearest open water is, looked over a few times a second: the closer
+    // and the more of it, the louder it laps; the sound comes from its side.
+    float waterLook;
+
+    void WaterSound(float dt, Vector3 focus, Vector3 right)
+    {
+        waterLook -= dt;
+        if (waterLook > 0f || terrain == null) return;
+        waterLook = 0.25f;
+        const int Reach = 20, Step = 2;
+        int cx = World.CellOf(focus.X), cz = World.CellOf(focus.Z);
+        float nearest = float.MaxValue;
+        Vector2 toward = Vector2.Zero;
+        int wet = 0, near = 0;
+        for (int dx = -Reach; dx <= Reach; dx += Step)
+            for (int dz = -Reach; dz <= Reach; dz += Step)
+            {
+                float d2 = dx * dx + dz * dz;
+                if (d2 > Reach * Reach) continue;
+                if (d2 <= 10 * 10) near++;
+                if (terrain.TileHeight(cx + dx, cz + dz) >= Look.WaterLevel - 0.05f) continue;
+                float d = Mathf.Sqrt(d2);
+                nearest = Mathf.Min(nearest, d);
+                if (d2 <= 10 * 10) wet++;
+                toward += new Vector2(dx, dz) / (1f + d2 * 0.05f);
+            }
+        if (nearest == float.MaxValue)
+        {
+            sound.Water = 0f;
+            return;
+        }
+        // A puddle-sized dip laps quietly; the shore of a wide pond laps fully.
+        float amount = Mathf.Clamp(wet / (float)near * 3f, 0.35f, 1f);
+        sound.Water = (1f - Mathf.SmoothStep(1.5f, Reach, nearest)) * amount;
+        sound.WaterPan = toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(new Vector2(right.X, right.Z)), -1f, 1f) : 0f;
+    }
+
     static float Woodedness(Vector3 at)
     {
         int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);
