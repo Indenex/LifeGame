@@ -31,8 +31,8 @@ public static class NextSteps
         ["lash.bow_drill"] = "A bent stick and a cord turn a drill faster than your palms.",
         ["fire.bow_drill"] = "With a bow drill, fire comes quicker and more surely.",
         ["chop.log"] = "Standing trees give logs to an axe. A log burns for a long time.",
-        ["hide.scrape"] = "A fresh hide needs scraping clean with a sharp edge.",
-        ["hide.stretch"] = "A scraped hide dries flat when it is laced onto sticks.",
+        ["hide.scrape"] = "A fresh hide must be scraped clean with an edge before it will keep.",
+        ["hide.stretch"] = "A clean hide laced onto a stick frame dries stiff and tan into leather, slower in rain and faster by a fire.",
         [Skills.DryHide] = "Leave a stretched hide to the sun and wind until it turns to leather.",
         ["clay.clean"] = "Dug clay is full of stones and roots. Pick them out first.",
         ["clay.grit"] = "Crushed stone worked into clay helps it survive the fire.",
@@ -53,9 +53,15 @@ public static class NextSteps
         ["build.roof"] = "A frame thatched with fiber keeps the rain off.",
         ["build.weave"] = "A woven storage basket keeps your things by your shelter.",
         ["build.door"] = "A finished hut wants a door.",
-        [Skills.Shear] = "A calm sheep can be shorn with a sharp edge, if you come up quietly.",
-        [Skills.Kill] = "Sheep can be hunted. A spear helps.",
-        [Skills.Butcher] = "A carcass gives meat and a hide to a sharp edge.",
+        [Skills.Shear] = "A calm sheep with a full fleece will stand for a blade. Come up slowly.",
+        [Skills.Kill] = "A spear or blade can bring a sheep down, but it will run.",
+        [Skills.Butcher] = "A fallen sheep yields meat and a hide to a blade.",
+        // Wool and clothing (Animals, animals-9); quiet until those processes land.
+        ["carve.drop_spindle"] = "A stone whorl on a straight stick makes something that turns loose wool into thread.",
+        ["cord.spin_wool"] = "Fleece twisted on a whirling spindle draws out into yarn. Keep it turning, but not too eagerly.",
+        ["weave.wool_cloth"] = "Yarn crossed over and under on a frame of sticks becomes cloth.",
+        ["sew.wool_tunic"] = "Cloth cut and sewn to fit keeps the night's chill off a little.",
+        ["sew.leather_wraps"] = "Leather tied round the feet keeps them off the cold ground.",
     };
 
     // Things that cut. Declared before After, which reads it.
