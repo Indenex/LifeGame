@@ -15,6 +15,7 @@ namespace LifeGame.Shared
         Strike, // knap: strike when the mark is in the sweet spot
         Shape,  // pinch a pot: hold to thin the wall, release in the sweet spot
         Coil,   // build a coil pot: lay each coil as the turning pot comes round
+        Spin,   // spin yarn: flick the drop spindle as it slows, before it stops (Animals, D-070)
     }
 
     // What a finished process makes.
@@ -169,7 +170,7 @@ namespace LifeGame.Shared
             {
                 Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Wool, 2) }, NeedsTool = ItemTags.Spindle,
-                Seconds = 10, Makes = Item.Yarn,
+                Seconds = 10, Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f,
             },
             new ProcessDef
             {
