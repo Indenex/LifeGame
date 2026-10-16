@@ -14,6 +14,7 @@ D-112 (Justin): shaping pots needs a Potter's bench inside a claim; clay prepara
 First fired pot still reachable in about 1 to 2 hours of play.
 
 ## Progress log
+- 2026-10-16 19:35: ClayCheck adapted (claim, stone axe, log, bench before shaping; 5965db1). PASSED: --pot (c8bench1), default pit run (c8bench2), --kiln --jar (c8bench3); each also checks shaping is refused with no bench. Merged main aa3e443 (#105, #119) and crafting-stations 07fd6d0 (a432ab6): table and bench models by station flag; broth and stew are GoodMeals (D-111). Server, client, ClayCheck, CraftCheck build. Upgrade check vs origin/main (with #105) PASSED.
 - 2026-10-16 19:10: 08c862d bench (StructureKind 8 after jar 6 and table 7; D-127 cost 1 log + 2 stones; BenchModel; Station on pinch/coil/jar). 3b1f192: model by station flag, `build.bench` for the journal, CraftJob.VesselQuality (Crafting approved) so pots keep their quality. Upgrade check vs origin/main PASSED (no wipe). #105 merged first as agreed. ClayCheck adaptation (claim, axe, log, bench) in progress by a subagent; WIP 2fe3a89.
 - 2026-10-16 18:37: Crafting agreed option 1 (cost) and described the framework (crafting-15, branch crafting-stations, sha in a couple of hours): StationKind enum in Processes.cs, ProcessDef.Station, StructureShape.Station, generic claim check in PlaceStructure, ingredients from inventory, nearby stores, then the claim stash.
 
@@ -22,4 +23,4 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - Bench cost decided: 1 log + 2 stones (D-127).
 
 ## Next step
-Finish ClayCheck's bench setup and pass `--pot` on a scratch db; merge main; open one PR (ceramics-7 + -8) once #160 merges; render request.
+When Crafting's #160 merges: merge main into claude/clay-ceramics-8-kfr4kr, build, open one PR (ceramics-7 + ceramics-8), send the PM the green sha. Render request sent at a432ab6.
