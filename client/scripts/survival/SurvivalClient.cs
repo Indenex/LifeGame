@@ -35,8 +35,8 @@ public partial class SurvivalClient : Node
     static readonly StringName NRun = "run";
     float stamina = 1f;
     bool winded;
-    // True while you are actually running this frame (for Animation's run cycle).
-    public bool Running { get; private set; }
+    // Seconds of steady walking, to offer the run hint once on a long walk.
+    float walkedFor;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -60,8 +60,6 @@ public partial class SurvivalClient : Node
     public override void _Ready()
     {
         Bind("eat", Key.X);
-        // Hold V to run until UX/UI moves sneak off Shift and gives run Shift (D-088, KEYMAP.md).
-        Bind("run", Key.V);
         AddChild(needsHud);
         RegisterUse();
     }
@@ -186,7 +184,9 @@ public partial class SurvivalClient : Node
     public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
     {
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
-        Running = running;
+        // "Hold Shift to run" shows once, the first time you walk on for a while.
+        walkedFor = moving && !sneak ? walkedFor + dt : 0f;
+        if (walkedFor > 8f && walkedFor - dt <= 8f) Hints.Request("run");
         stamina = Stamina.Step(stamina, running, dt);
         if (stamina <= 0f) winded = true;
         else if (stamina >= Stamina.MinToRun) winded = false;
