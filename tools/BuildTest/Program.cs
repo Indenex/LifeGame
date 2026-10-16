@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|brick-house|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house runs on its own, since its bricks take minutes to dry.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -73,6 +73,16 @@ if (which is "basket" or "both")
             for (int i = 0; i < 2; i++) b.Craft("cord.twist", Pump);
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
+
+if (which is "fence" or "both")
+{
+    BuildTogether(StructureKind.Fence,
+        new() { [Item.Stick] = 2 },
+        new() { [Item.Stick] = 2, [Item.Fiber] = 1 });
+    UseGate(BuildTogether(StructureKind.Gate,
+        new() { [Item.Stick] = 3 },
+        new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
+}
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (which is "brick-house")
@@ -203,6 +213,28 @@ void HangDoor(ulong hut)
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: false }, 10, "A unbarred it");
     b.Conn.Reducers.ToggleDoor(hut);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "and B can open it again");
+}
+
+// A finished gate hangs shut by itself. B opens and shuts it; A, who laid it out, bars it.
+void UseGate(ulong gate)
+{
+    Console.WriteLine("--- Gate");
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "the finished gate hangs shut");
+    var s = a.Conn.Db.Structure.Id.Find(gate)!;
+    var side = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 0.9f);
+    a.WalkTo(side.x - 0.4f, side.z, 0.3f, Pump);
+    b.WalkTo(side.x + 0.4f, side.z, 0.3f, Pump);
+    b.Conn.Reducers.ToggleDoor(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
+    b.Conn.Reducers.ToggleDoor(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    a.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");
+    b.Conn.Reducers.ToggleDoor(gate);
+    Pump(1500);
+    Check(a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true, Closed: true }, "B can't open it barred");
+    a.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "A unbarred it");
 }
 
 // A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
