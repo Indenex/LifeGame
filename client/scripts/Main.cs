@@ -47,6 +47,7 @@ public partial class Main : Node3D
     uint myId;
     readonly TradeWindow trade = new();
     readonly AdminPanel admin = new();
+    readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     bool spawned;
     Vector3 velocity;
@@ -68,6 +69,7 @@ public partial class Main : Node3D
         view.AddChild(me);
         view.AddChild(herd);
         view.AddChild(cameraRig);
+        cameraRig.GroundAt = terrain.HeightAt;
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
         view.AddChild(items);
@@ -91,6 +93,9 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        // What you wear (ui-10, D-074).
+        equipment.Note = hud.Note;
+        AddChild(equipment);
         building.MayBar = social.HasRightsAt;
         building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
@@ -111,6 +116,7 @@ public partial class Main : Node3D
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
+            || equipment.IsOpen
             || station.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
@@ -339,6 +345,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
+        equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);

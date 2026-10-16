@@ -89,6 +89,13 @@ public static partial class Module
         if (left > 0)
             throw new Exception($"Still simmering, about {MathF.Ceiling(left):0} s left");
         ctx.Db.SimmerPot.Id.Delete(pot.Id);
-        AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, pot.Quality);
+        if (ClayRules.KeepsPot((Item)pot.Dish))
+        {
+            // Tallow is skimmed off the top; the pot comes back empty (ceramics-9).
+            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, Items.RawQuality);
+            AddToInventory(ctx, ctx.Sender, Item.CoilPot, 1, pot.Quality);
+        }
+        else
+            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, pot.Quality);
     }
 }
