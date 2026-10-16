@@ -44,6 +44,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 22:05: #237 (Stalking, Archery, Progression) is on main. Merged main; replaced the Husbandry stand-in: Hunting.cs SneakCrit reads Progression.Effect(SneakCritChance/SneakCritBonus, SkillRank(.. Skills.Kill)) (Stalking); animals report Skills.Sneak (animal.sneak) from AnimalThinkFlock when a sneaking player is within 14 m of an unbolted wary animal, throttled to every 4 s per player via new AnimalPlayerSeen.SneakReportAt (Default 0; also ShotAt for the bow). Server and client build, upgrade check passed.
 
+- 2026-10-16 22:40: #219 was green at 5a621319 but conflicted with main again (the wool tunic #294 landed). Merged main (Items.cs: kept the tunic line and my venison items). Main's client does not compile: client/scripts/social/BuildingSystem.ClaimFences.cs (Claims) is in the global namespace while BuildingSystem is in namespace LifeGame (CS0759); told Integration; this branch carries the one-line fix (`namespace LifeGame;`) so the client builds, it no-ops once main has it. Server and client build, upgrade check against main passed.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
