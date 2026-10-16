@@ -485,3 +485,76 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-118 — 2026-10-16 — Cooking pot meals
 **Decision:** Berry broth (coil pot of water + 3 berries) gives 45% hunger + 30% thirst and takes 60 s; mutton stew (water + 1 raw mutton + 2 berries) gives 65% + 30% and takes 90 s. Eating returns the pot; the pot never burns and keeps simmering if the fire dies; at most 2 pots per fire and 2 per player.
 **Who:** Justin ("As proposed", as recommended)
+
+## D-119 — 2026-10-16 — PM keeps merging
+**Decision:** Justin allowed the Integration lane to merge, but an agent can't change sessions' permission settings, so the PM keeps executing merges and Integration prepares merge-readiness.
+**Who:** Justin ("I do not want to do ANY work if I can help it"; he doesn't want to do any setup work himself)
+
+## D-120 — 2026-10-16 — Hold wool until stations
+**Decision:** #90 (wool to cloth plus the spin minigame) waits and ships together with the Spindle station; no temporary hand-craft spinning.
+**Who:** Justin ("Hold for stations"; the PM had recommended merging now)
+
+## D-121 — 2026-10-16 — Full fires refuse any overflow
+**Decision:** A fire refuses fuel if any of the item's burn time would go past the cap; the fuel is kept.
+**Who:** Justin ("Refuse any overflow"; the PM had recommended accepting when at least half fits)
+
+## D-122 — 2026-10-16 — Wading chill stays uncapped
+**Decision:** Standing in water (3x chill) stays outside the 2x chill cap; you can always step out.
+**Who:** Justin ("Leave it", as recommended)
+
+## D-123 — 2026-10-16 — Endurance skill
+**Decision:** A new basic skill, Endurance, is trained by running (`move.run` process). Stamina run time and refill (D-111) grow with Endurance rank.
+**Who:** Justin ("New 'Endurance' skill", as recommended)
+
+## D-124 — 2026-10-16 — Claims next: wants-to-trade bubble
+**Decision:** claims-8 shows a soft "wants to trade" bubble over a player who asks you to trade, in the chat-bubble style.
+**Who:** Justin (as recommended)
+
+## D-125 — 2026-10-16 — Options page gets a soft panel
+**Decision:** The Options page sits on the same soft dark panel as the other menus.
+**Who:** Justin (as recommended)
+
+## D-126 — 2026-10-16 — Craft speed grows steadily with skill (amends D-113)
+**Decision:** The skill part of craft time is linear in rank (×1.00 at rank 0, 0.91 at 15, 0.70 at 50, 0.40 at Master), because skill ranks already come quickly early on. Examples at rank 0/15/50/100: basket 28/27/22/13 s, stone axe 17/16/13/8 s, coil pot 38/36/29/18 s, storage jar 56/54/44/26 s.
+**Who:** Justin ("Steadily", as recommended)
+
+## D-127 — 2026-10-16 — Potter's bench costs a log and stones
+**Decision:** The Potter's bench costs 1 log + 2 stones in one stage, placed inside a claim you have rights to; you work within 2 m of it. That means a stone axe and a felled tree come before the first pot, which lands roughly 20 to 30 min later than with a stick bench. First-evening path: fire, claim marker, stone axe, log, bench, clay, pinch pot, dry, fire.
+**Who:** Justin ("1 log + 2 stones"; the PM had recommended 6 sticks + 2 stones + 4 fiber)
+
+## D-128 — 2026-10-16 — Foot wraps ship before the tunic
+**Decision:** The leather foot wraps and the equipment panel ship on their own first; the wool tunic follows with the Spindle station.
+**Who:** Justin ("Yes, ship wraps first", as recommended)
+
+## D-129 — 2026-10-16 — One world wipe, after the land reshape
+**Decision:** Environment builds env-2 (more ponds, a stream, gentler hills) now. There will be exactly one world wipe, landing when env-2 and the in-flight PRs (stations, stamina, trade, clothing) are in. The PM brings Justin a wipe date to confirm before anything wipes. Until then every PR must upgrade the world without a wipe.
+**Who:** Justin ("Build the reshape, then one wipe", as recommended)
+
+## D-130 — 2026-10-16 — Wipe PRs pass by label
+**Decision:** A `world-wipe` PR label makes CI skip the no-wipe upgrade check and print a loud "this PR wipes the world" notice instead. Only the PM adds it, and only after Justin confirms the wipe date; every other PR stays protected.
+**Who:** Justin ("A 'world-wipe' label", as recommended)
+
+## D-131 — 2026-10-16 — Release & Launcher lane
+**Decision:** A new Opus Release & Launcher lane builds one-button updating. Every green merge to main becomes a versioned GitHub Release (clients and server module). A launcher for Linux and Windows downloads the latest client and has a server button that publishes the module over the existing world without wiping (refusing world-wipe releases unless Justin confirms). Fully automatic server updates from CI are proposed as options if they need setup or cost. Justin wants zero setup work.
+**Who:** Justin ("New Release & Launcher worker"; "I want to be able to open the game, hit button, and it update the game/server")
+
+## D-132 — 2026-10-16 — Raised hearth
+**Decision:** A raised hearth is built inside a finished hut or house (4 stone, then 3 daub). A fire lit on it burns 1.5x as long per stick, can't be put out by rain, and makes a hut fully warm, as a fire already does in a house. Smoke rises through the roof. Crafting adds one small hook to read the hearth.
+**Who:** Justin ("Better fire", as recommended)
+
+## D-133 — 2026-10-16 — Releases and launcher
+**Decision:** Justin's world runs on a local SpacetimeDB server on his own PC. Every green merge to main becomes a public GitHub Release (Linux and Windows clients plus the server module). The launcher has one button: it updates the client, publishes the new module over his local world without wiping (refusing world-wipe releases unless he confirms), starts the server if it's down, then offers Play. No cloud hosting, no cost, no setup.
+**Who:** Justin ("Public GitHub Releases" and "Launcher button on your PC", both as recommended)
+
+## D-134 — 2026-10-16 — Snow wets you at half rain's rate (amends D-114)
+**Decision:** Falling snow makes you wet at half the rate of rain. Seasons run about +8 °C in summer and −16 °C in winter (winter days near freezing, nights about −8 °C), with Survival's chill still capped.
+**Who:** Justin ("Half as fast as rain", as recommended)
+
+## D-135 — 2026-10-16 — Sheep through the seasons
+**Decision:** Flocks huddle tighter and graze less in snow, and lambs are born only in spring (up to 2 per flock each spring) instead of all year.
+**Who:** Justin ("Behaviour + spring lambing", as recommended)
+
+## D-136 — 2026-10-16 — Milder winter days
+**Decision:** Winter days only cool you; the harsh cold comes at night. Atmosphere and Survival tune the winter day temperature or cold drain so winter days aren't near-freezing all day.
+**Who:** Justin ("Milder winter days"; the PM had recommended keeping it for now)
+**Final values (2026-10-16):** Mid-winter is about 12.6 °C at clear noon (chill about 1.16x), 10 °C overcast, 6 °C in rain and wind, and about −8.6 °C at night (at the 2x cap). Snow falls mostly at night and lasts into the afternoon.
