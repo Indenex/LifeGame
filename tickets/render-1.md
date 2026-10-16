@@ -59,6 +59,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 20:45: render request claims-8 ff0ae8a (Claims): B's view of the "wants to trade" cue over A; scene claims-8-cue.txt queued. bugfix-18b (a): with 10 sticks carried the prompt reads Feed the fire even with a full fire and a dry pot (setup verified by SQL); told Bug fixes; no-sticks variant bugfix-18c queued.
 - 2026-10-16 20:55: bugfix-18 moved to 6f697c9 (real bug fixed; setups a/c/b, scene bugfix-18-abc.txt). New: ceramics-7 cooking pot 1da6609 via the lane's ClayCheck --pot bot sharing the camera's token (scenes/ceramics-7.sh, day + dusk).
 - 2026-10-16 21:05: ceramics-6 jar prompt + panel sent (c5ddf42; prompt needs <1.5 m). bugfix-19 sent (eab4ee2). Puppet now builds with AcceptTrade's new accept flag (TRADE_UNACCEPT); bugfix-18d rerunning.
+- 2026-10-16 21:15: new: ui-12 at 005572d (Options panel), survival-7 running clip 8a03451 (Survival, session_014pHdaxJ7uESzsvWekpjvsH). bugfix-18 6f697c9 (a) verified: Pick up the pot, sticks 10 -> 10; after pickup the prompt reads Set pots in the fire while the ring is full.
 
 ## Open questions / blockers
 - (none)

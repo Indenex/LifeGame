@@ -1,0 +1,14 @@
+# survival-7 (PR #119): running with Shift+W across the spawn clearing until the
+# stamina bar runs dry. Movie at 24 fps of game time; the camera is the runner.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2
+frames 360
+mark run-start
+keydown shift
+keydown w
+frames +264
+keyup w
+keyup shift
+frames +24
+mark run-end
