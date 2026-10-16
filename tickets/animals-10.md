@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
 Status: in_review
 Branch: claude/animals-fence-5gkntn
-PR: (to open)
+PR: #115
 
 ## Goal
 Sheep can't walk through a finished stick fence, a shut gate, or a hut/house wall (doorways stay open), so players can pen a flock (D-087, building-8). Done when a sheep walking at a fence turns away in a build.
@@ -19,4 +19,4 @@ Sheep can't walk through a finished stick fence, a shut gate, or a hut/house wal
 - (none)
 
 ## Next step
-Build, push, open the PR; once building-8 ships, live-test a sheep walking at a fence.
+Wait for CI on #115, send the PM the green sha; once building-8 ships, live-test a sheep walking at a fence.
