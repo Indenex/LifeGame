@@ -334,7 +334,12 @@ bool Step(string line)
             var trade = conn.Db.MyTrade.Iter().OrderByDescending(t => t.Id).FirstOrDefault();
             if (trade == null) { Console.WriteLine("puppet: server said no open trade"); break; }
             if (verb == "trade-answer") conn.Reducers.AnswerTrade(trade.Id, rest == "yes");
-            else if (verb == "trade-accept") conn.Reducers.AcceptTrade(trade.Id, trade.Version);
+            else if (verb == "trade-accept")
+#if TRADE_UNACCEPT
+                conn.Reducers.AcceptTrade(trade.Id, trade.Version, rest != "no");
+#else
+                conn.Reducers.AcceptTrade(trade.Id, trade.Version);
+#endif
             else if (verb == "trade-cancel") conn.Reducers.CancelTrade(trade.Id);
             else
             {

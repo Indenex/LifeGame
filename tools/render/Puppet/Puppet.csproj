@@ -11,6 +11,10 @@
   <PropertyGroup Condition="Exists('../../../client/module_bindings/Reducers/AskTrade.g.cs')">
     <DefineConstants>$(DefineConstants);HAS_TRADE</DefineConstants>
   </PropertyGroup>
+  <!-- Later commits let a player take an accept back: AcceptTrade(id, version, accept). -->
+  <PropertyGroup Condition="Exists('../../../client/module_bindings/Reducers/AcceptTrade.g.cs') And $([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../../client/module_bindings/Reducers/AcceptTrade.g.cs').Contains('bool accept'))">
+    <DefineConstants>$(DefineConstants);TRADE_UNACCEPT</DefineConstants>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="SpacetimeDB.ClientSDK" Version="2.12.*" />
