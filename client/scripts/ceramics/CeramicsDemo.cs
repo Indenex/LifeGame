@@ -65,6 +65,8 @@ public partial class CeramicsDemo : Node3D
             var pot = new PotView { Position = new Vector3((i - (stages.Length - 1) / 2f) * 0.55f, 0, 0) };
             row.AddChild(pot);
             pot.Show((ulong)i + 1, s.form, s.stage, s.fire, s.moisture, PotView.Now, 0f, s.full);
+            // Drying clay glows underfoot as in play: the first as the one G would tend.
+            if (s.stage == ClayStage.Drying) pot.Highlight = i == 0 ? 2 : 1;
         }
         // A short stack of sun-dried bricks at the end of the row.
         for (int i = 0; i < 3; i++)

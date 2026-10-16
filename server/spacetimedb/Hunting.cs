@@ -84,7 +84,7 @@ public static partial class Module
             FleeZ = dz / d,
         });
         float lx = animal.X + dx / d * StartleLeap, lz = animal.Z + dz / d * StartleLeap;
-        if (!AnimalCanStand(lx, lz)) (lx, lz) = (animal.X, animal.Z);
+        if (!AnimalCanStand(lx, lz) || AnimalStepBlocked(ctx, animal.X, animal.Z, lx, lz)) (lx, lz) = (animal.X, animal.Z);
         ctx.Db.Animal.Id.Update(animal with
         {
             State = AnimalState.Run,
@@ -116,7 +116,9 @@ public static partial class Module
         ctx.Db.AnimalMind.AnimalId.Delete(animal.Id);
 
         // The rest of the flock takes fright, and someone else leads.
-        var rest = ctx.Db.AnimalMind.FlockId.Filter(mind.FlockId).OrderBy(m => m.AnimalId).ToList();
+        // A grown sheep takes the lead if there is one; a lamb only if it's all that's left.
+        var rest = ctx.Db.AnimalMind.FlockId.Filter(mind.FlockId)
+            .OrderBy(m => (ctx.Db.Animal.Id.Find(m.AnimalId)?.Growth ?? 0) >= 100 ? 0 : 1).ThenBy(m => m.AnimalId).ToList();
         for (int i = 0; i < rest.Count; i++)
         {
             var mate = rest[i];
@@ -198,7 +200,7 @@ public static partial class Module
         if (adults.Count >= 2)
         {
             var mother = adults[ctx.Rng.Next(0, adults.Count)].Body;
-            SpawnAnimal(ctx, flock, mother.X + 0.6f, mother.Z + 0.4f, false, LambGrowth, now);
+            SpawnAnimal(ctx, flock, mother.X + 0.6f, mother.Z + 0.4f, false, LambGrowth, now, mother.Id);
         }
         else
             SpawnAnimal(ctx, flock, flock.HomeX, flock.HomeZ, !members.Any(m => m.Mind.Leader), 100, now);

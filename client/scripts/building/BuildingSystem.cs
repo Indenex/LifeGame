@@ -488,7 +488,8 @@ public partial class BuildingSystem : Node
         if (placing)
         {
             var shape = Structures.Shape(placeKind);
-            text = $"Lay out a {shape.Name.ToLowerInvariant()}    Tab change    T turn    click to place    Esc cancel";
+            string name = shape.Name.ToLowerInvariant();
+            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }

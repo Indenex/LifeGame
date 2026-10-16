@@ -36,8 +36,8 @@ public partial class SocialLayer : Node
     uint myId;
     float landTimer;
 
-    // True while the chat box has focus, so Main can stop walking.
-    public bool Typing => chat.Typing;
+    // True while the chat box or the claim panel's name box has focus, so Main can stop walking.
+    public bool Typing => chat.Typing || panel.Typing;
 
     public static long NowMicros => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
 
@@ -139,11 +139,13 @@ public partial class SocialLayer : Node
         }
     }
 
+    public Func<bool> HideChip = () => false;
+
     public override void _Process(double delta)
     {
         foreach (var marker in markers.Values) marker.Near(myPos);
-        // Step aside while a full panel (journal, claim panel, menu) is open.
-        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() ? 0f : 1f, (float)delta * 6f);
+        // Step aside while a full panel (journal, claim panel, menu) or the death card is up.
+        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() || HideChip() ? 0f : 1f, (float)delta * 6f);
         landChip.Modulate = new Color(1, 1, 1, chipAlpha);
         ProcessFighting((float)delta);
         landTimer -= (float)delta;
@@ -158,7 +160,7 @@ public partial class SocialLayer : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (conn == null || chat.Typing) return;
+        if (conn == null || Typing) return;
         if (e.IsActionPressed("chat"))
         {
             chat.Open();

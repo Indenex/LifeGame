@@ -106,7 +106,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         if (!Items.IsKnown(item))
             throw new Exception("You can't eat that");
-        var (food, water) = Nourishment((Item)item);
+        var (food, water) = Needs.Nourishment((Item)item);
         if (food <= 0 && water <= 0)
             throw new Exception("You can't eat that");
         if (CountOf(ctx, (Item)item) < 1)
@@ -359,12 +359,6 @@ public static partial class Module
     static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z);
 
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
-
-    static (float food, float water) Nourishment(Item item) => item switch
-    {
-        Item.Berries => (Needs.BerryFood, Needs.BerryWater),
-        _ => (0f, 0f),
-    };
 
     // What a pot of water gives back when drunk, and how much it quenches.
     static (Item empty, float water) PotOfWater(Item item) => item switch

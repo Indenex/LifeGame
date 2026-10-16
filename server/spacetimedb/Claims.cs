@@ -148,8 +148,21 @@ public static partial class Module
     // Anything that digs, builds or removes items in the world should call this.
     public static void RequireClaimAccess(ReducerContext ctx, float x, float z)
     {
-        if (ClaimAt(ctx, x, z) is { } claim && !HasClaimRights(ctx, claim, ctx.Sender))
+        if (ClaimAt(ctx, x, z) is not { } claim) return;
+        if (!HasClaimRights(ctx, claim, ctx.Sender))
             throw new Exception($"This land is claimed by {claim.OwnerName}");
+        TendByWork(ctx, claim);
+    }
+
+    // claims-5: owners and members keep their claim standing just by working on it.
+    // At most one write a minute (or a quarter of the lifetime, if shorter), so
+    // busy work doesn't churn the claim row.
+    static void TendByWork(ReducerContext ctx, Claim claim)
+    {
+        long life = ClaimLifetimeSeconds(ctx);
+        long every = Math.Min(Social.WorkTendEverySeconds, Math.Max(1, life / 4)) * 1_000_000;
+        if (ctx.Timestamp.MicrosecondsSinceUnixEpoch - claim.TendedAt.MicrosecondsSinceUnixEpoch < every) return;
+        ctx.Db.Claim.Id.Update(claim with { TendedAt = ctx.Timestamp, ExpiresAt = After(ctx.Timestamp, life) });
     }
 
     // Fighting is allowed in the wild, and inside a standing claim only when its
@@ -277,9 +290,44 @@ public static partial class Module
     {
         var claim = RequireOwnStandingClaim(ctx);
         var who = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
+        AddMember(ctx, claim, who);
+    }
+
+    // claims-4: the owner adds someone by name from the claim panel, near or far,
+    // online or not. Names are not unique: if several people share one and exactly
+    // one of them is online, that one is meant; otherwise invite them in person.
+    [SpacetimeDB.Reducer]
+    public static void AddClaimMemberByName(ReducerContext ctx, string name)
+    {
+        var claim = RequireOwnStandingClaim(ctx);
+        name = (name ?? "").Trim();
+        if (name.Length == 0) throw new Exception("Type the name of whoever you want to add");
+        var matches = ctx.Db.Player.Iter()
+            .Where(p => string.Equals(p.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matches.Count == 0) throw new Exception($"Nobody called {name} has been here");
+        if (matches.Count > 1)
+        {
+            var online = matches.Where(p => p.Online).ToList();
+            if (online.Count != 1)
+                throw new Exception($"More than one person goes by {name}. Invite them in person, near the marker");
+            matches = online;
+        }
+        AddMember(ctx, claim, matches[0]);
+    }
+
+    static void AddMember(ReducerContext ctx, Claim claim, Player who)
+    {
         if (who.Identity == ctx.Sender) throw new Exception("You already own this claim");
         if (HasClaimRights(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
         ctx.Db.ClaimMember.Insert(new ClaimMember { Id = 0, ClaimId = claim.Id, Member = who.Identity, PlayerId = who.PlayerId, Name = who.Name });
+
+        // A calm line by the marker, and where the new member stands if that's elsewhere.
+        string owner = ctx.Db.Player.Identity.Find(claim.Owner)?.Name ?? "the owner";
+        string line = $"{who.Name} now shares {owner}'s land";
+        SayNearby(ctx, claim.X, claim.Z, line);
+        if (who.Online && ctx.Db.PlayerPos.PlayerId.Find(who.PlayerId) is { } pos
+            && (pos.X - claim.X) * (pos.X - claim.X) + (pos.Z - claim.Z) * (pos.Z - claim.Z) > Social.ChatRange * Social.ChatRange)
+            SayNearby(ctx, pos.X, pos.Z, line);
     }
 
     [SpacetimeDB.Reducer]
