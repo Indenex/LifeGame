@@ -120,16 +120,17 @@ public sealed class SoundMix
 
     // Coming down from a jump: both feet at once on whatever is underfoot, heavier
     // and lower the harder the landing (strength 0 to 1).
-    public void Land(Ground ground, float strength)
+    public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f)
     {
         strength = Math.Clamp(strength, 0f, 1f);
-        steps.Trigger(ground, Wetness, 1.1f + 0.9f * strength, 0.85f - 0.2f * strength, -0.2f);
-        steps.Trigger(ground, Wetness, 1.0f + 0.8f * strength, 0.95f - 0.2f * strength, 0.2f);
+        steps.Trigger(ground, Wetness, (1.1f + 0.9f * strength) * gain, 0.85f - 0.2f * strength, Math.Clamp(pan - 0.2f, -1f, 1f));
+        steps.Trigger(ground, Wetness, (1.0f + 0.8f * strength) * gain, 0.95f - 0.2f * strength, Math.Clamp(pan + 0.2f, -1f, 1f));
     }
 
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
-    public void Play(Cue cue) => cues.Trigger(cue);
+    // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, gain, pan);
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -1424,7 +1425,7 @@ public sealed class SoundMix
         sealed class Voice
         {
             public Cue Cue;
-            public float Age, Pitch, Phase, Phase2;
+            public float Age, Pitch, Phase, Phase2, Gain = 1f, Pan;
             public BandPass Band;
             public Lowpass Low;
         }
@@ -1436,10 +1437,10 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(Cue cue)
+        public void Trigger(Cue cue, float gain = 1f, float pan = 0f)
         {
             if (active.Count > 8) active.RemoveAt(0);
-            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f) });
+            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f) });
         }
 
         // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
@@ -1473,6 +1474,7 @@ public sealed class SoundMix
             for (int k = active.Count - 1; k >= 0; k--)
             {
                 var v = active[k];
+                float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
                 float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
@@ -1561,10 +1563,12 @@ public sealed class SoundMix
                             send = s * 0.6f;
                             break;
                     }
-                    l[i] += s;
-                    r[i] += s;
-                    sl[i] += send;
-                    sr[i] += send;
+                    s *= v.Gain;
+                    send *= v.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    sl[i] += send * pl;
+                    sr[i] += send * pr;
                     v.Age += dt;
                 }
                 if (v.Age > length) active.RemoveAt(k);

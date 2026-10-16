@@ -17,6 +17,8 @@ Deer are quiet except: a short hoarse alarm bark when a deer starts to run (one 
 
 - 2026-10-16: Bug fixes (bugfix-25, tickets/bugfix-25.md on claude/bugfix-25) asked for jump sounds. Added `Cue.Jump` (push-off scuff + breath), `Sfx.Land(float strength, Ground ground)` (both feet, heavier and lower with strength; SoundMix.Land) and public `Atmosphere.GroundAt(Vector3)` (the ground-type logic from Footsteps, moved). SoundPreview `jump:12`: push -30.2, hop landing -31.1, big landing -27.5, sand landing -29.1, normal step -33.2 dBFS.
 
+- 2026-10-16: Justin picked "others see your jump" (via Bug fixes): added positional `Sfx.PlayAt(Cue, worldPos)` and `Sfx.LandAt(strength, ground, worldPos)` (Atmosphere reports the listener each frame via Sfx.Listen; others sit at 0.4 gain, silent beyond 30 m, panned to their side). SoundMix.Play/Land gained gain and pan.
+
 ## Open questions / blockers
 - Wiring waits for #219 (AnimalSpecies.Deer, Sheep.IsStag) and #217 (Atmosphere sheep-only bleats).
 

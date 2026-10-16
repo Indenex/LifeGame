@@ -281,6 +281,7 @@ public partial class Atmosphere : Node3D
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
+            Sfx.Listen(focus, ear.GlobalBasis.X);
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
