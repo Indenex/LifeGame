@@ -25,8 +25,21 @@ namespace LifeGame.Shared
             // Clay ground is boggy and thinly wooded; so is low ground by the water.
             d *= 1f - 0.75f * SmoothStep(0.55f, 0.7f, World.ClayScore(x, z));
             d *= SmoothStep(-0.9f, -0.4f, World.BaseHeight(x, z));
+            // Hilltops open into heath, with only the odd lone tree.
+            d *= 1f - 0.85f * Heath(x, z);
             return d;
         }
+
+        // Open heath on the hilltops, 0 none to 1 full heath: heather and gorse,
+        // short grass and the odd lone oak (env-4). The noise ragged the edge so it
+        // doesn't follow one contour line.
+        public static float Heath(int x, int z) =>
+            SmoothStep(0.65f, 0.95f, World.BaseHeight(x, z) + (World.Noise(x + 911, z - 433, 30f, 80) - 0.5f) * 0.6f);
+
+        // Wet ground by streams and ponds, 0 dry to 1 boggy: birch and alder, sedge
+        // and moss instead of grass (env-4).
+        public static float Wetland(int x, int z) =>
+            SmoothStep(-0.15f, -0.75f, World.BaseHeight(x, z) + (World.Noise(x - 617, z + 287, 14f, 81) - 0.5f) * 0.3f);
 
         // Where a grove gives way to a glade: the band undergrowth and saplings crowd.
         public static float Edge(float density) => Math.Clamp(1f - MathF.Abs(density - 0.4f) / 0.35f, 0f, 1f);
