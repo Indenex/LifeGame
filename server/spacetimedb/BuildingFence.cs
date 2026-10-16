@@ -5,7 +5,7 @@ using SpacetimeDB;
 // a fence whose woven hurdle opens and bars like a hut door, through the same
 // StructureDoor row, so ToggleDoor and ToggleLock work on it unchanged. Animals ask
 // StructureBlocksStep before each step, so sheep stop at fences, shut gates and
-// the walls of huts and houses.
+// the walls of huts and houses (through Animals' StructureStepHook, PR #115).
 public static partial class Module
 {
     // A finished gate hangs its hurdle at once, shut, as if whoever laid it out had hung it.
@@ -43,5 +43,11 @@ public static partial class Module
                 return true;
         }
         return false;
+    }
+
+    // Animals asks this before every step a sheep takes, its startled leaps included.
+    static partial void StructureStepHook(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ, ref bool blocked)
+    {
+        if (StructureBlocksStep(ctx, fromX, fromZ, toX, toZ)) blocked = true;
     }
 }
