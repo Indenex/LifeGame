@@ -3,24 +3,29 @@ using Godot;
 
 namespace LifeGame;
 
-// The Esc menu's Options page (D-097): one slider per kind of sound, and music on or
-// off. Every slider saves as it moves. Esc or Back returns to the menu.
+// The Esc menu's Options page (D-097): one slider per kind of sound, with music on or
+// off under Music. The levels live in the Audio lane's SoundScape, which saves them and
+// eases every change so dragging never clicks; new players start each at half.
+// Esc or Back returns to the menu.
 public partial class OptionsPage : Control
 {
     // Back to the menu (PauseMenu sets it).
     public Action Back = () => { };
-    // The world's soundscape, so music on/off works from here too; PauseMenu sets it.
+    // The world's soundscape; PauseMenu sets it.
     public Func<SoundScape?> Sound = () => null;
 
-    static readonly (string key, string label)[] Sliders =
+    record Level(string Label, Func<SoundScape, float> Get, Action<SoundScape, float> Set);
+
+    static readonly Level[] Levels =
     {
-        ("master", "Master"),
-        ("music", "Music"),
-        ("effects", "Work and effects"),
-        ("ambience", "Ambience"),
+        new("Master", s => s.MasterVolume, (s, v) => s.MasterVolume = v),
+        new("Music", s => s.MusicVolume, (s, v) => s.MusicVolume = v),
+        new("Effects", s => s.EffectsVolume, (s, v) => s.EffectsVolume = v),
+        new("Ambience", s => s.AmbienceVolume, (s, v) => s.AmbienceVolume = v),
     };
 
-    readonly HSlider[] sliders = new HSlider[Sliders.Length];
+    readonly HSlider[] sliders = new HSlider[Levels.Length];
+    readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
 
     public override void _Ready()
@@ -37,36 +42,49 @@ public partial class OptionsPage : Control
         var title = new Label { Text = "Options", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(title, 26, 1f);
         column.AddChild(title);
-        var help = new Label { Text = "Sound", HorizontalAlignment = HorizontalAlignment.Center };
-        Hud.Soft(help, 15, 0.6f);
-        column.AddChild(help);
+        var heading = new Label { Text = "Sound", HorizontalAlignment = HorizontalAlignment.Center };
+        Hud.Soft(heading, 15, 0.6f);
+        column.AddChild(heading);
 
-        for (int i = 0; i < Sliders.Length; i++)
+        for (int i = 0; i < Levels.Length; i++)
         {
-            var (key, label) = Sliders[i];
-            sliders[i] = ControlsPage.SliderRow(column, label, 0, 1, 0.05, SoundLevels.Get(key), v =>
+            var level = Levels[i];
+            int at = i;
+            sliders[i] = ControlsPage.SliderRow(column, level.Label, 0, 1, 0.01, 0.5, v =>
             {
-                SoundLevels.Set(key, (float)v);
-                // Until Audio reads SoundLevels.Music, the music level goes to the soundscape too.
-                if (key == "music" && Sound() is { } sound) sound.MusicVolume = (float)v;
+                if (Sound() is { } sound) level.Set(sound, (float)v);
+                percents[at].Text = Percent(v);
             });
+            // The level as a percentage, beside the slider.
+            percents[i] = new Label { Text = Percent(0.5), CustomMinimumSize = new Vector2(48, 0) };
+            Hud.Soft(percents[i], 16, 0.7f);
+            sliders[i].GetParent().AddChild(percents[i]);
+
+            if (level.Label == "Music")
+            {
+                music = ControlsPage.TextButton("Music on", () =>
+                {
+                    if (Sound() is { } sound) sound.MusicOn = !sound.MusicOn;
+                    else Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true });
+                });
+                music.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+                column.AddChild(music);
+            }
         }
 
-        var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        buttons.AddThemeConstantOverride("separation", 40);
-        music = ControlsPage.TextButton("Music on", () =>
-        {
-            if (Sound() is { } sound) sound.MusicOn = !sound.MusicOn;
-            else Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true });
-        });
-        buttons.AddChild(music);
-        buttons.AddChild(ControlsPage.TextButton("Back", () => Back()));
-        column.AddChild(buttons);
+        column.AddChild(ControlsPage.TextButton("Back", () => Back()));
     }
+
+    static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
     public void Open()
     {
-        for (int i = 0; i < Sliders.Length; i++) sliders[i].SetValueNoSignal(SoundLevels.Get(Sliders[i].key));
+        for (int i = 0; i < Levels.Length; i++)
+        {
+            double v = Sound() is { } sound ? Levels[i].Get(sound) : 0.5;
+            sliders[i].SetValueNoSignal(v);
+            percents[i].Text = Percent(v);
+        }
         Visible = true;
     }
 

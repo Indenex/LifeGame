@@ -30,7 +30,9 @@ public partial class PauseMenu : CanvasLayer
     public override void _Ready()
     {
         Layer = 4;
-        SoundLevels.ApplyMaster();
+        // The Master bus stays at full; the Options page's Master level lives in the
+        // soundscape (D-097).
+        AudioServer.SetBusVolumeDb(0, 0f);
 
         root = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -69,7 +71,7 @@ public partial class PauseMenu : CanvasLayer
         options.Back = HideControls;
         options.Sound = () => Sound();
         root.AddChild(options);
-        Callable.From(SyncMusic).CallDeferred();
+        Callable.From(MoveOldVolume).CallDeferred();
         // Saved keys and camera settings, once every lane has bound its own keys.
         Callable.From(ControlsPage.ApplySaved).CallDeferred();
 
@@ -149,15 +151,13 @@ public partial class PauseMenu : CanvasLayer
         column.Visible = true;
     }
 
-    // The music level lives in SoundLevels now. A player with no sound settings yet is
-    // new and starts at half, like every slider (D-097); one who had set music in the
-    // old menu keeps that level.
-    void SyncMusic()
+    // The old menu's Volume slider set the Master bus and saved [sound] volume here.
+    // A player who had set it keeps that level as the soundscape's Master, once.
+    void MoveOldVolume()
     {
-        if (Sound() is not { } sound) return;
-        if (!Settings.Has("sound", "music") && Settings.Has("sound", "volume"))
-            SoundLevels.Set("music", sound.MusicVolume);
-        sound.MusicVolume = SoundLevels.Music;
+        if (Sound() is not { } sound || !Settings.Has("sound", "volume")) return;
+        sound.MasterVolume = Settings.Get("sound", "volume", 0.5f);
+        Settings.Clear("sound");
     }
 
     new void Hide() => IsOpen = false;
