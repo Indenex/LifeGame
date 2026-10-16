@@ -173,12 +173,16 @@ public static partial class Module
     static Weather NextWeather(ReducerContext ctx, Weather w)
     {
         // Seasons tilt the odds: a dry summer, wet spring and autumn, grey winter.
-        (float fair, float overcast) = SeasonNow(ctx).Season switch
+        // Thunderstorms are summer's: rare but most likely then, and almost never in
+        // winter (atmosphere-21). `storm` is the share of rainy fronts that build
+        // into one; about one front in 45 in summer, one in 50 in spring and
+        // autumn, one in 150 in winter.
+        (float fair, float overcast, double storm) = SeasonNow(ctx).Season switch
         {
-            Season.Summer => (0.66f, 0.2f),
-            Season.Winter => (0.45f, 0.33f),
-            Season.Spring or Season.Autumn => (0.48f, 0.23f),
-            _ => (0.55f, 0.23f),
+            Season.Summer => (0.66f, 0.2f, 0.16),
+            Season.Winter => (0.45f, 0.33f, 0.03),
+            Season.Spring or Season.Autumn => (0.48f, 0.23f, 0.07),
+            _ => (0.55f, 0.23f, 0.07),
         };
         double roll = ctx.Rng.NextDouble();
         int minutes;
@@ -198,7 +202,8 @@ public static partial class Module
         }
         else
         {
-            double kind = ctx.Rng.NextDouble();
+            // Drizzle, light and steady rain share what storms leave, 38:34:21.
+            double kind = ctx.Rng.NextDouble() / (1.0 - storm) * 0.93;
             (w.TargetRain, w.TargetCloud, w.TargetWind, minutes) = kind switch
             {
                 < 0.38 => (Range(ctx, 0.12f, 0.25f), Range(ctx, 0.7f, 0.85f), Range(ctx, 0.2f, 0.45f), ctx.Rng.Next(8, 20)),   // drizzle
