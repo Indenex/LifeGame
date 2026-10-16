@@ -61,7 +61,7 @@ namespace LifeGame.Shared
             new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving, sewing, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", "sew"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).

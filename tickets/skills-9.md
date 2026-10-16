@@ -21,6 +21,7 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 (new session): CI green on 643475a (run 38829787501). Main had moved to 7c65c0f; merged it cleanly. Main added hides (hide.*), which trained no skill and `hide.dry` had no name: hides now train Husbandry (default, sent to the PM as a choice), `hide.dry` named "Drying leather" with a how-to line and counted in "still to discover". No .NET/SpacetimeDB in this container, so CI builds it.
 - 2026-10-16 17:12: PM relayed Justin: D-065 hide work gets its own capped Leatherwork specialty later, once leather has more uses; until then it trains Husbandry (as shipped). D-067 toasts only at new titles (as built in skills-8).
 - 2026-10-16 17:25: no CI had run on 13fcbce..97cfae1: the PR conflicted with main (STATUS.md), so GitHub skipped the pull_request workflow. Merged main (7e79d22), took main's STATUS.md; no new process ids to name.
+- 2026-10-16 17:24: Animals lane (via the PM, D-071): `sew.*` (animals-9: wool tunic, leather wraps) trains Toolmaking; prefix added now so it works when animals-9 lands. A capped Weaver specialty takes spinning, weaving and likely sewing later.
 
 ## Open questions / blockers
 - (none)
