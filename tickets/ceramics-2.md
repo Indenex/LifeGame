@@ -3,7 +3,7 @@ Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session cse_017sscCMDfHcyeZNqGW22GBE)
 Status: in_progress
 Branch: claude/clay-ceramics-kfr4kr (restarted from main 8b96a02 after #11 merged)
-PR: (milestone A, opening now: kiln firing logic, kiln look, deep clay grade)
+PR: #21, #40 (both merged)
 
 ## Goal
 A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots into it, fuels and lights it, and gets back pots that rarely crack and come out a little better than pit-fired ones. Done when the kiln works end to end on a local server (ClayCheck extended), with screenshots of the kiln cold, firing, and unloaded.
@@ -30,10 +30,11 @@ A player builds an updraft kiln from sun-dried bricks and daub, loads dry pots i
 - 2026-10-15 23:40: #21 merged (85a1572). Claims is on main: TendClay, FirePots and UseKiln now call RequireClaimAccess; server builds. Rides with the blueprint PR. #10 still open.
 - 2026-10-15 23:50: blueprint hooks re-applied on top of this branch + Building's branch (local prep f883e16): enum Kiln after ClaimMarker, StageCosts {Brick 4} / {Brick 4, Daub 2}, Shapes "Updraft kiln" (Round r0.85, Solid, Base/Dome), StageProcess KilnStructureKind => clay.kiln, StructureModel kind 3 => KilnModel.Pieces(), CeramicsStructureRemoved made the partial, casts replaced by StructureKind.Kiln. Builds; ClayCheck --kiln running.
 - 2026-10-15 23:52: Building says building-3 (after #10) adds Basket as StructureKind 3, so Kiln becomes 4 (set ClayRules.KilnStructureKind = 4, append every Kiln row after Basket's). Agreed with Building.
+- 2026-10-16 00:00: #40 merged (kiln blueprint as StructureKind 3, claim checks; also fixed main's CS0111). Kiln bot built the blueprint end to end locally. Remaining: in-game kiln screenshots for Justin.
 
 ## Open questions / blockers
 - Sent to PM: the design defaults above.
 - After Claims PR #8 is on main: RequireClaimAccess in TendClay, FirePots, OnPlaced and kiln use.
 
 ## Next step
-When #10 merges, merge main and port the blueprint hooks from the kiln-structure-prep notes above once #8 and #10 merge.
+Send the PM in-game kiln screenshots (blueprint, built, firing, done) via scratchpad kilnshots.sh-style run: bot builds and fires, a second player stands by the kiln and screenshots. Then mark this ticket done.

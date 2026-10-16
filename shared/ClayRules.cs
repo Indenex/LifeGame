@@ -103,6 +103,21 @@ namespace LifeGame.Shared
         // A pot fired before it is bone dry cracks: the water left inside turns to steam.
         public static bool TooWetToFire(float moisture) => moisture > SafeToFire;
 
+        // Seconds until a piece is dry enough to fire at its current drying rate;
+        // infinite when it isn't drying (soaked through in heavy rain).
+        public static float SecondsUntilDry(float moisture, float ratePerSecond) =>
+            moisture <= SafeToFire ? 0f : ratePerSecond <= 0f ? float.PositiveInfinity : (moisture - SafeToFire) / ratePerSecond;
+
+        // "about 3 min", "under a minute": how a player hears the wait.
+        public static string DryWait(float seconds) =>
+            float.IsInfinity(seconds) ? "not drying in this rain"
+            : seconds < 60f ? "under a minute left"
+            : $"about {MathF.Round(seconds / 60f):0} min left";
+
+        // Fuel for a pit firing, in sticks, when a fire has this many seconds left.
+        public static int SticksForFiring(float secondsLeft, float stickSeconds) =>
+            (int)MathF.Ceiling(Math.Max(0f, PitFireSeconds - secondsLeft) / stickSeconds);
+
         public static string Describe(float moisture) =>
             moisture > LeatherHard ? "wet" : moisture > SafeToFire ? "leather-hard" : "bone dry";
 

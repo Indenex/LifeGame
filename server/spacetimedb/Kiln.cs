@@ -155,17 +155,19 @@ public static partial class Module
         }
         foreach (var owner in load.Select(p => p.Owner).Append(kiln.LitBy).Distinct())
             News(ctx, owner, cracked == 0
-                ? $"The kiln has cooled: {whole} {(whole == 1 ? "pot" : "pots")} came out whole."
-                : $"The kiln has cooled: {whole} whole, {cracked} cracked.");
+                ? $"The kiln has cooled: {whole} {(whole == 1 ? "pot" : "pots")} came out whole. {{use}} picks them up."
+                : $"The kiln has cooled: {whole} whole, {cracked} cracked. {{use}} picks them up.");
     }
 
     // Takes fuel from the caller's bag worth at least this many seconds of fire,
-    // smallest fuels first; throws without taking anything if there isn't enough.
+    // longest-burning fuels first; throws without taking anything if there isn't enough.
     static void BurnFuel(ReducerContext ctx, float seconds)
     {
         var fuel = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
             .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
-            .OrderBy(i => Items.Def((Item)i.Item).FuelSeconds)
+            // Longest-burning first, like feeding a fire: sticks and logs go in before
+            // fiber and tinder, which a new player needs for lighting fires.
+            .OrderByDescending(i => Items.Def((Item)i.Item).FuelSeconds)
             .ToList();
         float have = fuel.Sum(i => Items.Def((Item)i.Item).FuelSeconds * i.Count);
         if (have < seconds)
