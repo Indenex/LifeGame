@@ -1,9 +1,9 @@
 # skills-9: The journal remembers recipes
 Lane: Journal and skills
 Owner: Journal and skills thread
-Status: in_review
+Status: done
 Branch: claude/journal-skills-iseewg
-PR: #43
+PR: #43 (merged 2026-10-16 18:26)
 
 ## Goal
 In the playtest, new players spent most of their time working out what to do. Once you have discovered something, the journal now tells you how to do it again. Each discovery card gets a short "how" line:
@@ -24,6 +24,7 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 17:24: Animals lane (via the PM, D-071): `sew.*` (animals-9: wool tunic, leather wraps) trains Toolmaking; prefix added now so it works when animals-9 lands. A capped Weaver specialty takes spinning, weaving and likely sewing later.
 - 2026-10-16 17:40: CI green on e6b8965 (contains main 7e79d22): https://github.com/Indenex/LifeGame/actions/runs/38939635952. Main has moved since but merges cleanly. Green sha sent to the PM.
 - 2026-10-16 17:43: D-086 (Justin): skill pace stays about 6 to 7 h to master for pre-alpha, effects linear; no curve change. The D-075 proposal below is parked for later.
+- 2026-10-16 18:26: merged by the PM.
 
 ## Open questions / blockers
 - D-075 skill curve review (PM asked 17:24), sent to the PM as options. Uses to reach a rank, one skill, ~30 s per use with gathering:
@@ -38,4 +39,4 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
   Effects (quality cap 35 to 100, speed to 40% time, minigame steps -75%) stay linear per rank by default; option to soften speed to 60% time and steps to -50%. Stored points are kept, so no wipe; existing players keep their ranks. Answered by D-086: no change for now.
 
 ## Next step
-Wait for the PM to merge PR #43 (green on e6b8965); then start skills-10 ("Things to try" hints in the journal, unless the PM picks another option).
+None; done. Follow-up is skills-10.

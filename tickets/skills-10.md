@@ -2,7 +2,7 @@
 Lane: Journal and skills
 Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
 Status: in_review
-Branch: claude/journal-skills-10 (stacked on claude/journal-skills-iseewg, PR #43)
+Branch: claude/journal-skills-10 (was stacked on #43, merged 18:26)
 PR: #112 (draft, stacked on #43)
 
 ## Goal
@@ -28,4 +28,4 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 - (none)
 
 ## Next step
-Wait for the PM to merge #43 then #112 (green on 131e27d) ; then start the next ticket the PM gives.
+Wait for CI on #112's head (runners backed up), then send the PM the green sha; the PM merges #112 (green on 131e27d) ; then start the next ticket the PM gives.
