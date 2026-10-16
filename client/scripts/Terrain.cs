@@ -369,7 +369,7 @@ public partial class Terrain : Node3D
                     float heather = 0.30f * heath, gorse = 0.04f * heath, sedge = 0.35f * wet;
                     if (plant < heather)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.6f + Hash01(x, z, 55) * 0.4f).ScaledLocal(new Vector3(1.1f, 0.45f, 1.1f)),
-                            Look.Heather.Lightened((Hash01(x, z, 56) - 0.5f) * 0.15f), custom));
+                            Look.Heather.Lightened((Hash01(x, z, 56) - 0.5f) * 0.15f), custom with { A = SeasonHeather }));
                     else if (plant < heather + gorse)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.5f), Look.Gorse.Lerp(Look.FlowerButtercup, Hash01(x, z, 56) * 0.25f), custom));
                     else if (plant < heather + gorse + sedge)
@@ -422,8 +422,9 @@ public partial class Terrain : Node3D
 
     // Season codes in each instance's custom data (w), for the seasons in Look's
     // shaders (D-099): broadleaf canopies thin in winter and turn in autumn, flowers
-    // only show in spring and summer. 0 (pines, bushes, rocks) never changes.
-    const float SeasonBroadleaf = 1f, SeasonFlower = 2f;
+    // only show in spring and summer, heather blooms purple in late summer. 0 (pines,
+    // other bushes, rocks) never changes.
+    const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
 
     static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {

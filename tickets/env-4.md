@@ -16,7 +16,7 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 - 2026-10-16 22:15: #175 (env-2) and #173 (seasons, palette) are on main; merged main and switched heath and wetland colours to the Look palette. Client and server build.
 
 ## Open questions / blockers
-- Justin picked A (D-152).
+- Justin picked A (D-152). Justin also said yes to heather blooming purple in late summer: heather bushes carry w = 3 (Atmosphere #217 adds the bloom; until then it acts like 0).
 - Modeling (model-2, claude/model-2) has PropMeshes.Trunk/Rock/FallenLog/Stump; swap them in once on main. Asked them for birch trunk, heather, gorse, cattails, hilltop outcrop, riverbank stones. Done on claude/model-2-env (PR after #197): PropMeshes.Birch (top (0,2.8,0), reuses leafy canopy, tint (0.86,0.84,0.80) with BarkSurface), Heather and Gorse (real colours in vertices, near-white tint, Look.Foliage), Cattails (Grass shader, 1.5 m), Outcrop (2.7 x 1.8 m, RockSurface), RiverStone(0..2) (0.3 m, scale 0.7 to 1.3). Swap in once on main.
 - Done: switched to Look.BirchBark/Heather/Gorse/Sedge/HeathGround/Moss (on main via #173). If Justin wants heather to bloom in late summer (Atmosphere asks the PM), give heather bushes w = 3.
 
