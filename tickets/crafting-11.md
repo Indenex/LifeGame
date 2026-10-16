@@ -1,7 +1,7 @@
 # crafting-11: Cold hearths and fires off the rocks
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: in_review
 Branch: crafting-cold-hearth
 PR: (not yet)
 
@@ -18,9 +18,10 @@ From Bug fixes' playtest 5 (screenshots/playtest5-fire-gone.png, playtest5-fire-
 ## Progress log
 - 2026-10-16 06:00: started from main 456b0cf.
 - 2026-10-16 06:25: server and client build. CraftCheck passes and now checks that no fire sits on a boulder. One run failed at a pond edge (ground 1 cm above the water), so the water margin is now 0.02 m.
+- 2026-10-16 17:20: merged main 7c65c0f. Burnout tested locally with StartSeconds = 20 (not committed): both CraftCheck fires became cold_hearth rows with Until = +1 h, and the fire rows went. CraftCheck passes with real numbers; server and client build. Not tested by hand: rekindling at a hearth (FireSpot picks the hearth within reach; logic only) and the burned-down message (the bot was offline by then).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Test burnout locally with a temporarily short Fires.StartSeconds (do not commit), screenshot the cold hearth, then open the PR.
+Wait for CI on the PR, send the PM the green sha; Render lane captures the cold hearth.
