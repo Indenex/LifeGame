@@ -1283,9 +1283,9 @@ public sealed class SoundMix
     // Small sounds for things that just happened, on the effects bus with the work
     // sounds: a rustle and soft knock as something goes in your bag, crunching
     // bites, gulps of water, a fire catching with a soft whoosh, a dull knock as
-    // something is set down, a page turning in the journal. Getting better at a
-    // skill rings a gentle two-note chime in the key of the music, with a little
-    // of the forest's reverb.
+    // something is set down. A skill's new title rings the journal's soft wooden
+    // two-note chime, and a new journal entry one faint note, both with a little of
+    // the forest's reverb.
     sealed class Cues
     {
         readonly int rate;
@@ -1314,6 +1314,29 @@ public sealed class SoundMix
             active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f) });
         }
 
+        // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
+        // fundamental and its bright 3.9x partial with a soft mallet, then two quiet
+        // echoes so it hangs in the air a moment.
+        static readonly (float Freq, float At, float Gain)[] Title = { (587.33f, 0f, 1f), (880f, 0.16f, 0.8f) };
+        static readonly (float Freq, float At, float Gain)[] Discovery = { (783.99f, 0f, 0.55f) };
+
+        static float Marimba(float t, (float Freq, float At, float Gain)[] notes) =>
+            Bars(t, notes) + 0.22f * Bars(t - 0.23f, notes) + 0.1f * Bars(t - 0.47f, notes);
+
+        static float Bars(float t, (float Freq, float At, float Gain)[] notes)
+        {
+            float sum = 0f;
+            foreach (var (freq, at, gain) in notes)
+            {
+                float u = t - at;
+                if (u < 0f) continue;
+                float body = MathF.Sin(MathF.Tau * freq * u) * MathF.Exp(-u * 3.2f);
+                float ring = 0.25f * MathF.Sin(MathF.Tau * freq * 3.9f * u) * MathF.Exp(-u * 14f);
+                sum += gain * Math.Min(1f, u / 0.004f) * (body + ring);
+            }
+            return sum;
+        }
+
         static float Burst(float t, float start, float decay) => t < start ? 0f : MathF.Min(1f, (t - start) / 0.004f) * MathF.Exp(-(t - start) / decay);
 
         public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
@@ -1322,7 +1345,7 @@ public sealed class SoundMix
             for (int k = active.Count - 1; k >= 0; k--)
             {
                 var v = active[k];
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, _ => 0.4f };
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1371,24 +1394,15 @@ public sealed class SoundMix
                             break;
                         }
                         case Cue.Learn:
-                        {
-                            // A page turning: a dry swish that sweeps up, then settles.
-                            float sweep = 1500f + 4000f * Math.Min(1f, t / 0.2f);
-                            s = v.Band.Process(x, sweep, 1.1f, rate) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.28f)) * 0.14f;
+                            // One faint wooden note, G5: something new in the journal.
+                            s = Marimba(t, Discovery) * 0.017f;
+                            send = s * 0.6f;
                             break;
-                        }
                         case Cue.SkillUp:
-                        {
-                            // D5 then A5, soft and bell-like, the second a little later.
-                            v.Phase += 2f * MathF.PI * 587.33f * dt;
-                            v.Phase2 += 2f * MathF.PI * 880f * dt;
-                            float a = Burst(t, 0f, 0.6f), b = Burst(t, 0.18f, 0.8f);
-                            float bell1 = MathF.Sin(v.Phase) + 0.25f * MathF.Sin(2.76f * v.Phase) * MathF.Exp(-t / 0.15f);
-                            float bell2 = MathF.Sin(v.Phase2) + 0.25f * MathF.Sin(2.76f * v.Phase2) * MathF.Exp(-MathF.Max(0f, t - 0.18f) / 0.15f);
-                            s = (bell1 * a + bell2 * b) * 0.019f;
-                            send = s * 0.8f;
+                            // D5 then A5 on a wooden bar, an open fifth: a skill earned a new title.
+                            s = Marimba(t, Title) * 0.027f;
+                            send = s * 0.6f;
                             break;
-                        }
                     }
                     l[i] += s;
                     r[i] += s;
