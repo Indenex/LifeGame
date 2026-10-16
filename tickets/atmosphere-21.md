@@ -16,9 +16,10 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
   - Close strikes (about 1 in 4) draw a jagged bolt with 1-3 forks 250-700 m away. It is drawn as camera-facing additive ribbons, unaffected by fog, and flickers with the double flash. A second DirectionalLight from the strike side casts hard blue-white shadows, on only during the flash.
   - Server (WorldClock.NextWeather): storms are weighted by season, as a share of rainy fronts: summer 16%, spring and autumn 7%, winter 3%. That is about 1 front in 45, 50 and 150. Winter ones mostly fall as snow, and snow throws no lightning. No schema change.
   - `--lightning=seconds` forces a close strike that often, for renders.
+- 2026-10-16 22:01: Justin picked (a), seasonal storms as built (via the PM): about 1 front in 45 in summer, 1 in 50 in spring and autumn, 1 in 150 in winter. The PM asked Audio for a close-strike crack and a rain-on-roof swell.
 
 ## Open questions / blockers
 - Audio: any new thunder variants (send them a request when the visuals land).
 
 ## Next step
-Wait for #286 CI and send the PM the green sha. Render request sent (session_015S96hNrEu92FrCoNZqZZjs). Season odds offered to Justin via the PM. Audio asked via the PM about a close-strike crack.
+Wait for #286 CI and send the PM the green sha. Render request sent (session_015S96hNrEu92FrCoNZqZZjs). Audio asked via the PM about a close-strike crack.
