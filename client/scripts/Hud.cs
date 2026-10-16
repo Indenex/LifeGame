@@ -116,7 +116,6 @@ public partial class Hud : CanvasLayer
     {
         float dt = (float)delta;
         toastTime -= dt;
-        // A note sits clear of the inventory, even when the row wraps onto two lines.
         // While a panel covers the middle, a note sits near the top, under the status
         // line; otherwise it sits clear of the inventory, even when the row wraps.
         float noteY = Panels.Open() ? TopNote
