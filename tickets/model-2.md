@@ -2,7 +2,7 @@
 Lane: Modeling
 Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
 Status: in_progress
-Branch: claude/model-2 (PR #197); env-4 props on claude/model-2-env (stacked, follow-up PR)
+Branch: claude/model-2 (#197), claude/model-2-env (#235), claude/model-2-worn (#277), all merged; batch devices on claude/model-2-devices
 PR: #197 (send green shas to the PM, D-119)
 
 ## Goal
@@ -27,12 +27,15 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-17 01:40: #197 merged (green on d4640a5, run 38959597611). Merged main into claude/model-2-env; build and smoke renders (items, deer, cooking, env, stations) fine. Opening the follow-up PR.
 - 2026-10-17 01:55: Animals (animals-15, Justin picked the standard bow): crude self bow and arrow in ItemModels (ground, icon, held) plus `ItemModels.ArrowFlight` (point +Z, origin mid-shaft). Crafting owns the ids; until they exist, `ItemModels.BowItem` / `ArrowItem` name them (set them, or I add switch arms when the ids reach main). Showcase `held` shows them.
 - 2026-10-17 02:10: Crafting reserved Item.Bow = 16, Item.Arrow = 17 (PR #266, branch crafting-bow-ids); models keyed by number. Repair table (crafting-19, D-155, StructureKind.RepairTable, Station Repair, 1.6 x 0.9 m): `StationMeshes.RepairTable()`, a thick split log on two log rounds with a whetstone, hammerstone, cord coil, a worn axe and spare shafts, distinct from the crafting table. Later: a worn look for hand tools (Durability.Condition worn / nearly spent / spent, on crafting-durability).
+- 2026-10-17 02:30: worn tools (D-155, Crafting): condition comes from `ItemLook.Condition(item, quality, wear)` / `Durability.Condition` ("", worn, nearly spent, spent), per stack. `ItemModels.GroundMesh(item, wear)` / `HeldMesh(item, wear)` with wear 0 new, 1 worn, 2 spent; `ItemModels.WearLevel(condition)` maps the strings. Only wearing tools change (stone axe, stone knife, spear, digging stick, bow drill, bow 16): wood and cord darken and desaturate with use, pale chip scars on stone edges, loose then frayed binding ends, a crack when spent; the digging stick's hardened tip scuffs back to pale wood. Showcase view `wear`. On claude/model-2-worn.
+- 2026-10-16 21:38: Crafting agreed the worn-tool hook goes in this lane's worn PR: ground items get a MultiMesh per (item, wear level) via ItemModels.WearLevel(ItemLook.Condition(item, quality, wear)); icons stay as new, with state shown as text. Needs Crafting #267 (durability: ItemLook.Condition, Wear column on WorldItem) on main first; Crafting will say when it merges. StructureKind.RepairTable is 11 in #267 and may be renumbered against building-10's LogCabin.
 - 2026-10-16 21:45: D-195 batch devices (Crafting's crafting-22), on claude/model-2-devices: `StationMeshes.SlakingTrough(fill)` (clay cleaning: hollowed log with slip, withy sieve, raw lumps, picked-out stones and roots), `Mortar(fill)` (grit and grog: hollow stone, pounding stone, sherds, grit heap), `WedgingSlab(fill)` (tempering: stone slab on log rounds, clay block, temper heap, water gourd). fill 0 to 3 = how loaded. Showcase view `devices`. Proposed to Crafting; waiting on their device list.
 - 2026-10-16 21:56: #277 (worn tools, claude/model-2-worn) green on 3eefa06, run https://github.com/Indenex/LifeGame/actions/runs/38970804021; sha sent to the PM.
+- 2026-10-16 21:57: #277 merged. Merged main into claude/model-2-devices; opening the devices PR.
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.
 - Most stations are on other lanes' unmerged branches; hooks wait until those merge, so models land first as standalone meshes plus Showcase views.
 
 ## Next step
-Wait for CI on the model-2-env PR and send the green sha to the PM. Pending swaps by whichever lane merges second: deer (Animals #219, Sheep.cs), cooking pot (Ceramics, SimmerView.Show), potter's bench (Ceramics, BenchModel), crafting table (Crafting, CraftingTableModel), distaff/drying rack (Animals' StationModels), env props (Environment, Terrain/LandmarkProps).
+Wait for CI on the devices PR (claude/model-2-devices) and send the green sha to the PM; Crafting swaps the devices into its crafting-22 views. When Crafting #267 merges, add the per-(item, wear) ground MultiMesh in ItemLook/GroundItems (follow-up PR). Pending swaps by whichever lane merges second: deer (Animals #219, Sheep.cs), cooking pot (Ceramics, SimmerView.Show), crafting table and repair table (Crafting #267), env props (Environment).
