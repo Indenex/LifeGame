@@ -35,18 +35,24 @@ public static class Controls
         new("walk_back", new[] { Key.S, Key.Down }, null, Name: "Walk back"),
         new("walk_left", new[] { Key.A, Key.Left }, null, Name: "Walk left"),
         new("walk_right", new[] { Key.D, Key.Right }, null, Name: "Walk right"),
-        // Hints show in this order: walking, then picking up and making things (the
-        // first things a new player needs), then the rest.
-        new("pick_up", new[] { Key.Space }, "Pick up", "{key} picks up what lies at your feet"),
+        // Hints show in this order: walking, then using and picking up, making things
+        // and turning the view (the first things a new player needs), then the rest.
+        // ui-17 (Justin): E uses what's in front of you, or picks up what lies at your
+        // feet when there's nothing to use; Space jumps; the view turns by mouse drag
+        // only (no Q/E). The Use key comes first: UseKey handles E when it has an
+        // offer, and otherwise lets it through to Main's pick-up.
+        new("use", new[] { Key.E }, "Use what's in front of you, or pick up what's at your feet", "{key} uses what's in front of you, or picks up what lies at your feet"),
+        // Pick up follows the Use key (SyncPickUp); it isn't rebound on its own.
+        new("pick_up", new[] { Key.E }, null, Fixed: true, KeyText: "{use}", Name: "Pick up"),
         new("craft", new[] { Key.C }, "Make things", "{key} to make things from what you carry"),
-        new("turn_left", new[] { Key.Q }, "Turn the view", "{key} turn the view", Name: "Turn the view left", Joins: new[] { "turn_left", "turn_right" }),
-        new("turn_right", new[] { Key.E }, null, Name: "Turn the view right"),
-        new("camera_drag", Array.Empty<Key>(), "Turn the view freely (hold and drag)", Mouse: MouseButton.Right, Name: "Turn the view freely (hold and drag)"),
+        new("camera_drag", Array.Empty<Key>(), "Turn the view (hold and drag)", "Hold the right mouse button and drag to turn the view", Mouse: MouseButton.Right, Name: "Turn the view (hold and drag)"),
+        // Bug fixes builds the jump (bugfix-25); it reads the "jump" action. Help stays
+        // null (out of the F1 list) until that lands and gives the row its line.
+        new("jump", new[] { Key.Space }, null, "{key} to jump", OnRequest: true, Name: "Jump"),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),
         new("sneak", new[] { Key.Ctrl }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
-        new("use", new[] { Key.G }, "Use what's in front of you"),
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
         new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you"),
@@ -91,12 +97,14 @@ public static class Controls
         foreach (var b in World)
             if (InputMap.HasAction(b.Action) && !defaults.ContainsKey(b.Action))
                 defaults[b.Action] = InputMap.ActionGetEvents(b.Action).ToArray();
+        ResetForNewLayout();
         foreach (var b in Rebindable.ToList())
         {
             string saved = Settings.Get("keys", b.Action, "");
             if (saved == "none") InputMap.ActionEraseEvents(b.Action);
             else if (Decode(saved) is { } e) Set(b.Action, e);
         }
+        SyncPickUp();
     }
 
     // Binds an action to one key or button and saves it. If another action had that
@@ -112,6 +120,30 @@ public static class Controls
         }
         Set(action, e);
         Save(action, e);
+        SyncPickUp();
+    }
+
+    // The default keys changed in ui-17 (E uses and picks up, Space jumps, no turn
+    // keys). A player's own key choices from before could now clash with them, so they
+    // are cleared once, with a one-time hint saying so.
+    const int Layout = 2;
+
+    static void ResetForNewLayout()
+    {
+        if (Settings.Get("keys", "layout", 0) >= Layout) return;
+        bool hadOwn = World.Any(b => Settings.Has("keys", b.Action));
+        Settings.Clear("keys");
+        Settings.Set("keys", "layout", Layout);
+        if (hadOwn)
+            Hints.Tip("keys_layout_2", "The keys have changed: E uses and picks up, Space jumps, and the right mouse button turns the view. Your own key choices were reset.");
+    }
+
+    // Pick up always rides on the Use key, wherever the player puts it.
+    static void SyncPickUp()
+    {
+        if (!InputMap.HasAction("use") || !InputMap.HasAction("pick_up")) return;
+        InputMap.ActionEraseEvents("pick_up");
+        foreach (var e in InputMap.ActionGetEvents("use")) InputMap.ActionAddEvent("pick_up", e);
     }
 
     public static void ResetAll()
@@ -123,6 +155,8 @@ public static class Controls
             foreach (var e in events) InputMap.ActionAddEvent(action, e);
         }
         Settings.Clear("keys");
+        Settings.Set("keys", "layout", Layout);
+        SyncPickUp();
     }
 
     static void Set(string action, InputEvent e)
@@ -165,7 +199,7 @@ public static class Controls
     // binding and the player's own keys both show correctly. Null when unbound.
     public static string? KeysFor(Binding b)
     {
-        if (b.KeyText != null) return b.KeyText.Replace("{use}", KeyFor("use") ?? "G");
+        if (b.KeyText != null) return b.KeyText.Replace("{use}", KeyFor("use") ?? "E");
         if (b.Joins != null)
         {
             var firsts = b.Joins.Select(a => Names(a).FirstOrDefault()).ToList();
@@ -180,6 +214,7 @@ public static class Controls
     public static string? KeyFor(string action)
     {
         var row = World.FirstOrDefault(b => b.Action == action);
+        if (row?.KeyText != null) return KeysFor(row);
         return row?.Joins != null ? KeysFor(row) : Names(action).FirstOrDefault();
     }
 
