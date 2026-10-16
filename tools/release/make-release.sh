@@ -15,6 +15,9 @@ out=$(cd "$out" && pwd)
 prs=$( [ -n "$prs_file" ] && cat "$prs_file" || echo '[]')
 wipe=$(jq -r 'any(.[]; .wipe)' <<<"$prs")
 
+# Never ship a game without its .NET assemblies (builds 1092 to 1096 did).
+"$(dirname "$0")/../ci/check-export.sh" "$art/LifeGame-Linux/linux" "$art/LifeGame-Windows/windows"
+
 cp "$art/LifeGame-Server/StdbModule.wasm" "$out/StdbModule.wasm"
 # Each zip holds the platform folder's contents at its root, so the launcher unpacks it as is.
 (cd "$art/LifeGame-Linux/linux" && chmod +x LifeGame.x86_64 && zip -qry "$out/LifeGame-Linux.zip" .)
