@@ -14,6 +14,7 @@ public enum StructureKind
     StorageJar,
     Fence,
     Gate,
+    Hearth,
 }
 
 // One material a structure's current stage still needs.
@@ -114,6 +115,8 @@ public static partial class Module
             if (Structures.TooClose(k, x, z, (int)other.Kind, other.X, other.Z))
                 throw new Exception("Too close to another building");
 
+        if (Structures.IsIndoor(k) && HomeAround(ctx, x, z, Structures.HearthWallGap) is null)
+            throw new Exception("A hearth goes inside a finished hut or house");
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         yaw = MathF.IEEERemainder(yaw, MathF.Tau);
@@ -280,6 +283,7 @@ public static partial class Module
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (s.Kind == StructureKind.BrickHouse && FireInside(ctx, s)) warmth = 1f;
+            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }

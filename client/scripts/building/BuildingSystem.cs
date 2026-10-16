@@ -489,6 +489,10 @@ public partial class BuildingSystem : Node
         foreach (var s in rows.Values)
             if (Structures.TooClose(placeKind, at.X, at.Z, (int)s.Kind, s.X, s.Z))
                 return "Too close to another building";
+        // A hearth goes inside a finished hut or house, a little way in from the walls (as the server checks).
+        if (Structures.IsIndoor(placeKind) && !rows.Values.Any(s => s.Complete && Structures.IsHome((int)s.Kind)
+                && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -Structures.HearthWallGap)))
+            return "A hearth goes inside a finished hut or house";
         return Structures.GroundProblem(placeKind, at.X, at.Z, yaw, terrain.HeightAt);
     }
 
