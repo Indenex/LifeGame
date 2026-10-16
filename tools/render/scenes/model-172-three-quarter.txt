@@ -1,0 +1,9 @@
+# #172: the new figure facing the camera (three-quarter). Camera = puppet; a short step toward the
+# camera (+x,+z, behind the game camera's default view) turns the figure to face it.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,35,0.35
+wait 35
+stroll 0.8 0.8
+arrive
+wait 3
+burst 3 1.5
