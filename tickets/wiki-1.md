@@ -1,8 +1,8 @@
 # wiki-1: First player wiki
 Lane: Wiki
 Owner: Wiki session (Sonnet)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Status: in_progress
+Branch: claude/wiki-1
 PR: (once opened)
 
 ## Goal
@@ -10,9 +10,10 @@ A player wiki in `wiki/` (Markdown, start at `wiki/README.md`) that a new playte
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-063).
+- 2026-10-16: branch claude/wiki-1; first full draft of all 10 pages under wiki/ written and pushed
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Read `DECISIONS.md` and `KEYMAP.md` on main, outline the pages in `wiki/README.md`, commit and push.
+Wait for PM review of the PR; fix review notes.
