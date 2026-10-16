@@ -35,6 +35,8 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16 21:30: Justin: Archery progression must be drawn out (7,6,5,4,3,2 hits at ranks 0,20,...,100, crude gear, no crit). Proposed to Journal (skills-12/#237): combat damage multipliers use a harmonic (even-in-hits) shape, m(r) = 1/(1/lo + (1/hi - 1/lo)*r/100), lo 0.44, Ceiling.ArcheryDamage 1.6. Crude per-hit 15/18/21/27/36/55 (hits 7/6/5/4/3/2). With a crit (x1.5-x3): one-shot needs about rank 80 plus a top-Stalking crit. Sent to PM. Bow.cs still has no Archery effect applied: after #237 merges, read ArcheryDamage/HitChance/DrawTime via Progression.Effect(kind, SkillRank(ctx, playerId, Skills.Shoot)).
 
+- 2026-10-16 21:40: merged the deer branch and Crafting's crafting-bow (Item.Bow 16, Arrow 17, powers). Client: Herd.cs registers a Strike finder `animals.bow`: carrying a bow and an arrow, the strike key shoots the nearest animal in a 25-degree cone within 40 m (calls ShootAnimal); ArrowFlight.cs draws a plain arrow flying to where the animal was (Modeling's ItemModels.ArrowFlight replaces it when #235 is on main). Server and client build. Not played. KEYMAP.md (UX) should note that the Strike key shoots when a bow is carried.
+
 ## Open questions / blockers
 - Numbers decided: A.
 - Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
