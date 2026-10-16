@@ -16,11 +16,29 @@ namespace LifeGame.Shared
             text.StartsWith("/me ", StringComparison.OrdinalIgnoreCase) || text.Equals("/me", StringComparison.OrdinalIgnoreCase);
         public static string EmoteBody(string text) => text.Length > 3 ? text[3..].Trim() : "";
 
-        // How bright a chat line is in the log: full within a third of chat range,
+        // claims-10: "/w hi" is a whisper, heard within WhisperRange; "/s hey!" is a
+        // shout, heard within ShoutRange. Stored with the prefix, like "/me".
+        public const float WhisperRange = 4f, ShoutRange = 60f;
+        public enum Voice { Say, Whisper, Shout }
+
+        public static Voice VoiceOf(string text) =>
+            HasPrefix(text, "/w") ? Voice.Whisper : HasPrefix(text, "/s") ? Voice.Shout : Voice.Say;
+
+        // The words without the "/w " or "/s " in front.
+        public static string VoiceBody(string text) =>
+            VoiceOf(text) == Voice.Say ? text : text.Length > 2 ? text[2..].Trim() : "";
+
+        public static float RangeOf(Voice voice) =>
+            voice == Voice.Whisper ? WhisperRange : voice == Voice.Shout ? ShoutRange : ChatRange;
+
+        static bool HasPrefix(string text, string prefix) =>
+            text.StartsWith(prefix + " ", StringComparison.OrdinalIgnoreCase) || text.Equals(prefix, StringComparison.OrdinalIgnoreCase);
+
+        // How bright a chat line is in the log: full within a third of its range,
         // easing to 55% at the edge.
-        public static float ChatDim(float distance)
+        public static float ChatDim(float distance, float range = ChatRange)
         {
-            float t = Math.Clamp((distance - ChatRange / 3f) / (ChatRange * 2f / 3f), 0f, 1f);
+            float t = Math.Clamp((distance - range / 3f) / (range * 2f / 3f), 0f, 1f);
             return 1f - 0.45f * t * t * (3f - 2f * t);
         }
         public const long ChatCooldownMicros = 400_000;

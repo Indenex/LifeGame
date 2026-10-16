@@ -176,6 +176,18 @@ Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != nu
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
+// claims-10: whisper and shout.
+Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
+    && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
+a.Conn.Reducers.SendChat("/W  psst ");
+Check(Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/w psst"), 5), "a whisper is stored as \"/w psst\"");
+int voiceCount = b.Conn.Db.ChatMessage.Iter().Count();
+Thread.Sleep(500);
+a.Conn.Reducers.SendChat("/s");
+Wait(() => false, 1);
+Check(b.Conn.Db.ChatMessage.Iter().Count() == voiceCount, "an empty /s says nothing");
+Thread.Sleep(500);
+
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
 a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
