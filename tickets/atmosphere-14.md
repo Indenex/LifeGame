@@ -1,7 +1,7 @@
 # atmosphere-14: Weather you see coming
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-14-weather-ahead
 PR: #217
 
@@ -20,8 +20,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 - 2026-10-16 20:27: #217 CI green on de37c62 (https://github.com/Indenex/LifeGame/actions/runs/38959812433), mergeable; green sha sent to the PM.
 
+- 2026-10-16 20:29: #217 merged by the PM.
+
 ## Open questions / blockers
 - Idea to offer the PM with this ticket (D-059 options): after Environment's env-2 reshape (#175: stream 45 m west of spawn, ponds, gentler hills, water still at -1 m), mist that lies in valleys and over ponds and the stream at dawn and dusk, using World.BaseHeight and the existing atmosphere-11 Mist (which already pools in hollows by depth). Options to send: A (rec) extend Mist to read terrain height so valleys and water fill first; B leave dawn mist as is.
 
 ## Next step
-PM merges #217; when the Render lane's shots arrive, tune fronts and rainbow in a small follow-up if needed.
+None; done. Tune fronts and rainbow in a small follow-up if the Render lane's shots show a need.
