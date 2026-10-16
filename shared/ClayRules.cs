@@ -75,17 +75,13 @@ namespace LifeGame.Shared
         // crack and come out a little better than from a pit.
         // Building gives this process to everyone who helps finish a kiln stage.
         public const string KilnProcess = "clay.kiln";
-        // StructureKind.Kiln as a number, for shared code (the enum is the server's);
-        // appended after LeanTo, ClayHut and ClaimMarker (D-035).
-        public const int KilnStructureKind = 3;
         public const string KilnFireProcess = "clay.kiln_fire";
         public const int KilnCapacity = 6;
         public const int KilnQualityBonus = 10;
 
-        // The storage jar (ceramics-6): tempered clay it takes, and the
-        // StructureKind it is set down as (appended after BrickHouse).
+        // The storage jar (ceramics-6): tempered clay it takes. Shared code finds
+        // the jar and the kiln by their StructureShape flags (Kiln, Jar).
         public const int JarClay = 4;
-        public const int JarStructureKind = 6;
         // Only a kiln heats a piece this big evenly enough.
         public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar;
 
