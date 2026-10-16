@@ -101,12 +101,18 @@ public partial class StructureView : Node3D
         return appeared;
     }
 
-    // --- Door (clay huts) ---------------------------------------------------
+    // --- Door (clay huts and brick houses) -------------------------------
 
-    // The doorway in the hut's frame: hinged on one jamb, swinging inward when open.
+    // The doorway in the building's frame: the door hangs from jamb a and closes
+    // onto jamb b, swinging inward when open.
     const float DoorRadius = 1.7f, DoorHalfAngle = 0.44f, DoorHeight = 1.45f, DoorOpenAngle = 1.75f;
     Node3D? doorHinge, doorBar;
     bool? doorClosed;
+
+    (Vector3 a, Vector3 b, float height) DoorFrame() => Kind == 5
+        ? StructureModel.HouseDoor
+        : (new Vector3(Mathf.Sin(DoorHalfAngle), 0, Mathf.Cos(DoorHalfAngle)) * DoorRadius,
+           new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius, DoorHeight);
 
     // closed: null takes the door away (none hung yet). locked shows the bar across it.
     public void SetDoor(bool? closed, bool locked, bool animate)
@@ -125,36 +131,33 @@ public partial class StructureView : Node3D
             doorClosed = null;
             return;
         }
+        var (a, b, height) = DoorFrame();
+        float baseYaw = Mathf.Atan2(-(b - a).Z, (b - a).X);
         bool fresh = doorHinge == null;
         if (doorHinge == null)
         {
-            var a = new Vector3(Mathf.Sin(DoorHalfAngle), 0, Mathf.Cos(DoorHalfAngle)) * DoorRadius;
-            var b = new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius;
-            doorHinge = new Node3D { Position = a, Rotation = new Vector3(0, Mathf.Atan2(-(b - a).Z, (b - a).X), 0) };
+            doorHinge = new Node3D { Position = a, Rotation = new Vector3(0, baseYaw, 0) };
             doorHinge.AddChild(new MeshInstance3D
             {
-                Mesh = StructureModel.Door(a.DistanceTo(b), DoorHeight),
+                Mesh = StructureModel.Door(a.DistanceTo(b), height),
                 MaterialOverride = StructureModel.Wood,
             });
             // The bar: a stout pole dropped into two pegs across the middle of the door, outside
-            // (the hinge's -Z faces out of the hut).
+            // (the hinge's -Z faces out of the building).
             float width = a.DistanceTo(b);
-            doorBar = new Node3D { Position = new Vector3(0, DoorHeight * 0.52f, -0.08f), Visible = locked };
+            doorBar = new Node3D { Position = new Vector3(0, height * 0.52f, -0.08f), Visible = locked };
             doorBar.AddChild(new MeshInstance3D { Mesh = StructureModel.Bar(width), MaterialOverride = StructureModel.PaleWood });
             doorHinge.AddChild(doorBar);
             AddChild(doorHinge);
             if (animate && IsInsideTree()) Settle(doorHinge, doorHinge.Position);
         }
         doorClosed = closed;
-        float baseYaw = Mathf.Atan2(-(DoorEnd() - doorHinge.Position).Z, (DoorEnd() - doorHinge.Position).X);
         float yaw = baseYaw - (closed.Value ? 0f : DoorOpenAngle);
         if (animate && !fresh && IsInsideTree())
             CreateTween().TweenProperty(doorHinge, "rotation:y", yaw, 0.6).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         else
             doorHinge.Rotation = new Vector3(0, yaw, 0);
     }
-
-    static Vector3 DoorEnd() => new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius;
 
     // --- Weathering ---------------------------------------------------------
 

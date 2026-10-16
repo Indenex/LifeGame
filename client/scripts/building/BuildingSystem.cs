@@ -122,6 +122,13 @@ public partial class BuildingSystem : Node
             Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
                 (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
         }
+        // --building-house: a finished brick house and one going up, without the rest.
+        if (OS.GetCmdlineUserArgs().Contains("--building-house"))
+        {
+            Put(StructureKind.BrickHouse, 7f, -3.2f, 4, 1f, 0.25f);
+            Put(StructureKind.BrickHouse, 8.5f, 4.2f, 1, 0.6f, -0.3f);
+            return;
+        }
         // --building-door: just a finished hut with its door barred, close up.
         if (OS.GetCmdlineUserArgs().Contains("--building-door"))
         {
@@ -230,6 +237,11 @@ public partial class BuildingSystem : Node
                 if (d < keep && d > 0.01f) to = new Vector3(s.X + dx / d * keep, to.Y, s.Z + dz / d * keep);
                 continue;
             }
+            if (s.Kind == StructureKind.BrickHouse && (s.Complete || s.Stage >= 2))
+            {
+                to = HouseWalls(s, from, to);
+                continue;
+            }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
             const float wall = 1.7f, half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
@@ -243,6 +255,24 @@ public partial class BuildingSystem : Node
             to = new Vector3(wx, to.Y, wz);
         }
         return to;
+    }
+
+    // A brick house's four straight walls, open at the doorway unless the door is shut.
+    Vector3 HouseWalls(Structure s, Vector3 from, Vector3 to)
+    {
+        const float half = 0.3f, door = 0.48f;
+        float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
+        var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
+        // Side walls at x = ±wx.
+        if (Mathf.Abs(lz) < wz + half && Mathf.Abs(Mathf.Abs(lx) - wx) < half)
+            lx = Mathf.Sign(lx) * (Mathf.Abs(fx) < wx ? wx - half : wx + half);
+        // Back and front walls at z = ±wz; the front has the doorway.
+        bool doorway = lz > 0 && Mathf.Abs(lx) < door && !DoorShut(s.Id);
+        if (!doorway && Mathf.Abs(lx) < wx + half && Mathf.Abs(Mathf.Abs(lz) - wz) < half)
+            lz = Mathf.Sign(lz) * (Mathf.Abs(fz) < wz ? wz - half : wz + half);
+        var (x, z) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+        return new Vector3(x, to.Y, z);
     }
 
     // --- Input ------------------------------------------------------------
