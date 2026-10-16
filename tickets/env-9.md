@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
 Status: in_review
 Branch: claude/environment-farland
-PR: (once opened)
+PR: #306
 
 ## Goal
 Hills, heath tops, valleys and the woods read from a distance, so players can steer by them and the world doesn't end at the last loaded chunk (about 56 m). A coarse ground mesh and simple tree silhouettes cover the land out to the fog, from the shared height and forest rules. Visual only, no wipe. Cheap: built on a background thread when the player changes chunk.
