@@ -145,13 +145,21 @@ Walk(b, stone.X, stone.Z);
 ExpectError(b, () => b.Conn.Reducers.PickUp(stone.Id), "claimed", "B cannot pick up inside A's claim");
 ExpectError(b, () => b.Conn.Reducers.TendClaim(claim.Id), "Only the owner", "B cannot tend A's marker");
 
-// The owner can still dig at home.
+// The owner can still dig at home, and working the land tends the claim (claims-5).
+var beforeWork = a.MyClaim()!;
+long workEvery = Math.Min(Social.WorkTendEverySeconds, (beforeWork.ExpiresAt.MicrosecondsSinceUnixEpoch - beforeWork.TendedAt.MicrosecondsSinceUnixEpoch) / 4_000_000) * 1_000_000;
+var workAfter = DateTime.UtcNow.AddMilliseconds((beforeWork.TendedAt.MicrosecondsSinceUnixEpoch + workEvery) / 1000 - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 500);
+Pump(() => DateTime.UtcNow > workAfter, 90, "wait to tend by work");
 a.LastError = null;
 int digX = (int)MathF.Round(a.X) + 1, digZ = (int)MathF.Round(a.Z);
 short depth = a.Depth(digX, digZ);
 a.Conn.Reducers.Dig(digX, digZ);
 Pump(() => a.Depth(digX, digZ) > depth || a.LastError != null, 5, "owner dig");
 Check(a.LastError == null, "A can dig in their own claim");
+Pump(() => a.MyClaim()!.TendedAt.MicrosecondsSinceUnixEpoch > beforeWork.TendedAt.MicrosecondsSinceUnixEpoch, 5, "tended by work");
+Check(a.MyClaim()!.ExpiresAt.MicrosecondsSinceUnixEpoch > beforeWork.ExpiresAt.MicrosecondsSinceUnixEpoch, "digging in your own claim tends it");
+long day = 86_400_000_000L, t0 = 1_000L * day;
+Check(Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0) == "Tended 2 days ago · stands 1 more day", $"the marker line reads well ({Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0)})");
 
 // claims-4: the owner adds B by name (any case), and a calm line says so.
 string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";

@@ -223,6 +223,7 @@ public static partial class Module
         var watchers = AnimalWatchPlayers(ctx, now);
         if (watchers.Count == 0) return;
         ClearOldCarcasses(ctx, now);
+        DryHides(ctx, now);
 
         foreach (var flock in ctx.Db.Flock.Iter().ToList())
         {
@@ -294,12 +295,13 @@ public static partial class Module
             var was = body;
 
             AnimalSense(ref mind, body, before, watchers, out bool calmedByStillPlayer);
+            AnimalShyFromFires(ctx, ref mind, body);
             var mother = AnimalFindMother(ref mind, body, before);
             if (mother is { } ewe)
                 LambDecide(ctx, ref body, ref mind, ewe, now);
             else
                 AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
-            AnimalMove(ref body, ref mind, before, i);
+            AnimalMove(ctx, ref body, ref mind, before, i);
             RegrowFleece(ref body, mind, now);
             AnimalGrowAndHeal(ref body, ref mind, now);
 
@@ -476,7 +478,7 @@ public static partial class Module
         mind.StateUntil = now + AnimalMicros(12f, 16f, ctx);
     }
 
-    static void AnimalMove(ref Animal body, ref AnimalMind mind, FlockMember[] flock, int self)
+    static void AnimalMove(ReducerContext ctx, ref Animal body, ref AnimalMind mind, FlockMember[] flock, int self)
     {
         if (body.State is not (AnimalState.Walk or AnimalState.Run)) return;
 
@@ -503,11 +505,11 @@ public static partial class Module
             }
         }
 
-        if (!AnimalCanStand(nx, nz))
+        if (!AnimalCanStand(nx, nz) || AnimalStepBlocked(ctx, body.X, body.Z, nx, nz))
         {
             if (body.State == AnimalState.Run)
             {
-                // Swerve along the shore instead of running into the water.
+                // Swerve along the shore (or round a fire) instead of running into it.
                 float c = MathF.Cos(1.1f), s = MathF.Sin(1.1f);
                 (mind.FleeX, mind.FleeZ) = (mind.FleeX * c - mind.FleeZ * s, mind.FleeX * s + mind.FleeZ * c);
             }
