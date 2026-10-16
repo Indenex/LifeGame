@@ -15,9 +15,10 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 
 ## Progress log
 - 2026-10-16 18:06: PM assigned ceramics-7 cooking pot (option 1); agree hunger numbers with Survival (session_014pHdaxJ7uESzsvWekpjvsH), generous per D-081. Branch stacked on #105 (D-093 jar change e6b78a4).
+- 2026-10-16 18:25: server (ab62982): items 115 PotOfBroth / 116 PotOfStew, processes cook.broth / cook.stew (Outcome.Placed, 2 s), server/spacetimedb/CookingPot.cs SimmerPot table + TakeOffPot; Ceramics OnPlaced routes dishes; no fire or no room hands the food back. Survival hooks: Needs.Nourishment rows (broth 45/30, stew 65/30) and Eat gives the coil pot back at the dish's quality. Client (1444cf9): SimmerView (pot, broth surface, steam, countdown label), G "Take the pot off the fire" (ceramics.simmer, 25, KEYMAP.md updated), simmer_pot range subscription, item looks. ClayCheck --pot added; running on c7pot1.
 
 ## Open questions / blockers
 - Survival: hunger/thirst numbers and who adds the Needs.Nourishment rows + pot-back on eating (offered to do it as small hooks). Proposed default: broth 45% hunger + 30% thirst, stew 65% hunger + 30% thirst.
 
 ## Next step
-Implement the server side (items 115-116, processes cook.broth/cook.stew with Outcome.Placed, a SimmerPot table in server/spacetimedb/CookingPot.cs, TakeOffPot reducer) on the default numbers.
+Check ClayCheck --pot on c7pot1 (scratchpad pot1.log); fix anything; then send a render request and, once #105 has merged, open the PR from claude/clay-ceramics-7-kfr4kr.
