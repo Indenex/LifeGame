@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-18
-PR: (opening)
+PR: #108
 
 ## Goal
 A dry pot sitting within 1.8 m of a burning fire (pots shaped at a campfire are set down 1 m from it) goes into the fire on G only when the fire can take it: fuel for the whole 4-minute firing and a free place in its 4-pot ring. Otherwise G picks it up, so it can be carried to a kiln. If the fire is low and you carry fuel, the prompt you face is "Feed the fire" (not a "Fire the pot" that only answers "Feed the fire first"); once fed, "Fire the pot" comes back.
