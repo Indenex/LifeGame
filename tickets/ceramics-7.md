@@ -1,0 +1,23 @@
+# ceramics-7: Cooking pot (broth and stew)
+Lane: Clay and ceramics
+Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
+Status: in_progress
+Branch: claude/clay-ceramics-7-kfr4kr (stacked on claude/clay-ceramics-kfr4kr / PR #105 until that merges)
+PR: (none yet)
+
+## Goal
+A second use for fired pots: cook in them. Done when:
+1. At a burning fire, the crafting panel offers "Simmer berry broth" (`cook.broth`: coil pot of water + 3 berries) and "Simmer mutton stew" (`cook.stew`: coil pot of water + 1 raw mutton + 2 berries). The pot sits at the fire's edge and simmers (broth 60 s, stew 90 s), visibly steaming. It never burns (D-081, light survival); if the fire dies the pot keeps whatever it reached.
+2. G by your simmering pot when it's done takes it off: "Pot of berry broth" (Item 115) or "Pot of mutton stew" (Item 116), at a quality from the pot and the ingredients (cook.* skill).
+3. Eating (X) one gives food and water (numbers agreed with Survival, generous), and the empty coil pot comes back at its quality, like drinking a pot of water (D-030).
+4. Client: the pot on the fire with a broth surface and steam, item looks, prompts. ClayCheck --pot runs it on a scratch db.
+Justin sees screenshots via the Render lane: a stew simmering on a fire, and eating it.
+
+## Progress log
+- 2026-10-16 18:06: PM assigned ceramics-7 cooking pot (option 1); agree hunger numbers with Survival (session_014pHdaxJ7uESzsvWekpjvsH), generous per D-081. Branch stacked on #105 (D-093 jar change e6b78a4).
+
+## Open questions / blockers
+- Survival: hunger/thirst numbers and who adds the Needs.Nourishment rows + pot-back on eating (offered to do it as small hooks). Proposed default: broth 45% hunger + 30% thirst, stew 65% hunger + 30% thirst.
+
+## Next step
+Implement the server side (items 115-116, processes cook.broth/cook.stew with Outcome.Placed, a SimmerPot table in server/spacetimedb/CookingPot.cs, TakeOffPot reducer) on the default numbers.
