@@ -21,7 +21,8 @@ namespace LifeGame.Shared
         RunSeconds,       // seconds of running from a full bar (Endurance)
         RefillSeconds,    // seconds to refill an empty bar (Endurance)
         SneakDistance,    // meters a sneaking player can get to a wary animal before it bolts (Stalking)
-        OneStrikeChance,  // chance a landed strike kills outright (Stalking)
+        SneakCritChance,  // chance a sneak attack crits, 0 to 1 (Stalking)
+        SneakCritBonus,   // extra damage on a sneak crit, as a multiple of normal damage (Stalking)
     }
 
     public sealed class EffectDef
@@ -86,8 +87,11 @@ namespace LifeGame.Shared
             // Proposal: sheep notice a walker at 14 m and never a sneaker, so a wary animal
             // (deer) bolts a novice sneaker at 10 m and a Master at 3 m.
             new(EffectKind.SneakDistance, "Sneak distance", 10f, 3f, "m"),
-            // Proposal: replaces Animals' stand-in "Husbandry >= 20 kills in one strike".
-            new(EffectKind.OneStrikeChance, "Kill in one strike", 0f, 0.9f, "chance"),
+            // Placeholders until Animals proposes values (Justin: normal damage scaling plus a
+            // large bonus-damage trigger chance when Stalking adds its bonus). Replaces the
+            // Husbandry >= 20 one-strike stand-in.
+            new(EffectKind.SneakCritChance, "Sneak crit chance", 0.05f, 0.5f, "chance"),
+            new(EffectKind.SneakCritBonus, "Sneak crit bonus", 1f, 3f, "x damage"),
         };
 
         public static EffectDef Get(EffectKind kind)

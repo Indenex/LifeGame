@@ -14,9 +14,9 @@ Justin: one formula handles all skill gains and effects, front-loaded (first ~15
 - 2026-10-16 20:55: Justin: fast for testing, much slower later (OSRS/Dofus); added Progression.Pace (1.0) scaling Skills.Gain; log b=12 and curve on rank confirmed.
 
 ## Open questions / blockers
-- PM answers on curve family (log recommended) and whether to also slow Skills.Gain.
+- Animals proposes SneakCritChance and SneakCritBonus start/end values (placeholders 5% to 50%, 1x to 3x bonus damage; Justin: crit chance with bonus damage and a visual crit cue, Animals owns the cue).
 - Sneak distance 10 -> 3 m and one-strike chance 0 -> 0.9 are proposals; Animals swaps its Husbandry >= 20 stand-in and reports `animal.sneak`.
 - Merging with #193 will conflict in shared/Skills.cs (Specializations array, SpecOverrides): keep both sets.
 
 ## Next step
-Push, send the green sha to the PM, send Animals the effect kinds (SneakDistance, OneStrikeChance) and the Things to try line.
+Push, send the green sha to the PM, send Animals the effect kinds (SneakDistance, SneakCritChance, SneakCritBonus) and the Things to try line.
