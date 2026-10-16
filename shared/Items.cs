@@ -56,6 +56,8 @@ namespace LifeGame.Shared
         SheepHide = 194,
         ScrapedHide = 195,
         Leather = 196,
+        // 197-200 are the wool items and the wool tunic (animals-8, PR #90; D-120).
+        LeatherWraps = 201,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -131,7 +133,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true },
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
-            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true });
+            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 
