@@ -357,3 +357,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
 **Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
 **Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours
+
+## D-087 — 2026-10-16 — Building order: fence, hearth, cabin
+**Decision:** House building does a stick fence and gate next (building-8), then a raised hearth, then a log cabin from felled trees.
+**Who:** Justin ("All of these, but the first one first")
+
+## D-088 — 2026-10-16 — Brisk walk, run on Shift, with stamina
+**Decision:** Normal movement stays at 4.2 m/s, animated as a brisk walk-jog. Holding Shift runs faster and spends stamina; stamina refills when not running. Stamina is a light need (D-081): it shows only while it is not full, and running out just drops you back to walking. Survival builds stamina; UX/UI moves sneak off Shift (key to be confirmed with Justin); Animation adds the run. Numbers start low per D-075.
+**Who:** Justin ("Keep the brisk jog, and add a run tied to shift. It should have a stamina system though.")
+
+## D-089 — 2026-10-16 — Better tools work up to about 15-20% faster
+**Decision:** Tool quality speeds work, from 0% for a crude tool to about 15-20% for an excellent one (PM default 15% at the top, open to 20% later), on the D-075 curve.
+**Who:** Justin ("Yes, but not 25% ... Maybe 15-20%?")
+
+## D-090 — 2026-10-16 — Full fires refuse fuel; fire length grows with skill (amends D-054)
+**Decision:** Feeding a fire at its cap is refused ("The fire is burning as high as it will") and the stick is kept. A newly lit fire burns 20 minutes (was 15, D-054). The most a fire can hold grows with Firecraft from 20 minutes up to 40 minutes (+100%) at Master.
+**Who:** Justin ("Refuse. Fires should start at 20 minutes and last longer maybe up to 100% more scaled with skill.")
