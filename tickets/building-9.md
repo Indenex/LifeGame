@@ -20,7 +20,7 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
   - BuildTest clay-hut adds a hearth: refused outside, built inside by both, a fire lit beside it sits on it with 1350 s of fuel (900 × 1.5). It passed locally with Crafting's hooks patched in uncommitted. The patch is in the scratchpad as crafting-hearth-hooks.patch and was sent to Crafting.
 
 ## Open questions / blockers
-- Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): must declare and call `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
+- Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) agreed 18:58 to add both hooks in their #122 (crafting-14) with the agreed signatures; they'll send the sha. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
 When Crafting's hook declarations reach main and #153 has merged: merge main into claude/house-building-8ueqz2 along with this branch, run all checks, open the building-9 PR and request a render.
