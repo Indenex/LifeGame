@@ -412,6 +412,11 @@ Walk(a, wx, wz);
 Walk(b, wx + 4, wz);
 ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too far", "a strike out of reach misses");
 Walk(b, wx + 1, wz);
+// Moves reach the server in batches: wait until it agrees B is within reach of A.
+bool ServerInReach() =>
+    b.Conn.Db.PlayerPos.PlayerId.Find(b.PlayerId) is { } pb && b.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId) is { } pa
+    && new Vector(pb.X - pa.X, pb.Z - pa.Z).Length <= Social.StrikeReach;
+Wait(ServerInReach, 5);
 float full = Hp(b, a.PlayerId);
 b.LastError = null;
 b.Conn.Reducers.StrikePlayer(a.PlayerId);
