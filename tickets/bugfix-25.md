@@ -35,6 +35,8 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 - 2026-10-16: Justin's picks (via PM): apex 1.1 m (clears fences); 8% of the stamina bar per jump; no air control (keep takeoff direction); NO jumping while sneaking (so the sneak-lower-apex default is dropped). Still open: whether other players see your jump (asked PM; v1 shows your own only).
 - 2026-10-16: lane hooks ready: Audio `Sfx.Play(Cue.Jump)` at takeoff and `Sfx.Land(strength, atmosphere.GroundAt(feet))` at landing (PR #242); Survival `SurvivalClient.TrySpendStamina(float fraction)` (PR #261); Animation `me.SetJump(airborne, rising, landing)` each frame from Main.Walk (branch claude/anim-2-jump). UX binds the `jump` action on Space (ui-16). Build after #228 merges, then add each hook as its PR reaches main.
 
+- 2026-10-16: Justin picked (b): others see your jump. Design: a new `server/spacetimedb/Jump.cs` with a public table `PlayerJump { PlayerId (PK), Seq, At }` and a reducer `Jump()` the client calls on takeoff. The server refuses while sneaking (PlayerSneaking), under `Jump.CooldownSeconds`, and later when stamina or the arc don't fit (bugfix-24). The client plays your own jump at once (prediction); other players' clients react to OnInsert/OnUpdate on the row: Animation's `SetJump` on that avatar, `Sfx.Play(Cue.Jump)` positioned at it, and a vertical offset from `Jump.Height(now - At)`. The landing for a remote avatar is played when the arc ends (`Jump.AirTime`), strength 0 (a hop). Stamina stays client side for now (Survival's TrySpendStamina); the server check comes with bugfix-24.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
 - (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
