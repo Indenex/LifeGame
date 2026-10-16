@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (opening)
+PR: #68
 
 ## Goal
 A fresh player sees "New in your journal: Foraging" and hears the discovery chime once, the first time they forage, not on every stick they pick up afterwards.
