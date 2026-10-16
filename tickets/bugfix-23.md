@@ -20,8 +20,10 @@ From Justin: "I want trees and houses etc. to have collision." Walking into a tr
 
 - 2026-10-16: trees and rocks: client/scripts/environment/TerrainCollision.cs (Terrain.CollideVegetation) plus one line in Main.Walk; client builds locally (dotnet 8 at ~/dotnet, bindings generated). Not yet walked in a running client.
 
+- 2026-10-16: audit: lean-to now blocks its sides and back (open front), claim marker made Solid; kilns, baskets, jars, huts, houses, fences already collided. Fires are not solid (you stand at them to use them); stations (#160) and hearth (#202) are not on main yet, so those lanes get a note. Client builds.
+
 ## Open questions / blockers
 - Need a lookup hook in Terrain.cs from Environment (asked).
 
 ## Next step
-Audit every StructureKind in BuildingSystem.Collide for missing collision (lean-to, fires, stations).
+Push, then ask Animals about AnimalStepBlocked, send Render request, tell Crafting/House building to mark stations and hearth Solid.

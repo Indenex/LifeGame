@@ -278,6 +278,11 @@ public partial class BuildingSystem : Node
                 to = HouseWalls(s, from, to);
                 continue;
             }
+            if (s.Kind == StructureKind.LeanTo)
+            {
+                to = LeanToWalls(s, shape, from, to);
+                continue;
+            }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
             const float wall = 1.7f, half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
@@ -301,6 +306,21 @@ public partial class BuildingSystem : Node
         if (Mathf.Abs(lx) > Structures.FenceHalfLength + half * 0.5f || Mathf.Abs(lz) >= half) return to;
         var (_, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
         var (x, z) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, fz >= 0f ? half : -half);
+        return new Vector3(x, to.Y, z);
+    }
+
+    // A lean-to's two sides and back; the front is open (bugfix-23).
+    static Vector3 LeanToWalls(Structure s, StructureShape shape, Vector3 from, Vector3 to)
+    {
+        const float half = 0.25f;
+        float wx = shape.HalfWidth, wz = shape.HalfDepth;
+        var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
+        var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
+        if (lz > -wz - half && lz < wz && Mathf.Abs(Mathf.Abs(lx) - wx) < half)
+            lx = Mathf.Sign(lx) * (Mathf.Abs(fx) < wx ? wx - half : wx + half);
+        if (Mathf.Abs(lx) < wx + half && Mathf.Abs(lz + wz) < half)
+            lz = fz > -wz ? -wz + half : -wz - half;
+        var (x, z) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
         return new Vector3(x, to.Y, z);
     }
 
