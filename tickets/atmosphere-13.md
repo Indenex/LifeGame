@@ -15,6 +15,8 @@ Option A of three sent to the PM 2026-10-16 (recommended; the default until the 
 
 - 2026-10-16: agreed a split with Environment (session_012hVejTxLoxBpZyX3GQmNL9): they own Terrain.cs, client/scripts/environment/, shore dressing and forest-floor tint, and add Forest.Density, switching Atmosphere.Woodedness to call it in their PR. I own light, sky, weather, the water surface shader and the ghost-fade shader code. Added global wind_dir (vec2, (0.6, 0.8), the direction the clouds already drift) for their foliage, b6e6528. Audio lane took atmosphere-12 (merged 68392c7 into claude/audio-1-work-sounds); merging main into #66 is fine, but don't edit audio code.
 
+- 2026-10-16 17:35: Environment pushed Forest.Density (claude/environment-env-1 0eaba8b: groves ~20 m, glades between) and switched Woodedness to average it, then SmoothStep(0.1, 0.6) (4907603); retune that curve once it merges. For them: Look flower colours (1e65d96), Look.Grass bends along wind_dir (c65003b, same direction). Good combined shafts spot: glade edge (36,-36).
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
