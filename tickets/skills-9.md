@@ -22,6 +22,8 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 17:12: PM relayed Justin: D-065 hide work gets its own capped Leatherwork specialty later, once leather has more uses; until then it trains Husbandry (as shipped). D-067 toasts only at new titles (as built in skills-8).
 - 2026-10-16 17:25: no CI had run on 13fcbce..97cfae1: the PR conflicted with main (STATUS.md), so GitHub skipped the pull_request workflow. Merged main (7e79d22), took main's STATUS.md; no new process ids to name.
 - 2026-10-16 17:24: Animals lane (via the PM, D-071): `sew.*` (animals-9: wool tunic, leather wraps) trains Toolmaking; prefix added now so it works when animals-9 lands. A capped Weaver specialty takes spinning, weaving and likely sewing later.
+- 2026-10-16 17:40: CI green on e6b8965 (contains main 7e79d22): https://github.com/Indenex/LifeGame/actions/runs/38939635952. Main has moved since but merges cleanly. Green sha sent to the PM.
+- 2026-10-16 17:43: D-086 (Justin): skill pace stays about 6 to 7 h to master for pre-alpha, effects linear; no curve change. The D-075 proposal below is parked for later.
 
 ## Open questions / blockers
 - D-075 skill curve review (PM asked 17:24), sent to the PM as options. Uses to reach a rank, one skill, ~30 s per use with gathering:
@@ -33,7 +35,7 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
   | 60 Expert | 150 (1.3 h) | 1,069 (9 h) | 1,826 (15 h) |
   | 80 Artisan | 394 (3.3 h) | 1,736 (14 h) | 2,826 (24 h) |
   | 100 Master | 794 (6.6 h) | 2,403 (20 h) | 3,826 (32 h) |
-  Effects (quality cap 35 to 100, speed to 40% time, minigame steps -75%) stay linear per rank by default; option to soften speed to 60% time and steps to -50%. Stored points are kept, so no wipe; existing players keep their ranks. Default until answered: no change.
+  Effects (quality cap 35 to 100, speed to 40% time, minigame steps -75%) stay linear per rank by default; option to soften speed to 60% time and steps to -50%. Stored points are kept, so no wipe; existing players keep their ranks. Answered by D-086: no change for now.
 
 ## Next step
-Wait for CI on PR #43 (head after the 7e79d22 merge); when green, log the run link here and send the PM the sha.
+Wait for the PM to merge PR #43 (green on e6b8965); then start skills-10 ("Things to try" hints in the journal, unless the PM picks another option).
