@@ -1,7 +1,7 @@
 # skills-13: Journal lines for the bow, and a skills panel check
 Lane: Journal and skills
 Owner: Journal and skills lane (Sonnet)
-Status: todo
+Status: in_progress
 Branch: claude/journal-skills-13
 PR: (not yet)
 
@@ -10,6 +10,8 @@ After skills-12 (#237 merged at 0821b2d3), keep the journal in step with new con
 
 ## Progress log
 - 2026-10-16 21:56: created; waiting on #266 for the ids.
+
+- 2026-10-16 22:05: Justin picked: drop the "Speed N%  Best quality" line from learned-step cards (rank title already says it). Done in JournalPanel.EntryRow; Godot client build only in CI.
 
 ## Open questions / blockers
 - Needs lash.bow and carve.arrows in shared/Processes.cs on main (#266, Crafting).

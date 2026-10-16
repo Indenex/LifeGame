@@ -126,7 +126,7 @@ public partial class JournalPanel : Control
         if (entries.Count == 0)
             entryList.AddChild(Wrapped("Nothing yet. Try things: dig, gather, work with what you find. Watching someone else work, or reading a note they left, teaches you too.", 15, Faint));
         foreach (var e in entries.OrderBy(e => e.LearnedAt.MicrosecondsSinceUnixEpoch))
-            entryList.AddChild(EntryRow(e, bySpec));
+            entryList.AddChild(EntryRow(e));
 
         var known = entries.Select(e => e.ProcessId).ToHashSet();
         int left = Skills.AllProcessIds().Count(id => !known.Contains(id));
@@ -192,11 +192,8 @@ public partial class JournalPanel : Control
         return button;
     }
 
-    Control EntryRow(JournalEntry e, Dictionary<string, SkillLevel> bySpec)
+    Control EntryRow(JournalEntry e)
     {
-        var spec = Skills.SpecFor(e.ProcessId);
-        int rank = spec != null && bySpec.TryGetValue(spec.Id, out var level) ? Skills.Rank(level.Points) : 0;
-
         var card = new PanelContainer();
         card.AddThemeStyleboxOverride("panel", Box(new Color(1, 1, 1, 0.04f), 10, 12));
         var box = new VBoxContainer();
@@ -224,11 +221,6 @@ public partial class JournalPanel : Control
         box.AddChild(Text($"{how}, {times}", 13, Faint));
         if (Recipes.HowTo(e.ProcessId) is { } howTo) box.AddChild(Wrapped(howTo, 13, Recipe));
 
-        if (spec != null)
-        {
-            int speed = (int)MathF.Round(100f / Skills.DurationScale(rank));
-            box.AddChild(Text($"{spec.Name}    Speed {speed}%    Best quality {Processes.Grade(Skills.QualityCap(rank))}", 13, Faint));
-        }
         return card;
     }
 
