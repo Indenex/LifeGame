@@ -17,6 +17,7 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 
 - 2026-10-16 18:35: PR #96 CI green on b3be674; green sha sent to the PM.
 - 2026-10-16 18:40: Animation trial-merged 067ed1c with `figure = PlayerModel.Build();` in Avatar.BuildFigure: compiles, heights fine. #100 keeps capsules until Justin picks; whichever of #100 / model-1 merges second makes that one-line swap.
+- 2026-10-16 19:10: D-081/D-082 from the PM: M1 order is player figure, then every item (ground, icon, held). Merged main. `ItemModels.cs`: models for 22 items (all crafting, survival and animal items plus Log), authored once in the ToolR frame, laid down for the ground and icon, plain-shaded for the hand; hooked into `ItemLook.MeshFor` (old shapes kept as `ItemLook.OldMeshFor` for fallback and before/after). Clay items keep Ceramics' ClayItemLook for now. ToolR is now a Node3D in the fist under a `HandRAttach` BoneAttachment3D. Showcase views `items` (`--old` for before) and `held`.
 
 ## Open questions / blockers
 - Sent to the PM for Justin: style A Carved (recommended) / B Soft / C Natural; pipeline: procedural C# (recommended) / Blender-made glTF.
@@ -32,4 +33,4 @@ All are one draw call per figure; 32 players at even C is ~140k tris, well insid
 Showcase: `godot --path client res://scripts/models/Showcase.tscn -- --view=row|people|faces|sheep|walk [--yaw=deg] [--shot=out.png]`. Headless capture here needs Vulkan (lavapipe: `apt-get install mesa-vulkan-drivers`) under `xvfb-run`; the GL path renders black.
 
 ## Next step
-Wait for Justin's style pick via the PM; meanwhile tune style A (recommended) on claude/model-1-style and plan the drop-in for Avatar (with Animation) and Sheep.cs.
+Wait for Justin's style pick and the Render lane's item renders; meanwhile model the clay items' held look and the sheep drop-in for Sheep.cs.

@@ -7,7 +7,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -28,6 +28,12 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
+        if (view is "items" or "held")
+        {
+            if (view == "items") ItemGrid(args.ContainsKey("old"));
+            else HeldTools();
+            return;
+        }
 
         var wool = Look.Solid(new Color(0.74f, 0.71f, 0.63f));
         wool.SetShaderParameter("detail_scale", 3.0f);
@@ -76,6 +82,60 @@ public partial class Showcase : Node3D
             _ => (new Vector3(0.4f, 3.2f, 10.5f), new Vector3(0.4f, 0.7f, 0f)),
         };
         camera.LookAtFromPosition(from, at, Vector3.Up);
+    }
+
+    // Every item lying on the grass in rows, the new model or (--old) today's.
+    void ItemGrid(bool old)
+    {
+        var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
+        items.Sort();
+        const int columns = 7;
+        const float step = 0.62f;
+        int rowCount = (items.Count + columns - 1) / columns;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var at = new Vector3((i % columns - (columns - 1) / 2f) * step, 0, (i / columns - (rowCount - 1) / 2f) * step * 1.1f);
+            var mesh = old ? ItemLook.OldMeshFor(item) : ItemLook.MeshFor(item);
+            // Long things are scaled down to fit their cell; the label says so.
+            float size = mesh.GetAabb().Size.Length();
+            float fit = Mathf.Min(1f, 0.6f / size);
+            AddChild(new MeshInstance3D { Mesh = mesh, Position = at, Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
+            AddChild(new Label3D
+            {
+                Text = LifeGame.Shared.Items.All[item].Name + (fit < 0.99f ? $" (x{fit:0.0})" : ""),
+                FontSize = 22,
+                PixelSize = 0.0022f,
+                Modulate = Look.Cream,
+                OutlineSize = 6,
+                OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.8f),
+                Position = at + new Vector3(0, 0.02f, 0.24f),
+                Rotation = new Vector3(-Mathf.Pi / 2f + 0.9f, 0, 0),
+            });
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 4.3f, 3.6f), new Vector3(0, 0, 0.35f), Vector3.Up);
+    }
+
+    // The player figure holding tools in its right hand, arm raised a little.
+    void HeldTools()
+    {
+        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.Basket };
+        for (int i = 0; i < tools.Length; i++)
+        {
+            var figure = PlayerModel.Build();
+            figure.Position = new Vector3((i - (tools.Length - 1) / 2f) * 1.1f, 0, 0);
+            figure.Rotation = new Vector3(0, -0.5f, 0);
+            AddChild(figure);
+            // Forearm forward so the tool shows.
+            figure.SetBonePoseRotation(HumanRig.ElbowR, new Quaternion(Vector3.Right, -0.9f));
+            var hand = figure.FindChild("ToolR", true, false);
+            hand.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(tools[i]) });
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
     }
 
     // Everyone mid-stride: left leg forward, right arm forward.

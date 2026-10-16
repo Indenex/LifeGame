@@ -20,6 +20,10 @@ public sealed class MeshKit
     int bone;
     Color color = Colors.White;
     public int Triangles { get; private set; }
+    // Applied to every vertex as it is written, e.g. to lay a held item on the ground.
+    // Must be a rotation plus a move, so faces keep their winding.
+    public Transform3D Xform = Transform3D.Identity;
+    public bool Empty => Triangles == 0;
 
     public MeshKit(bool flat)
     {
@@ -70,13 +74,27 @@ public sealed class MeshKit
         Triangles++;
     }
 
+    // Bones and weights only when the mesh will be skinned; static items skip them.
+    public bool Skinned = true;
+
     void Vertex(Vector3 p, Vector3 n)
     {
         st.SetColor(color);
-        st.SetBones(new[] { bone, 0, 0, 0 });
-        st.SetWeights(new[] { 1f, 0f, 0f, 0f });
-        st.SetNormal(n);
-        st.AddVertex(p);
+        if (Skinned)
+        {
+            st.SetBones(new[] { bone, 0, 0, 0 });
+            st.SetWeights(new[] { 1f, 0f, 0f, 0f });
+        }
+        st.SetNormal(Xform.Basis * n);
+        st.AddVertex(Xform * p);
+    }
+
+    public Godot.Collections.Array CommitToArrays()
+    {
+        var arrays = st.CommitToArrays();
+        st.Clear();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        return arrays;
     }
 
     // Two axes across a direction: side (x for an upright part) and front (z).
@@ -186,6 +204,72 @@ public sealed class MeshKit
         var o = -n * 0.004f;
         Tri(root + o, rgt + o, l + o, back, back, back);
         Tri(l + o, rgt + o, tipBent + o, back, back, back);
+    }
+
+    // A round tube along a path (cord, a bent bow, a coil), its frame carried
+    // along so it never twists. Radius may taper from start to end.
+    public void Tube(Vector3[] path, float radius, int sides, float endRadius = -1f, bool caps = true)
+    {
+        if (path.Length < 2) return;
+        if (endRadius < 0f) endRadius = radius;
+        int n = path.Length;
+        var tangent = new Vector3[n];
+        for (int i = 0; i < n; i++)
+            tangent[i] = (path[Math.Min(i + 1, n - 1)] - path[Math.Max(i - 1, 0)]).Normalized();
+        var (side, _) = Frame(tangent[0]);
+        var pts = new Vector3[n, sides];
+        var nrm = new Vector3[n, sides];
+        for (int i = 0; i < n; i++)
+        {
+            if (i > 0)
+            {
+                // Parallel transport: remove the part of the old side along the new tangent.
+                side = (side - tangent[i] * side.Dot(tangent[i])).Normalized();
+            }
+            var up = tangent[i].Cross(side).Normalized();
+            float r = radius + (endRadius - radius) * i / (n - 1f);
+            for (int k = 0; k < sides; k++)
+            {
+                float a = k * Mathf.Tau / sides;
+                var dir = side * Mathf.Cos(a) + up * Mathf.Sin(a);
+                pts[i, k] = path[i] + dir * r;
+                nrm[i, k] = dir;
+            }
+        }
+        for (int i = 0; i + 1 < n; i++)
+            for (int k = 0; k < sides; k++)
+            {
+                int k2 = (k + 1) % sides;
+                Tri(pts[i, k], pts[i + 1, k], pts[i + 1, k2], nrm[i, k], nrm[i + 1, k], nrm[i + 1, k2]);
+                Tri(pts[i, k], pts[i + 1, k2], pts[i, k2], nrm[i, k], nrm[i + 1, k2], nrm[i, k2]);
+            }
+        if (!caps) return;
+        for (int end = 0; end < 2; end++)
+        {
+            int i = end == 0 ? 0 : n - 1;
+            var outward = end == 0 ? -tangent[0] : tangent[n - 1];
+            var tip = path[i] + outward * (end == 0 ? radius : endRadius) * 0.4f;
+            for (int k = 0; k < sides; k++)
+            {
+                int k2 = (k + 1) % sides;
+                Tri(tip, pts[i, k], pts[i, k2], outward, (nrm[i, k] + outward).Normalized(), (nrm[i, k2] + outward).Normalized());
+            }
+        }
+    }
+
+    // A ring of points around a center, for coils and lashings.
+    public static Vector3[] Circle(Vector3 center, Vector3 axis, float radius, int points, float turns = 1f, float rise = 0f, float startAngle = 0f)
+    {
+        var (u, v) = Frame(axis);
+        axis = axis.Normalized();
+        var path = new Vector3[points];
+        for (int i = 0; i < points; i++)
+        {
+            float t = i / (points - 1f);
+            float a = startAngle + t * turns * Mathf.Tau;
+            path[i] = center + (u * Mathf.Cos(a) + v * Mathf.Sin(a)) * radius + axis * rise * t;
+        }
+        return path;
     }
 
     public static float Hash(int a, int b) => Terrain.Hash01(a, b, 911);

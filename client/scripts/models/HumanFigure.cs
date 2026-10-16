@@ -55,6 +55,8 @@ public static class HumanFigure
         public ArrayMesh Mesh = null!;
         public HumanRig.Joints Joints = null!;
         public int Triangles;
+        // How far below the wrist joint the middle of the fist is.
+        public float GripDrop;
     }
 
     static readonly Dictionary<string, Built> Cache = new();
@@ -235,7 +237,7 @@ public static class HumanFigure
 
         var mesh = new ArrayMesh();
         k.Commit(mesh, material);
-        done = new Built { Mesh = mesh, Joints = j, Triangles = k.Triangles };
+        done = new Built { Mesh = mesh, Joints = j, Triangles = k.Triangles, GripDrop = hh * 0.6f * 0.45f };
         Cache[s.Key] = done;
         return done;
     }
