@@ -94,6 +94,8 @@ Justin: one formula handles all skill gains and what they help, so every skill h
 - **Own formulas:** none. `Skills.Gain` and `SkipsMinigame` are listed in `Progression.Exceptions` with the reason.
 - **Check:** `dotnet run --project tools/ProgressionCheck` prints every effect at ranks 0, 10, 15, 25, 50, 100 and fails if an end value moves or rank 15 is not ~40%.
 
+- **Pace:** `Progression.Pace` (1.0 now) scales every point gain. Justin: keep leveling fast for testing, and much slower later, OSRS or Retro Dofus level. The planned later change is lowering this one number (0.05 is about 20x slower); effects, curves and tables stay as they are.
+
 This stacks with the front-loaded gain (see "Do not front-load twice" above), so mid-game ranks give more than before. The rule in that section is superseded for rank-based effects by Justin's pick.
 
 ## 3. Rewards between the steps (variable ratio, light)

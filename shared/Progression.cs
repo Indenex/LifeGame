@@ -48,6 +48,13 @@ namespace LifeGame.Shared
         // docs/PROGRESSION.md: ln(1 + b p) / ln(1 + b) with b = 12.
         public const float CurveB = 12f;
 
+        // Global leveling pace, applied to every point gain in Skills.Gain. 1 is today's
+        // fast testing pace (Master after about 800 uses). Later this is lowered many-fold
+        // toward OSRS / Retro Dofus-like leveling (Justin): 0.05 is about 20x slower. Each
+        // gain is at least 1 point (a hundredth of a rank), so below about 0.02 raise
+        // Skills.PointsPerRank as well.
+        public const float Pace = 1f;
+
         // 0 to 1 share of the full effect at progress p (rank / MaxRank).
         public static float Curve(float p)
         {

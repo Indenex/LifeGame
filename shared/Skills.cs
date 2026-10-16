@@ -171,7 +171,9 @@ namespace LifeGame.Shared
         {
             float left = 1f - Math.Clamp(points, 0, MaxPoints) / (float)MaxPoints;
             int gain = Math.Max(5, (int)MathF.Round(100f * left * left));
-            return failed ? Math.Max(1, gain / 2) : gain;
+            if (failed) gain = Math.Max(1, gain / 2);
+            // One global pace for all skills (Progression.Pace): 1 now for testing.
+            return Math.Max(1, (int)MathF.Round(gain * Progression.Pace));
         }
 
         // The best quality, 1 to 100, a player can produce: 35 at first, anything at Master.

@@ -11,6 +11,7 @@ Justin: one formula handles all skill gains and effects, front-loaded (first ~15
 ## Progress log
 - 2026-10-16 20:22: PM assigned; before/after table sent to PM, building with log b=12 and the curve on rank unless told otherwise.
 - 2026-10-16 20:50: built Progression.cs; migrated QualityCap, DurationScale, MinigameSteps, DugClayQuality, SecondLumpChance, Fires.MaxSecondsFor, Stamina; Stalking skill + Sneak process + hints; tools/ProgressionCheck passes; server type-checks.
+- 2026-10-16 20:55: Justin: fast for testing, much slower later (OSRS/Dofus); added Progression.Pace (1.0) scaling Skills.Gain; log b=12 and curve on rank confirmed.
 
 ## Open questions / blockers
 - PM answers on curve family (log recommended) and whether to also slow Skills.Gain.
