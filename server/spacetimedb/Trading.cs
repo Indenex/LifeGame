@@ -183,12 +183,7 @@ public static partial class Module
             AddToInventory(ctx, to, (Item)it.Item, it.Count, it.Quality);
         }
 
-        var aGave = items.Where(i => i.Side == Social.SideA).ToList();
-        var bGave = items.Where(i => i.Side == Social.SideB).ToList();
-        string line = aGave.Count > 0 && bGave.Count > 0 ? $"{trade.AName} and {trade.BName} trade"
-            : aGave.Count > 0 ? $"{trade.AName} hands {trade.BName} {GiftWords(aGave)}"
-            : $"{trade.BName} hands {trade.AName} {GiftWords(bGave)}";
-        SayNearbyTrade(ctx, trade, line);
+        // D-080: nothing is said to bystanders; the two traders get TradeEnded "done".
         EndTrade(ctx, trade, "done");
     }
 
@@ -241,16 +236,7 @@ public static partial class Module
         return MathF.Sqrt(dx * dx + dz * dz);
     }
 
-    // A line in chat between the two traders.
-    static void SayNearbyTrade(ReducerContext ctx, Trade trade, string text)
-    {
-        if (ctx.Db.PlayerPos.PlayerId.Find(trade.AId) is not { } pa) return;
-        var pb = ctx.Db.PlayerPos.PlayerId.Find(trade.BId) ?? pa;
-        SayNearby(ctx, (pa.X + pb.X) / 2, (pa.Z + pb.Z) / 2, text);
-    }
-
     static string ItemWords(ushort item, uint count) =>
         Items.IsKnown(item) ? Social.GiftPhrase(Items.Def((Item)item), count) : "something";
 
-    static string GiftWords(List<TradeItem> gave) => gave.Count == 1 ? ItemWords(gave[0].Item, gave[0].Count) : "a few things";
 }

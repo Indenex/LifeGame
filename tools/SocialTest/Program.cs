@@ -241,10 +241,12 @@ a.Conn.Reducers.AcceptTrade(tradeId, 1, true);
 Pump(() => TradeFor(b)?.BAccepted == true, 5, "A accepts again");
 Check(b.Count(Item.Stone) == 1, "nothing moves until both accept");
 b.LastError = null;
+b.LastTradeEnd = null;
 b.Conn.Reducers.AcceptTrade(tradeId, 1, true);
 Pump(() => a.Count(Item.Stone) > aStones || b.LastError != null, 5, "swap");
 Check(a.Count(Item.Stone) == aStones + 1 && b.Count(Item.Stone) == 0 && TradeFor(a) == null, $"both accepting swaps the items ({b.LastError ?? "ok"})");
-Check(Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && m.Text.Contains("hands")), 5), "a chat line says who handed what");
+Check(Wait(() => b.LastTradeEnd == "done", 2) && !Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && (m.Text.Contains(" trade") || m.Text.Contains(" hands "))), 1),
+    "both traders hear it is done, and bystanders hear nothing (D-080)");
 
 a.Conn.Reducers.AskTrade(b.PlayerId);
 Pump(() => TradeFor(b) != null, 5, "ask back");
