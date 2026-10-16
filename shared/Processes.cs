@@ -140,6 +140,20 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.RawMutton) },
                 Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
             },
+            // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
+            // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
+            new ProcessDef
+            {
+                Id = "cook.broth", Name = "Simmer berry broth", Doing = "Setting a pot of broth by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.Berries, 3) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfBroth,
+            },
+            new ProcessDef
+            {
+                Id = "cook.stew", Name = "Simmer mutton stew", Doing = "Setting a pot of stew by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton), new Ingredient(Item.Berries, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfStew,
+            },
             new ProcessDef
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
@@ -243,6 +257,15 @@ namespace LifeGame.Shared
                 Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle,
             },
 
+            // Clothing (Animals lane): cut and laced at the leather drying rack (D-139), worn in
+            // the equipment panel, slows the cold (see Clothing.cs).
+            new ProcessDef
+            {
+                Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 10, Makes = Item.LeatherWraps, Station = StationKind.DryingRack,
+            },
+
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
             new ProcessDef
@@ -280,20 +303,20 @@ namespace LifeGame.Shared
             {
                 Id = "clay.pinch_pot", Name = "Pinch a pot", Doing = "Pinching a pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
-                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
-                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
@@ -360,7 +383,7 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         public const float MasterMaxSeconds = 40 * 60;
         public static float MaxSecondsFor(int firecraftRank) =>
-            MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
+            Progression.Effect(EffectKind.FireSeconds, firecraftRank);
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
         // A burned-out fire leaves a cold hearth of stones and ash this long outside a

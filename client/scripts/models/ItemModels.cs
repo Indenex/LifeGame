@@ -35,26 +35,38 @@ public static class ItemModels
         static MeshKit New(bool flat, Transform3D xform) => new(flat) { Skinned = false, Xform = xform };
     }
 
-    static readonly Dictionary<Item, Mesh?> Ground = new(), Held = new();
+    static readonly Dictionary<(Item, int), Mesh?> Ground = new(), Held = new();
     static Material? wood, stone, plant, plain;
 
     // Laid on the ground, resting on y = 0 and centered; null if this item has no
     // model here yet (ItemLook falls back to its own).
-    public static Mesh? GroundMesh(Item item)
+    // wear: 0 as new, 1 worn, 2 spent (see WearLevel); only tools that wear use it.
+    public static Mesh? GroundMesh(Item item, int wear = 0)
     {
-        if (!Ground.TryGetValue(item, out var mesh)) Ground[item] = mesh = Make(item, false);
+        wear = Mathf.Clamp(wear, 0, 2);
+        if (!Ground.TryGetValue((item, wear), out var mesh)) Ground[(item, wear)] = mesh = Make(item, false, wear);
         return mesh;
     }
 
     // In the hand, in the ToolR frame; items without a model here (the clay pots)
     // use their ground look, held by the top like a pot by its rim.
-    public static Mesh HeldMesh(Item item)
+    public static Mesh HeldMesh(Item item, int wear = 0)
     {
-        if (Held.TryGetValue(item, out var mesh) && mesh != null) return mesh;
-        mesh = Make(item, true) ?? HungFromTop(ItemLook.MeshFor(item));
-        Held[item] = mesh;
+        wear = Mathf.Clamp(wear, 0, 2);
+        if (Held.TryGetValue((item, wear), out var mesh) && mesh != null) return mesh;
+        mesh = Make(item, true, wear) ?? HungFromTop(ItemLook.MeshFor(item));
+        Held[(item, wear)] = mesh;
         return mesh;
     }
+
+    // A tool's look from its condition (Crafting's Durability.Condition, D-155):
+    // "" as new, "worn", "nearly spent" and "spent".
+    public static int WearLevel(string condition) => condition switch
+    {
+        "worn" => 1,
+        "nearly spent" or "spent" => 2,
+        _ => 0,
+    };
 
     static Mesh HungFromTop(Mesh source)
     {
@@ -73,26 +85,42 @@ public static class ItemModels
         return mesh;
     }
 
-    static Mesh? Make(Item item, bool held)
+    static Mesh? Make(Item item, bool held, int wear = 0)
     {
         var (build, upright) = Recipe(item);
         if (build == null) return null;
+        // Only tools that wear have a worn look; everything else ignores it.
+        if (!WearMarks.ContainsKey(item)) wear = 0;
         // Laying down turns the held frame so -Y (the working end) points along +X
         // and the thin side faces up.
         var lay = upright || held ? Transform3D.Identity : new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), Vector3.Zero);
         var kit = new Kit(PlayerModel.Style.Flat, lay);
         build(kit);
+        if (wear > 0) WearMarks[item](kit, wear);
 
         EnsureMaterials();
         var surfaces = new List<(Godot.Collections.Array Arrays, Material Material)>();
-        void Take(MeshKit k, Material groundMaterial)
+        // Use darkens wood and cord: handled, sweaty, weathered.
+        void Take(MeshKit k, Material groundMaterial, float darken)
         {
-            if (!k.Empty) surfaces.Add((k.CommitToArrays(), held ? plain! : groundMaterial));
+            if (k.Empty) return;
+            var arrays = k.CommitToArrays();
+            if (darken < 1f && arrays[(int)Mesh.ArrayType.Color].Obj is Color[] colors)
+            {
+                for (int i = 0; i < colors.Length; i++)
+                {
+                    var c = colors[i];
+                    float grey = (c.R + c.G + c.B) / 3f;
+                    colors[i] = new Color(Mathf.Lerp(grey, c.R, 0.8f) * darken, Mathf.Lerp(grey, c.G, 0.8f) * darken, Mathf.Lerp(grey, c.B, 0.8f) * darken, c.A);
+                }
+                arrays[(int)Mesh.ArrayType.Color] = colors;
+            }
+            surfaces.Add((arrays, held ? plain! : groundMaterial));
         }
-        Take(kit.Wood, wood!);
-        Take(kit.Stone, stone!);
-        Take(kit.Plant, plant!);
-        Take(kit.Plain, plain!);
+        Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f);
+        Take(kit.Stone, stone!, 1f);
+        Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f);
+        Take(kit.Plain, plain!, 1f);
 
         // Rest on the ground, centered; held upright things hang from their top.
         var min = Vector3.Inf;
@@ -499,6 +527,76 @@ public static class ItemModels
         k.Plain.Tube(new[] { new Vector3(0.005f, -0.2f, 0.035f), new Vector3(0.01f, -0.24f, 0.14f) }, 0.011f, 4, 0.004f);
         k.Plain.Tube(new[] { new Vector3(0.02f, -0.52f, 0.08f), new Vector3(0.025f, -0.6f, 0.04f) }, 0.009f, 4, 0.003f);
     }
+
+    // --- Wear (D-155): what use does to each tool that wears. Level 1 is worn,
+    // 2 spent. Marks go in the plain surface so the darkening above leaves them
+    // alone. Fresh chip scars on flint are paler than the weathered stone.
+
+    static readonly Color ChipScar = new(0.72f, 0.72f, 0.74f);
+    static readonly Color FrayedCord = new(0.42f, 0.34f, 0.22f);
+    static readonly Color Crack = new(0.12f, 0.09f, 0.07f);
+
+    static readonly Dictionary<Item, Action<Kit, int>> WearMarks = new()
+    {
+        [Item.StoneAxe] = (k, w) =>
+        {
+            Chips(k, new Vector3(0, -0.48f, 0.14f), Vector3.Up, 0.05f, w * 3);
+            LooseEnd(k, new Vector3(0.03f, -0.4f, 0f), w);
+            if (w > 1) CrackLine(k, new Vector3(0.022f, -0.47f, -0.04f), new Vector3(0.024f, -0.5f, 0.08f));
+        },
+        [Item.StoneKnife] = (k, w) =>
+        {
+            Chips(k, new Vector3(0, -0.13f, 0.024f), Vector3.Up, 0.07f, w * 3);
+            LooseEnd(k, new Vector3(0.022f, -0.035f, 0f), w);
+        },
+        [Item.Spear] = (k, w) =>
+        {
+            Chips(k, new Vector3(0, -1.1f, 0.02f), Vector3.Up, 0.05f, w * 2);
+            LooseEnd(k, new Vector3(0.026f, -0.9f, 0f), w);
+            if (w > 1) CrackLine(k, new Vector3(0.022f, -0.7f, 0f), new Vector3(0.021f, -0.4f, 0.004f));
+        },
+        [Item.DiggingStick] = (k, w) =>
+        {
+            // The hardened tip scuffs back to pale wood, then splits.
+            k.Plain.Paint(new Color(0.62f, 0.5f, 0.36f)).Ellipsoid(new Vector3(0, -0.66f, 0.012f), new Vector3(0.012f, 0.04f, 0.008f) * w, 5, 3);
+            if (w > 1) CrackLine(k, new Vector3(0.0f, -0.7f, 0.019f), new Vector3(0.002f, -0.5f, 0.026f));
+        },
+        [Item.BowDrill] = (k, w) =>
+        {
+            // The spindle's end chars black; the string frays.
+            k.Plain.Paint(Crack).Ellipsoid(new Vector3(0.015f, -0.32f, 0.15f), new Vector3(0.016f, 0.016f, 0.03f), 6, 3);
+            LooseEnd(k, new Vector3(0, -0.3f, 0.06f), w);
+        },
+        [(Item)16] = (k, w) =>
+        {
+            LooseEnd(k, new Vector3(0, 0.55f, -0.12f), w);
+            if (w > 1) CrackLine(k, new Vector3(0.02f, 0.2f, -0.01f), new Vector3(0.02f, 0.38f, -0.03f));
+        },
+    };
+
+    // Pale scars along an edge where flakes have come away.
+    static void Chips(Kit k, Vector3 along, Vector3 axis, float spread, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var at = along + axis * (H(i, 60) - 0.5f) * 2f * spread;
+            k.Plain.Paint(ChipScar, 0.92f + H(i, 61) * 0.1f).Ellipsoid(at, new Vector3(0.01f, 0.012f, 0.006f) * (0.8f + H(i, 62) * 0.6f), 5, 2);
+        }
+    }
+
+    // A loose end of binding hanging free: one when worn, a frayed pair when spent.
+    static void LooseEnd(Kit k, Vector3 at, int w)
+    {
+        for (int i = 0; i < w; i++)
+        {
+            var dir = new Vector3(0.6f + i * 0.3f, -0.5f, 0.3f - i * 0.5f).Normalized();
+            k.Plain.Paint(FrayedCord, 0.9f + i * 0.1f).Tube(new[] { at, at + dir * 0.04f, at + dir * 0.08f + Vector3.Down * 0.02f }, 0.004f, 3, 0.002f);
+        }
+    }
+
+    // A dark split in the wood or stone.
+    static void CrackLine(Kit k, Vector3 a, Vector3 b) =>
+        k.Plain.Paint(Crack).Tube(new[] { a, (a + b) / 2f + new Vector3(0.002f, 0, 0.003f), b }, 0.003f, 3, 0.001f);
 
     // A crude self bow: one stave of wood, thick at the grip and tapering to each
     // tip, bent back by a twisted cord; a wrap of cord at the grip. Held frame:
