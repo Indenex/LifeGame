@@ -227,6 +227,8 @@ namespace LifeGame.Shared
             4 => WeaveProcess,
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            // Each crafting station reports its own id, so the journal knows it is built.
+            _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 

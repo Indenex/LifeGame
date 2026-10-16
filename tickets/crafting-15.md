@@ -60,6 +60,7 @@ Questions for Justin (recommended option first):
 ## Progress log
 - 2026-10-16 19:30: framework built. CraftCheck, BuildTest and the upgrade check (main's world carries over, no wipe) pass locally, and server and client build.
 - 2026-10-16 19:35: PR #160 opened at 859f25e. Render requested 859f25e (crafting table, built, inside a claim).
+- 2026-10-16 19:45: merged main (StorageJar 6, CraftingTable 7); each station kind reports its own build id (build.table, build.bench, build.spindle, build.rack) for Journal; the spindle is named "spindle station" (Animals). Upgrade check against origin/main passes; CraftCheck passes.
 - 2026-10-16 18:45: Ceramics asked for the coil pot to stay basic and the jar at the Table; adopted and sent to the PM.
 - 2026-10-16 18:35: proposal written and sent to the PM. Told Animals and Animation the planned shape (StationKind, ProcessDef.Station, Stations.NearestOf).
 

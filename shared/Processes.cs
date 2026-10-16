@@ -55,9 +55,19 @@ namespace LifeGame.Shared
         {
             StationKind.Table => "crafting table",
             StationKind.PottersBench => "potter's bench",
-            StationKind.Spindle => "spindle",
+            StationKind.Spindle => "spindle station",
             StationKind.DryingRack => "leather drying rack",
             _ => "",
+        };
+
+        // The skill-practice id a station's building reports (build.* trains Builder).
+        public static string BuildProcess(StationKind kind) => kind switch
+        {
+            StationKind.Table => "build.table",
+            StationKind.PottersBench => "build.bench",
+            StationKind.Spindle => "build.spindle",
+            StationKind.DryingRack => "build.rack",
+            _ => "build.frame",
         };
     }
 
