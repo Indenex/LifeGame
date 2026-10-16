@@ -1,7 +1,7 @@
 # atmosphere-6: Trees topple and rocks sink when ground is cleared
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #52
 
