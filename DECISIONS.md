@@ -903,3 +903,43 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
 **Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
 **Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-224 — 2026-10-16 — Build menu: a centred picture panel with category tabs (ui-20)
+**Decision:** Pressing B opens a centred picture panel with category tabs: Shelter, Storage, Crafting, Fences and gates, Fire. Each tile in its grid shows a picture rendered from the real model, the name, and costs as item icons, greyed when short. Clicking a tile starts the ghost placement. Justin chose this over a strip above the hotbar and a radial wheel. Owner: UX (ui-20).
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-225 — 2026-10-16 — Admin tools are chat commands, not an F10 panel
+**Decision:** Justin asked for an admin interface to add items, and answered with chat commands instead of a panel. The admin tools are chat commands: `/fly` (very fast flying), `/season`, `/time` (time of day), and `/give`, which opens a searchable item menu to spawn items. All of them are server-checked and admin-only. There is no F10 panel. This replaces the earlier PM default (admin-1: a hidden F10 panel).
+**Who:** Justin ("just chat commands to get it done faster, but yes, I want a flying option that's super fast, seasons, time of day, spawn items (give me a menu with a search for that one.)")
+
+## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
+**Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
+**Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
+
+## D-227 — 2026-10-16 — View distance is a four-step slider in Settings → Graphics (follows D-222)
+**Decision:** View distance is a slider with four steps: Short (48 m, today), Near (80 m), Far (128 m) and Very far (160 m and up). It lives in Settings → Graphics and is saved per player. The world edge always fades into haze, with no LoD pop-in. Far is the PM's proposed default, not yet confirmed by Justin.
+**Who:** Justin ("yeah, just make a slider of like short (today), near, far, very far for view distances. It can go in the settings menu -> graphics for people to adjust themselves.")
+
+## D-228 — 2026-10-16 — A roof takes 12 roof tiles (follows D-213)
+**Decision:** A roof takes 12 roof tiles. Each tile costs 1 tempered clay and takes 2 kiln firings. This replaces the proposed defaults of 24 tiles and 504 h.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-229 — 2026-10-16 — House-type buildings are claim-only; outside a claim, basics only and fast decay
+**Decision:** House-type buildings must be built inside a claim only. Allowed outside a claim: the lean-to, clay hut, campfire and hearth, crafting table, and storage basket and jar. Everything else is claim-only. Anything outside a claim that sits untouched for 48 h starts falling apart, as extreme weathering that manages server performance and world cleanliness. The idea is that players cooperate and build cities together.
+**Who:** Justin ("House-type buildings HAVE to be built inside of a claim ONLY. Temporrary shelters or the small hut can be built outside, and basic crafting tables, but not much else. Essentialy, basic survival, and anything outside of a claim has extreme weathering applied to manage server performance and world 'cleanliness'. The idea is players can cooperate and build cities and stuff together."), with his picks of what stays allowed outside a claim.
+
+## D-230 — 2026-10-16 — Atmosphere next: falling leaves and blossom
+**Decision:** Atmosphere's next work is falling leaves and blossom: leaves drifting under broadleaf trees in autumn, petals in spring, and more of both in wind. Justin chose it over the dawn valley mist and the sky reflected in still water. Owner: Atmosphere.
+**Who:** Justin, picking falling leaves and blossom (relayed by the PM; no direct quote).
+
+## D-231 — 2026-10-16 — Buildings scale about 25% bigger and doorways become a real opening (building-14)
+**Decision:** All house-type buildings scale by about 1.25 (about 25% bigger) with the same material costs. Doorways become a real opening, at least about 2.1 m clear and with nothing across the floor, that players walk through freely. Owner: House building (building-14).
+**Who:** Justin ("the scale of the buildings probably needs to be a bit bigger, and leave an actual doorway opening so the character can walk in, right now he hits his head and his feet on the entrance"), picking about 25% bigger.
+
+## D-232 — 2026-10-16 — Art direction: low-poly shapes with simple painted material textures, Valheim-like (pending Justin's pick of renders, D-154)
+**Decision:** The direction is low-poly shapes with simple, low-res, painted material textures (Valheim-like), a cutesy warm feel, and lighting and atmosphere carrying the awe. Justin did not want flat colour. This is a direction only: per D-154 it is pending Justin's pick of renders, so no art is built past a prototype yet. Modeling is prototyping 2 to 3 texture variants, and Atmosphere is lighting the test renders.
+**Who:** Justin ("I dont like the textures the models are using; I want things to be less textures, but still very stylized with our pretty low poly look." When offered flat colour: "I want things to have material looks/texture still, closer to valheim I think. I want the game to be cutesy and beautiful/awe inspiring with lighting and stuff.")

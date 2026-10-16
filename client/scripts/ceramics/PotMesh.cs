@@ -35,11 +35,20 @@ public static class PotMesh
         new(0.082f, 0.360f), new(0.085f, 0.385f), new(0.095f, 0.400f),
     };
 
+    // The oil lamp (ceramics-9): a low, open bowl; the spout is pinched in Turn's wobble.
+    static readonly Vector2[] LampProfile =
+    {
+        new(0.000f, 0.000f), new(0.035f, 0.000f), new(0.055f, 0.010f), new(0.066f, 0.024f),
+        new(0.068f, 0.036f), new(0.064f, 0.044f),
+    };
+
     public static float Height(ClayForm form) => form switch
     {
         ClayForm.PinchPot => 0.122f,
         ClayForm.CoilPot => 0.256f,
         ClayForm.StorageJar => 0.400f,
+        ClayForm.Lamp => 0.044f,
+        ClayForm.Tile => 0.030f,
         _ => 0.08f,
     };
 
@@ -61,6 +70,8 @@ public static class PotMesh
             ClayForm.Brick => Brick(variant),
             ClayForm.CoilPot => Turn(CoilProfile, true, variant),
             ClayForm.StorageJar => Turn(JarProfile, true, variant),
+            ClayForm.Lamp => Turn(LampProfile, false, variant),
+            ClayForm.Tile => Tile(variant),
             _ => Turn(PinchProfile, false, variant),
         };
         Cache[(form, variant)] = mesh;
@@ -127,6 +138,49 @@ public static class PotMesh
         }
         V(a, ha); V(b, ha); V(c, hc);
         V(a, ha); V(c, hc); V(d, hc);
+    }
+
+    // A curved roof tile (ceramics-10): a thin slab arched across its width, about
+    // 0.2 m by 0.3 m once PotView.Size is applied, with hand-pressed unevenness.
+    static ArrayMesh Tile(int variant)
+    {
+        const int across = 8, along = 6;
+        const float halfW = 0.050f, halfL = 0.075f, arch = 0.012f, thick = 0.0045f, baseY = 0.002f;
+        float Arch(float x, float z)
+        {
+            float u = x / halfW;
+            float n = Wobble(x * 25f, z * 17f, variant) - 0.5f;
+            return baseY + arch * (1f - u * u) + n * 0.003f;
+        }
+        var xs = new float[across + 1];
+        var zs = new float[along + 1];
+        for (int i = 0; i <= across; i++) xs[i] = -halfW + 2f * halfW * i / across;
+        for (int j = 0; j <= along; j++) zs[j] = -halfL + 2f * halfL * j / along;
+        Vector3 Top(int i, int j) => new(xs[i], Arch(xs[i], zs[j]) + thick, zs[j]);
+        Vector3 Bot(int i, int j) => new(xs[i], Arch(xs[i], zs[j]), zs[j]);
+        const float top = 0.03f;
+        float H(Vector3 v) => Mathf.Clamp(v.Y / top, 0f, 1f);
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        for (int i = 0; i < across; i++)
+            for (int j = 0; j < along; j++)
+            {
+                // Seen from above (x right, z down) clockwise is front-facing.
+                Quad(st, Top(i, j), Top(i + 1, j), Top(i + 1, j + 1), Top(i, j + 1), H(Top(i, j)), H(Top(i, j + 1)));
+                Quad(st, Bot(i, j), Bot(i, j + 1), Bot(i + 1, j + 1), Bot(i + 1, j), H(Bot(i, j)), H(Bot(i, j + 1)));
+            }
+        for (int j = 0; j < along; j++)
+        {
+            Quad(st, Top(0, j), Top(0, j + 1), Bot(0, j + 1), Bot(0, j), H(Top(0, j)), H(Bot(0, j)));
+            Quad(st, Top(across, j + 1), Top(across, j), Bot(across, j), Bot(across, j + 1), H(Top(across, j)), H(Bot(across, j)));
+        }
+        for (int i = 0; i < across; i++)
+        {
+            Quad(st, Top(i, along), Top(i + 1, along), Bot(i + 1, along), Bot(i, along), H(Top(i, along)), H(Bot(i, along)));
+            Quad(st, Top(i + 1, 0), Top(i, 0), Bot(i, 0), Bot(i + 1, 0), H(Top(i, 0)), H(Bot(i, 0)));
+        }
+        st.GenerateNormals();
+        return st.Commit();
     }
 
     // A sun-dried brick: a slab with softened, slightly uneven corners.

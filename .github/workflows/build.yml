@@ -24,10 +24,12 @@ on:
       - 'tools/wiki-page/**'
   workflow_dispatch:
 
-# A new push to a PR cancels that PR's older run. Every commit on main gets its own group, so
-# no merge ever cancels or replaces another commit's Build (a release needs each one to finish).
+# A new push to a PR cancels that PR's older run. Pushes to main share one group without
+# cancelling: the running build finishes, and only the newest pending build waits, so a burst of
+# merges is built as one batch (each merge replaces any older pending run) and the release picks
+# whatever is newest and green. Manual runs have a group of their own.
 concurrency:
-  group: build-${{ github.event_name == 'push' && github.sha || format('{0}-{1}', github.event_name, github.ref) }}
+  group: build-${{ github.event_name == 'push' && 'main' || format('{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
