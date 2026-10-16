@@ -78,6 +78,10 @@ public static partial class Module
     // (Ceramics.cs for clay.*, Leather.cs for hide.*).
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
     static partial void AnimalsOnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
+    // A craft job has started or ended (finished or failed), for sounds other players
+    // hear (D-072). Atmosphere implements them in WorkSounds.cs.
+    static partial void OnCraftStarted(ReducerContext ctx, CraftJob job);
+    static partial void OnCraftEnded(ReducerContext ctx, CraftJob job);
 
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
@@ -136,7 +140,7 @@ public static partial class Module
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
-        ctx.Db.CraftJob.Insert(new CraftJob
+        var started = ctx.Db.CraftJob.Insert(new CraftJob
         {
             Owner = ctx.Sender,
             PlayerId = player.PlayerId,
@@ -150,6 +154,7 @@ public static partial class Module
             Z = fz,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+        OnCraftStarted(ctx, started);
     }
 
     [SpacetimeDB.Reducer]
@@ -157,6 +162,7 @@ public static partial class Module
     {
         if (ctx.Db.CraftJob.Owner.Find(timer.Owner) is not { } job) return;
         ctx.Db.CraftJob.Owner.Delete(job.Owner);
+        OnCraftEnded(ctx, job);
         var def = Processes.Find(job.ProcessId);
         if (def is null) return;
 
