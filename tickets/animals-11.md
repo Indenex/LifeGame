@@ -35,3 +35,5 @@ Per D-098, spinning and weaving happen at a Spindle station, and hide work (scra
 
 ## Next step
 When #160 merges: merge main into this branch with SpindleStation and DryingRack moved to the very end of StructureKind, Shapes and StageCosts; rebuild, upgrade check, mark #90 ready.
+
+- 2026-10-16 21:10: #202 added Hearth to StructureKind; merged main again, Spindle and DryingRack re-appended after Hearth in the enum, Shapes and StageCosts. Server and client build, upgrade check passed.

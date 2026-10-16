@@ -1,7 +1,7 @@
 # atmosphere-16: Seasons
 Lane: World atmosphere (visual); leads seasons (D-099)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-16-seasons (stacked on claude/atmosphere-13-forest-light / #136)
 PR: #173
 
@@ -39,9 +39,11 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 19:40: AirCelsius now has a user: Animation (anim-2, session_019roNRWQBPw4ozNLDhzseig) draws breath puffs from Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius)) (helpers in Survival's #185); review Animation's sha for the look. Added Environment's env-4 palette to Look (BirchBark, Heather, Gorse, Sedge, HeathGround, Moss).
 
+- 2026-10-16 19:59: #173 CI green on a9795b5 (https://github.com/Indenex/LifeGame/actions/runs/38956423473), merged by the PM.
+
 ## Open questions / blockers
 - (answered) D-134: falling snow wets you at half rain's rate; wired via Survival's SnowfallAt hook. Justin is fine with the cold winter nights (D-136 retune).
 - Idea for the PM's next batch (D-059): heather blooms purple in late summer. A (rec) yes: Environment gives heather bushes w=3 and Look tints them purple through late summer; B no, heather stays evergreen.
 
 ## Next step
-Wait for #173 CI on the new head; send the green sha to the PM (D-119).
+None; done. Follow-ups: shader check from the Render lane's seasons shots (fix in a small PR if anything looks wrong); heather bloom if Justin says yes.

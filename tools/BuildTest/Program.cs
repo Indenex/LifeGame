@@ -62,6 +62,7 @@ if (which is "clay-hut" or "both")
         });
     HangDoor(hut);
     LayMat(hut);
+    BuildHearth(hut);
 }
 if (which is "basket" or "both")
     StoreInBasket(BuildTogether(StructureKind.Basket,
@@ -239,6 +240,60 @@ void UseGate(ulong gate)
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "A unbarred it");
 }
 
+// A raised hearth goes inside the finished hut, not outside it. A lays the stones, B the daub.
+void BuildHearth(ulong hut)
+{
+    Console.WriteLine("--- Raised hearth");
+    a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
+    b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
+    var until = clock.Elapsed + TimeSpan.FromSeconds(300);
+    while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
+    {
+        foreach (var bot in bots) bot.GatherStep(0.1f);
+        Pump(100);
+    }
+    Check(bots.All(x => x.HasWants), $"gathered stones and clay for a hearth ({a.Carried()} / {b.Carried()})");
+    for (int i = 0; i < 2; i++) b.Craft("clay.clean", Pump);
+    for (int i = 0; i < 2; i++) b.Craft("clay.daub", Pump);
+    Check(b.CountOf(Item.Daub) >= 3, $"mixed daub for the surround ({b.Carried()})");
+
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ + 0.6f);
+    a.WalkTo(door.x, door.z, 0.3f, Pump);
+    int before = a.Conn.Db.Structure.Count;
+    var outside = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).Radius + 2f);
+    a.Conn.Reducers.PlaceStructure(StructureKind.Hearth, outside.x, outside.z, 0f);
+    Pump(1500);
+    Check(a.Conn.Db.Structure.Count == before, "a hearth can't go outside a hut");
+
+    var spot = Structures.ToWorld(s.X, s.Z, s.Yaw, -0.2f, -0.7f);
+    var inside = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 0.4f);
+    a.WalkTo(inside.x, inside.z, 0.3f, Pump);
+    b.WalkTo(inside.x + 0.3f, inside.z, 0.3f, Pump);
+    a.Conn.Reducers.PlaceStructure(StructureKind.Hearth, spot.x, spot.z, s.Yaw);
+    WaitFor(() => a.Conn.Db.Structure.Count > before, 10, "hearth laid out inside the hut");
+    ulong id = a.Conn.Db.Structure.Iter().First(r => r.Kind == StructureKind.Hearth && !r.Complete).Id;
+    until = clock.Elapsed + TimeSpan.FromSeconds(60);
+    while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
+    {
+        foreach (var bot in bots) bot.TryBuild(id);
+        Pump(650);
+    }
+    Pump(300);
+    var done = b.Conn.Db.Structure.Id.Find(id);
+    Check(done is { Complete: true, Builders: 2 }, $"both built the hearth (stage {done?.Stage}, builders {done?.Builders})");
+
+    // A fire lit beside it goes onto the hearth and starts with half as much fuel again (D-132).
+    a.Craft("gather.tinder", Pump);
+    int fires = a.Conn.Db.Fire.Count;
+    a.Craft("fire.hand_drill", Pump);
+    WaitFor(() => a.Conn.Db.Fire.Count > fires, 10, "lit a fire beside the hearth");
+    var fire = a.Conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+    Check(MathF.Abs(fire.X - done!.X) < 0.01f && MathF.Abs(fire.Z - done.Z) < 0.01f, "the fire sits on the hearth");
+    double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
+    Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
+}
+
 // A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
 void LayMat(ulong hut)
 {
@@ -342,6 +397,7 @@ sealed class Bot
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
+                        "SELECT * FROM fire",
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
