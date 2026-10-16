@@ -1,0 +1,44 @@
+# bugfix-23: walking into a tree trunk and sliding round it, then along a built clay hut
+# wall. Movie at 24 fps; camera = puppet. Trees lie ahead (screen up) of the spawn.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=7,3.5,0,0.3
+frames 300
+mark trees-start
+keydown w
+frames +240
+keydown a
+frames +120
+keyup a
+keydown d
+frames +120
+keyup d
+keyup w
+frames +24
+mark trees-end
+give 1 40 50
+give 2 4 50
+give 3 20 50
+give 110 20 50
+place 1 4 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+frames +48
+mark hut-start
+keydown a
+frames +96
+keyup a
+keydown w
+frames +72
+keydown a
+frames +120
+keyup w
+keyup a
+frames +24
+mark hut-end
