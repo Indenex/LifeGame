@@ -3,7 +3,7 @@
 You start in a forest with empty hands. A good order to work in:
 
 1. **Gather.** Sticks, stones and plant fibre lie on the ground. Pick up some of each (Space), then open the crafting panel (C) to see what they make.
-2. **Make a fire.** A fire gives warmth and light and lets you cook. It burns down over time; feed it fuel to keep it going. Face a fire to see roughly how long it has left.
+2. **Make a fire.** A fire gives warmth and light and lets you cook. It burns down over time; feed it fuel to keep it going. When you carry fuel and face a fire, the Use prompt shows roughly how long it has left.
 3. **Find food.** Berry bushes are the easiest food early on. The game tells you when you are hungry.
 4. **Find water.** You can drink from rivers and ponds. Later you can carry water with you.
 5. **Plan a shelter.** Nights are cold and rain makes it worse. A lean-to is a reasonable first build; you can replace it with something better later.
