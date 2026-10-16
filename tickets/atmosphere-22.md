@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-farland-fog
-PR: (see below)
+PR: #289
 
 ## Goal
 Environment's env-9 "seeing further" (Justin's pick; branch claude/environment-farland, client/scripts/environment/FarLand.cs) draws coarse ground and tree silhouettes beyond the loaded chunks, out to 128 m (96 on Near, off on Off). At the normal fog density (0.005-0.009) the 128 m rim is only 50-70% fogged, so on a clear day the edge of the disc could show against the sky. Done: the rim melts fully into the fog colour, with no seam with the near land, and a PR green.
