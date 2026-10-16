@@ -124,10 +124,13 @@ public partial class BuildingSystem
                 if (UsableNear() is not { } s) return null;
                 float d = new Vector2(s.X - at.X, s.Z - at.Z).Length();
                 if (s.Kind == StructureKind.Basket)
-                    return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id));
+                    return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
+                // The doorway, so the hut you face wins over a basket beside you.
+                var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 1.7f);
+                var doorway = new Vector3(dx, at.Y, dz);
                 if (!doors.TryGetValue(s.Id, out var door))
                     return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
-                        ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id))
+                        ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
                 bool mine = door.HungBy == c.Identity;
                 // Shift+G bars and unbars; members of the claim can too, the server decides.
@@ -136,10 +139,10 @@ public partial class BuildingSystem
                     if (Input.IsKeyPressed(Key.Shift)) c.Reducers.ToggleLock(s.Id);
                     else c.Reducers.ToggleDoor(s.Id);
                 };
-                if (door.Locked && !mine) return new UseOffer("Barred", d, act);
+                if (door.Locked && !mine) return new UseOffer("Barred", d, act, Target: doorway);
                 string verb = door.Closed ? (door.Locked ? "Unbar and open" : "Open the door") : "Shut the door";
                 if (mine) verb += door.Locked ? "    Shift unbar" : "    Shift bar";
-                return new UseOffer(verb, d, act);
+                return new UseOffer(verb, d, act, Target: doorway);
             },
         });
     }

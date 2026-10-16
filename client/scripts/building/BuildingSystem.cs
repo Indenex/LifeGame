@@ -97,7 +97,7 @@ public partial class BuildingSystem : Node
                 var carried = c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => i.Item).ToHashSet();
                 if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item))) return null;
                 float d = new Vector2(site.X - at.X, site.Z - at.Z).Length();
-                return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval);
+                return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval, Target: new Vector3(site.X, at.Y, site.Z));
             },
         });
 
