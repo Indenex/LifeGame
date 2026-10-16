@@ -14,6 +14,7 @@ public enum StructureKind
     StorageJar,
     Fence,
     Gate,
+    CraftingTable,
     Hearth,
 }
 
@@ -119,6 +120,7 @@ public static partial class Module
             throw new Exception("A hearth goes inside a finished hut or house");
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
+        CheckStationSite(ctx, kind, x, z);
         yaw = MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);

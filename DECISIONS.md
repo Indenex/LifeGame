@@ -675,3 +675,63 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
 **Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
 **Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
+
+## D-166 — 2026-10-16 — env-5 landmarks and trails vary per instance
+**Decision:** env-5 builds landmarks and trails. A general design principle: repeated world features vary strongly per instance. If a landmark or feature appears in the world several times, each instance should look quite different (randomized a bit every time), so a player doesn't instantly recognise a pre-made, tiny-zone landmark.
+**Who:** Justin ("I don't want things like it to be repeated constantly. If they go into the world multiple times they should look quite different/randomized a bit every time, so a player doesn't instantly recognize that this is a pre-done rendered type of area/tiny zone landmark.")
+
+## D-167 — 2026-10-16 — Slower thirst at first (survival-10 spawn water)
+**Decision:** For survival-10 (spawn water), thirst falls 20% slower in the first hour.
+**Who:** Justin ("Slower thirst at first")
+
+## D-168 — 2026-10-16 — Playtest fixes: see yourself under trees, smaller frost
+**Decision:** Any time the player is rendered underneath something (trees, forest canopy, structures), the see-through effect should happen. Trees: #223 (Environment); structures pending with House building. The frost overlay is shrunk about 30 to 45% and made more transparent: #218 (Survival).
+**Who:** Justin ("it's very difficult to see yourself in forests/trees. Any time the player is rendered underneath something, the see-through effect should happen." And on frost: "the freezing effect is nice, but waaay too big. It needs more transparency and shrunk by like ~30-45%.")
+
+## D-169 — 2026-10-16 — Durability and repair (follow-up to D-155)
+**Decision:** Hand tools and worn equipment have durability (D-155). At zero durability, Justin chose option 2, "Stops until repaired: the tool stays in your bag but won't work until mended.", with repair mechanics added. Repairing should always be better than crafting brand new; the suggested balance is repair costing about 60% of the resources (or 40% needed with 60% already there), number not fixed. Wear should not be a chore to repair; the proposed 40 felt too little, to be judged once quality items are in. Repair happens at a dedicated repair table, and quality loss per repair scales down over time to a floor of 50%. Repair should stay easier than a brand-new item for a good while. Durability shows in words and as a worn look.
+**Who:** Justin ("2, but we need repair mechanics. System wise, repairing should always be better than crafting brand new. Not sure what a good number would be, 60% of the resources required? swapped around at 40% needed, 60% already there?" Wear: "It shouldn't be a total chore to have to repair. 40 seems like too little, but im not sure how hard having quality items is yet." Repair: "dedicated repair table, and quality loss scales down over time to 50%. It should balance out with the ease of crafting a new one. It should be easier to repair for a good bit vs. brand new." Shows: words and worn look.)
+
+## D-170 — 2026-10-16 — Trees, rocks and structures collide
+**Decision:** Trees collide at the trunk, rocks by their footprint, and every structure collides. Client side for now (no server physics yet).
+**Who:** Justin ("do we have physics work yet? I want trees and houses etc. to have collision.")
+
+## D-171 — 2026-10-16 — Red deer hunting: spear strike and bow
+**Decision:** One spear strike kills a red deer if your sneak skill is high enough. A bow and arrow is a new tool, with automatic targeting. It can take a few arrows, since damage depends on bow type and quality and arrow type and quality; Justin asked for a simple equation that won't overload the server. The worst, first bow takes 3 to 6 arrows and means chasing the creature down, so a lower sneak skill is enough.
+**Who:** Justin ("One spear strike kills if your sneak skill is high enough. However, a bow and arrow would be a fun new tool. I would want it to be automatic targeting or something. It can take a few times though as arrows would do damage based on a lot of factors; bow type/quality, arrow type/quality, etc. What's a simple equation that won't overload the server with that? Like, I'd want the worst/first bow to take 3-6 arrows and have to chase the creature down kinda thing, so you don't have to have as high of a sneak skill.")
+
+## D-172 — 2026-10-16 — Red deer sounds
+**Decision:** Deer sounds are a bark plus an autumn roar.
+**Who:** Justin (as relayed by the PM)
+
+## D-173 — 2026-10-16 — Antler is a plain material
+**Decision:** Antler is a plain material for other recipes, and it can also be built into a hammer or pickaxe.
+**Who:** Justin ("I like that it's just a plain material for other recipes, but building it into a hammer or pickaxe is cool.")
+
+## D-174 — 2026-10-16 — Durability numbers: Steady (follow-up to D-169)
+**Decision:** Tool durability is "Steady": a crude tool lasts about 150 uses, an excellent one about 400. Repair costs about 40% of a new item. Each repair loses 20% of the remaining gap to the 50% quality floor.
+**Who:** Justin ("Steady")
+
+## D-175 — 2026-10-16 — One shared formula for all skill gains and rank effects
+**Decision:** A single shared progression formula handles all skill gains and how much ranks help (D-075). Lanes declare only start and end values, and no skill gets its own formula unless absolutely necessary, so things always have the right scaling feel and sense of progression. The effect curve is front-loaded: the first ~15% of ranks give ~40% of the benefit. Owner: Journal & skills (skills-12).
+**Who:** Justin ("I think we also need a formula that handles all skill gains, how much they help certain things, etc. I don't want each skill to have its own formulas unless absolutely necessary, so that things always have the right scaling feel and sense of progression." Effect curve: "Front-loaded")
+
+## D-176 — 2026-10-16 — Stalking is a real skill
+**Decision:** The "sneak skill" in D-171 means a real skill. Journal & skills adds Stalking (skills-12). Until it exists, Animals uses Husbandry of at least 20 as a stand-in.
+**Who:** Justin (D-171: "One spear strike kills if your sneak skill is high enough."), read by the PM as a real sneak skill
+
+## D-177 — 2026-10-16 — Skill curve shape and Pace constant (extends D-175)
+**Decision:** The shared skill curve is logarithmic on rank with b=12: benefit at rank 10/25/50/100 is 31/54/76/100%. Today's fast gain stays for testing, but leveling must become much slower later, to OSRS or Retro Dofus level. A single Pace constant will later slow leveling many-fold.
+**Who:** Justin ("Keep things fast for now for testing, but things should be muuuuch slower later. Like, OSRS or Retro Dofus level slow leveling.")
+
+## D-178 — 2026-10-16 — Bow numbers: Standard
+**Decision:** The bow is "Standard": range 40 m, a ±25° auto-aim cone, hit chance 95% falling to 30% with distance, ×0.55 against a running target. A crude bow does about 21 damage per hit; a red deer has 100 HP, so a kill takes 3 to 6 hits (extends D-171).
+**Who:** Justin ("Standard")
+
+## D-179 — 2026-10-16 — Sneak attacks crit with Stalking (amends D-171 and D-176)
+**Decision:** Hunting hits do normal scaled damage. A sneak attack can trigger a Stalking crit: a large bonus damage, with the crit chance and the bonus on the shared progression curve (D-175, D-177), and a visible and audible crit cue. This replaces the one-strike-kill threshold in D-171 and the Husbandry of at least 20 stand-in in D-176.
+**Who:** Justin ("It should be normal damage value scaling plus a large damage bonus trigger chance (with some visual feedback like a 'crit' sorta thing) when Stalk adds its bonus damage.")
+
+## D-180 — 2026-10-16 — Campfire light reaches further at night
+**Decision:** Campfire light reaches further at night: about 10 m by day and about 14 m at night.
+**Who:** Justin ("Further at night")

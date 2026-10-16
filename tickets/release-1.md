@@ -1,7 +1,7 @@
 # release-1: Automatic releases and a one-button launcher
 Lane: Release & Launcher (D-131)
 Owner: Release & Launcher thread (session_015Je3JR5vZrzA7TwQYBSPgM)
-Status: in_progress
+Status: done
 Branch: claude/release-1
 PR: #161
 
@@ -37,6 +37,9 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 - 2026-10-16 19:55: per Integration: the wipe flag now comes from every PR merged since the previous release (`tools/release/merged-prs.sh`, REST compare + commits/pulls), since Build concurrency can skip a merge's own release; notes list those PRs; release only for head_branch main. Tested merged-prs.sh read-only against the real repo (115a22e..45f8913 gives #146, #147) and make-release.sh with a wipe PR in the list.
 - 2026-10-16 19:40: Q3 check (does a `lifegame` database exist on Maincloud under his login?) not done: probing Maincloud and the CLI login from this sandbox was refused by the session's permission checks, and the launcher can't verify it without touching his login. Told the PM.
 
+- 2026-10-16 21:15: first release out: https://github.com/Indenex/LifeGame/releases/tag/build-680-02153f2 (verified). Done; follow-ups in release-2.
+- 2026-10-16 20:25: #161 merged by the PM as bd666f5. First release expected from Build 666.
+- 2026-10-16 20:20: CI green on 4ad7e48 (Server, Client Linux, Client Windows); Integration approved; sha sent to the PM.
 - 2026-10-16 20:10: Render shots (renders/release-1-02ae54a-1..4.png on claude/render-1-013qe8) and PM asks: the wipe question is now a launcher-styled overlay below the title; focus on "Keep my world", so Enter keeps, and Esc keeps; disabled buttons dim instead of brightening. Checked under Xvfb with xdotool: Enter and Esc each left the world on 474 ("Nothing changed"). Added `--press` (clicks the main button once, for screenshots). PM dropped Q3.
 
 ## Open questions / blockers
@@ -52,4 +55,4 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 - Tag = `build-<Build run number>-<short sha>` (Integration's suggestion, never collides); the launcher compares numbers.
 
 ## Next step
-Wait for CI on the PR; when green send the head sha to the PM (merge) and Integration (review). After the first merge, check the first real release appears and the launcher reads it.
+None; continued in tickets/release-2.md.

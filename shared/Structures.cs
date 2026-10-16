@@ -29,6 +29,8 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // A crafting station of this kind once finished (D-098); None for anything else.
+        public StationKind Station;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -124,6 +126,15 @@ namespace LifeGame.Shared
                 Fence = true, Gate = true,
                 Stages = new[] { "Posts", "Gate" },
             },
+            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
+            new StructureShape
+            {
+                Name = "Crafting table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Table,
+                Stages = new[] { "Table" },
+            },
             // A raised hearth inside a hut or house: a ring of stones with a clay surround.
             // A fire on it burns longer per stick and warms a whole hut (building-9, D-132).
             new StructureShape
@@ -197,6 +208,11 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stick, 2u) },
                 new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
+            },
+            // Crafting table (D-112): Table
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
             // Raised hearth: Stone ring, Clay surround
             new[]
@@ -286,6 +302,8 @@ namespace LifeGame.Shared
             // Hearth: laying the stone ring is framing; the clay surround is daub work.
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
+            // Each crafting station reports its own id, so the journal knows it is built.
+            _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
