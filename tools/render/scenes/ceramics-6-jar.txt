@@ -1,15 +1,16 @@
 # ceramics-6 (PR #105): a placed storage jar, its G prompt and the open jar panel.
 client-as-puppet
-client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.6,1.4,0,0.2
 wait 35
 give 114 1 80
 give 2 6 50
 give 1 9 50
-place 6 0 2.2 0
+# in front of the player as the camera looks (-x, -z), and face it
+place 6 -1.1 -1.1 0
 build
 store 2 50 4
 store 1 50 6
-face 0
+face -135
 wait 3
 burst 3 1.5
 key g
