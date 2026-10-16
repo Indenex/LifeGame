@@ -93,7 +93,7 @@ public static partial class Module
             ?? ctx.Db.SkillLevel.Insert(new SkillLevel { Id = 0, Owner = who, Spec = spec.Id, Points = 0, Mode = SkillMode.Raise });
         if (row.Mode != SkillMode.Raise) return;
 
-        int gain = Math.Min(Skills.Gain(row.Points, failed), Skills.MaxPoints - row.Points);
+        int gain = Math.Min(Skills.Gain(row.Points, failed, spec.Id), Skills.MaxPoints - row.Points);
         if (gain <= 0) return;
         if (!spec.Basic) gain = MakeRoom(ctx, who, spec.Id, gain);
         if (gain <= 0) return;

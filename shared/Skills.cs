@@ -49,6 +49,11 @@ namespace LifeGame.Shared
         public const string Shear = "animal.shear";
         // Reported on every strike that lands, and when a carcass is butchered (Animals lane).
         public const string Kill = "animal.kill";
+        // Moving at sneak speed near a wary animal that has not bolted (Animals lane reports it).
+        public const string Sneak = "animal.sneak";
+        // Loosing an arrow, reported on every shot by the Animals lane (Bow.cs); a miss
+        // reports it as failed, so a hit teaches twice as much (Skills.Gain).
+        public const string Shoot = "animal.shoot";
         public const string Butcher = "animal.butcher";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
@@ -69,18 +74,26 @@ namespace LifeGame.Shared
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
             new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
+            // Sneaking up on wary animals and striking before they bolt (skills-12).
+            new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", "stalk"),
+            // The bow (skills-12): a capped specialty, so it competes for the 300 total.
+            new("archery", "Archery", false, "Shooting a bow true and quickly.", "shoot"),
             // Specialties for the crafts that grew out of animals (D-065, D-071, skills-11).
             new("leatherwork", "Leatherwork", false, "Scraping and drying hides into leather, and working it.", "hide"),
             new("weaver", "Weaver", false, "Spinning wool into yarn, weaving cloth and sewing it to wear.", "sew"),
         };
 
         // Processes that train a different skill from their prefix: wool work shares
-        // "cord" and "weave" with Toolmaking, and leather sewing belongs to Leatherwork.
+        // "cord" and "weave" with Toolmaking, leather sewing belongs to Leatherwork, and
+        // hunting and sneaking belong to Stalking, not Husbandry.
         static readonly Dictionary<string, string> SpecOverrides = new()
         {
             ["cord.spin_wool"] = "weaver",
             ["weave.wool_cloth"] = "weaver",
             ["sew.leather_wraps"] = "leatherwork",
+            [Kill] = "stalking",
+            [Sneak] = "stalking",
+            [Shoot] = "archery",
         };
 
         // Names for processes that are not in Processes.List.
@@ -101,6 +114,8 @@ namespace LifeGame.Shared
             [Berries] = "Picking berries",
             [Shear] = "Shearing a sheep",
             [Kill] = "Hunting",
+            [Sneak] = "Sneaking up on an animal",
+            [Shoot] = "Shooting a bow",
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
             [Run] = "Running",
@@ -126,6 +141,8 @@ namespace LifeGame.Shared
             foreach (var id in BuildStages) yield return id;
             yield return Shear;
             yield return Kill;
+            yield return Sneak;
+            yield return Shoot;
             yield return Butcher;
             yield return DryHide;
             yield return Run;
@@ -173,24 +190,27 @@ namespace LifeGame.Shared
         // feels good, slower near mastery, never zero: rank 10 after about 11 uses,
         // rank 50 after about 100, Master after about 800, so masters stay rare
         // (Justin's choice). A failed attempt still teaches, at half the rate.
-        public static int Gain(int points, bool failed)
+        public static int Gain(int points, bool failed, string? specId = null)
         {
             float left = 1f - Math.Clamp(points, 0, MaxPoints) / (float)MaxPoints;
             int gain = Math.Max(5, (int)MathF.Round(100f * left * left));
-            return failed ? Math.Max(1, gain / 2) : gain;
+            if (failed) gain = Math.Max(1, gain / 2);
+            // One global pace for all skills (Progression.Pace, 1 now for testing); combat skills
+            // level slower (Progression.CombatPaceFactor).
+            return Math.Max(1, (int)MathF.Round(gain * Progression.PaceFor(specId)));
         }
 
         // The best quality, 1 to 100, a player can produce: 35 at first, anything at Master.
-        public static byte QualityCap(int rank) => (byte)MathF.Round(35f + 65f * Math.Clamp(rank, 0, MaxRank) / MaxRank);
+        public static byte QualityCap(int rank) => (byte)MathF.Round(Progression.Effect(EffectKind.QualityCap, rank));
 
         // Multiplier on how long a process takes: a Master works in 40% of the time.
-        public static float DurationScale(int rank) => 1f - 0.6f * Math.Clamp(rank, 0, MaxRank) / MaxRank;
+        public static float DurationScale(int rank) => Progression.Effect(EffectKind.WorkTime, rank);
 
         // Minigames lose steps as you improve; at Master a craft is one action.
         public static int MinigameSteps(int baseSteps, int rank)
         {
             if (rank >= MaxRank) return 1;
-            return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
+            return Math.Max(1, (int)MathF.Round(baseSteps * Progression.Effect(EffectKind.MinigameSteps, rank)));
         }
 
         // A Master doesn't play the minigame; the craft scores as a steady hand.
@@ -200,8 +220,8 @@ namespace LifeGame.Shared
         // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
         // lumps and sometimes two at once.
         // Steps of 5 keep a digger's clay in a few stacks instead of one per point.
-        public static byte DugClayQuality(int rank) => (byte)Math.Clamp(Items.RawQuality + rank * 35 / MaxRank / 5 * 5, 1, 100);
-        public static double SecondLumpChance(int rank) => rank / 200.0;
+        public static byte DugClayQuality(int rank) => (byte)Math.Clamp(Items.RawQuality + (int)Progression.Effect(EffectKind.DugClayBonus, rank) / 5 * 5, 1, 100);
+        public static double SecondLumpChance(int rank) => Progression.Effect(EffectKind.SecondLumpChance, rank);
 
         public static string Title(int rank) => rank switch
         {
