@@ -73,6 +73,7 @@ public partial class StationPanel : CanvasLayer
 
     public override void _Process(double delta)
     {
+        TipFirstStation();
         if (station is not { } s) return;
         var kind = Structures.Shape((int)s.Kind).Station;
         // Walked away, or the station is gone: close.
@@ -93,6 +94,24 @@ public partial class StationPanel : CanvasLayer
             Close();
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    // The fourth first-evening tip (D-150): once your first station stands, how to use
+    // it. Shown once per install through the hint corner; checked about once a second.
+    bool tipped;
+    float tipWait;
+
+    void TipFirstStation()
+    {
+        if (tipped || (tipWait -= (float)GetProcessDeltaTime()) > 0f) return;
+        tipWait = 1f;
+        if (Conn() is not { } c || c.Identity is not { } me) return;
+        var mine = c.Db.Structure.Iter().FirstOrDefault(s => s.Complete && s.Owner == me
+            && Structures.Shape((int)s.Kind).Station != StationKind.None);
+        if (mine == null) return;
+        tipped = true;
+        string name = StationInfo.Name(Structures.Shape((int)mine.Kind).Station);
+        Hints.Tip("station_use", $"Stand at the {name} and press {Controls.KeyFor("use") ?? "G"} to see what's made there.");
     }
 
     // --- Layout ------------------------------------------------------------
