@@ -453,7 +453,9 @@ void OffRocks(Fire f)
 {
     for (int i = World.CellOf(f.X) - 2; i <= World.CellOf(f.X) + 2; i++)
         for (int j = World.CellOf(f.Z) - 2; j <= World.CellOf(f.Z) + 2; j++)
-            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null)
+            // A building clears the ground under it, so a hut's hearth can stand where a boulder was.
+            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null
+                && !conn.Db.Structure.Iter().Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, i, j, 0.4f)))
             {
                 var (rx, rz) = Rocks.Center(i, j);
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));

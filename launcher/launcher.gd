@@ -674,8 +674,12 @@ func _publish_world(wasm: String, wipe: bool) -> bool:
 		return false
 	bar.value = 0.86
 	_set_status("Updating the world to build %d..." % latest.build, "Your world is kept." if not wipe else "Starting a fresh world.")
+	# SpacetimeDB 2.12 asks "This will DESTROY ... ALL corresponding data" before a wipe and
+	# aborts without a terminal unless --yes names delete-data. Only the wipe path (which the
+	# player confirmed in the dialog) passes it; a normal update never skips that prompt.
+	var yes := "migrate,break-clients,skip-login" + (",delete-data" if wipe else "")
 	var args := ["publish", db, "--server", stdb_server, "--bin-path", wasm,
-		"--delete-data=" + ("always" if wipe else "never"), "--yes=migrate,break-clients,skip-login"]
+		"--delete-data=" + ("always" if wipe else "never"), "--yes=" + yes]
 	_log("> %s %s" % [cli, " ".join(args)])
 	var res := await _run(cli, args)
 	_log(res.output)
