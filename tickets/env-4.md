@@ -12,6 +12,7 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 - 2026-10-16 21:40: proposed env-4 options to the PM (A corners of the forest, recommended; B gatherables by habitat with Survival/Crafting; C landmarks and trails; D draw distance). Started A as the default.
 - 2026-10-16 21:55: `shared/Forest.cs`: `Heath(x, z)` (height above about 0.65 to 0.95 with a 30 m noise ragging the edge; about 16% of the land) and `Wetland(x, z)` (height below about -0.15 to -0.75 with a 14 m noise; about 10%). Density x (1 - 0.85 heath), so the heath has only lone trees. `Terrain.cs`: birch and alder (slim trunks, pale bark, light leaves) on wet ground; broad old oaks for full trees on the heath; heather (flattened bushes) and gorse on the heath; sedge (short reeds) on wet ground; no ferns or wildflowers on the heath; grass short on the heath and thin on wet ground; ground tinted heath-brown and moss-green. No new MultiMeshes (reuses trunk, leafy, bush and reed meshes). Colours are hard-coded in `Undergrowth.cs` until Atmosphere adds them to Look. Client and server build.
 - 2026-10-16 22:00: merged env-2's terrain speed-up (3f908b9). On a fresh local world, CraftCheck and SpawnCheck pass.
+- 2026-10-16 22:05: Render requested at branch head: heath hilltop (-4,46) from (-4,40), wetland bank (-42,-18) from (-36,-14), forest (-46,-46); noon and dusk.
 
 ## Open questions / blockers
 - Justin picked A (D-152).
@@ -19,4 +20,4 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 - Look.BirchBark/Heather/Gorse/Sedge/HeathGround/Moss are on Atmosphere's #173 with the same values; switch `Undergrowth.cs` to them once #173 merges. If Justin wants heather to bloom in late summer (Atmosphere asks the PM), give heather bushes w = 3.
 
 ## Next step
-Find a heath hilltop and a wetland bank near spawn (Forest.Heath/Wetland), request renders from Render, and open the PR once #175 has merged (then swap in Modeling's props once #197 and model-2-env are on main).
+Render requested (heath (-4,46), wetland (-42,-18), forest (-46,-46)); open the PR once #175 has merged (then swap in Modeling's props once #197 and model-2-env are on main).
