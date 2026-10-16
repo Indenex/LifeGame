@@ -37,6 +37,32 @@ public static partial class Module
         public Timestamp NextChangeAt;
     }
 
+    // The year (D-099): one row. Clients work out the season from YearStart, the
+    // day length and DaysPerSeason with Seasons.YearFraction, like the time of day.
+    [SpacetimeDB.Table(Accessor = "SeasonClock", Public = true)]
+    public partial struct SeasonClock
+    {
+        [PrimaryKey]
+        public uint Id;
+        public Timestamp YearStart;
+        public float DaysPerSeason;
+    }
+
+    // What the season does to the weather right now, updated every weather tick.
+    // Precipitation eases like Weather.Rain used to; it falls as Weather.Rain when
+    // warm and as Snow when cold, so Weather.Rain still means liquid rain for every
+    // system that reads it. SnowCover is how much snow lies on the ground (0 to 1).
+    [SpacetimeDB.Table(Accessor = "SeasonState", Public = true)]
+    public partial struct SeasonState
+    {
+        [PrimaryKey]
+        public uint Id;
+        public float Precipitation;
+        public float Snow;
+        public float SnowCover;
+        public float Temperature;
+    }
+
     [SpacetimeDB.Table(Accessor = "WeatherTickTimer", Scheduled = nameof(WeatherTick), ScheduledAt = nameof(ScheduledAt))]
     public partial struct WeatherTickTimer
     {
@@ -74,6 +100,19 @@ public static partial class Module
                 NextChangeAt = After(ctx, 10 * 60),
             });
         }
+        if (ctx.Db.SeasonClock.Id.Find(0) is null)
+        {
+            var dayLength = ctx.Db.WorldClock.Id.Find(0)?.DayLengthSeconds ?? (uint)WorldTime.DayLengthSeconds;
+            double yearMicros = dayLength * 1_000_000.0 * 4.0 * Seasons.DaysPerSeason;
+            ctx.Db.SeasonClock.Insert(new SeasonClock
+            {
+                Id = 0,
+                YearStart = new Timestamp(ctx.Timestamp.MicrosecondsSinceUnixEpoch - (long)(yearMicros * Seasons.StartYear)),
+                DaysPerSeason = Seasons.DaysPerSeason,
+            });
+        }
+        if (ctx.Db.SeasonState.Id.Find(0) is null)
+            ctx.Db.SeasonState.Insert(new SeasonState { Id = 0, Precipitation = ctx.Db.Weather.Id.Find(0)?.Rain ?? 0f, Temperature = 10f });
         if (!ctx.Db.WeatherTickTimer.Iter().Any())
         {
             ctx.Db.WeatherTickTimer.Insert(new WeatherTickTimer
@@ -98,10 +137,24 @@ public static partial class Module
             w = NextWeather(ctx, w);
 
         // Clouds gather over a few minutes and rain follows them; a storm takes six
-        // or seven minutes to build and as long to pass.
+        // or seven minutes to build and as long to pass. Below freezing it comes
+        // down as snow instead.
+        var season = ctx.Db.SeasonState.Id.Find(0)!.Value;
         w.Cloud = Toward(w.Cloud, w.TargetCloud, 0.06f);
-        w.Rain = Toward(w.Rain, Math.Min(w.TargetRain, w.Cloud * 1.1f), 0.05f);
+        season.Precipitation = Toward(season.Precipitation, Math.Min(w.TargetRain, w.Cloud * 1.1f), 0.05f);
         w.Wind = Toward(w.Wind, w.TargetWind, 0.06f);
+        season.Temperature = Temperature(ctx, w, season.Precipitation);
+        float snowy = Seasons.SnowFraction(season.Temperature);
+        season.Snow = season.Precipitation * snowy;
+        w.Rain = season.Precipitation - season.Snow;
+
+        // Heavy snow covers the ground in about seven minutes. Above freezing it
+        // melts over twenty minutes or so, faster in sun and in rain.
+        if (season.Snow > 0.05f)
+            season.SnowCover = Math.Min(1f, season.SnowCover + season.Snow * 0.05f);
+        else if (season.Temperature > 0.5f)
+            season.SnowCover = Math.Max(0f, season.SnowCover - 0.004f * Math.Min(season.Temperature, 8f) * (1f + WorldTime.Daylight(TimeOfDay(ctx)) + 2f * w.Rain));
+        ctx.Db.SeasonState.Id.Update(season);
 
         // Heavy rain soaks the ground in about five minutes. It dries over half an
         // hour or so in sun, and much more slowly at night or under cloud.
@@ -118,16 +171,24 @@ public static partial class Module
     // less common, and a heavy storm that closes the world in is rare.
     static Weather NextWeather(ReducerContext ctx, Weather w)
     {
+        // Seasons tilt the odds: a dry summer, wet spring and autumn, grey winter.
+        (float fair, float overcast) = SeasonNow(ctx).Season switch
+        {
+            Season.Summer => (0.66f, 0.2f),
+            Season.Winter => (0.45f, 0.33f),
+            Season.Spring or Season.Autumn => (0.48f, 0.23f),
+            _ => (0.55f, 0.23f),
+        };
         double roll = ctx.Rng.NextDouble();
         int minutes;
-        if (roll < 0.55)
+        if (roll < fair)
         {
             w.TargetCloud = Range(ctx, 0.05f, 0.35f);
             w.TargetRain = 0f;
             w.TargetWind = Range(ctx, 0.15f, 0.45f);
             minutes = ctx.Rng.Next(12, 30);
         }
-        else if (roll < 0.78)
+        else if (roll < fair + overcast)
         {
             w.TargetCloud = Range(ctx, 0.55f, 0.85f);
             w.TargetRain = 0f;
@@ -190,7 +251,52 @@ public static partial class Module
         ctx.Db.WorldClock.Id.Update(clock with { DayStart = new Timestamp(start), ServerNow = ctx.Timestamp });
     }
 
+    // Moves the year so it is now this far through (0 spring, 0.25 summer, 0.5
+    // autumn, 0.75 winter). Snow on the ground stays and melts or builds from there.
+    [SpacetimeDB.Reducer]
+    public static void SetSeason(ReducerContext ctx, float yearFraction)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can change the season");
+        if (float.IsNaN(yearFraction) || yearFraction < 0f || yearFraction > 1f) throw new Exception("The year runs from 0 to 1");
+        EnsureWorldClock(ctx);
+        var clock = ctx.Db.SeasonClock.Id.Find(0)!.Value;
+        long start = ctx.Timestamp.MicrosecondsSinceUnixEpoch - (long)(yearFraction * YearMicros(ctx, clock));
+        ctx.Db.SeasonClock.Id.Update(clock with { YearStart = new Timestamp(start) });
+    }
+
+    // How many in-game days each season lasts, keeping the current point in the year.
+    [SpacetimeDB.Reducer]
+    public static void SetDaysPerSeason(ReducerContext ctx, float days)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can change the length of the seasons");
+        if (float.IsNaN(days) || days < 0.05f || days > 365f) throw new Exception("Days per season run from 0.05 to 365");
+        EnsureWorldClock(ctx);
+        float year = SeasonNow(ctx).Year;
+        var clock = ctx.Db.SeasonClock.Id.Find(0)!.Value with { DaysPerSeason = days };
+        long start = ctx.Timestamp.MicrosecondsSinceUnixEpoch - (long)(year * YearMicros(ctx, clock));
+        ctx.Db.SeasonClock.Id.Update(clock with { YearStart = new Timestamp(start) });
+    }
+
+    static double YearMicros(ReducerContext ctx, SeasonClock clock) =>
+        (ctx.Db.WorldClock.Id.Find(0)?.DayLengthSeconds ?? (uint)WorldTime.DayLengthSeconds) * 1_000_000.0 * 4.0 * clock.DaysPerSeason;
+
     // --- For other systems -------------------------------------------------
+
+    // Where the year is: Year 0 to 1 (0 spring, 0.25 summer, 0.5 autumn, 0.75
+    // winter), the Season, and Warmth from -1 deep winter to 1 high summer.
+    public static (float Year, Season Season, float Warmth) SeasonNow(ReducerContext ctx)
+    {
+        if (ctx.Db.SeasonClock.Id.Find(0) is not { } clock || ctx.Db.WorldClock.Id.Find(0) is not { } day)
+            return (Seasons.StartYear, Seasons.SeasonOf(Seasons.StartYear), Seasons.Warmth(Seasons.StartYear));
+        float year = Seasons.YearFraction(ctx.Timestamp.MicrosecondsSinceUnixEpoch, clock.YearStart.MicrosecondsSinceUnixEpoch, (int)day.DayLengthSeconds, clock.DaysPerSeason);
+        return (year, Seasons.SeasonOf(year), Seasons.Warmth(year));
+    }
+
+    // How much snow lies on the ground, 0 to 1.
+    public static float SnowCover(ReducerContext ctx) => ctx.Db.SeasonState.Id.Find(0)?.SnowCover ?? 0f;
+
+    // How hard it is snowing right now, 0 to 1 (Weather.Rain is the rain).
+    public static float Snowfall(ReducerContext ctx) => ctx.Db.SeasonState.Id.Find(0)?.Snow ?? 0f;
 
     // How far through the day it is: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset.
     public static float TimeOfDay(ReducerContext ctx)
@@ -218,13 +324,17 @@ public static partial class Module
     static float GroundDrying(ReducerContext ctx, Weather w) =>
         0.15f + 0.85f * WorldTime.Daylight(TimeOfDay(ctx)) * (1f - 0.6f * w.Cloud);
 
-    // Outdoor air temperature in degrees Celsius: a mild forest, cooler at night
-    // and in rain, colder in wind.
-    public static float AirTemperature(ReducerContext ctx)
+    // Outdoor air temperature in degrees Celsius: a mild forest, cooler at night,
+    // in rain or snow and in wind; warmer in summer, around freezing on a winter
+    // day and about -8 on a winter night, 27 on a summer afternoon.
+    public static float AirTemperature(ReducerContext ctx) =>
+        Temperature(ctx, CurrentWeather(ctx), ctx.Db.SeasonState.Id.Find(0)?.Precipitation ?? CurrentWeather(ctx).Rain);
+
+    static float Temperature(ReducerContext ctx, Weather w, float precipitation)
     {
-        var w = CurrentWeather(ctx);
         float day = WorldTime.Daylight(TimeOfDay(ctx));
-        return 9f + 10f * day * (1f - 0.4f * w.Cloud) - 3f * w.Rain - 2f * w.Wind;
+        return 9f + 10f * day * (1f - 0.4f * w.Cloud) - 3f * precipitation - 2f * w.Wind
+            + Seasons.TemperatureOffset(SeasonNow(ctx).Warmth);
     }
 
     static float Toward(float value, float target, float step) =>
