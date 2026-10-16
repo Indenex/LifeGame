@@ -10,6 +10,7 @@ Small sounds that make the world answer the player (M1, and M2's "sees skill gai
 
 ## Progress log
 - 2026-10-16 22:20: picked (D-145), told the PM. SoundMix.Cues: Pickup (rustle + bag knock), Eat (three crunchy bites), Drink (two gulps + slosh), FireLit (soft whoosh), Place (dull knock + scuff), Learn (page swish), SkillUp (D5 then A5 bell, a little reverb). SoundScape.Play, client/scripts/audio/Sfx.cs (`Sfx.Play(Cue)`). SoundPreview scene `cues`. Loudest 50 ms each -28.2 to -25.8 dBFS (about work-hit level, chime slightly above). Hook points found: InventoryBar.SetItems gained item (UX), SurvivalClient eat/drink (Survival), Journal.SkillChanged and Learned (Journal; journal/Chime.cs already chimes and should move to Audio per D-079), BuildingSystem.Place (Building), Fire.OnInsert near me (Crafting).
+- 2026-10-16 22:35: ported journal/Chime.cs into Cues so the sound stays the same and goes through the Effects slider: SkillUp = its D5 then A5 marimba with two echoes (title change), Learn = its single faint G5 (new journal entry); about -26 and -32 dBFS loudest 50 ms, keeping Chime's 6 dB gap. Other cues -28 to -26.
 
 ## Open questions / blockers
 - Journal: replace journal/Chime.cs's Title()/Discovery() with Sfx.Play(Cue.SkillUp)/Sfx.Play(Cue.Learn)? Asked.
