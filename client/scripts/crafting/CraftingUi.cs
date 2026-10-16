@@ -188,13 +188,16 @@ public partial class CraftingUi : CanvasLayer
 
     // --- Starting a process ----------------------------------------------
 
+    bool reopenAfterMinigame;
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
         if (job != null) { Notice?.Invoke("Your hands are busy"); return; }
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
-        panel.Visible = false;
+        // The panel stays open after a craft, so pressing the same number repeats
+        // it; it only steps aside while a minigame is played.
         // Skill hook (journal/CraftingUi.Skills.cs): a Master just does the work.
         float? skipped = null;
         if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
@@ -215,6 +218,8 @@ public partial class CraftingUi : CanvasLayer
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
             return;
         }
+        reopenAfterMinigame = panel.Visible;
+        panel.Visible = false;
         AddChild(minigame.Root);
     }
 
@@ -248,6 +253,11 @@ public partial class CraftingUi : CanvasLayer
         var def = minigame.Process;
         minigame.Root.QueueFree();
         minigame = null;
+        if (reopenAfterMinigame)
+        {
+            panel.Visible = true;
+            Refresh();
+        }
         if (score is { } s && conn != null) conn.Reducers.StartCraft(def.Id, s);
     }
 
