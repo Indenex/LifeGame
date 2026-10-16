@@ -99,14 +99,16 @@ public static partial class Module
         public float FromZ;
         public bool Crit;
         public bool Killed;
+        // True for an arrow hit, so Audio doesn't also play the melee thud.
+        public bool Ranged;
     }
 
     // Damage lands: it dies if that is all the health it has, otherwise it is wounded
     // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
-    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
+    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false, bool ranged = false)
     {
         bool kills = damage >= mind.Health;
-        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills });
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills, Ranged = ranged });
         if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
