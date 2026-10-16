@@ -107,7 +107,7 @@ The Render lane makes every image, clip and audio file Justin sees (D-059). The 
 2. env-2-pond 0abbc0c (Environment): clear pond from the bank at (30,76).
 3. model-172-walk, model-172-facefront, model-172-face34 on main 71f7c7c (PM priority: Modeling #172 new figure/items). Already captured and NOT yet sent: renders/model-172-71f7c7c-1,2.png (back views), model-172-items-71f7c7c-1..6.png (hotbar icons in frame 1, items on the ground in 4-6). Send all #172 together.
 4. atmosphere-16 seasons c41b1e6 (Atmosphere session_01KvVF5vpkYEHTKNRpHC18WN; PM priority #173), incl. shader-error grep and a snowfall clip.
-5. model-2 Showcase views 427d0cb (Modeling session_01JKX3FNjkrEkAqoTaFJiXAm): the A/B/C style options the PM is waiting for; send to the PM and Modeling.
+5. model-2 Showcase views 427d0cb (Modeling session_01JKX3FNjkrEkAqoTaFJiXAm): PM 2026-10-16 23:50: the A/B/C style options are no longer needed (Modeling shot them, Justin picked A). Only render the new views: set VIEWS=stations,props,hearth in the queue.jobs line.
 6. animals-13 seasonal sheep 04f4712 (Animals session_01SAcVBUUfPFFk1rdXuiQZRU).
 7. ceramics-9 oil lamp demo cd30d6f (Ceramics session_01Diab34HTvew38VmUaqhj5Q).
 8. survival-8 arrival badge aa3e443 (Survival session_014pHdaxJ7uESzsvWekpjvsH).
@@ -118,6 +118,7 @@ The Render lane makes every image, clip and audio file Justin sees (D-059). The 
 13. claims-7 f85c3b9, skills-10 (journal hints), ui-12b 005572d (Options on a panel), survival-7 run clip 8a03451, ui-10c 78b834b, building-8 fences 969a7ae, crafting-15 table 859f25e, ui-13 station panel 2cdbc1c, animals-11 stations de48c3f, claims-9 camp name baecf02, claims-8 trade cue ff0ae8a, env-1 / env-1-after, atmosphere-13 before/after, bugfix-17 + before (may be moot: bugfix-18/17 merged; ask the PM), animals-8 + ground (4233255), atmosphere-66 cloud clip, anim-2 side/turn/work 1eec5b4 (Animation session_019roNRWQBPw4ozNLDhzseig), tour-main (D-145).
 13b. building-9 raised hearth 5793230 (House building session_01RrKHUxWRH973Ndnxsad9nv, arrived during handoff, NOT yet in queue.jobs): inside a finished clay hut, a raised hearth (B menu, kind from Building.cs StructureKind) with a fire on it at dusk/night; the hearth half-built (stone ring done, clay surround blueprint); a basket beside it if possible. Needs a puppet scene: claim not required; place a ClayHut, build it fully, place the hearth inside, build, light a fire (fire.hand_drill facing it).
 14. Live scenes last (need someone appending steps to $RENDER_WORK/live.txt): animals-8-spin (spinning minigame: click "Spin wool yarn" in the panel, then `key space` every ~2 s with bursts), ui-9-liveA/B 88d7cf2 (two-player trade; puppet trade-ask/answer/add/accept steps).
+New requester sessions (PM, 2026-10-16 23:50): Journal session_013iTXrpndd1fMtDLqqBPgJ5, Claims session_01CAk6p7Z42GfVwi8QMfNMhZ, Audio session_01SXcxtoyeqDmypiHxkHedU6, Ceramics session_01Sc3N1RCsurSszfX5YwGzMU, Survival session_01RedPo6NfcLBPNHQNVhC4qf. Results still go to the PM.
 Many requested shas will have merged into main by now; if a branch moved, use the requester's latest sha.
 
 ## Open questions / blockers
