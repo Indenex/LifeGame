@@ -17,8 +17,10 @@ D-123: stamina (D-111) grows with a new basic skill, Endurance, trained by runni
 ## Progress log
 - 2026-10-16: built Ran reducer, RunReport table, client reporting and rank lookup. Asked Journal and skills for the Specialization line. Not compiled locally (no dotnet).
 
+- 2026-10-16: Journal and skills added Endurance in PR #112 (claude/journal-skills-10): spec "endurance" prefix "move", Skills.Run named Running, how-to and Things to try lines; onlookers don't learn move.* (Skills.Watchable). No change needed here.
+
 ## Open questions / blockers
-- Journal and skills' Specialization line (until then running is journaled but trains no skill).
+- Endurance trains only once #112 is on main; if this PR lands first, running is journaled but trains nothing until then (harmless). If needed, copy #112's Specializations line verbatim.
 
 ## Next step
 After #119 merges: merge main, open the survival-8/9 PR, wait for CI, send the green sha to the PM.
