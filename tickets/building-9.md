@@ -11,9 +11,11 @@ D-087, second of three (fence, hearth, cabin). Working on option (a), sent to th
 ## Progress log
 - 2026-10-16 18:45: ticket opened. Design question sent to the PM: (a) recommended; (b) looks only; (c) also cooks faster.
 
+- Crafting's Hearths.cs `FireSpot` places a new fire, rekindling a cold hearth within reach. `FeedFire` adds `FuelSeconds`. A built hearth needs two partial hooks declared by Crafting: one in `FireSpot` (a built hearth within reach takes the fire) and one in `FeedFire` and `LightFire` (fuel ×1.5 on a hearth). Building implements both with a `HearthAt(ctx, x, z)`. Ask Crafting once the design is confirmed.
+
 ## Open questions / blockers
 - PM/Justin: hearth design (a/b/c). Working on (a).
 - Crafting: needs a hook to read the hearth when a fire is lit and fuelled (to ask once (a) is confirmed).
 
 ## Next step
-Read how Crafting lights and fuels fires (Crafting.cs FireSpot, fuel), then design the HearthAt hook and a StructureKind Hearth placeable only inside finished huts and houses.
+Wait for the PM's hearth answer (a/b/c). If (a), send Crafting the two hook signatures, then build the Hearth StructureKind (inside finished huts and houses only).
