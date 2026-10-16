@@ -326,6 +326,13 @@ public static class Look
             // Set on a ghost (never a solid) to fade it by hand, 0 solid to 1 clear, in place of the
             // tree test: buildings drive it while the player is under their roof.
             uniform float fade_override = -1.0;
+            // A building ghost cuts away like Project Zomboid (D-168). cut_mode 1 is a wall:
+            // it fades on the side facing the camera (cam_dir, flat, from the building's
+            // centre cut_origin to the camera) and stays solid on the far side. cut_mode 2
+            // is a roof: it clears away entirely as fade_override reaches 1. 0 is the trees.
+            uniform float cut_mode = 0.0;
+            uniform vec3 cut_origin = vec3(0.0);
+            uniform vec2 cam_dir = vec2(0.0, 1.0);
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -482,7 +489,16 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
-                ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                if (cut_mode > 1.5) {
+                    ALPHA = 1.0 - fade;
+                } else if (cut_mode > 0.5) {
+                    vec2 out_dir = world_pos.xz - cut_origin.xz;
+                    float facing = smoothstep(-0.1, 0.35, dot(normalize(out_dir + vec2(1e-4)), cam_dir));
+                    ALPHA = 1.0 - fade * facing * (0.85 + 0.15 * window);
+                } else {
+                    ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                }
+                if (ALPHA < 0.04) discard;
             #endif
             }
 

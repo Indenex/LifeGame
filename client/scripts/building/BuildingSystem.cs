@@ -447,7 +447,8 @@ public partial class BuildingSystem : Node
         UpdatePrompt();
     }
 
-    // Finished shelters ease to a ghost while they hide the player from the camera (D-168).
+    // Finished shelters cut away while the player is inside or behind them (D-168): roof gone
+    // from inside, camera-side walls faded, far walls solid.
     void UpdateSeeThrough(float dt)
     {
         var camera = me.GetViewport()?.GetCamera3D();
@@ -455,11 +456,14 @@ public partial class BuildingSystem : Node
         {
             if (!views.TryGetValue(s.Id, out var v)) continue;
             var shape = ShapeOf(s);
-            bool hides = false;
+            bool inside = false, hides = false;
             if (s.Complete && shape.RainCover > 0f && camera != null
                 && new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared() < 25f * 25f)
-                hides = Look.HidesPlayer(Footprint(s, shape, v.Position.Y), camera.GlobalPosition, me.Position);
-            if (hides || v.Fading) v.UpdateSeeThrough(hides, dt);
+            {
+                inside = Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, -0.2f);
+                hides = inside || Look.HidesPlayer(Footprint(s, shape, v.Position.Y), camera.GlobalPosition, me.Position);
+            }
+            if (hides || v.Fading) v.UpdateSeeThrough(inside, hides, camera?.GlobalPosition ?? Vector3.Zero, dt);
         }
     }
 

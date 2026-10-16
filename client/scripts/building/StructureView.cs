@@ -103,26 +103,38 @@ public partial class StructureView : Node3D
 
     // --- See-through (building-11, D-168) --------------------------------
 
-    // Under a roof, or with the walls between the camera and the player, the building eases
-    // to a see-through ghost, clear in a soft circle round the player, like the trees.
-    float seeThrough;
-    readonly Dictionary<Material, ShaderMaterial> seeThroughMaterials = new();
+    // Like Project Zomboid: from inside, the roof and any upper parts clear away entirely and
+    // the walls between the camera and the player fade (the far walls stay), so the room reads
+    // as a cutaway. From outside, behind the building, only the walls in the way fade, round a
+    // clear circle at the player, and the roof stays. Each fades over about a third of a second.
+    float roofFade, wallFade;
+    readonly Dictionary<(Material, StructureModel.PieceRole), ShaderMaterial> seeThroughMaterials = new();
     readonly Dictionary<int, MeshInstance3D> ghostMeshes = new();
 
     // True while anything is still faded, so callers can keep it ticking until it is solid again.
-    public bool Fading => seeThrough > 0.001f;
+    public bool Fading => roofFade > 0.001f || wallFade > 0.001f;
 
-    public void UpdateSeeThrough(bool hidesPlayer, float dt)
+    // inside: the player stands in the footprint. hides: the building is between the camera
+    // and the player (always true when inside). camera: where the camera is, in the world.
+    public void UpdateSeeThrough(bool inside, bool hides, Vector3 camera, float dt)
     {
-        float target = hidesPlayer ? 1f : 0f;
-        if (Mathf.IsEqualApprox(seeThrough, target) && (target > 0f || ghostMeshes.Count == 0)) return;
-        seeThrough = Mathf.MoveToward(seeThrough, target, dt * 3f);
-        bool on = seeThrough > 0.02f;
+        float roofTarget = inside ? 1f : 0f, wallTarget = hides || inside ? 1f : 0f;
+        // Solid and staying solid: nothing to do. Anything else keeps ticking, since the cut follows the camera.
+        if (roofFade <= 0f && wallFade <= 0f && roofTarget <= 0f && wallTarget <= 0f) return;
+        roofFade = Mathf.MoveToward(roofFade, roofTarget, dt * 3f);
+        wallFade = Mathf.MoveToward(wallFade, wallTarget, dt * 3f);
+
         for (int i = 0; i < pieces.Count; i++)
         {
             var (piece, holder, mesh) = pieces[i];
+            float amount = piece.Role switch
+            {
+                StructureModel.PieceRole.Roof => roofFade,
+                StructureModel.PieceRole.Wall => wallFade,
+                _ => 0f,
+            };
             // Only finished pieces fade; the plan of an unfinished building stays as it is.
-            bool fade = on && solid.Contains(i) && piece.Material is ShaderMaterial;
+            bool fade = amount > 0.02f && solid.Contains(i) && piece.Material is ShaderMaterial;
             if (!fade)
             {
                 if (ghostMeshes.TryGetValue(i, out var off)) off.Visible = false;
@@ -131,24 +143,38 @@ public partial class StructureView : Node3D
             }
             if (!ghostMeshes.TryGetValue(i, out var ghostMesh))
             {
-                var source = (ShaderMaterial)piece.Material;
-                if (!seeThroughMaterials.TryGetValue(source, out var material))
-                    seeThroughMaterials[source] = material = Look.StructureGhost(source);
                 ghostMesh = new MeshInstance3D
                 {
                     Mesh = piece.Mesh,
-                    MaterialOverride = material,
+                    MaterialOverride = SeeThroughMaterial((ShaderMaterial)piece.Material, piece.Role),
                     Position = -piece.Anchor,
                     CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 };
                 holder.AddChild(ghostMesh);
                 ghostMeshes[i] = ghostMesh;
             }
-            ghostMesh.Visible = true;
+            // A roof that has cleared away completely isn't drawn at all.
+            bool gone = piece.Role == StructureModel.PieceRole.Roof && amount > 0.97f;
+            ghostMesh.Visible = !gone;
             mesh.Visible = false;
         }
-        foreach (var material in seeThroughMaterials.Values)
-            material.SetShaderParameter("fade_override", seeThrough);
+
+        var toCamera = new Vector2(camera.X - GlobalPosition.X, camera.Z - GlobalPosition.Z);
+        var direction = toCamera.LengthSquared() > 0.0001f ? toCamera.Normalized() : new Vector2(0, 1);
+        foreach (var ((_, role), material) in seeThroughMaterials)
+        {
+            material.SetShaderParameter("fade_override", role == StructureModel.PieceRole.Roof ? roofFade : wallFade);
+            material.SetShaderParameter("cam_dir", direction);
+        }
+    }
+
+    ShaderMaterial SeeThroughMaterial(ShaderMaterial source, StructureModel.PieceRole role)
+    {
+        if (seeThroughMaterials.TryGetValue((source, role), out var material)) return material;
+        material = Look.StructureGhost(source);
+        material.SetShaderParameter("cut_mode", role == StructureModel.PieceRole.Roof ? 2f : 1f);
+        material.SetShaderParameter("cut_origin", GlobalPosition);
+        return seeThroughMaterials[(source, role)] = material;
     }
 
     // Hides the see-through plan of what isn't built yet (showcase shots only).

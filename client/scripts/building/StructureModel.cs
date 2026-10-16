@@ -19,7 +19,17 @@ public static partial class StructureModel
         public Material Material = null!;
         // Where the piece grows from when it appears.
         public Vector3 Anchor;
+        // What the piece is when the player is under or behind the building (D-168): a roof
+        // (and upper parts) hides completely from inside, a wall fades on the camera's side,
+        // and anything laid on the floor stays solid.
+        public PieceRole Role;
     }
+
+    public enum PieceRole { Fixed, Wall, Roof }
+
+    // Anything reaching above the walls of a house, hut or cabin (3 m ridges, 2.0 m wall tops)
+    // belongs to the roof, and so does all thatch.
+    const float RoofFromY = 2.15f;
 
     static readonly Dictionary<int, List<Piece>> Cache = new();
     static ShaderMaterial? wood, fiber, thatch, clay, stone;
@@ -226,6 +236,7 @@ public static partial class StructureModel
             Mesh = mesh,
             Material = material,
             Anchor = new Vector3(aabb.GetCenter().X, aabb.Position.Y, aabb.GetCenter().Z),
+            Role = stage < 1 ? PieceRole.Fixed : material == Thatch || aabb.End.Y > RoofFromY ? PieceRole.Roof : PieceRole.Wall,
         });
     }
 
