@@ -53,6 +53,12 @@ public static partial class Module
         public float ArrivalLeft;
         [Default(0f)]
         public float ArrivalRate;
+        // A new character's first hour online, thirst falls slower (survival-10):
+        // seconds left at AsOf, and its rate (-1 while online, else 0).
+        [Default(0f)]
+        public float ThirstEaseLeft;
+        [Default(0f)]
+        public float ThirstEaseRate;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -117,13 +123,14 @@ public static partial class Module
             LastDeath = "",
             DiedAt = ctx.Timestamp,
             ArrivalLeft = Needs.ArrivalSeconds,
+            ThirstEaseLeft = Needs.ThirstEaseSeconds,
         }, pos, online: true));
     }
 
     static void SurvivalDisconnected(ReducerContext ctx, Player player)
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
-            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 });
+            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0, ThirstEaseRate = 0 });
         ctx.Db.Drenched.PlayerId.Delete(player.PlayerId);
     }
 
@@ -144,7 +151,15 @@ public static partial class Module
         if (v.Food >= 1f)
             throw new Exception("You are full");
 
-        Take(ctx, (Item)item, 1);
+        // Eaten from a pot, the pot goes back in your hands at its quality, as DrinkFrom does (ceramics-7).
+        if (Needs.EatenFrom((Item)item) is { } empty)
+        {
+            var stack = AnyStack(ctx, (Item)item)!.Value;
+            RemoveFromStack(ctx, stack, 1);
+            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+        }
+        else
+            Take(ctx, (Item)item, 1);
         ctx.Db.Vitals.PlayerId.Update(v with
         {
             Food = Math.Min(1f, v.Food + food),
@@ -253,7 +268,7 @@ public static partial class Module
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
                 || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f
-                || next.ArrivalRate != v.ArrivalRate)
+                || next.ArrivalRate != v.ArrivalRate || next.ThirstEaseRate != v.ThirstEaseRate)
                 ctx.Db.Vitals.PlayerId.Update(next);
             ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
@@ -279,6 +294,7 @@ public static partial class Module
     // of the wilderness; what they know stays with them.
     static void Die(ReducerContext ctx, Player player, Vitals v, PlayerPos pos, string cause)
     {
+        BeforeDeathDrop(ctx, player);
         foreach (var stack in ctx.Db.InventoryItem.Owner.Filter(player.Identity).ToList())
         {
             for (uint i = 0; i < stack.Count; i++)
@@ -326,6 +342,7 @@ public static partial class Module
             Wetness = 0,
             WellFedUntil = 0,
             ArrivalLeft = 0,
+            ThirstEaseLeft = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,
@@ -383,6 +400,7 @@ public static partial class Module
             Warmth = Needs.At(v.Warmth, v.WarmthRate, s),
             Wetness = Needs.At(v.Wetness, v.WetnessRate, s),
             ArrivalLeft = Math.Max(0f, v.ArrivalLeft + v.ArrivalRate * s),
+            ThirstEaseLeft = Math.Max(0f, v.ThirstEaseLeft + v.ThirstEaseRate * s),
             AsOf = ctx.Timestamp,
         };
     }
@@ -391,20 +409,23 @@ public static partial class Module
     static Vitals WithSurroundings(ReducerContext ctx, Vitals v, PlayerPos pos, bool online)
     {
         if (!online)
-            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 };
+            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0, ThirstEaseRate = 0 };
         float heat = HeatAt(ctx, pos.X, pos.Z);
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, v.Wetness)
+        float insulation = 0;
+        ClothingWarmthHook(ctx, v.PlayerId, ref insulation);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * (1f - Math.Clamp(insulation, 0f, 1f)) * Chill(ctx, v.Wetness)
             * (v.ArrivalLeft > 0f ? Needs.ArrivalChill : 1f);
         return v with
         {
             WetnessRate = Needs.WetnessRate(Precipitation(ctx), rainCover, wet, heat > 0),
             FoodRate = -Needs.FoodDrain,
-            WaterRate = -Needs.WaterDrain,
+            WaterRate = -Needs.WaterDrain * (v.ThirstEaseLeft > 0f ? Needs.ThirstEaseFactor : 1f),
             WarmthRate = heat - cold,
             ArrivalRate = v.ArrivalLeft > 0f ? -1f : 0f,
+            ThirstEaseRate = v.ThirstEaseLeft > 0f ? -1f : 0f,
             NearHeat = heat > 0,
             Wet = wet,
         };
@@ -444,6 +465,13 @@ public static partial class Module
         float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
         return Math.Min(cold * wet, Needs.MaxChill);
     }
+
+    // Animals (Clothing.cs) puts worn clothes back in the inventory so they drop too.
+    static partial void BeforeDeathDrop(ReducerContext ctx, Player player);
+
+    // Clothing: Animals implements this (Clothing.cs). Insulation 0 (naked) .. 1
+    // scales down the cold drain like shelter does.
+    static partial void ClothingWarmthHook(ReducerContext ctx, uint playerId, ref float insulation);
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for

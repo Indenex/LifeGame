@@ -1,5 +1,8 @@
 // End-to-end clay check: one bot connects to a freshly published server, digs
-// clay, cleans and tempers it, lights a fire, shapes two pinch pots beside it,
+// clay, makes a stone axe, chops a log, claims land past the spawn clearing and
+// builds a potter's bench there (every mode does this; pots are shaped at the
+// bench, D-112). Then it cleans and tempers the clay, shapes two pinch pots at the
+// bench, lights a fire beside them,
 // fires one while still damp (it must crack), lets the other dry, fires it, picks
 // the fired pot up and fills it with water. Then it crushes the sherds into grog
 // and tempers more clay with it. Takes about ten real minutes, because drying and
@@ -11,6 +14,8 @@
 //        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
 //        dotnet run -- <uri> <db> --kiln --jar   (the kiln run plus a storage jar: a campfire refuses it,
 //        the kiln fires it, it is set down from the build menu and stores a stack; ceramics-6)
+//        dotnet run -- <uri> <db> --pot   (instead: a coil pot fired in a campfire and filled, berries
+//        picked, berry broth simmered by the fire, taken off and eaten, the pot comes back; ceramics-7)
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -21,10 +26,12 @@ string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
 bool jarRun = args.Contains("--jar");
+bool potRun = args.Contains("--pot");
 bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
 Fire fire = null!;
+Structure bench = null!, marker = null!;
 uint myId = 0;
 bool subscribed = false;
 string? lastError = null;
@@ -48,7 +55,11 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM kiln",
                 "SELECT * FROM structure",
                 "SELECT * FROM basket_item",
+                "SELECT * FROM simmer_pot",
+                "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree",
+                "SELECT * FROM claim",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
             });
@@ -81,14 +92,17 @@ var (clayX, clayZ) = Nearest((cx, cz) => World.IsClay(cx, cz), 0, 0);
 var (waterX, waterZ) = Nearest((cx, cz) => World.BaseHeight(cx, cz) < World.WaterLevel - 0.1f, 0, 0);
 Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 
-Gather(Item.Stone, 3);
-Gather(Item.Stick, 10);
-Gather(Item.Fiber, kilnRun ? 12u : 4u);
+// Stones: a hammer that is never used up, one for the hand axe, two for the
+// potter's bench and up to two for grit. Sticks and fiber: also the axe's haft and
+// cordage, and the claim marker.
+Gather(Item.Stone, 6);
+Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
+Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : 12u;
+uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -104,7 +118,13 @@ while (CountOf(Item.Clay) < clayWanted)
 }
 Log($"Dug {CountOf(Item.Clay)} clay");
 
+// Pots are shaped at a potter's bench inside a claim (D-112): make a stone axe, chop
+// a log, claim land past the spawn clearing and build the bench there. All the clay
+// work below happens round the bench.
+SetUpBench();
+
 if (kilnRun) return KilnCheck();
+if (potRun) return PotCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -115,18 +135,8 @@ Craft("clay.temper_grit", 0, Item.TemperedClay);
 Craft("clay.temper_grit", 0, Item.TemperedClay);
 if (CountOf(Item.TemperedClay) != 4) Fail($"expected 4 tempered clay, have {CountOf(Item.TemperedClay)}");
 
-// A fire near the spawn clearing, fed well enough for a firing.
-float fireX = 2f, fireZ = 2f;
-WalkTo(fireX, fireZ, 1.2f);
-Craft("gather.tinder", 0, Item.Tinder);
-int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
-Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
-Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
-KeepFireGoing();
-
-// Shape two pinch pots. They are set down at the fire's edge if shaped onto it.
+// Shape two pinch pots at the bench; they are set down beside it, on our side.
+AtBench();
 int piecesBefore = conn.Db.ClayPiece.Count;
 Craft("clay.pinch_pot", 0.9f, null);
 Craft("clay.pinch_pot", 0.9f, null);
@@ -134,10 +144,16 @@ Pump(() => conn.Db.ClayPiece.Count >= piecesBefore + 2, 5, "two pots set down to
 var pots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).ToList();
 var damp = pots[0];
 var good = pots[1];
+
+// A fire right beside the wet pots, off the bench, fed well enough for a firing.
+LightFireNear(pots.Average(p => p.X) + 1.3f, pots.Average(p => p.Z));
+Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
+KeepFireGoing();
 Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate {good.DryRate * 480:F2}x");
 if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
 
 // Firing a damp pot is refused without confirmation, then cracks.
+WalkTo(damp.X, damp.Z, 1.2f);
 lastError = null;
 conn.Reducers.TendClay(damp.Id, false);
 Pump(() => lastError != null, 3, "a warning about a damp pot");
@@ -165,6 +181,7 @@ Pump(() => news.Any(n => n.Contains("Crack")), 60, "the damp pot to crack");
 Log("Damp pot cracked into sherds, as it should");
 
 KeepFireGoing();
+WalkTo(good.X, good.Z, 1.2f);
 lastError = null;
 conn.Reducers.TendClay(good.Id, false);
 Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(good.Id)?.Stage == (byte)ClayStage.Firing, 3, "the dry pot to go in the fire");
@@ -228,8 +245,8 @@ int KilnCheck()
         Craft("clay.temper_grit", 0, Item.TemperedClay);
     }
 
-    // Two pots shaped in the open, away from any fire, so picking them up doesn't fire them.
-    WalkTo(-4f, 6f, 0.5f);
+    // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
+    AtBench();
     Craft("clay.pinch_pot", 0.9f, null);
     Craft("clay.pinch_pot", 0.9f, null);
     Craft("clay.daub", 0, Item.Daub);
@@ -238,22 +255,22 @@ int KilnCheck()
     ulong jarPiece = 0;
     if (jarRun)
     {
-        WalkTo(-5.5f, 6f, 0.5f);
+        AtBench();
         Craft("clay.storage_jar", 0.9f, null);
         jarPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.StorageJar)?.Id ?? 0;
         if (jarPiece == 0) Fail("no storage jar drying");
         Log("STAGE jar-drying");
     }
 
-    // Eight bricks round a fire, where they dry twice as fast.
-    float fx = 2f, fz = 2f;
-    WalkTo(fx, fz, 1.2f);
-    Craft("gather.tinder", 0, Item.Tinder);
-    int firesBefore = conn.Db.Fire.Count;
-    Craft("fire.hand_drill", 1f, null);
-    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
-    fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+    // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
+    // the fire is well clear of the pots by the bench.
+    LightFireNear(bench.X + 4f, bench.Z + 1.3f);
+    foreach (var id in kilnPots.Append(jarPiece).Where(id => id != 0))
+        if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
+            Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
+    WalkTo(fire.X, fire.Z + 1.2f, 0.2f);
+    Face(fire.X, fire.Z);
     for (int i = 0; i < 8; i++) Craft("clay.brick", 0, null);
     Log($"8 bricks drying round the fire; {CountOf(Item.Daub)} daub");
     Log("STAGE bricks");
@@ -270,8 +287,12 @@ int KilnCheck()
 
     // Lay out a kiln blueprint a few steps from the fire, door toward us, and
     // build it brick by brick.
-    WalkTo(fx + 4f, fz + 1f, 0.3f);
-    float kx = x + 1.8f, kz = z;
+    var kilnSite = FindSite(StructureKind.Kiln, fire.X + 3.5f, fire.Z, -MathF.PI / 2, (sx, sz) =>
+        DistanceTo(sx, sz, fire.X, fire.Z) >= 3f
+        && conn.Db.ClayPiece.Iter().All(p => DistanceTo(sx, sz, p.X, p.Z) >= 2.5f)
+        && InMyClaim(sx, sz, 2f) && ClearGround(sx, sz, -2, 2, -2, 2)) ?? FailAt("no ground for the kiln");
+    WalkTo(kilnSite.X - 1.8f, kilnSite.Z, 0.2f);
+    float kx = kilnSite.X, kz = kilnSite.Z;
     lastError = null;
     conn.Reducers.PlaceStructure(StructureKind.Kiln, kx, kz, MathF.Atan2(x - kx, z - kz));
     Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.Kiln && s.Owner == me), 5, "the kiln blueprint");
@@ -378,6 +399,117 @@ int KilnCheck()
     return 0;
 }
 
+// Cooking in a pot (ceramics-7): a coil pot dried by a fire and fired in it,
+// filled at the water, berries picked, broth simmered, taken off and eaten.
+int PotCheck()
+{
+    // Two coil pots, so one cracking in the pit (a chance) doesn't void the run.
+    while (CountOf(Item.CleanClay) < 6) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.grit", 0, Item.Grit);
+    for (int i = 0; i < 3; i++) Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    // Shaped at the bench, then a fire lit right beside them so they dry by it.
+    AtBench();
+    Craft("clay.coil_pot", 0.9f, null);
+    Craft("clay.coil_pot", 0.9f, null);
+    var coilPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).ToList();
+    var coils = coilPieces.Select(p => p.Id).ToList();
+    if (coils.Count != 2) Fail($"expected 2 coil pots drying, have {coils.Count}");
+    LightFireNear(coilPieces.Average(p => p.X) + 1.3f, coilPieces.Average(p => p.Z));
+    if (coilPieces.Any(p => DistanceTo(p.X, p.Z, fire.X, fire.Z) > ClayRules.FireReach)) Fail("coil pot set down out of the fire's reach");
+    KeepFireGoing();
+    var watch = Stopwatch.StartNew();
+    while (coils.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("coil pots never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    int newsBefore = news.Count;
+    foreach (var id in coils)
+    {
+        KeepFireGoing();
+        var piece = conn.Db.ClayPiece.Id.Find(id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(id)?.Stage == (byte)ClayStage.Firing, 3, "a coil pot to go in the fire");
+        if (lastError != null) Fail($"firing: {lastError}");
+    }
+    watch.Restart();
+    while (coils.Any(id => conn.Db.ClayPiece.Id.Find(id) != null))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(6)) Fail("firing never finished");
+        Pump(() => false, 2, null);
+    }
+    Pump(() => news.Count >= newsBefore + 2, 5, "firing news");
+    if (!news.Skip(newsBefore).Any(n => n.Contains("whole")))
+    {
+        Log("Both coil pots cracked in the fire (a small chance); pot cooking not checked this run");
+        conn.Disconnect();
+        return 0;
+    }
+    Gather(Item.CoilPot, 1);
+    WalkTo(waterX, waterZ, 1.5f);
+    lastError = null;
+    conn.Reducers.FillPots();
+    Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
+    if (lastError != null) Fail($"filling: {lastError}");
+    Log("STAGE pot-of-water");
+
+    // Berries from the nearest ripe bushes.
+    watch.Restart();
+    while (CountOf(Item.Berries) < 3)
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(3)) Fail("could not pick 3 berries");
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now)
+            .OrderBy(b => DistanceTo(b.X, b.Z, x, z)).FirstOrDefault();
+        if (bush == null) { Pump(() => false, 2, null); continue; }
+        WalkTo(bush.X, bush.Z, 1.5f);
+        lastError = null;
+        uint before = CountOf(Item.Berries);
+        conn.Reducers.Forage(bush.Id);
+        Pump(() => lastError != null || CountOf(Item.Berries) > before, 3, "berries");
+        if (lastError == "Still working") Pump(() => false, 0.7f, null);
+    }
+    Log($"Picked {CountOf(Item.Berries)} berries");
+
+    // A fresh fire if this one died while we were away.
+    fire = conn.Db.Fire.Id.Find(fire.Id) ?? fire;
+    KeepFireGoing();
+    WalkTo(fire.X + 1.2f, fire.Z, 0.3f);
+    Craft("cook.broth", 0, null);
+    Pump(() => conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == myId), 5, "the broth to go on");
+    var simmer = conn.Db.SimmerPot.Iter().First(p => p.PlayerId == myId);
+    Log($"Broth simmering by the fire at quality {simmer.Quality}");
+    Log("STAGE broth-simmering");
+
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null, 3, "an early take-off to be refused");
+    Log($"Too early: {lastError}");
+    Pump(() => false, ClayRules.BrothSeconds + 1, null);
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null || CountOf(Item.PotOfBroth) == 1, 3, "the broth to come off");
+    if (lastError != null) Fail($"taking the pot off: {lastError}");
+    Log("STAGE broth-done");
+
+    uint pots = CountOf(Item.CoilPot);
+    lastError = null;
+    conn.Reducers.Eat((ushort)Item.PotOfBroth);
+    Pump(() => lastError != null || CountOf(Item.PotOfBroth) == 0, 3, "eating the broth");
+    if (lastError != null) Fail($"eating: {lastError}");
+    Pump(() => CountOf(Item.CoilPot) == pots + 1, 3, "the empty pot back");
+    Log("Ate the broth; the coil pot came back");
+    Log("STAGE broth-eaten");
+    Log("Pot check passed: a fired pot cooks broth that feeds you");
+    conn.Disconnect();
+    return 0;
+}
+
 // The fired jar (or its sherds, 2% of the time) lies by the kiln door. Pick it
 // up, set it down from the build menu, put a stack in and take it out again.
 void JarCheck(Structure kiln)
@@ -396,8 +528,11 @@ void JarCheck(Structure kiln)
     Log($"Fired jar at quality {jar.Quality}");
     Log("STAGE jar-fired");
 
-    WalkTo(kiln.X - 3f, kiln.Z - 3f, 0.4f);
-    float jx = x + 1.2f, jz = z;
+    var jarSite = FindSite(StructureKind.StorageJar, kiln.X, kiln.Z - 3f, 0f, (sx, sz) =>
+        DistanceTo(sx, sz, kiln.X, kiln.Z) >= 2.5f && DistanceTo(sx, sz, fire.X, fire.Z) >= 2f
+        && InMyClaim(sx, sz, 1f) && ClearGround(sx, sz, -1, 1, -1, 1)) ?? FailAt("no ground for the jar");
+    WalkTo(jarSite.X - 1.2f, jarSite.Z, 0.2f);
+    float jx = jarSite.X, jz = jarSite.Z;
     lastError = null;
     conn.Reducers.PlaceStructure(StructureKind.StorageJar, jx, jz, 0f);
     Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.StorageJar && s.Owner == me), 5, "the jar site");
@@ -430,6 +565,148 @@ void JarCheck(Structure kiln)
     if (lastError != null) Fail($"taking the stick out: {lastError}");
     Log($"Jar stores and gives back; at quality {jar.Quality} it holds {Structures.JarStacks(jar.Quality)} stacks");
     Log("STAGE jar-store");
+}
+
+// A stone axe, one log, a claim past the spawn clearing and a potter's bench in it.
+void SetUpBench()
+{
+    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("lash.stone_axe", 0, Item.StoneAxe);
+    var (treeX, treeZ) = NearestTree();
+    var trunk = Trees.Trunk(treeX, treeZ);
+    WalkTo(trunk.X, trunk.Z, 1.2f);
+    Craft("chop.log", 0, Item.Log);
+
+    // Claims stay out of the spawn clearing: walk out past it, away from the origin.
+    float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
+    float claimDist = keepOut + 5f;
+    float ang = clayX == 0 && clayZ == 0 ? 0f : MathF.Atan2(clayZ, clayX);
+    WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist, 1f);
+    marker = BuildHere(StructureKind.ClaimMarker, (sx, sz) => sx * sx + sz * sz > (keepOut + 1f) * (keepOut + 1f) && ClearGround(sx, sz, -1, 1, -1, 1));
+    Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
+    Log($"Claimed land at {marker.X:F1}, {marker.Z:F1}");
+
+    // With no bench, shaping is refused.
+    lastError = null;
+    conn.Reducers.StartCraft("clay.pinch_pot", 0.9f);
+    Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a pot away from a bench to be refused");
+    if (lastError?.Contains("potter's bench") != true) Fail($"a pot shaped away from a bench: {lastError ?? "it started"}");
+    Log($"No bench: {lastError}");
+
+    // The bench, on open level ground with room to the east for fires and a kiln, and
+    // well away from the marker.
+    bench = BuildHere(StructureKind.PottersBench, (sx, sz) =>
+        InMyClaim(sx, sz, 7f) && DistanceTo(sx, sz, marker.X, marker.Z) >= 10f && ClearGround(sx, sz, -3, 6, -2, 4));
+    Log($"Built a potter's bench at {bench.X:F1}, {bench.Z:F1}; {CountOf(Item.Stone)} stones left");
+    Log("STAGE bench");
+}
+
+// Stands where pots are shaped: just on the player's (south) side of the bench.
+void AtBench() => WalkTo(bench.X, bench.Z + 1.6f, 0.1f);
+
+// Lights a hand-drill fire at a spot, standing 1.2 m south of it and facing it.
+void LightFireNear(float tx, float tz)
+{
+    WalkTo(tx, tz + 1.2f, 0.1f);
+    Face(tx, tz);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesBefore = conn.Db.Fire.Count;
+    Craft("fire.hand_drill", 1f, null);
+    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
+    fire = conn.Db.Fire.Iter().Where(f => f.LitBy == myId).OrderBy(f => DistanceTo(f.X, f.Z, tx, tz)).First();
+    if (DistanceTo(fire.X, fire.Z, tx, tz) > 0.5f) Log($"Fire landed at {fire.X:F1}, {fire.Z:F1}, not {tx:F1}, {tz:F1}");
+}
+
+// Turns on the spot to face a point.
+void Face(float tx, float tz)
+{
+    conn.Reducers.Move(x, z, MathF.Atan2(tx - x, tz - z));
+    Pump(() => false, 0.4f, null);
+}
+
+bool InMyClaim(float px, float pz, float margin) => DistanceTo(px, pz, marker.X, marker.Z) <= Social.ClaimRadius - margin;
+
+// No tree, boulder or uneven ground anywhere in a box of cells round a spot.
+bool ClearGround(float px, float pz, int x0, int x1, int z0, int z1)
+{
+    int ci = World.CellOf(px), cj = World.CellOf(pz);
+    float lo = float.MaxValue, hi = float.MinValue;
+    for (int i = ci + x0; i <= ci + x1; i++)
+        for (int j = cj + z0; j <= cj + z1; j++)
+        {
+            if (Trees.GrowsAt(i, j) || Rocks.LiesAt(i, j)) return false;
+            float h = World.Height(i, j, DepthAt(i, j));
+            lo = Math.Min(lo, h);
+            hi = Math.Max(hi, h);
+        }
+    return lo > World.WaterLevel + 0.1f && hi - lo < 0.35f;
+}
+
+// The nearest spot to a point where a structure fits and `ok` holds.
+(float X, float Z)? FindSite(StructureKind kind, float ox, float oz, float yaw, Func<float, float, bool> ok)
+{
+    float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(i, j));
+    for (int r = 0; r < 30; r++)
+    {
+        int steps = r == 0 ? 1 : 8 + 4 * r;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps, sx = ox + MathF.Cos(a) * r, sz = oz + MathF.Sin(a) * r;
+            if (Structures.GroundProblem((int)kind, sx, sz, yaw, H) != null) continue;
+            if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
+            if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
+            if (!ok(sx, sz)) continue;
+            return (sx, sz);
+        }
+    }
+    return null;
+}
+
+(float X, float Z) FailAt(string message)
+{
+    Fail(message);
+    return default;
+}
+
+// Lays out a structure on clear, level ground near the bot and builds it from the bag.
+Structure BuildHere(StructureKind kind, Func<float, float, bool> ok)
+{
+    float fromX = x, fromZ = z;
+    var at = FindSite(kind, x, z, 0f, (sx, sz) => DistanceTo(sx, sz, fromX, fromZ) >= 3f && ok(sx, sz)) ?? FailAt($"no ground for a {kind}");
+    WalkTo(at.X, at.Z + 2f, 0.2f);
+    int before = conn.Db.Structure.Count;
+    lastError = null;
+    conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
+    if (lastError != null) Fail($"laying out a {kind}: {lastError}");
+    var s = conn.Db.Structure.Iter().Where(o => o.Owner == me).OrderByDescending(o => o.PlacedAt.MicrosecondsSinceUnixEpoch).First();
+    var sw = Stopwatch.StartNew();
+    while (conn.Db.Structure.Id.Find(s.Id) is { Complete: false })
+    {
+        if (sw.Elapsed.TotalSeconds > 60) Fail($"building the {kind}: {lastError}");
+        lastError = null;
+        conn.Reducers.Build(s.Id);
+        Pump(() => false, 0.35f, null);
+    }
+    return conn.Db.Structure.Id.Find(s.Id)!;
+}
+
+// The standing tree nearest the bot, by the same rules the server uses.
+(int X, int Z) NearestTree()
+{
+    int cx = (int)MathF.Round(x), cz = (int)MathF.Round(z);
+    for (int r = 0; r < 60; r++)
+        for (int i = cx - r; i <= cx + r; i++)
+            for (int j = cz - r; j <= cz + r; j++)
+            {
+                if (Math.Max(Math.Abs(i - cx), Math.Abs(j - cz)) != r || !Trees.GrowsAt(i, j)) continue;
+                long key = World.CellKey(i, j);
+                if (conn.Db.TerrainEdit.CellKey.Find(key) != null || conn.Db.ChoppedTree.CellKey.Find(key) != null) continue;
+                return (i, j);
+            }
+    Fail("no tree within 60 m");
+    return (0, 0);
 }
 
 void Feed(int sticks)
@@ -486,7 +763,7 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
-    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds + 5, $"{processId} to finish");
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
         Pump(() => CountOf(item) > before, 3, $"{processId} output");

@@ -70,9 +70,24 @@ public static partial class Module
 
     const float DryCheckSeconds = 15f;
 
+    // Too much clay out already: refuse the shaping before any clay is used (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal)
+    {
+        if (refusal == null && ClayRules.FormFor(def.Id) is not null
+            && ctx.Db.ClayPiece.MadeBy.Filter(playerId).Count() >= ClayRules.MaxPiecesPerPlayer)
+            refusal = TooMuchClay;
+    }
+
+    const string TooMuchClay = "You have too much clay drying already. Pick some up or fire it first.";
+
     // Shaping a pot or molding a brick sets it down here to dry.
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
+        if (ClayRules.DishFor(def.Id) is { } dish)
+        {
+            SetToSimmer(ctx, job, def, dish);
+            return;
+        }
         if (ClayRules.FormFor(def.Id) is not { } form) return;
         if (ctx.Db.ClayPiece.MadeBy.Filter(job.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
         {

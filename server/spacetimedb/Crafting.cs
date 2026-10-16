@@ -21,6 +21,10 @@ public static partial class Module
         // Where a fire will be lit, for processes that make one.
         public float X;
         public float Z;
+        // A vessel consumed by the process (a coil pot of water for broth), at its own
+        // quality, so Ceramics can hand it back unchanged (ceramics-7). 0 for none.
+        [Default((byte)0)]
+        public byte VesselQuality;
     }
 
     // Clients see only their own job, to show its progress.
@@ -69,6 +73,8 @@ public static partial class Module
     // Hooks for the skills system. It implements these in its own file; until it
     // does, the compiler drops the calls and every cap stays at 100.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
+    // Lanes refuse a craft before its inputs are taken by setting refusal (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal);
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
@@ -101,22 +107,34 @@ public static partial class Module
 
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
             throw new Exception("You need the right tool");
+        // Station crafts are made at a finished station in a claim (Stations.cs).
+        Structure? station = null;
+        if (def.Station != StationKind.None)
+            station = StationNear(ctx, def.Station, pos.X, pos.Z)
+                ?? throw new Exception($"You need to be at a {StationInfo.Name(def.Station)} in your claim");
         // Find the fire's spot before anything is used up, in case there is none.
         (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
-            if (CountOf(ctx, input.Item) < input.Count)
+            if (CountFor(ctx, station, input.Item) < input.Count)
                 throw new Exception($"You need {input.Count} {Items.Def(input.Item).Count(input.Count).ToLowerInvariant()}");
         // A stone used as the hammer cannot also be the stone being knapped.
         if (def.NeedsTool.HasFlag(ItemTags.Hammer) && !HasSpareHammer(ctx, def))
             throw new Exception("You need a second stone to strike with");
+        // Another lane can refuse before anything is used up (Ceramics: too much clay out).
+        string? refusal = null;
+        CanStartCraft(ctx, player.PlayerId, def, ref refusal);
+        if (refusal != null) throw new Exception(refusal);
 
         float inputQuality = 0f;
         uint taken = 0;
+        byte vesselQuality = 0;
         foreach (var input in def.Consumes)
         {
-            inputQuality += Take(ctx, input.Item, input.Count);
+            float q = TakeFor(ctx, station, input.Item, input.Count);
+            if (ClayRules.IsVessel(input.Item)) vesselQuality = (byte)Math.Round(q / input.Count);
+            inputQuality += q;
             taken += input.Count;
         }
         inputQuality = taken > 0 ? inputQuality / taken : Items.RawQuality;
@@ -129,6 +147,7 @@ public static partial class Module
         // clear ground near there, or into a cold hearth within reach (Hearths.cs).
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
         if (fireSpot is { } spot) (fx, fz) = spot;
+        if (station is { } st) (fx, fz) = BesideStation(st, pos.X, pos.Z);
         // Roasting goes over a fire already burning within reach.
         if (def.Outcome == Outcome.Roast)
         {
@@ -140,7 +159,12 @@ public static partial class Module
         // Chopping takes a log from the tree within reach (Woodcutting.cs).
         if (def.Outcome == Outcome.Chop)
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
+        // A roast keeps its meat's quality until it comes off the fire.
+        byte quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap);
+        // Better work takes a little longer (D-113); fires and roasts keep their times.
         float seconds = def.Seconds;
+        if (def.Outcome is not (Outcome.Fire or Outcome.Roast))
+            seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
@@ -155,11 +179,11 @@ public static partial class Module
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
             FinishAt = finish,
-            // A roast keeps its meat's quality until it comes off the fire.
-            Quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap),
+            Quality = quality,
             Failed = failed,
             X = fx,
             Z = fz,
+            VesselQuality = vesselQuality,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
         OnCraftStarted(ctx, started);
@@ -225,13 +249,24 @@ public static partial class Module
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        foreach (var fire in ctx.Db.Fire.Iter().ToList())
+        foreach (var row in ctx.Db.Fire.Iter().ToList())
+        {
+            // A fire on a raised hearth feeds itself from storage nearby (D-149, Building).
+            var fire = row;
+            var until = fire.FuelUntil;
+            FireTopUpHook(ctx, fire, ref until);
+            if (until.MicrosecondsSinceUnixEpoch != fire.FuelUntil.MicrosecondsSinceUnixEpoch)
+            {
+                fire = fire with { FuelUntil = until };
+                ctx.Db.Fire.Id.Update(fire);
+            }
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
                 LeaveColdHearth(ctx, fire);
             }
+        }
         ClearOldHearths(ctx);
     }
 

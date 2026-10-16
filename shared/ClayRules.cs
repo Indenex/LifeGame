@@ -183,6 +183,30 @@ namespace LifeGame.Shared
             _ => null,
         };
 
+        // Cooking in a pot (ceramics-7). A coil pot of water and food set by a burning
+        // fire simmers for this long, then waits, never burning (D-081). It keeps
+        // simmering if the fire dies: the pot holds the heat.
+        public const float BrothSeconds = 60f, StewSeconds = 90f;
+        // Pots simmering by one fire, and per player anywhere.
+        public const int PotsPerFire = 2, SimmersPerPlayer = 2;
+        // Simmering pots sit on a ring this far from the fire's center.
+        public const float SimmerRing = 0.55f;
+
+        // The dish a cooking process makes, or null for other processes.
+        public static Item? DishFor(string processId) => processId switch
+        {
+            "cook.broth" => Item.PotOfBroth,
+            "cook.stew" => Item.PotOfStew,
+            _ => null,
+        };
+
+        // A pot that holds a dish while it cooks and comes back after eating, at its own quality.
+        public static bool IsVessel(Item item) => item == Item.CoilPotOfWater;
+
+        public static float SimmerSeconds(Item dish) => dish == Item.PotOfStew ? StewSeconds : BrothSeconds;
+
+        public static string DishName(Item dish) => dish == Item.PotOfStew ? "mutton stew" : "berry broth";
+
         static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }
 }

@@ -40,6 +40,9 @@ public partial class SurvivalClient : Node
     float walkedFor;
     // Seconds since you last ran; refill waits a moment (D-111).
     float rested = 999f;
+    // Whether Main's Walk() asked for a speed this frame; when it didn't (a panel has
+    // the input), _Process keeps the bar refilling so it isn't frozen behind panels.
+    bool walkedThisFrame;
     // Seconds run since the last Endurance report.
     float ranFor;
     // Deaths when the new-arrival half hour was last seen running, null once it ends.
@@ -90,7 +93,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                ? new UseOffer("Drink", World.Reach, () => { conn.Reducers.Drink(); Sfx.Play(Cue.Drink); })
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
@@ -100,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => conn.Reducers.DrinkFrom((ushort)pot))
+                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -184,6 +187,8 @@ public partial class SurvivalClient : Node
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
 
+        if (!walkedThisFrame) Rest((float)delta);
+        walkedThisFrame = false;
         UpdateLoad();
         UpdateOthersWet();
     }
@@ -192,6 +197,7 @@ public partial class SurvivalClient : Node
     // all slowed alike by an overload. Main's Walk() calls this once per frame.
     public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
     {
+        walkedThisFrame = true;
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
         rested = running ? 0f : rested + dt;
         if (running && (ranFor += dt) >= Stamina.RunPerUse)
@@ -209,6 +215,28 @@ public partial class SurvivalClient : Node
         staminaBar.Set(stamina, FeetOnScreen());
         float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
         return speed * WalkFactor;
+    }
+
+    // Spends a fraction of the bar on a one-off effort such as a jump. False, and
+    // nothing spent, while winded or if the bar holds less than the cost.
+    public bool TrySpendStamina(float fraction)
+    {
+        if (winded || stamina < fraction) return false;
+        stamina -= fraction;
+        rested = 0f;
+        if (stamina <= 0f) winded = true;
+        staminaBar.Set(stamina, FeetOnScreen());
+        return true;
+    }
+
+    // Stamina keeps refilling while you stand still with a panel open.
+    void Rest(float dt)
+    {
+        rested += dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        stamina = Stamina.Step(stamina, false, rested, StaminaRank(), wellFed, dt);
+        if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
     }
 
     // Endurance (D-123): stamina grows with its rank, and running trains it.
@@ -278,7 +306,7 @@ public partial class SurvivalClient : Node
         if (e.IsActionPressed("eat"))
         {
             var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
-            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
+            if (Needs.BestFood(Current().food, carried) is { } food) { conn.Reducers.Eat((ushort)food); Sfx.Play(Cue.Eat); }
             else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }
