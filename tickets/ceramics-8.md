@@ -17,6 +17,7 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - 2026-10-16 18:37: Crafting agreed option 1 (cost) and described the framework (crafting-15, branch crafting-stations, sha in a couple of hours): StationKind enum in Processes.cs, ProcessDef.Station, StructureShape.Station, generic claim check in PlaceStructure, ingredients from inventory, nearby stores, then the claim stash.
 
 ## Open questions / blockers
+- StructureKind order: jar is 6 (#105); Building's #153 appends Fence, Gate; whichever merges second goes after the other, keeping StructureKind, Structures.Shapes and Structures.StageCosts in the same order. The bench takes the next free number at merge time (and ClayRules has KilnStructureKind/JarStructureKind ints that must match).
 - Blocked on Crafting's crafting-stations sha (they ping). StructureKind number from Building (Crafting asked them: jar 6, Table 7, Bench 8, ...).
 - PM/Justin: bench cost (option 1 recommended, sent by Crafting).
 
