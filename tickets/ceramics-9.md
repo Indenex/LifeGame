@@ -1,6 +1,6 @@
 # ceramics-9: Clay oil lamp
 Lane: Clay and ceramics
-Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
+Owner: Clay and ceramics lane (handed off 2026-10-16 ~20:00 to a fresh Sonnet session, D-159; read tickets/ceramics-8.md 'Handoff' first)
 Status: in_progress
 Branch: claude/clay-ceramics-9-kfr4kr (stacked on claude/clay-ceramics-8-kfr4kr until that merges)
 PR: (none yet)
@@ -27,4 +27,4 @@ Numbers: Justin picked the lamp (D-147) with 30 min per tallow and self-refill f
 - Atmosphere: should a lit lamp count as light for anything at night (e.g. darkness checks)? Not needed for the first version.
 
 ## Next step
-Check ClayCheck --lamp on c9lamp1 (scratchpad lamp1.log); then a render request (lamp lit inside a hut at dusk) once ceramics-7/8 has merged.
+After the ceramics-7+8 PR merges: merge origin/main into claude/clay-ceramics-9-kfr4kr, build, run ClayCheck --lamp on a fresh db (and with CLAYCHECK_TALLOW=1 once Animals answers about a mutton hook), open the lamp PR, send the PM the green sha.
