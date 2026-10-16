@@ -9,6 +9,8 @@
 //   near 3            walk to 3 m from the camera player
 //   away 20           walk straight away from the camera player until 20 m off
 //   goto x z          walk to a point
+//   front 2           walk to 2 m in front of the camera player, as the game camera
+//                     first looks (yaw 45 deg: forward is -x, -z), and face them
 //   stroll dx dz      start walking dx, dz metres from here and go on to the next
 //                     step at once (to snap mid-stride); "arrive" waits for it
 //   say hello there   send a chat line ("/me waves" works too)
@@ -35,6 +37,11 @@
 //   trade-add 8 5     put 5 of item 8 into my side of the trade
 //   trade-accept      accept the trade as it stands
 //   trade-cancel      call it off
+//   sql UPDATE clay_piece SET moisture = 0.0   any SQL as the database owner ({me} = my identity hex, {target} = the camera player's id)
+//   feed 1            feed one of item 1 into the fire I lit
+//   place 6 0 2.5 0   lay out structure kind 6 at dx, dz from me, facing yaw (degrees)
+//   build             add materials to my newest structure (once per call)
+//   store 2 50 5      put 5 of item 2 (quality 50) into my newest structure (basket, jar)
 //   mouse 660 850     move the mouse there in the camera client's window (tooltips)
 //   frames 300 / frames +72   (movie scenes) wait until the camera client has
 //                     written that many frames (or that many more)
@@ -72,7 +79,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire"
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure"
 #if HAS_TRADE
                 , "SELECT * FROM my_trade"
 #endif
@@ -175,6 +182,13 @@ bool Step(string line)
             float dx = x - ax, dz = z - az, d = MathF.Sqrt(dx * dx + dz * dz);
             if (d < 0.1f) { dx = 1; dz = 0; d = 1; }
             WalkTo(ax + dx / d * want, az + dz / d * want);
+            break;
+        }
+        case "front":
+        {
+            float d = float.Parse(rest, System.Globalization.CultureInfo.InvariantCulture);
+            var (ax, az) = Target();
+            WalkTo(ax - 0.7071f * d, az - 0.7071f * d);
             break;
         }
         case "goto":
@@ -316,6 +330,39 @@ bool Step(string line)
             break;
         }
 #endif
+        case "sql":
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"");
+            Pump(0.5);
+            break;
+        case "feed":
+        {
+            var fire = conn.Db.Fire.Iter().LastOrDefault(f => f.LitBy == myId);
+            if (fire == null) { Console.WriteLine("puppet: server said no fire of mine"); break; }
+            conn.Reducers.FeedFire(fire.Id, ushort.Parse(rest));
+            Pump(0.8);
+            break;
+        }
+        case "place":
+        {
+            var v = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(t => float.Parse(t, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            conn.Reducers.PlaceStructure((StructureKind)(int)v[0], x + v[1], z + v[2], (v.Length > 3 ? v[3] : 0f) * MathF.PI / 180f);
+            Pump(1.0);
+            break;
+        }
+        case "build":
+        case "store":
+        {
+            var mine = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6).OrderByDescending(st => st.Id).FirstOrDefault();
+            if (mine == null) { Console.WriteLine("puppet: server said no structure near me"); break; }
+            if (verb == "build") conn.Reducers.Build(mine.Id);
+            else
+            {
+                var t = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                conn.Reducers.BasketPut(mine.Id, ushort.Parse(t[0]), byte.Parse(t[1]), uint.Parse(t[2]));
+            }
+            Pump(1.0);
+            break;
+        }
         case "mouse":
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
             Pump(0.3);

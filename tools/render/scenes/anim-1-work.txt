@@ -2,7 +2,7 @@
 # restarted until ~3 s of movie is recorded (the server runs in real time).
 client-as-puppet
 client-movie 24
-client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,1.2,150,0.7
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,0.5,35,0.1
 frames 330
 give 3 200 50
 give 2 60 50

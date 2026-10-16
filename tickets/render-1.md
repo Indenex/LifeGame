@@ -3,7 +3,7 @@ Lane: Render
 Owner: Render lane session session_013qe8zPzzBHx9rFPEYoKMr5
 Status: in_progress
 Branch: claude/render-1-013qe8 (no harness branch was assigned; named by the session)
-PR: (once opened, for any tooling under tools/render/)
+PR: #103 (tools/render only, branch claude/render-1-tools)
 
 ## Goal
 Per D-059 the Render lane makes every screenshot and clip Justin sees. Done means: from a clean clone, one documented command (under `tools/render/`) builds a given commit, starts a local server and client, puts the camera at a requested place and time of day, and saves PNGs to /mnt/project-files/screenshots/<ticket>-<short sha>-<n>.png. First proof: render current `main` at spawn by day and by night and send the PM the images with a one-line summary. Justin sees those two images in the PM thread.
@@ -39,6 +39,12 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:55: audio-1 b7fde7a clip sent to the PM and the Audio lane (76a896b). New requests: ui-9 live trade 18b4bda (two players, both screens), model-1 style showcase 37a5656 (5 views), env-1 after 0eaba8b. Queue 6 (after queue 5): model-1-style.sh, env-1-after.sh, ui-9-live-a/b scenes (live). Background jobs time out after 2 h: if a queue died, rerun its remaining lines by hand.
 - 2026-10-16 18:05: ui-9 mock shots at short delays caught an unloaded world (the mock's timers run from game start, loading takes 20-30 s). Added --render-slowstart=scale,seconds (render_cam.gd) so game time crawls while the world loads. All remaining work is now in tools/render/queue.sh, run detached with nohup (log $RENDER_WORK/queue.log, finished jobs in queue.done; rerun it to resume). Queue 2 (claims-6 rerun, model-1 baseline) finishes first.
 - 2026-10-16 18:10: PM decided renders stay on this branch; only tools/render/ merges via a small PR (send raw links). PM asked for a 10-15 s cloud-shadow clip of #66 (queued after animals-8). ui-9 live moved to ffdabf3 (+ un-accept check).
+- 2026-10-16 18:20: claims-6 sent to the PM (frames 2, 3, 11, 20 of renders/claims-6-c126163-*.png, e5f2d45). Tools PR #103 opened (branch claude/render-1-tools).
+- 2026-10-16 18:35: queue.sh now rereads tools/render/queue.jobs between jobs (add/reorder jobs there while it runs); lib.sh makes RENDER_OUT absolute (Godot saved relative paths under client/). model-1 baseline shots done except the player close-ups (redo running with corrected camera heights: the rig focus is ~0.65 m above the feet, yaw 0 faces the player).
+- 2026-10-16 18:45: new requests: ceramics-6 storage jar e9544db (session_01Diab34HTvew38VmUaqhj5Q; demo row queued, in-game jar being worked out), bugfix-18 e80c6cf (session_01HddD17VpF2CmiCxHoPH84Y; pot pickup by a full/low fire, setup being researched), model-1 style moved to fd5c17a with items / items --old / held views (+ optional in-game dropped items and inventory icons).
+- 2026-10-16 18:47: render request bugfix-19 1877b88 (PR #109, session_01HddD17VpF2CmiCxHoPH84Y): wet pinch pot by the water while thirsty: G prompt reads Drink (not Drying); away from water it reads Drying and the floating label hides.
+- 2026-10-16 19:00: model-1 baseline sent to Modeling and the PM (8f3e255). Puppet gained sql/feed/place/build/store; bugfix-18, bugfix-19 and ceramics-6 jar scenes are in queue.jobs.
+- 2026-10-16 19:05: new: claims-7 f85c3b9 (session_013ECn821EbTpbj4h7d3PepH) Trade-with prompt in the wild (scene claims-7-ask.txt; --debug-position is client-only, so the scene moves A on the server by SQL); model-1 style now eb8b399 (+ clothes view).
 
 ## Open questions / blockers
 - (none)
