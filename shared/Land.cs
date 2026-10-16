@@ -22,17 +22,20 @@ namespace LifeGame.Shared
 
             // The water is a flat plane, so a stream runs in a valley: within about
             // 26 m of its line the hills sink toward a floor just above the water,
-            // then a channel about 3 m wide is cut to a bed below it.
+            // then a channel about 6 m wide slopes gently down to a bed below it.
             float meters = RiverDistance(x, z);
             float valley = 1f - SmoothStep(4f, 26f, meters);
-            float bed = 1f - SmoothStep(1.2f, 3.5f, meters);
+            float bed = 1f - SmoothStep(1.0f, 6.0f, meters);
             float h = hills * (1f - 0.85f * valley) - 0.55f * 0.85f * valley;
             h = h * (1f - bed) + (World.WaterLevel - 0.35f) * bed;
 
-            // Ponds: round hollows filled to a fixed depth. The offsets keep them off
-            // the noise lattice, where they would line up in rows.
+            // Ponds: round hollows filled to a fixed depth, in a wider dip so the banks
+            // slope gently. The offsets keep them off the noise lattice, where they
+            // would line up in rows.
             float pondField = World.Noise(x + 5113, z - 2971, 26f, 70) * 0.6f + World.Noise(x - 3307, z + 7741, 16.4f, 75) * 0.4f;
-            float pond = SmoothStep(0.66f, 0.78f, pondField);
+            float dip = SmoothStep(0.36f, 0.74f, pondField);
+            h += (MathF.Min(h, -0.6f) - h) * dip;
+            float pond = SmoothStep(0.68f, 0.82f, pondField);
             h += (MathF.Min(h, World.WaterLevel - 0.4f) - h) * pond;
 
             // The spawn clearing is a dry, gentle rise.

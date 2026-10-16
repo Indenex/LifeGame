@@ -35,13 +35,15 @@ def land(x, z):
     # channel ~3 m wide is cut to a fixed bed below water.
     meters = river_distance(x, z)
     valley = 1 - ss(4, 26, meters)
-    bed = 1 - ss(1.2, 3.5, meters)
+    bed = 1 - ss(1.0, 6.0, meters)
     h = hills * (1 - 0.85 * valley) - 0.55 * 0.85 * valley
     h = h * (1 - bed) + (WL - 0.35) * bed
-    # Ponds: round hollows filled to a fixed depth. Offsets keep them off the
+    # Ponds: round hollows filled to a fixed depth, in a wider dip so banks slope
+    # gently. Offsets keep them off the
     # noise lattice (and off the axes, where the hash is weak).
     field = VN(x + 5113, z - 2971, 26, 70) * 0.6 + VN(x - 3307, z + 7741, 16.4, 75) * 0.4
-    pond = ss(0.66, 0.78, field)
+    h += (min(h, -0.6) - h) * ss(0.36, 0.74, field)
+    pond = ss(0.68, 0.82, field)
     h += (min(h, WL - 0.4) - h) * pond
     keep = ss(18, 32, math.hypot(x, z))  # spawn stays a dry, gentle rise
     return h * keep + (0.1 + hills * 0.3) * (1 - keep)
