@@ -45,6 +45,7 @@ public partial class Main : Node3D
     DbConnection? conn;
     Identity? myIdentity;
     uint myId;
+    readonly Placing placing = new();
     readonly TradeWindow trade = new();
     bool spawned;
     Vector3 velocity;
@@ -79,6 +80,13 @@ public partial class Main : Node3D
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
+        // Setting crafted things down from the bag (ui-16, crafting-20).
+        placing.Terrain = terrain;
+        placing.Me = me;
+        placing.CameraRig = cameraRig;
+        placing.View = view;
+        placing.Note = hud.Note;
+        AddChild(placing);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
@@ -87,7 +95,7 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         building.MayBar = social.HasRightsAt;
         // Trading face to face (ui-9, D-069).
@@ -99,7 +107,7 @@ public partial class Main : Node3D
             || social.PanelOpen
             || trade.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());

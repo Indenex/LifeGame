@@ -61,6 +61,9 @@ public static class Controls
         new("claim_open", None, "Your claim", "{key} shows the land you claim"),
         new("chat", None, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
+        // Setting down something you made (ui-16, crafting-20); its hint waits until you carry one.
+        // Help stays null (out of the F1 list) until Crafting's placing link is wired.
+        new("place_item", new[] { Key.P }, null, "{key} sets down something you made", OnRequest: true, Name: "Set down something you made"),
         // Interim: Ceramics reads V directly until tending clay moves to G.
         new("tend_clay", new[] { Key.V }, "Tend clay", Fixed: true),
     };
