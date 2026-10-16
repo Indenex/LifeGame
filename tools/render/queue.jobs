@@ -1,0 +1,26 @@
+# One job per line: <name> <command...>. queue.sh rereads this file between jobs,
+# so jobs can be added or reordered while it runs. Live scenes go last.
+model-1-player tools/render/render.sh model-1-player b3be674 "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,-35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35"
+ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
+crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
+ui-10 env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 1931044 "--time-of-day=0.45 --screenshot-hud --screenshot-equip --render-slowstart=0.05,45 --screenshot-delay=4" "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
+ceramics-6-demo tools/render/render.sh ceramics-6 e9544db "--time-of-day=0.45 --ceramics-demo=jar"
+ceramics-6-jar tools/render/scene.sh ceramics-6-jar e9544db tools/render/scenes/ceramics-6-jar.txt
+bugfix-18 tools/render/scene.sh bugfix-18 e80c6cf tools/render/scenes/bugfix-18-pot.txt
+bugfix-19 tools/render/scene.sh bugfix-19 1877b88 tools/render/scenes/bugfix-19-pot.txt
+claims-7 tools/render/scene.sh claims-7 f85c3b9 tools/render/scenes/claims-7-ask.txt
+env-1 tools/render/scenes/env-1.sh 1ade969
+env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
+model-1-style tools/render/scenes/model-1-style.sh eb8b399
+atmosphere-13 tools/render/scenes/atmosphere-13.sh
+bugfix-17 tools/render/scene.sh bugfix-17 caaf9ae tools/render/scenes/bugfix-17-pot.txt
+bugfix-17-before tools/render/scene.sh bugfix-17-before 7e79d22 tools/render/scenes/bugfix-17-pot.txt
+animals-8 tools/render/scene.sh animals-8 4233255 tools/render/scenes/animals-8-wool.txt
+animals-8-ground tools/render/scene.sh animals-8-ground 4233255 tools/render/scenes/animals-8-ground.txt
+atmosphere-66-clouds tools/render/scene.sh atmosphere-66-clouds dca2a0f tools/render/scenes/atmosphere-66-clouds.txt
+anim-1-side env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1 4afbb2b tools/render/scenes/anim-1-side.txt
+anim-1-turn env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-turn 4afbb2b tools/render/scenes/anim-1-turn.txt
+anim-1-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-work 4afbb2b tools/render/scenes/anim-1-work.txt
+animals-8-spin tools/render/scene.sh animals-8-spin 4233255 tools/render/scenes/animals-8-spin.txt
+ui-9-liveA tools/render/scene.sh ui-9-liveA 0d7a326 tools/render/scenes/ui-9-live-a.txt
+ui-9-liveB tools/render/scene.sh ui-9-liveB 0d7a326 tools/render/scenes/ui-9-live-b.txt

@@ -1,0 +1,20 @@
+# animals-8 (4233255): the spinning minigame. Driven live: the Render lane looks at the
+# panel snap, clicks "Spin wool yarn", then flicks with Space and bursts snaps.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2
+wait 35
+give 6 1 60
+give 1 4 50
+give 2 1 50
+give 193 10 60
+wait 2
+craft carve.drop_spindle
+wait 2
+key c
+wait 2
+key Tab
+wait 2
+key Tab
+wait 3
+snap
+live
