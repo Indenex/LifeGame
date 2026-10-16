@@ -867,3 +867,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-213 — 2026-10-16 — Ceramics next: roof tiles; Justin wipes his world manually on build 980
 **Decision:** Ceramics' next feature is roof tiles ("Roof tiles"), not slip decoration. Separately, Justin is wiping his world manually on build 980, because the launcher's wipe confirm is broken; the Release lane is fixing it.
 **Who:** Justin, picking "Roof tiles".
+
+## D-214 — 2026-10-16 — UX next: finish inventory and drag and drop, then a 10-slot hotbar with keybinds
+**Decision:** The UI/UX worker finishes the inventory and drag and drop next, then adds a hotbar along the bottom of the screen. The hotbar fills up to 10 slots, each with an assigned keybind, and hitting the keybind uses the item in that slot. Owner: UX (ui-18 inventory, ui-19 hotbar).
+**Who:** Justin ("I want the UI/UX worker to finish inventory, drag and drop stuff, etc. next, and assign keybinds to slots on the bottom of the screen. These slots should fill up to 10 slots, and have the item be usable by hitting the assigned keybind.")
+
+## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
+**Decision:** The chat leak is fixed with per-recipient private delivery. This is the PM's default; Justin did not pick. Owner: Claims (claims-13).
+**Who:** PM default (Justin did not pick).
