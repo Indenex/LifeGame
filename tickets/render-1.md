@@ -54,6 +54,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 20:05: bugfix-18 run 1: my SQL dried the 4 pots in the fire too and they finished at once, so shot (a) had no full fire (prompt read Feed the fire; setup error, not a finding). Scene now dries only `WHERE fire_id = 0`; bugfix-18b queued. Jar scene rerun queued (first run: jar placed and filled, but behind the player, no prompt).
 - 2026-10-16 20:10: anim-1 moved to 0b749e4 (all of requests 1+2; no run clip; Shift = sneak).
 - 2026-10-16 20:12: render request ui-12 Options page bca464e (UX/UI): --screenshot-menu and --screenshot-options, fresh settings.cfg, 1280x720. Queued.
+- 2026-10-16 20:30: ui-12 sent (f92bff3; b118ee0 is wiring-only), 968f6a7. Jar rerun 2: jar hidden behind the player, no prompt (puppet heading doesn't turn the client's own figure); jar3 queued with side camera and a W tap.
 
 ## Open questions / blockers
 - (none)
