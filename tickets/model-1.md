@@ -1,9 +1,9 @@
 # model-1: Model style and first upgrades
 Lane: Modeling
 Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
-Status: in_progress
+Status: in_review
 Branch: claude/model-1-style
-PR: (once Justin has seen renders)
+PR: #172
 
 ## Goal
 Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar.cs`, `Sheep.cs`, `StructureModel*.cs`, `PotMesh.cs`, `KilnModel.cs`, `BowDrillMesh.cs`, `ItemLook.cs`, `ClaimMarkerModel.cs`, `Terrain.cs`). Done means: (1) a short art-direction note `client/assets/models/STYLE.md` (silhouette, proportions, palette, poly budget per object for 32 players on modest Linux/Windows PCs), proposed to Justin through the PM as 2 to 3 options shown as renders; (2) a pipeline decision: keep procedural meshes, or add glTF assets (say how they are made headlessly in CI-friendly tooling and committed); (3) the first visible upgrade, the player figure, then the sheep, matching the chosen style. Justin sees before/after renders.
@@ -22,6 +22,7 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 - 2026-10-16 19:50: baseline renders from the Render lane at b3be674: branch claude/render-1-013qe8 commit 8f3e255, `renders/model-1-*-b3be674-*.png` (player 1-3, walk 1-2, sheep 4-5, flock 6, hut 7-8). Seen at the game camera, the player is ~60 px tall and items are specks: silhouette and size matter more than faces, which supports style A and slightly oversized raw materials. Style renders (request 3, eb8b399) are queued with the Render lane.
 - 2026-10-16 20:05: Animals' wool items (animals-8, #90): drop spindle 197, wool yarn 198, wool cloth 199 modeled (by number until on main); the Showcase `items` grid shows pending ids 197-201 too. New CLAUDE.md rule: lanes never edit STATUS.md on their branches. PR #96 (made earlier at the PM's request) does; asked the PM to merge or close it.
 - 2026-10-16 20:30: PM chose to close #96 (the Scribe sets my STATUS row); closed, and STATUS.md restored to main's on this branch.
+- 2026-10-16 21:15: D-142 (renders never hold up merges): merged main, build green on db855b0, opened PR #172 (style A default). Avatar swap to PlayerModel.Build() happens in whichever of #172 / Animation's #100 merges second.
 
 ## Open questions / blockers
 - Sent to the PM for Justin: style A Carved (recommended) / B Soft / C Natural; pipeline: procedural C# (recommended) / Blender-made glTF.
@@ -37,4 +38,4 @@ All are one draw call per figure; 32 players at even C is ~140k tris, well insid
 Showcase: `godot --path client res://scripts/models/Showcase.tscn -- --view=row|people|faces|sheep|walk [--yaw=deg] [--shot=out.png]`. Headless capture here needs Vulkan (lavapipe: `apt-get install mesa-vulkan-drivers`) under `xvfb-run`; the GL path renders black.
 
 ## Next step
-Wait for Justin's style pick and the Render lane's item renders; meanwhile model the clay items' held look and the sheep drop-in for Sheep.cs.
+Wait for CI on PR #172, send the green sha to the PM and Integration (D-095); then model the cold hearth (Crafting, FireView.cs ColdHearthView) and the clay items' held look.
