@@ -232,8 +232,8 @@ public partial class Terrain : Node3D
         // Under the trees the grass gives way to leaf litter; on the hilltops to
         // heath, by the water to moss.
         color = color.Lerp(LeafLitter, Forest.Density(x, z) * 0.4f);
-        color = color.Lerp(Undergrowth.HeathGround, Forest.Heath(x, z) * 0.45f);
-        color = color.Lerp(Undergrowth.Moss, Forest.Wetland(x, z) * 0.4f);
+        color = color.Lerp(Look.HeathGround, Forest.Heath(x, z) * 0.45f);
+        color = color.Lerp(Look.Moss, Forest.Wetland(x, z) * 0.4f);
 
         float clay = Mathf.SmoothStep(0.64f, 0.85f, World.ClayScore(x, z));
         color = color.Lerp(Look.Clay, clay * 0.35f);
@@ -326,7 +326,7 @@ public partial class Terrain : Node3D
                     {
                         // Birch and alder by the water: slim, pale and light-leaved.
                         var slim = at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f));
-                        trunks.Add((slim, Undergrowth.BirchBark.Darkened(Hash01(x, z, 24) * 0.15f), custom));
+                        trunks.Add((slim, Look.BirchBark.Darkened(Hash01(x, z, 24) * 0.15f), custom));
                         leafy.Add((slim, Look.LeafLight.Lerp(Look.Leaf, Hash01(x, z, 18) * 0.3f), custom with { A = SeasonBroadleaf }));
                     }
                     else if (heath > 0.5f && roll < tree)
@@ -369,11 +369,11 @@ public partial class Terrain : Node3D
                     float heather = 0.30f * heath, gorse = 0.04f * heath, sedge = 0.35f * wet;
                     if (plant < heather)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.6f + Hash01(x, z, 55) * 0.4f).ScaledLocal(new Vector3(1.1f, 0.45f, 1.1f)),
-                            Undergrowth.Heather.Lightened((Hash01(x, z, 56) - 0.5f) * 0.15f), custom));
+                            Look.Heather.Lightened((Hash01(x, z, 56) - 0.5f) * 0.15f), custom));
                     else if (plant < heather + gorse)
-                        bushes.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.5f), Undergrowth.Gorse.Lerp(Look.FlowerButtercup, Hash01(x, z, 56) * 0.25f), custom));
+                        bushes.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.5f), Look.Gorse.Lerp(Look.FlowerButtercup, Hash01(x, z, 56) * 0.25f), custom));
                     else if (plant < heather + gorse + sedge)
-                        reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Undergrowth.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
+                        reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Look.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
                     else if (plant < heather + gorse + sedge + fernChance)
                         ferns.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
                     else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density)
