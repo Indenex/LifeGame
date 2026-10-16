@@ -27,7 +27,5 @@ public static class AvatarWork
     static void Start(Avatar avatar, string? processId)
     {
         avatar.Work = WorkMotions.For(processId);
-        var (right, left) = HeldItems.For(processId);
-        avatar.Hold(right, left);
     }
 }

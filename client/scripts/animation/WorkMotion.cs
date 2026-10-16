@@ -2,9 +2,10 @@ using Godot;
 
 namespace LifeGame;
 
-// What the hands are doing while a craft job runs. Each one kneels on the right knee
-// with the left foot planted and loops its own arm motion.
-public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend }
+// What the hands are doing while a craft job runs. Small crafts kneel on the right knee
+// with the left foot planted and loop their own arm motion; Station stands working at a
+// waist-high station (crafting table, spindle, drying rack: D-098). Hands hold nothing.
+public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend, Station }
 
 public static class WorkMotions
 {
@@ -33,6 +34,11 @@ public static class WorkMotions
     public static void Pose(Pose p, WorkMotion work, float t, float legLength)
     {
         p.Clear();
+        if (work == WorkMotion.Station)
+        {
+            Station(p, t);
+            return;
+        }
         // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
         // back; left thigh forward and shin straight down to a planted foot.
         p.HipsOffset = new Vector3(0, -legLength * 0.44f, -0.05f);
@@ -147,6 +153,24 @@ public static class WorkMotions
         p[Joint.Spine].X = lean;
         // Breathing goes on underneath.
         p[Joint.Spine].X += 0.01f * Mathf.Sin(t * 1.65f);
+    }
+
+    // Standing at a waist-high station, knees soft, both hands working on its top and
+    // the weight shifting a little with the work.
+    static void Station(Pose p, float t)
+    {
+        float work = Mathf.Sin(t * 2.6f), sway = Mathf.Sin(t * 0.9f);
+        p.HipsOffset = new Vector3(0.015f * sway, -0.02f, 0);
+        p[Joint.HipL] = new Vector3(-0.08f, 0, -0.02f * sway);
+        p[Joint.HipR] = new Vector3(-0.08f, 0, -0.02f * sway);
+        p[Joint.KneeL].X = 0.14f;
+        p[Joint.KneeR].X = 0.14f;
+        p[Joint.FootL].X = -0.06f;
+        p[Joint.FootR].X = -0.06f;
+        p[Joint.Spine] = new Vector3(0.3f + 0.01f * Mathf.Sin(t * 1.65f), 0.05f * work, 0);
+        p[Joint.Neck].X = 0.2f;
+        Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
+        Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
     }
 
     // Shoulder swing (negative is forward), shoulder sideways (inward is negative on the

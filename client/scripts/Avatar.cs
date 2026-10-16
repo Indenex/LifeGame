@@ -14,7 +14,6 @@ public partial class Avatar : Node3D
     readonly Node3D figure;
     readonly PlayerAnimator animator;
     readonly Label3D nameplate;
-    readonly MeshInstance3D heldR = new() { Scale = Vector3.One * 0.75f }, heldL = new() { Scale = Vector3.One * 0.75f };
     float speed, turnRate, lastHeading;
     Vector3 lastPosition;
 
@@ -26,9 +25,6 @@ public partial class Avatar : Node3D
         figure = BuildFigure();
         AddChild(figure);
         animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
-        // Hand attach points (Node3D or BoneAttachment3D): tool shaft along -Y out of the fist.
-        (figure.FindChild("ToolR", true, false) ?? figure).AddChild(heldR);
-        (figure.FindChild("ToolL", true, false) ?? figure).AddChild(heldL);
 
         nameplate = new Label3D
         {
@@ -113,14 +109,6 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
-
-    // Items shown in the hands (null: empty hand). Today's ground meshes until the
-    // Modeling lane's held models land.
-    public void Hold(Shared.Item? right, Shared.Item? left)
-    {
-        heldR.Mesh = right is { } r ? ItemLook.MeshFor(r) : null;
-        heldL.Mesh = left is { } l ? ItemLook.MeshFor(l) : null;
-    }
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
