@@ -29,9 +29,11 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:05: PM delegated merges (D-095). Merged #107 (dbf4dff, CI concurrency) and #97 (927e22a, local merge build passed). Then this session's permission check blocked merge work ("merge without review", the delegation came from the PM, not Justin), so merges are back with the PM; lanes send green shas to the PM. #121 (integration-2, sneak flag) opened.
 - 2026-10-16 18:15: check-in survey vs main cb84d64: all 20 open PRs clean vs main. Pairwise conflicts, whoever merges second merges main in: bugfix #99 x #108, #108 x #109 (CeramicsView.cs); #105 x #108, #105 x #109 (ceramics); #105 x #61 (Building). Sent to the PM.
 - 2026-10-16 18:20: correction: #110 x #111 was a false positive (survey modeled the first merge with one parent; #111 contains #110). Pairwise check now uses `git commit-tree <tree> -p origin/main -p origin/<first>`. Other conflicts confirmed.
+- 2026-10-16 18:40: Justin's merge permission for this session not in place (PM's session refused to add the rule; Justin adds it himself), so the PM keeps merging; this lane sends green shas. #121 green on 777ff5e, sent. Survey vs 235fe50: all 16 open PRs clean; only #108 x #105 conflict (ceramics).
+- 2026-10-16 18:42: D-129: exactly one world wipe, with Environment's env-2 land reshape, on a date Justin confirms. This lane helps Environment with `shared/World.cs` and the upgrade check, and flags any other PR that would wipe.
 
 ## Open questions / blockers
-- (none; STATUS.md rule answered: option 1)
+- Sent to PM 18:45: how env-2's intended wipe passes CI's upgrade check (options in the message).
 
 ## Next step
 After each merge to main, re-run the conflict survey (`git merge-tree` each open PR vs main and pairwise) and send the PM which PRs need main merged in; get #121 (integration-2) green and to the PM.
