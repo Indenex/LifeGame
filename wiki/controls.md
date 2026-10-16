@@ -7,13 +7,13 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 | Key | Action |
 |---|---|
 | W A S D | Walk |
-| Q / E, or hold right mouse and drag | Turn the view |
+| Hold right mouse and drag | Turn the view |
 | Hold Shift | Run (uses stamina) |
 | Hold Ctrl | Sneak (walk slowly) |
-| Space | Pick up |
+| Space | Jump |
 | F | Dig |
-| G | **Use**: act on what you are facing (the prompt shows what it will do) |
-| Shift+G | Bar or unbar a door you are allowed to lock |
+| E | **Use**: act on what you are facing (the prompt shows what it will do). With nothing to use, pick up what lies at your feet |
+| Shift+E | Bar or unbar a door you are allowed to lock |
 | C | Crafting panel |
 | X | Eat the best food you carry |
 | B | Build menu |
