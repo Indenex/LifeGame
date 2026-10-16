@@ -21,6 +21,10 @@
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
+//   frames 300 / frames +72   (movie scenes) wait until the camera client has
+//                     written that many frames (or that many more)
+//   mark walk-start   log the current movie frame; scene.sh cuts clips between
+//                     "<name>-start" and "<name>-end" marks
 // With PUPPET_TOKEN_OUT set, the puppet writes its login token there once it has
 // joined; scene.sh hands it to the camera client for "client-as-puppet" scenes, so
 // the camera shows the puppet's own inventory and work.
@@ -115,6 +119,8 @@ void WalkTo(float tx, float tz)
 }
 
 int shots = 0;
+string? movieDir = Environment.GetEnvironmentVariable("PUPPET_MOVIE_DIR");
+int Frames() => movieDir != null && Directory.Exists(movieDir) ? Directory.GetFiles(movieDir, "*.png").Length : 0;
 string Display() => Environment.GetEnvironmentVariable("DISPLAY") ?? ":99";
 void Run(string file, string arguments)
 {
@@ -221,6 +227,16 @@ foreach (var line in steps)
             Pump(0.8);
             break;
         }
+        case "frames":
+        {
+            int now = Frames();
+            int want = rest.StartsWith('+') ? now + int.Parse(rest[1..]) : int.Parse(rest);
+            Pump(3600, () => Frames() >= want);
+            break;
+        }
+        case "mark":
+            Console.WriteLine($"puppet: mark {rest} frame={Frames()}");
+            break;
         case "keydown":
         case "keyup":
             Run("xdotool", $"search --name LifeGame windowfocus {verb} {rest}");

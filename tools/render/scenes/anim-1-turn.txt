@@ -1,0 +1,17 @@
+# anim-1: idle and walking a circle (W + E turns the camera, so the walk curves),
+# 3/4 front view.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=3.2,1.3,150,0.9
+frames 360
+mark idle34-start
+frames +144
+mark idle34-end
+mark circle-start
+keydown w
+keydown e
+frames +120
+keyup e
+keyup w
+frames +12
+mark circle-end
