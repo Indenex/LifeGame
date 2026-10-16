@@ -16,10 +16,10 @@ Recipes (main plus open branches):
 | knap.flake, knap.hand_axe, carve.digging_stick, cord.twist | basic (C) |
 | lash.spear, haft.knife, lash.stone_axe, lash.bow_drill | basic (C), first tools so you survive outside a claim (Q-D) |
 | clay.clean, clay.grit, clay.grog, clay.temper_grit, clay.temper_grog, clay.daub | basic (C), material processing |
-| clay.pinch_pot | basic (C), so the first pot needs no building (Q-A) |
+| clay.pinch_pot, clay.coil_pot | basic (C), so pots never wait on a claim (Q-A; Ceramics' recommendation, 18:22) |
 | clay.brick | basic (C), house material |
-| chop.log (at a tree), cook.meat (at a fire) | world actions, unchanged |
-| weave.basket, clay.coil_pot, clay.storage_jar, carve.drop_spindle | Crafting Table |
+| chop.log (at a tree), cook.meat, cook.broth, cook.stew (at a fire) | world actions, unchanged; the fire is their station |
+| weave.basket, clay.storage_jar, carve.drop_spindle | Crafting Table |
 | sew.wool_tunic | Crafting Table |
 | cord.spin_wool, weave.wool_cloth | Spindle |
 | hide.scrape, hide.stretch (drying), sew.leather_wraps | Leather drying rack |
@@ -38,12 +38,13 @@ Framework (Crafting):
 - Over-time work (drying) goes in a per-station slot table later; Animals keeps hide_rack for now.
 
 Questions for Justin (recommended option first):
-- Q-A: pinch pot basic (rec; first pot needs no building) / pinch pot at the table (stronger push to claim early).
+- Q-A: all clay working basic, pinch and coil pots included (rec, Ceramics agrees) / pots at the table or a Potter's bench (stronger potter identity, but no pot before a claim).
 - Q-B: table costs 4 sticks + 2 cordage (rec; about 2 min) / also a log (needs an axe, +10 min).
 - Q-C: station draws from baskets and jars within 4 m plus the claim stash (rec) / anywhere in the claim (simplest, less physical) / the stash only.
 - Q-D: hafted tools (spear, knife, axe, bow drill) basic (rec; survive anywhere) / at the table.
 
 ## Progress log
+- 2026-10-16 18:45: Ceramics asked for the coil pot to stay basic and the jar at the Table; adopted and sent to the PM.
 - 2026-10-16 18:35: proposal written and sent to the PM. Told Animals and Animation the planned shape (StationKind, ProcessDef.Station, Stations.NearestOf).
 
 ## Open questions / blockers
