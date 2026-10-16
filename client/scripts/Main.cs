@@ -103,6 +103,8 @@ public partial class Main : Node3D
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
+        // First-evening tips for a brand-new player (ui-14, M2).
+        AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
@@ -323,6 +325,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
+        AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);

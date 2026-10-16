@@ -236,8 +236,18 @@ public static partial class Module
     static void SpawnGroundItem(ReducerContext ctx, int chunkX, int chunkZ)
     {
         float span = World.ChunkSize * World.CellSize;
-        float x = (chunkX + (float)ctx.Rng.NextDouble()) * span;
-        float z = (chunkZ + (float)ctx.Rng.NextDouble()) * span;
+        // Only on dry ground: a stick dropped in a pond or stream bed can't be reached,
+        // and it would still count toward the chunk's target (bugfix-21). A chunk that
+        // is all water gets nothing this round.
+        float x = 0, z = 0;
+        bool found = false;
+        for (int tries = 0; tries < 8 && !found; tries++)
+        {
+            x = (chunkX + (float)ctx.Rng.NextDouble()) * span;
+            z = (chunkZ + (float)ctx.Rng.NextDouble()) * span;
+            found = IsDry(x, z);
+        }
+        if (!found) return;
         ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
