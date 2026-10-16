@@ -78,6 +78,10 @@ public partial class Atmosphere : Node3D
 
     readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
     Vector2 cloudOffset;
+    // Which way the wind blows (x, z), shared with shaders as wind_dir. Fixed for now;
+    // the clouds drift with it.
+    public static readonly Vector2 WindDirection = new(0.6f, 0.8f);
+    static readonly StringName NWindDir = "wind_dir";
 
     // How wooded it is around the player, eased over a few seconds: where the sun
     // shafts between the trunks show.
@@ -234,7 +238,7 @@ public partial class Atmosphere : Node3D
         wetness = Mathf.Lerp(wetness, wet, snap ? 1f : 1f - Mathf.Exp(-dt / 10f));
 
         // Clouds drift with the wind, the same way the grass leans.
-        cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
+        cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
@@ -242,6 +246,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NRainAmount, rainAmount);
         RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
         RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
+        RenderingServer.GlobalShaderParameterSet(NWindDir, WindDirection);
 
         ApplyLight();
 

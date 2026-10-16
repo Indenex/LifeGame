@@ -45,6 +45,7 @@ public static class Look
         Add("wetness", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("wind_strength", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
         Add("wind_gust", RenderingServer.GlobalShaderParameterType.Float, 0.5f);
+        Add("wind_dir", RenderingServer.GlobalShaderParameterType.Vec2, Atmosphere.WindDirection);
         Add("rain_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("cloud_cover", RenderingServer.GlobalShaderParameterType.Float, 0.2f);
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
@@ -211,6 +212,8 @@ public static class Look
         global uniform float wind_strength;
         // The gust heard in the wind right now (0 to 1), so what moves matches the sound.
         global uniform float wind_gust;
+        // Which way the wind blows across the ground (unit x, z); clouds drift this way.
+        global uniform vec2 wind_dir;
         global uniform float rain_amount;
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
