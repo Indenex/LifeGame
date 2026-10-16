@@ -208,3 +208,35 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-050 — 2026-10-15 — Right-drag turns the camera
 **Decision:** Holding the right mouse button and moving the mouse turns the camera. Q/E still turn it. The UX/UI lane builds it.
 **Who:** Justin
+
+## D-051 — 2026-10-16 — Ship firelight and the moonlit early night
+**Decision:** Atmosphere's warmer firelight and the moonlit early night (#32) ship as shown.
+**Who:** Justin ("Ship it")
+
+## D-052 — 2026-10-16 — Carrying too much slows you down
+**Decision:** Over the carrying limit (D-042) you can still pick things up, but you walk slower: easing down to half speed at the overload cap, never slower. This is what survival-3 (#39) already does.
+**Who:** Justin ("Slower walk")
+
+## D-053 — 2026-10-16 — Player fighting: as proposed, and killers are marked
+**Decision:** PvP follows Claims' proposal: left click strikes a player in reach (fists ~12 hits to kill, hand axe ~6); fighting is open in the wild, blocked inside claims unless the owner allows it and within 20 m of spawn; new players are protected for 10 minutes; dying to a player is like any death (drop what you carry, keep skills); one chat line says who struck whom. Added: a killer's name shows red to others for 30 minutes. Being hurt shows as a soft dark-red screen edge instead of a health ring (Claims' change, shown to Justin).
+**Who:** Justin ("Mark killers")
+
+## D-054 — 2026-10-16 — A new fire burns 15 minutes
+**Decision:** A newly lit fire burns for 15 minutes before it needs feeding (was 60 s; Crafting had proposed 180 s). Each stick fed still adds 90 s.
+**Who:** Justin ("15 minutes for the fire length")
+
+## D-055 — 2026-10-16 — Skill titles stay every 20 ranks
+**Decision:** Titles stay Apprentice 20, Journeyman 40, Expert 60, Artisan 80, Master 100 (the design doc's 25/50/75/90 is not used). The Journeyman focus choice opens at rank 50.
+**Who:** Justin ("Keep the game's"; the PM had recommended the doc's)
+
+## D-056 — 2026-10-16 — Cleared trees fall in a random direction
+**Decision:** When ground is cleared, trees topple and settle in a random direction (seeded per tree so all players see the same), rocks sink, grass thins. The PM had recommended away-from-camera.
+**Who:** Justin ("Random")
+
+## D-057 — 2026-10-16 — Mud-brick house costs
+**Decision:** The mud-brick house (building-4) costs footings 6 stone + 4 sticks, walls 16 bricks + 6 daub, rafters 12 sticks + 2 cordage, thatch 14 fiber. Full rain cover, warmth 0.85 (0.9 door shut), a fire inside makes it fully warm, weathers after 7 days untouched. The PM had recommended 10 bricks.
+**Who:** Justin ("16 bricks"); the other numbers are Building's defaults, shown to him
+
+## D-058 — 2026-10-16 — Dedicated Integration lane; Opus codes, Sonnet does small tasks
+**Decision:** Crafting no longer owns integration, CI and builds; a dedicated Integration lane does (shared-file hooks, CI workflows, build and bindings tooling, the Use dispatcher, PR merge-readiness). Crafting and the other feature lanes only build features. Every session or agent that writes or designs code runs on Opus; small, basic tasks run on Sonnet, handed out by a coordinator (the lane session) that breaks its ticket down and reviews the results. Supersedes "Crafting (integration owner)" in D-025; the Bug fixes lane (D-040) still takes cross-lane bugs.
+**Who:** Justin

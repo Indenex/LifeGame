@@ -15,7 +15,15 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
-- **Lane sessions** each own one lane (see `STATUS.md`) and work one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration.
+
+## Models (D-058)
+
+- **Opus** for any session or agent that writes or designs code: the PM, every lane session, and coding subagents.
+- **Sonnet** for small, basic tasks: searching, reading logs, summarizing, ticket and status bookkeeping, mechanical one-file edits, running checks.
+- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
+- New sessions started for a lane (e.g. `create_session`) use Opus.
 
 ## The no-handoff rule
 
@@ -32,7 +40,7 @@ Each lane works in its own files so lanes don't collide:
 
 - Server code in `server/spacetimedb/<Feature>.cs` as `partial class Module`.
 - Client code under `client/scripts/<feature>/`.
-- Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Crafting lane is the integration owner for these, CI and builds.
+- Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Integration lane owns these, CI and builds.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
 - `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.
 
