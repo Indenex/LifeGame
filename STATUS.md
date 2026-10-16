@@ -22,7 +22,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Integration (D-058) | integration-1 take over CI and builds; unassigned, needs a session | not started | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Integration (D-058) | integration-1 take over CI and builds; in progress (session_01Rf5965nk4Lvd3f2QDteZSq) | `claude/integration-lane` | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
 | Render (D-059) | render-1 set up the capture pipeline; unassigned, needs a session | not started | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Crafting | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
