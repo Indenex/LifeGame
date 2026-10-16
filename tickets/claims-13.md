@@ -17,9 +17,10 @@ Every Claims, Chat, Trading, stash and fighting reducer validates reach, ownersh
   - Still to read: Combat.cs (strike reach, cooldown, PvP check), Stance.cs, ClaimNames.cs.
 
 - 2026-10-16: PM picked (b). Implemented: private `ChatHeard` table (one row per listener in range, speaker included) + public `MyChat` view; SendChat and SayNearby go through `Deliver`; SocialLayer subscribes to `my_chat`; SocialTest reads MyChat and checks an out-of-earshot whisper never arrives. `ChatMessage` is now private and unwritten (kept so existing worlds upgrade without a wipe; PruneChat still clears it). Not built locally (no dotnet); CI is the first build, and its upgrade check covers the schema change.
+- 2026-10-16: read Combat.cs, Stance.cs, ClaimNames.cs. StrikePlayer checks online, reach (+slack), spawn clearing, PvP rule at both positions, newcomer grace and strike cooldown, all on the server. SetNewcomerGrace and SetClaimLifetime are admin-only. NameClaim cleans the name and needs an owned standing claim. SetSneaking only touches the caller's own row. No further gaps found; audit done apart from PR #315.
 
 ## Open questions / blockers
 - Gap A: PM chose (b), done (see log). Options were: (a) keep as is, since chat is only ever near-field and a hostile client can read the lot (cheap, leaves the leak); (b) server-side range: move whispers and shouts out of the public table into a per-recipient private table written by SendChat for players in range [recommended; more writes per message, 0 client leak]; (c) a SpacetimeDB client visibility filter by chunk (smallest code, depends on filter support in our SDK version, unverified).
 
 ## Next step
-Open the PR, wait for CI (check the upgrade check passes without a wipe). Then read Combat.cs, Stance.cs and ClaimNames.cs for the same checks and add findings here.
+Wait for CI on PR #315 (check the upgrade check passes without a wipe), fix anything red, then send the PM the green sha.
