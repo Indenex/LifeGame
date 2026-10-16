@@ -1,0 +1,9 @@
+# ui-15 (PR #250): the crit "!" pop, every 1.2 s of game time 4 m in front of the camera.
+# Movie at 24 fps so the pop, settle and fade can be cut out frame by frame.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --screenshot-hitpop --screenshot-hud
+frames 300
+mark pop-start
+frames +72
+mark pop-end
