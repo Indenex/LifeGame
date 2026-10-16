@@ -93,7 +93,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                ? new UseOffer("Drink", World.Reach, () => { conn.Reducers.Drink(); Sfx.Play(Cue.Drink); })
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
@@ -103,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => conn.Reducers.DrinkFrom((ushort)pot))
+                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -294,7 +294,7 @@ public partial class SurvivalClient : Node
         if (e.IsActionPressed("eat"))
         {
             var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
-            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
+            if (Needs.BestFood(Current().food, carried) is { } food) { conn.Reducers.Eat((ushort)food); Sfx.Play(Cue.Eat); }
             else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }
