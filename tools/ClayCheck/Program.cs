@@ -27,6 +27,7 @@ string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
 bool jarRun = args.Contains("--jar");
 bool potRun = args.Contains("--pot");
+bool lampRun = args.Contains("--lamp");
 bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
@@ -56,6 +57,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
+                "SELECT * FROM lamp",
                 "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree",
@@ -102,7 +104,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : 12u;
+uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : lampRun ? 4u : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -125,6 +127,7 @@ SetUpBench();
 
 if (kilnRun) return KilnCheck();
 if (potRun) return PotCheck();
+if (lampRun) return LampCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -401,6 +404,108 @@ int KilnCheck()
 
 // Cooking in a pot (ceramics-7): a coil pot dried by a fire and fired in it,
 // filled at the water, berries picked, broth simmered, taken off and eaten.
+// Clay oil lamps (ceramics-9): two lamps pinched at the bench and pit-fired; setting
+// one down with no tallow is refused. Tallow comes from raw mutton, which only Animals
+// hands out: with CLAYCHECK_TALLOW=1, put 2 raw mutton in this player's bag (the
+// identity is printed) and the run renders tallow in a pot, lights a lamp and feeds it.
+int LampCheck()
+{
+    while (CountOf(Item.CleanClay) < 2) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    AtBench();
+    Craft("clay.lamp", 0.9f, null);
+    Craft("clay.lamp", 0.9f, null);
+    var lampPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Lamp).ToList();
+    if (lampPieces.Count != 2) Fail($"expected 2 lamps drying, have {lampPieces.Count}");
+    Log("STAGE lamps-drying");
+    LightFireNear(lampPieces.Average(p => p.X) + 1.3f, lampPieces.Average(p => p.Z));
+    KeepFireGoing();
+    var ids = lampPieces.Select(p => p.Id).ToList();
+    var watch = Stopwatch.StartNew();
+    while (ids.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("lamps never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    int newsBefore = news.Count;
+    foreach (var id in ids)
+    {
+        KeepFireGoing();
+        var piece = conn.Db.ClayPiece.Id.Find(id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(id)?.Stage == (byte)ClayStage.Firing, 3, "a lamp to go in the fire");
+        if (lastError != null) Fail($"firing a lamp: {lastError}");
+    }
+    watch.Restart();
+    while (ids.Any(id => conn.Db.ClayPiece.Id.Find(id) != null))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(6)) Fail("lamp firing never finished");
+        Pump(() => false, 2, null);
+    }
+    Pump(() => news.Count >= newsBefore + 2, 5, "firing news");
+    if (!news.Skip(newsBefore).Any(n => n.Contains("whole")))
+    {
+        Log("Both lamps cracked in the fire (a small chance); lamp lighting not checked this run");
+        conn.Disconnect();
+        return 0;
+    }
+    Gather(Item.ClayLamp, 1);
+    Log("STAGE lamp-fired");
+
+    KeepFireGoing();
+    WalkTo(fire.X + 2.5f, fire.Z, 0.3f);
+    lastError = null;
+    conn.Reducers.SetLamp(x + 1f, z);
+    Pump(() => lastError != null, 3, "a lamp with no tallow to be refused");
+    if (lastError?.Contains("tallow") != true) Fail($"a lamp with no tallow: {lastError}");
+    Log($"No tallow: {lastError}");
+
+    if (Environment.GetEnvironmentVariable("CLAYCHECK_TALLOW") != "1")
+    {
+        Log("Lamp check passed: a lamp pinched at the bench, fired, and refused without tallow (set CLAYCHECK_TALLOW=1 to light one)");
+        conn.Disconnect();
+        return 0;
+    }
+    Log($"Waiting for 2 raw mutton in the inventory of {me}");
+    Pump(() => CountOf(Item.RawMutton) >= 2, 300, "raw mutton");
+    WalkTo(waterX, waterZ, 1.5f);
+    if (CountOf(Item.CoilPotOfWater) == 0)
+    {
+        lastError = null;
+        conn.Reducers.FillPots();
+        Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
+        if (CountOf(Item.CoilPotOfWater) == 0) Fail("the tallow run needs a coil pot in the bag (put one there too)");
+    }
+    fire = conn.Db.Fire.Id.Find(fire.Id) ?? fire;
+    KeepFireGoing();
+    WalkTo(fire.X + 1.2f, fire.Z, 0.3f);
+    Craft("cook.tallow", 0, null);
+    Pump(() => conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == myId), 5, "the tallow to go on");
+    var simmer = conn.Db.SimmerPot.Iter().First(p => p.PlayerId == myId);
+    Pump(() => false, ClayRules.SimmerSeconds(Item.Tallow) + 1, null);
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null || CountOf(Item.Tallow) >= 1, 3, "tallow");
+    if (lastError != null) Fail($"taking the tallow off: {lastError}");
+    Log($"Rendered tallow; the coil pot came back empty ({CountOf(Item.CoilPot)} coil pots)");
+    Gather(Item.Tallow, 1);
+
+    WalkTo(fire.X + 2.5f, fire.Z, 0.3f);
+    lastError = null;
+    conn.Reducers.SetLamp(x + 1f, z);
+    Pump(() => lastError != null || conn.Db.Lamp.Iter().Any(l => l.PlayerId == myId), 3, "a lit lamp");
+    if (lastError != null) Fail($"setting a lamp: {lastError}");
+    Log("STAGE lamp-lit");
+    Log("Lamp check passed: tallow rendered, and a fired lamp set down and lit");
+    conn.Disconnect();
+    return 0;
+}
+
 int PotCheck()
 {
     // Two coil pots, so one cracking in the pit (a chance) doesn't void the run.
