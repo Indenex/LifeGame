@@ -1,0 +1,202 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using LifeGame.Shared;
+using SpacetimeDB.Types;
+
+namespace LifeGame;
+
+// One stack in the bag panel: what it is, how good, how many (ui-18).
+public record BagStack(Item Item, byte Quality, uint Count)
+{
+    public string Label => ItemLook.Label(Item, Quality, Count);
+}
+
+// What the bag panel talks to: everything you carry, and dropping one at your feet.
+public interface IBagLink
+{
+    IEnumerable<BagStack> Carried();
+    void Drop(Item item, byte quality);
+}
+
+// A pretend bag for previews.
+public sealed class MockBagLink : IBagLink
+{
+    readonly List<BagStack> bag = new()
+    {
+        new(Item.Stick, 0, 8), new(Item.Stone, 0, 3), new(Item.Fiber, 0, 12), new(Item.Flake, 60, 2),
+        new(Item.HandAxe, 72, 1), new(Item.Berries, 0, 5), new(Item.Clay, 0, 4), new(Item.CoilPotOfWater, 55, 1),
+    };
+
+    public MockBagLink(bool filled) { if (!filled) bag.Clear(); }
+
+    public IEnumerable<BagStack> Carried() => bag;
+
+    public void Drop(Item item, byte quality)
+    {
+        int i = bag.FindIndex(s => s.Item == item && s.Quality == quality);
+        if (i < 0) return;
+        if (bag[i].Count > 1) bag[i] = bag[i] with { Count = bag[i].Count - 1 };
+        else bag.RemoveAt(i);
+    }
+}
+
+public sealed class ServerBagLink : IBagLink
+{
+    readonly DbConnection conn;
+    public ServerBagLink(DbConnection conn) => this.conn = conn;
+
+    public IEnumerable<BagStack> Carried() => conn.Db.MyInventory.Iter()
+        .Where(i => i.Count > 0 && Items.IsKnown(i.Item))
+        .GroupBy(i => (i.Item, i.Quality))
+        .Select(g => new BagStack((Item)g.Key.Item, g.Key.Quality, (uint)g.Sum(i => i.Count)));
+
+    public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
+}
+
+// Everything you carry as a grid of round slots, sorted by kind (ui-18). Drag a slot
+// onto the hotbar, onto a worn slot, or out of the panel onto the ground: a placeable
+// thing opens the placing ghost, anything else is dropped at your feet. Double-click
+// uses it the way its hotbar key would.
+public partial class BagGrid : GridContainer
+{
+    public const float Slot = 50f;
+    public IBagLink Link = new MockBagLink(false);
+    public Action<Item> Use = _ => { };
+    // A thing let go outside the panel (the panel says where it is).
+    public Func<Vector2, bool> OverPanel = _ => true;
+    public Action<Item, byte> PlaceOrDrop = (_, _) => { };
+    // A worn piece dragged back onto the bag is taken off; a hotbar slot dragged here is cleared.
+    public Action<ClothingSlot> TakeOff = _ => { };
+    public Action<int> ClearHotbar = _ => { };
+
+    string shown = "";
+    internal (Item item, byte quality)? Dragging;
+
+    public override void _Ready()
+    {
+        Columns = 6;
+        AddThemeConstantOverride("h_separation", 10);
+        AddThemeConstantOverride("v_separation", 10);
+        MouseFilter = MouseFilterEnum.Pass;
+    }
+
+    // Sorted by kind: what you use (food, drink, tools, clothes) first, then the rest by item.
+    static int Group(Item item) => Items.UseOf(item) switch
+    {
+        UseAction.Eat or UseAction.Drink => 0,
+        UseAction.Hold => 1,
+        UseAction.Wear => 2,
+        _ => 3,
+    };
+
+    public void Refresh()
+    {
+        var stacks = Link.Carried()
+            .OrderBy(s => Group(s.Item)).ThenBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
+        string now = string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}"));
+        if (now == shown) return;
+        shown = now;
+        foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
+        foreach (var s in stacks) AddChild(new BagSlotView { Stack = s, Grid = this });
+        if (stacks.Count == 0)
+        {
+            var none = Hud.Text("Your hands are empty", 14);
+            none.Modulate = new Color(1, 1, 1, 0.5f);
+            AddChild(none);
+        }
+    }
+
+    public override bool _CanDropData(Vector2 atPosition, Variant data) =>
+        data.Obj is Godot.Collections.Dictionary d && (d.ContainsKey("worn") || d.ContainsKey("hotbar"));
+
+    public override void _DropData(Vector2 atPosition, Variant data)
+    {
+        if (data.Obj is not Godot.Collections.Dictionary d) return;
+        if (d.TryGetValue("worn", out var slot)) TakeOff((ClothingSlot)slot.AsInt32());
+        else if (d.TryGetValue("hotbar", out var i)) ClearHotbar(i.AsInt32());
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationDragEnd || Dragging is not { } d) return;
+        Dragging = null;
+        // Let go over the world rather than over a panel: set it down or drop it.
+        if (!GetViewport().GuiIsDragSuccessful() && !OverPanel(GetViewport().GetMousePosition()))
+            PlaceOrDrop(d.item, d.quality);
+    }
+}
+
+// One round slot in the bag grid.
+public partial class BagSlotView : PanelContainer
+{
+    public BagStack Stack = null!;
+    public BagGrid Grid = null!;
+
+    public override void _Ready()
+    {
+        CustomMinimumSize = new Vector2(BagGrid.Slot, BagGrid.Slot);
+        MouseFilter = MouseFilterEnum.Stop;
+        TooltipText = Stack.Label;
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.09f, 0.10f, 0.07f, 0.7f),
+            BorderColor = new Color(Look.Cream, 0.28f),
+        };
+        style.SetBorderWidthAll(1);
+        style.SetCornerRadiusAll((int)(BagGrid.Slot / 2) - 2);
+        AddThemeStyleboxOverride("panel", style);
+
+        var stack = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(stack);
+        var picture = new TextureRect
+        {
+            Texture = ItemIcon.For(Stack.Item),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        picture.SetAnchorsPreset(LayoutPreset.FullRect);
+        picture.OffsetLeft = picture.OffsetTop = 2;
+        picture.OffsetRight = picture.OffsetBottom = -2;
+        stack.AddChild(picture);
+        if (Stack.Count > 1)
+        {
+            var count = Hud.Text(Stack.Count.ToString(), 13);
+            count.SetAnchorsPreset(LayoutPreset.FullRect);
+            count.HorizontalAlignment = HorizontalAlignment.Right;
+            count.VerticalAlignment = VerticalAlignment.Bottom;
+            count.OffsetRight = -3;
+            count.OffsetBottom = 1;
+            stack.AddChild(count);
+        }
+    }
+
+    public override void _GuiInput(InputEvent e)
+    {
+        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, DoubleClick: true, Pressed: true })
+        {
+            Grid.Use(Stack.Item);
+            AcceptEvent();
+        }
+    }
+
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        var preview = new TextureRect
+        {
+            Texture = ItemIcon.For(Stack.Item),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            Size = new Vector2(BagGrid.Slot, BagGrid.Slot),
+            Position = -new Vector2(BagGrid.Slot, BagGrid.Slot) / 2,
+            Modulate = new Color(1, 1, 1, 0.8f),
+        };
+        var holder = new Control();
+        holder.AddChild(preview);
+        SetDragPreview(holder);
+        Grid.Dragging = (Stack.Item, Stack.Quality);
+        return new Godot.Collections.Dictionary { ["bag"] = (int)Stack.Item, ["quality"] = (int)Stack.Quality };
+    }
+}

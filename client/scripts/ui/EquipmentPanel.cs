@@ -5,9 +5,12 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// What you wear (D-074): a paper doll with a slot on each part of the body that can be
-// dressed. Click a slot, then pick something you carry to put on, or take off what's
-// there. I opens and closes it; Esc closes. Main sets Link and Note.
+// What you wear (D-074) and what you carry (ui-18): a paper doll with a slot on each
+// part of the body that can be dressed, and the bag beside it. Click a slot, then pick
+// something you carry to put on, or take off what's there; or drag between the bag,
+// the worn slots and the hotbar, which stays up below while this is open. Dragging
+// something out over the world sets it down. I opens and closes it; Esc closes. Main
+// sets Link, Note and the Bag's actions.
 public partial class EquipmentPanel : CanvasLayer
 {
     // Talks to the server (animals-9) once Main calls Attach; a mock until then.
@@ -19,6 +22,10 @@ public partial class EquipmentPanel : CanvasLayer
     const float SlotSize = 66f;
 
     public bool IsOpen => panel.Visible;
+    // Everything you carry (ui-18); Main sets its link and actions.
+    public readonly BagGrid Bag = new();
+    // Whether a point on screen is over this panel.
+    public bool Covers(Vector2 at) => IsOpen && panel.GetGlobalRect().HasPoint(at);
 
     // Swaps the mock for the server link once Main has a connection; a
     // --screenshot-equip preview keeps the mock.
@@ -56,7 +63,7 @@ public partial class EquipmentPanel : CanvasLayer
         // --screenshot-equip opens the panel with the first wearable on and the rest to
         // hand; =feet picks the feet slot.
         foreach (var arg in OS.GetCmdlineUserArgs())
-            if (arg.StartsWith("--screenshot-equip") && (previewing = true))
+            if (arg.StartsWith("--screenshot-equip") && (previewing = true) && (Bag.Link = new MockBagLink(true)) != null)
                 GetTree().CreateTimer(1.5).Timeout += () =>
                 {
                     // Put on the first piece there is, and show the slot named (=feet), or Body.
@@ -72,6 +79,7 @@ public partial class EquipmentPanel : CanvasLayer
         panel.Visible = true;
         shown = "";
         Refresh();
+        Bag.Refresh();
     }
 
     public void Close() => panel.Visible = false;
@@ -90,9 +98,9 @@ public partial class EquipmentPanel : CanvasLayer
 
     public override void _Process(double delta)
     {
-        if (IsOpen) Refresh();
-        // The first time you carry something to wear, the one-time hint teaches I.
-        else if (live && !hinted && Enum.GetValues<ClothingSlot>().Any(s => Link.Carried(s).Any()))
+        if (IsOpen) { Refresh(); Bag.Refresh(); }
+        // The first time you carry something, the one-time hint teaches I.
+        else if (live && !hinted && Bag.Link.Carried().Any())
         {
             hinted = true;
             Hints.Request(NEquipment);
@@ -141,7 +149,20 @@ public partial class EquipmentPanel : CanvasLayer
         choices = new VBoxContainer();
         side.AddChild(choices);
 
-        var hint = Hud.Text("Click a slot, then what to put on    I or Esc closes", 13);
+        // The bag (ui-18).
+        var bagSide = new VBoxContainer();
+        bagSide.AddThemeConstantOverride("separation", 10);
+        columns.AddChild(bagSide);
+        bagSide.AddChild(Hud.Text("What you carry", 17));
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(6 * BagGrid.Slot + 5 * 10 + 14, 330),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+        };
+        scroll.AddChild(Bag);
+        bagSide.AddChild(scroll);
+
+        var hint = Hud.Text("Drag things onto the bar below, onto a slot to wear them, or out onto the ground    Double-click uses    I or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
@@ -169,6 +190,19 @@ public partial class EquipmentPanel : CanvasLayer
         };
         button.AddThemeFontSizeOverride("font_size", 13);
         button.Pressed += () => { selected = slot; shown = ""; };
+        // Drag a worn piece back onto the bag to take it off, or something you carry onto the slot to put it on.
+        button.SetDragForwarding(
+            Callable.From((Vector2 _) => Link.Worn(slot) is { } on
+                ? (Variant)new Godot.Collections.Dictionary { ["worn"] = (int)slot, ["item"] = (int)on.Item }
+                : default),
+            Callable.From((Vector2 _, Variant data) => data.Obj is Godot.Collections.Dictionary d
+                && d.TryGetValue("bag", out var it) && Clothing.Find((ushort)it.AsInt32())?.Slot == slot),
+            Callable.From((Vector2 _, Variant data) =>
+            {
+                if (data.Obj is not Godot.Collections.Dictionary d) return;
+                selected = slot;
+                Link.Wear(new WornPiece((Item)d["bag"].AsInt32(), (byte)d["quality"].AsInt32(), slot));
+            }));
         doll.AddChild(button);
         slots[slot] = button;
     }

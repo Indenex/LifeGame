@@ -42,6 +42,12 @@ public partial class HotbarBar : Control
 
     // How far above the bottom edge the row reaches; notes sit above it.
     public float Top => Size.Y - row.Position.Y;
+    // Where the slots are on screen (a drag let go here isn't over the world).
+    public Rect2 RowRect => row.GetGlobalRect().Grow(10f);
+    // Stays up over a panel that drags onto it (the bag, ui-18).
+    public Func<bool> ShowOverPanels = () => false;
+
+    public void RequestPlace(Item item) => PlaceRequested?.Invoke(item);
 
     static readonly StringName[] Actions = Enumerable.Range(1, Slots).Select(i => new StringName($"hotbar_{i}")).ToArray();
 
@@ -90,12 +96,9 @@ public partial class HotbarBar : Control
         if (gained.Count > 0 && !quiet) Sfx.Play(Cue.Pickup);
 
         // A new kind of item takes the first empty slot (Justin's "fill up to 10").
-        // At login the bar fills once from the whole bag if it is empty.
-        if (!quiet && !filledOnce && Enumerable.Range(0, Slots).All(i => Link.SlotItem(i) == null))
-            foreach (var item in carried.Keys) Fill(item);
-        else if (!quiet)
+        // At login the bar fills once from the whole bag if it is empty (_Process).
+        if (!quiet && filledOnce)
             foreach (var item in gained.Where(i => !before.ContainsKey(i))) Fill(item);
-        if (!quiet) filledOnce = true;
 
         if (gained.Count > 0 || before.Count != carried.Count || before.Any(kv => carried.GetValueOrDefault(kv.Key) != kv.Value))
         {
@@ -157,6 +160,12 @@ public partial class HotbarBar : Control
     {
         if (Link.SlotItem(i) is not { } item) return;
         views[i].Pop();
+        UseItem(item);
+    }
+
+    // Uses one carried item: places it, or asks the server to eat, drink, wear or hold it.
+    public void UseItem(Item item)
+    {
         sinceChange = 0f;
         string what = labels.TryGetValue(item, out var l) ? l : ItemName(item);
         if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
@@ -189,10 +198,17 @@ public partial class HotbarBar : Control
     public override void _Process(double delta)
     {
         float dt = (float)delta;
+        // At login, once the rows have settled, an empty bar fills from the bag.
+        if (!filledOnce && quietUntil > 0 && Time.GetTicksMsec() / 1000.0 >= quietUntil)
+        {
+            filledOnce = true;
+            if (Enumerable.Range(0, Slots).All(i => Link.SlotItem(i) == null))
+                foreach (var item in carried.Keys.OrderBy(i => i)) Fill(item);
+        }
         sinceChange += dt;
         alpha = Mathf.MoveToward(alpha, sinceChange < IdleAfter ? 1f : IdleAlpha, dt * (sinceChange < IdleAfter ? 4f : 0.6f));
         // Steps aside while a panel covers the world.
-        cover = Mathf.MoveToward(cover, Panels.Open() ? 1f : 0f, dt * 6f);
+        cover = Mathf.MoveToward(cover, Panels.Open() && !ShowOverPanels() ? 1f : 0f, dt * 6f);
         row.Modulate = new Color(1, 1, 1, alpha * (1f - cover));
         nameTime -= dt;
         name.Text = floatingName ?? "";

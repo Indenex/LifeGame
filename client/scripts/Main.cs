@@ -93,6 +93,17 @@ public partial class Main : Node3D
         // The hotbar's number keys (ui-19) rest while something else has the keys.
         hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
+        // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
+        hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
+        equipment.Bag.Use = hud.Hotbar.UseItem;
+        equipment.Bag.TakeOff = slot => equipment.Link.TakeOff(slot);
+        equipment.Bag.ClearHotbar = i => hud.Hotbar.Link.Set(i, null);
+        equipment.Bag.OverPanel = at => equipment.Covers(at) || hud.Hotbar.RowRect.HasPoint(at);
+        equipment.Bag.PlaceOrDrop = (item, quality) =>
+        {
+            if (HotbarBar.Placeable(item)) { equipment.Close(); hud.Hotbar.RequestPlace(item); }
+            else equipment.Bag.Link.Drop(item, quality);
+        };
         social.HideChip = () => survival.Mourning;
         // What you wear (ui-10, D-074).
         equipment.Note = hud.Note;
@@ -342,6 +353,7 @@ public partial class Main : Node3D
         trade.Attach(new ServerTradeLink(conn, () => myId));
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        equipment.Bag.Link = new ServerBagLink(conn);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
