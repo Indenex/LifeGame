@@ -76,16 +76,14 @@ public static partial class Module
     // Justin's rule (Q13): a sneak attack (the hunter is sneaking and the animal is not
     // alarmed) has a chance, from Stalking skill, to land a large bonus on top of normal
     // damage, shown as a crit. Returns the extra damage, 0 when it doesn't trigger.
-    // Stand-in until Journal's Progression.Effect(SneakCritChance / SneakCritBonus) lands
-    // (#237): Husbandry rank, a front-loaded curve, chance 3% to 40% and a bonus of
-    // 0.5x to 2.0x the normal damage (Justin: "rarer, bigger"), so a master's crit on a deer kills it outright and
-    // a novice's does not.
+    // Chance and bonus come from the shared progression (Progression.Effect, tuned in
+    // shared/Progression.cs); animal.kill trains and reads Stalking.
     static int SneakCrit(ReducerContext ctx, uint playerId, Animal animal, int damage)
     {
         if (animal.State == AnimalState.Run || ctx.Db.PlayerSneaking.PlayerId.Find(playerId) == null) return 0;
-        float t = Math.Clamp(SkillRank(ctx, playerId, HuntProcess) / 100f, 0f, 1f);
-        t = 1f - (1f - t) * (1f - t);
-        float chance = 0.03f + 0.37f * t, bonus = 0.5f + 1.5f * t;
+        int rank = SkillRank(ctx, playerId, Skills.Kill);
+        float chance = Progression.Effect(EffectKind.SneakCritChance, rank);
+        float bonus = Progression.Effect(EffectKind.SneakCritBonus, rank);
         return ctx.Rng.NextDouble() < chance ? (int)MathF.Round(damage * bonus) : 0;
     }
 

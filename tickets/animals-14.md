@@ -42,6 +42,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 21:47: PM relays Justin's new rule (Integration writes docs/CONTENT.md): animals become data-driven. One AnimalDef registry in shared/ (traits, drops, butcher yields, sounds, model id, animation set, behaviour flags like shearable, huntable, flocking, wary) plus a generic client animal view (rename or split Sheep.cs). Done when the next animal is added: after #219 lands and before any new species, convert the deer's "if Deer" branches into Def data. Does not block #219.
 
+- 2026-10-16 22:05: #237 (Stalking, Archery, Progression) is on main. Merged main; replaced the Husbandry stand-in: Hunting.cs SneakCrit reads Progression.Effect(SneakCritChance/SneakCritBonus, SkillRank(.. Skills.Kill)) (Stalking); animals report Skills.Sneak (animal.sneak) from AnimalThinkFlock when a sneaking player is within 14 m of an unbolted wary animal, throttled to every 4 s per player via new AnimalPlayerSeen.SneakReportAt (Default 0; also ShotAt for the bow). Server and client build, upgrade check passed.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
