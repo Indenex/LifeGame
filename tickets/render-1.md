@@ -33,6 +33,9 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:27: render request from Environment (session_012hVejTxLoxBpZyX3GQmNL9): env-1 before shots on main 1ade969: spawn (0,0) facing +x, pond edge (-20,-2) facing -x, dense forest (-46,-46), each noon and dusk; overhead of spawn from ~40 m at noon.
 - 2026-10-16 17:35: animals-8 first run: crafting worked (toast "Weave wool cloth"), but panel shots missed the Cord and haft tab and the ground items weren't visible; redo queued (animals-8-wool.txt, animals-8-ground.txt).
 - 2026-10-16 17:35: queues: [1] crafting-11 (running) -> [2] ui-9, claims-6 rerun, model-1 -> [3] anim-1 movies -> [4] animals-8 redo, env-1, bugfix-17 (fix caaf9ae + before 7e79d22). Each queue waits for the previous one's "done" line in its output file.
+- 2026-10-16 17:45: new requests: atmosphere-13 (session_01KvVF5vpkYEHTKNRpHC18WN) before 47a151d / after dc26f57, light through the forest; ui-10 (session_01V6qgbNbvTwniqW946KACLr) equipment panel 8d398ef; animals-8 moved to 4233255 + spinning minigame; anim-1 moved to 4afbb2b + work poses. atmosphere-12 audio also sent to the Audio lane (session_01LeXCWTFVBQcCNVEDdhPek3).
+- 2026-10-16 17:45: crafting-11 first shots don't show the fire clearly (different spawn each run, far camera); rerun at (0,0) with a close render cam.
+- 2026-10-16 17:45: queue 5 (after queue 2): crafting-11 rerun, ui-10, env-1, atmosphere-13, bugfix-17 (+before), animals-8 wool/ground at 4233255, anim-1 side/turn/work at 4afbb2b, animals-8 spin (live, needs the Render lane at the keyboard: append steps to $RENDER_WORK/live.txt).
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
