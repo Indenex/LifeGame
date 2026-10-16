@@ -1,9 +1,9 @@
 # atmosphere-5: No pops when ground is cleared; canopy fade under Compatibility
 Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
-Status: in_progress
-Branch: claude/atmosphere-sound-hlqfke (after #32 merges)
-PR: (none yet)
+Status: in_review
+Branch: claude/atmosphere-sound-hlqfke
+PR: #49
 
 ## Goal
 From the Bug fixes playtest (via PM): placing a blueprint made the grass vanish instantly, a pop against D-036; and the canopy fade looked like a dark blob under the Compatibility renderer. Done means grass on newly cleared ground lies down and sinks over about 1.6 s while the ground color eases to bare earth (and the reverse when a blueprint is removed), and the tree fade looks the same in Compatibility as in Forward+.
@@ -16,4 +16,4 @@ From the Bug fixes playtest (via PM): placing a blueprint made the grass vanish 
 - Trees and rocks on a newly cleared cell still disappear at once.
 
 ## Next step
-After #32 merges: merge main into atmosphere-5-wip, push it to claude/atmosphere-sound-hlqfke, open the PR.
+Wait for CI on #49, then send the green sha to the PM.
