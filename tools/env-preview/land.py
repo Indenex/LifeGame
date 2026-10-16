@@ -12,16 +12,21 @@ def ss(a, b, x):
 
 WL = -1.0  # World.WaterLevel
 
-def river(x, z):
-    return VN(x, z, 140, 71) * 0.8 + VN(x, z, 35, 74) * 0.2
+# Streams run roughly north to south, one every RiverSpacing meters, wandering
+# side to side by a warp gentle enough (slope under 1) that a stream never
+# doubles back into a loop.
+RiverSpacing = 300.0
 
-# Meters from the river line (where river() crosses 0.5): the value's offset
-# divided by its slope, so flat stretches of noise don't widen the stream.
+def river(x, z):
+    warp = (VN(x, z, 120, 71) - 0.5) * 70 + (VN(x, z, 40, 74) - 0.5) * 18
+    return x + 66 + warp  # the first stream passes about 66 m west of spawn
+
 def river_distance(x, z):
-    r = river(x, z)
+    u = river(x, z)
+    off = abs(u - RiverSpacing * round(u / RiverSpacing))
     gx = (river(x + 1, z) - river(x - 1, z)) / 2
     gz = (river(x, z + 1) - river(x, z - 1)) / 2
-    return abs(r - 0.5) / max(math.hypot(gx, gz), 0.002)
+    return off / max(math.hypot(gx, gz), 0.2)
 
 def land(x, z):
     hills = VN(x, z, 48, 1) * 2.0 + VN(x, z, 8, 2) * 0.4 - 0.6
