@@ -1,8 +1,8 @@
 # building-9: Raised hearth
 Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
-Status: in_progress
-Branch: local building-9, stacked on claude/house-building-8ueqz2 (#153); moves to that branch once #153 merges
+Status: in_review
+Branch: claude/house-building-8ueqz2 (backup: claude/house-building-8ueqz2-hearth)
 PR: (not yet)
 
 ## Goal
@@ -25,9 +25,12 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 
 - 2026-10-16 19:38: FireTopUpHook implemented (BuildingHearth.cs). Scratch test merged with #122, with the proposed BurnOutFires call patched in and a throwaway reducer setting up a hearth, a basket (3 sticks, 1 log) and a fire with 25 s left. On the next tick it took the log and fuel went +540 s (360 × 1.5); sticks untouched. The cap uses the lighter's Firecraft rank (Fires.MaxSecondsFor × 1.5), so nothing more is needed from Crafting.
 
+- 2026-10-16 19:50: #122 merged without FireTopUpHook, so the self-feed ships as a plain `HearthTopUp` method. Crafting put the hook up as #194; once it's on main, one line wires it up. Merged main into claude/house-building-8ueqz2 along with building-9. All local checks green: LoadTest, BuildTest (all modes in "both"), SpawnCheck, CraftCheck, SocialTest, and the upgrade check over origin/main.
+- 2026-10-16 19:55: for Claims' claims-12 (claim fences), declared `GateOpenHook(ctx, s, ref bool allowed)`, called in ToggleDoor for gates, and the client `SnapFenceHook(target, ref snapped, ref yaw, ref done)`, called first in SnapFence. Claims implements both in its own files. BuildTest fence passes.
+
 ## Open questions / blockers
-- Crafting: declare FireTopUpHook and call it in BurnOutFires (asked 19:36; the cap is handled on my side).
+- Crafting's #194 (FireTopUpHook): once merged, add `static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil) => HearthTopUp(ctx, fire, ref fuelUntil);` to BuildingHearth.cs.
 - Crafting's #122 declares and calls both hooks; tested. Building-9 waits for #122 and #153 to merge. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
-When Crafting's hook declarations reach main and #153 has merged: merge main into claude/house-building-8ueqz2 along with this branch, run all checks, open the building-9 PR and request a render.
+Wait for CI on the building-9 PR and send the PM the green sha. Wire up FireTopUpHook when #194 merges.

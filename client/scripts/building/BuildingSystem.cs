@@ -453,8 +453,16 @@ public partial class BuildingSystem : Node
 
     // A fence laid near the free end of another fence or gate joins on to it, along
     // the ghost's own heading (T turns it, so runs can bend at corners).
+    // Claims implements this in its own file (claims-12) to lay fences along a claim's
+    // border: set done, with the spot and heading, and end-to-end snapping is skipped.
+    partial void SnapFenceHook(Vector3 target, ref Vector3 snapped, ref float yaw, ref bool done);
+
     Vector3 SnapFence(Vector3 target)
     {
+        Vector3 claimed = target;
+        bool done = false;
+        SnapFenceHook(target, ref claimed, ref ghostYawTarget, ref done);
+        if (done) return claimed;
         const float reach = 0.9f;
         Vector3? best = null;
         float bestD = reach;
