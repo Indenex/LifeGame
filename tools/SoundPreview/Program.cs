@@ -1,7 +1,7 @@
 // Renders the game's soundscape to a WAV file without running the game, so the
 // ambience and music can be listened to and checked for level and clipping.
 //
-//   dotnet run -- out.wav [scene:seconds ...] [--no-music]
+//   dotnet run -- out.wav [scene:seconds ...] [--no-music] [--master=0.5 --music= --effects= --ambience=]
 //
 // Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
 // from under a roof), rain (same as storm), fire (a campfire at night), firerain
@@ -12,16 +12,25 @@
 // on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
+// Work scenes stand still on a calm morning and work for all but the last second:
+// knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
+// (knap-fail). others: you knap while another player drills 8 m to your left
+// and a third carves 20 m to the right. still: the same calm morning with no work,
+// the bed the work scenes are measured against.
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
 bool music = !args.Contains("--no-music");
-args = args.Where(a => a != "--no-music").ToArray();
+// Slider positions, 0 to 1 (0.5 default): --master=0.7 --music= --effects= --ambience=
+float Slider(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}=")) is { } a
+    ? float.Parse(a[(name.Length + 3)..], System.Globalization.CultureInfo.InvariantCulture) : 0.5f;
+float master = Slider("master"), musicLevel = Slider("music"), effects = Slider("effects"), ambienceLevel = Slider("ambience");
+args = args.Where(a => !a.StartsWith("--")).ToArray();
 string path = args.Length > 0 ? args[0] : "soundscape.wav";
 var scenes = args.Length > 1 ? args[1..] : new[] { "day:40", "rain:30", "dusk:20", "night:40" };
 const int rate = 44100;
-var mix = new SoundMix(rate, seed: 7) { MusicOn = music };
+var mix = new SoundMix(rate, seed: 7) { MusicOn = music, MasterLevel = master, MusicLevel = musicLevel, EffectsLevel = effects, AmbienceLevel = ambienceLevel };
 var samples = new List<short>();
 var left = new float[1024];
 var right = new float[1024];
@@ -51,6 +60,23 @@ foreach (var scene in scenes)
         "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
+    string name = parts[0].Replace("-fail", "");
+    var work = SoundMix.WorkFor(name switch
+    {
+        "knap" => "knap.flake", "drill" => "fire.hand_drill", "fibre" => "cord.twist", "lash" => "lash.spear",
+        "pat" => "clay.brick", "rasp" => "hide.scrape", "carve" => "carve.digging_stick", _ => "",
+    });
+    if (work != Work.None || name == "still") (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
+    if (name == "others")
+    {
+        (work, day, rain, wind, wet, time) = (Work.Knap, 0.9f, 0f, 0.15f, 0f, 0.33f);
+        mix.OtherWorking(2, Work.Drill);
+        mix.OtherPlace(2, 0.4f * 0.93f, -0.8f);
+        mix.OtherWorking(3, Work.Carve);
+        mix.OtherPlace(3, 0.4f * 0.34f, 0.9f);
+    }
+    mix.Working(work);
+    bool workEnded = false;
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
     int total = (int)(seconds * rate), done = 0;
@@ -74,7 +100,16 @@ foreach (var scene in scenes)
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && t < seconds / 2;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
+        if (work != Work.None && !workEnded && t >= seconds - 1)
+        {
+            mix.Working(Work.None);
+            mix.WorkDone(work, parts[0].EndsWith("-fail"));
+            mix.OtherWorking(2, Work.None);
+            mix.OtherWorkDone(2, Work.Drill, false);
+            mix.OtherWorking(3, Work.None);
+            workEnded = true;
+        }
         if (walks && t >= nextStep)
         {
             mix.Step(ground, ground == Ground.Floor ? 0f : mix.Wetness);

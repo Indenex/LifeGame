@@ -1,7 +1,7 @@
 # ceramics-3: Clay that explains itself
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session_017sscCMDfHcyeZNqGW22GBE)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-kfr4kr
 PR: #44
 
@@ -20,9 +20,11 @@ Justin sees screenshots of the prompt.
 - 2026-10-16 00:46: CI run https://github.com/Indenex/LifeGame/actions/runs/38830284348 green on 73e49a4; sha sent to PM (PM merges in queue order, no more main merges from us). Screenshot clay-08 shows no overlap.
 - Pending: when UX #46 (rebindable keys) is on main, use Controls.KeyFor("use") ?? "G" in "Press G again" and in the tips/prompts that name G.
 
+- 2026-10-16: merged into main via #44 (ca1ce9f); ticket closed.
+
 ## Open questions / blockers
 - Asked UX for Hints.Tip(id, text); switch CeramicsView.Tip to it when it lands.
 - Once UX #38 is on main, pass Target on the clay and kiln G offers.
 
 ## Next step
-Wait for the PM to merge #44; then tell UX (drop tend_clay row), and after #46 use Controls.KeyFor("use") in G wording as a follow-up.
+None; done. Lane continues in the next ceramics ticket.
