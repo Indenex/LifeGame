@@ -97,7 +97,7 @@ public static partial class Module
         AddToInventory(ctx, ctx.Sender, Item.Leather, 1, rack.Quality);
         OnProcessPerformed(ctx, player.PlayerId, "hide.dry", rack.Quality, false);
         ctx.Db.HideRack.Id.Delete(rackId);
-        // The rack comes apart; the sticks and cord are worth keeping.
+        // The rack comes apart; the sticks are worth keeping, the cord is worn through.
         AddToInventory(ctx, ctx.Sender, Item.Stick, 2, Items.RawQuality);
     }
 }
