@@ -17,6 +17,7 @@ atmosphere-19-night10 tools/render/scene.sh atmosphere-19-night10 682361f tools/
 atmosphere-19-night40 tools/render/scene.sh atmosphere-19-night40 682361f tools/render/scenes/atmosphere-19-night40.txt
 atmosphere-19-shut10 tools/render/scene.sh atmosphere-19-shut10 682361f tools/render/scenes/atmosphere-19-shut10.txt
 atmosphere-19-day10 tools/render/scene.sh atmosphere-19-day10 682361f tools/render/scenes/atmosphere-19-day10.txt
+atmosphere-20 tools/render/render.sh atmosphere-20 73e79f1 "--screenshot-delay=90 --debug-position=0,0 --render-cam=7,0.6,0,0.9 --time-of-day=0.4 --wetness=0 --rain=0 --cloud=0.2" "--screenshot-delay=90 --debug-position=0,0 --render-cam=7,0.6,0,0.9 --time-of-day=0.4 --rain=0.6 --wetness=0.8 --cloud=0.9" "--screenshot-delay=90 --debug-position=0,0 --render-cam=7,0.6,0,0.9 --time-of-day=0.4 --rain=0 --wetness=1 --cloud=0.3 --puddles=1" "--screenshot-delay=90 --debug-position=0,0 --render-cam=7,0.6,0,0.9 --time-of-day=0.45 --rain=0 --wetness=0.5 --cloud=0.2"
 env-2 tools/render/scenes/env-2.sh
 model-172 tools/render/render.sh model-172 71f7c7c "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35" "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.4,0.6,35,0.35"
 model-172-items tools/render/scene.sh model-172-items 71f7c7c tools/render/scenes/model-172-items.txt
