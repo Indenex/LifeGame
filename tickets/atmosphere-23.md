@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-tickets-close
-PR: (none yet)
+PR: #347
 
 ## Goal
 The first valley-mist renders (atmosphere-17, da2c2fb) were weak: the woods spot showed only a faint haze at dawn, and dusk was too dark to see any mist. Make dawn mist clearly visible in hollows and by water: denser, a little taller, and glowing warm when you look toward the low sun. Done: Render lane shots at the pond (30,76) at dawn show mist pooled in the low ground and lit toward the sun, and a PR green.
@@ -21,4 +21,4 @@ The first valley-mist renders (atmosphere-17, da2c2fb) were weak: the woods spot
 - Waiting for the Render lane's pond set (30,76) to judge it; the PM queued it.
 
 ## Next step
-Commit, open the PR, and send the Render lane a request: pond (30,76) at --time-of-day=0.26 --wind=0.1 --cloud=0.2, looking toward and away from the sun.
+Wait for #347 CI and send the PM the green sha. Render request sent (pond 30,76 at dawn, toward and away from the sun). Tune from the shots.
