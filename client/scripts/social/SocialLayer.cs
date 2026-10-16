@@ -25,7 +25,8 @@ public partial class SocialLayer : Node
     readonly ChatPanel chat = new();
     readonly ClaimPanel panel = new();
     readonly Label landLabel = new();
-    PanelContainer landChip = null!;
+    Label landChip = null!;
+    float chipAlpha = 1f;
     readonly Dictionary<ulong, ClaimMarker> markers = new();
     readonly HashSet<ulong> heard = new();
 
@@ -93,8 +94,10 @@ public partial class SocialLayer : Node
         chat.Sent += Say;
 
         var layer = new CanvasLayer { Layer = 2 };
-        Hud.Style(landLabel, 15, 0.9f);
-        landChip = Hud.Panel(landLabel, Vector2.Zero);
+        // Boxless like the rest of the HUD (D-045).
+        Hud.Soft(landLabel, 15, 0.9f);
+        landChip = landLabel;
+        landChip.HorizontalAlignment = HorizontalAlignment.Right;
         landChip.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         landChip.GrowHorizontal = Control.GrowDirection.Begin;
         landChip.Position = new Vector2(-20, 18);
@@ -137,6 +140,9 @@ public partial class SocialLayer : Node
     public override void _Process(double delta)
     {
         foreach (var marker in markers.Values) marker.Near(myPos);
+        // Step aside while a full panel (journal, claim panel, menu) is open.
+        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() ? 0f : 1f, (float)delta * 6f);
+        landChip.Modulate = new Color(1, 1, 1, chipAlpha);
         landTimer -= (float)delta;
         if (landTimer <= 0f)
         {
