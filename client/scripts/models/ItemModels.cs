@@ -1,0 +1,524 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+using LifeGame.Shared;
+
+namespace LifeGame;
+
+// Proper models for items (model-1, D-082): one design per item, used lying on
+// the ground (and so for the inventory icon, which ItemIcon renders from the
+// ground mesh) and held in the hand.
+//
+// Long things (sticks, tools) are made as held: the grip at the origin, the
+// working end toward -Y, the edge or point facing +Z, the thin side across X.
+// That is the frame of the player's ToolR attachment (HumanRig HandR). On the
+// ground they are laid on their flat side. Upright things (a stone, a basket,
+// meat) are made as they rest on the ground; held, the hand is at their top.
+public static class ItemModels
+{
+    // One surface per kind of material, so wood, stone and plants each get their
+    // own relief on the ground. Held items draw plain: the relief is mapped in
+    // world space and would crawl over a moving tool.
+    sealed class Kit
+    {
+        public readonly MeshKit Wood, Stone, Plant, Plain;
+
+        public Kit(bool flat, Transform3D xform)
+        {
+            Wood = New(flat, xform);
+            Stone = New(flat, xform);
+            Plant = New(flat, xform);
+            Plain = New(flat, xform);
+        }
+
+        static MeshKit New(bool flat, Transform3D xform) => new(flat) { Skinned = false, Xform = xform };
+    }
+
+    static readonly Dictionary<Item, Mesh?> Ground = new(), Held = new();
+    static Material? wood, stone, plant, plain;
+
+    // Laid on the ground, resting on y = 0 and centered; null if this item has no
+    // model here yet (ItemLook falls back to its own).
+    public static Mesh? GroundMesh(Item item)
+    {
+        if (!Ground.TryGetValue(item, out var mesh)) Ground[item] = mesh = Make(item, false);
+        return mesh;
+    }
+
+    // In the hand, in the ToolR frame; falls back to the ground look, centered.
+    public static Mesh HeldMesh(Item item)
+    {
+        if (Held.TryGetValue(item, out var mesh) && mesh != null) return mesh;
+        mesh = Make(item, true) ?? Centered(ItemLook.MeshFor(item));
+        Held[item] = mesh;
+        return mesh;
+    }
+
+    static Mesh Centered(Mesh source)
+    {
+        var mesh = new ArrayMesh();
+        var shift = -source.GetAabb().GetCenter();
+        for (int s = 0; s < source.GetSurfaceCount(); s++)
+        {
+            var arrays = source.SurfaceGetArrays(s);
+            var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+            for (int i = 0; i < verts.Length; i++) verts[i] += shift;
+            arrays[(int)Mesh.ArrayType.Vertex] = verts;
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, source.SurfaceGetMaterial(s));
+        }
+        return mesh;
+    }
+
+    static Mesh? Make(Item item, bool held)
+    {
+        var (build, upright) = Recipe(item);
+        if (build == null) return null;
+        // Laying down turns the held frame so -Y (the working end) points along +X
+        // and the thin side faces up.
+        var lay = upright || held ? Transform3D.Identity : new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), Vector3.Zero);
+        var kit = new Kit(PlayerModel.Style.Flat, lay);
+        build(kit);
+
+        EnsureMaterials();
+        var surfaces = new List<(Godot.Collections.Array Arrays, Material Material)>();
+        void Take(MeshKit k, Material groundMaterial)
+        {
+            if (!k.Empty) surfaces.Add((k.CommitToArrays(), held ? plain! : groundMaterial));
+        }
+        Take(kit.Wood, wood!);
+        Take(kit.Stone, stone!);
+        Take(kit.Plant, plant!);
+        Take(kit.Plain, plain!);
+
+        // Rest on the ground, centered; held upright things hang from their top.
+        var min = Vector3.Inf;
+        var max = -Vector3.Inf;
+        foreach (var (arrays, _) in surfaces)
+            foreach (var v in (Vector3[])arrays[(int)Mesh.ArrayType.Vertex])
+            {
+                min = min.Min(v);
+                max = max.Max(v);
+            }
+        var center = (min + max) / 2f;
+        var shift = !held ? new Vector3(-center.X, -min.Y, -center.Z)
+            : upright ? new Vector3(-center.X, -max.Y, -center.Z)
+            : Vector3.Zero;
+
+        var mesh = new ArrayMesh();
+        foreach (var (arrays, material) in surfaces)
+        {
+            var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+            for (int i = 0; i < verts.Length; i++) verts[i] += shift;
+            arrays[(int)Mesh.ArrayType.Vertex] = verts;
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, material);
+        }
+        return mesh;
+    }
+
+    static void EnsureMaterials()
+    {
+        if (plain != null) return;
+        plain = Look.Solid(Colors.White);
+        wood = Relief(7f, 0.9f, 0.3f);
+        stone = Relief(5f, 0.9f, 0.3f);
+        plant = Relief(9f, 0.8f, 0.25f);
+    }
+
+    static Material Relief(float scale, float bump, float cavity)
+    {
+        var material = Look.Solid(Colors.White);
+        material.SetShaderParameter("detail_scale", scale);
+        material.SetShaderParameter("bump", bump);
+        material.SetShaderParameter("cavity", cavity);
+        return material;
+    }
+
+    // --- Palette. Raw materials stay a little light so they stand out in the grass.
+
+    static readonly Color BarkLight = new(0.55f, 0.42f, 0.30f);
+    static readonly Color Whittled = new(0.80f, 0.66f, 0.46f);
+    static readonly Color Charred = new(0.16f, 0.12f, 0.10f);
+    static readonly Color Flint = new(0.44f, 0.45f, 0.48f);
+    static readonly Color FlintBrown = new(0.52f, 0.47f, 0.42f);
+    static readonly Color Cord = new(0.60f, 0.47f, 0.28f);
+    static readonly Color Straw = new(0.80f, 0.70f, 0.46f);
+    static readonly Color Weave = new(0.72f, 0.58f, 0.32f);
+    static readonly Color Fleece = new(0.86f, 0.83f, 0.74f);
+    static readonly Color HideSkin = new(0.86f, 0.74f, 0.60f);
+    static readonly Color LeatherBrown = new(0.55f, 0.37f, 0.22f);
+    static readonly Color TunicWool = new(0.78f, 0.74f, 0.64f);
+    static readonly Color Bone = new(0.92f, 0.88f, 0.80f);
+
+    static (Action<Kit>? Build, bool Upright) Recipe(Item item) => item switch
+    {
+        Item.Stick => (Stick, false),
+        Item.Stone => (Stone, true),
+        Item.Log => (Log, false),
+        Item.Fiber => (Fiber, false),
+        Item.Tinder => (Tinder, true),
+        Item.Flake => (Flake, false),
+        Item.HandAxe => (HandAxe, false),
+        Item.Cordage => (Cordage, true),
+        Item.Spear => (Spear, false),
+        Item.StoneAxe => (StoneAxe, false),
+        Item.StoneKnife => (StoneKnife, false),
+        Item.DiggingStick => (DiggingStick, false),
+        Item.Basket => (Basket, true),
+        Item.BowDrill => (BowDrill, false),
+        Item.Berries => (Berries, true),
+        Item.RawMutton => (k => Mutton(k, new Color(0.74f, 0.30f, 0.30f), new Color(0.93f, 0.87f, 0.77f), Bone, 1f), true),
+        Item.CookedMutton => (k => Mutton(k, new Color(0.50f, 0.27f, 0.12f), new Color(0.74f, 0.54f, 0.28f), new Color(0.86f, 0.78f, 0.64f), 0.95f), true),
+        Item.BurntMutton => (k => Mutton(k, new Color(0.10f, 0.08f, 0.07f), new Color(0.17f, 0.13f, 0.10f), new Color(0.32f, 0.28f, 0.23f), 0.88f), true),
+        Item.Wool => (Wool, true),
+        Item.SheepHide => (k => RolledHide(k, true), true),
+        Item.ScrapedHide => (k => RolledHide(k, false), true),
+        Item.Leather => (Leather, true),
+        // Clothing (D-074), by number until the items reach main.
+        (Item)Garments.WoolTunic => (Tunic, true),
+        (Item)Garments.FootWraps => (FootWraps, true),
+        // Wool (animals-8), by number until the items reach main.
+        (Item)197 => (DropSpindle, false),
+        (Item)198 => (Yarn, true),
+        (Item)199 => (WoolCloth, true),
+        _ => (null, false),
+    };
+
+    static float H(int a, int b) => MeshKit.Hash(a, b);
+
+    // A fallen branch, a little crooked, with the stub of a twig.
+    static void Stick(Kit k)
+    {
+        var path = new[] { new Vector3(0, 0.36f, 0), new Vector3(0.008f, 0.05f, 0.01f), new Vector3(-0.01f, -0.3f, -0.012f), new Vector3(0.004f, -0.64f, 0.006f) };
+        k.Wood.Paint(BarkLight).Tube(Smooth(path, 4), 0.042f, 6, 0.03f);
+        k.Wood.Paint(BarkLight, 0.92f).Tube(new[] { new Vector3(0, -0.12f, 0.005f), new Vector3(0.004f, -0.2f, 0.07f), new Vector3(0.006f, -0.24f, 0.12f) }, 0.016f, 5, 0.008f);
+    }
+
+    // A river cobble: rounded but not round.
+    static void Stone(Kit k)
+    {
+        k.Stone.Paint(Look.Rock).Ellipsoid(new Vector3(0, 0.07f, 0), new Vector3(0.14f, 0.08f, 0.115f), 7, 4, new Basis(Vector3.Up, 0.4f));
+        k.Stone.Paint(Look.Rock, 0.94f).Ellipsoid(new Vector3(0.05f, 0.075f, 0.03f), new Vector3(0.09f, 0.065f, 0.08f), 6, 3, new Basis(Vector3.Up, 1.3f));
+    }
+
+    // A length of trunk: bark round the outside, pale wood and rings at the cut ends.
+    static void Log(Kit k)
+    {
+        const float r = 0.085f;
+        k.Wood.Paint(Look.Bark.Lightened(0.1f)).Loft(new Vector3(0, 0.4f, 0), new Vector3(0, -0.4f, 0), new MeshKit.Ring[]
+        {
+            new(0f, r * 0.97f, r), new(0.5f, r * 1.03f, r * 0.98f, 0.004f), new(1f, r * 0.92f, r * 0.95f),
+        }, 8, 0.02f);
+        for (int end = -1; end <= 1; end += 2)
+        {
+            float y = end * (0.4f + 0.002f);
+            k.Wood.Paint(Whittled).Ellipsoid(new Vector3(0, y, 0), new Vector3(r * 0.85f, 0.006f, r * 0.85f), 8, 2);
+            k.Wood.Paint(Whittled.Darkened(0.25f)).Ellipsoid(new Vector3(0, y * 1.004f, 0), new Vector3(r * 0.45f, 0.006f, r * 0.45f), 8, 2);
+        }
+        // The stub of a cut-off branch.
+        k.Wood.Paint(Look.Bark.Lightened(0.15f)).Tube(new[] { new Vector3(0.06f, 0.1f, 0.02f), new Vector3(0.12f, 0.16f, 0.03f) }, 0.022f, 6, 0.018f);
+    }
+
+    // A sheaf of stripped plant fiber, tied near one end.
+    static void Fiber(Kit k)
+    {
+        for (int i = 0; i < 14; i++)
+        {
+            float a = i * 2.4f;
+            var root = new Vector3(Mathf.Cos(a) * 0.012f, 0.22f, Mathf.Sin(a) * 0.018f);
+            var tip = new Vector3(Mathf.Cos(a) * (0.03f + H(i, 1) * 0.05f), -0.34f - H(i, 2) * 0.08f, Mathf.Sin(a) * (0.05f + H(i, 3) * 0.06f));
+            var color = (i % 3) switch { 0 => Look.LeafWarm.Lightened(0.15f), 1 => Straw, _ => Look.LeafLight.Lightened(0.1f) };
+            k.Plant.Paint(color, 0.88f + H(i, 4) * 0.2f).Blade(root, tip, new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)), 0.026f, 0.01f);
+        }
+        k.Plant.Paint(Cord, 0.85f).Tube(MeshKit.Circle(new Vector3(0, 0.13f, 0), Vector3.Up, 0.026f, 14), 0.007f, 4, -1f, false);
+    }
+
+    // A loose nest of shredded bark and dry grass.
+    static void Tinder(Kit k)
+    {
+        k.Plant.Paint(Straw).Ellipsoid(new Vector3(0, 0.045f, 0), new Vector3(0.075f, 0.045f, 0.075f), 8, 4);
+        for (int i = 0; i < 18; i++)
+        {
+            float a = i * 2.4f + H(i, 1);
+            var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            var root = dir * 0.04f + new Vector3(0, 0.03f + H(i, 2) * 0.04f, 0);
+            var tip = root + dir * (0.06f + H(i, 3) * 0.04f) + Vector3.Up * (H(i, 4) * 0.05f - 0.01f);
+            k.Plant.Paint(i % 2 == 0 ? Straw : Straw.Darkened(0.2f), 0.9f + H(i, 5) * 0.15f).Blade(root, tip, Vector3.Up, 0.03f, 0.012f);
+        }
+    }
+
+    // A sharp flake knocked off a core: thin, with a ridge down its back.
+    // Loose flakes are drawn half again as big as life, so they show in the grass.
+    static void Flake(Kit k) =>
+        k.Stone.Paint(Flint).Loft(new Vector3(0, 0.045f, 0), new Vector3(0, -0.15f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.009f, 0.033f), new(0.3f, 0.016f, 0.063f), new(0.7f, 0.012f, 0.054f), new(1f, 0.003f, 0.009f),
+        }, 5, 0.3f, 0f);
+
+    // A teardrop of knapped stone, worked on both faces.
+    static void HandAxe(Kit k) =>
+        k.Stone.Paint(FlintBrown).Loft(new Vector3(0, 0.06f, 0), new Vector3(0, -0.21f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.02f, 0.038f), new(0.2f, 0.035f, 0.07f), new(0.55f, 0.038f, 0.078f), new(0.85f, 0.022f, 0.05f), new(1f, 0.005f, 0.01f),
+        }, 6, 0.3f, 0f);
+
+    // A hank of twisted cord, coiled.
+    static void Cordage(Kit k)
+    {
+        var coil = MeshKit.Circle(new Vector3(0, 0.012f, 0), Vector3.Up, 0.065f, 48, 2.6f, 0.022f);
+        k.Plant.Paint(Cord).Tube(coil, 0.011f, 5);
+        var end = coil[^1];
+        k.Plant.Paint(Cord, 0.93f).Tube(new[] { end, end + new Vector3(0.03f, -0.004f, 0.03f), end + new Vector3(0.07f, -0.02f, 0.05f) }, 0.011f, 5, 0.008f);
+    }
+
+    // A straight shaft with a stone point lashed into its end.
+    static void Spear(Kit k)
+    {
+        k.Wood.Paint(BarkLight.Lightened(0.08f)).Tube(new[] { new Vector3(0, 0.62f, 0), new Vector3(0.004f, -0.2f, 0.002f), new Vector3(0, -1.0f, 0) }, 0.022f, 6, 0.019f);
+        k.Stone.Paint(Flint).Loft(new Vector3(0, -0.96f, 0), new Vector3(0, -1.16f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.008f, 0.02f), new(0.3f, 0.011f, 0.032f), new(1f, 0.002f, 0.003f),
+        }, 5, 0.2f, 0f);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0, -0.9f, 0), Vector3.Down, 0.025f, 40, 5f, 0.08f), 0.006f, 4);
+    }
+
+    // A hand axe hafted crosswise in a handle and bound tight with cord.
+    static void StoneAxe(Kit k)
+    {
+        k.Wood.Paint(BarkLight.Lightened(0.05f)).Tube(new[] { new Vector3(0, 0.12f, 0), new Vector3(0.003f, -0.2f, 0), new Vector3(0, -0.56f, 0) }, 0.023f, 6, 0.028f);
+        k.Stone.Paint(FlintBrown).Loft(new Vector3(0, -0.48f, -0.075f), new Vector3(0, -0.48f, 0.15f), new MeshKit.Ring[]
+        {
+            new(0f, 0.02f, 0.03f), new(0.3f, 0.032f, 0.046f), new(0.75f, 0.024f, 0.056f), new(1f, 0.004f, 0.062f),
+        }, 6, 0.3f, 0f);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0, -0.4f, 0), Vector3.Down, 0.031f, 32, 4f, 0.05f), 0.006f, 4);
+        k.Plant.Paint(Cord, 0.92f).Tube(MeshKit.Circle(new Vector3(0, -0.52f, 0), Vector3.Down, 0.033f, 24, 3f, 0.035f), 0.006f, 4);
+        // Two turns round the head itself, holding it to the handle.
+        k.Plant.Paint(Cord, 0.96f).Tube(MeshKit.Circle(new Vector3(0, -0.48f, 0.01f), Vector3.Back, 0.05f, 20, 2f, 0.012f), 0.006f, 4);
+    }
+
+    // A flake set in a short wooden handle and bound with cord.
+    static void StoneKnife(Kit k)
+    {
+        k.Wood.Paint(BarkLight).Tube(new[] { new Vector3(0, 0.07f, 0), new Vector3(0, -0.07f, 0) }, 0.019f, 6, 0.021f);
+        k.Stone.Paint(Flint).Loft(new Vector3(0, -0.055f, 0), new Vector3(0, -0.21f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.007f, 0.019f), new(0.25f, 0.008f, 0.026f, 0.004f), new(0.8f, 0.006f, 0.02f, 0.006f), new(1f, 0.002f, 0.004f, 0.004f),
+        }, 5, 0.3f, 0f);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0, -0.035f, 0), Vector3.Down, 0.022f, 30, 4f, 0.05f), 0.005f, 4);
+    }
+
+    // A straight stick, its end whittled flat and hardened black in the fire.
+    static void DiggingStick(Kit k)
+    {
+        k.Wood.Paint(Whittled.Darkened(0.12f)).Loft(new Vector3(0, 0.42f, 0), new Vector3(0, -0.5f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.032f, 0.032f), new(0.6f, 0.03f, 0.03f), new(1f, 0.027f, 0.029f),
+        }, 6, 0.3f);
+        k.Wood.Paint(Charred).Loft(new Vector3(0, -0.5f, 0), new Vector3(0, -0.7f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.027f, 0.029f), new(0.6f, 0.018f, 0.026f), new(1f, 0.004f, 0.018f),
+        }, 6, 0.1f);
+    }
+
+    // A woven basket: stakes standing round a base, rows of weavers going in and
+    // out between them, and a thick rim.
+    static void Basket(Kit k)
+    {
+        const int stakes = 12, rows = 7;
+        const float height = 0.22f, bottom = 0.14f, top = 0.19f;
+        k.Plant.Paint(Weave, 0.85f).Ellipsoid(new Vector3(0, 0.012f, 0), new Vector3(bottom, 0.012f, bottom), 12, 3);
+        for (int s = 0; s < stakes; s++)
+        {
+            float a = s * Mathf.Tau / stakes;
+            var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            k.Plant.Paint(Weave, 0.8f).Tube(new[] { dir * bottom + Vector3.Up * 0.01f, dir * top + Vector3.Up * (height + 0.015f) }, 0.007f, 4);
+        }
+        for (int r = 0; r < rows; r++)
+        {
+            float y = 0.025f + r * (height - 0.03f) / (rows - 1);
+            float radius = Mathf.Lerp(bottom, top, y / height) + 0.004f;
+            var path = new Vector3[49];
+            for (int i = 0; i < path.Length; i++)
+            {
+                float a = i * Mathf.Tau / (path.Length - 1);
+                // In front of one stake, behind the next.
+                float weave = Mathf.Sin(a * stakes / 2f + r * Mathf.Pi) * 0.006f;
+                path[i] = new Vector3(Mathf.Cos(a) * (radius + weave), y, Mathf.Sin(a) * (radius + weave));
+            }
+            k.Plant.Paint(Weave, r % 2 == 0 ? 1f : 0.9f).Tube(path, 0.011f, 4, -1f, false);
+        }
+        k.Plant.Paint(Weave, 0.95f).Tube(MeshKit.Circle(new Vector3(0, height + 0.01f, 0), Vector3.Up, top + 0.006f, 49), 0.015f, 5, -1f, false);
+    }
+
+    // A bow with its string, and the spindle caught in a loop of the string.
+    static void BowDrill(Kit k)
+    {
+        var bow = new Vector3[14];
+        for (int i = 0; i < bow.Length; i++)
+        {
+            float t = i / (bow.Length - 1f);
+            bow[i] = new Vector3(0, 0.06f - t * 0.74f, Mathf.Sin(t * Mathf.Pi) * 0.11f);
+        }
+        k.Wood.Paint(BarkLight).Tube(bow, 0.016f, 6, 0.012f);
+        var a = bow[0];
+        var b = bow[^1];
+        var middle = (a + b) / 2f + new Vector3(0, 0, 0.05f);
+        k.Plant.Paint(Cord).Tube(new[] { a, middle + new Vector3(0, 0.02f, 0), middle - new Vector3(0, 0.02f, 0), b }, 0.004f, 4);
+        k.Wood.Paint(Whittled).Tube(new[] { middle + new Vector3(0.015f, 0, -0.2f), middle + new Vector3(0.015f, 0, 0.14f) }, 0.014f, 6, 0.012f);
+    }
+
+    // A small cluster of berries on a twig, with a leaf or two.
+    static void Berries(Kit k)
+    {
+        k.Wood.Paint(Look.Bark.Lightened(0.1f)).Tube(new[] { new Vector3(-0.06f, 0.03f, -0.02f), new Vector3(0, 0.05f, 0), new Vector3(0.07f, 0.045f, 0.02f) }, 0.006f, 4, 0.004f);
+        for (int i = 0; i < 9; i++)
+        {
+            float a = i * 2.4f;
+            var at = new Vector3(Mathf.Cos(a) * 0.035f * (0.4f + H(i, 1) * 0.6f), 0.025f + H(i, 2) * 0.03f, Mathf.Sin(a) * 0.035f * (0.4f + H(i, 3) * 0.6f));
+            k.Plain.Paint(BerryBush.BerryColor, 0.8f + H(i, 4) * 0.35f).Ellipsoid(at, Vector3.One * (0.017f + H(i, 5) * 0.007f), 7, 4);
+        }
+        k.Plant.Paint(Look.Leaf).Blade(new Vector3(0.05f, 0.045f, 0.015f), new Vector3(0.12f, 0.03f, 0.06f), Vector3.Up, 0.04f, 0.008f);
+        k.Plant.Paint(Look.LeafLight).Blade(new Vector3(-0.04f, 0.035f, -0.015f), new Vector3(-0.11f, 0.02f, -0.06f), Vector3.Up, 0.035f, 0.008f);
+    }
+
+    // A leg chop: lean meat, a rind of fat round one side, the end of a bone.
+    static void Mutton(Kit k, Color meat, Color fat, Color bone, float size)
+    {
+        k.Plain.Paint(meat).Ellipsoid(new Vector3(0, 0.05f, 0.01f) * size, new Vector3(0.11f, 0.05f, 0.085f) * size, 9, 5, null, 0.6f);
+        k.Plain.Paint(fat).Ellipsoid(new Vector3(-0.01f, 0.045f, -0.02f) * size, new Vector3(0.115f, 0.046f, 0.075f) * size, 9, 5, null, 0.6f);
+        k.Plain.Paint(bone).Tube(new[] { new Vector3(0.06f, 0.05f, 0.01f) * size, new Vector3(0.19f, 0.055f, 0.015f) * size }, 0.014f * size, 6);
+        k.Plain.Paint(bone, 0.95f).Ellipsoid(new Vector3(0.195f, 0.055f, 0.015f) * size, new Vector3(0.02f, 0.022f, 0.026f) * size, 7, 4);
+    }
+
+    // A tuft of shorn fleece.
+    static void Wool(Kit k)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * 2.4f;
+            float r = i == 0 ? 0f : 0.05f + H(i, 1) * 0.03f;
+            var at = new Vector3(Mathf.Cos(a) * r, 0.04f + H(i, 2) * 0.03f, Mathf.Sin(a) * r * 0.8f);
+            k.Plant.Paint(Fleece, 0.9f + H(i, 3) * 0.1f).Ellipsoid(at, new Vector3(0.05f, 0.04f, 0.05f) * (0.8f + H(i, 4) * 0.5f), 7, 4);
+        }
+    }
+
+    // A hide rolled up and tied: fleece outside for a fresh sheepskin, bare pale
+    // skin once it has been scraped.
+    static void RolledHide(Kit k, bool fleece)
+    {
+        const float half = 0.17f, radius = 0.075f;
+        var outside = fleece ? k.Plant.Paint(Fleece) : k.Plain.Paint(HideSkin);
+        outside.Loft(new Vector3(-half, radius, 0), new Vector3(half, radius, 0), new MeshKit.Ring[]
+        {
+            new(0f, radius * 0.95f, radius * 0.95f), new(0.15f, radius, radius), new(0.85f, radius, radius), new(1f, radius * 0.95f, radius * 0.95f),
+        }, 9, 0.05f);
+        // The ends show the rolled skin.
+        for (int end = -1; end <= 1; end += 2)
+        {
+            k.Plain.Paint(HideSkin, 0.9f).Ellipsoid(new Vector3(end * half, radius, 0), new Vector3(0.008f, radius * 0.9f, radius * 0.9f), 9, 5);
+            k.Plain.Paint(HideSkin, 0.75f).Ellipsoid(new Vector3(end * (half + 0.002f), radius, 0), new Vector3(0.008f, radius * 0.45f, radius * 0.45f), 7, 4);
+            k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(end * half * 0.55f, radius, 0), Vector3.Right, radius + 0.004f, 20), 0.006f, 4, -1f, false);
+        }
+    }
+
+    // Leather, folded into a flat stack.
+    static void Leather(Kit k)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            float y = 0.012f + i * 0.022f;
+            float jx = (H(i, 1) - 0.5f) * 0.02f, jz = (H(i, 2) - 0.5f) * 0.02f;
+            k.Plain.Paint(LeatherBrown, 0.88f + i * 0.07f).Loft(new Vector3(-0.15f + jx, y, jz), new Vector3(0.15f + jx, y, jz), new MeshKit.Ring[]
+            {
+                new(0f, 0.016f, 0.16f), new(0.5f, 0.018f, 0.17f), new(1f, 0.016f, 0.16f),
+            }, 4, 0.15f, Mathf.Pi / 4f);
+        }
+    }
+
+    // A wool tunic folded in a square, its cord belt coiled on top.
+    static void Tunic(Kit k)
+    {
+        k.Plain.Paint(TunicWool, 0.95f).Loft(new Vector3(-0.15f, 0.02f, 0), new Vector3(0.15f, 0.02f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.026f, 0.15f), new(0.5f, 0.03f, 0.16f), new(1f, 0.026f, 0.15f),
+        }, 4, 0.2f, Mathf.Pi / 4f);
+        k.Plain.Paint(TunicWool).Loft(new Vector3(-0.14f, 0.055f, 0.01f), new Vector3(0.14f, 0.055f, 0.01f), new MeshKit.Ring[]
+        {
+            new(0f, 0.022f, 0.13f), new(0.5f, 0.026f, 0.14f), new(1f, 0.022f, 0.13f),
+        }, 4, 0.2f, Mathf.Pi / 4f);
+        k.Plant.Paint(new Color(0.45f, 0.34f, 0.18f)).Tube(MeshKit.Circle(new Vector3(0.02f, 0.078f, 0.01f), Vector3.Up, 0.05f, 30, 1.8f, 0.006f), 0.006f, 4);
+    }
+
+    // A pair of leather foot wraps, each rolled and tied.
+    static void FootWraps(Kit k)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            float z = i == 0 ? -0.045f : 0.045f;
+            k.Plain.Paint(LeatherBrown, i == 0 ? 1f : 0.92f).Loft(new Vector3(-0.1f, 0.04f, z), new Vector3(0.1f, 0.04f, z), new MeshKit.Ring[]
+            {
+                new(0f, 0.036f, 0.036f), new(0.15f, 0.04f, 0.04f), new(0.85f, 0.04f, 0.04f), new(1f, 0.036f, 0.036f),
+            }, 7, 0.1f);
+            k.Plant.Paint(new Color(0.45f, 0.34f, 0.18f)).Tube(MeshKit.Circle(new Vector3(0, 0.04f, z), Vector3.Right, 0.043f, 16), 0.005f, 4, -1f, false);
+        }
+    }
+
+    // A drop spindle: a straight shaft, a flat stone whorl near the bottom, and
+    // yarn wound on above it.
+    static void DropSpindle(Kit k)
+    {
+        k.Wood.Paint(Whittled).Tube(new[] { new Vector3(0, 0.07f, 0), new Vector3(0, -0.2f, 0) }, 0.007f, 6, 0.006f);
+        k.Stone.Paint(Look.Rock.Lightened(0.1f)).Ellipsoid(new Vector3(0, -0.155f, 0), new Vector3(0.036f, 0.008f, 0.036f), 10, 3);
+        k.Plain.Paint(TunicWool).Ellipsoid(new Vector3(0, -0.09f, 0), new Vector3(0.022f, 0.055f, 0.022f), 8, 6);
+        // A thread trails up to a notch at the top.
+        k.Plain.Paint(TunicWool, 0.9f).Tube(new[] { new Vector3(0.01f, -0.04f, 0.012f), new Vector3(0.004f, 0.02f, 0.006f), new Vector3(0, 0.066f, 0.004f) }, 0.0025f, 3);
+    }
+
+    // A ball of cream yarn, wound round and round.
+    static void Yarn(Kit k)
+    {
+        const float r = 0.045f;
+        k.Plain.Paint(TunicWool, 0.94f).Ellipsoid(new Vector3(0, r, 0), Vector3.One * r, 10, 6);
+        for (int i = 0; i < 7; i++)
+        {
+            var axis = new Vector3(H(i, 1) - 0.5f, H(i, 2) - 0.5f, H(i, 3) - 0.5f).Normalized();
+            k.Plain.Paint(TunicWool, 0.95f + H(i, 4) * 0.08f).Tube(MeshKit.Circle(new Vector3(0, r, 0), axis, r + 0.002f, 24), 0.004f, 4, -1f, false);
+        }
+        var loose = new Vector3(r * 0.7f, r * 0.3f, r * 0.7f);
+        k.Plain.Paint(TunicWool).Tube(new[] { loose, loose + new Vector3(0.03f, -0.012f, 0.01f), loose + new Vector3(0.07f, -0.012f, -0.01f) }, 0.004f, 4);
+    }
+
+    // A folded square of coarse woven cloth, the weave showing on top.
+    static void WoolCloth(Kit k)
+    {
+        k.Plain.Paint(TunicWool, 0.95f).Loft(new Vector3(-0.13f, 0.018f, 0), new Vector3(0.13f, 0.018f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.022f, 0.13f), new(1f, 0.022f, 0.13f),
+        }, 4, 0.15f, Mathf.Pi / 4f);
+        const float top = 0.0345f, half = 0.088f;
+        for (int i = 0; i < 9; i++)
+        {
+            float t = -half + i * 2f * half / 8f;
+            k.Plain.Paint(TunicWool, 0.85f).Tube(new[] { new Vector3(-half, top, t), new Vector3(half, top, t) }, 0.0022f, 3, -1f, false);
+            k.Plain.Paint(TunicWool, 1.05f).Tube(new[] { new Vector3(t, top + 0.001f, -half), new Vector3(t, top + 0.001f, half) }, 0.0022f, 3, -1f, false);
+        }
+    }
+
+    // Catmull-Rom points between the given ones, so a path bends smoothly.
+    static Vector3[] Smooth(Vector3[] points, int steps)
+    {
+        var result = new List<Vector3>();
+        for (int i = 0; i + 1 < points.Length; i++)
+        {
+            var p0 = points[Math.Max(i - 1, 0)];
+            var p1 = points[i];
+            var p2 = points[i + 1];
+            var p3 = points[Math.Min(i + 2, points.Length - 1)];
+            for (int s = 0; s < steps; s++)
+                result.Add(p1.CubicInterpolate(p2, p0, p3, s / (float)steps));
+        }
+        result.Add(points[^1]);
+        return result.ToArray();
+    }
+}

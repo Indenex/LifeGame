@@ -212,6 +212,18 @@ a.LastError = null;
 a.Conn.Reducers.AddClaimMemberByName(" " + bName.ToUpperInvariant() + " ");
 Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId) || a.LastError != null, 5, "membership");
 Check(b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), $"the owner can add someone by name ({a.LastError ?? "ok"})");
+
+// claims-9: the owner names the place; members see the name; an empty name clears it.
+ExpectError(b, () => b.Conn.Reducers.NameClaim("Not Yours"), "do not hold a claim", "only the owner can name the land");
+a.Conn.Reducers.NameClaim("  Willow   Hollow  ");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) != null || a.LastError != null, 5, "name");
+Check(b.Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name == "Willow Hollow", $"the owner names the land, tidied ({b.Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name ?? a.LastError ?? "-"})");
+Check(Social.CleanClaimName(new string('x', 40)).Length == Social.ClaimNameMax, "long names are cut short");
+a.Conn.Reducers.NameClaim(" ");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5, "unname");
+Check(true, "an empty name clears it");
+a.Conn.Reducers.NameClaim("Willow Hollow");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) != null, 5, "rename");
 Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBeforeAdd && m.SenderId == 0 && m.Text.StartsWith(bName + " now shares")), 5, "added line");
 Check(true, "a chat line says who now shares the land");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName(bName), "already a member", "adding a member twice is refused");
@@ -391,6 +403,7 @@ if (decay)
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
     Check(true, "the marker post went with it");
+    Check(Wait(() => a.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5), "its name went with it");
     Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
@@ -452,7 +465,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
