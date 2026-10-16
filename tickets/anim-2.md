@@ -10,6 +10,7 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 
 ## Progress log
 - 2026-10-16 19:35: started from #100 head + main (PM, D-145 never idle). Chop: WorkMotion.Chop (wide stance, wind back over the right shoulder, whip across into the trunk, ~0.85 swings/s), chop/fell families map to it, your avatar faces the nearest trunk within 3 m (shared/Trees.cs) when the job starts. Previously chop.log mapped to kneeling Carve. Client builds.
+- 2026-10-16 19:40: #100 green on 25764cc (run https://github.com/Indenex/LifeGame/actions/runs/38953389730), sent to PM to merge. Asked Survival for a cold signal and Animals about Sheep.cs.
 - Station pose + facing already built on claude/anim-1-stations (needs #160); merge it here after #160 merges.
 
 ## Open questions / blockers
