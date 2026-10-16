@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
 Status: in_review
 Branch: claude/animals-sheep-5gkntn (restarted from main 47cc6e5 after #63 merged)
-PR: (after #63)
+PR: #69
 
 ## Goal
 Playtest found sheep wandering onto and standing in a lit fire. Sheep should keep about 1.5 m from a burning fire and shy from it like a mild fright. Burned-out fires don't count.
