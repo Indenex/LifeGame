@@ -85,7 +85,7 @@ for shot in "${shots[@]}"; do
   done
   case " $shot " in *" --screenshot-delay="*) ;; *) extra+=("--screenshot-delay=40") ;; esac
   echo "shot $n: $shot"
-  (cd "$tree/client" && timeout 900 xvfb-run -a -s "-screen 0 1600x900x24" "$godot" --path . --resolution 1600x900 -- \
+  (cd "$tree/client" && timeout "${RENDER_SHOT_TIMEOUT:-2400}" xvfb-run -a -s "-screen 0 1600x900x24" "$godot" --path . --resolution 1600x900 -- \
     "$server_opt" --db=lifegame --profile=render$n "--screenshot=$out" "${extra[@]}") >>"$log" 2>&1 || true
   if [ -s "$out" ]; then echo "  saved $out"; else echo "  no image (see $log)"; fi
 done
