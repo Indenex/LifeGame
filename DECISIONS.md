@@ -759,3 +759,23 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-186 — 2026-10-16 — Hardening behind a dev flag
 **Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
 **Who:** PM (technical decision)
+
+## D-187 — 2026-10-16 — Crafted items: bag first, real-world items can be placed
+**Decision:** Finished crafts go to the bag. Real-world items (bricks and the like) also get an optional "Place it now" prompt, and can be placed from the bag with a Place key and a ghost preview. Small items such as tinder go straight to the bag. Owner: Crafting (crafting-20), with UX.
+**Who:** Justin ("when items like bricks and things are crafted, they should either go into your inventory and then allow them to be placed, or allow you to simply choose where to put them when done crafting (real world items only, things like tinder etc. just auto inventory)"), who chose "Both"
+
+## D-188 — 2026-10-16 — E interacts and picks up
+**Decision:** E is the key that interacts with things and picks up items, not G or space. Owner: UX (ui-16, keys). Note: D-150's first-time tips name G for feeding a fire and for the crafting table, and need the new key.
+**Who:** Justin ("I want E to be the item that interacts with things and picks up items, not G/space.")
+
+## D-189 — 2026-10-16 — Turn view by mouse drag only
+**Decision:** The view turns by mouse drag only. Q/E turning is removed.
+**Who:** Justin ("Mouse drag only")
+
+## D-190 — 2026-10-16 — Jumping
+**Decision:** The player can jump, and jumping clears fences too, but not claim fences unless you are a member of that claim. Owners: Bug fixes (bugfix-25, jump and clearance), with Animation and Audio for the poses and sounds.
+**Who:** Justin ("Also I want to be able to jump." Fences: "Fences too, but not claim fences unless you're a member of it.")
+
+## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
+**Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
+**Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
