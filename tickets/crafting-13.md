@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_progress
 Branch: crafting-numbers
-PR: (none yet)
+PR: #125
 
 ## Goal
 D-075: every number starts low and grows slowly, with faster gains through about the first 15% of progression, then a slow climb. Review Crafting's numbers, send the PM options, and apply whatever Justin picks.
