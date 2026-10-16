@@ -1,9 +1,9 @@
 # atmosphere-8: Admin time commands (/day, /night, /time)
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
-PR: (after #52)
+PR: #54
 
 ## Goal
 Justin can set the time of day: `/day` (mid-morning, 0.35), `/night` (0.92) and `/time 0-1` typed in chat, admin only. Every client glides to the new time over about 2 s (the existing clock glide), lighting and ambience included. Admin commands show in F1 for admins only.

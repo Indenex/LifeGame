@@ -1,7 +1,7 @@
 # atmosphere-9: Sound off the main thread, fewer draw calls
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #60
 
