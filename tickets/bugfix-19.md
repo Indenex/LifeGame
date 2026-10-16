@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-19
-PR: (opening)
+PR: #109
 
 ## Goal
 While a freshly shaped pot or brick dries (4 to 8 minutes), G near it still does what it would do without it: Drink or Fill pots at the water's edge, Pick berries, pick up a fired pot. The "Drying, about N min left" line shows only when G has nothing real to do. Its floating moisture label steps aside only when the G prompt really shows that line, so drying info is never hidden while the prompt shows something else.
@@ -14,6 +14,7 @@ Fix: the wet-piece line moves to its own handler `ceramics.drying` at priority 0
 
 ## Progress log
 - 2026-10-16: found in the clay-path review (see bugfix-17). Fixed; the client builds.
+- 2026-10-16: pushed, opened #109. Render requested (sha below in the next line once pushed).
 
 ## Open questions / blockers
 - (none)
