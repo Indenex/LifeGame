@@ -286,16 +286,20 @@ public static class Look
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
-            // How far a tree has faded because it stands between the camera and the
-            // player: 0 solid, 1 fully in the way. Measured from the line of sight to
-            // the tree's own axis, so the whole tree eases in and out together as
-            // either moves. Only the main camera fades things, so shadows stay whole.
+            // How far a tree has faded because it hides the player: 0 solid, 1 fully in
+            // the way. The crown is taken as an upright capsule round the canopy, sized
+            // by the tree's own scale, and the tree fades when the line of sight from
+            // the camera to the player passes through it anywhere, including right at
+            // the player, so a crown overhead fades too (Justin's playtest). Trunk and
+            // canopy share a transform, so the whole tree eases in and out together.
+            // Only the main camera fades things, so shadows stay whole.
             float fade_amount(mat4 model, vec3 cam) {
                 if (distance(cam, view_camera_position) > 0.5) return 0.0;
-                float size = length(model[1].xyz);
+                float tall = length(model[1].xyz);
+                float wide = length(model[0].xyz);
                 vec3 base = model[3].xyz;
                 vec3 p1 = cam, d1 = player_position + vec3(0.0, 1.0, 0.0) - cam;
-                vec3 p2 = base + vec3(0.0, 0.5 * size, 0.0), d2 = vec3(0.0, 3.5 * size, 0.0);
+                vec3 p2 = base + vec3(0.0, 1.6 * tall, 0.0), d2 = vec3(0.0, 2.8 * tall, 0.0);
                 vec3 r = p1 - p2;
                 float a = dot(d1, d1), b = dot(d1, d2), c = dot(d1, r), e = dot(d2, d2), f = dot(d2, r);
                 float denom = a * e - b * b;
@@ -303,8 +307,9 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                // Wide enough that neighboring crowns overlapping the player fade too.
-                return (1.0 - smoothstep(1.2 * size, 2.6 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                // A canopy reaches about 1.9 times the tree's width from its axis; fade
+                // fully inside that and ease out a little beyond.
+                return 1.0 - smoothstep(1.9 * wide, 2.7 * wide, d);
             }
 
             varying vec3 tint;
