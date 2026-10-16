@@ -166,6 +166,12 @@ public static partial class Module
         public float Vz;
         public long At;
         public long StillSince;
+        // When Stalking last got credit for sneaking near a wary animal (animal.sneak),
+        // throttled to every few seconds; and when this player last drew a bow (Bow.cs).
+        [Default(0L)]
+        public long SneakReportAt;
+        [Default(0L)]
+        public long ShotAt;
     }
 
     [SpacetimeDB.Table(Accessor = "AnimalTickTimer", Scheduled = nameof(AnimalTick), ScheduledAt = nameof(ScheduledAt))]
@@ -259,6 +265,8 @@ public static partial class Module
     struct AnimalWatcher
     {
         public float X, Z, Vx, Vz, Speed, StillSeconds;
+        public uint PlayerId;
+        public bool Sneaking;
     }
 
     struct FlockMember
@@ -309,7 +317,7 @@ public static partial class Module
             }
             if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) continue;
 
-            var w = new AnimalWatcher { X = pos.X, Z = pos.Z };
+            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null };
             if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId) is { } seen)
             {
                 // Positions arrive in 100 ms batches, so a single sample is jittery;
@@ -368,6 +376,26 @@ public static partial class Module
             if (!mind.Equals(before[i].Mind))
                 ctx.Db.AnimalMind.AnimalId.Update(mind);
         }
+
+        // Stalking trains from sneaking near a wary animal that hasn't bolted.
+        if (Traits(before[0].Body.Species).Wary > 0f)
+            foreach (var w in watchers)
+            {
+                if (!w.Sneaking || w.Speed < 0.3f) continue;
+                if (before.Any(m => m.Body.State != AnimalState.Run && AnimalDist(w.X, w.Z, m.Body.X, m.Body.Z) < SneakTrainRange))
+                    ReportSneaking(ctx, w.PlayerId, now);
+            }
+    }
+
+    // Close enough to a wary animal that creeping up on it counts as practice.
+    const float SneakTrainRange = 14f;
+    const long SneakReportEveryMicros = 4_000_000;
+
+    static void ReportSneaking(ReducerContext ctx, uint playerId, long now)
+    {
+        if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(playerId) is not { } seen || now - seen.SneakReportAt < SneakReportEveryMicros) return;
+        ctx.Db.AnimalPlayerSeen.PlayerId.Update(seen with { SneakReportAt = now });
+        OnProcessPerformed(ctx, playerId, Skills.Sneak, 50, false);
     }
 
     // Players closing in fast scare a sheep; a player standing still calms it.

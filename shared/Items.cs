@@ -61,7 +61,10 @@ namespace LifeGame.Shared
         SheepHide = 194,
         ScrapedHide = 195,
         Leather = 196,
-        // 197-201 are the wool items, the wool tunic and the foot wraps (#90, #149).
+        DropSpindle = 197,
+        Yarn = 198,
+        WoolCloth = 199,
+        // 200-201 are the wool tunic and the foot wraps (#149, animals-9).
         RawVenison = 202,
         DeerHide = 203,
         Antler = 204,
@@ -101,6 +104,7 @@ namespace LifeGame.Shared
         Digging = 64,   // breaks ground faster than hands
         Container = 128, // carries loose things
         FireBow = 256,   // spins a fire drill with a bowstring
+        Spindle = 512,   // twists loose fibre into yarn
     }
 
     public static class Items
@@ -150,6 +154,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
             new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
+            new ItemDef { Id = Item.DropSpindle, Name = "Drop spindle", Plural = "Drop spindles", Tags = ItemTags.Spindle, HasQuality = true },
+            new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
+            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
             new ItemDef { Id = Item.RawVenison, Name = "Raw venison", Plural = "Raw venison", HasQuality = true },
             new ItemDef { Id = Item.DeerHide, Name = "Deer hide", Plural = "Deer hides", HasQuality = true },
             new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true },

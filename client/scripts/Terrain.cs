@@ -234,6 +234,8 @@ public partial class Terrain : Node3D
         color = color.Lerp(LeafLitter, Forest.Density(x, z) * 0.4f);
         color = color.Lerp(Look.HeathGround, Forest.Heath(x, z) * 0.45f);
         color = color.Lerp(Look.Moss, Forest.Wetland(x, z) * 0.4f);
+        // Deer trails wear the ground bare, some stretches more than others.
+        color = color.Lerp(Look.Earth, Landmarks.Trail(x, z) * (0.25f + 0.35f * World.Noise(x + 733, z - 1291, 20f, 93)));
 
         float clay = Mathf.SmoothStep(0.64f, 0.85f, World.ClayScore(x, z));
         color = color.Lerp(Look.Clay, clay * 0.35f);
@@ -274,6 +276,7 @@ public partial class Terrain : Node3D
         var reeds = new List<(Transform3D, Color, Color)>();
         var flowers = new List<(Transform3D, Color, Color)>();
         var bushes = new List<(Transform3D, Color, Color)>();
+        var landmarks = new LandmarkProps.Lists();
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
@@ -294,7 +297,10 @@ public partial class Terrain : Node3D
                 // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
+                    // Stepping stones or a fallen log mark an easy place to ford a stream.
+                    if (Landmarks.FordStoneAt(x, z))
+                        LandmarkProps.Ford(x, z, top, landmarks, custom);
+                    else if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
                     continue;
                 }
@@ -315,6 +321,19 @@ public partial class Terrain : Node3D
                 // Heath on the hilltops, wetland by the water (env-4).
                 float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
                 float tree = Forest.TreeChance(density, heath); // the same as Trees.Forest(x, z)
+                float trail = Landmarks.Trail(x, z);
+
+                // Landmarks to steer by (env-5), each shaped by its own seed.
+                if (Landmarks.GiantOakAt(x, z))
+                {
+                    LandmarkProps.GiantTree(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
+                    continue;
+                }
+                if (Landmarks.OutcropAt(x, z))
+                {
+                    LandmarkProps.Outcrop(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
+                    continue;
+                }
                 float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
                 float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
@@ -360,7 +379,7 @@ public partial class Terrain : Node3D
                     trunks.Add((new Transform3D(lying, new Vector3(fx, top + 0.1f, fz)), Look.Bark.Darkened(0.1f), custom));
                 }
 
-                if (!shore)
+                if (!shore && trail < 0.5f)
                 {
                     // Ferns under the trees and bushes where a grove opens into a glade;
                     // heather and gorse on the heath; sedge on wet ground.
@@ -379,7 +398,7 @@ public partial class Terrain : Node3D
                     else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
                 }
-                else if (Hash01(x, z, 60) < 0.25f)
+                else if (shore && Hash01(x, z, 60) < 0.25f)
                     reeds.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 61) * 0.4f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
 
                 // Wildflowers in patches across the open ground.
@@ -395,17 +414,21 @@ public partial class Terrain : Node3D
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet)
+                if (grassy && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
                 {
                     // Shear the patch onto the slope so every blade stays rooted.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
-                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath), 0), new Vector3(0, sz, 1));
+                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
                     tufts.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
             }
 
+        trunks.AddRange(landmarks.Trunks);
+        leafy.AddRange(landmarks.Leafy);
+        pines.AddRange(landmarks.Pines);
+        rocks.AddRange(landmarks.Rocks);
         AddMulti(root, trunkMesh!, trunks, Look.TreeBark);
         AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
@@ -424,7 +447,7 @@ public partial class Terrain : Node3D
     // shaders (D-099): broadleaf canopies thin in winter and turn in autumn, flowers
     // only show in spring and summer, heather blooms purple in late summer. 0 (pines,
     // other bushes, rocks) never changes.
-    const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
+    internal const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
 
     static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
@@ -471,7 +494,7 @@ public partial class Terrain : Node3D
     // for nearly every chunk.
     public void ShowGhosts(Vector3 camera, Vector3 player)
     {
-        const float Margin = 8f; // the fade's reach round the widest canopy (2.7 x a 2.6 m wide oak)
+        const float Margin = 12f; // the fade's reach round the widest canopy: a giant tree's lobes (env-5) reach about 11 m
         int n = World.ChunkSize;
         var a = new Vector2(camera.X, camera.Z);
         var b = new Vector2(player.X, player.Z);
