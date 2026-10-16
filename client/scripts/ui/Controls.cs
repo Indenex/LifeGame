@@ -16,12 +16,13 @@ public static class Controls
     // call Hints.Request(action) at the right moment.
     // Name labels the row on the Controls page (ui/ControlsPage.cs) when Help doesn't
     // fit; Joins lists actions whose first keys read together ("W A S D").
-    // Fixed rows can't be rebound (a lane reads the raw key).
+    // Fixed rows can't be rebound (a lane reads the raw key). KeyText writes a row's
+    // keys for the F1 list when they aren't one action ("Shift {use}" reads the Use key).
     // A row with no Keys or Mouse belongs to a lane that still binds it itself; its
     // key list entry and hint wait until that action exists.
     public record Binding(string Action, Key[] Keys, string? Help, string? Hint = null,
         bool OnRequest = false, MouseButton Mouse = MouseButton.None, string? Name = null,
-        string[]? Joins = null, bool Fixed = false)
+        string[]? Joins = null, bool Fixed = false, string? KeyText = null)
     {
         public string Label => Name ?? Help ?? Action;
     }
@@ -44,6 +45,8 @@ public static class Controls
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         new("sneak", new[] { Key.Shift }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
         new("use", new[] { Key.G }, "Use what's in front of you"),
+        // Building reads Shift inside its door offer, so this follows the Use key.
+        new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
         new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
         // with these keys; they join the key list once those lanes land.
@@ -160,6 +163,7 @@ public static class Controls
     // binding and the player's own keys both show correctly. Null when unbound.
     public static string? KeysFor(Binding b)
     {
+        if (b.KeyText != null) return b.KeyText.Replace("{use}", KeyFor("use") ?? "G");
         if (b.Joins != null)
         {
             var firsts = b.Joins.Select(a => Names(a).FirstOrDefault()).ToList();
