@@ -17,6 +17,8 @@ Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings a
 
 - 2026-10-16 17:35: Environment pushed Forest.Density (claude/environment-env-1 0eaba8b: groves ~20 m, glades between) and switched Woodedness to average it, then SmoothStep(0.1, 0.6) (4907603); retune that curve once it merges. For them: Look flower colours (1e65d96), Look.Grass bends along wind_dir (c65003b, same direction). Good combined shafts spot: glade edge (36,-36).
 
+- 2026-10-16 17:46: #66 approved by Justin (D-083); CI green on 7bf58e8 (https://github.com/Indenex/LifeGame/actions/runs/38940107818); PM merges. Not pushing more to that branch (its atmosphere-11 ticket gets this note once merged, from this branch).
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
