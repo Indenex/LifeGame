@@ -146,6 +146,34 @@ namespace LifeGame.Shared
                 Indoor = true,
                 Stages = new[] { "Stone ring", "Clay surround" },
             },
+            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
+            new StructureShape
+            {
+                Name = "Spindle station",
+                HalfWidth = 0.6f, HalfDepth = 0.4f,
+                Clearance = 1.0f,
+                Station = StationKind.Spindle,
+                Stages = new[] { "Distaff stand" },
+            },
+            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
+            new StructureShape
+            {
+                Name = "Leather drying rack",
+                HalfWidth = 1.2f, HalfDepth = 0.35f,
+                Clearance = 1.0f,
+                Station = StationKind.DryingRack,
+                Stages = new[] { "Posts and bar" },
+            },
+            // Ceramics' potter's bench (ceramics-8, D-112): pots are shaped at it, inside a claim.
+            new StructureShape
+            {
+                Name = "Potter's bench",
+                // Modeling's bench (wedging stone, stool, pots) is about 1.3 x 1.0 m, +Z where the potter sits.
+                HalfWidth = 0.65f, HalfDepth = 0.5f,
+                Clearance = 1.0f,
+                Station = StationKind.PottersBench,
+                Stages = new[] { "Bench" },
+            },
             // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
             new StructureShape
             {
@@ -229,6 +257,21 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stone, 4u) },
                 new[] { (Item.Daub, 3u) },
+            },
+            // Spindle station: your drop spindle becomes part of it (D-137)
+            new[]
+            {
+                new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
+            },
+            // Leather drying rack
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
+            },
+            // Potter's bench (Ceramics, D-127): a split log on two stones
+            new[]
+            {
+                new[] { (Item.Log, 1u), (Item.Stone, 2u) },
             },
             // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
             new[]

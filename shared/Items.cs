@@ -26,6 +26,9 @@ namespace LifeGame.Shared
         Basket = 13,
         BowDrill = 14,
         Log = 15,
+        // Bow and arrow (animals-15): ids reserved here so Modeling and Animals can build on them.
+        Bow = 16,
+        Arrow = 17,
 
         // Clay and ceramics (tier 3) use 100 to 129.
         CleanClay = 100,
@@ -43,6 +46,8 @@ namespace LifeGame.Shared
         UnfiredCoilPot = 112,
         UnfiredStorageJar = 113,
         StorageJar = 114,
+        PotOfBroth = 115,
+        PotOfStew = 116,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -58,6 +63,11 @@ namespace LifeGame.Shared
         SheepHide = 194,
         ScrapedHide = 195,
         Leather = 196,
+        DropSpindle = 197,
+        Yarn = 198,
+        WoolCloth = 199,
+        // 200 is the wool tunic (animals-9, D-120).
+        LeatherWraps = 201,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -75,6 +85,12 @@ namespace LifeGame.Shared
         // A thing that sits visibly in the world, so it can be set down where you choose
         // (crafting-21). Small things like tinder and cordage just go to the bag.
         public bool Placeable;
+        // Hand tools wear with use and stop working until mended at a repair table
+        // (crafting-19, shared/Durability.cs). A wearing tool needs HasQuality. Mending
+        // takes RepairCost besides the visit, and RepairNeedsTool in hand (a cutting tool).
+        public bool Wears;
+        public Ingredient[]? RepairCost;
+        public ItemTags RepairNeedsTool;
 
         public string Count(uint n) => n == 1 ? Name : Plural;
     }
@@ -92,12 +108,16 @@ namespace LifeGame.Shared
         Digging = 64,   // breaks ground faster than hands
         Container = 128, // carries loose things
         FireBow = 256,   // spins a fire drill with a bowstring
+        Spindle = 512,   // twists loose fibre into yarn
     }
 
     public static class Items
     {
         // Raw materials picked up or dug start at this quality (0 to 100).
         public const byte RawQuality = 50;
+
+        // Mending a lashed tool takes a length of fresh cordage.
+        static readonly Ingredient[] Lashing = { new Ingredient(Item.Cordage) };
 
         public static readonly IReadOnlyDictionary<Item, ItemDef> All = Build(
             new ItemDef { Id = Item.Stick, Name = "Stick", Plural = "Sticks", FuelSeconds = 90 },
@@ -108,8 +128,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Flake, Name = "Stone flake", Plural = "Stone flakes", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
-            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true, Wears = true, RepairCost = Lashing },
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing },
             new ItemDef { Id = Item.CleanClay, Name = "Clean clay", Plural = "Clean clay" },
             new ItemDef { Id = Item.Grit, Name = "Stone grit", Plural = "Stone grit" },
             new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
@@ -125,11 +145,15 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredStorageJar, Name = "Unfired storage jar", Plural = "Unfired storage jars", HasQuality = true },
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true, Placeable = true },
-            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
-            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
+            new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true },
+            new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
+            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing },
+            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairNeedsTool = ItemTags.Cutting },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true, Placeable = true },
-            new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
+            new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true, Wears = true, RepairCost = Lashing },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360, Placeable = true },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true },
+            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
@@ -138,7 +162,11 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true },
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
-            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true });
+            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
+            new ItemDef { Id = Item.DropSpindle, Name = "Drop spindle", Plural = "Drop spindles", Tags = ItemTags.Spindle, HasQuality = true },
+            new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
+            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 

@@ -55,6 +55,6 @@ namespace LifeGame.Shared
         public static bool CanRun(float stamina, bool winded) => stamina > 0f && (!winded || stamina >= MinToRun);
 
         static float Lerp(float start, float master, int rank) =>
-            start + (master - start) * Math.Clamp(rank, 0, Skills.MaxRank) / Skills.MaxRank;
+            Progression.Effect(rank, start, master);
     }
 }

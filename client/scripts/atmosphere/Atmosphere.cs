@@ -19,6 +19,7 @@ public partial class Atmosphere : Node3D
     // Cached names: a string here would build a new StringName every frame.
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
+    static readonly StringName NPuddles = "puddles";
     static readonly StringName NWindStrength = "wind_strength";
     static readonly StringName NWindGust = "wind_gust";
     static readonly StringName NRainAmount = "rain_amount";
@@ -61,6 +62,9 @@ public partial class Atmosphere : Node3D
     float cloud = 0.2f, rainAmount, wind = 0.3f, wetness;
     float targetCloud = 0.2f, targetRain, targetWind = 0.3f, targetWetness;
     float? argCloud, argRain, argWind, argWetness;
+    // Standing water after rain, eased; --puddles=1 holds it for screenshots.
+    float puddleLevel;
+    float? argPuddles;
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
@@ -109,6 +113,7 @@ public partial class Atmosphere : Node3D
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
         ReadyFronts();
+        ReadyHomes();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -124,6 +129,7 @@ public partial class Atmosphere : Node3D
         argRain = ArgFloat("rain");
         argWind = ArgFloat("wind");
         argWetness = ArgFloat("wetness");
+        argPuddles = ArgFloat("puddles");
         if (Arg("debug-position")?.Split(',') is [var px, var pz]
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
@@ -162,6 +168,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
@@ -244,6 +251,10 @@ public partial class Atmosphere : Node3D
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        // Puddles stand once the ground is well soaked, and frozen ground holds none.
+        float puddleTarget = Mathf.SmoothStep(0.45f, 0.9f, wetness) * (1f - Mathf.SmoothStep(0.3f, 0.8f, SnowCover));
+        puddleLevel = Mathf.Lerp(puddleLevel, argPuddles ?? puddleTarget, snap ? 1f : 1f - Mathf.Exp(-dt / 20f));
+        RenderingServer.GlobalShaderParameterSet(NPuddles, puddleLevel);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
         RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);
@@ -269,6 +280,8 @@ public partial class Atmosphere : Node3D
         // Dawn mist glows with the same light as the fog: warm at sunrise.
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
+        Night = 1f - daylight;
+        UpdateHomes(dt, focus, Night, env.FogLightColor);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
@@ -281,6 +294,7 @@ public partial class Atmosphere : Node3D
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
+            Sfx.Listen(focus, ear.GlobalBasis.X);
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
@@ -429,6 +443,11 @@ public partial class Atmosphere : Node3D
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
     }
+
+    // How much of night it is, 0 full day to 1 full night, for other lanes that
+    // change with the dark (e.g. campfire light reaching about 14 m at night instead
+    // of 10 m by day, Justin's pick). Updated every frame.
+    public static float Night { get; private set; }
 
     // How bright a campfire burns from moment to moment: a slow breathing as the
     // flames rise and settle, quicker licks over it, and now and then a dip as a
@@ -594,6 +613,9 @@ public partial class Atmosphere : Node3D
                 float m = max(dot(d, moon_dir), 0.0);
                 col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
                 col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
+                // A pale ring around the moon when thin cloud veils it.
+                float veil = smoothstep(0.25, 0.5, cloud_cover) * (1.0 - smoothstep(0.75, 0.95, cloud_cover));
+                col += vec3(0.75, 0.8, 0.9) * exp(-pow((m - 0.927) / 0.008, 2.0)) * veil * night * 0.08 * step(0.0, moon_dir.y);
 
                 // How much of this direction belongs to the coming weather: the
                 // upwind side, low in the sky.
@@ -602,10 +624,23 @@ public partial class Atmosphere : Node3D
 
                 if (d.y > 0.0) {
                     if (stars > 0.0) {
+                        // A band of the galaxy arching across a clear night: faint,
+                        // mottled, and thick with extra stars.
+                        vec3 axis = normalize(vec3(0.35, 0.45, 0.82));
+                        float band = exp(-pow(dot(d, axis) / 0.2, 2.0));
+                        float dust = texture(clouds, d.xz / (d.y + 0.4) * 0.35 + vec2(0.13, 0.71)).r;
+                        float high = smoothstep(0.0, 0.3, d.y);
+                        col += vec3(0.50, 0.55, 0.72) * band * smoothstep(0.3, 0.8, dust) * 0.09 * stars * high;
+
                         vec3 p = d * 260.0;
                         float r = hash(floor(p));
-                        float star = step(0.985, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - 0.985) * 66.0;
-                        col += vec3(star) * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
+                        float threshold = 0.985 - 0.01 * band;
+                        float star = step(threshold, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - threshold) * 66.0;
+                        // Each star twinkles at its own pace and has its own tint,
+                        // from pale blue to warm white.
+                        float twinkle = 0.75 + 0.25 * sin(TIME * (1.5 + r * 3.0) + r * 90.0);
+                        vec3 tint = mix(vec3(0.80, 0.88, 1.0), vec3(1.0, 0.92, 0.80), fract(r * 37.0));
+                        col += tint * star * twinkle * stars * high * 1.4;
                     }
                     // The same cloud layer whose shadows drift over the ground.
                     vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;

@@ -222,6 +222,7 @@ public partial class CraftingUi : CanvasLayer
             _ => null,
         };
         if (minigame == null) MinigameFor(def, ref minigame);
+        if (minigame == null) AnimalsMinigameFor(def, ref minigame);
         if (minigame == null)
         {
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
@@ -241,6 +242,8 @@ public partial class CraftingUi : CanvasLayer
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
+    // The same for Animals (animals/CraftingUi.Spin.cs): a partial has one body, and Ceramics has MinigameFor.
+    partial void AnimalsMinigameFor(ProcessDef def, ref Minigame_? game);
 
     // Skill hooks, implemented in journal/CraftingUi.Skills.cs: skip the minigame
     // with this score, and how many steps (strikes, coils, strokes) it takes.
@@ -280,7 +283,7 @@ public partial class CraftingUi : CanvasLayer
 
     // What is missing to run a process, and where to get it, or null when
     // everything is at hand. Shown under a greyed-out recipe and as a notice.
-    string? Missing(ProcessDef def)
+    internal string? Missing(ProcessDef def)
     {
         // Station crafts are made standing at the station (Stations.cs).
         Structure? station = null;
@@ -328,7 +331,9 @@ public partial class CraftingUi : CanvasLayer
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
             Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
             Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
-            _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => $"Make it first: {maker.Name}.",
+            _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => maker.Station == StationKind.None
+                ? $"Make it first: {maker.Name}."
+                : $"Make it first at a {StationInfo.Name(maker.Station)}: {maker.Name}.",
             _ => "",
         };
     }
@@ -359,12 +364,17 @@ public partial class CraftingUi : CanvasLayer
             ItemTags.Digging => "a digging tool",
             ItemTags.FireBow => "a bow drill",
             ItemTags.Container => "a container",
+            ItemTags.Spindle => "a spindle",
             _ => t.ToString().ToLowerInvariant(),
         }));
 
-    static List<int> Tiers() => Processes.List.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
+    // The C menu holds hand crafts only; station crafts are made in the station's
+    // panel (D-098, ui-13 StationPanel).
+    static IEnumerable<ProcessDef> HandCrafts => Processes.List.Where(p => p.Station == StationKind.None);
 
-    List<ProcessDef> InTier() => Processes.List.Where(p => p.Tier == tier).ToList();
+    static List<int> Tiers() => HandCrafts.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
+
+    List<ProcessDef> InTier() => HandCrafts.Where(p => p.Tier == tier).ToList();
 
     void Refresh()
     {
@@ -372,7 +382,7 @@ public partial class CraftingUi : CanvasLayer
         foreach (var child in tabs.GetChildren()) child.QueueFree();
         foreach (int t in Tiers())
         {
-            int ready = Processes.List.Count(p => p.Tier == t && Missing(p) == null);
+            int ready = HandCrafts.Count(p => p.Tier == t && Missing(p) == null);
             var tabButton = new Button
             {
                 Text = ready > 0 ? $"{TierName(t)} ({ready})" : TierName(t),

@@ -32,13 +32,9 @@ namespace LifeGame.Shared
         public static int Used(uint wear) => (int)(wear & 0xFFFF);
         public static byte Origin(uint wear) => (byte)((wear >> 16) & 0xFF);
 
-        // True for the tools that wear: the ones put together from a handle and lashing.
-        // Loose flakes, hand axes and plain stones are one stone each and never wear.
-        public static bool Wears(Item item) => item switch
-        {
-            Item.StoneAxe or Item.StoneKnife or Item.Spear or Item.DiggingStick or Item.BowDrill => true,
-            _ => false,
-        };
+        // True for the tools that wear: the ones put together from a handle and lashing
+        // (ItemDef.Wears). Loose flakes, hand axes and plain stones are one stone each and never wear.
+        public static bool Wears(Item item) => Items.IsKnown((ushort)item) && Items.Def(item).Wears;
 
         public static bool IsSpent(byte quality, uint wear) => Used(wear) >= Life(quality);
 
@@ -70,16 +66,11 @@ namespace LifeGame.Shared
         public static uint Repaired(byte quality, uint wear) =>
             Pack(0, Origin(wear) == 0 ? quality : Origin(wear));
 
-        // What a repair takes besides a visit to the table. Mostly fresh lashing, always
-        // less than the tool costs new. A digging stick only needs sharpening, which
-        // takes a cutting tool and nothing else.
-        public static Ingredient[] RepairCost(Item item) => item switch
-        {
-            Item.StoneAxe or Item.StoneKnife or Item.Spear or Item.BowDrill => new[] { new Ingredient(Item.Cordage) },
-            _ => Array.Empty<Ingredient>(),
-        };
+        // What a repair takes besides a visit to the table (ItemDef.RepairCost): mostly fresh
+        // lashing, always less than the tool costs new. A digging stick only needs sharpening,
+        // which takes a cutting tool (ItemDef.RepairNeedsTool) and nothing else.
+        public static Ingredient[] RepairCost(Item item) => Items.Def(item).RepairCost ?? Array.Empty<Ingredient>();
 
-        public static ItemTags RepairNeedsTool(Item item) =>
-            item == Item.DiggingStick ? ItemTags.Cutting : ItemTags.None;
+        public static ItemTags RepairNeedsTool(Item item) => Items.Def(item).RepairNeedsTool;
     }
 }

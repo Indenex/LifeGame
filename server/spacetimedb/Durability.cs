@@ -34,9 +34,15 @@ public static partial class Module
         if (!Items.IsKnown(tool.Item) || !Durability.Wears((Item)tool.Item)) return;
         int step = ctx.Db.WearConfig.Id.Find(0)?.Step ?? 1;
         uint wear = Durability.Pack(Durability.Used(tool.Wear) + step, Durability.Origin(tool.Wear));
-        var owner = tool.Owner;
-        RemoveFromStack(ctx, tool, 1);
-        AddToInventory(ctx, owner, (Item)tool.Item, 1, tool.Quality, wear);
+        // Keep the row's other columns (a tool kept on the belt keeps its place): update a lone
+        // tool in place, or split one off a stack of several.
+        if (tool.Count == 1)
+            ctx.Db.InventoryItem.Id.Update(tool with { Wear = wear });
+        else
+        {
+            RemoveFromStack(ctx, tool, 1);
+            ctx.Db.InventoryItem.Insert(tool with { Id = 0, Count = 1, Wear = wear });
+        }
     }
 
     // What to tell a player who has no working tool: if they carry one that is spent,
