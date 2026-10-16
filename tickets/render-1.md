@@ -22,9 +22,10 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:50: #66 six stills sent to the PM (renders/atmosphere-10-11-dca2a0f-1..6.png, 169f4ec).
 - 2026-10-16 17:50: added tools/render/scene.sh + Puppet (scripted second player; can be the camera, give items via owner SQL, craft, drop, press keys, snap/clip on cue). Scenes: tools/render/scenes/claims-6-chat.txt, animals-8-wool.txt (untested).
 - 2026-10-16 17:18: render request from Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): crafting-11, PR #92 at 11ca4f8: --screenshot-fire=cold vs --screenshot-fire by day, optional bow-drill fire beside a boulder. Queue: main, claims-6, animals-8, crafting-11.
+- 2026-10-16 17:58: render-1 proof done: main 217dc13 spawn by day and night (renders/render-1-217dc13-1/2.png, d4a7614) sent to the PM. Asked the PM: renders stay on this branch and only tools/render/ merges (recommended), or merge renders, or Drive.
 
 ## Open questions / blockers
-- (none)
+- PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
 
 ## Next step
-When main 217dc13 day/night finishes (running), send them to the PM; then `tools/render/scene.sh claims-6 origin/claude/claims-chat-pvp-vk2qak tools/render/scenes/claims-6-chat.txt`, then the animals-8 scene at 573a057.
+Queue running (claims-6 scene, animals-8 scene, crafting-11 stills): review each image, send to the PM; then open a PR with tools/render/ only.
