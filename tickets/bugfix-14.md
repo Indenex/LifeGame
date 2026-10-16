@@ -11,10 +11,10 @@ The build-mode prompt reads "Lay out an updraft kiln", not "Lay out a updraft ki
 Fix in client/scripts/building/BuildingSystem.cs (UpdatePrompt): pick "a" or "an" from the name's first letter.
 
 ## Progress log
-- 2026-10-16: seen in the clay-path playtest (bugfix-14-before-a-updraft-kiln.png); fixed locally, builds.
+- 2026-10-16: seen in the clay-path playtest (bugfix-14-before-a-updraft-kiln.png); fixed locally; prompt now reads "Lay out an updraft kiln" (bugfix-14-after-an-updraft-kiln.png).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Screenshot the kiln prompt with the fix, then ship with bugfix-13 once #68 merges.
+Ship with bugfix-13 once #68 merges.
