@@ -353,7 +353,19 @@ b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // A member may lay out a building on the claim.
+// Pick level, dry, clear ground inside the claim (a fixed offset can land on a slope or in water).
+float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => b.Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
 float hx = claim.X + 6, hz = claim.Z + 5;
+bool found = false;
+for (float r = 6f; r <= 14f && !found; r += 2f)
+    for (int k = 0; k < 16 && !found; k++)
+    {
+        float ang = k * MathF.Tau / 16, sx = claim.X + MathF.Cos(ang) * r, sz = claim.Z + MathF.Sin(ang) * r;
+        if (Structures.GroundProblem((int)StructureKind.LeanTo, sx, sz, 0f, H) != null) continue;
+        if (b.Conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)StructureKind.LeanTo, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
+        if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
+        hx = sx; hz = sz; found = true;
+    }
 Walk(b, hx - 2, hz);
 b.LastError = null;
 b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
