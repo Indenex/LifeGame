@@ -19,6 +19,9 @@ public partial class SurvivalClient : Node
     Node world = null!;
     Terrain terrain = null!;
     Node3D player = null!;
+    WetLook wetLook = null!;
+    // Finds another player's avatar by player id; Main sets it.
+    public Func<uint, Node3D?> AvatarOf { get; set; } = _ => null;
     Hud hud = null!;
     DbConnection? conn;
     Vitals? vitals;
@@ -34,6 +37,7 @@ public partial class SurvivalClient : Node
     public static IEnumerable<string> Queries(string range) => new[]
     {
         "SELECT * FROM my_vitals",
+        "SELECT * FROM drenched",
         $"SELECT * FROM forage_bush WHERE {range}",
     };
 
@@ -43,6 +47,7 @@ public partial class SurvivalClient : Node
         this.terrain = terrain;
         this.player = player;
         this.hud = hud;
+        wetLook = WetLook.On(player);
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -91,6 +96,7 @@ public partial class SurvivalClient : Node
         conn = connection;
         conn.Db.MyVitals.OnInsert += (_, v) => OnVitals(v);
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
+        conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
         conn.Db.ForageBush.OnInsert += (_, b) => AddBush(b);
         conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) n.Ripe = IsRipe(b); };
         conn.Db.ForageBush.OnDelete += (_, b) => RemoveNode(bushes, b.Id);
@@ -148,6 +154,7 @@ public partial class SurvivalClient : Node
         {
             var (food, water, warmth) = Current();
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
+            wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");
@@ -163,13 +170,30 @@ public partial class SurvivalClient : Node
         }
 
         UpdateLoad();
+        UpdateOthersWet();
+    }
+
+    // Other players look as wet as the server says (D-036), in tenths.
+    void UpdateOthersWet()
+    {
+        if (conn == null || vitals is not { } me) return;
+        foreach (var d in conn.Db.Drenched.Iter())
+            if (d.PlayerId != me.PlayerId && AvatarOf(d.PlayerId) is { } avatar)
+                WetLook.On(avatar).Wetness = d.Level / 10f;
     }
 
     // Carrying limit (D-042): too heavy a load slows your walk.
     void UpdateLoad()
     {
         if (conn == null) return;
-        var (load, limit) = Carry.Of(conn.Db.MyInventory.Iter().Select(i => ((Item)i.Item, i.Count)));
+        float load = 0f;
+        bool basket = false;
+        foreach (var i in conn.Db.MyInventory.Iter())
+        {
+            load += Carry.Weight((Item)i.Item) * i.Count;
+            if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;
+        }
+        float limit = Carry.Limit(basket);
         WalkFactor = Carry.WalkFactor(load, limit);
         needsHud.SetLoad(load, limit);
         bool burdened = load > limit;
@@ -191,7 +215,14 @@ public partial class SurvivalClient : Node
         }
     }
 
-    bool Carrying(Item item) => conn?.Db.MyInventory.Iter().Any(i => i.Item == (ushort)item && i.Count > 0) == true;
+    // Plain loops here: the Use finders run every frame, so no LINQ allocations.
+    bool Carrying(Item item)
+    {
+        if (conn == null) return false;
+        foreach (var i in conn.Db.MyInventory.Iter())
+            if (i.Item == (ushort)item && i.Count > 0) return true;
+        return false;
+    }
 
     // The smallest pot of water you carry, so the big one is saved for later.
     Item? PotOfWater() =>
@@ -202,13 +233,18 @@ public partial class SurvivalClient : Node
     {
         if (conn == null) return null;
         var p = player.Position;
-        return conn.Db.ForageBush.Iter()
-            .Where(IsRipe)
-            .Select(b => (b, d: new Vector2(b.X - p.X, b.Z - p.Z).Length()))
-            .Where(t => t.d <= Needs.BushReach - 0.2f)
-            .OrderBy(t => t.d)
-            .Select(t => t.b)
-            .FirstOrDefault();
+        ForageBush? best = null;
+        float bestDistance = Needs.BushReach - 0.2f;
+        foreach (var b in conn.Db.ForageBush.Iter())
+        {
+            float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();
+            if (d <= bestDistance && IsRipe(b))
+            {
+                best = b;
+                bestDistance = d;
+            }
+        }
+        return best;
     }
 
     // Mirrors the server: any ground below the water line within reach.

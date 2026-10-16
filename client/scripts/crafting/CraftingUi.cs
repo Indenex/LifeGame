@@ -14,6 +14,8 @@ public partial class CraftingUi : CanvasLayer
 {
     // True while a minigame wants the keyboard, so walking pauses.
     public bool CapturesInput => minigame != null;
+    // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
+    public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;
 
     DbConnection? conn;
@@ -190,6 +192,9 @@ public partial class CraftingUi : CanvasLayer
 
     bool reopenAfterMinigame;
 
+    // Starts a process from outside the panel, such as G next to a tree.
+    public void Start(ProcessDef def) => Begin(def);
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
@@ -307,6 +312,7 @@ public partial class CraftingUi : CanvasLayer
         return item switch
         {
             Item.Stick => $"Pick them up under the trees{Key("pick_up")}.",
+            Item.Log => $"Chop one from a tree with a stone axe{Key("use")}.",
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
             Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
             Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
