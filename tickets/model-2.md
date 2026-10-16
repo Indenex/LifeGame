@@ -14,6 +14,7 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-16 22:25: `PropMeshes.cs` for Environment: Trunk (root flare, branch stubs; same base and height as Terrain's), Rock (three lumps and a moss cap), FallenLog, Stump; near-white vertex colors so Terrain's instance tint and materials apply. Showcase view `props`. Offered to Environment with Terrain.EnsureMeshes swaps. Asked Crafting what the cooking pot is.
 - 2026-10-16 22:45: #172 green on c42de30 (run 38953936989), sha sent to the PM. `StationMeshes.Distaff()` and `StationMeshes.DryingRack()` (frame only; Animals' hide meshes hang at RackBarY 0.99, posts at ±1.15) added; offered to Animals (default: they swap one line each in their StructureModel switch).
 - 2026-10-16 22:55: sheep in style A wired into Animals' `Sheep.cs` (BuildMeshes now takes `SheepFigure.Build(PlayerModel.Style, ...)`; the old builder kept as `Sheep.OldMesh()`). Same bones and two surfaces, so herd code is unchanged. Told Animals.
+- 2026-10-16 23:05: clay items without a model are held hung from their top. Render requested 427d0cb (stations, props, hearth, sheep; plus request 3's views if not yet captured).
 
 ## Open questions / blockers
 - Most stations are on other lanes' unmerged branches; hooks wait until those merge, so models land first as standalone meshes plus Showcase views.
