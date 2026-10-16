@@ -3,7 +3,7 @@ Lane: Render
 Owner: Render lane session session_013qe8zPzzBHx9rFPEYoKMr5
 Status: in_progress
 Branch: claude/render-1-013qe8 (no harness branch was assigned; named by the session)
-PR: (once opened, for any tooling under tools/render/)
+PR: #103 (tools/render only, branch claude/render-1-tools)
 
 ## Goal
 Per D-059 the Render lane makes every screenshot and clip Justin sees. Done means: from a clean clone, one documented command (under `tools/render/`) builds a given commit, starts a local server and client, puts the camera at a requested place and time of day, and saves PNGs to /mnt/project-files/screenshots/<ticket>-<short sha>-<n>.png. First proof: render current `main` at spawn by day and by night and send the PM the images with a one-line summary. Justin sees those two images in the PM thread.
