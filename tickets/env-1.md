@@ -1,8 +1,8 @@
 # env-1: Cosy forest pass
 Lane: Environment
 Owner: Environment session (Opus)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Status: in_progress
+Branch: claude/environment-env-1
 PR: (once opened)
 
 ## Goal
@@ -10,6 +10,8 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-078).
+- 2026-10-16 17:30: Environment session (session_012hVejTxLoxBpZyX3GQmNL9) started on `claude/environment-env-1` (harness assigned none).
+- 2026-10-16 17:35: read the world code. Findings: `shared/World.cs` gives height (`BaseHeight`, two value-noise octaves) and clay; `client/scripts/Terrain.cs` plants everything per 1 m cell in `AddVegetation`: trees by `roll < 0.03 + 0.10*Noise(24,33)` (even-ish scatter, no clusters), a 12 m bare spawn clearing, rare boulders (0.6%), a grass tuft on nearly every dry tile, nothing at water edges. Trees and boulders are client-only visuals; the server does not know them (gatherable sticks/stones/clay are server items, untouched). Atmosphere's `Woodedness()` in `client/scripts/atmosphere/Atmosphere.cs` copies the forest density formula for ambience: any density change must keep both in sync, so plan a shared `ForestDensity(x, z)` both call.
 
 ## Open questions / blockers
 - (none)
