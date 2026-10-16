@@ -37,6 +37,7 @@ Whenever the PM or any worker has an idea (a feature, a look, a number, a differ
 
 - **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
 - **Fun first, some realism (D-081).** Survival is light: needs nudge players along, never punish; no death spirals. Aesthetics and a world to get lost in come first; everything a player makes should look real on the ground, in hand and in the inventory.
+- **Crafted things are not chores (D-148).** Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Check new features against this.
 - **Lanes never edit `STATUS.md` on their branches.** Send STATUS changes to the PM.
 
 ## The no-handoff rule
