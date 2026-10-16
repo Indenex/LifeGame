@@ -3,7 +3,7 @@ Lane: Clay and ceramics
 Owner: Clay and ceramics lane (handed off 2026-10-16 ~20:00 from Opus session_01Diab34HTvew38VmUaqhj5Q to a fresh Sonnet session, D-159)
 Status: in_progress
 Branch: claude/clay-ceramics-8-kfr4kr (stacked on crafting-stations #160; contains ceramics-7). One PR for ceramics-7 + -8 after #160 merges (PM).
-PR: (none yet)
+PR: (opening 2026-10-16 20:45, see progress log)
 
 ## Goal
 D-112 (Justin): shaping pots needs a Potter's bench inside a claim; clay preparation (clean, grit, grog, temper, brick, daub) stays a hand craft. Done when:
@@ -27,6 +27,8 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - 2026-10-16 18:37: Crafting agreed option 1 (cost) and described the framework (crafting-15, branch crafting-stations, sha in a couple of hours): StationKind enum in Processes.cs, ProcessDef.Station, StructureShape.Station, generic claim check in PlaceStructure, ingredients from inventory, nearby stores, then the claim stash.
 
 - 2026-10-16 20:20: new Sonnet session. #160 still open (conflicts with main). Merged origin/main (env-2, #153 fences) into this branch: StructureKind now ...StorageJar 6, Fence 7, Gate 8, CraftingTable 9, PottersBench 10 (enum, Shapes, StageCosts, StructureModel). Server and ClayCheck build. Told Crafting to resolve #160 the same way; asked Animals for a mutton hook. ClayCheck --pot on fresh db c8env2 running.
+
+- 2026-10-16 20:45: #160 and #192 (craft times) on main; merged main (5781182): bench = kind 10 after CraftingTable 9; pinch/coil/jar keep Base() times plus Station. Server, ClayCheck build. ClayCheck --pot PASSED on fresh db (c8final); earlier run on pre-#160 merge also passed. Upgrade check vs origin/main PASSED. Opening the one combined PR now. Mutton for --lamp: Animals says use spear x2 + ButcherCarcass (DebugGiveMeat comes later). Bug fixes #254 adds RequireServer(ctx) to DryClay/FinishFiring/FinishKiln: merge main when it lands.
 
 ## Open questions / blockers
 - Modeling's `CookingMeshes` (client/scripts/models/CookingMeshes.cs, claude/model-2-env, after #197): once on main, in SimmerView.Show add `new MeshInstance3D { Mesh = CookingMeshes.Under }` as a sibling of the pot body (unscaled) and `CookingMeshes.Floaters(dish, PotMesh.WaterLine(CoilPot).X * PotView.Size)` at the liquid disc's height + 0.002 (PotOfBroth->Broth, PotOfStew->Stew, Tallow->Tallow). Materials are baked in.
