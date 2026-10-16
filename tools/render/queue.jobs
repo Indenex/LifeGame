@@ -4,9 +4,10 @@ model-1-player tools/render/render.sh model-1-player b3be674 "--time-of-day=0.5 
 ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
 crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
 ui-10 env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 1931044 "--time-of-day=0.45 --screenshot-hud --screenshot-equip --render-slowstart=0.05,45 --screenshot-delay=4" "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
+ceramics-6-demo tools/render/render.sh ceramics-6 e9544db "--time-of-day=0.45 --ceramics-demo=jar"
 env-1 tools/render/scenes/env-1.sh 1ade969
 env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
-model-1-style tools/render/scenes/model-1-style.sh 37a5656
+model-1-style tools/render/scenes/model-1-style.sh fd5c17a
 atmosphere-13 tools/render/scenes/atmosphere-13.sh
 bugfix-17 tools/render/scene.sh bugfix-17 caaf9ae tools/render/scenes/bugfix-17-pot.txt
 bugfix-17-before tools/render/scene.sh bugfix-17-before 7e79d22 tools/render/scenes/bugfix-17-pot.txt
