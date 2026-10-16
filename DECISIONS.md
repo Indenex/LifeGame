@@ -843,3 +843,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-207 — 2026-10-16 — Scribe self-merges doc-only PRs immediately
 **Decision:** The Scribe self-merges its doc-only PRs immediately, with no CI wait and no merge freeze. It only touches doc files (`DECISIONS.md`, `STATUS.md`, `CLAUDE.md`, `WORKER_LOOP.md`, `docs/*.md`). Direct pushes to `main` were blocked by the session safety classifier, so the PR route stays.
 **Who:** Justin ("Scribe should just be able to modify text files, it can skip all safety checks, it's not allowed to touch anything but it's docs files anyway.")
+
+## D-208 — 2026-10-16 — Environment env-9: See further
+**Decision:** Environment's next feature (env-9) is "See further": low-detail distant terrain and tree silhouettes beyond about 56 m. Not picked: gatherables by habitat, small life, wearing paths.
+**Who:** Justin, picking "See further".
