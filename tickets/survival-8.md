@@ -18,6 +18,8 @@ D-115: a new character's first 30 minutes online, cold drains at half speed, so 
 
 - 2026-10-16: UX/UI agreed look A (badge after the warmth ring, no number per D-107). It already fades with the needs row under panels (it sits in the same panel) and the end note goes through hud.Note.
 
+- 2026-10-16: Atmosphere seasons (claude/atmosphere-16-seasons, c41b1e6): winter offset -16 C, so winter days sit near 0 C (cold ~1.9x) and nights about -8 C (2x, the cap). No code change needed: AirTemperature includes the season. Snow doesn't wet (Weather.Rain is liquid only; snowfall is Module.Snowfall). In winter the new-arrival half-speed cold matters all day, not just at night.
+
 ## Open questions / blockers
 - (none)
 
