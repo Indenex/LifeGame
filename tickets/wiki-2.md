@@ -25,6 +25,7 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16 19:30: #163 merged. PM: merged #167 (new-arrival slower cold with sprout badge; Endurance skill trained by running) and #108 (pot and fire fixes, no text); added wiki lines. Pending: #175 new land with hills, stream and ponds (world wipe).
 - 2026-10-16 20:05: PM: #175 new land and #173 seasons merged; moved the new-land and seasons drafts into getting-started, needs and tips, checked against shared/Land.cs and shared/Seasons.cs. Fauna does not change by season yet, so no animals text.
 - 2026-10-16 20:50: PM batch: moved in crafting stations (only the Crafting Table exists on main; Potter's bench, Spindle and drying rack stay drafts), craft times (#160), Leatherwork and Weaver (#193), thirst eases in the first hour (#226), weather you can see coming (#217), lambs and snow huddling (#195). No text for sounds, forest corners, see-through trees, the carved player. Drafts for deer and hunting, tool wear, claim fences on claude/wiki-drafts.
+- 2026-10-16 21:40: #264 ui-17 keys merged: E use and pick up, Shift+E bar, right-drag turn, no Q/E. Space jump left out until bugfix-25 lands (KEYMAP: out of F1 until then).
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).

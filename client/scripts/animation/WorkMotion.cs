@@ -1,18 +1,23 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
-// What the hands are doing while a craft job runs. Small crafts kneel on the right knee
-// with the left foot planted and loop their own arm motion; Station stands working at a
-// waist-high station (crafting table, spindle, drying rack: D-098). Hands hold nothing.
-public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend, Station, Chop }
+// What the hands are doing while a craft job runs (the WorkMotion enum is in shared/).
+// Small crafts kneel on the right knee with the left foot planted and loop their own arm
+// motion; Station stands working at a waist-high station (crafting table, spindle,
+// drying rack: D-098). Hands hold nothing.
 
 public static class WorkMotions
 {
-    // Process ids are dotted strings from shared/Processes.cs; new families fall back to Gather.
+    // A process names its motion on its Def (ProcessDef.Motion). Older entries leave it
+    // unset and get a guess from their id prefix; new families fall back to Gather.
     public static WorkMotion For(string? processId)
     {
         if (string.IsNullOrEmpty(processId)) return WorkMotion.None;
+        var def = Processes.Find(processId);
+        if (def is { Motion: not WorkMotion.None }) return def.Motion;
+        if (def is { Station: not StationKind.None }) return WorkMotion.Station;
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
         if (processId == "hide.scrape") return WorkMotion.Scrape;
         if (processId == "hide.stretch") return WorkMotion.Wrap;

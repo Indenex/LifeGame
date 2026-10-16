@@ -131,6 +131,30 @@ namespace LifeGame.Shared
         // The process a finished claim marker reports (Journal's "Things to try").
         public const string MarkProcess = "claim.mark";
 
+        // claims-12: claim fences. A fence laid within FenceSnapDistance of a claim's
+        // border snaps onto the circle, end to end. Its ends land on the circle, and it
+        // runs along the tangent. Returns the fence's middle and yaw (the yaw convention
+        // used by Structures.ToWorld).
+        public const float FenceSnapDistance = 2f;
+
+        public static (float x, float z, float yaw) SnapToClaimBorder(float claimX, float claimZ, float x, float z)
+        {
+            int segments = Math.Max(3, (int)MathF.Round(MathF.Tau * ClaimRadius / (2f * Structures.FenceHalfLength)));
+            float step = MathF.Tau / segments;
+            float a = MathF.Atan2(z - claimZ, x - claimX);
+            a = MathF.Round(a / step) * step;
+            // The chord between two points on the circle, half a step either side.
+            float mid = ClaimRadius * MathF.Cos(step / 2f);
+            float yaw = MathF.Atan2(-MathF.Cos(a), -MathF.Sin(a));
+            return (claimX + MathF.Cos(a) * mid, claimZ + MathF.Sin(a) * mid, yaw);
+        }
+
+        public static bool NearClaimBorder(float claimX, float claimZ, float x, float z)
+        {
+            float dx = x - claimX, dz = z - claimZ;
+            return MathF.Abs(MathF.Sqrt(dx * dx + dz * dz) - ClaimRadius) <= FenceSnapDistance;
+        }
+
         // claims-11: the stash log keeps this many entries per claim; the same person
         // putting in or taking the same thing within a minute folds into one entry.
         public const int StashLogKeep = 20;

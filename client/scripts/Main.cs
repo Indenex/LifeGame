@@ -46,6 +46,7 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly StationPanel station = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -90,14 +91,21 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         building.MayBar = social.HasRightsAt;
+        building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
+        // The panel at a crafting station (ui-13, D-098).
+        station.Conn = () => conn;
+        station.Crafting = crafting;
+        station.Me = () => me.Position;
+        AddChild(station);
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
-            || trade.IsOpen;
+            || trade.IsOpen
+            || station.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
@@ -255,7 +263,7 @@ public partial class Main : Node3D
 
         water = new MeshInstance3D
         {
-            Mesh = new PlaneMesh { Size = new Vector2(260, 260) },
+            Mesh = new PlaneMesh { Size = new Vector2(500, 500) },
             MaterialOverride = Look.WaterSurface,
             Position = new Vector3(0, Look.WaterLevel, 0),
         };

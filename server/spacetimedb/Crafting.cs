@@ -21,6 +21,10 @@ public static partial class Module
         // Where a fire will be lit, for processes that make one.
         public float X;
         public float Z;
+        // A vessel consumed by the process (a coil pot of water for broth), at its own
+        // quality, so Ceramics can hand it back unchanged (ceramics-7). 0 for none.
+        [Default((byte)0)]
+        public byte VesselQuality;
     }
 
     // Clients see only their own job, to show its progress.
@@ -125,9 +129,12 @@ public static partial class Module
 
         float inputQuality = 0f;
         uint taken = 0;
+        byte vesselQuality = 0;
         foreach (var input in def.Consumes)
         {
-            inputQuality += TakeFor(ctx, station, input.Item, input.Count);
+            float q = TakeFor(ctx, station, input.Item, input.Count);
+            if (ClayRules.IsVessel(input.Item)) vesselQuality = (byte)Math.Round(q / input.Count);
+            inputQuality += q;
             taken += input.Count;
         }
         inputQuality = taken > 0 ? inputQuality / taken : Items.RawQuality;
@@ -176,6 +183,7 @@ public static partial class Module
             Failed = failed,
             X = fx,
             Z = fz,
+            VesselQuality = vesselQuality,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
         OnCraftStarted(ctx, started);
