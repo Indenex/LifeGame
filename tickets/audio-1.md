@@ -14,8 +14,10 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 17:40: Atmosphere handed over: final atmosphere-12 sha 68392c7 (merged here). Render request for af3bd67 sent to Render ~17:10, no reply yet. PR must stack after #66 and depends on #97 (crafting-12): when merging main after #97, delete the two OnCraftStarted/OnCraftEnded declaration lines in server/spacetimedb/WorkSounds.cs in that merge commit (else CS0756). Integration wants the PR number. Not yet done: in-game listen; per-strike sounds on minigame keys (MinigameSound only gives open/close). Atmosphere keeps #66 merged with main; #66 audio (WaterVoice, Frogs, StepGain) is now Audio's.
 
 - 2026-10-16 18:00: levels. Measured (SoundPreview, no music): calm bed -41.5 rms; work rose only 0 to 5 dB over it, music about 11 dB above work, so work was nearly lost. Changes: work gets its own bus, WorkGain = 0.55 + 5 x ambience (was StepGain, 0.2 on a calm bed), per-kind trims (drill friction down 3.5 dB, pat 0.6, creak 2, lash rustle 1.3, shave 1.25), master Volume 1.3 -> 1.7 (+2.3 dB). Now: bed -39.7, loudest 50 ms of each work -30.4 to -27.6 dBFS, storm peak -4.9 dBFS. New SoundPreview scene `still`. Wrote audio/AUDIO.md (requests + mix table). Client and SoundPreview build locally.
+- 2026-10-16 18:05: Render requested b7fde7a (SoundPreview still, each craft, knap-fail, others, midday with music). Asked PM for Justin: own work vs music, A level with music (default, in use) / B under / C over.
 
 ## Open questions / blockers
+- Justin: own work level vs music, A level (default) / B under / C over. Sent to PM 18:05.
 - Depends on #66 (stacked) and #97 (crafting-12 hook declarations); see the 17:40 log line for the merge step.
 
 ## Next step
