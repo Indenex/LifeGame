@@ -372,7 +372,7 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         public const float MasterMaxSeconds = 40 * 60;
         public static float MaxSecondsFor(int firecraftRank) =>
-            MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
+            Progression.Effect(EffectKind.FireSeconds, firecraftRank);
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
         // A burned-out fire leaves a cold hearth of stones and ash this long outside a

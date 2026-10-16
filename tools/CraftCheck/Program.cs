@@ -133,9 +133,22 @@ Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
 foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
-// A freshly lit fire is already as high as it burns (D-090): feeding is refused and the stick is kept.
+// A fire burns no higher than the cap (D-090): once it is full, feeding is refused and the stick is
+// kept. The cap grows with Firecraft (the shared progression curve), so a freshly lit fire may still
+// have room for a stick; top it up first instead of assuming rank 0.
 var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
 WalkTo(bowFire.X, bowFire.Z);
+for (int top = 0; top < 12; top++)
+{
+    long fuelNow = conn.Db.Fire.Id.Find(bowFire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+    lastError = null;
+    conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
+    Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
+    if (lastError == "The fire is burning as high as it will") break;
+    if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
+    Gather(Item.Stick, 1);
+    WalkTo(bowFire.X, bowFire.Z);
+}
 RefusedFeed(bowFire, Item.Stick);
 
 // The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
@@ -263,6 +276,9 @@ void FireCraft(string processId, float score)
 }
 
 // Lays out a structure on clear, level ground near the bot and builds it from the bag.
+// Just past the server's keep-out for claims (Claims.CheckStructureSite).
+const float ClaimKeepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+
 Structure BuildHere(StructureKind kind)
 {
     float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
@@ -272,6 +288,8 @@ Structure BuildHere(StructureKind kind)
         {
             float a = k * MathF.Tau / 16, sx = x + MathF.Cos(a) * r, sz = z + MathF.Sin(a) * r;
             if (Structures.GroundProblem((int)kind, sx, sz, 0f, H) != null) continue;
+            // The server refuses claims in the spawn clearing; the search must not drift back into it.
+            if (kind == StructureKind.ClaimMarker && sx * sx + sz * sz < ClaimKeepOut * ClaimKeepOut) continue;
             if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
             if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
             site = (sx, sz);

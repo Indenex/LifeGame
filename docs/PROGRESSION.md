@@ -84,6 +84,24 @@ Use for: XP per rank or materials per upgrade, paired with a linear benefit. The
 
 Our skill gain is already front-loaded in time (`Skills.Gain` in `shared/Skills.cs`: 100 x (1 - p)^2 points per use, floor 5). 15% of the uses to Master reaches **rank ~55**. So an effect that is linear in rank (D-086) already gives about 55% of its gain in the first 15% of play time. Putting curve A on top of rank would give ~85% in that time and leave nothing to chase. Rule: **if the input is skill rank, keep the effect linear in rank.** Use curves A to D when the input is item quality, gear tier or a count.
 
+## 2b. One formula for every skill (skills-12)
+
+Justin: one formula handles all skill gains and what they help, so every skill has the same scaling feel. It lives in `shared/Progression.cs`.
+
+- **Gaining rank:** `Skills.Gain`, the same quadratic falloff for every skill.
+- **What a rank is worth:** `Progression.Effect(kind, rank)` = `lo + (hi - lo) * curve(rank / 100)`, with curve family B (`ln(1 + 12 p) / ln(13)`): the first 15% of ranks give 40% of the benefit.
+- **Adding an effect:** add an `EffectKind` and one row in `Progression.Effects` with its start and Master values. Never write a rank formula elsewhere.
+- **Own formulas:** none. `Skills.Gain` and `SkipsMinigame` are listed in `Progression.Exceptions` with the reason.
+- **Check:** `dotnet run --project tools/ProgressionCheck` prints every effect at ranks 0, 10, 15, 25, 50, 100 and fails if an end value moves or rank 15 is not ~40%.
+
+- **Pace:** `Progression.Pace` (1.0 now) scales every point gain. Justin: keep leveling fast for testing, and much slower later, OSRS or Retro Dofus level. The planned later change is lowering this one number (0.05 is about 20x slower); effects, curves and tables stay as they are.
+
+- **Combat damage shape (exception):** damage multipliers in the combat category (today Arrow damage) use the `EvenInHits` shape instead of the front-loaded curve: `m = 1 / (1/lo + (1/hi - 1/lo) * rank/100)`, so the hits needed to kill fall one step per equal band of ranks (Animals' target for a 100-HP deer with crude gear and no crit: 7, 6, 5, 4, 3, 2 hits at ranks 0, 20, 40, 60, 80, 100). Arrow damage runs 0.44 to 1.6 (`Ceiling.ArcheryDamage`) giving 0.44 / 0.51 / 0.62 / 0.78 / 1.05 / 1.6 at those ranks. It still has a single ceiling constant and the combat pace. Hit chance and draw time stay on the normal curve.
+- **Combat pace:** combat skills (Stalking, Archery) level at `Progression.CombatPaceFactor` (0.5) of the base Pace, so half as fast now and in step with any later global slowdown (Justin: slower combat progression). Add a skill to `Progression.IsCombat` to put it in the category.
+- **Ceiling:** every effect's Master value is one named constant in `Progression.Ceiling`. To raise the game's ceiling later, change that constant; ranks, curve and gains stay. Skill rank should matter much more than an item's base stats, so weapons and tools keep small bases and let the skill effect carry the range.
+
+This stacks with the front-loaded gain (see "Do not front-load twice" above), so mid-game ranks give more than before. The rule in that section is superseded for rank-based effects by Justin's pick.
+
 ## 3. Rewards between the steps (variable ratio, light)
 
 Small random bonuses make repeated work pleasant: a second clay lump (already `SecondLumpChance`, up to 50% at Master), a rare pretty stone, a better-than-expected quality roll. Suggested base: a "nice surprise" about 1 in 15 to 1 in 30 actions, cosmetic or small. Never random losses, never anything bought, never a streak that resets.
