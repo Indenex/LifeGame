@@ -40,7 +40,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) | #23 shearing; then animals-3 kill and butcher (D-039) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Sc3N1RCsurSszfX5YwGzMU) | ceramics-7+8, lamp ceramics-9 (Sonnet, D-159) | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
-| Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
+| Bug fixes (session_01AeuMsF8LfzDsWW8jUh1Fkp) | #221, then bugfix-23 collision (Sonnet, D-159) | lane records | any file, minimal diffs, PM assigns |
 | Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
 | Release & Launcher (D-131) (session_01Jxp6a8KwCCg4DsFyCZHC9t) | release-2; PR #201 (Sonnet, D-159) | `claude/release-1` | `launcher/`, `tools/release/`, `.github/workflows/release.yml` (reviewed by Integration) |
 
