@@ -39,8 +39,9 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 19:40: AirCelsius now has a user: Animation (anim-2, session_019roNRWQBPw4ozNLDhzseig) draws breath puffs from Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius)) (helpers in Survival's #185); review Animation's sha for the look. Added Environment's env-4 palette to Look (BirchBark, Heather, Gorse, Sedge, HeathGround, Moss).
 
-## Open questions
-- (answered) D-134: falling snow wets you at half rain's rate; Survival wires it from Module.Snowfall (told them). Justin is fine with the -16 C winter. / blockers
+## Open questions / blockers
+- (answered) D-134: falling snow wets you at half rain's rate; wired via Survival's SnowfallAt hook. Justin is fine with the cold winter nights (D-136 retune).
+- Idea for the PM's next batch (D-059): heather blooms purple in late summer. A (rec) yes: Environment gives heather bushes w=3 and Look tints them purple through late summer; B no, heather stays evergreen.
 
 ## Next step
 Wait for #173 CI on the new head; send the green sha to the PM (D-119).
