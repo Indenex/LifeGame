@@ -134,8 +134,9 @@ func _load_state() -> void:
 		if d is Dictionary:
 			for k in state.keys():
 				state[k] = int(d.get(k, 0))
-	# A game folder without state (copied in by hand) counts as unknown, so it is replaced.
-	if not FileAccess.file_exists(_game_exe()):
+	# A game folder without state (copied in by hand), or one with files missing (an
+	# interrupted or hand-made install), counts as unknown, so it is replaced.
+	if not _client_ok(home.path_join("game")):
 		state["client_build"] = 0
 
 func _save_state() -> void:
@@ -150,6 +151,21 @@ func _client_asset() -> String:
 
 func _game_exe() -> String:
 	return home.path_join("game").path_join("LifeGame.exe" if _is_windows() else "LifeGame.x86_64")
+
+# True when dir holds a complete game install: the executable, its LifeGame.pck and the
+# data_* folder with the .NET assemblies. Godot says "Unable to find the .NET assemblies
+# directory" when only the executable is there.
+func _client_ok(dir: String) -> bool:
+	var exe := "LifeGame.exe" if _is_windows() else "LifeGame.x86_64"
+	if not FileAccess.file_exists(dir.path_join(exe)) or not FileAccess.file_exists(dir.path_join("LifeGame.pck")):
+		return false
+	var d := DirAccess.open(dir)
+	if d == null:
+		return false
+	for sub in d.get_directories():
+		if sub.begins_with("data_") and not DirAccess.get_files_at(dir.path_join(sub)).is_empty():
+			return true
+	return false
 
 # --- UI ---------------------------------------------------------------------------
 
@@ -722,6 +738,12 @@ func _install_client(zip: String) -> bool:
 		detail_label.text = "Unpacking %d of %d files" % [progress.done, progress.total]
 		await get_tree().process_frame
 	if not t.wait_to_finish():
+		_log("The game zip didn't unpack completely (%d of %d files)." % [progress.done, progress.total])
+		return false
+	# Never swap in an install that is missing pieces; the old game stays until this is whole.
+	if not _client_ok(fresh):
+		_log("The unpacked game is missing LifeGame.pck, the executable or the data_* folder.")
+		_remove_tree(fresh)
 		return false
 	if not _is_windows():
 		OS.execute("chmod", ["+x", fresh.path_join("LifeGame.x86_64")])
@@ -750,8 +772,12 @@ func _unzip(zip: String, dest: String, progress: Dictionary) -> bool:
 			var w := FileAccess.open(target, FileAccess.WRITE)
 			if w == null:
 				return false
-			w.store_buffer(r.read_file(f))
+			var data := r.read_file(f)
+			w.store_buffer(data)
+			var wrote := w.get_length()
 			w.close()
+			if wrote != data.size():
+				return false  # a short write (disk full?) must not count as installed
 		progress.done += 1
 	r.close()
 	return true
@@ -769,9 +795,13 @@ func _remove_tree(path: String) -> void:
 
 func _play() -> void:
 	var exe := _game_exe()
-	if not FileAccess.file_exists(exe):
-		_set_status("The game isn't installed yet.", "", WARN)
-		return
+	if not _client_ok(home.path_join("game")):
+		# Files are missing (or the game was never installed): fetch it again before playing.
+		state.client_build = 0
+		_save_state()
+		if latest.is_empty() or not await _update(true, false) or not _client_ok(home.path_join("game")):
+			_set_status("The game isn't installed yet.", "Press Update and play when you're online.", WARN)
+			return
 	if manage_server:
 		_set_busy(true)
 		var up := await _ensure_server()
