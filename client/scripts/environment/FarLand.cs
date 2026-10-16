@@ -34,6 +34,18 @@ public partial class FarLand : Node3D
     Task<Built>? pending;
 
     static Mesh? blob, cone;
+    Reach? fadeFor;
+
+    // Atmosphere's painted shaders fade everything into the fog over the last quarter
+    // of far_land_radius (#289), so the rim never shows; 0 turns the fade off. Only
+    // set once that global exists, so a build without it stays quiet (and keeps asking
+    // each frame, a cheap list lookup, until it does).
+    static bool TellFog(Reach level)
+    {
+        if (!RenderingServer.GlobalShaderParameterGetList().Contains("far_land_radius")) return false;
+        RenderingServer.GlobalShaderParameterSet("far_land_radius", level == Reach.Off ? 0f : (float)Shape(level).Radius);
+        return true;
+    }
 
     sealed class Built
     {
@@ -54,6 +66,7 @@ public partial class FarLand : Node3D
         }
         var level = Level;
         Visible = level != Reach.Off;
+        if (level != fadeFor && TellFog(level)) fadeFor = level;
         if (pending == null && level != Reach.Off && builtFor != (chunkX, chunkZ, level))
         {
             builtFor = (chunkX, chunkZ, level);
