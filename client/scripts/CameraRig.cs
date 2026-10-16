@@ -11,7 +11,7 @@ public partial class CameraRig : Node3D
     {
         Fov = 45f,
         Near = 0.3f,
-        Far = 250f,
+        Far = 300f,
         // The far forest softens out of focus, which sells the depth.
         Attributes = new CameraAttributesPractical
         {

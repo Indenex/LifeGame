@@ -19,6 +19,7 @@ public partial class Atmosphere : Node3D
     // Cached names: a string here would build a new StringName every frame.
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
+    static readonly StringName NPuddles = "puddles";
     static readonly StringName NWindStrength = "wind_strength";
     static readonly StringName NWindGust = "wind_gust";
     static readonly StringName NRainAmount = "rain_amount";
@@ -61,6 +62,9 @@ public partial class Atmosphere : Node3D
     float cloud = 0.2f, rainAmount, wind = 0.3f, wetness;
     float targetCloud = 0.2f, targetRain, targetWind = 0.3f, targetWetness;
     float? argCloud, argRain, argWind, argWetness;
+    // Standing water after rain, eased; --puddles=1 holds it for screenshots.
+    float puddleLevel;
+    float? argPuddles;
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
@@ -109,6 +113,7 @@ public partial class Atmosphere : Node3D
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
         ReadyFronts();
+        ReadyHomes();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -124,6 +129,7 @@ public partial class Atmosphere : Node3D
         argRain = ArgFloat("rain");
         argWind = ArgFloat("wind");
         argWetness = ArgFloat("wetness");
+        argPuddles = ArgFloat("puddles");
         if (Arg("debug-position")?.Split(',') is [var px, var pz]
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
@@ -162,6 +168,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
@@ -244,6 +251,10 @@ public partial class Atmosphere : Node3D
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        // Puddles stand once the ground is well soaked, and frozen ground holds none.
+        float puddleTarget = Mathf.SmoothStep(0.45f, 0.9f, wetness) * (1f - Mathf.SmoothStep(0.3f, 0.8f, SnowCover));
+        puddleLevel = Mathf.Lerp(puddleLevel, argPuddles ?? puddleTarget, snap ? 1f : 1f - Mathf.Exp(-dt / 20f));
+        RenderingServer.GlobalShaderParameterSet(NPuddles, puddleLevel);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
         RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);
@@ -270,6 +281,7 @@ public partial class Atmosphere : Node3D
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
+        UpdateHomes(dt, focus, Night, env.FogLightColor);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
