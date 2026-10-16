@@ -20,6 +20,7 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 - 2026-10-16 18:55: Claims added un-accept (claims-7 396125c: `AcceptTrade(tradeId, version, bool accept)`). Merged it in and regenerated the bindings. The Accept button takes an accept back again ("Accepted, waiting for X (click to take it back)"). Claims confirmed the server never refuses a trade for overload (D-077), so the warning stays a warning. Build 0 errors.
 - 2026-10-16 19:00: Merged the claims-7 head (89840b5, D-080: a finished trade posts no chat line). The window's "You trade with X" note on TradeEnded "done" is now the only confirmation, and both traders get it. Build 0 errors.
 - 2026-10-16 19:35: #73 is merged and Claims opened #110 (head f85c3b9). Merged main and #110 in; the only conflicts were two Main.cs hook lines, and I kept both sides. Build 0 errors. Pushed 1a47033 and opened PR #111 against main, marked to merge after #110.
+- 2026-10-16 19:50: Render's mock shots of e4319e5 (renders/ui-9-e4319e5-1..5.png on claude/render-1-013qe8) showed two bugs. In the "changed" preview, Mara re-accepted on the mock's real-time timer before the shot. And labels had no counts ("Sticks"). Fixed: previews hold Mara's state (`MockTradeLink.Hold`), and labels read "4 sticks" (one stays "Decent stone flake"). Build 0 errors.
 
 ## Open questions / blockers
 - PR order: #111 contains #110; merge #110 first.

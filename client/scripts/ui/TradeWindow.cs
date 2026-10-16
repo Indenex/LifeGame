@@ -92,6 +92,8 @@ public partial class TradeWindow : CanvasLayer
             Refresh();
             if (what == "changed") mock.Set(new TradeStack(Item.Fiber, 0, 3));
         }
+        // Each preview stays as set up; Mara doesn't make up her mind mid-shot.
+        mock.Hold = true;
     }
 
     // Someone waits on you: G says yes, whatever you face. Its target is where you stand,
@@ -291,7 +293,7 @@ public partial class TradeWindow : CanvasLayer
     {
         var button = new Button
         {
-            Text = ItemLook.Label(s.Item, s.Quality, s.Count),
+            Text = Words(s),
             Icon = ItemIcon.For(s.Item),
             Flat = true,
             FocusMode = Control.FocusModeEnum.None,
@@ -303,6 +305,13 @@ public partial class TradeWindow : CanvasLayer
         if (move != null)
             button.Pressed += () => move(s, Input.IsKeyPressed(Key.Shift) ? s.Count : 1);
         return button;
+    }
+
+    // "4 sticks", or "Decent stone flake" for just one.
+    static string Words(TradeStack s)
+    {
+        string label = ItemLook.Label(s.Item, s.Quality, s.Count);
+        return s.Count > 1 ? $"{s.Count} {char.ToLowerInvariant(label[0])}{label[1..]}" : label;
     }
 
     static Label Faint(string text)

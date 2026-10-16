@@ -64,6 +64,8 @@ public sealed class MockTradeLink : ITradeLink
     bool mineAccepted, theirsAccepted, open;
     uint version;
     double theirAcceptAt = double.MaxValue;
+    // Holds Mara's mind as it is, so a preview shot shows a fixed state.
+    public bool Hold;
 
     public TradeView? Current => open
         ? new TradeView(1, 7, "Mara", mine.ToList(), theirs.ToList(), mineAccepted, theirsAccepted, version)
@@ -126,7 +128,7 @@ public sealed class MockTradeLink : ITradeLink
     // Called each frame by the window so Mara can make up her mind.
     public void Tick(double now)
     {
-        if (open && !theirsAccepted && now >= theirAcceptAt)
+        if (open && !Hold && !theirsAccepted && now >= theirAcceptAt)
         {
             theirsAccepted = true;
             if (mineAccepted) Finish();
