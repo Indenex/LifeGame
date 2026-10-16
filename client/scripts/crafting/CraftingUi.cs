@@ -221,7 +221,14 @@ public partial class CraftingUi : CanvasLayer
         reopenAfterMinigame = panel.Visible;
         panel.Visible = false;
         AddChild(minigame.Root);
+        MinigameSound(def, true);
     }
+
+    // Sound hook: Atmosphere implements this in its own file to play the work sounds
+    // (Sound.Working) while any minigame is open, Drill and Strike here or Shape and
+    // Coil from Ceramics, so the hands-on part is never silent (D-036). Unimplemented,
+    // the compiler drops the calls.
+    static partial void MinigameSound(ProcessDef def, bool playing);
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
@@ -253,6 +260,7 @@ public partial class CraftingUi : CanvasLayer
         var def = minigame.Process;
         minigame.Root.QueueFree();
         minigame = null;
+        MinigameSound(def, false);
         if (reopenAfterMinigame)
         {
             panel.Visible = true;
