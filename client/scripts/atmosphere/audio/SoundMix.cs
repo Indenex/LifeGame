@@ -67,6 +67,7 @@ public sealed class SoundMix
     readonly DayInsects insects;
     readonly Cues cues;
     readonly StreamVoice stream;
+    readonly Deer deer;
     readonly Steps steps;
     readonly WorkVoice work;
     // Other players at work nearby, by player id (D-072).
@@ -103,6 +104,7 @@ public sealed class SoundMix
         insects = new DayInsects(rate, noise, rng);
         cues = new Cues(rate, noise, rng);
         stream = new StreamVoice(rate, noise, rng);
+        deer = new Deer(rate, noise, rng);
         steps = new Steps(rate, noise, rng);
         work = new WorkVoice(rate, noise, rng);
         sheep = new Sheep(rate, rng);
@@ -170,6 +172,9 @@ public sealed class SoundMix
     // gain from distance, startled when the flock bolts.
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
 
+    // A deer somewhere around the listener (pan -1 to 1, gain from distance, far 0 to 1).
+    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, pan, gain, far);
+
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
     public void Thunder(float delay, float gain, float near) => thunder.Trigger(delay, gain, near);
@@ -208,6 +213,7 @@ public sealed class SoundMix
         night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind), season.Insects);
         insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
         sheep.Render(outL, outR, sendL, sendR, count);
+        deer.Render(outL, outR, sendL, sendR, count);
         water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
         stream.Render(outL, outR, count, Stream, StreamPan, Rain);
         frogs.Render(outL, outR, sendL, sendR, count, Water * season.Frogs * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
@@ -1843,6 +1849,129 @@ public sealed class SoundMix
                     voice.Age += dt;
                 }
                 if (voice.Age >= voice.Length) voices.RemoveAt(v);
+            }
+        }
+    }
+
+    // --- Red deer ---------------------------------------------------------------
+
+    // Deer are quiet. A startled one gives a short hoarse bark; at dusk in autumn a
+    // stag lets out a long, deep roar that rolls and cracks and carries a long way;
+    // running deer thud softly. Distance rounds the sound off (a low-pass) and
+    // sends more of it to the reverb, so a far roar is a low rolling shape.
+    public enum DeerCall { Bark, Roar, Hoof }
+
+    sealed class Deer
+    {
+        readonly int rate;
+        readonly Random rng;
+        readonly Noise noise;
+        readonly List<Voice> voices = new();
+
+        sealed class Voice
+        {
+            public DeerCall Call;
+            public float Pitch, Length, Gain, Pan, Far, Age, Phase, Rough;
+            public BandPass Low, High, Body;
+            public Lowpass Round;
+        }
+
+        public Deer(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        // gain 0 to 1 from distance; far 0 (close) to 1 (a long way off).
+        public void Trigger(DeerCall call, float pan, float gain, float far)
+        {
+            if (voices.Count > 6 || gain < 0.01f) return;
+            var v = new Voice { Call = call, Pan = Math.Clamp(pan, -1f, 1f), Far = Math.Clamp(far, 0f, 1f) };
+            switch (call)
+            {
+                case DeerCall.Bark:
+                    v.Pitch = Range(rng, 330f, 420f);
+                    v.Length = Range(rng, 0.16f, 0.24f);
+                    v.Gain = gain * 0.125f;
+                    v.Rough = 0.55f;
+                    break;
+                case DeerCall.Roar:
+                    v.Pitch = Range(rng, 78f, 105f);
+                    v.Length = Range(rng, 2.6f, 3.6f);
+                    v.Gain = gain * 0.05f;
+                    v.Rough = 0.8f;
+                    break;
+                default:
+                    v.Pitch = Range(rng, 70f, 95f);
+                    v.Length = 0.11f;
+                    v.Gain = gain * 0.07f;
+                    break;
+            }
+            voices.Add(v);
+        }
+
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
+        {
+            float dt = 1f / rate;
+            for (int k = voices.Count - 1; k >= 0; k--)
+            {
+                var v = voices[k];
+                float pl = Pan(v.Pan, true), pr = Pan(v.Pan, false);
+                float round = Lowpass.Coef(6000f - 5200f * v.Far, rate);
+                float send = 0.25f + 0.7f * v.Far;
+                for (int i = 0; i < n && v.Age < v.Length; i++)
+                {
+                    float u = v.Age / v.Length;
+                    float s;
+                    switch (v.Call)
+                    {
+                        case DeerCall.Bark:
+                        {
+                            // A sharp cough: a buzzy tone dropping fast, mixed with breath,
+                            // through a throat formant, cut off short.
+                            float freq = v.Pitch * (1.25f - 0.45f * u);
+                            v.Phase += freq * dt;
+                            v.Phase -= MathF.Floor(v.Phase);
+                            float buzz = 2f * v.Phase - 1f;
+                            float src = buzz * 0.7f + noise.Next() * v.Rough * 0.9f;
+                            float env = MathF.Min(1f, v.Age / 0.008f) * MathF.Pow(1f - u, 1.6f);
+                            s = (v.Low.Process(src, 900f, 0.45f, rate) + 0.7f * v.High.Process(src, 1900f, 0.55f, rate)) * env;
+                            break;
+                        }
+                        case DeerCall.Roar:
+                        {
+                            // A low voice that swells, bends up then sags, shaken by a fast
+                            // growl (about 28 Hz) with rough noise riding on top.
+                            float bend = 1f + 0.35f * MathF.Sin(MathF.PI * MathF.Min(1f, u * 1.4f)) - 0.25f * u * u;
+                            float growl = 0.55f + 0.45f * MathF.Sin(v.Age * 2f * MathF.PI * (24f + 8f * u));
+                            v.Phase += v.Pitch * bend * dt;
+                            v.Phase -= MathF.Floor(v.Phase);
+                            float saw = 2f * v.Phase - 1f;
+                            float src = saw + noise.Next() * v.Rough * 0.5f;
+                            float env = MathF.Min(1f, v.Age / 0.35f) * MathF.Min(1f, (v.Length - v.Age) / 0.9f);
+                            float body = v.Body.Process(src, 230f + 120f * u, 0.4f, rate) * 1.2f;
+                            float mouth = v.Low.Process(src, 520f + 300f * MathF.Sin(MathF.PI * u), 0.5f, rate) * 0.6f;
+                            s = (body + mouth) * growl * env;
+                            break;
+                        }
+                        default:
+                        {
+                            // A dull hoof on soft ground: a short low thump with a little scuff.
+                            float env = MathF.Exp(-v.Age / 0.03f) * MathF.Min(1f, v.Age / 0.003f);
+                            v.Phase += v.Pitch * (1f - 0.5f * u) * dt;
+                            s = (MathF.Sin(v.Phase * 2f * MathF.PI) + 0.4f * v.Body.Process(noise.Next(), 700f, 0.7f, rate)) * env;
+                            break;
+                        }
+                    }
+                    s = v.Round.Process(s, round) * v.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    sl[i] += s * pl * send;
+                    sr[i] += s * pr * send;
+                    v.Age += dt;
+                }
+                if (v.Age >= v.Length) voices.RemoveAt(k);
             }
         }
     }

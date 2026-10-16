@@ -92,8 +92,9 @@ foreach (var scene in scenes)
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
     // Season scenes: a breezy morning (or night) in light woods at the middle of
     // that season; winter has snow on the ground. Other scenes are early summer.
-    string seasonName = parts[0] == "snow" ? "winter" : parts[0].Replace("night", "");
-    mix.Year = seasonName switch { "spring" => 0.125f, "summer" => 0.375f, "autumn" => 0.625f, "winter" => 0.875f, _ => 0.3f };
+    string seasonName = parts[0] == "deer" ? "deer" : parts[0] == "snow" ? "winter" : parts[0].Replace("night", "");
+    if (parts[0] == "deer") (day, time) = (0.35f, 0.78f);
+    mix.Year = seasonName switch { "deer" => 0.625f, "spring" => 0.125f, "summer" => 0.375f, "autumn" => 0.625f, "winter" => 0.875f, _ => 0.3f };
     mix.SnowCover = seasonName == "winter" ? 0.8f : 0f;
     if (seasonName is "spring" or "summer" or "autumn" or "winter") mix.Foliage = 0.7f;
     int total = (int)(seconds * rate), done = 0;
@@ -146,6 +147,19 @@ foreach (var scene in scenes)
             mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false, Random.Shared.NextDouble() < 0.35);
         if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
             for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true, b == 3);
+        // Deer scene (autumn dusk): bark close, bark far, roar far, roar near, then a herd bolting.
+        if (parts[0] == "deer")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1.5)) mix.DeerCry(SoundMix.DeerCall.Bark, -0.4f, 0.9f, 0f);
+            if (At(4)) mix.DeerCry(SoundMix.DeerCall.Bark, 0.7f, 0.4f, 0.5f);
+            if (At(6)) mix.DeerCry(SoundMix.DeerCall.Roar, -0.6f, 0.35f, 0.9f);
+            if (At(12)) mix.DeerCry(SoundMix.DeerCall.Roar, 0.3f, 0.8f, 0.3f);
+            if (a >= 18 && a < 22 && Math.Floor(a / 0.28) != Math.Floor(b / 0.28))
+                mix.DeerCry(SoundMix.DeerCall.Hoof, (float)(Random.Shared.NextDouble() * 1.4 - 0.7), (float)(0.5 + 0.4 * Random.Shared.NextDouble()), 0.1f);
+            if (At(18)) mix.DeerCry(SoundMix.DeerCall.Bark, 0f, 1f, 0f);
+        }
         // Storms: a strike every 10 seconds or so, some close, most far off.
         if (parts[0] is "storm" or "rain" && Random.Shared.NextDouble() < n / (double)rate * 0.1)
         {
