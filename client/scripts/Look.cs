@@ -123,6 +123,39 @@ public static class Look
         return ghost;
     }
 
+    // Whether something occupying the box hides the player from the camera: the line
+    // from the camera to the player's head (or chest, for low eaves) passes through
+    // it, or the player stands inside it. For anything the player can be under, such
+    // as roofs and walls, to fade the way trees do (Justin's playtest).
+    public static bool HidesPlayer(Aabb box, Vector3 camera, Vector3 player) =>
+        box.HasPoint(player + new Vector3(0, 0.9f, 0))
+        || SegmentHitsBox(camera, player + new Vector3(0, 1.6f, 0), box)
+        || SegmentHitsBox(camera, player + new Vector3(0, 0.9f, 0), box);
+
+    // Whether the segment from a to b touches the box (the slab test).
+    public static bool SegmentHitsBox(Vector3 a, Vector3 b, Aabb box)
+    {
+        float t0 = 0f, t1 = 1f;
+        var d = b - a;
+        var min = box.Position;
+        var max = box.End;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float start = a[axis], step = d[axis];
+            if (Mathf.Abs(step) < 1e-6f)
+            {
+                if (start < min[axis] || start > max[axis]) return false;
+                continue;
+            }
+            float ta = (min[axis] - start) / step, tb = (max[axis] - start) / step;
+            if (ta > tb) (ta, tb) = (tb, ta);
+            t0 = Mathf.Max(t0, ta);
+            t1 = Mathf.Min(t1, tb);
+            if (t0 > t1) return false;
+        }
+        return true;
+    }
+
     // Kept for callers that only need a plain painted surface.
     public static ShaderMaterial Painted => Ground;
     public static ShaderMaterial Swaying => Foliage;
