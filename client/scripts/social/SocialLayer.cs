@@ -255,14 +255,19 @@ public partial class SocialLayer : Node
         {
             // Older lines drift up by the new one's height and dim; the oldest beyond three go.
             var older = avatar.GetChildren().OfType<Label3D>().Where(l => l.HasMeta("bubble") && !l.IsQueuedForDeletion()).ToList();
+            float rise = lineCount * BubbleLineHeight + BubbleGap;
             for (int i = 0; i < older.Count; i++)
             {
                 var old = older[i];
-                if (older.Count - i >= BubbleStack) { FadeOut(old); continue; }
+                // Every older line rises (the one leaving too, so nothing overlaps while it fades).
+                // Lift from where it is headed, not where it is, in case it is still rising.
+                float to = (old.HasMeta("lift_to") ? (float)old.GetMeta("lift_to") : old.Offset.Y) + rise;
+                old.SetMeta("lift_to", to);
                 var lift = old.CreateTween().SetParallel();
-                lift.TweenProperty(old, "offset:y", old.Offset.Y + lineCount * BubbleLineHeight + BubbleGap, 0.6f)
+                lift.TweenProperty(old, "offset:y", to, 0.6f)
                     .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
-                lift.TweenProperty(old, "transparency", 0.45f, 0.6f).SetTrans(Tween.TransitionType.Sine);
+                if (older.Count - i >= BubbleStack) FadeOut(old);
+                else lift.TweenProperty(old, "transparency", 0.45f, 0.6f).SetTrans(Tween.TransitionType.Sine);
             }
             bubble.SetMeta("bubble", true);
             bubble.Position = new Vector3(0, 2.35f, 0);
