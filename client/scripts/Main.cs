@@ -47,6 +47,7 @@ public partial class Main : Node3D
     uint myId;
     readonly TradeWindow trade = new();
     readonly StationPanel station = new();
+    readonly BuildMenu buildMenu = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -82,6 +83,8 @@ public partial class Main : Node3D
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
+        // The picture build menu (ui-20), a prototype until Justin picks its layout.
+        AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
@@ -105,7 +108,8 @@ public partial class Main : Node3D
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
-            || station.IsOpen;
+            || station.IsOpen
+            || buildMenu.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
@@ -332,6 +336,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
