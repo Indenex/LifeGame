@@ -31,6 +31,7 @@ namespace LifeGame.Shared
         public const float MinQualityShare = 0.7f;
 
         public static readonly IReadOnlyDictionary<Item, Wearable> All = Build(
+            new Wearable { Item = Item.WoolTunic, Slot = ClothingSlot.Body, Insulation = 0.10f, Effect = "Keeps a little of the cold off" },
             new Wearable { Item = Item.LeatherWraps, Slot = ClothingSlot.Feet, Insulation = 0.04f, Effect = "Keeps your feet off the cold ground" });
 
         public static Wearable? Find(ushort item) => All.TryGetValue((Item)item, out var w) ? w : null;
