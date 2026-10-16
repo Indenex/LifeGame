@@ -143,8 +143,8 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         // Sheep bleat; Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
-        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run);
+        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
+        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
         conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -392,10 +392,11 @@ public partial class Atmosphere : Node3D
     {
         if (Player == null) return;
         int cx = Mathf.RoundToInt(Player.GlobalPosition.X), cz = Mathf.RoundToInt(Player.GlobalPosition.Z);
+        int r = Mathf.RoundToInt(ArgFloat("debug-clear-radius") ?? 3f);
         var before = terrain.Cleared;
-        terrain.Cleared = (x, z) => before?.Invoke(x, z) == true || (x - cx) * (x - cx) + (z - cz) * (z - cz) <= 9;
-        for (int x = cx - 3; x <= cx + 3; x++)
-            for (int z = cz - 3; z <= cz + 3; z++)
+        terrain.Cleared = (x, z) => before?.Invoke(x, z) == true || (x - cx) * (x - cx) + (z - cz) * (z - cz) <= r * r;
+        for (int x = cx - r; x <= cx + r; x++)
+            for (int z = cz - r; z <= cz + r; z++)
                 terrain.Refresh(x, z);
     }
 
