@@ -695,3 +695,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-170 — 2026-10-16 — Trees, rocks and structures collide
 **Decision:** Trees collide at the trunk, rocks by their footprint, and every structure collides. Client side for now (no server physics yet).
 **Who:** Justin ("do we have physics work yet? I want trees and houses etc. to have collision.")
+
+## D-171 — 2026-10-16 — Red deer hunting: spear strike and bow
+**Decision:** One spear strike kills a red deer if your sneak skill is high enough. A bow and arrow is a new tool, with automatic targeting. It can take a few arrows, since damage depends on bow type and quality and arrow type and quality; Justin asked for a simple equation that won't overload the server. The worst, first bow takes 3 to 6 arrows and means chasing the creature down, so a lower sneak skill is enough.
+**Who:** Justin ("One spear strike kills if your sneak skill is high enough. However, a bow and arrow would be a fun new tool. I would want it to be automatic targeting or something. It can take a few times though as arrows would do damage based on a lot of factors; bow type/quality, arrow type/quality, etc. What's a simple equation that won't overload the server with that? Like, I'd want the worst/first bow to take 3-6 arrows and have to chase the creature down kinda thing, so you don't have to have as high of a sneak skill.")
+
+## D-172 — 2026-10-16 — Red deer sounds
+**Decision:** Deer sounds are a bark plus an autumn roar.
+**Who:** Justin (as relayed by the PM)
+
+## D-173 — 2026-10-16 — Antler is a plain material
+**Decision:** Antler is a plain material for other recipes, and it can also be built into a hammer or pickaxe.
+**Who:** Justin ("I like that it's just a plain material for other recipes, but building it into a hammer or pickaxe is cool.")
