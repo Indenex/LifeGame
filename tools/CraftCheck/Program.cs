@@ -309,6 +309,9 @@ Structure BuildHere(StructureKind kind)
         lastError = null;
         conn.Reducers.Build(s.Id);
         Pump(() => false, 0.35f, null);
+        // WalkTo stops up to 1.5 m short of its target, so approaching the site from the far
+        // side can leave the bot just outside the work reach: step up to the building and go on.
+        if (lastError != null && lastError.Contains("Out of reach")) WalkTo(s.X, s.Z);
     }
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
