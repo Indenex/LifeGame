@@ -36,6 +36,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 (Sonnet): Q13 implemented, unbuilt (no dotnet here; CI checks): StrikeScale removed; deer and sheep both Health 100. A spear strike kills a deer outright only if the hunter is sneaking (PlayerSneaking), the deer isn't running, and Husbandry rank (animal.kill trains it) >= SneakKillRank 20 (Hunting.cs). There is no separate sneak skill in shared/Skills.cs, so Husbandry stands in; asked PM whether Journal and skills should add one. Otherwise the strike wounds; deer run speed scales 0.3+0.7*health, and deer under 45 health tire (extra calm) so they bolt then rest and can be chased down.
 
+- 2026-10-16: Justin's final Q13 rule: no hard kill. Every strike does normal damage; a sneak attack (sneaking, animal not running) has a Stalking-skill chance to add a large bonus (crit). Hunting.cs: HurtAnimal shared by spear and bow, SneakCrit stand-in (Husbandry rank; chance 5-60%, bonus 0.3x-1.2x of normal damage, front-loaded) until Journal's #237 Progression.Effect(SneakCritChance/SneakCritBonus) lands; public event table AnimalHit {AnimalId, X, Z, Crit, Killed} for client feedback. Asked UX/Animation/Audio for crit flash/sound.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.

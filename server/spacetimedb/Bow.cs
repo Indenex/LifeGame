@@ -63,8 +63,9 @@ public static partial class Module
             return;
         }
 
-        float damage = BowDamage(shot, d, ctx.Rng.NextDouble());
-        HurtAnimal(ctx, animal, mind, Math.Max(1, (int)MathF.Round(damage)), pos.X, pos.Z, 0f, now);
+        int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble())));
+        int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
+        HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0);
     }
 
     // 0.95 close up, falling 0.012 per meter beyond 5 m to a floor of 0.3, then the

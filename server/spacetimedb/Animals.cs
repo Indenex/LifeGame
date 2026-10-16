@@ -60,8 +60,8 @@ public static partial class Module
 
     // Deer notice you from far off and even a careful approach unsettles them; they
     // keep to the woodland edge and bolt far into the trees. Health 100 like a sheep:
-    // an ordinary spear strike wounds; only a sneaking hunter of some skill kills in
-    // one (Hunting.cs SneakKillRank).
+    // a spear strike wounds, and a skilled sneak attack may crit for a kill
+    // (Hunting.cs SneakCrit).
     static readonly AnimalTraits DeerTraits = new()
     {
         Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
