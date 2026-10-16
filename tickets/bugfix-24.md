@@ -44,6 +44,8 @@ Sizes: S = under half a day, M = about a day, L = several days.
   - Checked: server module builds; local LoadTest 5 bots 5 s, 0 reducer errors, moves still round-trip. Not tried: a hostile client; add a speed-bot check to tools when item 1 is scheduled for real.
   - Still todo: the dev flag (hardening on by default, flag for CI/test servers) is not needed for these two changes.
 
+- 2026-10-16: PR #254 CI: Server job failed in CraftCheck ("timed out waiting for position to settle", run 38964017711). Cause: the new Move budget now holds a bot to the real walk limit (6 m/s times Carry.WalkFactor, down to 3 m/s when overloaded), but the check tools walked at a fixed 5 m/s and, after their last Move, waited for the server to reach a spot the server had clamped short (the server only moves a player on a Move call). Not a server bug: a real client keeps sending Move and slows down with its load. Fixed the tools, not the rule: CraftCheck, ClayCheck and BuildTest only advance while the server position is within 1.5 m of theirs, and resend Move while waiting to settle. Verified locally on a fresh server: CraftCheck passes (6 min), BuildTest passes (257 s; it hung before), SpawnCheck and SocialTest pass. Local note: `spacetimedb-cli logout` after wiping a scratch server, or publish fails with Broken pipe.
+
 ## Open questions / blockers
 - Items 7 and 2 touch other lanes' files; the PM should tell those lanes when they are scheduled.
 - Does Justin want a server setting to switch the hardening on, so local test servers and CI keep working? Recommended: on by default, off with a `--dev` flag.

@@ -430,8 +430,13 @@ sealed class Bot
         if (dist > 0.05f)
         {
             float step = MathF.Min(dist, 5f * dt);
-            X += dx / dist * step;
-            Z += dz / dist * step;
+            // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once
+            // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
+            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 1.5f)
+            {
+                X += dx / dist * step;
+                Z += dz / dist * step;
+            }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         return MathF.Max(0, dist - 5f * dt);
