@@ -161,7 +161,7 @@ public partial class Herd : Node3D
         foreach (var a in conn.Db.Animal.Iter())
         {
             float d = DistanceTo(a, at);
-            if (d <= best && a.Species == AnimalSpecies.Sheep && a.Fleece >= 80)
+            if (d <= best && AnimalDefs.Get((byte)a.Species).Shearable && a.Fleece >= 80)
                 (nearest, best) = (a, d);
         }
         if (nearest == null) return null;

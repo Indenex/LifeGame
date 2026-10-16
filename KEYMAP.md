@@ -25,7 +25,8 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
-| I | What you wear: the equipment panel (body and feet slots; click a slot, then what to put on). I or Esc closes | UX/UI | new, ui-10 (D-074); I decided by Justin (D-094) |
+| I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
+| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, or set a made thing down (tools work by themselves). Rebindable | UX/UI | new, ui-19 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
