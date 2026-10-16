@@ -78,6 +78,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 23:10: new: animals-13 seasonal sheep 04f4712 (Animals): scene animals-13-seasons.txt (owner `call set_season`, SQL snow_cover; lamb attempt after deleting one sheep).
 - 2026-10-16 23:20: anim-2 1eec5b4 (new figure + animation) replaces the queued anim-1 movies (side incl. run, turn, work; no axe chop). env-2 reshoot at 0abbc0c running. animals-13 queued.
 - 2026-10-16 23:25: new: ceramics-9 oil lamp demo cd30d6f (night, dusk, + hut door try).
+- 2026-10-16 23:30: new: env-4 corners of the forest at 36f6d1d (Environment), right after env-2b; 90 s delay for terrain loading.
 
 ## Open questions / blockers
 - (none)
