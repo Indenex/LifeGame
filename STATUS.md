@@ -15,7 +15,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-068 |
+| Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-080 |
 | Next PM action | All lanes restarted 2026-10-16 17:04 (session ids in the lane table; reach them with send_message). Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
@@ -25,10 +25,10 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds | session_01Rf5965nk4Lvd3f2QDteZSq records its branch | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
 | Render (D-059) (session_013qe8zPzzBHx9rFPEYoKMr5) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
-| Modeling (D-073) | model-1 model style and first upgrades | session records its branch | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
-| Animation (D-073) | anim-1 player animation pass | session records its branch | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
-| Environment (D-078) | env-1 cosy forest pass with Atmosphere | session records its branch | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
-| Audio (D-079) | audio-1 take over audio; finish work sounds (atmosphere-12, D-072) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
+| Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 model style and first upgrades | session records its branch | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
+| Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-1 player animation pass | session records its branch | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
+| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-1 cosy forest pass with Atmosphere | session records its branch | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
+| Audio (D-079) (session_01LeXCWTFVBQcCNVEDdhPek3) | audio-1 take over audio; finish work sounds (atmosphere-12, D-072) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
 | Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_014pHdaxJ7uESzsvWekpjvsH) | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013QuyGdXAWemhkois2ictmc) | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |

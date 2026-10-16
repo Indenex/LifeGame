@@ -324,3 +324,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-079 — 2026-10-16 — Dedicated Audio lane takes all audio
 **Decision:** A new Opus Audio lane owns all sound and music: `client/scripts/atmosphere/audio/` (SoundMix), `client/scripts/atmosphere/SoundScape.cs`, `tools/SoundPreview/`, music and any future `client/scripts/audio/`. Other lanes no longer make audio; they send the Audio lane a request (what event, where, how it should feel), as with render requests. Atmosphere hands its in-progress work sounds (atmosphere-12, branch `claude/atmosphere-12-work-sounds`, incl. D-072 other players at about 60% quieter) to Audio and keeps the visual side.
 **Who:** Justin ("a dedicated audio worker ... that takes anyone's audio work from them")
+
+## D-080 — 2026-10-16 — Trades are silent; requests lapse after 30 s
+**Decision:** Completed trades post nothing to bystanders' chat (the two traders still see their own confirmation). An unanswered trade request lapses after 30 seconds.
+**Who:** Justin ("Nothing"; the PM had recommended names only. "30 seconds", which the PM recommended)
