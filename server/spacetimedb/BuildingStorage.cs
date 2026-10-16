@@ -68,6 +68,12 @@ public static partial class Module
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
         if (door.Locked && !CanLock(ctx, s, door))
             throw new Exception(Structures.IsGate((int)s.Kind) ? "The gate is barred" : "The door is barred");
+        if (Structures.IsGate((int)s.Kind))
+        {
+            bool allowed = true;
+            GateOpenHook(ctx, s, ref allowed);
+            if (!allowed) throw new Exception("Only the claim's members can open this gate");
+        }
         // Opening a locked door unbars it; it stays unbarred until someone locks it again.
         ctx.Db.StructureDoor.StructureId.Update(door with { Closed = !door.Closed, Locked = false });
         TouchStructure(ctx, structureId);
@@ -86,8 +92,14 @@ public static partial class Module
         TouchStructure(ctx, structureId);
     }
 
+    // Claims implements this for gates on a claim's fence line (claims-12): set allowed
+    // to false to keep a non-member from opening or shutting the gate.
+    static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed);
+
     static bool CanLock(ReducerContext ctx, Structure s, StructureDoor door)
     {
+        // Claim gates are members only (D-160); outside a claim, whoever hung the gate keeps the right.
+        if (Structures.IsGate((int)s.Kind) && ClaimAt(ctx, s.X, s.Z) is { } gateClaim) return HasClaimRights(ctx, gateClaim, ctx.Sender);
         if (door.HungBy == ctx.Sender) return true;
         return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
     }
