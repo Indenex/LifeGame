@@ -45,9 +45,6 @@ public partial class SurvivalClient : Node
     // Deaths when the new-arrival half hour was last seen running, null once it ends.
     uint? arrivalDeaths;
     public bool Mourning => needsHud.Mourning;
-    // How clearly breath shows in the air around you, 0 (warm) to 1 (0 C or colder),
-    // for Animation's breath puffs (D-144). It applies to everyone near you.
-    public static float AirColdness { get; private set; }
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
     public static IEnumerable<string> Queries(string range) => new[]
@@ -173,7 +170,6 @@ public partial class SurvivalClient : Node
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
             wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
             UpdateArrival(v);
-            AirColdness = Needs.Breath(v.AirCold);
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");

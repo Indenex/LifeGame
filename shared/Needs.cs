@@ -46,7 +46,8 @@ namespace LifeGame.Shared
         // How cold the air is: 0 at MildCelsius or warmer, 1 at 0 C or colder. The cold
         // drain is 1 + this; the client shows breath from it (D-144).
         public static float AirCold(float celsius) => Math.Clamp((MildCelsius - celsius) / MildCelsius, 0f, 1f);
-        // Breath shows from about 6 C (AirCold 0.6) and is full at 0 C.
+        // How clearly breath shows (D-144), 0 to 1: from about 6 C (AirCold 0.6), full
+        // at 0 C. Animation reads it as Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius)).
         public static float Breath(float airCold) => Math.Clamp((airCold - 0.6f) / 0.4f, 0f, 1f);
 
         // Getting wet (survival-5). Wetness runs from 0 (dry) to 1 (soaked). Full

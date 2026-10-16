@@ -53,10 +53,6 @@ public static partial class Module
         public float ArrivalLeft;
         [Default(0f)]
         public float ArrivalRate;
-        // How cold the air is where the player stands, 0 (15 C or warmer) to 1
-        // (0 C or colder), so the client can show breath (D-144). Coarse, in twentieths.
-        [Default(0f)]
-        public float AirCold;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -257,7 +253,7 @@ public static partial class Module
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
                 || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f
-                || next.ArrivalRate != v.ArrivalRate || next.AirCold != v.AirCold)
+                || next.ArrivalRate != v.ArrivalRate)
                 ctx.Db.Vitals.PlayerId.Update(next);
             ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
@@ -410,7 +406,6 @@ public static partial class Module
             WarmthRate = heat - cold,
             ArrivalRate = v.ArrivalLeft > 0f ? -1f : 0f,
             NearHeat = heat > 0,
-            AirCold = MathF.Round(Needs.AirCold(AirTemperature(ctx)) * 20f) / 20f,
             Wet = wet,
         };
     }
