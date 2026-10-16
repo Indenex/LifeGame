@@ -279,14 +279,19 @@ namespace LifeGame.Shared
     // Campfires: how long they burn and how far their warmth reaches.
     public static class Fires
     {
-        // A freshly lit fire burns this long before it needs feeding (D-054): long
+        // A freshly lit fire burns this long before it needs feeding (D-054, D-090): long
         // enough to shape, dry and fire a first pot without tending it.
-        public const float StartSeconds = 15 * 60;
-        // Fuel stacks up to this many seconds ahead.
+        public const float StartSeconds = 20 * 60;
+        // Fuel stacks up to this many seconds ahead. The cap grows with the feeder's
+        // Firecraft rank, from MaxSeconds at rank 0 to MasterMaxSeconds at Master (D-090).
         public const float MaxSeconds = 20 * 60;
+        public const float MasterMaxSeconds = 40 * 60;
+        public static float MaxSecondsFor(int firecraftRank) =>
+            MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
-        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // A burned-out fire leaves a cold hearth of stones and ash this long outside a
+        // claim; inside one it stays while the claim stands (D-109). Lighting
         // a fire beside it rekindles it in place.
         public const float ColdSeconds = 60 * 60;
         // The stone ring's reach from the fire's middle, in meters, and how far apart

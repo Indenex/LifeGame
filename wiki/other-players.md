@@ -12,6 +12,9 @@ Press Enter to chat. Only players near you see your messages, and each line also
 - Players who choose different specialities can make things for each other.
 - Other players can see when you are sneaking.
 
+## Trading
+Face another player and press Use to ask them to trade. A "wants to trade" sign appears over the player who asked; they say yes with Use or no with Esc. In the trade window, click things you carry to offer them (Shift+click offers the whole stack) and click your offer to take something back. The swap happens only when both players accept. Any change to either offer clears both accepts. Walking apart or pressing Esc calls the trade off. You can receive more than you can comfortably carry.
+
 ## Fighting
 Left click strikes a player in reach. A weapon hits harder than bare hands.
 
