@@ -29,10 +29,12 @@ Milestone context (PM): M2 "the first evening", a new player reaches a fired pot
 
 - 2026-10-16: D-099 (Justin): cap combined chill at 2x. Done: Needs.MaxChill = 2, applied in Survival.Chill (cold x wet). Standing in water (WetChill 3x) stays outside the cap: you can always step out. Seasons (Atmosphere leads) will feed AirTemperature later; Survival owns how season temperature feeds cold. Opened PR for the cap alone; carry/food/fire picks follow when Justin answers.
 
+- 2026-10-16: D-100: carry 20 bare, basket +10 (pick 1A). D-101: food unchanged (pick 2A). Carry.BasketBonus 15 -> 10 in #124. Fire warmth (pick 3) still with Justin; keep 30 s.
+
 ## Open questions / blockers
 - Seasons (Atmosphere, session_01KvVF5vpkYEHTKNRpHC18WN): seasonal offset goes into AirTemperature (about +8 C summer, -12 C winter); no Survival change needed thanks to the 2x cap. Snow doesn't wet players for now; if Justin agrees (Atmosphere asks), falling snow wets at half rain's rate via SeasonState.Snow.
 - Sent to PM: winter starts for new players. A) 30 min of half-speed cold for new characters [rec], B) a lit campfire at the spawn edge in winter, C) nothing. Nothing ships until Justin picks.
-- Waiting on Justin (via PM) for picks 1 to 3 above; pick 4 decided (D-099, option A). Survival-3's carry-limit question is folded into item 1.
+- Fire warmth (pick 3) still with Justin; 1, 2 and 4 decided (D-100, D-101, D-099). Survival-3's carry-limit question is folded into item 1.
 
 ## Next step
-Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM. Then apply Justin's carry/food/fire picks when the PM relays them.
+Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM. Then apply Justin's fire pick when the PM relays it.
