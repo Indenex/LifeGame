@@ -212,6 +212,8 @@ for (int i = 0; i < 40 && !b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0
 }
 Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && m.Text.Contains("struck down")), 5, "struck down");
 Check(true, "a player can be struck down in the wild, and nearby players hear of it");
+Check(b.Conn.Db.PlayerHealth.PlayerId.Find(b.PlayerId)?.MarkedUntil.MicrosecondsSinceUnixEpoch > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000,
+    "whoever struck them down is marked for a while");
 Pump(() => a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, 5, "drop on death");
 Check(carried == 0 || a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, $"being struck down drops what you carry ({carried} things)");
 var woke = a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId)!;

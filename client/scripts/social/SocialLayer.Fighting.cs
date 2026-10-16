@@ -16,6 +16,8 @@ public partial class SocialLayer
     readonly ColorRect hurtEdge = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     ShaderMaterial hurtMaterial = null!;
     float hurtShown;
+    float markTimer;
+    static readonly Color MarkedName = new(0.92f, 0.36f, 0.30f);
 
     void ReadyFighting()
     {
@@ -96,5 +98,25 @@ void fragment() {
         hurtShown = Mathf.MoveToward(hurtShown, target, dt * (target > hurtShown ? 3f : 0.6f));
         hurtMaterial.SetShaderParameter("amount", hurtShown);
         hurtEdge.Visible = hurtShown > 0.005f;
+
+        markTimer -= dt;
+        if (markTimer <= 0f)
+        {
+            markTimer = 0.5f;
+            TintMarkedNames();
+        }
+    }
+
+    // Anyone who struck someone down in the last half hour shows a red name (D-053).
+    void TintMarkedNames()
+    {
+        if (conn == null) return;
+        long now = NowMicros;
+        foreach (var p in conn.Db.PlayerPos.Iter())
+        {
+            if (p.PlayerId == myId || avatarOf(p.PlayerId) is not Avatar avatar) continue;
+            bool marked = conn.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h && h.MarkedUntil.MicrosecondsSinceUnixEpoch > now;
+            avatar.SetNameTint(marked ? MarkedName : Look.Cream);
+        }
     }
 }

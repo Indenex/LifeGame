@@ -34,7 +34,7 @@ namespace LifeGame.Shared
         public const long DefaultClaimLifetimeSeconds = 3 * 24 * 60 * 60;
         public const float WeatheredFrom = 0.75f;
 
-        // --- Fighting (claims-3; starting values, PM card to Justin pending) ---
+        // --- Fighting (claims-3, D-053) ---
         public const float MaxHealth = 100f;
         // A strike lands on someone in front of you within this reach. The server
         // allows a little slack for movement still in flight.
@@ -48,6 +48,9 @@ namespace LifeGame.Shared
         public const float WellFed = 0.2f;
         // New players can't strike or be struck for this long after first waking.
         public const long NewcomerGraceMicros = 10L * 60 * 1_000_000;
+
+        // A player who strikes someone down shows a red name for this long (D-053).
+        public const long KillerMarkMicros = 30L * 60 * 1_000_000;
 
         // Damage by the best weapon carried: about 12 bare-handed hits to kill, about 6
         // with a hand axe.

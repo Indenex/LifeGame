@@ -21,6 +21,9 @@ public static partial class Module
         // Newcomers can't strike or be struck until then.
         public Timestamp GraceUntil;
         public bool Fed;
+        // After striking someone down, a player's name shows red to others until
+        // then (D-053).
+        public Timestamp MarkedUntil;
     }
 
     // Tells nearby clients a strike landed, so the struck player flinches.
@@ -71,6 +74,7 @@ public static partial class Module
             LastStrikeAt = new Timestamp(0),
             GraceUntil = ctx.Timestamp + new TimeDuration(NewcomerGrace(ctx)),
             Fed = true,
+            MarkedUntil = new Timestamp(0),
         });
     }
 
@@ -131,6 +135,8 @@ public static partial class Module
         }
 
         ctx.Db.PlayerHealth.PlayerId.Update(theirs with { Health = Social.MaxHealth, LastHitAt = new Timestamp(0) });
+        if (ctx.Db.PlayerHealth.PlayerId.Find(attacker.PlayerId) is { } killer)
+            ctx.Db.PlayerHealth.PlayerId.Update(killer with { MarkedUntil = ctx.Timestamp + new TimeDuration(Social.KillerMarkMicros) });
         // Survival's death screen reads "You were struck down" for this cause.
         KillPlayer(ctx, victim, "slain");
         SayNearby(ctx, b.X, b.Z, $"{victim.Name} was struck down by {attacker.Name}");
