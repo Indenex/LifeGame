@@ -18,9 +18,9 @@ Husbandry keeps shearing, hunting and butchering; Toolmaking keeps cordage, bask
 
 ## Progress log
 - 2026-10-16 19:35: PM assigned skills-11 (D-145 never idle). Specialties and overrides done; harness shows the mapping; server type-checks.
+- 2026-10-16 19:37: D-153 (Justin): foot wraps train Leatherwork, drop spindle stays Toolmaking, as built.
 
 ## Open questions / blockers
-- Defaults sent to the PM: leather wraps train Leatherwork (not Weaver); drop spindle stays Toolmaking.
 - Station build ids: asked Crafting (owner of #160) to have finishing a station report `build.<station>` (build.table, build.bench, build.spindle, build.rack).
 
 ## Next step
