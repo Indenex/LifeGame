@@ -15,6 +15,8 @@ public partial class Sheep : Node3D
     // gliding when the next update arrives and never stops between steps.
     const float GlideSeconds = 0.6f;
     const float HopSeconds = 0.35f;
+    // Fastest turn, radians per second; quicker than this reads as snapping round.
+    const float MaxTurn = 4.5f;
 
     readonly Terrain terrain;
     // One skinned mesh per sheep: the parts used to be separate nodes, eight draw
@@ -33,7 +35,7 @@ public partial class Sheep : Node3D
     readonly float seed;
 
     Vector2 from, to;
-    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw;
+    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
     Color woolColor;
@@ -211,7 +213,12 @@ public partial class Sheep : Node3D
         var flat = from.Lerp(to, glide);
         float ground = terrain.HeightAt(flat.X, flat.Y);
         Position = new Vector3(flat.X, Mathf.Lerp(Position.Y, ground, 1f - Mathf.Exp(-12f * dt)), flat.Y);
-        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-7f * dt)), 0);
+        // Turn at a natural rate rather than snapping to each new heading, and remember
+        // how fast, so the body can lean into the turn and the head lead it.
+        float turn = Mathf.AngleDifference(Rotation.Y, targetHeading) * (1f - Mathf.Exp(-7f * dt));
+        turn = Mathf.Clamp(turn, -MaxTurn * dt, MaxTurn * dt);
+        Rotation = new Vector3(0, Rotation.Y + turn, 0);
+        turnRate = Mathf.Lerp(turnRate, turn / Mathf.Max(dt, 1e-4f), 1f - Mathf.Exp(-6f * dt));
 
         var moved = Position - lastPosition;
         moved.Y = 0;
@@ -220,7 +227,13 @@ public partial class Sheep : Node3D
 
         float walk = Mathf.Clamp(speed / 1.0f, 0f, 1f);
         float run = Mathf.Clamp((speed - 2f) / 1.5f, 0f, 1f);
-        gait += dt * (speed * 5.5f + run * 4f);
+        // The cycle advances by ground covered, not time, so hooves don't skate: one cycle
+        // is the distance two swings of the legs reach, longer in the bound's flight.
+        // Hip height from the leg bone's rest, so any species strides on its own legs.
+        if (hipHeight <= 0f) hipHeight = skeleton.GetBoneRest(FirstLegBone).Origin.Y;
+        float leg = hipHeight * Scale.Y;
+        float reach = 4f * leg * Mathf.Lerp(Mathf.Sin(0.45f * Mathf.Max(walk, 0.2f)), Mathf.Sin(0.7f) * 1.6f, run);
+        gait += speed * dt * Mathf.Tau / Mathf.Max(reach, 0.05f);
 
         // Walking moves diagonal legs together; running bounds front pair, then back pair.
         float s = Mathf.Sin(gait) * 0.45f * walk;
@@ -242,7 +255,9 @@ public partial class Sheep : Node3D
         float hopLift = Mathf.Sin(Mathf.Pi * hop / HopSeconds) * 0.28f;
         float bounce = Mathf.Abs(Mathf.Sin(gait)) * (0.025f * walk * (1f - run) + 0.12f * run);
         float breathe = Mathf.Sin(time * 1.7f) * 0.006f * (1f - walk);
-        Body(new Vector3(0, hopLift + bounce, 0), new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, 0), new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
+        // Lean into turns, more at speed.
+        float lean = Mathf.Clamp(turnRate * speed * 0.05f, -0.22f, 0.22f);
+        Body(new Vector3(0, hopLift + bounce, 0), new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, -lean), new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
 
         // Head down to nibble when grazing, up and looking about when idle or alarmed.
         float targetPitch, targetYaw = 0f;
@@ -262,6 +277,8 @@ public partial class Sheep : Node3D
         }
         else
             targetPitch = 0.15f;
+        // The head leads the turn.
+        if (speed > 0.3f) targetYaw += Mathf.Clamp(turnRate * 0.25f, -0.5f, 0.5f);
         pitch = Mathf.Lerp(pitch, targetPitch, 1f - Mathf.Exp(-4f * dt));
         yaw = Mathf.Lerp(yaw, targetYaw, 1f - Mathf.Exp(-3f * dt));
         Head(new Vector3(pitch, yaw, 0));

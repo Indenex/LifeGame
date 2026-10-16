@@ -101,26 +101,10 @@ namespace LifeGame.Shared
         public const float Low = 0.25f;
 
         // What eating one of an item gives: (food, water). Zero for anything inedible.
-        public static (float food, float water) Nourishment(Item item) => item switch
-        {
-            Item.Berries => (BerryFood, BerryWater),
-            Item.CookedMutton => (RoastMuttonFood, 0f),
-            Item.BurntMutton => (BurntMuttonFood, 0f),
-            Item.PotOfBroth => (BrothFood, BrothWater),
-            Item.PotOfStew => (StewFood, StewWater),
-            Item.CookedVenison => (RoastMuttonFood, 0f),
-            Item.BurntVenison => (BurntMuttonFood, 0f),
-            _ => (0f, 0f),
-        };
-
-        // The container a food is eaten from, which goes back in your hands; null for none.
-        public static Item? EatenFrom(Item item) => item is Item.PotOfBroth or Item.PotOfStew ? Item.CoilPot : null;
+        public static (float food, float water) Nourishment(Item item) =>
+            Foods.Find(item) is { } f ? (f.Food, f.Water) : (0f, 0f);
 
         public static bool Edible(Item item) => Nourishment(item).food > 0f;
-
-        // A cooked meal, which lets you run longer for a while (D-111). Berries and
-        // burnt food don't count.
-        public static bool GoodMeal(Item item) => item is Item.CookedMutton or Item.CookedVenison or Item.PotOfBroth or Item.PotOfStew;
 
         // Which of the foods you carry to eat at this hunger: the most filling one
         // that doesn't waste much, or else the smallest, so a roast isn't spent on a

@@ -46,6 +46,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 22:40: #219 was green at 5a621319 but conflicted with main again (the wool tunic #294 landed). Merged main (Items.cs: kept the tunic line and my venison items). Main's client does not compile: client/scripts/social/BuildingSystem.ClaimFences.cs (Claims) is in the global namespace while BuildingSystem is in namespace LifeGame (CS0759); told Integration; this branch carries the one-line fix (`namespace LifeGame;`) so the client builds, it no-ops once main has it. Server and client build, upgrade check against main passed.
 
+- 2026-10-16 23:10: main moved again (#254, #304 FoodDef, #309 lamp). Merged: Needs.cs takes main's FoodDef-based Nourishment; venison is now two FoodDef entries in shared/Foods.cs (Roast venison GoodMeal, Burnt venison), same numbers as mutton; Processes.cs keeps main's cook.tallow and my cook.venison. Server and client build, upgrade check passed.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.

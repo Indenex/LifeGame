@@ -875,3 +875,59 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
 **Decision:** The chat leak is fixed with private per-player delivery: each message is delivered only to its recipients. Owner: Claims (claims-13).
 **Who:** Justin, picking "Private per-player delivery".
+
+## D-216 — 2026-10-16 — Heather is sparse, patchy and muted (revises D-164's purple bloom)
+**Decision:** The hilltop heath's heather must be sparse, in irregular patches, and muted in colour: a soft desaturated mauve, only in bloom, close to the grass in brightness. This revises the purple bloom of D-164. Hotfix owner: Environment, with Atmosphere.
+**Who:** Justin ("I HATE this, the color, the quantity, it's crazy.")
+
+## D-217 — 2026-10-16 — Hotbar: the row becomes the hotbar (extends D-214)
+**Decision:** The bottom row becomes the hotbar: a round row of 10 slots with key numbers. The bag moves to the I panel. Owner: UX (ui-19).
+**Who:** Justin, picking "Row becomes hotbar".
+
+## D-218 — 2026-10-16 — Hotbar fills automatically with new items
+**Decision:** New items auto-fill into the hotbar slots.
+**Who:** Justin, picking "Auto-fill new items".
+
+## D-219 — 2026-10-16 — Tools live in a tools section on the player doll, outside inventory space and weight
+**Decision:** Tools only need to be in the player's inventory to be usable. A tools section is created on the player doll. Tools do not take up inventory space and add no weight.
+**Who:** Justin ("as long as they're in your inventory it's fine, and honestly, create a tools section on the player doll. Tools shouldn't take up inventory space or add weight.")
+
+## D-220 — 2026-10-16 — Bag order: a sort button and manual arrangement
+**Decision:** The bag offers both a sort button and manual arrangement.
+**Who:** Justin, picking "Both, a sort button, and manual arrangement".
+
+## D-221 — 2026-10-16 — Camera angle can be tilted a little with the existing right-click controls
+**Decision:** The player can change the camera angle a bit, a little up and a little down, using the right-click mouse controls that already exist, so they can see the new sky changes and so on coming up. Owner: Integration.
+**Who:** Justin ("I want to be able to change the angle of the camera a bit, so I can see the new sky changes etc. coming up. a little up, a little down, just controlled by the right click mouse controls we already have")
+
+## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
+**Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
+**Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-224 — 2026-10-16 — Build menu: a centred picture panel with category tabs (ui-20)
+**Decision:** Pressing B opens a centred picture panel with category tabs: Shelter, Storage, Crafting, Fences and gates, Fire. Each tile in its grid shows a picture rendered from the real model, the name, and costs as item icons, greyed when short. Clicking a tile starts the ghost placement. Justin chose this over a strip above the hotbar and a radial wheel. Owner: UX (ui-20).
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-225 — 2026-10-16 — Admin tools are chat commands, not an F10 panel
+**Decision:** Justin asked for an admin interface to add items, and answered with chat commands instead of a panel. The admin tools are chat commands: `/fly` (very fast flying), `/season`, `/time` (time of day), and `/give`, which opens a searchable item menu to spawn items. All of them are server-checked and admin-only. There is no F10 panel. This replaces the earlier PM default (admin-1: a hidden F10 panel).
+**Who:** Justin ("just chat commands to get it done faster, but yes, I want a flying option that's super fast, seasons, time of day, spawn items (give me a menu with a search for that one.)")
+
+## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
+**Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
+**Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
+
+## D-227 — 2026-10-16 — View distance is a four-step slider in Settings → Graphics (follows D-222)
+**Decision:** View distance is a slider with four steps: Short (48 m, today), Near (80 m), Far (128 m) and Very far (160 m and up). It lives in Settings → Graphics and is saved per player. The world edge always fades into haze, with no LoD pop-in. Far is the PM's proposed default, not yet confirmed by Justin.
+**Who:** Justin ("yeah, just make a slider of like short (today), near, far, very far for view distances. It can go in the settings menu -> graphics for people to adjust themselves.")
+
+## D-228 — 2026-10-16 — A roof takes 12 roof tiles (follows D-213)
+**Decision:** A roof takes 12 roof tiles. Each tile costs 1 tempered clay and takes 2 kiln firings. This replaces the proposed defaults of 24 tiles and 504 h.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-229 — 2026-10-16 — House-type buildings are claim-only; outside a claim, basics only and fast decay
+**Decision:** House-type buildings must be built inside a claim only. Allowed outside a claim: the lean-to, clay hut, campfire and hearth, crafting table, and storage basket and jar. Everything else is claim-only. Anything outside a claim that sits untouched for 48 h starts falling apart, as extreme weathering that manages server performance and world cleanliness. The idea is that players cooperate and build cities together.
+**Who:** Justin ("House-type buildings HAVE to be built inside of a claim ONLY. Temporrary shelters or the small hut can be built outside, and basic crafting tables, but not much else. Essentialy, basic survival, and anything outside of a claim has extreme weathering applied to manage server performance and world 'cleanliness'. The idea is players can cooperate and build cities and stuff together."), with his picks of what stays allowed outside a claim.
