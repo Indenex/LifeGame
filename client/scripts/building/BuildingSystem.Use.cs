@@ -133,7 +133,8 @@ public partial class BuildingSystem
                     return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
                         ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
-                bool mine = door.HungBy == c.Identity;
+                // Whoever hung it, or a member of the claim it stands in, may bar it, as the server's CanLock (bugfix-15).
+                bool mine = door.HungBy == c.Identity || MayBar(s.X, s.Z);
                 // Shift+G bars and unbars; members of the claim can too, the server decides.
                 Action act = () =>
                 {

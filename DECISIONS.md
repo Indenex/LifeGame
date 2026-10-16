@@ -264,3 +264,96 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-064 — 2026-10-16 — The wiki moves to Opus, in a plainer voice (amends D-063)
 **Decision:** The Wiki lane runs on Opus, not Sonnet. The wiki is rewritten in a plain, direct voice like a good game manual: no cosy or affectionate tone, no "be kind", no cute one-liners. The spoiler rule from D-063 stays.
 **Who:** Justin ("the sonnet worker's writing style is weird and oddly affectionate")
+
+## D-065 — 2026-10-16 — Leatherwork becomes its own specialty later
+**Decision:** Hide work (scrape, stretch, dry into leather) will train a new capped Leatherwork specialty once leather has more uses. Until that skill exists, hide work trains Husbandry (PM default, so it trains something meanwhile).
+**Who:** Justin ("Leatherwork later"; the PM had recommended Husbandry)
+
+## D-066 — 2026-10-16 — Ceramics builds a storage jar next
+**Decision:** ceramics-6 is a large kiln-fired storage jar set down as a store: ~6 stacks, keeps contents dry, 4 tempered clay, coil minigame, pit firing usually cracks it.
+**Who:** Justin ("Storage jar", which the PM recommended)
+
+## D-067 — 2026-10-16 — Skill toasts only at new titles
+**Decision:** Rank-ups show a toast with a chime only at a new title; other ranks show as dots in the journal (skills-8 as built).
+**Who:** Justin ("Titles only", which the PM recommended)
+
+## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
+**Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
+**Who:** Justin ("10%", which the PM recommended)
+
+## D-069 — 2026-10-16 — Player trading
+**Decision:** Players can trade. Claims builds the server side (claims-7, replacing the one-way hand-over); UX/UI builds the trade window (ui-9). PM defaults, Justin's to change: face a player and press Use to ask to trade; they accept or decline. A window shows both players' offers side by side; each adds items from what they carry. Both must press Accept; any change to either offer clears both accepts. The swap is all-or-nothing and checked on the server (items still held, carry limits respected, D-042). Walking away (beyond ~4 m), Esc, or either player dying cancels it. An empty side is a gift. One trade at a time per player; a chat line says when a trade completes. Claims writes the reducer and table contract into its ticket first so UX can build against it.
+**Who:** Justin ("Do a trading interface"); the flow above is the PM's default
+
+## D-070 — 2026-10-16 — Spinning gets its own minigame
+**Decision:** Spinning wool into yarn is a new minigame: flick the spindle and keep it turning (animals-8). Weaving stays a timed craft.
+**Who:** Justin ("New spin minigame"; the PM had recommended a plain timed craft)
+
+## D-071 — 2026-10-16 — Weaver becomes its own specialty later
+**Decision:** Spinning and weaving will train a capped Weaver specialty that later grows into dyes and clothing, like Leatherwork (D-065). Until it exists they train Toolmaking.
+**Who:** Justin ("Weaver later"; the PM had recommended Toolmaking)
+
+## D-072 — 2026-10-16 — Hear other players' work, quieter
+**Decision:** Crafting work sounds play for everyone nearby, not only your own; other players' work sounds play about 60% quieter than your own (atmosphere-12). Needs other players' running jobs to be visible to clients; Atmosphere agrees the table or hook with Crafting and Integration.
+**Who:** Justin ("Everyone's sounds, but make it other player ones like 60% quieter than your own")
+
+## D-073 — 2026-10-16 — Animation and Modeling lanes
+**Decision:** Two new Opus lanes for look and immersion. **Modeling** makes and upgrades the 3D models (player, animals, tools, items, structures, plants); it owns `client/assets/models/` and `client/scripts/models/`, and may change the existing in-code meshes owned by other lanes (e.g. `Sheep.cs`, `StructureModel*.cs`, `PotMesh.cs`, `ItemLook.cs`) in small PRs, telling the owning lane. **Animation** makes characters and creatures move well (player walk/idle/work/gather, sheep, felling, crafting gestures); it owns `client/scripts/animation/` and takes over `client/scripts/Avatar.cs` from Integration. Both send their work to the Render lane, and Justin sees it before it merges. Both keep to Linux and Windows performance budgets (32 players, CI load test).
+**Who:** Justin ("start an animation worker, and a dedicated modeler")
+
+## D-074 — 2026-10-16 — Clothes go on through an equipment panel
+**Decision:** Players wear clothing through a paper-doll equipment panel (slots such as body and feet), not automatically. Animals builds the worn-slots server side (animals-9); UX/UI builds the panel; Modeling and Animation show worn clothes on the figure.
+**Who:** Justin ("Equipment panel"; the PM had recommended auto-worn)
+
+## D-075 — 2026-10-16 — Start low, grow slowly (all numbers)
+**Decision:** Every number and stat in the game (gear bonuses, skill gains, yields, speeds, capacities, durability) starts on the low end and grows slowly, so each new piece of equipment or step up is worth having. The game is meant to take a long time to progress through. The curve rises faster through roughly the first 15% of progression, so new players feel early gains, and then flattens into a slow climb. Applies to all new numbers; lanes re-check existing numbers against it and propose changes to the PM. First case: clothing warmth starts small (well under the 25%/10% proposed).
+**Who:** Justin ("ALL numbers, Stats, etc. should start on the lower ends and scale up slowly ... faster at the first 15% or so")
+
+## D-076 — 2026-10-16 — Storage jar is kiln-only
+**Decision:** The storage jar can only be fired in a kiln; a campfire refuses it.
+**Who:** Justin ("Kiln only", which the PM recommended)
+
+## D-077 — 2026-10-16 — Trades may overload you
+**Decision:** A trade that takes a player over their carry limit is allowed; they walk slower, as with picking things up.
+**Who:** Justin ("Allow, walk slower", which the PM recommended)
+
+## D-078 — 2026-10-16 — Environment lane, paired with Atmosphere for cosy immersion
+**Decision:** A new Opus Environment lane builds the world itself: terrain shape and ground cover, trees, bushes, grass, rocks, water edges, paths and natural props, placed so the forest feels lived-in and cosy. It works hand in hand with Atmosphere (light, sky, weather, time of day, mood); the two lanes together own comfy immersion. Environment owns `client/scripts/environment/` and `client/scripts/Terrain.cs`; gameplay rules for trees and resources stay with their lanes (e.g. Crafting's `shared/Trees.cs`), and world-generation changes in `shared/World.cs` go through Integration as small hooks.
+**Who:** Justin
+
+## D-079 — 2026-10-16 — Dedicated Audio lane takes all audio
+**Decision:** A new Opus Audio lane owns all sound and music: `client/scripts/atmosphere/audio/` (SoundMix), `client/scripts/atmosphere/SoundScape.cs`, `tools/SoundPreview/`, music and any future `client/scripts/audio/`. Other lanes no longer make audio; they send the Audio lane a request (what event, where, how it should feel), as with render requests. Atmosphere hands its in-progress work sounds (atmosphere-12, branch `claude/atmosphere-12-work-sounds`, incl. D-072 other players at about 60% quieter) to Audio and keeps the visual side.
+**Who:** Justin ("a dedicated audio worker ... that takes anyone's audio work from them")
+
+## D-080 — 2026-10-16 — Trades are silent; requests lapse after 30 s
+**Decision:** Completed trades post nothing to bystanders' chat (the two traders still see their own confirmation). An unanswered trade request lapses after 30 seconds.
+**Who:** Justin ("Nothing"; the PM had recommended names only. "30 seconds", which the PM recommended)
+
+## D-081 — 2026-10-16 — Pre-alpha MVP and milestones
+**Decision:** MVP: a fresh player wakes in a beautiful forest, reaches fire, food, shelter and a fired pot alone in about 1 to 2 hours, and sees a long road ahead; everything they make looks real on the ground, in their hands and in the inventory. Progression runs on three visible ladders: materials/tools tiers, skills (fast first ~15%, D-075), and home (lean-to to hut to mud-brick house). Survival is light: needs nudge players along the ladders and never punish; death is mild; cold is a reason to build; no death spirals. Fun first, with some realism. Milestones, M1 and M2 worked in parallel:
+- **M1 Looks and feels real:** proper models for every item used on the ground, as the icon and held in hand; player figure and animation; cosy forest, light and sound. (Modeling, Animation, Environment, Atmosphere, Audio, UX)
+- **M2 The first evening:** a new playtester reaches a fired pot unaided in 1 to 2 h, sees skill gains in session one, always has a next goal. (Crafting, Survival, Skills, Ceramics, Bug fixes, Wiki)
+- **M3 A place of your own:** mud-brick house, storage jar, kiln, mat, clothing and equipment panel, fences, trading.
+- **M4 The long road:** specialties, tool quality, ~20 h mastery, cooking, wool and leather chains.
+- **M5 Pre-alpha playtest:** 8 to 16 outside players, no wipes, stable servers, shareable wiki.
+**Who:** Justin ("Adopt, M1 and M2 together"; aesthetics, a world to live in and get lost in, images for all items, survival not super difficult)
+
+## D-082 — 2026-10-16 — Modeling order: player figure, then every item
+**Decision:** Modeling does the player figure first, then every item (early-game items first) as one model used on the ground, for the inventory icon and held in hand. Animation adds holding tools and items in hand.
+**Who:** Justin ("Player figure first"; the PM had recommended items first)
+
+## D-083 — 2026-10-16 — Ship the water and sky
+**Decision:** Atmosphere's water and sky (#66: shimmer, lapping, rain rings, frogs, wind sway, clouds and cloud shadows, dawn mist) ships as rendered.
+**Who:** Justin ("Ship it", which the PM recommended)
+
+## D-084 — 2026-10-16 — Groves and glades now, reshaped land after
+**Decision:** Environment builds groves and glades first (visual only, no wipe): clustered trees with open glades, undergrowth at grove edges, logs, mossy rocks, flowers, reeds and stones at the pond. After that it reshapes the land: more ponds, a stream, gentler hills. The reshape needs a world wipe; Justin chose it, and the PM confirms the timing with him before any wipe runs.
+**Who:** Justin ("1 and 3")
+
+## D-085 — 2026-10-16 — Forest light first, the other skies later
+**Decision:** Atmosphere does light through the forest next (sun shafts, dappled light at morning and evening), then weather you can see coming (rain curtains, darkening sky, rainbow), then the cosy night (firelight on trunks, starrier sky, softer moonlight).
+**Who:** Justin ("One, but I want all of these eventually")
+
+## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
+**Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
+**Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours

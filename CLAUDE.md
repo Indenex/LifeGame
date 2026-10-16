@@ -17,6 +17,8 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
 - **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
 - **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration.
+- **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
+- **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
 - **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059).
 
 ## Ideas become choices (D-059)
@@ -29,6 +31,12 @@ Whenever the PM or any worker has an idea (a feature, a look, a number, a differ
 - **Sonnet** for small, basic tasks: searching, reading logs, summarizing, ticket and status bookkeeping, mechanical one-file edits, running checks.
 - A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
 - New sessions started for a lane (e.g. `create_session`) use Opus.
+
+## Design principles
+
+- **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
+- **Fun first, some realism (D-081).** Survival is light: needs nudge players along, never punish; no death spirals. Aesthetics and a world to get lost in come first; everything a player makes should look real on the ground, in hand and in the inventory.
+- **Lanes never edit `STATUS.md` on their branches.** Send STATUS changes to the PM.
 
 ## The no-handoff rule
 
