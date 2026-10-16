@@ -1,9 +1,9 @@
 # skills-14: Skills reference process ids, not name prefixes (CONTENT.md Skill row)
 Lane: Journal and skills
 Owner: Journal and skills lane (Sonnet)
-Status: in_review
+Status: done
 Branch: claude/journal-skills-14
-PR: (not yet)
+PR: #301 (merged)
 
 ## Goal
 Behaviour-preserving cleanup (PM approved option 1, nothing visible to players): a skill names what trains it (exact process ids first, else a recipe family), `SpecOverrides` and the `animal.`/`stalk`/`shoot` prefix workarounds are gone, and the built-in actions (dig, forage, hunt, shoot, build stages...) live in one table with their journal names and order instead of ExtraNames + AllProcessIds + BuildStages.
@@ -16,4 +16,4 @@ Behaviour-preserving cleanup (PM approved option 1, nothing visible to players):
 - Last conversion step (ProcessDef carries its skill) touches Crafting's Processes.cs; left for later.
 
 ## Next step
-Wait for CI on the PR, send the green sha to the PM.
+Done (#301 merged 2026-10-16). Optional later: ProcessDef carries its skill (touches Crafting's Processes.cs).
