@@ -17,6 +17,8 @@ public partial class SoundScape : Node
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
     public float Cover { set => mix.Cover = value; }
+    public float TimeOfDay { set => mix.TimeOfDay = value; }
+    public float Foliage { set => mix.Foliage = value; }
     public float Fire { set => mix.Fire = value; }
     public float FirePan { set => mix.FirePan = value; }
     // Music settings, remembered between sessions. The volume runs 0 to 1 and eases
