@@ -1,9 +1,9 @@
 # claims-5: How long a claim stands, and tending by working the land
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
-PR: (not opened yet)
+PR: https://github.com/Indenex/LifeGame/pull/65
 
 ## Goal
 Players can see how long an untended claim has left. The claim panel reads "Tended 2 days ago · stands 5 more days", and walking up to any marker shows the same calm line floating softly above it, with the owner's name on someone else's marker. Owners and members tend their claim just by working inside it (digging, building, picking up, firing pots), not only with G at the marker, so a lived-in claim never falls.
