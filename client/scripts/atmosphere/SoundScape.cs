@@ -8,7 +8,9 @@ public partial class SoundScape : Node
     readonly SoundMix mix = new((int)AudioServer.GetMixRate(), (int)(Time.GetTicksUsec() % 100000));
     readonly AudioStreamPlayer player = new();
     AudioStreamGeneratorPlayback? playback;
-    float[] left = new float[1024], right = new float[1024];
+    const int Chunk = 256;
+    readonly float[] left = new float[Chunk], right = new float[Chunk];
+    readonly Vector2[] frames = new Vector2[Chunk];
 
     public float Daylight { set => mix.Daylight = value; }
     public float Rain { set => mix.Rain = value; }
@@ -56,15 +58,16 @@ public partial class SoundScape : Node
     public override void _Process(double delta)
     {
         if (playback == null) return;
+        // Push whole chunks through one reused array, so the mixer makes no garbage.
+        // A remainder shorter than a chunk (under 6 ms) waits for the next frame;
+        // the 0.25 s buffer stays nearly full either way.
         int available = playback.GetFramesAvailable();
-        while (available > 0)
+        while (available >= Chunk)
         {
-            int n = Mathf.Min(available, 1024);
-            mix.Render(left, right, n);
-            var frames = new Vector2[n];
-            for (int i = 0; i < n; i++) frames[i] = new Vector2(left[i], right[i]);
+            mix.Render(left, right, Chunk);
+            for (int i = 0; i < Chunk; i++) frames[i] = new Vector2(left[i], right[i]);
             playback.PushBuffer(frames);
-            available -= n;
+            available -= Chunk;
         }
     }
 }
