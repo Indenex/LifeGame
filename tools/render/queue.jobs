@@ -17,6 +17,8 @@ bugfix-18b tools/render/scene.sh bugfix-18b e80c6cf tools/render/scenes/bugfix-1
 ceramics-6-jar4 tools/render/scene.sh ceramics-6-jar e9544db tools/render/scenes/ceramics-6-jar.txt
 bugfix-18d tools/render/scene.sh bugfix-18 6f697c9 tools/render/scenes/bugfix-18-abc.txt
 bugfix-19 tools/render/scene.sh bugfix-19 1877b88 tools/render/scenes/bugfix-19-pot.txt
+ceramics-7 tools/render/scenes/ceramics-7.sh 1da6609 0.45
+ceramics-7-dusk tools/render/scenes/ceramics-7.sh 1da6609 0.74
 claims-7 tools/render/scene.sh claims-7 f85c3b9 tools/render/scenes/claims-7-ask.txt
 skills-10 tools/render/scene.sh skills-10 origin/claude/journal-skills-10 tools/render/scenes/skills-10-journal.txt
 claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
