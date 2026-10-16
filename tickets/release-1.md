@@ -3,7 +3,7 @@ Lane: Release & Launcher (D-131)
 Owner: Release & Launcher thread (session_015Je3JR5vZrzA7TwQYBSPgM)
 Status: in_progress
 Branch: claude/release-1
-PR: (not yet)
+PR: #161
 
 ## Goal
 Justin opens one launcher on Linux or Windows, presses one button, and both the game and his world's server are on the newest green `main` build, with no setup work and no wipe. Concretely:
