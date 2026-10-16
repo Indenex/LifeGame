@@ -39,6 +39,8 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 
 - 2026-10-16: more hooks. UX: `jump` action on Space in PR #264 (ui-17, claude/ux-ui-keys-xlrh2s, 8959e3f); read `Input.IsActionJustPressed("jump")`, never Key.Space (rebindable). When the jump lands, change its row in client/scripts/ui/Controls.cs from `null` to `"Jump"` (F1 help list) and optionally `Hints.Request("jump")`. Merge after #264. Animation: remote avatars are the same Avatar class (Remote = true), so `SetJump` works on them; but a remote node glides to its server Target each frame, so for remote jumps do NOT set Position.Y: call `avatar.SetAirHeight(metres)` (added in PR #262) and set it to 0 on landing. Own avatar: move Y directly.
 
+- 2026-10-16: Audio (PR #242): own jump `Sfx.Play(Cue.Jump)` and `Sfx.Land(strength, ground)`; other players' jumps `Sfx.PlayAt(Cue.Jump, worldPosition)` at takeoff and `Sfx.LandAt(0.3f, atmosphere.GroundAt(landingPos), landingPos)` at the end of the arc. They are quiet, fade out by about 30 m and pan, so no distance skip on my side.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
 - (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
