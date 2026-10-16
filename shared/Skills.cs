@@ -12,16 +12,17 @@ namespace LifeGame.Shared
     {
         public readonly string Id, Name, Blurb;
         public readonly bool Basic;
-        // Process ids starting with any of these ("knap" covers "knap.flake") train this skill.
-        public readonly string[] Prefixes;
+        // What trains this skill: an exact process id ("animal.shear") or a recipe family
+        // ("knap" covers every "knap.*" recipe). An exact id beats a family.
+        public readonly string[] Trains;
 
-        public Specialization(string id, string name, bool basic, string blurb, params string[] prefixes)
+        public Specialization(string id, string name, bool basic, string blurb, params string[] trains)
         {
             Id = id;
             Name = name;
             Basic = basic;
             Blurb = blurb;
-            Prefixes = prefixes;
+            Trains = trains;
         }
     }
 
@@ -59,10 +60,6 @@ namespace LifeGame.Shared
         public const string DryHide = "hide.dry";
         // Running, reported by Survival's stamina every 20 s of actual running (D-123).
         public const string Run = "move.run";
-        // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
-        // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
-        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
-
         public static readonly Specialization[] Specializations =
         {
             new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
@@ -71,82 +68,80 @@ namespace LifeGame.Shared
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
-            // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
-            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
+            // Animal work is a survival basic (D-049). Husbandry names its processes, so a new
+            // animal.* process trains nothing until a skill claims it (CONTENT.md, Skill row).
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher),
             // Sneaking up on wary animals and striking before they bolt (skills-12).
-            new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", "stalk"),
+            new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", Kill, Sneak),
             // The bow (skills-12): a capped specialty, so it competes for the 300 total.
-            new("archery", "Archery", false, "Shooting a bow true and quickly.", "shoot"),
-            // Specialties for the crafts that grew out of animals (D-065, D-071, skills-11).
-            new("leatherwork", "Leatherwork", false, "Scraping and drying hides into leather, and working it.", "hide"),
-            new("weaver", "Weaver", false, "Spinning wool into yarn, weaving cloth and sewing it to wear.", "sew"),
+            new("archery", "Archery", false, "Shooting a bow true and quickly.", Shoot),
+            // Specialties for the crafts that grew out of animals (D-065, D-071, skills-11). Wool
+            // work shares the "cord" and "weave" families with Toolmaking; exact ids win.
+            new("leatherwork", "Leatherwork", false, "Scraping and drying hides into leather, and working it.", "hide", "sew.leather_wraps"),
+            new("weaver", "Weaver", false, "Spinning wool into yarn, weaving cloth and sewing it to wear.", "sew", "cord.spin_wool", "weave.wool_cloth"),
         };
 
-        // Processes that train a different skill from their prefix: wool work shares
-        // "cord" and "weave" with Toolmaking, leather sewing belongs to Leatherwork, and
-        // hunting and sneaking belong to Stalking, not Husbandry.
-        static readonly Dictionary<string, string> SpecOverrides = new()
+        // Processes that are reported by the game rather than crafted from Processes.List: one table
+        // for their journal name and their place in the journal's order (CONTENT.md, Process row).
+        static readonly (string Id, string Name)[] ActionsBeforeRecipes =
         {
-            ["cord.spin_wool"] = "weaver",
-            ["weave.wool_cloth"] = "weaver",
-            ["sew.leather_wraps"] = "leatherwork",
-            [Kill] = "stalking",
-            [Sneak] = "stalking",
-            [Shoot] = "archery",
+            (Forage, "Foraging"),
+            (Berries, "Picking berries"),
+            (Dig, "Digging"),
         };
 
-        // Names for processes that are not in Processes.List.
-        static readonly Dictionary<string, string> ExtraNames = new()
+        // Building stages are reported by the Building lane (Structures.FrameProcess and friends);
+        // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
+        static readonly (string Id, string Name)[] ActionsAfterRecipes =
         {
-            [Dig] = "Digging",
-            [Forage] = "Foraging",
-            [ClayRules.PitFireProcess] = "Pit firing",
-            [ClayRules.FillProcess] = "Filling a pot",
-            [ClayRules.KilnProcess] = "Building a kiln",
-            [ClayRules.KilnFireProcess] = "Kiln firing",
-            ["build.frame"] = "Raising a frame",
-            ["build.wattle"] = "Weaving wattle walls",
-            ["build.daub"] = "Daubing walls",
-            ["build.roof"] = "Thatching a roof",
-            ["build.weave"] = "Weaving a storage basket",
-            ["build.door"] = "Hanging a door",
-            [Berries] = "Picking berries",
-            [Shear] = "Shearing a sheep",
-            [Kill] = "Hunting",
-            [Sneak] = "Sneaking up on an animal",
-            [Shoot] = "Shooting a bow",
-            [Butcher] = "Butchering a carcass",
-            [DryHide] = "Drying leather",
-            [Run] = "Running",
-            // D-127 first-evening steps: Claims reports the marker (#174); the bench comes with ceramics-8.
-            ["claim.mark"] = "Planting a claim",
+            (ClayRules.FillProcess, "Filling a pot"),
+            (ClayRules.PitFireProcess, "Pit firing"),
+            (ClayRules.KilnProcess, "Building a kiln"),
+            (ClayRules.KilnFireProcess, "Kiln firing"),
+            ("build.frame", "Raising a frame"),
+            ("build.wattle", "Weaving wattle walls"),
+            ("build.daub", "Daubing walls"),
+            ("build.roof", "Thatching a roof"),
+            ("build.weave", "Weaving a storage basket"),
+            ("build.door", "Hanging a door"),
+            (Shear, "Shearing a sheep"),
+            (Kill, "Hunting"),
+            (Sneak, "Sneaking up on an animal"),
+            (Shoot, "Shooting a bow"),
+            (Butcher, "Butchering a carcass"),
+            (DryHide, "Drying leather"),
+            (Run, "Running"),
+            // D-127 first-evening step: Claims reports the marker (#174).
+            ("claim.mark", "Planting a claim"),
+        };
+
+        // Names for the build step of each crafting station (D-098). The ids come from
+        // StationInfo.BuildProcess for each station that exists.
+        static readonly Dictionary<string, string> StationBuildNames = new()
+        {
             ["build.bench"] = "Building a potter's bench",
             ["build.table"] = "Building a crafting table",
             ["build.spindle"] = "Building a spindle station",
             ["build.rack"] = "Building a drying rack",
         };
 
+        static readonly Dictionary<string, string> ActionNames = BuildActionNames();
+
+        static Dictionary<string, string> BuildActionNames()
+        {
+            var names = new Dictionary<string, string>(StationBuildNames);
+            foreach (var (id, name) in ActionsBeforeRecipes) names[id] = name;
+            foreach (var (id, name) in ActionsAfterRecipes) names[id] = name;
+            return names;
+        }
+
         // Everything the journal counts toward "still to discover".
         public static IEnumerable<string> AllProcessIds()
         {
-            yield return Forage;
-            yield return Berries;
-            yield return Dig;
+            foreach (var (id, _) in ActionsBeforeRecipes) yield return id;
             foreach (var def in Processes.List) yield return def.Id;
-            yield return ClayRules.FillProcess;
-            yield return ClayRules.PitFireProcess;
-            yield return ClayRules.KilnProcess;
-            yield return ClayRules.KilnFireProcess;
-            foreach (var id in BuildStages) yield return id;
-            yield return Shear;
-            yield return Kill;
-            yield return Sneak;
-            yield return Shoot;
-            yield return Butcher;
-            yield return DryHide;
-            yield return Run;
-            yield return "claim.mark";
+            foreach (var (id, _) in ActionsAfterRecipes) yield return id;
             // Building each kind of crafting station (D-098), as Structures reports it.
             var stations = new HashSet<string>();
             foreach (var shape in Structures.Shapes)
@@ -164,22 +159,25 @@ namespace LifeGame.Shared
             return null;
         }
 
-        // The skill a process trains, by the prefix before its first dot. Unknown
-        // processes still go in the journal but train nothing.
+        // The skill a process trains: the one that names its exact id, else the one that names
+        // its family (the part before the first dot). Unknown processes still go in the journal
+        // but train nothing.
         public static Specialization? SpecFor(string processId)
         {
-            if (SpecOverrides.TryGetValue(processId, out var specId)) return Spec(specId);
-            int dot = processId.IndexOf('.');
-            string prefix = dot < 0 ? processId : processId[..dot];
+            // An exact process id beats a recipe family (wool spinning shares "cord" with Toolmaking).
             foreach (var s in Specializations)
-                if (Array.IndexOf(s.Prefixes, prefix) >= 0) return s;
+                if (Array.IndexOf(s.Trains, processId) >= 0) return s;
+            int dot = processId.IndexOf('.');
+            string family = dot < 0 ? processId : processId[..dot];
+            foreach (var s in Specializations)
+                if (Array.IndexOf(s.Trains, family) >= 0) return s;
             return null;
         }
 
         public static string ProcessName(string processId)
         {
             if (Processes.Find(processId) is { } def) return def.Name;
-            if (ExtraNames.TryGetValue(processId, out var name)) return name;
+            if (ActionNames.TryGetValue(processId, out var name)) return name;
             string last = processId[(processId.LastIndexOf('.') + 1)..].Replace('_', ' ');
             return last.Length == 0 ? processId : char.ToUpperInvariant(last[0]) + last[1..];
         }
