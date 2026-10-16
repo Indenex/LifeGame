@@ -2,7 +2,7 @@
 # game time. The camera is the puppet, and keys drive the camera client's own player.
 client-as-puppet
 client-movie 24
-client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=3,1.2,90,0.9
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=3,0.55,90,0.3
 frames 360
 mark idle-start
 frames +192
