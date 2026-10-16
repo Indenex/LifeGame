@@ -9,8 +9,7 @@ namespace LifeGame;
 // replaces (trunk: base at y = 0, 2.8 m tall; rock: about 1 m across).
 public static class PropMeshes
 {
-    static Mesh? trunk, rock, fallenLog, stump, birch, heather, gorse, cattails, outcrop;
-    static readonly Mesh?[] riverStones = new Mesh?[3];
+    static Mesh? trunk, rock, fallenLog, stump, cattails;
 
     static MeshKit Kit() => new(true) { Skinned = false };
 
@@ -107,89 +106,117 @@ public static class PropMeshes
         return Done(k);
     }
 
-    // --- env-4 props (Environment's "corners of the forest", D-152).
+    // --- env-4 and env-5 props (Environment, D-152). Landmark props come in seeded
+    // variants that differ in shape, not just size (Justin: things placed many
+    // times should look quite different every time). Pick a variant per instance
+    // from its seed; variants wrap around, so any int works.
+
+    public const int BirchVariants = 3, HeatherVariants = 3, GorseVariants = 3, OutcropVariants = 6, RiverStoneVariants = 6;
+    static readonly System.Collections.Generic.Dictionary<(string, int), Mesh> Variants = new();
+
+    static Mesh Variant(string kind, int variant, int count, System.Func<int, ArrayMesh> build)
+    {
+        int v = ((variant % count) + count) % count;
+        if (!Variants.TryGetValue((kind, v), out var mesh)) Variants[(kind, v)] = mesh = build(v);
+        return mesh;
+    }
+
+    // A seeded number 0 to 1 for variant v.
+    static float V(int v, int salt) => MeshKit.Hash(v * 31 + salt, 977);
 
     // A birch or alder by the water: slim and pale, with dark marks across the
-    // bark. Same base and top as Trunk, so the leafy canopy fits it too.
-    public static Mesh Birch => birch ??= BuildBirch();
+    // bark. Same base and top (0, 2.8, 0) as Trunk, so the leafy canopy fits; the
+    // variants bend differently and carry their marks in different places.
+    public static Mesh Birch(int variant) => Variant("birch", variant, BirchVariants, BuildBirch);
 
-    static ArrayMesh BuildBirch()
+    static ArrayMesh BuildBirch(int v)
     {
         var k = Kit();
+        float bx = (V(v, 1) - 0.5f) * 0.08f, bz = (V(v, 2) - 0.5f) * 0.08f, slim = 0.9f + V(v, 3) * 0.2f;
         k.Paint(Colors.White).Loft(new Vector3(0, -0.1f, 0), new Vector3(0, 2.8f, 0), new MeshKit.Ring[]
         {
-            new(0f, 0.17f, 0.16f), new(0.05f, 0.13f, 0.125f), new(0.5f, 0.1f, 0.095f, 0.015f, -0.02f), new(1f, 0.065f, 0.065f),
+            new(0f, 0.17f * slim, 0.16f * slim), new(0.05f, 0.13f * slim, 0.125f * slim), new(0.5f, 0.1f * slim, 0.095f * slim, bz, bx), new(1f, 0.065f, 0.065f),
         }, 7, 0.2f);
-        // Dark lenticels and cracks: thin dark bands part way round the trunk.
-        for (int i = 0; i < 26; i++)
+        // Dark marks: short dashes curving round the bark, following the bend.
+        int marks = 20 + (int)(V(v, 4) * 12f);
+        for (int i = 0; i < marks; i++)
         {
-            float y = 0.3f + i * 0.095f + H(i, 20) * 0.05f;
-            // Follow the loft above: its center bends out to (-0.02, 0.015) at mid
-            // height and back, and its radius narrows from 0.13 to 0.065.
+            float y = 0.3f + (i + H(i + v * 50, 20) * 0.6f) * 2.35f / marks;
             float t = (y + 0.1f) / 2.9f;
             float bend = t < 0.5f ? Mathf.Max(0f, (t - 0.05f) / 0.45f) : (1f - t) / 0.5f;
-            float r = t < 0.5f ? Mathf.Lerp(0.13f, 0.1f, Mathf.Max(0f, (t - 0.05f) / 0.45f)) : Mathf.Lerp(0.1f, 0.065f, (t - 0.5f) / 0.5f);
-            float a = H(i, 21) * Mathf.Tau;
-            // A short dark dash curving round the bark.
-            var axisAt = new Vector3(-0.02f * bend, y, 0.015f * bend);
-            float arc = (0.12f + H(i, 22) * 0.18f) * (H(i, 39) > 0.8f ? 2f : 1f);
-            k.Paint(Colors.White, 0.18f).Tube(MeshKit.Circle(axisAt, Vector3.Up, r * 0.93f, 6, arc, 0f, a), 0.012f + H(i, 41) * 0.006f, 4, 0.006f);
+            float r = (t < 0.5f ? Mathf.Lerp(0.13f, 0.1f, Mathf.Max(0f, (t - 0.05f) / 0.45f)) * slim : Mathf.Lerp(0.1f * slim, 0.065f, (t - 0.5f) / 0.5f));
+            float a = H(i + v * 50, 21) * Mathf.Tau;
+            var axisAt = new Vector3(bx * bend, y, bz * bend);
+            float arc = (0.12f + H(i + v * 50, 22) * 0.18f) * (H(i + v * 50, 39) > 0.8f ? 2f : 1f);
+            k.Paint(Colors.White, 0.18f).Tube(MeshKit.Circle(axisAt, Vector3.Up, r * 0.93f, 6, arc, 0f, a), 0.012f + H(i + v * 50, 41) * 0.006f, 4, 0.006f);
         }
-        // Darker, rougher bark at the foot.
-        k.Paint(Colors.White, 0.45f).Loft(new Vector3(0, -0.1f, 0), new Vector3(0, 0.35f, 0), new MeshKit.Ring[]
+        // Darker, rougher bark at the foot, higher on some trees than others.
+        float foot = 0.25f + V(v, 5) * 0.25f;
+        k.Paint(Colors.White, 0.45f).Loft(new Vector3(0, -0.1f, 0), new Vector3(0, foot, 0), new MeshKit.Ring[]
         {
-            new(0f, 0.18f, 0.17f), new(1f, 0.125f, 0.12f),
+            new(0f, 0.18f * slim, 0.17f * slim), new(1f, 0.125f * slim, 0.12f * slim),
         }, 7, 0.1f);
         return Done(k);
     }
 
     // Heather on the hilltop heath: a low mound of fine clumps, about 0.6 m across,
-    // purple-tipped. Its colors are in the vertices, so tint it near white.
-    public static Mesh Heather => heather ??= BuildHeather();
+    // purple-tipped. Variants differ in clump count, spread, height and how much is
+    // in flower. Colors in the vertices; tint near white.
+    public static Mesh Heather(int variant) => Variant("heather", variant, HeatherVariants, BuildHeather);
 
-    static ArrayMesh BuildHeather()
+    static ArrayMesh BuildHeather(int v)
     {
         var k = Kit();
         var green = new Color(0.36f, 0.42f, 0.26f);
         var purple = new Color(0.62f, 0.42f, 0.62f);
-        for (int i = 0; i < 16; i++)
+        int clumps = 12 + (int)(V(v, 1) * 9f);
+        float spread = 0.2f + V(v, 2) * 0.12f, tall = 0.8f + V(v, 3) * 0.5f, flowering = 0.55f + V(v, 4) * 0.45f;
+        // Some mounds are long rather than round.
+        float stretch = 0.8f + V(v, 5) * 0.5f;
+        for (int i = 0; i < clumps; i++)
         {
-            float a = i * 2.4f, r = Mathf.Sqrt(i / 16f) * 0.24f;
-            var at = new Vector3(Mathf.Cos(a) * r, 0.1f + (0.24f - r) * 0.6f, Mathf.Sin(a) * r);
-            float size = 0.09f + H(i, 23) * 0.05f;
-            k.Paint(green, 0.85f + H(i, 24) * 0.25f).Ellipsoid(at, new Vector3(size, size * 0.8f, size), 6, 3);
-            k.Paint(purple, 0.85f + H(i, 25) * 0.25f).Ellipsoid(at + Vector3.Up * size * 0.55f, new Vector3(size * 0.7f, size * 0.35f, size * 0.7f), 5, 2);
+            float a = i * 2.4f + V(v, 6) * 3f, r = Mathf.Sqrt(i / (float)clumps) * spread;
+            var at = new Vector3(Mathf.Cos(a) * r * stretch, (0.1f + (spread - r) * 0.6f) * tall, Mathf.Sin(a) * r / stretch);
+            float size = 0.08f + H(i + v * 40, 23) * 0.06f;
+            k.Paint(green, 0.85f + H(i + v * 40, 24) * 0.25f).Ellipsoid(at, new Vector3(size, size * 0.8f, size), 6, 3);
+            if (H(i + v * 40, 26) < flowering)
+                k.Paint(purple, 0.85f + H(i + v * 40, 25) * 0.25f).Ellipsoid(at + Vector3.Up * size * 0.55f, new Vector3(size * 0.7f, size * 0.35f, size * 0.7f), 5, 2);
         }
         return Done(k);
     }
 
     // Gorse: a spiky bush about 1 m high, dark green, flecked with yellow flowers.
-    // Colors in the vertices; tint it near white.
-    public static Mesh Gorse => gorse ??= BuildGorse();
+    // Variants differ in shape (round, tall, sprawling) and how much is in flower.
+    // Colors in the vertices; tint near white.
+    public static Mesh Gorse(int variant) => Variant("gorse", variant, GorseVariants, BuildGorse);
 
-    static ArrayMesh BuildGorse()
+    static ArrayMesh BuildGorse(int v)
     {
         var k = Kit();
         var green = new Color(0.22f, 0.32f, 0.18f);
         var yellow = new Color(0.95f, 0.80f, 0.20f);
-        for (int i = 0; i < 9; i++)
+        // Round, tall or sprawling.
+        var shape = v switch { 0 => new Vector3(1f, 1f, 1f), 1 => new Vector3(0.8f, 1.3f, 0.8f), _ => new Vector3(1.35f, 0.75f, 1.1f) };
+        int lumps = 7 + (int)(V(v, 1) * 4f);
+        for (int i = 0; i < lumps; i++)
         {
-            float a = i * 2.4f, r = i == 0 ? 0f : 0.25f + H(i, 26) * 0.12f;
-            var at = new Vector3(Mathf.Cos(a) * r, 0.35f + H(i, 27) * 0.35f - r * 0.4f, Mathf.Sin(a) * r);
-            k.Paint(green, 0.8f + H(i, 28) * 0.3f).Ellipsoid(at, Vector3.One * (0.25f + H(i, 29) * 0.08f), 6, 4);
+            float a = i * 2.4f + V(v, 2) * 3f, r = i == 0 ? 0f : 0.25f + H(i + v * 30, 26) * 0.12f;
+            var at = new Vector3(Mathf.Cos(a) * r * shape.X, (0.35f + H(i + v * 30, 27) * 0.35f - r * 0.4f) * shape.Y, Mathf.Sin(a) * r * shape.Z);
+            k.Paint(green, 0.8f + H(i + v * 30, 28) * 0.3f).Ellipsoid(at, Vector3.One * (0.25f + H(i + v * 30, 29) * 0.08f), 6, 4);
         }
-        // Spines poking out all over, and yellow flowers among them.
+        float flowers = 0.2f + V(v, 3) * 0.25f;
+        var body = new Vector3(0.42f * shape.X, 0.38f * shape.Y, 0.42f * shape.Z);
         for (int i = 0; i < 70; i++)
         {
             float y = 1f - (i + 0.5f) / 70f * 1.6f;
-            float rr = Mathf.Sqrt(Mathf.Max(0f, 1f - y * y)), a = i * 2.39996f;
+            float rr = Mathf.Sqrt(Mathf.Max(0f, 1f - y * y)), a = i * 2.39996f + v;
             var dir = new Vector3(Mathf.Cos(a) * rr, y, Mathf.Sin(a) * rr).Normalized();
-            var root = new Vector3(0, 0.5f, 0) + dir * new Vector3(0.42f, 0.38f, 0.42f);
+            var root = new Vector3(0, 0.5f * shape.Y, 0) + dir * body;
             if (root.Y < 0.08f) continue;
-            if (i % 3 == 0)
-                k.Paint(yellow, 0.9f + H(i, 30) * 0.15f).Ellipsoid(root + dir * 0.03f, Vector3.One * 0.035f, 5, 3);
+            if (H(i + v * 30, 32) < flowers)
+                k.Paint(yellow, 0.9f + H(i + v * 30, 30) * 0.15f).Ellipsoid(root + dir * 0.03f, Vector3.One * 0.035f, 5, 3);
             else
-                k.Paint(green, 0.7f).Tube(new[] { root, root + dir * (0.1f + H(i, 31) * 0.06f) }, 0.012f, 3, 0.001f, false);
+                k.Paint(green, 0.7f).Tube(new[] { root, root + dir * (0.1f + H(i + v * 30, 31) * 0.06f) }, 0.012f, 3, 0.001f, false);
         }
         return Done(k);
     }
@@ -224,44 +251,87 @@ public static class PropMeshes
         return Done(k);
     }
 
-    // A hilltop outcrop, about 2.5 m across and 2 m high: weathered slabs stacked
-    // and tilted like a broken layer of rock, moss in the cracks. A landmark.
-    public static Mesh Outcrop => outcrop ??= BuildOutcrop();
+    // A hilltop outcrop, a landmark: layers of the same rock dipping one way, run
+    // together into one weathered mass, with fallen blocks at its foot and moss on
+    // its ledges. Variants differ in layer count (3 to 5), dip and its direction,
+    // size, how far each layer steps back, the fallen blocks and the moss. Roughly
+    // 2 to 3.2 m across and 1.3 to 2.3 m high.
+    public static Mesh Outcrop(int variant) => Variant("outcrop", variant, OutcropVariants, BuildOutcrop);
 
-    static ArrayMesh BuildOutcrop()
+    static ArrayMesh BuildOutcrop(int v)
     {
         var k = Kit();
-        // Layers of the same rock, all dipping the same way, run together into one
-        // mass, each a little smaller and set back from the one below.
-        const float dip = 0.2f;
-        var slabs = new (Vector3 At, Vector3 Size, float Turn)[]
+        int layers = 3 + v % 3;
+        float dip = (0.08f + V(v, 1) * 0.3f) * (V(v, 2) < 0.5f ? 1f : -1f);
+        float width = 1.1f + V(v, 3) * 0.5f, depth = 0.75f + V(v, 4) * 0.35f;
+        float step = 0.7f + V(v, 5) * 0.2f, layerH = 0.42f + V(v, 6) * 0.15f;
+        float turn = V(v, 7) * Mathf.Tau, lean = (V(v, 8) - 0.5f) * 0.3f;
+        var tops = new System.Collections.Generic.List<(Vector3 At, Vector3 Size, Basis Basis)>();
+        float y = layerH * 0.6f, w = width, d = depth;
+        var offset = Vector3.Zero;
+        for (int i = 0; i < layers; i++)
         {
-            (new Vector3(0.05f, 0.3f, 0), new Vector3(1.35f, 0.5f, 0.95f), 0.2f),
-            (new Vector3(-0.12f, 0.75f, 0.02f), new Vector3(1.15f, 0.45f, 0.8f), 0.28f),
-            (new Vector3(0.0f, 1.15f, -0.08f), new Vector3(0.85f, 0.4f, 0.62f), 0.12f),
-            (new Vector3(-0.2f, 1.5f, -0.05f), new Vector3(0.5f, 0.32f, 0.42f), 0.4f),
-            (new Vector3(0.9f, 0.2f, 0.45f), new Vector3(0.55f, 0.35f, 0.45f), 0.9f),
-            (new Vector3(-0.95f, 0.18f, -0.4f), new Vector3(0.5f, 0.3f, 0.4f), 1.7f),
-        };
-        for (int i = 0; i < slabs.Length; i++)
-        {
-            var (at, size, turn) = slabs[i];
-            var basis = new Basis(Vector3.Up, turn) * new Basis(Vector3.Forward, dip + (H(i, 40) - 0.5f) * 0.1f);
-            k.Paint(Colors.White, 0.85f + H(i, 38) * 0.18f).Ellipsoid(at, size, 8, 3, basis, 0.7f);
+            var at = new Vector3(offset.X, y, offset.Z);
+            var size = new Vector3(w, layerH, d);
+            var basis = new Basis(Vector3.Up, turn + (H(i + v * 20, 42) - 0.5f) * 0.4f) * new Basis(Vector3.Forward, dip + (H(i + v * 20, 40) - 0.5f) * 0.1f);
+            k.Paint(Colors.White, 0.82f + H(i + v * 20, 38) * 0.2f).Ellipsoid(at, size, 8, 3, basis, 0.7f);
+            tops.Add((at, size, basis));
+            y += layerH * (0.75f + H(i + v * 20, 43) * 0.2f);
+            w *= step; d *= step * 1.05f;
+            offset += new Vector3(Mathf.Cos(turn) * lean, 0, Mathf.Sin(turn) * lean) * layerH;
         }
-        k.Paint(new Color(0.62f, 0.78f, 0.45f)).Ellipsoid(new Vector3(-0.2f, 1.62f, -0.05f), new Vector3(0.38f, 0.07f, 0.3f), 7, 2, new Basis(Vector3.Up, 0.4f) * new Basis(Vector3.Forward, dip));
-        k.Paint(new Color(0.62f, 0.78f, 0.45f), 0.9f).Ellipsoid(new Vector3(-0.35f, 1.05f, 0.25f), new Vector3(0.4f, 0.06f, 0.25f), 7, 2, new Basis(Vector3.Up, 0.28f) * new Basis(Vector3.Forward, dip));
+        // One or two layers split by a crack: a block set apart from the rest.
+        if (V(v, 9) > 0.35f)
+        {
+            var (at, size, basis) = tops[Mathf.Min(1, layers - 1)];
+            var side = basis.Column0.Normalized();
+            k.Paint(Colors.White, 0.9f).Ellipsoid(at + side * size.X * 0.9f - Vector3.Up * 0.05f, size * new Vector3(0.35f, 0.9f, 0.7f), 7, 3, basis, 0.7f);
+        }
+        // Fallen blocks around the foot.
+        int fallen = 1 + (int)(V(v, 10) * 3f);
+        for (int i = 0; i < fallen; i++)
+        {
+            float a = turn + 1.2f + i * 2.1f + H(i + v * 20, 44);
+            var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            float s = 0.25f + H(i + v * 20, 45) * 0.25f;
+            k.Paint(Colors.White, 0.85f + H(i + v * 20, 46) * 0.15f).Ellipsoid(dir * (width + s * 0.6f), new Vector3(s * 1.2f, s * 0.7f, s), 7, 3, new Basis(Vector3.Up, a + 0.7f) * new Basis(Vector3.Forward, (H(i + v * 20, 47) - 0.5f) * 0.6f), 0.6f);
+        }
+        // Moss on one to three ledges, never the same ones.
+        var moss = new Color(0.62f, 0.78f, 0.45f);
+        for (int i = 0; i < layers; i++)
+        {
+            if (H(i + v * 20, 48) > 0.55f && i != layers - 1) continue;
+            var (at, size, basis) = tops[i];
+            k.Paint(moss, 0.85f + H(i + v * 20, 49) * 0.2f).Ellipsoid(at + Vector3.Up * size.Y * 0.62f, new Vector3(size.X * 0.55f, 0.06f, size.Z * 0.5f), 7, 2, basis);
+        }
         return Done(k);
     }
 
-    // Flat riverbank stones, about 0.3 m across; three shapes, scale them 0.7 to 1.3.
-    public static Mesh RiverStone(int variant) => riverStones[variant % 3] ??= BuildRiverStone(variant % 3);
+    // Flat riverbank stones, about 0.3 m across: six shapes (round, long, wedge,
+    // split pair, notched, domed); scale them 0.7 to 1.3.
+    public static Mesh RiverStone(int variant) => Variant("riverstone", variant, RiverStoneVariants, BuildRiverStone);
 
     static ArrayMesh BuildRiverStone(int v)
     {
         var k = Kit();
-        var size = v switch { 0 => new Vector3(0.16f, 0.05f, 0.12f), 1 => new Vector3(0.13f, 0.06f, 0.13f), _ => new Vector3(0.18f, 0.045f, 0.09f) };
-        k.Paint(Colors.White).Ellipsoid(new Vector3(0, size.Y * 0.6f, 0), size, 7, 3, new Basis(Vector3.Up, v * 1.3f), 0.5f);
+        var turn = new Basis(Vector3.Up, v * 1.3f);
+        switch (v)
+        {
+            case 0: k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.03f, 0), new Vector3(0.15f, 0.05f, 0.14f), 7, 3, turn, 0.5f); break;
+            case 1: k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.026f, 0), new Vector3(0.2f, 0.045f, 0.08f), 7, 3, turn, 0.5f); break;
+            case 2:
+                k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.16f, 0.06f, 0.12f), 6, 3, turn * new Basis(Vector3.Forward, 0.25f), 0.4f);
+                break;
+            case 3:
+                k.Paint(Colors.White).Ellipsoid(new Vector3(-0.06f, 0.025f, 0), new Vector3(0.09f, 0.045f, 0.1f), 6, 3, turn, 0.5f);
+                k.Paint(Colors.White, 0.93f).Ellipsoid(new Vector3(0.08f, 0.022f, 0.02f), new Vector3(0.08f, 0.04f, 0.09f), 6, 3, turn * new Basis(Vector3.Up, 0.6f), 0.5f);
+                break;
+            case 4:
+                k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.028f, 0), new Vector3(0.17f, 0.05f, 0.12f), 8, 3, turn, 0.5f);
+                k.Paint(Colors.White, 0.9f).Ellipsoid(new Vector3(0.1f, 0.05f, 0.04f), new Vector3(0.07f, 0.035f, 0.06f), 6, 3, turn, 0.5f);
+                break;
+            default: k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.04f, 0), new Vector3(0.12f, 0.075f, 0.12f), 7, 4, turn, 0.4f); break;
+        }
         return Done(k);
     }
 }

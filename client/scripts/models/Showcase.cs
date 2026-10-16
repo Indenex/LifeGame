@@ -250,11 +250,29 @@ public partial class Showcase : Node3D
             multi.SetInstanceColor(0, tint);
             AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
         }
-        Place(PropMeshes.Birch, Look.BarkSurface, new Vector3(-2.6f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
-        Place(PropMeshes.Outcrop, Look.RockSurface, new Vector3(1.6f, 0, -1.8f), Look.Rock);
-        Place(PropMeshes.Heather, Look.Foliage, new Vector3(-1.0f, 0, 0.4f), Colors.White);
-        Place(PropMeshes.Heather, Look.Foliage, new Vector3(-0.5f, 0, 0.9f), Colors.White, 0.8f);
-        Place(PropMeshes.Gorse, Look.Foliage, new Vector3(0.2f, 0, -0.2f), Colors.White);
+        if (args.ContainsKey("variants"))
+        {
+            // Every seeded variant of the landmark props, in rows.
+            for (int v = 0; v < PropMeshes.OutcropVariants; v++)
+                Place(PropMeshes.Outcrop(v), Look.RockSurface, new Vector3(-7.5f + v * 3.0f, 0, -4.5f), Look.Rock);
+            for (int v = 0; v < PropMeshes.BirchVariants; v++)
+                Place(PropMeshes.Birch(v), Look.BarkSurface, new Vector3(-6.5f + v * 0.8f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
+            for (int v = 0; v < PropMeshes.HeatherVariants; v++)
+                Place(PropMeshes.Heather(v), Look.Foliage, new Vector3(-3.0f + v * 0.8f, 0, -0.8f), Colors.White);
+            for (int v = 0; v < PropMeshes.GorseVariants; v++)
+                Place(PropMeshes.Gorse(v), Look.Foliage, new Vector3(0.0f + v * 1.3f, 0, -1.0f), Colors.White);
+            for (int v = 0; v < PropMeshes.RiverStoneVariants; v++)
+                Place(PropMeshes.RiverStone(v), Look.RockSurface, new Vector3(4.2f + v * 0.45f, 0, -0.6f), Look.Rock.Lightened(0.1f));
+            var wide = new Camera3D { Fov = 45f, Current = true };
+            AddChild(wide);
+            wide.LookAtFromPosition(new Vector3(0, 5.0f, 7.5f), new Vector3(0, 0.6f, -2.2f), Vector3.Up);
+            return;
+        }
+        Place(PropMeshes.Birch(0), Look.BarkSurface, new Vector3(-2.6f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
+        Place(PropMeshes.Outcrop(0), Look.RockSurface, new Vector3(1.6f, 0, -1.8f), Look.Rock);
+        Place(PropMeshes.Heather(0), Look.Foliage, new Vector3(-1.0f, 0, 0.4f), Colors.White);
+        Place(PropMeshes.Heather(1), Look.Foliage, new Vector3(-0.5f, 0, 0.9f), Colors.White, 0.8f);
+        Place(PropMeshes.Gorse(0), Look.Foliage, new Vector3(0.2f, 0, -0.2f), Colors.White);
         Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.4f, 0, 0.8f), Look.GrassBlade);
         Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.9f, 0, 0.5f), Look.GrassBlade, 0.85f);
         for (int i = 0; i < 6; i++)
