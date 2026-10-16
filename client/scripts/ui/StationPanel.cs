@@ -7,11 +7,11 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// The panel at a crafting station (D-098, D-112): G at a finished station opens it.
+// The panel at a crafting station (D-098, D-112): Use (E) at a finished station opens it.
 // It lists what is made there and, for each ingredient, how much you have in your bag
 // and nearby (baskets and jars within 4 m of the station, and the claim's stash).
 // Make hands the craft to the C panel's own path (CraftingUi.Start), so minigames and
-// skills work the same; the server (Stations.cs) has the last word. Walking away, G or
+// skills work the same; the server (Stations.cs) has the last word. Walking away, Use or
 // Esc closes it. Main sets Conn, Crafting and Me.
 public partial class StationPanel : CanvasLayer
 {
@@ -40,7 +40,7 @@ public partial class StationPanel : CanvasLayer
         Use.Register(new UseHandler { Id = "ui.station", Priority = 30, Find = FindUse });
     }
 
-    // G at a finished station you stand at opens its panel.
+    // Use (E) at a finished station you stand at opens its panel.
     UseOffer? FindUse(Vector3 at)
     {
         if (IsOpen || Conn() is not { } c) return null;

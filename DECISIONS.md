@@ -612,7 +612,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("Hearths only", as recommended), applying D-148
 
 ## D-150 — 2026-10-16 — First-time tips
-**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with E (was G, changed by D-188). (3) Your claim keeps what you build; press B. (4) The crafting table: press E at it (was G, changed by D-188).
 **Who:** Justin ("All four", as recommended)
 
 ## D-151 — 2026-10-16 — Log cabin
@@ -727,3 +727,71 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-178 — 2026-10-16 — Bow numbers: Standard
 **Decision:** The bow is "Standard": range 40 m, a ±25° auto-aim cone, hit chance 95% falling to 30% with distance, ×0.55 against a running target. A crude bow does about 21 damage per hit; a red deer has 100 HP, so a kill takes 3 to 6 hits (extends D-171).
 **Who:** Justin ("Standard")
+
+## D-179 — 2026-10-16 — Sneak attacks crit with Stalking (amends D-171 and D-176)
+**Decision:** Hunting hits do normal scaled damage. A sneak attack can trigger a Stalking crit: a large bonus damage, with the crit chance and the bonus on the shared progression curve (D-175, D-177), and a visible and audible crit cue. This replaces the one-strike-kill threshold in D-171 and the Husbandry of at least 20 stand-in in D-176.
+**Who:** Justin ("It should be normal damage value scaling plus a large damage bonus trigger chance (with some visual feedback like a 'crit' sorta thing) when Stalk adds its bonus damage.")
+
+## D-180 — 2026-10-16 — Campfire light reaches further at night
+**Decision:** Campfire light reaches further at night: about 10 m by day and about 14 m at night.
+**Who:** Justin ("Further at night")
+
+## D-181 — 2026-10-16 — Valley mist
+**Decision:** atmosphere-17 adds valley mist: dawn and dusk mist settles in low ground, ponds and streams.
+**Who:** Justin ("Yes, valley mist")
+
+## D-182 — 2026-10-16 — Server is the authority: rule now, harden before players
+**Decision:** Justin will host the server himself; players never get a server. Every game rule, number, check and outcome is decided by a server reducer; the client only predicts and draws. New features must validate on the server (reach, cooldowns, ownership, line of sight, speed, collision via `shared/` code) and must not send clients values that should stay hidden. A hardening pass closes existing client-only gaps before outside players join.
+**Who:** Justin ("is that going to fuck up our design process... we would need many many things to be server sided for hacking purposes."), answered with "Rule now, harden before players"
+
+## D-183 — 2026-10-16 — Launcher: two builds
+**Decision:** Two launcher builds. Justin's host launcher installs, starts and updates the server. Players get a client-only launcher that updates the game and connects to his server.
+**Who:** Justin ("Two builds")
+
+## D-184 — 2026-10-16 — Stalking crit values: rarer, bigger (extends D-179)
+**Decision:** Stalking crit chance runs from 3% to 40% and the bonus damage from +50% to +200%, both on the shared front-loaded curve (D-175, D-177).
+**Who:** Justin ("Rarer, bigger")
+
+## D-185 — 2026-10-16 — Crit cue look: "!" only
+**Decision:** A Stalking crit shows an amber "!" with a starburst over the animal, bigger on a kill. No numbers, and plain hits stay quiet (extends D-179).
+**Who:** Justin ("Crit '!' only")
+
+## D-186 — 2026-10-16 — Hardening behind a dev flag
+**Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
+**Who:** PM (technical decision)
+
+## D-187 — 2026-10-16 — Crafted items: bag first, real-world items can be placed
+**Decision:** Finished crafts go to the bag. Real-world items (bricks and the like) also get an optional "Place it now" prompt, and can be placed from the bag with a Place key and a ghost preview. Small items such as tinder go straight to the bag. Owner: Crafting (crafting-20), with UX.
+**Who:** Justin ("when items like bricks and things are crafted, they should either go into your inventory and then allow them to be placed, or allow you to simply choose where to put them when done crafting (real world items only, things like tinder etc. just auto inventory)"), who chose "Both"
+
+## D-188 — 2026-10-16 — E interacts and picks up
+**Decision:** E is the key that interacts with things and picks up items, not G or space. Owner: UX (ui-16, keys). Note: D-150's first-time tips name G for feeding a fire and for the crafting table, and need the new key.
+**Who:** Justin ("I want E to be the item that interacts with things and picks up items, not G/space.")
+
+## D-189 — 2026-10-16 — Turn view by mouse drag only
+**Decision:** The view turns by mouse drag only. Q/E turning is removed.
+**Who:** Justin ("Mouse drag only")
+
+## D-190 — 2026-10-16 — Jumping
+**Decision:** The player can jump, and jumping clears fences too, but not claim fences unless you are a member of that claim. Owners: Bug fixes (bugfix-25, jump and clearance), with Animation and Audio for the poses and sounds.
+**Who:** Justin ("Also I want to be able to jump." Fences: "Fences too, but not claim fences unless you're a member of it.")
+
+## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
+**Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
+**Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
+
+## D-192 — 2026-10-16 — Jump details (extends D-190)
+**Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
+**Who:** Justin (as relayed by the PM)
+
+## D-193 — 2026-10-16 — Other players see your jump
+**Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
+**Who:** Justin ("Yes, pose and sound")
+
+## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
+**Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
+**Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
+
+## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
+**Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
+**Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")

@@ -28,7 +28,10 @@ namespace LifeGame.Shared
             // are deeper and are walked round.
             float meters = RiverDistance(x, z);
             float valley = 1f - SmoothStep(4f, 26f, meters);
-            float bed = 1f - SmoothStep(1.0f, 6.0f, meters);
+            // The channel narrows and widens along its length, so the banks never run
+            // straight and parallel for long.
+            float width = 0.85f + 0.5f * World.Noise(x + 3907, z - 1613, 30f, 76);
+            float bed = 1f - SmoothStep(1.0f * width, 6.0f * width, meters);
             float h = hills * (1f - 0.85f * valley) - 0.55f * 0.85f * valley;
             h = h * (1f - bed) + (World.WaterLevel - 0.22f) * bed;
 
@@ -51,14 +54,18 @@ namespace LifeGame.Shared
         // stream; further out it may read short, but never under 26.
         public static float StreamDistance(int x, int z) => RiverDistance(x, z);
 
+        // The line wanders on four scales: broad bends every few hundred meters,
+        // meanders every few tens and small kinks, so no stretch runs straight for long.
         static float River(int x, int z) =>
-            x + RiverOffset + (World.Noise(x, z, 120f, 71) - 0.5f) * 70f + (World.Noise(x, z, 40f, 74) - 0.5f) * 18f;
+            x + RiverOffset + (World.Noise(x, z, 120f, 71) - 0.5f) * 70f + (World.Noise(x, z, 40f, 74) - 0.5f) * 18f
+            + (World.Noise(x + 2741, z - 5167, 22f, 77) - 0.5f) * 18f + (World.Noise(x - 6211, z + 3343, 11f, 78) - 0.5f) * 3f;
 
-        // River never changes faster than this per meter (1 from x, plus the two warp
-        // octaves' steepest smoothed slopes, 70 * 1.5 / 120 and 18 * 1.5 / 40, on
-        // each axis), so a point that far off the line in River units is at least
-        // 26 m from the stream, where neither the valley nor the channel reaches.
-        const float MaxRiverSlope = 3.0f;
+        // River never changes faster than this per meter (1 from x, plus the warp
+        // octaves' steepest smoothed slopes, 70 * 1.5 / 120, 18 * 1.5 / 40,
+        // 18 * 1.5 / 22 and 3 * 1.5 / 11, on each axis), so a point that far off the
+        // line in River units is at least 26 m from the stream, where neither the
+        // valley nor the channel reaches.
+        const float MaxRiverSlope = 5.3f;
         const float BeyondValley = 26f;
 
         // Meters from the nearest stream line: how far River is from a multiple of

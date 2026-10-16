@@ -95,7 +95,9 @@ public partial class SoundScape : Node
 
     // One-off sounds go through a queue so the synth thread adds them between blocks.
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
-    public void Play(Cue cue) => events.Enqueue(m => m.Play(cue));
+    public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Land(ground, strength, gain, pan));
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(cue, gain, pan));
+    public void DeerCry(SoundMix.DeerCall call, float pan, float gain, float far) => events.Enqueue(m => m.DeerCry(call, pan, gain, far));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
     public void Working(Work kind) => events.Enqueue(m => m.Working(kind));

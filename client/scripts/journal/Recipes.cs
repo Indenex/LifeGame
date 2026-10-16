@@ -30,6 +30,10 @@ public static class Recipes
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
+        ["build.table"] = "{build_mode} to lay out a crafting table in your claim, then add its materials with {use}.",
+        ["build.bench"] = "{build_mode} to lay out a potter's bench in your claim, then add its materials with {use}.",
+        ["build.spindle"] = "{build_mode} to lay out a spindle station in your claim, then add its materials with {use}.",
+        ["build.rack"] = "{build_mode} to lay out a leather drying rack in your claim, then add its materials with {use}.",
         ["claim.mark"] = "{build_mode} to lay out a claim marker away from the clearing, then add sticks and fiber with {use}.",
         ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",
         [Skills.Run] = "Hold {run} to run. Running far builds Endurance; slow down to get your breath back.",
@@ -61,7 +65,8 @@ public static class Recipes
             Outcome.Placed => "Sets it down in front of you.",
             _ => $"Makes {Some(def.Makes, def.MakesCount)}.",
         };
-        return $"{needs}. {makes} {Keys("{craft}")} to make it.";
+        string where = def.Station != StationKind.None ? $" beside a {StationInfo.Name(def.Station)}" : "";
+        return $"{needs}. {makes} {Keys("{craft}")}{where} to make it.";
     }
 
     // "2 sticks", "a tinder bundle", "cordage".
