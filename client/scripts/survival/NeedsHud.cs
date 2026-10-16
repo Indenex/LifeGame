@@ -95,6 +95,9 @@ public partial class NeedsHud : CanvasLayer
         loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
 
+    // True while the death card covers the screen, so nothing offers itself over it.
+    public bool Mourning => fade.Color.A > 0.02f;
+
     public void ShowDeath(string cause)
     {
         deathTitle.Text = cause switch
