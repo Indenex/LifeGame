@@ -240,3 +240,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-058 — 2026-10-16 — Dedicated Integration lane; Opus codes, Sonnet does small tasks
 **Decision:** Crafting no longer owns integration, CI and builds; a dedicated Integration lane does (shared-file hooks, CI workflows, build and bindings tooling, the Use dispatcher, PR merge-readiness). Crafting and the other feature lanes only build features. Every session or agent that writes or designs code runs on Opus; small, basic tasks run on Sonnet, handed out by a coordinator (the lane session) that breaks its ticket down and reviews the results. Supersedes "Crafting (integration owner)" in D-025; the Bug fixes lane (D-040) still takes cross-lane bugs.
 **Who:** Justin
+
+## D-059 — 2026-10-16 — Ideas come as choices; a dedicated Render lane
+**Decision:** (1) Whenever the PM or a worker has an idea, it goes to Justin as a short question with 2 to 4 concrete options, recommended first, answerable in a word; work continues on the recommended option meanwhile. (2) A dedicated Render lane makes all screenshots, clips and mockups. Other lanes send it a render request (ticket, branch, sha, what to show, short summary) instead of rendering themselves; when done, the Render lane sends the images and the requester's summary to the PM, who presents them to Justin. Images still go under /mnt/project-files/screenshots/ (D-034).
+**Who:** Justin
