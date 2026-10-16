@@ -25,6 +25,8 @@ public partial class CameraRig : Node3D
     float yawTarget = Mathf.DegToRad(45f), yaw = Mathf.DegToRad(45f);
     float distanceTarget = 16f, distance = 16f;
     const float Pitch = -34f;
+    // How quickly the view catches up when it turns (Controls page; 7 is the default).
+    public static float TurnEase = 7f;
 
     public override void _Ready()
     {
@@ -47,7 +49,7 @@ public partial class CameraRig : Node3D
     {
         float dt = (float)delta;
         Position = Position.Lerp(Focus + Vector3.Up * 1.2f, 1f - Mathf.Exp(-6f * dt));
-        yaw = Mathf.Lerp(yaw, yawTarget, 1f - Mathf.Exp(-7f * dt));
+        yaw = Mathf.Lerp(yaw, yawTarget, 1f - Mathf.Exp(-TurnEase * dt));
         distance = Mathf.Lerp(distance, distanceTarget, 1f - Mathf.Exp(-6f * dt));
 
         Rotation = new Vector3(Mathf.DegToRad(Pitch), yaw, 0);

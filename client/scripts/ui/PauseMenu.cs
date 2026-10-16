@@ -4,13 +4,11 @@ using Godot;
 
 namespace LifeGame;
 
-// Esc in the world opens a small, quiet menu over a darkened world: Resume, Keys,
-// volume, music and Quit. The world keeps running behind it (it's multiplayer);
+// Esc in the world opens a small, quiet menu over a darkened world: Resume, Controls
+// (every key, which you can change, and the camera), volume, music and Quit. The world keeps running behind it (it's multiplayer);
 // walking and the Use key wait while it's open.
 public partial class PauseMenu : CanvasLayer
 {
-    const string SettingsPath = "user://settings.cfg";
-
     public static bool IsOpen { get; private set; }
 
     // Other things that own Esc while they're open (a panel, chat, placing a building).
@@ -18,9 +16,9 @@ public partial class PauseMenu : CanvasLayer
     public Func<bool> OthersOpen = () => false;
     public KeyHelp Keys = null!;
 
-    readonly ConfigFile settings = new();
     readonly List<Control> rows = new();
-    Control root = null!;
+    Control root = null!, column = null!;
+    readonly ControlsPage page = new();
     HSlider volume = null!;
     float alpha;
     int focus;
@@ -28,8 +26,7 @@ public partial class PauseMenu : CanvasLayer
     public override void _Ready()
     {
         Layer = 4;
-        settings.Load(SettingsPath);
-        SetVolume((float)settings.GetValue("sound", "volume", 0.8f));
+        SetVolume(Settings.Get("sound", "volume", 0.8f));
 
         root = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -53,19 +50,26 @@ public partial class PauseMenu : CanvasLayer
         shade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         root.AddChild(shade);
 
-        var column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
+        column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
         column.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         column.AddThemeConstantOverride("separation", 10);
         root.AddChild(column);
 
         column.AddChild(Entry("Resume", Close));
-        column.AddChild(Entry("Keys", () => { Keys.Pinned = true; Hide(); }));
+        column.AddChild(Entry("Controls", ShowControls));
         column.AddChild(VolumeRow());
         column.AddChild(Entry("Music on or off", () => Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true })));
         column.AddChild(Entry("Quit", () => GetTree().Quit()));
 
+        page.Back = HideControls;
+        root.AddChild(page);
+        // Saved keys and camera settings, once every lane has bound its own keys.
+        Callable.From(ControlsPage.ApplySaved).CallDeferred();
+
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-menu") >= 0)
             GetTree().CreateTimer(1).Timeout += Open;
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-controls") >= 0)
+            GetTree().CreateTimer(1).Timeout += () => { Open(); ShowControls(); };
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -80,7 +84,7 @@ public partial class PauseMenu : CanvasLayer
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (!IsOpen) return;
+        if (!IsOpen || page.Visible) return;
         // W/S or arrows move, A/D or arrows change the volume, Enter or Space picks.
         switch (key.PhysicalKeycode)
         {
@@ -109,7 +113,23 @@ public partial class PauseMenu : CanvasLayer
         Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
-    void Close() => IsOpen = false;
+    void Close()
+    {
+        HideControls();
+        IsOpen = false;
+    }
+
+    void ShowControls()
+    {
+        column.Visible = false;
+        page.Open();
+    }
+
+    void HideControls()
+    {
+        page.Close();
+        column.Visible = true;
+    }
 
     new void Hide() => IsOpen = false;
 
@@ -142,7 +162,7 @@ public partial class PauseMenu : CanvasLayer
         volume = new HSlider
         {
             MinValue = 0, MaxValue = 1, Step = 0.05,
-            Value = (float)settings.GetValue("sound", "volume", 0.8f),
+            Value = Settings.Get("sound", "volume", 0.8f),
             CustomMinimumSize = new Vector2(180, 24),
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
             FocusMode = Control.FocusModeEnum.None,
@@ -157,8 +177,7 @@ public partial class PauseMenu : CanvasLayer
         volume.ValueChanged += v =>
         {
             SetVolume((float)v);
-            settings.SetValue("sound", "volume", v);
-            settings.Save(SettingsPath);
+            Settings.Set("sound", "volume", v);
         };
         row.AddChild(volume);
         int index = rows.Count;

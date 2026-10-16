@@ -10,6 +10,9 @@ public partial class CameraDrag : Node
 {
     const float RadiansPerPixel = 0.006f;
 
+    // Mouse sensitivity from the Controls page (1 = the default feel).
+    public static float Sensitivity = 1f;
+
     public CameraRig Rig = null!;
     // True while something else owns the right button (placing a building cancels on it).
     public Func<bool> Blocked = () => false;
@@ -18,15 +21,16 @@ public partial class CameraDrag : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right } button)
+        // The drag button is the camera_drag action, so players can move it.
+        if (e is InputEventMouseButton or InputEventKey && InputMap.HasAction("camera_drag") && e.IsAction("camera_drag") && !e.IsEcho())
         {
-            dragging = button.Pressed && !Blocked();
+            dragging = e.IsPressed() && !Blocked();
             // Hide and hold the cursor while dragging so it never runs off the edge.
             Input.MouseMode = dragging ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
         }
         else if (dragging && e is InputEventMouseMotion motion)
         {
-            Rig.TurnBy(-motion.Relative.X * RadiansPerPixel);
+            Rig.TurnBy(-motion.Relative.X * RadiansPerPixel * Sensitivity);
             GetViewport().SetInputAsHandled();
         }
     }
