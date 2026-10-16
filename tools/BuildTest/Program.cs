@@ -3,8 +3,8 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
-// brick-house runs on its own, since its bricks take minutes to dry.
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -115,6 +115,23 @@ if (which is "brick-house")
     HangDoor(house);
 }
 
+// Not in "both": each player makes a stone axe and chops ten logs, which takes minutes (log-cabin).
+if (which is "log-cabin")
+{
+    ulong cabin = BuildTogether(StructureKind.LogCabin,
+        new() { [Item.Stone] = 7, [Item.Stick] = 7, [Item.Fiber] = 3 },
+        new() { [Item.Stone] = 3, [Item.Stick] = 7, [Item.Fiber] = 23 },
+        prepareA: () => ChopLogs(a, 10),
+        // B also twists the two cordage for the rafters.
+        prepareB: () =>
+        {
+            ChopLogs(b, 10);
+            for (int i = 0; i < 2; i++) b.Craft("cord.twist", Pump);
+            Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the rafters ({b.Carried()})");
+        });
+    HangDoor(cabin);
+}
+
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
@@ -216,6 +233,28 @@ void HangDoor(ulong hut)
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: false }, 10, "A unbarred it");
     b.Conn.Reducers.ToggleDoor(hut);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "and B can open it again");
+}
+
+// A player makes a stone axe (a hand axe knapped from a stone, hafted on a stick with
+// cordage), then fells trees until they carry this many logs.
+void ChopLogs(Bot bot, int logs)
+{
+    bot.Craft("cord.twist", Pump);
+    bot.Craft("knap.hand_axe", Pump, 0.95f);
+    bot.Craft("lash.stone_axe", Pump);
+    Check(bot.CountOf(Item.StoneAxe) >= 1, $"{bot.Name} made a stone axe ({bot.Carried()})");
+    var until = clock.Elapsed + TimeSpan.FromMinutes(12);
+    while (bot.CountOf(Item.Log) < logs && clock.Elapsed < until)
+    {
+        var (tx, tz) = bot.NearestTree();
+        var trunk = Trees.Trunk(tx, tz);
+        bot.WalkTo(trunk.X, trunk.Z, 1.2f, Pump);
+        uint before = bot.CountOf(Item.Log);
+        bot.Craft("chop.log", Pump);
+        // A tree that fell or was taken by the other player: move on to the next one.
+        if (bot.CountOf(Item.Log) == before) Pump(500);
+    }
+    Check(bot.CountOf(Item.Log) >= logs, $"{bot.Name} chopped {logs} logs ({bot.Carried()})");
 }
 
 // A finished gate hangs shut by itself. B opens and shuts it; A, who laid it out, bars it.
@@ -351,6 +390,7 @@ sealed class Bot
     public Dictionary<Item, uint> Wants = new();
 
     readonly string name, uri, db;
+    public string Name => name;
     string? token;
     Identity? me;
     public uint MyId => myId;
@@ -398,6 +438,7 @@ sealed class Bot
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
                         "SELECT * FROM fire",
+                        "SELECT * FROM chopped_tree",
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
@@ -499,6 +540,22 @@ sealed class Bot
         pump(300);
     }
 
+    // The nearest standing tree nobody has started on.
+    public (int X, int Z) NearestTree()
+    {
+        int cx = World.CellOf(X), cz = World.CellOf(Z);
+        for (int r = 0; r < 60; r++)
+            for (int i = cx - r; i <= cx + r; i++)
+                for (int j = cz - r; j <= cz + r; j++)
+                {
+                    if (Math.Max(Math.Abs(i - cx), Math.Abs(j - cz)) != r || !Trees.GrowsAt(i, j)) continue;
+                    long key = World.CellKey(i, j);
+                    if (Conn.Db.TerrainEdit.CellKey.Find(key) != null || Conn.Db.ChoppedTree.CellKey.Find(key) != null) continue;
+                    return (i, j);
+                }
+        throw new Exception("no tree within 60 m");
+    }
+
     public (float, float)? FindSite(StructureKind kind)
     {
         float H(float x, float z) => Structures.GroundAt(x, z, (i, j) => Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
@@ -516,11 +573,11 @@ sealed class Bot
     // Starts a craft and waits for it to finish. The job row can reach us after the
     // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
     // until the job has come and gone, or the made item has turned up.
-    public void Craft(string processId, Action<int> pump)
+    public void Craft(string processId, Action<int> pump, float score = 0.6f)
     {
         var def = Processes.Find(processId)!;
         uint before = CountOf(def.Makes);
-        Conn.Reducers.StartCraft(processId, 0.6f);
+        Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds + 5);
         bool seen = false;
         while (DateTime.UtcNow < until)
