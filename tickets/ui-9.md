@@ -15,10 +15,11 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 - 2026-10-16 17:50: Render requested 119c068 (four previews). Sent Claims (session_013ECn821EbTpbj4h7d3PepH) the calls and reads the window needs, plus the assumptions in Open questions.
 - 2026-10-16 18:05: claims-7 contract received (branch claude/claims-7-hand-item, 857662f, tickets/claims-7.md "Contract"). Reshaped the client to match: one `Set` call with an absolute count (SetTradeItem), Accept carries the version, and the trade has an id. The server owns the apart, death and lapse checks, so the client-side ones are gone, and so is my G handler for asking (Claims' `claims.trade` does it). Asked Claims for `AcceptTrade(tradeId, version, bool accept)` so you can take an Accept back. Build 0 errors.
 - 2026-10-16 18:10: ui-8 PR #73 passed CI at 6dd68f5 (https://github.com/Indenex/LifeGame/actions/runs/38937147982), with main merged in. Sent the PM that sha to merge. It's logged here so the ui-8 branch doesn't get a ticket-only push that would restart its CI. Render request moved to e4319e5.
+- 2026-10-16 18:40: Claims pushed the server side (claude/claims-7-hand-item 6bf1736, SocialTest passing). Merged it into this branch and resolved Main.cs: Panels.Open keeps Claims' `social.PanelOpen` and adds `trade.IsOpen`. Wrote `ui/ServerTradeLink.cs`, the real link over my_trade, my_trade_items, trade_ended and the reducers; Main attaches it on connect (`trade.Attach`). Reducer errors reach the HUD through Main's unhandled-error note. AcceptTrade has no on/off flag, so there's no take-back: the button reads "Accepted. Waiting for <name>", and changing your offer clears it. `--screenshot-trade` previews keep the mock. KEYMAP has a Trade window row. Build 0 errors.
 
 ## Open questions / blockers
-- Asked Claims 2026-10-16: can AcceptTrade take a bool so you can take an Accept back? Until they answer, the window keeps a take-back button.
-- Bindings for claims-7 not pushed yet; the window still runs on MockTradeLink.
+- PR order: this branch holds ui-8 (#73) and claims-7 (Claims opens its PR after #71). Open the ui-9 PR once both merge, then merge main in.
+- Not tested with two live clients yet. Render, or a two-client run, should check ask, accept, the swap and the end lines.
 
 ## Next step
-When Claims pushes claims-7 with bindings, write ServerTradeLink (ITradeLink over my_trade, my_trade_items, trade_ended and the five reducers) and make Main use it.
+When #73 and the claims-7 PR have merged, merge main into this branch, build, and open the ui-9 PR; meanwhile ask Render for a two-client trade run at the pushed sha.

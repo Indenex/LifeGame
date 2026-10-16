@@ -13,7 +13,7 @@ namespace LifeGame;
 // trade off; the server ends it when you walk apart, die or go offline.
 public partial class TradeWindow : CanvasLayer
 {
-    // Talks to the server (claims-7); a mock until that lands.
+    // Talks to the server (claims-7) once Main calls Attach; a mock until then and for previews.
     public ITradeLink Link = new MockTradeLink();
     // A short line for the HUD ("You trade with Mara").
     public Action<string> Note = _ => { };
@@ -22,6 +22,8 @@ public partial class TradeWindow : CanvasLayer
     static readonly Color Caution = new(0.98f, 0.76f, 0.38f);
 
     public bool IsOpen => Link.Current != null;
+    // A --screenshot-trade preview keeps the pretend Mara even once connected.
+    bool previewing;
 
     Control window = null!;
     Label title = null!, warning = null!, cleared = null!, asked = null!;
@@ -34,6 +36,15 @@ public partial class TradeWindow : CanvasLayer
     long lastVersion = -1;
     bool lastAnyAccepted;
     float clearedTime;
+
+    // Swaps the mock for the server link once Main has a connection.
+    public void Attach(ITradeLink link)
+    {
+        if (previewing) return;
+        Link = link;
+        Link.Said += line => Note(line);
+        shown = "";
+    }
 
     public override void _Ready()
     {
@@ -63,7 +74,10 @@ public partial class TradeWindow : CanvasLayer
         // =changed shows the cleared accepts after you add something.
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--screenshot-trade") && Link is MockTradeLink mock)
+            {
+                previewing = true;
                 GetTree().CreateTimer(1.5).Timeout += () => Preview(mock, arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..] : "");
+            }
     }
 
     void Preview(MockTradeLink mock, string what)
@@ -128,7 +142,7 @@ public partial class TradeWindow : CanvasLayer
 
         accept = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
         accept.AddThemeFontSizeOverride("font_size", 17);
-        accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted, t.Version); };
+        accept.Pressed += () => { if (Link.Current is { MineAccepted: false } t) Link.Accept(t.Version); };
         box.AddChild(accept);
 
         // Said loudly when a change wipes the accepts, so nobody agrees to the old deal.
@@ -220,7 +234,9 @@ public partial class TradeWindow : CanvasLayer
         Fill(theirsList, trade.Theirs, null);
         Mark(mineBox, mineState, trade.MineAccepted, "You accept", "You haven't accepted");
         Mark(theirsBox, theirsState, trade.TheirsAccepted, $"{trade.Partner} accepts", $"{trade.Partner} hasn't accepted");
-        accept.Text = trade.MineAccepted ? "Accepted (click to take it back)" : "Accept this trade";
+        // Once accepted it stays until either offer changes; change yours to take it back.
+        accept.Text = trade.MineAccepted ? $"Accepted. Waiting for {trade.Partner}" : "Accept this trade";
+        accept.Disabled = trade.MineAccepted;
         accept.Modulate = trade.MineAccepted ? Agreed : Colors.White;
 
         // What you could still add: what you carry less what you already offer.

@@ -38,6 +38,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
+| Trade window (ui-9) | Click something you carry to offer one, Shift+click all; click your offer to take one back; Esc calls the trade off. When asked: G says yes, Esc says no |
 
 
 ## Chat commands

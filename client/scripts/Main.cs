@@ -44,6 +44,7 @@ public partial class Main : Node3D
     DbConnection? conn;
     Identity? myIdentity;
     uint myId;
+    readonly TradeWindow trade = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -86,13 +87,12 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         // Trading face to face (ui-9, D-069).
-        var trade = new TradeWindow { Note = hud.Note };
+        trade.Note = hud.Note;
         AddChild(trade);
         JournalPanel? journalPanel = null;
-        ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
-            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true
+            || social.PanelOpen
             || trade.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
@@ -102,7 +102,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -322,6 +322,7 @@ public partial class Main : Node3D
         herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
