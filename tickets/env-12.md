@@ -17,9 +17,10 @@ With view distance up to Very far (radius 10, 441 chunks; env-9), chunk building
 
 ## Progress log
 - 2026-10-16 23:15 UTC: started (ticket and plan).
+- 2026-10-16 23:40 UTC: built. `environment/ChunkWorker.cs`: Prewarm (meshes, materials, ghosts made on the main thread first), Snapshot (dig records with a 10-cell margin, cleared cells and their easing for the chunk plus its corner row, the tuft flag), Compute on a worker (thread-static `building` behind TileHeight, IsCleared, Edited, Depth, ClearChange; its own base-height cache), Assemble on the main thread, PumpBuilds (up to 3 workers, nearest first; finished builds put in place within 3 ms a frame; stale or out-of-range ones dropped). Proof: `--view-hash` (every chunk out to 4 around (-4,46), ground and instance buffers) gives 3E74A7536CE734C9 on both the old code (88bffb7) and the new. Real client at radius 5 under xvfb: no errors, all 121 chunks in place.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Step 1 and 2: prewarm and snapshot, then move AddVegetation's math behind the snapshot.
+Open the PR (stacked on #337; base claude/environment-view until #337 merges, then main). Later: batch distant chunks for Very far at radius 12.
