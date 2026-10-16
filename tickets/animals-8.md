@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
 Status: in_review
 Branch: claude/animals-wool-cloth-5gkntn (from main after #76 merged; rebuild was needed because the first animals-8 local branch was lost with an old container)
-PR: (to open)
+PR: #90
 
 ## Goal
 Raw wool from shearing becomes cloth with plain tier-2 crafting: make a drop spindle (stick + stone, using a blade), spin 2 raw wool into wool yarn with it, then weave 4 yarn over 2 sticks into wool cloth. Quality flows through as for other crafts. Done when Justin can shear a sheep and end up with wool cloth in a build. Cloth is the input for animals-9 (clothing).
@@ -19,6 +19,7 @@ Raw wool from shearing becomes cloth with plain tier-2 crafting: make a drop spi
 
 ## Progress log
 - 2026-10-16: PR #76 (animals-7) green on 93043c5, sha sent to the PM. Started animals-8; items and processes written. Installing .NET + SpacetimeDB in this container to build.
+- 2026-10-16 17:20: opened PR #90; Render requested 573a057.
 - 2026-10-16 17:10: #76 merged (a5e5b1e); merged main in. Server + client build. Local bot test (scratch WoolCheck with a TEMP give-wool reducer, not committed): flake -> drop spindle q35, 4x spin -> 4 yarn q36-37, weave -> 1 wool cloth q38, spindle kept, no yarn left. Upgrade check against main passed.
 
 ## Open questions / blockers
