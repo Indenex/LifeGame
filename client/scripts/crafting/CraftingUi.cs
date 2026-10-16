@@ -188,13 +188,16 @@ public partial class CraftingUi : CanvasLayer
 
     // --- Starting a process ----------------------------------------------
 
+    bool reopenAfterMinigame;
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
         if (job != null) { Notice?.Invoke("Your hands are busy"); return; }
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
-        panel.Visible = false;
+        // The panel stays open after a craft, so pressing the same number repeats
+        // it; it only steps aside while a minigame is played.
         // Skill hook (journal/CraftingUi.Skills.cs): a Master just does the work.
         float? skipped = null;
         if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
@@ -215,8 +218,17 @@ public partial class CraftingUi : CanvasLayer
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
             return;
         }
+        reopenAfterMinigame = panel.Visible;
+        panel.Visible = false;
         AddChild(minigame.Root);
+        MinigameSound(def, true);
     }
+
+    // Sound hook: Atmosphere implements this in its own file to play the work sounds
+    // (Sound.Working) while any minigame is open, Drill and Strike here or Shape and
+    // Coil from Ceramics, so the hands-on part is never silent (D-036). Unimplemented,
+    // the compiler drops the calls.
+    static partial void MinigameSound(ProcessDef def, bool playing);
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
@@ -248,6 +260,12 @@ public partial class CraftingUi : CanvasLayer
         var def = minigame.Process;
         minigame.Root.QueueFree();
         minigame = null;
+        MinigameSound(def, false);
+        if (reopenAfterMinigame)
+        {
+            panel.Visible = true;
+            Refresh();
+        }
         if (score is { } s && conn != null) conn.Reducers.StartCraft(def.Id, s);
     }
 
