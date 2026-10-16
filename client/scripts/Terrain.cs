@@ -51,13 +51,15 @@ public partial class Terrain : Node3D
 
     // The land's shape costs a dozen noise lookups a cell (shared/Land.cs) and a chunk
     // asks for each cell many times, so heights are kept once worked out. The cache
-    // is dropped when it outgrows a few views' worth of ground.
+    // is dropped when it outgrows about two views' worth of ground at the current
+    // view distance (Very far draws about 113,000 cells).
     readonly Dictionary<long, float> baseHeights = new();
 
     float BaseHeight(long key, int x, int z)
     {
         if (baseHeights.TryGetValue(key, out var h)) return h;
-        if (baseHeights.Count > 60_000) baseHeights.Clear();
+        int side = (2 * ViewRadius + 1) * World.ChunkSize + 2;
+        if (baseHeights.Count > Math.Max(60_000, 2 * side * side)) baseHeights.Clear();
         return baseHeights[key] = World.BaseHeight(x, z);
     }
 
