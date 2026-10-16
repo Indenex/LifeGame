@@ -119,6 +119,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void PruneChat(ReducerContext ctx, ChatPruneTimer timer)
     {
+        RequireServer(ctx);
         var cutoff = new Timestamp(ctx.Timestamp.MicrosecondsSinceUnixEpoch - Social.ChatKeepMicros);
         foreach (var message in ctx.Db.ChatMessage.SentAt.Filter((new Timestamp(0), cutoff)).ToList())
             ctx.Db.ChatMessage.Id.Delete(message.Id);

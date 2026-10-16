@@ -24,6 +24,9 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=jar shows the storage jar wet, leather-hard, dry and kiln-fired, a coil pot for scale (ceramics-6).
     static bool ShowJars => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=jar");
 
+    // --ceramics-demo=lamp shows three lit clay lamps and a cold one, for judging the glow at night (ceramics-9).
+    static bool ShowLamps => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=lamp");
+
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
         this.terrain = terrain;
@@ -46,6 +49,18 @@ public partial class CeramicsDemo : Node3D
                 var pot = new PotView { Position = new Vector3(-0.6f + i * 0.45f, 0, 1.2f) };
                 row.AddChild(pot);
                 pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowLamps)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                var lamp = new LampView { Position = new Vector3((i - 1.5f) * 1.1f, 0, (i % 2) * 0.4f) };
+                row.AddChild(lamp);
+                lamp.Show((ulong)i + 40, i == 3 ? 0 : PotView.Now + 1800);
             }
             AddChild(camera);
             camera.MakeCurrent();
@@ -127,6 +142,12 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
+        if (ShowLamps)
+        {
+            camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
+            camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);
+            return;
+        }
         if (ShowJars)
         {
             camera.Position = at + new Vector3(0f, 1.6f, 4.6f);

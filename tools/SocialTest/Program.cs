@@ -260,12 +260,16 @@ Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "member pick up")
 Check(b.Count(Item.Stone) == 1, $"member B can pick up inside the claim ({b.LastError ?? "ok"})");
 Walk(b, claim.X + 1, claim.Z);
 b.LastError = null;
-b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone) || b.LastError != null, 5, "stash");
 Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B's stone shows in the owner's stash ({b.LastError ?? "ok"})");
-b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 999), "have that many", "you can't take more than the stash holds");
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 0), "Nothing", "a stash move needs a count");
+b.LastError = null;
+b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
 Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+ExpectError(b, () => b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 999), "that many", "you can't stash more than you carry");
 Check(Wait(() => a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count > 0)
     && a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count < 0), 5), "the owner sees who left and took the stone");
 Check(Social.StashLine("Tam", Items.Def(Item.Stick), -2) == "Tam took 2 sticks", "a stash line reads well");
@@ -340,7 +344,7 @@ Pump(() => TradeFor(b)?.State == Social.TradeOpen, 5, "open to walk away");
 a.LastTradeEnd = null;
 Walk(a, b.X + Social.TradeBreakDistance + 2, b.Z);
 Check(Wait(() => a.LastTradeEnd == "apart" && TradeFor(a) == null, 5), $"walking apart ends a trade ({a.LastTradeEnd ?? "-"})");
-b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // A member may lay out a building on the claim.
@@ -372,7 +376,7 @@ Check(true, "owner can allow fighting");
 // Removing B locks them out again.
 a.Conn.Reducers.RemoveClaimMember(b.PlayerId);
 Pump(() => !b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "removal");
-ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality), "not yours", "removed member cannot open the stash");
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 1), "not yours", "removed member cannot open the stash");
 
 // The land's owner can clear anything on it; nobody else can take down the owner's things.
 Walk(b, site.X + 1.5f, site.Z);
