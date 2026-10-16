@@ -18,6 +18,7 @@ Fix: shared/ClayRules.FireCanTakePot(fuelSecondsLeft, potsInFire). The server's 
 - 2026-10-16: merged main (#99 conflict, then #109); new head 77d6990 then this merge.
 - 2026-10-16: Render lane on e80c6cf: with a full ring and sticks in hand the prompt read "Feed the fire", and G fed a stick (pick-up at 12 lost to feeding at 20). Fixed: the pick-up now goes with the firing offers at 22 unless the fire only needs fuel and you carry some. Client builds.
 - 2026-10-16: Render on 6f697c9: (a) works (full ring, sticks in hand: "Pick up the pot"; pot in bag, sticks unchanged). It also showed "Set pots in the fire" offered on a full ring. Fixed: FirePotsOffer only offers when FireCanTakePot holds (also for low fuel, so Feed the fire wins there too).
+- 2026-10-16: merged main (#105 storage jar: kiln-only forms are never fired by a campfire; kept in both TendClay and TendOffer). Server and client build.
 
 ## Open questions / blockers
 - (none)

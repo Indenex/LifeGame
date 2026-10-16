@@ -129,7 +129,7 @@ public static partial class Module
         float moisture = MoistureNow(ctx, piece);
         // A dry pot the fire can't take (too little fuel, or a full ring) is picked up
         // instead, so a pot shaped by a fire can still be carried away (bugfix-18).
-        if (form != ClayForm.Brick && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire
+        if (form != ClayForm.Brick && !ClayRules.KilnOnly(form) && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire
             && (ClayRules.TooWetToFire(moisture) || FireCanTakePot(ctx, fire)))
         {
             if (ClayRules.TooWetToFire(moisture) && !evenIfDamp)
@@ -163,6 +163,10 @@ public static partial class Module
             .ToList();
         if (pots.Count == 0)
             throw new Exception("You have no dry pots to fire");
+        // A storage jar is too big for an open fire; it waits for a kiln.
+        pots = pots.Where(i => !ClayRules.KilnOnly(ClayRules.FormOfUnfired((Item)i.Item)!.Value)).ToList();
+        if (pots.Count == 0)
+            throw new Exception("A storage jar is too big for a campfire. Fire it in a kiln.");
         if (ctx.Db.ClayPiece.MadeBy.Filter(player.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
             throw new Exception("You have too much clay out already");
 
