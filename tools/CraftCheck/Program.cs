@@ -213,6 +213,43 @@ Craft("weave.basket", 0, Item.Basket);
 Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
 Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
 
+// Crafting-21: a made thing is set down where the player chooses. The basket just woven
+// is placeable; a stick is not; the spot has to be within reach.
+{
+    Gather(Item.Stick, 1);
+    WalkTo(table.X, table.Z);
+    var basket = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Basket);
+    var stickRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Stick);
+    lastError = null;
+    conn.Reducers.PlaceItem(stickRow.Item, stickRow.Quality, stickRow.Wear, x + 1f, z, 0f);
+    Pump(() => lastError != null, 5, "placing a stick to be refused");
+    if (lastError != "That can't be set down") Fail($"placing a stick: {lastError}");
+    lastError = null;
+    conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 30f, z, 0f);
+    Pump(() => lastError != null, 5, "placing out of reach to be refused");
+    Console.WriteLine($"Placing out of reach: {lastError}");
+
+    bool placedOk = false;
+    for (int k = 0; k < 12 && !placedOk; k++)
+    {
+        float a = k * MathF.Tau / 12, px = x + MathF.Cos(a) * 1.8f, pz = z + MathF.Sin(a) * 1.8f;
+        int before = conn.Db.WorldItem.Count;
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, px, pz, 1.25f);
+        Pump(() => lastError != null || conn.Db.WorldItem.Count > before, 5, "the basket to be placed");
+        if (lastError == null) placedOk = true;
+        else if (!lastError.Contains("steep") && !lastError.Contains("way") && !lastError.Contains("water")) Fail($"placing the basket: {lastError}");
+    }
+    if (!placedOk) Fail("no spot beside the table took a basket");
+    var placed = conn.Db.WorldItem.Iter().First(w => w.Item == (ushort)Item.Basket && w.Placed);
+    if (MathF.Abs(placed.Yaw - 1.25f) > 0.001f) Fail($"the placed basket lost its turn ({placed.Yaw})");
+    if (CountOf(Item.Basket) != 0) Fail("the basket stayed in the bag");
+    WalkTo(placed.X, placed.Z);
+    conn.Reducers.PickUp(placed.Id);
+    Pump(() => CountOf(Item.Basket) == 1, 5, "the placed basket to be picked back up");
+    Console.WriteLine($"Placed the basket at ({placed.X:F1}, {placed.Z:F1}) turned {placed.Yaw:F2} and picked it up again");
+}
+
 // Crafting-19: tool wear and repair (D-155). The server counts each use as one use of
 // the tool's life; the admin raises that so a single use spends a tool.
 {
