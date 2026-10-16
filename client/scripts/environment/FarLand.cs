@@ -7,20 +7,30 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // The land beyond the loaded chunks (env-9): a coarse ground mesh and simple tree
-// silhouettes out to FarRadius, so hills, heath tops, valleys and the woods read
+// silhouettes out to the chosen reach, so hills, heath tops, valleys and the woods read
 // from a distance and the fog swallows them gently instead of the world ending at
 // the last chunk. Everything comes from the shared height and forest rules, worked
 // out on a background thread whenever the player moves into another chunk.
 public partial class FarLand : Node3D
 {
-    // Limited by the water plane (260 m across, centred on the player), so a far pond
-    // always has water in it.
-    const int FarRadius = 128;
-    const int Step = 4;
+    // How far it reaches, from the Options page (Settings graphics/distant_land):
+    // Far is the full view, Near a shorter, coarser one for slow PCs, Off none.
+    // Far is limited by the water plane (260 m across, centred on the player), so a
+    // far pond always has water in it.
+    public enum Reach { Off, Near, Far }
+    public static readonly string[] ReachNames = { "Off", "Near", "Far" };
+
+    public static Reach Level
+    {
+        get => (Reach)Math.Clamp(Settings.Get("graphics", "distant_land", (int)Reach.Far), 0, 2);
+        set => Settings.Set("graphics", "distant_land", (int)value);
+    }
+
+    static (int Radius, int Step) Shape(Reach level) => level == Reach.Near ? (96, 8) : (128, 4);
 
     MeshInstance3D? ground;
     MultiMeshInstance3D? broadleaf, conifer;
-    (int, int) builtFor = (int.MinValue, int.MinValue);
+    (int, int, Reach) builtFor = (int.MinValue, int.MinValue, Reach.Off);
     Task<Built>? pending;
 
     static Mesh? blob, cone;
@@ -42,29 +52,32 @@ public partial class FarLand : Node3D
             if (pending.Status == TaskStatus.RanToCompletion) Apply(pending.Result);
             pending = null;
         }
-        if (pending == null && builtFor != (chunkX, chunkZ))
+        var level = Level;
+        Visible = level != Reach.Off;
+        if (pending == null && level != Reach.Off && builtFor != (chunkX, chunkZ, level))
         {
-            builtFor = (chunkX, chunkZ);
+            builtFor = (chunkX, chunkZ, level);
+            var (radius, step) = Shape(level);
             int r = World.ViewRadiusChunks, n = World.ChunkSize;
             // The loaded chunks cover this square; the far ground leaves a hole there,
             // overlapping its edge by one step so no gap shows.
-            var near = ((chunkX - r) * n + Step, (chunkZ - r) * n + Step, (chunkX + r + 1) * n - Step, (chunkZ + r + 1) * n - Step);
+            var near = ((chunkX - r) * n + step, (chunkZ - r) * n + step, (chunkX + r + 1) * n - step, (chunkZ + r + 1) * n - step);
             int cx = chunkX * n + n / 2, cz = chunkZ * n + n / 2;
-            pending = Task.Run(() => Build(cx, cz, near));
+            pending = Task.Run(() => Build(cx, cz, near, radius, step));
         }
     }
 
-    static Built Build(int cx, int cz, (int MinX, int MinZ, int MaxX, int MaxZ) near)
+    static Built Build(int cx, int cz, (int MinX, int MinZ, int MaxX, int MaxZ) near, int radius, int step)
     {
         var built = new Built();
-        int ox = (cx - FarRadius) / Step * Step, oz = (cz - FarRadius) / Step * Step;
-        int count = FarRadius * 2 / Step + 1;
+        int ox = (cx - radius) / step * step, oz = (cz - radius) / step * step;
+        int count = radius * 2 / step + 1;
         var heights = new float[count, count];
         var colors = new Color[count, count];
         for (int i = 0; i < count; i++)
             for (int j = 0; j < count; j++)
             {
-                int x = ox + i * Step, z = oz + j * Step;
+                int x = ox + i * step, z = oz + j * step;
                 heights[i, j] = World.BaseHeight(x, z);
                 colors[i, j] = GroundColor(x, z, heights[i, j]);
             }
@@ -77,35 +90,36 @@ public partial class FarLand : Node3D
         {
             float l = heights[Math.Max(i - 1, 0), j], r = heights[Math.Min(i + 1, count - 1), j];
             float d = heights[i, Math.Max(j - 1, 0)], u = heights[i, Math.Min(j + 1, count - 1)];
-            return new Vector3(l - r, 2f * Step, d - u).Normalized();
+            return new Vector3(l - r, 2f * step, d - u).Normalized();
         }
         void Corner(int i, int j)
         {
             // A touch below the true ground, so where it slips under the loaded
             // chunks at the hole's edge it never shows through them.
-            vertices.Add(new Vector3(ox + i * Step, heights[i, j] - 0.3f, oz + j * Step));
+            vertices.Add(new Vector3(ox + i * step, heights[i, j] - 0.3f, oz + j * step));
             normals.Add(NormalAt(i, j));
             cols.Add(colors[i, j]);
         }
         for (int i = 0; i < count - 1; i++)
             for (int j = 0; j < count - 1; j++)
             {
-                int x = ox + i * Step, z = oz + j * Step;
-                if (Inside(x, z) && Inside(x + Step, z + Step)) continue;
-                float dx = x + Step / 2 - cx, dz = z + Step / 2 - cz;
-                if (dx * dx + dz * dz > FarRadius * FarRadius) continue;
+                int x = ox + i * step, z = oz + j * step;
+                if (Inside(x, z) && Inside(x + step, z + step)) continue;
+                float dx = x + step / 2 - cx, dz = z + step / 2 - cz;
+                if (dx * dx + dz * dz > radius * radius) continue;
                 Corner(i, j); Corner(i + 1, j); Corner(i + 1, j + 1);
                 Corner(i, j); Corner(i + 1, j + 1); Corner(i, j + 1);
 
                 // Tree silhouettes: one crown standing for the trees of this patch,
                 // more likely and larger the denser the woods.
                 float density = Forest.Density(x, z);
-                float chance = Math.Min(1f, Forest.TreeChanceAt(x, z) * Step * Step * 0.55f);
+                float chance = Math.Min(1f, Forest.TreeChanceAt(x, z) * step * step * 0.55f);
                 if (Inside(x, z) || Terrain.Hash01(x, z, 801) >= chance) continue;
-                float px = x + Terrain.Hash01(x, z, 802) * Step, pz = z + Terrain.Hash01(x, z, 803) * Step;
-                int pi = Math.Clamp((int)MathF.Round((px - ox) / Step), 0, count - 1), pj = Math.Clamp((int)MathF.Round((pz - oz) / Step), 0, count - 1);
+                float px = x + Terrain.Hash01(x, z, 802) * step, pz = z + Terrain.Hash01(x, z, 803) * step;
+                int pi = Math.Clamp((int)MathF.Round((px - ox) / step), 0, count - 1), pj = Math.Clamp((int)MathF.Round((pz - oz) / step), 0, count - 1);
                 if (heights[pi, pj] < World.WaterLevel + 0.1f) continue;
-                float scale = 1.3f + density * 0.9f + Terrain.Hash01(x, z, 804) * 0.5f;
+                // On the coarser grid each crown stands for more trees, so it is a little larger.
+                float scale = (1.3f + density * 0.9f + Terrain.Hash01(x, z, 804) * 0.5f) * (step > 4 ? 1.25f : 1f);
                 var at = new Transform3D(new Basis(Vector3.Up, Terrain.Hash01(x, z, 805) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3(px, heights[pi, pj] - 0.2f, pz));
                 bool pine = Terrain.Hash01(x, z, 806) < 0.4f && Forest.Wetland(x, z) < 0.4f && Forest.Heath(x, z) < 0.5f;
                 if (pine) built.Conifer.Add((at, Look.Pine.Lightened(Terrain.Hash01(x, z, 807) * 0.08f)));
