@@ -46,6 +46,8 @@ public static class NextSteps
         ["clay.temper_grit"] = "Clean clay alone cracks in the fire. It needs something worked into it.",
         ["clay.temper_grog"] = "Crushed sherds temper clay even better than grit.",
         ["clay.pinch_pot"] = "Tempered clay can be pinched into a small pot.",
+        ["clay.storage_jar"] = "A big coiled jar, fired in a kiln, keeps a lot safe at home.",
+        ["weave.mat"] = "A thick weave of fiber makes a mat to sleep on, off the cold ground.",
         [Claim] = "Plant a claim marker away from the clearing, and the land around it is yours to build on.",
         [Bench] = "A potter's bench in your claim, made from a log and two stones, is where clay is shaped.",
         ["clay.coil_pot"] = "Rolled into coils, tempered clay builds a bigger pot.",
@@ -106,6 +108,8 @@ public static class NextSteps
     {
         ["clay.pinch_pot"] = new[] { new[] { Bench } },
         ["clay.coil_pot"] = new[] { new[] { Bench } },
+        // The jar is fired only in a kiln (D-076).
+        ["clay.storage_jar"] = new[] { new[] { Bench }, new[] { "clay.coil_pot" }, new[] { ClayRules.KilnProcess } },
     };
 
     // Where things come from when no crafting job makes them.
