@@ -73,6 +73,11 @@ public static partial class Module
     // Shaping a pot or molding a brick sets it down here to dry.
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
+        if (ClayRules.DishFor(def.Id) is { } dish)
+        {
+            SetToSimmer(ctx, job, def, dish);
+            return;
+        }
         if (ClayRules.FormFor(def.Id) is not { } form) return;
         if (ctx.Db.ClayPiece.MadeBy.Filter(job.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
         {
@@ -127,7 +132,7 @@ public static partial class Module
 
         var form = (ClayForm)piece.Form;
         float moisture = MoistureNow(ctx, piece);
-        if (form != ClayForm.Brick && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire)
+        if (form != ClayForm.Brick && !ClayRules.KilnOnly(form) && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire)
         {
             if (ClayRules.TooWetToFire(moisture) && !evenIfDamp)
                 throw new Exception($"The pot is still {ClayRules.Describe(moisture)}. Fired now, it will crack.");
@@ -160,6 +165,10 @@ public static partial class Module
             .ToList();
         if (pots.Count == 0)
             throw new Exception("You have no dry pots to fire");
+        // A storage jar is too big for an open fire; it waits for a kiln.
+        pots = pots.Where(i => !ClayRules.KilnOnly(ClayRules.FormOfUnfired((Item)i.Item)!.Value)).ToList();
+        if (pots.Count == 0)
+            throw new Exception("A storage jar is too big for a campfire. Fire it in a kiln.");
         if (ctx.Db.ClayPiece.MadeBy.Filter(player.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
             throw new Exception("You have too much clay out already");
 
