@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
 Status: in_review
 Branch: claude/animals-wraps-5gkntn (from main; split out of animals-9 per D-128)
-PR: (to open)
+PR: #149
 
 ## Goal
 The first piece of clothing ships on its own: Leather foot wraps, made from leather and cordage with a blade, put on in the equipment panel (D-074, UX's ui-10). Worn, they take 4% off how fast the cold drains you, scaled by quality (D-100). This also lands the worn-slots server side that the wool tunic (animals-9, with the Spindle station and #90, D-120) will use. Done when Justin dries a hide into leather, makes wraps, puts them on in the panel, and his warmth falls a little more slowly.
@@ -24,4 +24,4 @@ The first piece of clothing ships on its own: Leather foot wraps, made from leat
 - (none)
 
 ## Next step
-Push, open the PR, tell UX (session_01V6qgbNbvTwniqW946KACLr) the PR number, wait for CI and send the PM the green sha.
+Wait for CI on #149 and send the PM the green sha.
