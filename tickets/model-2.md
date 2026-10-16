@@ -36,6 +36,7 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-16 22:08: docs/CONTENT.md (Justin's content-as-data rule): models are assets looked up by a `Model` id on each Def. Modeling keeps builders public in client/scripts/models and adds a `Models.Structure(id)` / `Models.Item(id)` lookup by dotted id once a family's Def carries `Model` (told Integration; the converting lane sends the ids).
 - 2026-10-16 22:36: Justin playtested and disliked saturated pink heather; Environment's hotfix #318 muted PropMeshes.BuildHeather (body 0.35/0.37/0.24, flower heads muted purple 0.46/0.34/0.46 (Atmosphere's shader keys on that purple); mauve only from Atmosphere's shader). Rule for props: keep plant colours muted, near grass brightness.
 - 2026-10-16 22:55: #287 green on 654b9cf4 (run https://github.com/Indenex/LifeGame/actions/runs/38976691223). PM: it conflicted with main's Hearths.cs (bugfix-26 #307); merged main and took main's Hearths.cs and CraftCheck (port dropped). Server, client and CraftCheck build.
+- 2026-10-16 23:40: #346 (claude/model-2-next) green on 2b76c894 (run 38980715679), sha sent to the PM. Render requested 2b76c894 (stations, devices, wear, cooking) from the Render lane.
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.

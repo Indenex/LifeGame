@@ -419,7 +419,11 @@ public partial class Main : Node3D
     void OnPlayer(Player p)
     {
         names[p.PlayerId] = p.Name;
-        if (p.Identity == myIdentity) myId = p.PlayerId;
+        if (p.Identity == myIdentity)
+        {
+            myId = p.PlayerId;
+            me.SetLook(p.PlayerId);
+        }
         if (others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar.SetPlayerName(p.Name);
@@ -443,6 +447,7 @@ public partial class Main : Node3D
         if (!others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
+            avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
         }
