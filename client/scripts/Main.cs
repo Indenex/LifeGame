@@ -45,6 +45,7 @@ public partial class Main : Node3D
     DbConnection? conn;
     Identity? myIdentity;
     uint myId;
+    readonly TradeWindow trade = new();
     readonly EquipmentPanel equipment = new();
     bool spawned;
     Vector3 velocity;
@@ -93,10 +94,14 @@ public partial class Main : Node3D
         equipment.Note = hud.Note;
         AddChild(equipment);
         building.MayBar = social.HasRightsAt;
+        // Trading face to face (ui-9, D-069).
+        trade.Note = hud.Note;
+        AddChild(trade);
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
+            || trade.IsOpen
             || equipment.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
@@ -321,6 +326,7 @@ public partial class Main : Node3D
         herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        trade.Attach(new ServerTradeLink(conn, () => myId));
         equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         fires.Attach(conn);

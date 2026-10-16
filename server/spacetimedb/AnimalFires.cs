@@ -16,8 +16,15 @@ public static partial class Module
 
     // True when a step from one spot to another would cross something a sheep
     // won't walk into: for now, the ring around a burning fire or firing kiln.
+    // House building implements this (building-8, D-087): a step across a finished
+    // fence, a shut gate or a wall is blocked. Unimplemented, it does nothing.
+    static partial void StructureStepHook(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ, ref bool blocked);
+
     static bool AnimalStepBlocked(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ)
     {
+        bool blocked = false;
+        StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref blocked);
+        if (blocked) return true;
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var (fx, fz, wall) in BurningFiresNear(ctx, toX, toZ, now))
         {

@@ -252,6 +252,13 @@ namespace LifeGame.Shared
             return (byte)Math.Clamp(MathF.Round(q), 1f, cap);
         }
 
+        // How much faster a better tool works (D-089): a power curve over the tool's
+        // quality (docs/PROGRESSION.md), about 7% at quality 35 and MaxToolSpeedup at 100.
+        public const float MaxToolSpeedup = 0.15f;
+        public const float ToolSpeedupPower = 0.73f;
+        public static float ToolSpeedup(byte toolQuality) =>
+            MaxToolSpeedup * MathF.Pow(Math.Clamp(toolQuality, (byte)0, (byte)100) / 100f, ToolSpeedupPower);
+
         // Words for a quality number, so players never see raw digits.
         public static string Grade(byte quality) => quality switch
         {
