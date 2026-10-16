@@ -1,4 +1,4 @@
-# ui-9 live (18b4bda): B's screen. Camera = B, puppet = A asks, adds sticks, accepts.
+# ui-9 live (ffdabf3): B's screen. Camera = B, puppet = A asks, adds sticks, accepts.
 client --time-of-day=0.45 --rain=0 --cloud=0.2
 name A
 find

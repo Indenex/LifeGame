@@ -38,9 +38,10 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:45: queue 5 (after queue 2): crafting-11 rerun, ui-10, env-1, atmosphere-13, bugfix-17 (+before), animals-8 wool/ground at 4233255, anim-1 side/turn/work at 4afbb2b, animals-8 spin (live, needs the Render lane at the keyboard: append steps to $RENDER_WORK/live.txt).
 - 2026-10-16 17:55: audio-1 b7fde7a clip sent to the PM and the Audio lane (76a896b). New requests: ui-9 live trade 18b4bda (two players, both screens), model-1 style showcase 37a5656 (5 views), env-1 after 0eaba8b. Queue 6 (after queue 5): model-1-style.sh, env-1-after.sh, ui-9-live-a/b scenes (live). Background jobs time out after 2 h: if a queue died, rerun its remaining lines by hand.
 - 2026-10-16 18:05: ui-9 mock shots at short delays caught an unloaded world (the mock's timers run from game start, loading takes 20-30 s). Added --render-slowstart=scale,seconds (render_cam.gd) so game time crawls while the world loads. All remaining work is now in tools/render/queue.sh, run detached with nohup (log $RENDER_WORK/queue.log, finished jobs in queue.done; rerun it to resume). Queue 2 (claims-6 rerun, model-1 baseline) finishes first.
+- 2026-10-16 18:10: PM decided renders stay on this branch; only tools/render/ merges via a small PR (send raw links). PM asked for a 10-15 s cloud-shadow clip of #66 (queued after animals-8). ui-9 live moved to ffdabf3 (+ un-accept check).
 
 ## Open questions / blockers
-- PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
+- (none)
 
 ## Next step
 Watch /tmp/claude-0/render/queue.log (or rerun `RENDER_WORK=... nohup tools/render/queue.sh &` in a new container); review each job's images and send them to the PM (+ requester where asked); drive the live scenes by appending steps to $RENDER_WORK/live.txt.

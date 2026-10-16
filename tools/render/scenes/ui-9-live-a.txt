@@ -1,4 +1,4 @@
-# ui-9 live (18b4bda, real server): A's screen. Camera = A, puppet = B. Driven live:
+# ui-9 live (ffdabf3, real server): A's screen. Camera = A, puppet = B. Driven live:
 # A presses G facing B; B answers, adds berries and accepts by reducer.
 client --time-of-day=0.45 --rain=0 --cloud=0.2
 name B

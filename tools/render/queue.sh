@@ -26,11 +26,12 @@ job bugfix-17 tools/render/scene.sh bugfix-17 caaf9ae tools/render/scenes/bugfix
 job bugfix-17-before tools/render/scene.sh bugfix-17-before 7e79d22 tools/render/scenes/bugfix-17-pot.txt
 job animals-8 tools/render/scene.sh animals-8 4233255 tools/render/scenes/animals-8-wool.txt
 job animals-8-ground tools/render/scene.sh animals-8-ground 4233255 tools/render/scenes/animals-8-ground.txt
+job atmosphere-66-clouds tools/render/scene.sh atmosphere-66-clouds dca2a0f tools/render/scenes/atmosphere-66-clouds.txt
 job anim-1-side env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1 4afbb2b tools/render/scenes/anim-1-side.txt
 job anim-1-turn env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-turn 4afbb2b tools/render/scenes/anim-1-turn.txt
 job anim-1-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-work 4afbb2b tools/render/scenes/anim-1-work.txt
 # Live scenes last: they wait for the Render lane to append steps to $RENDER_WORK/live.txt.
 job animals-8-spin tools/render/scene.sh animals-8-spin 4233255 tools/render/scenes/animals-8-spin.txt
-job ui-9-liveA tools/render/scene.sh ui-9-liveA 18b4bda tools/render/scenes/ui-9-live-a.txt
-job ui-9-liveB tools/render/scene.sh ui-9-liveB 18b4bda tools/render/scenes/ui-9-live-b.txt
+job ui-9-liveA tools/render/scene.sh ui-9-liveA ffdabf3 tools/render/scenes/ui-9-live-a.txt
+job ui-9-liveB tools/render/scene.sh ui-9-liveB ffdabf3 tools/render/scenes/ui-9-live-b.txt
 echo "== queue empty"
