@@ -53,14 +53,16 @@ public partial class EquipmentPanel : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
 
-        // --screenshot-equip opens the panel with a tunic on and shoes to hand;
-        // =feet picks the feet slot.
+        // --screenshot-equip opens the panel with the first wearable on and the rest to
+        // hand; =feet picks the feet slot.
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--screenshot-equip") && (previewing = true))
                 GetTree().CreateTimer(1.5).Timeout += () =>
                 {
-                    if (Link.Carried(ClothingSlot.Body).FirstOrDefault() is { } tunic) Link.Wear(tunic);
+                    // Put on the first piece there is, and show the slot named (=feet), or Body.
                     if (arg.EndsWith("=feet")) selected = ClothingSlot.Feet;
+                    var first = Enum.GetValues<ClothingSlot>().SelectMany(Link.Carried).FirstOrDefault();
+                    if (first != null) Link.Wear(first);
                     Open();
                 };
     }

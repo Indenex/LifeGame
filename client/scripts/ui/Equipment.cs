@@ -28,16 +28,14 @@ public interface IEquipLink
     event Action<string>? Said;
 }
 
-// Pretend clothes for screenshots: a tunic and foot wraps, plus a rougher tunic to swap.
+// Pretend clothes for screenshots: a fine and a rough piece of everything wearable in
+// shared/Clothing.cs, whatever Animals has shipped so far (D-128: foot wraps first).
 public sealed class MockEquipLink : IEquipLink
 {
     readonly Dictionary<ClothingSlot, WornPiece> worn = new();
-    readonly List<WornPiece> carried = new()
-    {
-        new(Item.WoolTunic, 70, ClothingSlot.Body),
-        new(Item.WoolTunic, 25, ClothingSlot.Body),
-        new(Item.LeatherWraps, 50, ClothingSlot.Feet),
-    };
+    readonly List<WornPiece> carried = Clothing.All.Values
+        .SelectMany(w => new[] { new WornPiece(w.Item, 70, w.Slot), new WornPiece(w.Item, 25, w.Slot) })
+        .ToList();
 
     public event Action<string>? Said;
 
