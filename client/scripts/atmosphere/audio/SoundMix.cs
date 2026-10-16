@@ -6,7 +6,7 @@ namespace LifeGame;
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
-public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place }
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -67,6 +67,7 @@ public sealed class SoundMix
     readonly DayInsects insects;
     readonly Cues cues;
     readonly StreamVoice stream;
+    readonly Deer deer;
     readonly Steps steps;
     readonly WorkVoice work;
     // Other players at work nearby, by player id (D-072).
@@ -103,6 +104,7 @@ public sealed class SoundMix
         insects = new DayInsects(rate, noise, rng);
         cues = new Cues(rate, noise, rng);
         stream = new StreamVoice(rate, noise, rng);
+        deer = new Deer(rate, noise, rng);
         steps = new Steps(rate, noise, rng);
         work = new WorkVoice(rate, noise, rng);
         sheep = new Sheep(rate, rng);
@@ -116,9 +118,19 @@ public sealed class SoundMix
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
 
+    // Coming down from a jump: both feet at once on whatever is underfoot, heavier
+    // and lower the harder the landing (strength 0 to 1).
+    public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f)
+    {
+        strength = Math.Clamp(strength, 0f, 1f);
+        steps.Trigger(ground, Wetness, (1.1f + 0.9f * strength) * gain, 0.85f - 0.2f * strength, Math.Clamp(pan - 0.2f, -1f, 1f));
+        steps.Trigger(ground, Wetness, (1.0f + 0.8f * strength) * gain, 0.95f - 0.2f * strength, Math.Clamp(pan + 0.2f, -1f, 1f));
+    }
+
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
-    public void Play(Cue cue) => cues.Trigger(cue);
+    // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, gain, pan);
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -170,6 +182,9 @@ public sealed class SoundMix
     // gain from distance, startled when the flock bolts.
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
 
+    // A deer somewhere around the listener (pan -1 to 1, gain from distance, far 0 to 1).
+    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, pan, gain, far);
+
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
     public void Thunder(float delay, float gain, float near) => thunder.Trigger(delay, gain, near);
@@ -208,6 +223,7 @@ public sealed class SoundMix
         night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind), season.Insects);
         insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
         sheep.Render(outL, outR, sendL, sendR, count);
+        deer.Render(outL, outR, sendL, sendR, count);
         water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
         stream.Render(outL, outR, count, Stream, StreamPan, Rain);
         frogs.Render(outL, outR, sendL, sendR, count, Water * season.Frogs * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
@@ -1279,17 +1295,20 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(Ground ground, float wetness)
+        public void Trigger(Ground ground, float wetness) => Trigger(ground, wetness, 1f, 1f, leftFoot ? 0.12f : -0.12f, true);
+
+        // A landing sets both feet down at once: heavier (gain) and lower (pitch).
+        public void Trigger(Ground ground, float wetness, float weight, float pitch, float pan, bool walking = false)
         {
-            leftFoot = !leftFoot;
+            if (walking) leftFoot = !leftFoot;
             if (active.Count > 6) active.RemoveAt(0);
             active.Add(new Step
             {
                 Ground = ground,
                 Wet = wetness,
-                Gain = Range(rng, 0.8f, 1.15f),
-                Pitch = Range(rng, 0.85f, 1.15f),
-                Pan = leftFoot ? -0.12f : 0.12f,
+                Gain = Range(rng, 0.8f, 1.15f) * weight,
+                Pitch = Range(rng, 0.85f, 1.15f) * pitch,
+                Pan = pan,
             });
         }
 
@@ -1406,7 +1425,7 @@ public sealed class SoundMix
         sealed class Voice
         {
             public Cue Cue;
-            public float Age, Pitch, Phase, Phase2;
+            public float Age, Pitch, Phase, Phase2, Gain = 1f, Pan;
             public BandPass Band;
             public Lowpass Low;
         }
@@ -1418,10 +1437,10 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(Cue cue)
+        public void Trigger(Cue cue, float gain = 1f, float pan = 0f)
         {
             if (active.Count > 8) active.RemoveAt(0);
-            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f) });
+            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f) });
         }
 
         // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
@@ -1455,7 +1474,8 @@ public sealed class SoundMix
             for (int k = active.Count - 1; k >= 0; k--)
             {
                 var v = active[k];
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, _ => 0.4f };
+                float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1503,6 +1523,35 @@ public sealed class SoundMix
                             s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
                             break;
                         }
+                        case Cue.Hit:
+                        {
+                            // A blow landing: a dull thud dropping in pitch, a slap of cloth and flesh.
+                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
+                            float slap = v.Band.Process(x, 1100f * v.Pitch, 0.7f, rate) * Burst(t, 0f, 0.03f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.15f + slap * 0.225f;
+                            break;
+                        }
+                        case Cue.Crit:
+                        {
+                            // A sneak attack's bonus: the same thud, a sharp crack over it and a
+                            // short bright ring that says it was a good one.
+                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
+                            v.Phase2 += 2f * MathF.PI * 1480f * v.Pitch * dt;
+                            float crack = v.Band.Process(x, 3600f, 0.6f, rate) * Burst(t, 0f, 0.012f);
+                            float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
+                            send = ring * 0.024f;
+                            break;
+                        }
+                        case Cue.Jump:
+                        {
+                            // Pushing off: a quick scuff of the ground and cloth, and a small
+                            // lift of breath.
+                            float scuff = v.Band.Process(x, 1500f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
+                            float breath = v.Low.Process(x, Lowpass.Coef(2200f, rate)) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.25f));
+                            s = scuff * 0.3f + breath * 0.05f;
+                            break;
+                        }
                         case Cue.Learn:
                             // One faint wooden note, G5: something new in the journal.
                             s = Marimba(t, Discovery) * 0.017f;
@@ -1514,10 +1563,12 @@ public sealed class SoundMix
                             send = s * 0.6f;
                             break;
                     }
-                    l[i] += s;
-                    r[i] += s;
-                    sl[i] += send;
-                    sr[i] += send;
+                    s *= v.Gain;
+                    send *= v.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    sl[i] += send * pl;
+                    sr[i] += send * pr;
                     v.Age += dt;
                 }
                 if (v.Age > length) active.RemoveAt(k);
@@ -1843,6 +1894,129 @@ public sealed class SoundMix
                     voice.Age += dt;
                 }
                 if (voice.Age >= voice.Length) voices.RemoveAt(v);
+            }
+        }
+    }
+
+    // --- Red deer ---------------------------------------------------------------
+
+    // Deer are quiet. A startled one gives a short hoarse bark; at dusk in autumn a
+    // stag lets out a long, deep roar that rolls and cracks and carries a long way;
+    // running deer thud softly. Distance rounds the sound off (a low-pass) and
+    // sends more of it to the reverb, so a far roar is a low rolling shape.
+    public enum DeerCall { Bark, Roar, Hoof }
+
+    sealed class Deer
+    {
+        readonly int rate;
+        readonly Random rng;
+        readonly Noise noise;
+        readonly List<Voice> voices = new();
+
+        sealed class Voice
+        {
+            public DeerCall Call;
+            public float Pitch, Length, Gain, Pan, Far, Age, Phase, Rough;
+            public BandPass Low, High, Body;
+            public Lowpass Round;
+        }
+
+        public Deer(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        // gain 0 to 1 from distance; far 0 (close) to 1 (a long way off).
+        public void Trigger(DeerCall call, float pan, float gain, float far)
+        {
+            if (voices.Count > 6 || gain < 0.01f) return;
+            var v = new Voice { Call = call, Pan = Math.Clamp(pan, -1f, 1f), Far = Math.Clamp(far, 0f, 1f) };
+            switch (call)
+            {
+                case DeerCall.Bark:
+                    v.Pitch = Range(rng, 330f, 420f);
+                    v.Length = Range(rng, 0.16f, 0.24f);
+                    v.Gain = gain * 0.125f;
+                    v.Rough = 0.55f;
+                    break;
+                case DeerCall.Roar:
+                    v.Pitch = Range(rng, 78f, 105f);
+                    v.Length = Range(rng, 2.6f, 3.6f);
+                    v.Gain = gain * 0.05f;
+                    v.Rough = 0.8f;
+                    break;
+                default:
+                    v.Pitch = Range(rng, 70f, 95f);
+                    v.Length = 0.11f;
+                    v.Gain = gain * 0.07f;
+                    break;
+            }
+            voices.Add(v);
+        }
+
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
+        {
+            float dt = 1f / rate;
+            for (int k = voices.Count - 1; k >= 0; k--)
+            {
+                var v = voices[k];
+                float pl = Pan(v.Pan, true), pr = Pan(v.Pan, false);
+                float round = Lowpass.Coef(6000f - 5200f * v.Far, rate);
+                float send = 0.25f + 0.7f * v.Far;
+                for (int i = 0; i < n && v.Age < v.Length; i++)
+                {
+                    float u = v.Age / v.Length;
+                    float s;
+                    switch (v.Call)
+                    {
+                        case DeerCall.Bark:
+                        {
+                            // A sharp cough: a buzzy tone dropping fast, mixed with breath,
+                            // through a throat formant, cut off short.
+                            float freq = v.Pitch * (1.25f - 0.45f * u);
+                            v.Phase += freq * dt;
+                            v.Phase -= MathF.Floor(v.Phase);
+                            float buzz = 2f * v.Phase - 1f;
+                            float src = buzz * 0.7f + noise.Next() * v.Rough * 0.9f;
+                            float env = MathF.Min(1f, v.Age / 0.008f) * MathF.Pow(1f - u, 1.6f);
+                            s = (v.Low.Process(src, 900f, 0.45f, rate) + 0.7f * v.High.Process(src, 1900f, 0.55f, rate)) * env;
+                            break;
+                        }
+                        case DeerCall.Roar:
+                        {
+                            // A low voice that swells, bends up then sags, shaken by a fast
+                            // growl (about 28 Hz) with rough noise riding on top.
+                            float bend = 1f + 0.35f * MathF.Sin(MathF.PI * MathF.Min(1f, u * 1.4f)) - 0.25f * u * u;
+                            float growl = 0.55f + 0.45f * MathF.Sin(v.Age * 2f * MathF.PI * (24f + 8f * u));
+                            v.Phase += v.Pitch * bend * dt;
+                            v.Phase -= MathF.Floor(v.Phase);
+                            float saw = 2f * v.Phase - 1f;
+                            float src = saw + noise.Next() * v.Rough * 0.5f;
+                            float env = MathF.Min(1f, v.Age / 0.35f) * MathF.Min(1f, (v.Length - v.Age) / 0.9f);
+                            float body = v.Body.Process(src, 230f + 120f * u, 0.4f, rate) * 1.2f;
+                            float mouth = v.Low.Process(src, 520f + 300f * MathF.Sin(MathF.PI * u), 0.5f, rate) * 0.6f;
+                            s = (body + mouth) * growl * env;
+                            break;
+                        }
+                        default:
+                        {
+                            // A dull hoof on soft ground: a short low thump with a little scuff.
+                            float env = MathF.Exp(-v.Age / 0.03f) * MathF.Min(1f, v.Age / 0.003f);
+                            v.Phase += v.Pitch * (1f - 0.5f * u) * dt;
+                            s = (MathF.Sin(v.Phase * 2f * MathF.PI) + 0.4f * v.Body.Process(noise.Next(), 700f, 0.7f, rate)) * env;
+                            break;
+                        }
+                    }
+                    s = v.Round.Process(s, round) * v.Gain;
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    sl[i] += s * pl * send;
+                    sr[i] += s * pr * send;
+                    v.Age += dt;
+                }
+                if (v.Age >= v.Length) voices.RemoveAt(k);
             }
         }
     }
