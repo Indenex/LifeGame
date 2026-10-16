@@ -7,7 +7,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, sheep, walk (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -35,9 +35,9 @@ public partial class Showcase : Node3D
         wool.SetShaderParameter("cavity", 0.3f);
 
         // Today's figure first, for comparison, then each style.
-        const float gap = 2.2f;
+        float gap = view == "faces" ? 0.75f : 2.2f;
         float x0 = -gap * 1.5f;
-        var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0) };
+        var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0), Visible = view != "sheep" };
         AddChild(today);
         Label("Today", new Vector3(x0, 0, 0));
         for (int i = 0; i < HumanFigure.All.Length; i++)
@@ -50,22 +50,30 @@ public partial class Showcase : Node3D
             AddChild(person);
             people.Add(person);
             var sheep = SheepFigure.Create(style, wool);
-            sheep.Position = new Vector3(x + 0.2f, 0, 1.4f);
-            sheep.Rotation = new Vector3(0, yaw + 0.9f, 0);
+            // Sheep stand beside their person in the row, and alone in the sheep view.
+            sheep.Position = view == "sheep" ? new Vector3(x, 0, 0) : new Vector3(x + 0.75f, 0, -0.9f);
+            sheep.Rotation = new Vector3(0, yaw + (view == "sheep" ? 1.45f : 0.9f), 0);
+            sheep.Visible = view is "row" or "sheep";
+            person.Visible = view != "sheep";
             AddChild(sheep);
             int tris = HumanFigure.Build(style).Triangles;
-            Label($"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(style, wool).Triangles:N0}", new Vector3(x, 0, 0));
+            Label(view == "faces" ? $"{style.Key}  {style.Name}" : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(style, wool).Triangles:N0}", new Vector3(x, 0, 0));
         }
         if (view == "walk") Stride();
+        // The faces view is close enough that the labels would cover the heads.
+        if (view == "faces")
+            foreach (var child in GetChildren())
+                if (child is Label3D label) label.Position += new Vector3(0, -2.15f + 0.1f, 0.3f);
 
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         var (from, at) = view switch
         {
-            "people" => (new Vector3(1.1f, 1.45f, 7.2f), new Vector3(1.1f, 1.0f, 0f)),
-            "sheep" => (new Vector3(1.3f, 1.4f, 5.6f), new Vector3(1.3f, 0.5f, 1.4f)),
-            "walk" => (new Vector3(1.1f, 1.2f, 7.2f), new Vector3(1.1f, 0.95f, 0f)),
-            _ => (new Vector3(1.1f, 2.6f, 9.5f), new Vector3(1.1f, 0.8f, 0.6f)),
+            "people" => (new Vector3(0f, 1.3f, 8.4f), new Vector3(0f, 0.95f, 0f)),
+            "faces" => (new Vector3(0f, 1.6f, 4.2f), new Vector3(0f, 1.45f, 0f)),
+            "sheep" => (new Vector3(0.6f, 1.5f, 6.2f), new Vector3(0.6f, 0.5f, 0f)),
+            "walk" => (new Vector3(0f, 1.2f, 8.4f), new Vector3(0f, 0.95f, 0f)),
+            _ => (new Vector3(0.4f, 3.2f, 10.5f), new Vector3(0.4f, 0.7f, 0f)),
         };
         camera.LookAtFromPosition(from, at, Vector3.Up);
     }

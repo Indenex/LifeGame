@@ -111,9 +111,25 @@ public static class HumanFigure
             new(0f, 0.05f * b, 0.05f * b),
             new(1f, 0.045f * b, 0.048f * b),
         }, s.LimbSides, 0.2f);
-        k.Ellipsoid(new Vector3(0, chin + hh * 0.52f, 0), new Vector3(hh * 0.40f, hh * 0.52f, hh * 0.46f), s.HeadSegments, s.HeadRings);
-        // Jaw and cheeks, a little forward of the skull.
-        k.Paint(Look.Skin, 0.97f).Ellipsoid(new Vector3(0, chin + hh * 0.24f, hh * 0.05f), new Vector3(hh * 0.31f, hh * 0.25f, hh * 0.36f), s.HeadSegments, s.HeadRings);
+        if (s.Flat)
+        {
+            // Carved: a block of a head in a few clean planes, narrow at the chin,
+            // broad at the cheekbones, flat on top.
+            k.Loft(new Vector3(0, chin, hh * 0.06f), new Vector3(0, H, -hh * 0.02f), new MeshKit.Ring[]
+            {
+                new(0f, hh * 0.17f, hh * 0.2f, hh * 0.06f),
+                new(0.22f, hh * 0.3f, hh * 0.38f, hh * 0.03f),
+                new(0.55f, hh * 0.39f, hh * 0.45f),
+                new(0.85f, hh * 0.37f, hh * 0.43f),
+                new(1f, hh * 0.25f, hh * 0.3f),
+            }, s.HeadSegments, 0.3f, 0f);
+        }
+        else
+        {
+            k.Ellipsoid(new Vector3(0, chin + hh * 0.52f, 0), new Vector3(hh * 0.40f, hh * 0.52f, hh * 0.46f), s.HeadSegments, s.HeadRings);
+            // Jaw and cheeks, a little forward of the skull.
+            k.Paint(Look.Skin, 0.97f).Ellipsoid(new Vector3(0, chin + hh * 0.24f, hh * 0.05f), new Vector3(hh * 0.31f, hh * 0.25f, hh * 0.36f), s.HeadSegments, s.HeadRings);
+        }
         k.Paint(Look.Skin, 0.95f).Ellipsoid(new Vector3(0, chin + hh * 0.42f, hh * 0.45f), new Vector3(hh * 0.065f, hh * 0.1f, hh * 0.08f), s.Flat ? 4 : 8, s.Flat ? 3 : 5);
         if (s.Brow)
             k.Paint(Look.Skin, 0.93f).Ellipsoid(new Vector3(0, chin + hh * 0.64f, hh * 0.35f), new Vector3(hh * 0.3f, hh * 0.065f, hh * 0.1f), s.Flat ? 6 : 12, s.Flat ? 3 : 5);
@@ -121,7 +137,7 @@ public static class HumanFigure
             for (int side = -1; side <= 1; side += 2)
                 k.Paint(Look.Skin, 0.92f).Ellipsoid(new Vector3(side * hh * 0.4f, chin + hh * 0.5f, -hh * 0.02f), new Vector3(hh * 0.05f, hh * 0.12f, hh * 0.08f), 8, 5);
         for (int side = -1; side <= 1; side += 2)
-            k.Paint(Eye).Ellipsoid(new Vector3(side * hh * 0.16f, chin + hh * 0.55f, hh * 0.405f), new Vector3(hh * 0.055f, hh * 0.065f, hh * 0.03f) * s.EyeSize, s.Flat ? 5 : 8, s.Flat ? 3 : 5);
+            k.Paint(Eye).Ellipsoid(new Vector3(side * hh * 0.16f, chin + hh * 0.55f, hh * (s.Flat ? 0.37f : 0.405f)), new Vector3(hh * 0.055f, hh * 0.065f, hh * 0.03f) * s.EyeSize, s.Flat ? 5 : 8, s.Flat ? 3 : 5);
 
         // Hair: a cap set high and back so the face shows, a lock at the nape, and
         // in some styles chunky locks round the crown.
@@ -129,7 +145,7 @@ public static class HumanFigure
         k.Paint(Look.Hair, 0.92f).Ellipsoid(new Vector3(0, chin + hh * 0.5f, -hh * 0.3f), new Vector3(hh * 0.36f, hh * 0.32f, hh * 0.2f), s.HeadSegments, s.HeadRings);
         for (int i = 0; i < s.HairLocks; i++)
         {
-            float a = Mathf.DegToRad(-140f + 280f * i / Mathf.Max(1, s.HairLocks - 1)) + Mathf.Pi;
+            float a = Mathf.DegToRad(-105f + 210f * i / Mathf.Max(1, s.HairLocks - 1)) + Mathf.Pi;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
             var at = new Vector3(0, chin + hh * (0.66f + MeshKit.Hash(i, 3) * 0.1f), -hh * 0.06f) + dir * hh * 0.4f;
             var tilt = MeshKit.Aim((dir + Vector3.Down * 0.8f).Normalized());
@@ -142,7 +158,7 @@ public static class HumanFigure
             int u = side == 0 ? HumanRig.UpperArmL : HumanRig.UpperArmR;
             Vector3 sh = j.At[u], el = j.At[u + 1], wr = j.At[u + 2];
             k.Bone(u).Paint(Look.Skin);
-            k.Ellipsoid(sh + new Vector3(0, -0.02f, 0), new Vector3(0.07f, 0.075f, 0.07f) * b, s.LimbSides, s.Flat ? 4 : 6);
+            k.Ellipsoid(sh + new Vector3(-Mathf.Sign(sh.X) * 0.02f, -0.035f, 0), new Vector3(0.062f, 0.07f, 0.064f) * b, s.LimbSides, s.Flat ? 4 : 6);
             k.Loft(sh, el, new MeshKit.Ring[] { new(0f, 0.058f * b, 0.062f * b), new(0.5f, 0.053f * b, 0.056f * b), new(1f, 0.043f * b, 0.046f * b) }, s.LimbSides);
             k.Bone(u + 1);
             k.Loft(el, wr, new MeshKit.Ring[] { new(0f, 0.043f * b, 0.045f * b), new(0.3f, 0.046f * b, 0.05f * b), new(1f, 0.031f * b, 0.029f * b) }, s.LimbSides);
@@ -174,7 +190,7 @@ public static class HumanFigure
             k.Bone(t).Paint(Look.Skin);
             k.Loft(hip + Vector3.Up * 0.05f, knee, new MeshKit.Ring[] { new(0f, 0.085f * b, 0.092f * b), new(0.5f, 0.075f * b, 0.08f * b, 0.005f), new(1f, 0.054f * b, 0.057f * b) }, s.LimbSides);
             k.Bone(t + 1);
-            k.Ellipsoid(knee, new Vector3(0.056f, 0.06f, 0.06f) * b, s.LimbSides, s.Flat ? 4 : 6);
+            k.Ellipsoid(knee, new Vector3(0.052f, 0.058f, 0.055f) * b, s.LimbSides, s.Flat ? 4 : 6);
             k.Loft(knee, ankle, new MeshKit.Ring[] { new(0f, 0.053f * b, 0.055f * b), new(0.3f, 0.058f * b, 0.064f * b, -0.012f), new(1f, 0.036f * b, 0.038f * b) }, s.LimbSides);
             k.Bone(t + 2);
             if (s.RoundFeet)
