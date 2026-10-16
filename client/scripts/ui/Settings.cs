@@ -23,6 +23,8 @@ public static class Settings
     public static T Get<[MustBeVariant] T>(string section, string key, T fallback) =>
         File.HasSectionKey(section, key) ? File.GetValue(section, key).As<T>() : fallback;
 
+    public static bool Has(string section, string key) => File.HasSectionKey(section, key);
+
     public static void Set(string section, string key, Variant value)
     {
         File.SetValue(section, key, value);

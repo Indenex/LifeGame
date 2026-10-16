@@ -87,6 +87,14 @@ WaitFor(() => MyPos() is { } p && p.X < targetX + 1, 20, $"server has us out at 
 var far = MyPos()!;
 Check(World.ChunkOf(far.X) < -World.ViewRadiusChunks, $"chunk {far.ChunkX} is outside the old area around the origin");
 
+// Others see us sneak (anim-1); the row is the whole signal.
+uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+conn.Reducers.SetSneaking(true);
+WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) != null, 10, "sneaking shows for others");
+conn.Reducers.SetSneaking(true);
+Pump(300);
+Check(conn.Db.PlayerSneaking.Iter().Count(r => r.PlayerId == myId) == 1, "sneaking twice is still one row");
+
 conn.Disconnect();
 Pump(500);
 Connect();
@@ -102,6 +110,11 @@ Check(back != null && MathF.Abs(back.X - far.X) < 1.5f && MathF.Abs(back.Z - far
     $"own position is where we logged off ({back?.X:F1}, {back?.Z:F1})");
 Subscribe(Subscriptions.Area(AreaAround(back!.X, back.Z)), 20, "area around the saved position subscribed");
 Check(conn.Db.PlayerPos.Iter().Any(p => p.PlayerId == back.PlayerId), "the area includes us too");
+Check(conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, "logging off stood us up again");
+conn.Reducers.SetSneaking(true);
+WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) != null, 10, "can sneak again");
+conn.Reducers.SetSneaking(false);
+WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "standing up clears it");
 
 // Walking still works from there.
 float stepX = back.X + 3;

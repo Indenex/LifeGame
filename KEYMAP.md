@@ -17,7 +17,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
-| G | **Use** what you're facing: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker | all | G forage (Survival), G feed fire (Crafting), G drink (Survival, R gone), H add materials (Building), R read note (Journal) |
+| G | **Use** what you're facing: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, ask a player to trade or say yes when one asks (Esc says no; ui-9) | all | G forage (Survival), G feed fire (Crafting), G drink (Survival, R gone), H add materials (Building), R read note (Journal) |
 | Shift+G | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (also in the F1 list as "Shift G") |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
@@ -39,6 +39,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
+| Trade window (ui-9) | Click something you carry to offer one, Shift+click all; click your offer to take one back; Esc calls the trade off. When asked: G says yes, Esc says no |
 
 
 ## Chat commands
