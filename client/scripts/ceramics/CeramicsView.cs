@@ -61,7 +61,7 @@ public partial class CeramicsView : Node
         };
         conn.Db.ClayNews.OnInsert += (_, n) =>
         {
-            if (n.PlayerId == MyId) note(n.Text.Replace("{use}", Controls.KeyFor("use") ?? "G"));
+            if (n.PlayerId == MyId) note(n.Text.Replace("{use}", UseKey));
         };
         conn.Db.MyCraftJob.OnDelete += (_, j) =>
         {
@@ -140,12 +140,17 @@ public partial class CeramicsView : Node
     {
         Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
-        Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = TendOffer });
+        // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
+        Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
+        Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = at => TendOffer(at, firing: false) });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
         Use.Register(new UseHandler { Id = "ceramics.pick_up", Priority = 10, Find = PickUpOffer });
     }
 
-    // Fresh clay is small; pieces this close get a faint glow on the ground under them.
+    // The player's Use key as prompts write it (rebindable on the Controls page).
+    static string UseKey => Controls.KeyFor("use") ?? "G";
+
+    // Fresh clay is small; drying pieces this close get a faint rim light.
     const float SpotRange = 8f;
 
     public override void _Process(double delta)
@@ -185,10 +190,11 @@ public partial class CeramicsView : Node
         if (kiln.view == null || kiln.view.IsFiring) return null;
         bool pots = Carrying(i => ClayRules.FormOfUnfired(i) != null);
         ulong id = kiln.id;
+        var target = new Vector3(kiln.view.Position.X, 0, kiln.view.Position.Z);
         if (pots && kiln.view.Load < ClayRules.KilnCapacity)
-            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: kiln.view.Position);
+            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: target);
         if (kiln.view.Load > 0 && FuelSeconds() >= ClayRules.KilnFireSeconds)
-            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: kiln.view.Position);
+            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: target);
         return null;
     }
 
@@ -201,7 +207,9 @@ public partial class CeramicsView : Node
         return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id), Target: new Vector3(fire.X, 0, fire.Z));
     }
 
-    UseOffer? TendOffer(Vector3 me3)
+    // Pass a Target so G picks what you face (KEYMAP.md); without one, a fire you face
+    // always won over the pot beside it (bugfix-13).
+    UseOffer? TendOffer(Vector3 me3, bool firing)
     {
         if (conn == null) return null;
         var at = new Vector2(me3.X, me3.Z);
@@ -217,10 +225,11 @@ public partial class CeramicsView : Node
         float moisture = piece.view.Moisture;
         bool dry = !ClayRules.TooWetToFire(moisture);
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
+        if (besideFire != firing) return null;
         ulong id = piece.id;
-        var target = piece.view.Position;
+        var target = new Vector3(piece.view.Position.X, 0, piece.view.Position.Z);
         if (row?.MadeBy == MyId)
-            Tip("ceramics.tend", "G by your drying clay shows how long it has left. Once it turns pale, G picks it up, or fires it beside a fire.");
+            Tip("ceramics.tend", $"{UseKey} by your drying clay shows how long it has left. Once it turns pale, {UseKey} picks it up, or fires it beside a fire.");
         if (dry)
             return besideFire
                 ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false), Target: target)
@@ -230,7 +239,7 @@ public partial class CeramicsView : Node
         string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
         dryingOfferFrame = Engine.GetProcessFrames();
         if (besideFire)
-            return new UseOffer($"{wait} (G twice fires it wet)", piece.d, () => FireDamp(id, moisture), Target: target);
+            return new UseOffer($"{wait} ({UseKey} twice fires it wet)", piece.d, () => FireDamp(id, moisture), Target: target);
         bool warm = BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
         return new UseOffer(wait, piece.d, () => note(warm
             ? $"It is {ClayRules.Describe(moisture)}. It turns pale when it is dry enough."
@@ -252,7 +261,7 @@ public partial class CeramicsView : Node
         {
             confirmPiece = id;
             confirmUntil = Time.GetTicksMsec() / 1000.0 + ConfirmSeconds;
-            note($"It is still {ClayRules.Describe(moisture)} and will crack. Press G again to fire it anyway.");
+            note($"It is still {ClayRules.Describe(moisture)} and will crack. Press {UseKey} again to fire it anyway.");
             return;
         }
         confirmPiece = 0;
