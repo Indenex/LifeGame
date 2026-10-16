@@ -63,6 +63,8 @@ public static class Controls
         new("claim_open", None, "Your claim", "{key} shows the land you claim"),
         new("chat", None, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
+        // The equipment panel (ui-10, D-074, D-094); its hint waits until you first carry clothes.
+        new("equipment", new[] { Key.I }, "What you wear", "{key} shows what you wear", OnRequest: true),
         // Interim: Ceramics reads V directly until tending clay moves to G.
         new("tend_clay", new[] { Key.V }, "Tend clay", Fixed: true),
     };
