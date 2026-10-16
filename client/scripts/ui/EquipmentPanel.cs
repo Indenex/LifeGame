@@ -24,6 +24,12 @@ public partial class EquipmentPanel : CanvasLayer
     public bool IsOpen => panel.Visible;
     // Everything you carry (ui-18); Main sets its link and actions.
     public readonly BagGrid Bag = new();
+    // The tools section of the doll (Justin): tools here work by themselves, take no
+    // bag space and add no weight. Shown once the server keeps it (Bag.Link.Arranges).
+    public const int ToolSlots = 6;
+    readonly BagGrid belt = new() { Kind = "belt", Width = 3, Empty = "" };
+    Control beltSection = null!;
+    Button sort = null!;
     // Whether a point on screen is over this panel.
     public bool Covers(Vector2 at) => IsOpen && panel.GetGlobalRect().HasPoint(at);
 
@@ -80,6 +86,7 @@ public partial class EquipmentPanel : CanvasLayer
         shown = "";
         Refresh();
         Bag.Refresh();
+        belt.Refresh();
     }
 
     public void Close() => panel.Visible = false;
@@ -98,7 +105,13 @@ public partial class EquipmentPanel : CanvasLayer
 
     public override void _Process(double delta)
     {
-        if (IsOpen) { Refresh(); Bag.Refresh(); }
+        if (IsOpen)
+        {
+            Refresh();
+            Bag.Refresh();
+            belt.Refresh();
+            beltSection.Visible = sort.Visible = Bag.Link.Arranges;
+        }
         // The first time you carry something, the one-time hint teaches I.
         else if (live && !hinted && Bag.Link.Carried().Any())
         {
@@ -120,9 +133,22 @@ public partial class EquipmentPanel : CanvasLayer
         columns.AddThemeConstantOverride("separation", 26);
         box.AddChild(columns);
 
-        // The figure, with a slot over each part that can be dressed.
+        // The figure, with a slot over each part that can be dressed, and the tools below.
+        var figure = new VBoxContainer();
+        figure.AddThemeConstantOverride("separation", 8);
+        columns.AddChild(figure);
         var doll = new EquipmentFigure { CustomMinimumSize = new Vector2(220, 380) };
-        columns.AddChild(doll);
+        figure.AddChild(doll);
+        var tools = new VBoxContainer();
+        tools.AddThemeConstantOverride("separation", 6);
+        var toolsTitle = Hud.Text("Tools", 15);
+        toolsTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        tools.AddChild(toolsTitle);
+        belt.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        tools.AddChild(belt);
+        beltSection = tools;
+        figure.AddChild(tools);
+        WireBelt();
         AddSlot(doll, ClothingSlot.Body, new Vector2(110, 150));
         AddSlot(doll, ClothingSlot.Feet, new Vector2(110, 338));
 
@@ -153,7 +179,15 @@ public partial class EquipmentPanel : CanvasLayer
         var bagSide = new VBoxContainer();
         bagSide.AddThemeConstantOverride("separation", 10);
         columns.AddChild(bagSide);
-        bagSide.AddChild(Hud.Text("What you carry", 17));
+        var bagHead = new HBoxContainer();
+        bagHead.AddThemeConstantOverride("separation", 12);
+        bagHead.AddChild(Hud.Text("What you carry", 17));
+        bagHead.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+        sort = new Button { Text = "Sort", FocusMode = Control.FocusModeEnum.None, Flat = true, TooltipText = "Put the bag in order by kind" };
+        sort.AddThemeFontSizeOverride("font_size", 14);
+        sort.Pressed += () => Bag.Link.Sort();
+        bagHead.AddChild(sort);
+        bagSide.AddChild(bagHead);
         var scroll = new ScrollContainer
         {
             CustomMinimumSize = new Vector2(6 * BagGrid.Slot + 5 * 10 + 14, 330),
@@ -162,7 +196,7 @@ public partial class EquipmentPanel : CanvasLayer
         scroll.AddChild(Bag);
         bagSide.AddChild(scroll);
 
-        var hint = Hud.Text("Drag things onto the bar below, onto a slot to wear them, or out onto the ground    Double-click uses    I or Esc closes", 13);
+        var hint = Hud.Text("Drag things onto the bar below, onto a slot to wear them, tools onto Tools, or out onto the ground    Double-click uses    I or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
@@ -175,6 +209,22 @@ public partial class EquipmentPanel : CanvasLayer
         outer.GrowHorizontal = Control.GrowDirection.Both;
         outer.GrowVertical = Control.GrowDirection.Both;
         return outer;
+    }
+
+    // The belt and the bag's own order: drag a tool from the bag onto the belt and back,
+    // drag within either to rearrange. The server checks each move (ui-18).
+    void WireBelt()
+    {
+        belt.Positioned = () => true;
+        belt.Capacity = () => ToolSlots;
+        belt.Source = () => Bag.Link.Belt();
+        belt.Accepts = d => d["from"].AsString() == "bag" && Items.UseOf((Item)d["item"].AsInt32()) == UseAction.Tool;
+        belt.ReceiveAt = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
+        belt.Arrange = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
+        Bag.Positioned = () => Bag.Link.Arranges;
+        Bag.Arrange = (d, cell) => Bag.Link.MoveTo((ulong)d["id"].AsInt64(), cell);
+        Bag.Accepts = d => d["from"].AsString() == "belt";
+        Bag.ReceiveAt = (d, cell) => Bag.Link.FromBelt((ulong)d["id"].AsInt64(), cell);
     }
 
     void AddSlot(Control doll, ClothingSlot slot, Vector2 centre)
