@@ -12,7 +12,7 @@ anim-2's goals are all merged (station pose, chop swing, breath, sheep motion, w
 - 2026-10-17 00:00: #358 (flinch) merged. Built HeldTools.For(processId, inventory) in client/scripts/animation/HeldTools.cs, plus Avatar.Hold(right, left), which puts ItemModels.HeldMesh under ToolR/ToolL only when the held item changes. AvatarWork.Start sets both hands with the work pose. Client builds.
 
 ## Open questions / blockers
-- Other players' exact tool: the server knows it (BestTool) but CraftWork has no tool column. Option for the PM: add `ushort Tool` (with [Default]) to CraftWork, set by Crafting at StartCraft. It's a small cross-lane server change, and the default meanwhile is the plainest item.
+- Other players' exact tool: PM picked (a) at 23:55. #372 ships with the plainest-item guess. Crafting will add `Tool` (defaulted) to CraftWork at StartCraft; then a follow-up reads CraftWork.Tool for other players in AvatarWork/HeldTools.
 
 ## Next step
 Open the PR for claude/anim-3, get CI green and send the sha to the PM; ask Render for a clip of chopping and knapping with tools in hand.
