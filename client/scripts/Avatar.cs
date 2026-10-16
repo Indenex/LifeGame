@@ -60,6 +60,11 @@ public partial class Avatar : Node3D
         if (dx * dx + dz * dz > 1e-4f) Rotation = new Vector3(0, Mathf.Atan2(dx, dz), 0);
     }
 
+    // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
+    // the last landing was (0 to 1, set on the frame you land). The avatar's height is
+    // moved by whoever moves it; this only poses the body.
+    public void SetJump(bool airborne, bool rising, float landing) => animator.Jump(airborne, rising, landing);
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.
