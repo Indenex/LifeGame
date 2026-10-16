@@ -28,10 +28,12 @@ Husbandry keeps shearing, hunting and butchering; Toolmaking keeps cordage, bask
 - Server type-check: `cd server/spacetimedb && /tmp/dotnet/dotnet build -p:RuntimeIdentifier= -p:OutputType=Library -p:SelfContained=false`.
 - Hint harness: a console project compiling `shared/*.cs` + `client/scripts/journal/NextSteps.cs`, with a stub `namespace LifeGame { public static class Recipes { internal static string Keys(string t) => t; } }`; loop `NextSteps.Next(known)` taking the first (and the third) id until empty and check every `Skills.AllProcessIds()` id gets reached and has a line in NextSteps.Lines.
 
+- 2026-10-16 20:35: #160 and audio-3 (#210) merged. Merged main here (clean), swapped Journal.cs to Sfx.Play(Cue.SkillUp/Learn), deleted Chime.cs. Harness 47/47 (picks 1st and 3rd), server type-checks. Waiting on CI.
+
 ## Open questions / blockers
 - #160 (Crafting, session_01Y2sA7pDBFch57bWb1uKMTq) conflicts with main in shared/Structures.cs, server/spacetimedb/Building.cs, client/scripts/building/StructureModel.cs; Crafting was told 19:50. Don't resolve those here; wait for #160 to merge.
 - Audio (session_01LeXCWTFVBQcCNVEDdhPek3, audio-3, branch claude/audio-3-cues): when it merges, in client/scripts/journal/Journal.cs replace `chime.Title()` with `Sfx.Play(Cue.SkillUp)` and `chime.Discovery()` with `Sfx.Play(Cue.Learn)`, then delete client/scripts/journal/Chime.cs (and its .uid). Audio will say when it has merged.
 - Ceramics-8 adds the potter's bench shape; Things to try already handles `build.bench` once it exists.
 
 ## Next step
-When #160 merges: `git merge origin/main` into claude/journal-skills-11, run the harness and server type-check, push, wait for CI on #193, mark it ready and send the green sha to the PM.
+Wait for CI on #193 (head after push), then send the green sha to the PM. Merging #237 (skills-12) first or second needs a small conflict fix in shared/Skills.cs: keep both sets of specializations and SpecOverrides.
