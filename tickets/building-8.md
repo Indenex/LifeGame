@@ -28,6 +28,8 @@ Costs (D-117, Justin approved the cheap ones): fence posts 2 sticks, rails 2 sti
 
 - 2026-10-16 18:40: locally all green on 969a7ae (LoadTest, BuildTest all modes, SpawnCheck, CraftCheck, SocialTest, upgrade check over origin/main). Opened #153. Render requested 969a7ae.
 
+- 2026-10-16 19:29: merged main after #105 (jar is kind 6; Fence and Gate follow). CI green on 7ed904b (https://github.com/Indenex/LifeGame/actions/runs/38953660183); sent the PM the sha. Logged here on the building-9 branch so #153's head doesn't move.
+
 ## Open questions / blockers
 - Animals agreed and declared `StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref bool blocked)` in AnimalFires.cs (PR #115, claude/animals-fence-5gkntn 22c0a61). BuildingFence.cs implements it (8ebc64b). A partial implementation without its declaration won't compile, so this PR must merge after #115 (merge main once #115 is in). Animals will live-test sheep at a fence.
 - (none) Costs D-117 and shelter D-116 are decided. This PR includes #115's commits until #115 merges.
