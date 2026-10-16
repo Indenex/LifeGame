@@ -1,0 +1,15 @@
+# claims-8: B's screen shows a soft slanted "wants to trade" over A's head after A asks.
+# Camera = B (held at 30,20 in the wild), puppet = A.
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --debug-position=30,20
+name A
+find
+wait 35
+sql UPDATE player_pos SET x = 30.0, z = 20.0, chunk_x = 1, chunk_z = 1 WHERE player_id = {target}
+wait 1
+front 2
+wait 3
+trade-ask
+burst 4 1.5
+# A walks off past 4 m: the cue should fade
+away 7
+burst 3 1.5

@@ -19,6 +19,7 @@ bugfix-18c tools/render/scene.sh bugfix-18c e80c6cf tools/render/scenes/bugfix-1
 bugfix-19 tools/render/scene.sh bugfix-19 1877b88 tools/render/scenes/bugfix-19-pot.txt
 claims-7 tools/render/scene.sh claims-7 f85c3b9 tools/render/scenes/claims-7-ask.txt
 skills-10 tools/render/scene.sh skills-10 origin/claude/journal-skills-10 tools/render/scenes/skills-10-journal.txt
+claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
 env-1 tools/render/scenes/env-1.sh 1ade969
 env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
 model-1-style tools/render/scenes/model-1-style.sh eb8b399

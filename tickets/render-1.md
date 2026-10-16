@@ -56,6 +56,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 20:12: render request ui-12 Options page bca464e (UX/UI): --screenshot-menu and --screenshot-options, fresh settings.cfg, 1280x720. Queued.
 - 2026-10-16 20:30: ui-12 sent (f92bff3; b118ee0 is wiring-only), 968f6a7. Jar rerun 2: jar hidden behind the player, no prompt (puppet heading doesn't turn the client's own figure); jar3 queued with side camera and a W tap.
 - 2026-10-16 20:40: PR #103 merged (tools/render on main). render-1 done; the lane continues serving render requests from this branch (images in renders/, tools updates via small follow-up PRs).
+- 2026-10-16 20:45: render request claims-8 ff0ae8a (Claims): B's view of the "wants to trade" cue over A; scene claims-8-cue.txt queued. bugfix-18b (a): with 10 sticks carried the prompt reads Feed the fire even with a full fire and a dry pot (setup verified by SQL); told Bug fixes; no-sticks variant bugfix-18c queued.
 
 ## Open questions / blockers
 - (none)
