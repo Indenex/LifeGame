@@ -15,9 +15,11 @@ Small sounds that make the world answer the player (M1, and M2's "sees skill gai
 - 2026-10-16 22:55: Journal agreed (written in its tickets/skills-11.md): once audio-3 is on main it swaps chime.Title()/Discovery() for Sfx.Play(Cue.SkillUp/Learn) and deletes Chime.cs. Send the "audio-3 merged" note to the PM, who passes it to the new Journal session.
 - 2026-10-16 23:05: Justin chose A (via PM): a soft rustle and knock on every pickup. #189 merged, so the cues no longer need audio-2a/2b: cherry-picked onto main as claude/audio-3-cues-main (conflicts only at the StreamVoice lines, dropped). Client and SoundPreview build; cues still -28 to -26 dBFS loudest 50 ms; storm peak -6.8.
 
+- 2026-10-16 (Sonnet takeover): audio-2a+2b PR is #216 (branch claude/audio-2a-streams). Merged main and claude/audio-2a-streams into claude/audio-3-cues-main (resolved SoundMix/Program.cs additively); SoundPreview builds, `cues:20` renders (rms -35.2, peak -14.4). Justin chose pickup sound on every item (A).
+
 ## Open questions / blockers
 - Answered: pickup sound on every item (A).
 - Journal: agreed (skills-11); tell the PM when audio-3 merges.
 
 ## Next step
-Watch PR #210 to green and send the PM the sha; send Render a `cues:20` SoundPreview clip request, then send each lane its one-line hook: UX/UI `Sfx.Play(Cue.Pickup)` in ui/InventoryBar.cs SetItems where `gained` is found (skip the first call at login); Survival `Cue.Eat` after conn.Reducers.Eat in survival/SurvivalClient.cs and `Cue.Drink` in the survival.drink UseOffer; Journal the chime swap; Building `Cue.Place` after PlaceStructure in building/BuildingSystem.cs Place(); Crafting `Cue.FireLit` on Fire.OnInsert within ~6 m of the local player (crafting/FireView.cs).
+When #216 merges: merge main into claude/audio-3-cues-main, build SoundPreview, open the audio-3 PR (base main), request a Render `cues:20` clip, then send each lane its one-line hook (see git history of this ticket for the list: UX InventoryBar.SetItems Pickup; Survival Eat/Drink; Journal chime swap; Building Place; Crafting FireLit) and tell the PM audio-3 merged.

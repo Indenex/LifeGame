@@ -5,7 +5,8 @@ namespace LifeGame;
 
 // Rain as soft grey veils rather than individual streaks: three rings of falling
 // rain around the player, near, middle and far, each a faint scrolling curtain
-// that fades into the ground and the fog. Heavy rain closes the world in.
+// that fades into the ground and the fog. Heavy rain closes the world in. The same
+// rings in snow mode drift down as slow, pale flakes that sway as they fall.
 public partial class Rain : Node3D
 {
     // Cached names: a string here would build a new StringName every frame.
@@ -17,6 +18,7 @@ public partial class Rain : Node3D
     static readonly StringName NAmount = "amount";
     static readonly StringName NSlant = "slant";
     static readonly StringName NTint = "tint";
+    static readonly StringName NFlakes = "flakes";
 
     static readonly (float Radius, float Height, float Strength, float Scale, float Speed)[] Rings =
     {
@@ -27,8 +29,13 @@ public partial class Rain : Node3D
 
     readonly ShaderMaterial[] materials = new ShaderMaterial[Rings.Length];
 
-    public Rain()
+    readonly bool snow;
+
+    public Rain() : this(false) { }
+
+    public Rain(bool snow)
     {
+        this.snow = snow;
         var streaks = new NoiseTexture2D
         {
             Width = 256,
@@ -44,7 +51,8 @@ public partial class Rain : Node3D
             material.SetShaderParameter(NStreaks, streaks);
             material.SetShaderParameter(NStrength, strength);
             material.SetShaderParameter(NScale, scale);
-            material.SetShaderParameter(NSpeed, speed);
+            material.SetShaderParameter(NSpeed, snow ? speed * 0.16f : speed);
+            material.SetShaderParameter(NFlakes, snow ? 1f : 0f);
             material.SetShaderParameter(NHalfHeight, height / 2f);
             materials[i] = material;
             AddChild(new MeshInstance3D
@@ -71,7 +79,7 @@ public partial class Rain : Node3D
         {
             var material = materials[i];
             material.SetShaderParameter(NAmount, perRing[i]);
-            material.SetShaderParameter(NSlant, 0.05f + wind * 0.25f);
+            material.SetShaderParameter(NSlant, snow ? 0.15f + wind * 0.6f : 0.05f + wind * 0.25f);
             material.SetShaderParameter(NTint, tint);
         }
     }
@@ -91,6 +99,8 @@ public partial class Rain : Node3D
             uniform float speed = 1.0;
             uniform float slant = 0.1;
             uniform float half_height = 10.0;
+            // 0 rain streaks, 1 snowflakes: round, sparse, swaying, brighter.
+            uniform float flakes = 0.0;
 
             varying vec3 local;
 
@@ -106,10 +116,12 @@ public partial class Rain : Node3D
                 float angle = atan(away.x * l.y - away.y * l.x, dot(away, l));
                 float around = angle * length(l);
 
-                vec2 uv = vec2(around * 0.22 * scale + local.y * slant * 0.22, local.y * 0.018 * scale + TIME * 0.55 * speed);
+                float sway = flakes * sin(TIME * 0.6 + local.y * 0.35) * 0.08;
+                vec2 uv = vec2(around * 0.22 * scale + local.y * slant * 0.22 + sway, local.y * mix(0.018, 0.2, flakes) * scale + TIME * 0.55 * speed);
                 float a = texture(streaks, uv).r;
                 float b = texture(streaks, uv * vec2(1.9, 1.4) + vec2(0.37, TIME * 0.21 * speed)).r;
-                float rain = smoothstep(0.55, 0.85, a) * 0.6 + smoothstep(0.6, 0.9, b) * 0.4;
+                float rain = mix(smoothstep(0.55, 0.85, a) * 0.6 + smoothstep(0.6, 0.9, b) * 0.4,
+                    smoothstep(0.74, 0.8, a) + smoothstep(0.78, 0.83, b) * 0.7, flakes);
 
                 // Soft at the top and bottom of the ring, and wherever the ground or a
                 // tree is just behind it, so it never shows a hard edge.
@@ -120,7 +132,7 @@ public partial class Rain : Node3D
                 float soft = clamp(behind / 3.0, 0.0, 1.0);
 
                 ALBEDO = tint;
-                ALPHA = amount * strength * (0.05 + rain * 0.16) * edge * soft;
+                ALPHA = amount * strength * mix(0.05 + rain * 0.16, 0.02 + rain * 0.5, flakes) * edge * soft;
             }
             """,
     };
