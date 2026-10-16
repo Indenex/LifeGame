@@ -12,7 +12,7 @@
 #
 # Useful shot options: --time-of-day=0..1 (0 midnight, 0.5 noon), --rain=0..1,
 # --cloud=, --wind=, --wetness=, --debug-position=x,z, --screenshot-yaw=steps,
-# --screenshot-delay=seconds (default 40 here), --screenshot-fire,
+# --screenshot-delay=seconds (default 30 here), --screenshot-fire,
 # --screenshot-hud, --camera-zoom=-8, --offline (no server; the client
 # shows the world without other players).
 #
@@ -62,6 +62,12 @@ if [ ! -d "$tree/client/.godot/imported" ]; then
   (cd "$tree/client" && timeout 600 "$godot" --headless --path . --import) >>"$log" 2>&1 || true
 fi
 
+# Software rendering runs ~0.5 fps. Godot drops game time beyond 8 physics steps
+# a frame, so a 30 s screenshot timer would take ~10 real minutes. This untracked
+# override (render checkout only) lets game time keep pace with the wall clock.
+printf '[physics]\n\ncommon/physics_ticks_per_second=20\ncommon/max_physics_steps_per_frame=60\n' \
+  > "$tree/client/override.cfg"
+
 # 3. A fresh in-memory server for this run.
 # Its own data dir, so two renders can run at once on different RENDER_PORTs.
 rm -rf "$work/stdb-$port"
@@ -72,7 +78,7 @@ for _ in $(seq 1 30); do curl -sf "http://127.0.0.1:$port/v1/ping" >/dev/null &&
 (cd "$tree/server" && spacetimedb-cli publish lifegame --server "http://127.0.0.1:$port" --yes) >>"$log" 2>&1 \
   || { echo "publish failed, see $log"; exit 1; }
 
-# 4. One client run per shot. Forward+ on llvmpipe takes a minute or two per shot.
+# 4. One client run per shot. Forward+ on llvmpipe: about a minute per shot; run one render at a time.
 n=0
 for shot in "${shots[@]}"; do
   n=$((n + 1))
@@ -83,7 +89,7 @@ for shot in "${shots[@]}"; do
   for o in "${opts[@]}"; do
     if [ "$o" = "--offline" ]; then server_opt="--server=http://127.0.0.1:1"; else extra+=("$o"); fi
   done
-  case " $shot " in *" --screenshot-delay="*) ;; *) extra+=("--screenshot-delay=40") ;; esac
+  case " $shot " in *" --screenshot-delay="*) ;; *) extra+=("--screenshot-delay=30") ;; esac
   echo "shot $n: $shot"
   (cd "$tree/client" && timeout "${RENDER_SHOT_TIMEOUT:-2400}" xvfb-run -a -s "-screen 0 1600x900x24" "$godot" --path . --resolution 1600x900 -- \
     "$server_opt" --db=lifegame --profile=render$n "--screenshot=$out" "${extra[@]}") >>"$log" 2>&1 || true
