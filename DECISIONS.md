@@ -606,3 +606,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-148 — 2026-10-16 — Crafted things are not chores
 **Decision:** A design principle. Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Lanes check new features against this.
 **Who:** Justin ("I don't want things to feel 'chorish'. Once something is crafted it shouldn't become just one more thing to take care of all the time.")
+
+## D-149 — 2026-10-16 — Hearth fires feed themselves
+**Decision:** A fire on a built raised hearth (D-132) pulls sticks and logs from nearby chests and storage (baskets, jars, claim stash within reach) so it doesn't need tending. Open campfires still need feeding by hand.
+**Who:** Justin ("Hearths only", as recommended), applying D-148
