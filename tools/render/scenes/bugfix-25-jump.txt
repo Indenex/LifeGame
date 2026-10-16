@@ -1,0 +1,54 @@
+# bugfix-25 (PR #328): Space jumps. Flat ground jumps while running, then running at a stick fence
+# and jumping it. 12 fps movie, camera = puppet. Claim-fence cases not covered here.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=7,3.5,0,0.3
+frames 60
+give 1 40 50
+give 3 20 50
+place 7 -3 -3 45
+build
+build
+build
+build
+build
+place 7 -1.59 -4.41 45
+build
+build
+build
+build
+build
+place 7 -4.41 -1.59 45
+build
+build
+build
+build
+build
+frames +12
+mark jump-start
+key space
+frames +12
+key space
+frames +12
+keydown w
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+key space
+frames +12
+keyup w
+frames +12
+mark jump-end
