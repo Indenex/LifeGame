@@ -3,7 +3,7 @@ Lane: Journal and skills
 Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
 Status: in_progress
 Branch: claude/journal-skills-11 (stacked on #112 and on Crafting's #160)
-PR: (once opened)
+PR: #193 (draft)
 
 ## Goal
 D-065 and D-071 promised capped specialties for hide work and wool work once stations made them real (#160 stations, #90 wool and clothing). Two new capped skills, sharing the 300-rank cap with Potter and Builder:
