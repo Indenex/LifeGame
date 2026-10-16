@@ -225,7 +225,7 @@ public partial class ClaimPanel : CanvasLayer
     }
 
     // "Hand axe (fine)" for made things, just "Stick" for raw materials.
-    static string Name(ushort item, byte quality)
+    internal static string Name(ushort item, byte quality)
     {
         if (!Items.IsKnown(item)) return "Something";
         var def = Items.Def((Item)item);
@@ -236,21 +236,21 @@ public partial class ClaimPanel : CanvasLayer
     static string StandsFor(Claim claim) =>
         Social.TendedLine(claim.TendedAt.MicrosecondsSinceUnixEpoch, claim.ExpiresAt.MicrosecondsSinceUnixEpoch, SocialLayer.NowMicros);
 
-    static Label Heading(string text, int size)
+    internal static Label Heading(string text, int size)
     {
         var label = new Label { Text = text };
         Hud.Style(label, size, 1f);
         return label;
     }
 
-    static Label Note(string text)
+    internal static Label Note(string text)
     {
         var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(300, 0) };
         Hud.Style(label, 14, 0.65f);
         return label;
     }
 
-    static HBoxContainer Row(string text)
+    internal static HBoxContainer Row(string text)
     {
         var row = new HBoxContainer();
         var label = new Label { Text = text, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -261,7 +261,7 @@ public partial class ClaimPanel : CanvasLayer
 
     static Button Button(string text, Action onPress) => MakeButton(text, onPress, 15, 10);
 
-    static Button Small(string text, Action onPress) => MakeButton(text, onPress, 13, 6);
+    internal static Button Small(string text, Action onPress) => MakeButton(text, onPress, 13, 6);
 
     static Button MakeButton(string text, Action onPress, int size, int pad)
     {

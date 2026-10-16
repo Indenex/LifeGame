@@ -115,5 +115,6 @@ public static partial class Module
         var cutoff = new Timestamp(ctx.Timestamp.MicrosecondsSinceUnixEpoch - Social.ChatKeepMicros);
         foreach (var message in ctx.Db.ChatMessage.SentAt.Filter((new Timestamp(0), cutoff)).ToList())
             ctx.Db.ChatMessage.Id.Delete(message.Id);
+        PruneGifts(ctx);
     }
 }

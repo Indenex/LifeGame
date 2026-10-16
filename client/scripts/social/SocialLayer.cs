@@ -63,6 +63,7 @@ public partial class SocialLayer : Node
         conn.Db.MyInventory.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyInventory.OnDelete += (_, _) => panel.MarkDirty();
         AttachFighting();
+        AttachGiving();
 
         // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
         Use.Register(new UseHandler
@@ -105,6 +106,7 @@ public partial class SocialLayer : Node
         layer.AddChild(landChip);
         AddChild(layer);
         ReadyFighting();
+        ReadyGiving();
     }
 
     static void Bind(string action, params Key[] keys)
@@ -124,7 +126,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_gift_offers" });
 
         // Chat carries a little further than a chunk, so listen two chunks out.
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
@@ -148,6 +150,7 @@ public partial class SocialLayer : Node
         chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() || HideChip() ? 0f : 1f, (float)delta * 6f);
         landChip.Modulate = new Color(1, 1, 1, chipAlpha);
         ProcessFighting((float)delta);
+        ProcessGiving();
         landTimer -= (float)delta;
         if (landTimer <= 0f)
         {
@@ -174,9 +177,10 @@ public partial class SocialLayer : Node
             else if (!HasRights(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
             else panel.Open(marker, IsMine(marker));
         }
-        else if (e.IsActionPressed("ui_cancel") && panel.IsOpen)
+        else if (e.IsActionPressed("ui_cancel") && PanelOpen)
         {
             panel.Close();
+            give.Close();
             GetViewport().SetInputAsHandled();
         }
     }

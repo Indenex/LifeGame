@@ -9,6 +9,7 @@ PR: (not yet)
 Players can help each other directly. Face a player within arm's reach and press G ("Give to Tam"): a small list of what you carry opens; pick one (or the whole stack). Tam gets a soft note "Mira offers you a flint · G to take" and, facing Mira, G says "Take the flint from Mira". Nothing moves until Tam takes it; the offer lapses after a minute or if either walks away. When it's taken, one chat line nearby says "Mira hands Tam a flint".
 
 ## Progress log
+- 2026-10-16 17:40: first full pass written, not yet built. Server: Giving.cs (GiftOffer table, MyGiftOffers view, OfferGift/AcceptGift/DeclineGift; lapsed offers pruned along with chat). Shared: Social.GiveReach, GiftKeepMicros, GiftPhrase. Client: GivePanel.cs, SocialLayer.Giving.cs (G handlers claims.give and claims.take). SocialTest: 6 new checks.
 - 2026-10-16 17:15: started. D-044 is fully built, so I sent the PM options for claims-7, with this one recommended; building it on that default.
 
 ## Decisions / defaults
@@ -21,4 +22,4 @@ Players can help each other directly. Face a player within arm's reach and press
 - Sent to PM 2026-10-16: claims-7 options (1 hand an item [recommended], 2 whisper/shout, 3 name your camp, 4 stash log).
 
 ## Next step
-Write server/spacetimedb/Giving.cs (GiftOffer table, MyGiftOffers view, OfferGift/AcceptGift/DeclineGift reducers), then the client GivePanel in client/scripts/social/.
+Build the server module and client locally, run tools/SocialTest against a local server, fix whatever fails, push.

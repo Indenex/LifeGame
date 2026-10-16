@@ -100,6 +100,21 @@ namespace LifeGame.Shared
             return Math.Clamp(age, 0f, 1f);
         }
 
+        // claims-7: handing things over. Face someone within GiveReach and offer; the
+        // server allows a little more for lag. An offer lapses after GiftKeepMicros.
+        public const float GiveReach = 3f;
+        public const float GiveReachSlack = 1f;
+        public const long GiftKeepMicros = 60_000_000;
+
+        // "a stone flake", "an axe", "some clay", "3 sticks": how a gift reads in a line.
+        public static string GiftPhrase(ItemDef def, uint count)
+        {
+            if (count > 1) return $"{count} {def.Plural.ToLowerInvariant()}";
+            string name = def.Name.ToLowerInvariant();
+            if (def.Plural == def.Name) return $"some {name}";
+            return ("aeiou".IndexOf(name[0]) >= 0 ? "an " : "a ") + name;
+        }
+
         // "Tended 2 days ago · stands 1 more day": what a marker and the claim panel say.
         public static string TendedLine(long tendedAtMicros, long expiresAtMicros, long nowMicros)
         {

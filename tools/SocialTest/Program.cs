@@ -203,6 +203,30 @@ Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B'
 b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
 Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+
+// claims-7: B hands the stone to A; nothing moves until A takes it, then A hands it back.
+Check(Social.GiftPhrase(Items.Def(Item.Stone), 1) == "a stone" && Social.GiftPhrase(Items.Def(Item.Clay), 1) == "some clay"
+    && Social.GiftPhrase(Items.Def(Item.Stick), 3) == "3 sticks", "a gift reads well (a stone, some clay, 3 sticks)");
+Walk(a, b.X + 6, b.Z);
+ExpectError(b, () => b.Conn.Reducers.OfferGift(a.PlayerId, (ushort)Item.Stone, stone.Quality, 1), "Step closer", "you can't hand things across a distance");
+Walk(a, b.X + 1.5f, b.Z);
+uint aStones = a.Count(Item.Stone);
+b.LastError = null;
+b.Conn.Reducers.OfferGift(a.PlayerId, (ushort)Item.Stone, stone.Quality, 1);
+Pump(() => a.Conn.Db.MyGiftOffers.Iter().Any(o => o.FromId == b.PlayerId) || b.LastError != null, 5, "offer");
+var gift = a.Conn.Db.MyGiftOffers.Iter().FirstOrDefault(o => o.FromId == b.PlayerId);
+Check(gift != null && b.Count(Item.Stone) == 1, $"A sees B's offer and B still holds the stone ({b.LastError ?? "ok"})");
+ExpectError(b, () => b.Conn.Reducers.AcceptGift(gift!.Id), "gone", "only the receiver can take a gift");
+a.LastError = null;
+a.Conn.Reducers.AcceptGift(gift!.Id);
+Pump(() => a.Count(Item.Stone) > aStones || a.LastError != null, 5, "accept");
+Check(a.Count(Item.Stone) == aStones + 1 && b.Count(Item.Stone) == 0, $"taking the gift moves the stone ({a.LastError ?? "ok"})");
+Check(Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && m.Text.Contains("hands")), 5), "a chat line says who handed what");
+Check(!a.Conn.Db.MyGiftOffers.Iter().Any(), "a taken gift is gone");
+a.Conn.Reducers.OfferGift(b.PlayerId, (ushort)Item.Stone, stone.Quality, 1);
+Pump(() => b.Conn.Db.MyGiftOffers.Iter().Any(o => o.FromId == a.PlayerId), 5, "offer back");
+b.Conn.Reducers.AcceptGift(b.Conn.Db.MyGiftOffers.Iter().First(o => o.FromId == a.PlayerId).Id);
+Pump(() => b.Count(Item.Stone) == 1, 5, "accept back");
 b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
@@ -354,7 +378,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM my_gift_offers",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
