@@ -215,7 +215,11 @@ Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take
 
 // --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
 float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
-// Not on claimed land with fighting off.
+// Not on claimed land with fighting off. Tend first: CI gives claims only 30 s.
+Walk(a, claim.X + 1.5f, claim.Z);
+long tendedBefore = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0;
+a.Conn.Reducers.TendClaim(claim.Id);
+Pump(() => (a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > tendedBefore, 5, "tend before fighting");
 a.Conn.Reducers.SetClaimPvp(claim.Id, false);
 Pump(() => a.MyClaim()?.AllowPvp == false, 5, "pvp off");
 Walk(a, claim.X + 4, claim.Z);
@@ -258,8 +262,13 @@ a.X = woke.X; a.Z = woke.Z;
 
 if (decay)
 {
-    var expires = a.MyClaim()!.ExpiresAt.MicrosecondsSinceUnixEpoch;
-    Console.WriteLine($"Waiting for the marker to fall ({(expires - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)...");
+    // CI gives claims a 30 s life, and the fighting checks above can outlast it on a
+    // slow runner, so the claim may already have fallen by now.
+    if (a.MyClaim() is { } standing)
+    {
+        long left = (standing.ExpiresAt.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000;
+        Console.WriteLine($"Waiting for the marker to fall ({left}s left plus up to 20s for the decay tick)...");
+    }
     Pump(() => a.MyClaim() == null, 120, "decay");
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
