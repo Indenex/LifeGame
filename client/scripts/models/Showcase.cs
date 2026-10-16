@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -37,6 +37,7 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "wear") WearRows();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -196,6 +197,24 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
+    }
+
+    // Each tool that wears, as new, worn and spent (D-155), lying in rows.
+    void WearRows()
+    {
+        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.BowDrill, (LifeGame.Shared.Item)16 };
+        for (int t = 0; t < tools.Length; t++)
+            for (int w = 0; w < 3; w++)
+            {
+                var mesh = ItemModels.GroundMesh(tools[t], w)!;
+                float fit = Mathf.Min(1f, 0.9f / mesh.GetAabb().Size.Length());
+                AddChild(new MeshInstance3D { Mesh = mesh, Scale = Vector3.One * fit, Position = new Vector3((w - 1) * 0.9f, 0, (t - 2.5f) * 0.45f) });
+            }
+        foreach (var (text, x) in new[] { ("new", -0.9f), ("worn", 0f), ("spent", 0.9f) })
+            AddChild(new Label3D { Text = text, FontSize = 28, PixelSize = 0.003f, Position = new Vector3(x, 0.02f, 1.55f), Rotation = new Vector3(-1.2f, 0, 0), Modulate = Look.Cream, OutlineSize = 6 });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.6f, 2.0f), new Vector3(0, 0, 0.1f), Vector3.Up);
     }
 
     // Red deer for Animals: a hind and a stag, with a person and a sheep for scale.

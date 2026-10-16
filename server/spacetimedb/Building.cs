@@ -19,6 +19,7 @@ public enum StructureKind
     // Animals stations (D-098, animals-11); numbered by merge order: always at the end.
     SpindleStation,
     DryingRack,
+    PottersBench,
 }
 
 // One material a structure's current stage still needs.

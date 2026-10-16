@@ -41,6 +41,8 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 19:45: PM thought #107 starved main builds; data showed running main builds always finish (639, 680 green), cancelled ones had zero jobs (replaced while queued). release.yml reached main 19:22; first release build-680-02153f2. Real red: main Build 653 (c09f9b8) CraftCheck "fire.hand_drill: There's no clear, level ground here for a fire" on the second fire, intermittent; Crafting's fix is PR #203.
 - 2026-10-16 19:55: reviewed Release's #201 (scheduled release fallback, `pick` job): approved. Added tools/integration/survey.sh (the conflict survey). Handoff to a Sonnet session (D-159).
 
+- 2026-10-16 21:55: Sonnet Integration session. #209 merged; #160, #203, #90 and others merged by the PM. main Build 954 (fffdc70) red in CraftCheck "a fire at (-63.1, 51.6) sits on the boulder at (-62.2, 52.0)"; passes alone on a fresh world locally; Bug fixes owns the fix (server placement check against the shared boulder lookup). Main Builds were being cancelled by merge traffic and doc commits: PR claude/integration-docs-paths gives every push to main its own concurrency group (never cancelled or replaced) and adds `paths-ignore` for docs (`**.md`, tickets, docs, wiki, renders, tools/wiki-page) to build.yml push and pull_request. release.yml: the schedule's `pick` job is the only run with nothing new; it is one small job and the heavy jobs are skipped.
+
 ## Handoff (read this first, fresh session)
 
 How this lane works now:
