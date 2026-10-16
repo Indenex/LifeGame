@@ -873,5 +873,5 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("I want the UI/UX worker to finish inventory, drag and drop stuff, etc. next, and assign keybinds to slots on the bottom of the screen. These slots should fill up to 10 slots, and have the item be usable by hitting the assigned keybind.")
 
 ## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
-**Decision:** The chat leak is fixed with per-recipient private delivery. This is the PM's default; Justin did not pick. Owner: Claims (claims-13).
-**Who:** PM default (Justin did not pick).
+**Decision:** The chat leak is fixed with private per-player delivery: each message is delivered only to its recipients. Owner: Claims (claims-13).
+**Who:** Justin, picking "Private per-player delivery".
