@@ -285,6 +285,7 @@ public static partial class Module
         ctx.Db.StructureProgress.StructureId.Delete(s.Id);
         ctx.Db.StructureDoor.StructureId.Delete(s.Id);
         ctx.Db.StructureTouch.StructureId.Delete(s.Id);
+        DropMats(ctx, s);
         ctx.Db.Structure.Id.Delete(s.Id);
         OnStructureRemoved(ctx, s);
         CeramicsStructureRemoved(ctx, s);

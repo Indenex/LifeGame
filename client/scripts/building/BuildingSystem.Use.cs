@@ -28,6 +28,7 @@ public partial class BuildingSystem
         "SELECT * FROM structure_door",
         "SELECT * FROM structure_touch",
         "SELECT * FROM basket_item",
+        "SELECT * FROM sleeping_mat",
     };
 
     void BindUse(DbConnection c)
@@ -40,6 +41,7 @@ public partial class BuildingSystem
             if (views.TryGetValue(d.StructureId, out var v)) v.SetDoor(null, false, animate: false);
         };
         RegisterUse(c);
+        BindMats(c);
         c.Db.StructureTouch.OnInsert += (_, t) => Touched(t);
         c.Db.StructureTouch.OnUpdate += (_, _, t) => Touched(t);
         c.Db.StructureTouch.OnDelete += (_, t) => touched.Remove(t.StructureId);

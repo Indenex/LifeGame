@@ -122,6 +122,16 @@ public partial class BuildingSystem : Node
             Upsert(new Structure(id--, kind, at.X, at.Z, yaw + turn, World.ChunkOf(at.X), World.ChunkOf(at.Z), default,
                 (byte)Math.Min(stage, stages), needs, stage >= stages, 1, default), fresh: false);
         }
+        // --building-mat: a brick house with only its first courses up, so the sleeping mat by the hearth shows.
+        if (OS.GetCmdlineUserArgs().Contains("--building-mat"))
+        {
+            var at = f * 7.5f;
+            Put(StructureKind.BrickHouse, 7.5f, 0f, 1, 0.3f, 0.5f);
+            views[id + 1].HideUnbuilt();
+            var (mx, mz) = Structures.ToWorld(at.X, at.Z, yaw + 0.5f, 1.2f, -0.3f);
+            ShowMat(1, mx, mz, yaw + 0.5f);
+            return;
+        }
         // --building-house: a finished brick house and one going up, without the rest.
         if (OS.GetCmdlineUserArgs().Contains("--building-house"))
         {

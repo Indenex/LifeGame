@@ -127,6 +127,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = 15, Makes = Item.Basket,
             },
+            // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
+            new ProcessDef
+            {
+                Id = "weave.mat", Name = "Weave a sleeping mat", Doing = "Weaving a sleeping mat", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Fiber, 8) },
+                Seconds = 12, Makes = Item.SleepingMat,
+            },
             new ProcessDef
             {
                 Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
