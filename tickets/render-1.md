@@ -25,6 +25,8 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:58: render-1 proof done: main 217dc13 spawn by day and night (renders/render-1-217dc13-1/2.png, d4a7614) sent to the PM. Asked the PM: renders stay on this branch and only tools/render/ merges (recommended), or merge renders, or Drive.
 - 2026-10-16 17:20: render request from Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm): model-1 baseline, head of claude/model-1: player close-up idle and walking, sheep close-up, flock with player, clay hut late afternoon. Reply paths to Modeling too.
 - 2026-10-16 17:20: render request from UX/UI (session_01V6qgbNbvTwniqW946KACLr): ui-9 trade window, 119c068, 1280x720, --screenshot-hud with --screenshot-trade[=accepted|changed|asked], before/after Mara accepts.
+- 2026-10-16 17:23: ui-9 moved to e4319e5 (accepted = Mara green only; changed = Mara's accept cleared + amber line).
+- 2026-10-16 17:25: claims-6 first try: client lags 2-4 s behind the puppet, so beats were missed; added `burst` snaps, rerun queued. Added render_cam.gd (--render-cam, --render-cam-target=sheep) for model-1 close-ups.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
