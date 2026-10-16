@@ -1,9 +1,9 @@
 # bugfix-15: claim members' door prompt says "Barred"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (after #68)
+PR: (opening)
 
 ## Goal
 A member of a claim standing at a barred door in that claim sees "Unbar and open    Shift unbar", and at an unbarred one "Open the door    Shift bar", as whoever hung the door does. The server already lets claim members bar and unbar (BuildingStorage.cs CanLock), so only the prompt was wrong. Outsiders still see "Barred".
@@ -17,4 +17,4 @@ Cause: client/scripts/building/BuildingSystem.Use.cs only counted the door's han
 - (none)
 
 ## Next step
-Push onto #68 or open after it merges, as the PM says.
+Wait for CI on the PR, then send the PM the green sha.
