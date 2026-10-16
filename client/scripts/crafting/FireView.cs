@@ -280,7 +280,7 @@ public partial class FireView : Node3D
         {
             time += (float)delta;
             long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-            float left = Math.Clamp((FuelUntilMicros - now) / 1_000_000f, 0f, Fires.MaxSeconds);
+            float left = Math.Clamp((FuelUntilMicros - now) / 1_000_000f, 0f, Fires.MasterMaxSeconds);
             // Full strength with a minute or more of fuel, fading to embers as it runs out.
             float strength = Math.Clamp(left / 60f, 0.15f, 1f);
             float flicker = Atmosphere.FireFlicker(time);
