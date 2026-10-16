@@ -41,7 +41,9 @@ fi
 # Software rendering runs ~0.5 fps. Godot drops game time beyond 8 physics steps
 # a frame, so a 30 s screenshot timer would take ~10 real minutes. This untracked
 # override (render checkout only) lets game time keep pace with the wall clock.
-printf '[physics]\n\ncommon/physics_ticks_per_second=20\ncommon/max_physics_steps_per_frame=60\n' \
+# It also loads render_cam.gd (--render-cam=distance,height,yaw[,look]) for close-ups.
+cp "$(dirname "${BASH_SOURCE[0]}")/render_cam.gd" "$tree/client/render_cam.gd"
+printf '[physics]\n\ncommon/physics_ticks_per_second=20\ncommon/max_physics_steps_per_frame=60\n\n[autoload]\n\nRenderCam="*res://render_cam.gd"\n' \
   > "$tree/client/override.cfg"
 
 # 3. A fresh in-memory server for this run.
