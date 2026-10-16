@@ -46,6 +46,9 @@ public static class NextSteps
         ["clay.temper_grit"] = "Clean clay alone cracks in the fire. It needs something worked into it.",
         ["clay.temper_grog"] = "Crushed sherds temper clay even better than grit.",
         ["clay.pinch_pot"] = "Tempered clay can be pinched into a small pot.",
+        ["build.table"] = "A crafting table in your claim, of sticks, cord and a log, is where finer things are made.",
+        ["build.spindle"] = "A spindle station in your claim is where fleece is spun into yarn and yarn woven into cloth.",
+        ["build.rack"] = "A drying rack in your claim is where hides are scraped and stretched into leather.",
         ["clay.storage_jar"] = "A big coiled jar, fired in a kiln, keeps a lot safe at home.",
         ["weave.mat"] = "A thick weave of fiber makes a mat to sleep on, off the cold ground.",
         [Claim] = "A marker of sticks and fiber, raised away from the waking clearing, makes the land around it yours.",
@@ -101,6 +104,9 @@ public static class NextSteps
         [Skills.DryHide] = new[] { new[] { "hide.stretch" } },
         [Claim] = new[] { new[] { Skills.Forage } },
         [Bench] = new[] { new[] { "chop.log" }, new[] { Claim } },
+        ["build.table"] = new[] { new[] { "chop.log" }, new[] { "cord.twist" }, new[] { Claim } },
+        ["build.spindle"] = new[] { new[] { Skills.Shear }, new[] { Claim } },
+        ["build.rack"] = new[] { new[] { Skills.Butcher }, new[] { Claim } },
     };
 
     // Crafting jobs that also need a place to work, on top of their ingredients.
@@ -128,7 +134,7 @@ public static class NextSteps
     // Rough tier for activities outside Processes.List, so hints come in a sensible order.
     static readonly Dictionary<string, int> Tier = new()
     {
-        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1,
+        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
         [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
@@ -174,6 +180,8 @@ public static class NextSteps
         if (After.TryGetValue(id, out var groups)) return Met(groups, known, exists);
         if (Processes.Find(id) is not { } def) return false;
         if (AlsoAfter.TryGetValue(id, out var also) && !Met(also, known, exists)) return false;
+        // Made at a station: build the station first (D-098).
+        if (def.Station != StationKind.None && !Met(new[] { new[] { StationInfo.BuildProcess(def.Station) } }, known, exists)) return false;
         if (def.NeedsTool != ItemTags.None && !have.Any(i => (Items.Def(i).Tags & def.NeedsTool) != 0)) return false;
         return def.Consumes.All(c => have.Contains(c.Item));
     }
