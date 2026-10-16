@@ -43,9 +43,7 @@ public static class Controls
         new("turn_right", new[] { Key.E }, null, Name: "Turn the view right"),
         new("camera_drag", Array.Empty<Key>(), "Turn the view freely (hold and drag)", Mouse: MouseButton.Right, Name: "Turn the view freely (hold and drag)"),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
-        // D-088, D-091: Shift runs (stamina) and sneak is Ctrl. Run stays out of the F1
-        // list until running exists; the lane that builds it gives it a Help line and
-        // calls Hints.Request("run"). The Controls page lists it for rebinding already.
+        // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),
         new("sneak", new[] { Key.Ctrl }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
         new("use", new[] { Key.G }, "Use what's in front of you"),
