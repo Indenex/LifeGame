@@ -49,6 +49,7 @@ public static class Subscriptions
         $"SELECT * FROM clay_piece WHERE {range}",
         $"SELECT * FROM kiln WHERE {range}",
         $"SELECT * FROM simmer_pot WHERE {range}",
+        $"SELECT * FROM lamp WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
         // What you wear (animals-12, read by the equipment panel, ui-10).

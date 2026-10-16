@@ -404,6 +404,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DecayClaims(ReducerContext ctx, ClaimDecayTimer timer)
     {
+        RequireServer(ctx);
         foreach (var claim in ctx.Db.Claim.Iter().ToList())
             if (!IsStanding(ctx, claim))
                 RemoveClaim(ctx, claim);

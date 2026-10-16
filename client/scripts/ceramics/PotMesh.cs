@@ -35,11 +35,19 @@ public static class PotMesh
         new(0.082f, 0.360f), new(0.085f, 0.385f), new(0.095f, 0.400f),
     };
 
+    // The oil lamp (ceramics-9): a low, open bowl; the spout is pinched in Turn's wobble.
+    static readonly Vector2[] LampProfile =
+    {
+        new(0.000f, 0.000f), new(0.035f, 0.000f), new(0.055f, 0.010f), new(0.066f, 0.024f),
+        new(0.068f, 0.036f), new(0.064f, 0.044f),
+    };
+
     public static float Height(ClayForm form) => form switch
     {
         ClayForm.PinchPot => 0.122f,
         ClayForm.CoilPot => 0.256f,
         ClayForm.StorageJar => 0.400f,
+        ClayForm.Lamp => 0.044f,
         _ => 0.08f,
     };
 
@@ -61,6 +69,7 @@ public static class PotMesh
             ClayForm.Brick => Brick(variant),
             ClayForm.CoilPot => Turn(CoilProfile, true, variant),
             ClayForm.StorageJar => Turn(JarProfile, true, variant),
+            ClayForm.Lamp => Turn(LampProfile, false, variant),
             _ => Turn(PinchProfile, false, variant),
         };
         Cache[(form, variant)] = mesh;
