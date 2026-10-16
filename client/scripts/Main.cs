@@ -323,6 +323,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
+        AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
@@ -525,7 +526,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed(NSneak) ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(Input.IsActionPressed(NSneak), input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
