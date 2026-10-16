@@ -1,7 +1,7 @@
 # animals-4: Lambs follow their mothers
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
+Status: in_review
 Branch: claude/animals-sheep-5gkntn
 PR: (to open)
 
@@ -15,9 +15,10 @@ Lambs stay at their mother's side: they trail a step behind her when she walks, 
 
 ## Progress log
 - 2026-10-16 01:10: server and client written; both build.
+- 2026-10-16 01:25: local test (temporary 5 s birth timer): two lambs born, each grazes about 1 m from its mother and moves with her. Screenshots screenshots/animals-05-*.png.
 
 ## Open questions / blockers
 - Lamb voices: Atmosphere's SheepVoices could bleat higher for lambs (Animal.Growth < 100). Suggest to Atmosphere via the PM.
 
 ## Next step
-Test locally with a short birth timer (temporary), take screenshots, open the PR.
+Wait for CI on the animals-4 PR, then send the green sha to the PM; then start animals-5 (hide to leather).
