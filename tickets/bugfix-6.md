@@ -16,8 +16,10 @@ Confirm main's CI is green after the rapid merges (fix it if not), then profile 
 - 2026-10-16 01:00: headless busy scene before: 1.9 MB/s managed garbage, gen2 GC hitches of 200-400 ms about every 45 s, 60-120 ms chunk-build frames. Causes: string literals converted to new StringNames every frame in Atmosphere, Rain, Main.Walk, UseKey, NeedsHud, KeyHelp, FireView, Look.Tick (each tracked by Godot's disposables table, which grows into the large-object heap); a new Vector2[] per audio push in SoundScape; ground mesh corners computed six times each through SurfaceTool interop.
 - 2026-10-16 01:30: fixed all of the above (cached StringNames, one reused audio chunk, ground built from arrays with each corner computed once, chunk building time-budgeted at 4 ms a frame). Ground mesh verified identical vertex for vertex (positions, normals, colors, clearing channel, format) and 4x faster. After: 0.9 MB/s garbage, no GCs in a 90 s run, no hitch over 30 ms after startup.
 
+- 2026-10-16 02:10: merged main b2446ec (atmosphere-5's clearing channel carried into the array-built ground; re-verified). Headless re-run on merged main: 1.25 MB/s garbage (new lane code), no GCs, worst frame after startup 53 ms. Rendered run (Xvfb, software GL, so no meaningful FPS): about 2,500 draw calls, 2,650 objects, 1.0 M primitives a frame in the storm at spawn.
+
 ## Open questions / blockers
 - None.
 
 ## Next step
-Rendered run for draw-call numbers, then open the PR and send the PM numbers and the other-lane list.
+Open the PR, drive CI green, send the PM the head sha, numbers and other-lane list.
