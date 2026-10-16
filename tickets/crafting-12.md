@@ -12,7 +12,7 @@ D-072: other players' craft work is audible, about 60% quieter than your own. `C
 - 2026-10-16 17:30: hooks added on main 7c65c0f; server builds. Told Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN) to drop its declarations.
 
 ## Open questions / blockers
-- (none)
+- If atmosphere-12 (WorkSounds.cs 9965c81, carries the same two declarations) merges first, merge main here and delete the declarations from Crafting.cs, keeping the two calls.
 
 ## Next step
 Wait for CI on the PR, then send the PM the green sha.
