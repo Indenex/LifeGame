@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -90,14 +91,15 @@ public partial class Sheep : Node3D
 
     // About a third of deer are antlered stags; Audio uses this too so the roar
     // comes from the stags that are drawn.
-    public static bool IsStag(ulong id) => Terrain.Hash01((int)id, 13, 21) < 0.35f;
+    public static bool IsStag(ulong id) => Terrain.Hash01((int)id, 13, 21) < AnimalDefs.Get(AnimalDefs.Deer).AntlerShare;
 
     public Sheep(ulong id, Terrain terrain, AnimalSpecies species = AnimalSpecies.Sheep)
     {
         this.terrain = terrain;
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
-        bool deer = species == AnimalSpecies.Deer;
-        // About a third of deer are antlered stags.
+        var def = AnimalDefs.Get((byte)species);
+        bool deer = def.Model == "deer";
+        // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
         if (deer) BuildDeerMeshes();
