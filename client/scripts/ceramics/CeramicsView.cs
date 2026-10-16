@@ -136,7 +136,9 @@ public partial class CeramicsView : Node
     {
         Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
-        Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = TendOffer });
+        // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
+        Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
+        Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = at => TendOffer(at, firing: false) });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
     }
 
@@ -169,10 +171,11 @@ public partial class CeramicsView : Node
         if (kiln.view == null || kiln.view.IsFiring) return null;
         bool pots = Carrying(i => ClayRules.FormOfUnfired(i) != null);
         ulong id = kiln.id;
+        var target = new Vector3(kiln.view.Position.X, 0, kiln.view.Position.Z);
         if (pots && kiln.view.Load < ClayRules.KilnCapacity)
-            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: target);
         if (kiln.view.Load > 0 && FuelSeconds() >= ClayRules.KilnFireSeconds)
-            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: target);
         return null;
     }
 
@@ -182,10 +185,12 @@ public partial class CeramicsView : Node
         var at = new Vector2(me3.X, me3.Z);
         if (BurningFireNear(at, World.Reach) is not { } fire) return null;
         float d = new Vector2(fire.X, fire.Z).DistanceTo(at);
-        return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id));
+        return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id), Target: new Vector3(fire.X, 0, fire.Z));
     }
 
-    UseOffer? TendOffer(Vector3 me3)
+    // Pass a Target so G picks what you face (KEYMAP.md); without one, a fire you face
+    // always won over the pot beside it (bugfix-13).
+    UseOffer? TendOffer(Vector3 me3, bool firing)
     {
         if (conn == null) return null;
         var at = new Vector2(me3.X, me3.Z);
@@ -201,13 +206,15 @@ public partial class CeramicsView : Node
         float moisture = piece.view.Moisture;
         bool dry = !ClayRules.TooWetToFire(moisture);
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
+        if (besideFire != firing) return null;
         ulong id = piece.id;
+        var target = new Vector3(piece.view.Position.X, 0, piece.view.Position.Z);
         if (besideFire)
             return dry
-                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
-                : new UseOffer("Fire it wet (it will crack)", piece.d, () => FireDamp(id, moisture));
+                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false), Target: target)
+                : new UseOffer("Fire it wet (it will crack)", piece.d, () => FireDamp(id, moisture), Target: target);
         if (dry)
-            return new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false));
+            return new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false), Target: target);
         return null;
     }
 
