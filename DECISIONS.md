@@ -578,3 +578,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-141 — 2026-10-16 — Forest light ships before the screenshots
 **Decision:** atmosphere-13 (sun shafts and dappled light through the canopy, #136) merges without Justin having seen it; it gets tuned afterwards from the Render shots.
 **Who:** Justin ("Merge now, tune later"; the PM had recommended waiting for the pictures)
+
+## D-142 — 2026-10-16 — Renders never block merges
+**Decision:** A PR that is green and matches decisions merges without waiting for Render shots or for Justin to see them. Renders still get made and shown to Justin afterwards, and any changes he asks for come as follow-up PRs. Wipes still need his confirmation of the date (D-129).
+**Who:** Justin ("Don't hold up merges waiting on rendering, they can go in before I see them, but the work should continue and be logged correctly")
