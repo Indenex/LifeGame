@@ -66,11 +66,7 @@ public partial class Terrain
             var (fx, fz) = Trees.Trunk(x, z);
             var built = new LandmarkProps.Lists();
             LandmarkProps.Outcrop(x, z, new Vector3(fx, 0f, fz), (_, _) => 0f, built, new Color(0, 0, 0, 0));
-            foreach (var (xf, _, _) in built.Rocks)
-            {
-                float r = RockRadius(Mathf.Max(xf.Basis.X.Length(), xf.Basis.Z.Length()));
-                if (r >= 0.2f) stones.Add((xf.Origin.X, xf.Origin.Z, r));
-            }
+            stones.AddRange(built.Blocks);
         }
         if (outcropStones.Count > 256) outcropStones.Clear();
         outcropStones[(sx, sz)] = stones;
