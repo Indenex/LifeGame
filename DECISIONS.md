@@ -421,3 +421,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-102 — 2026-10-16 — Scribe lane keeps the decision log
 **Decision:** A Sonnet Scribe lane (session_01He77u9z8pt5DtP7it3NMAQ) records Justin's decisions in `DECISIONS.md` and applies the `STATUS.md` changes the PM sends, merging its own docs-only PRs. The PM keeps asking Justin and relaying decisions to the lanes.
 **Who:** Justin ("pass decision logging work off to a dedicated sonnet worker, and keep my questions coming")
+
+## D-103 — 2026-10-16 — Campfire warms in 60 s
+**Decision:** A basic campfire takes about 60 s to warm you from frozen to full (was 30 s). Later hearths and stone-ringed fires can be faster.
+**Who:** Justin ("60 s"; the PM had recommended keeping 30 s)
+
+## D-104 — 2026-10-16 — Chopping trains Foraging
+**Decision:** Chopping logs (`chop.log`) trains Foraging.
+**Who:** Justin ("Foraging", which the PM recommended)
+
+## D-105 — 2026-10-16 — Things to try hints in the journal
+**Decision:** skills-10 adds 2 to 3 gentle "Things to try" hints in the journal pointing at the next undiscovered thing, without recipes (D-063), so a new player always has a next goal. Each lane supplies one hint line per new process.
+**Who:** Justin ("Things to try hints", which the PM recommended)
+
+## D-106 — 2026-10-16 — Ceramics makes a cooking pot next
+**Decision:** ceramics-7 is a cooking pot: a coil pot of water on a fire makes broth from berries or mutton. Hunger values are agreed with Survival and kept generous (D-081).
+**Who:** Justin ("Cooking pot", which the PM recommended)
