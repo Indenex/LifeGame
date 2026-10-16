@@ -533,3 +533,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-130 — 2026-10-16 — Wipe PRs pass by label
 **Decision:** A `world-wipe` PR label makes CI skip the no-wipe upgrade check and print a loud "this PR wipes the world" notice instead. Only the PM adds it, and only after Justin confirms the wipe date; every other PR stays protected.
 **Who:** Justin ("A 'world-wipe' label", as recommended)
+
+## D-131 — 2026-10-16 — Release & Launcher lane
+**Decision:** A new Opus Release & Launcher lane builds one-button updating. Every green merge to main becomes a versioned GitHub Release (clients and server module). A launcher for Linux and Windows downloads the latest client and has a server button that publishes the module over the existing world without wiping (refusing world-wipe releases unless Justin confirms). Fully automatic server updates from CI are proposed as options if they need setup or cost. Justin wants zero setup work.
+**Who:** Justin ("New Release & Launcher worker"; "I want to be able to open the game, hit button, and it update the game/server")

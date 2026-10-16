@@ -41,6 +41,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
 | Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
+| Release & Launcher (D-131) | release-1 releases + launcher | session records its branch | release workflow (with Integration), launcher app |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 
