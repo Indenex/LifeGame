@@ -21,6 +21,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:40: atmosphere-12 audio sent to the PM (renders/audio/atmosphere-12-af3bd67-work-sounds.mp3, e1c6231).
 - 2026-10-16 17:50: #66 six stills sent to the PM (renders/atmosphere-10-11-dca2a0f-1..6.png, 169f4ec).
 - 2026-10-16 17:50: added tools/render/scene.sh + Puppet (scripted second player; can be the camera, give items via owner SQL, craft, drop, press keys, snap/clip on cue). Scenes: tools/render/scenes/claims-6-chat.txt, animals-8-wool.txt (untested).
+- 2026-10-16 17:18: render request from Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): crafting-11, PR #92 at 11ca4f8: --screenshot-fire=cold vs --screenshot-fire by day, optional bow-drill fire beside a boulder. Queue: main, claims-6, animals-8, crafting-11.
 
 ## Open questions / blockers
 - (none)
