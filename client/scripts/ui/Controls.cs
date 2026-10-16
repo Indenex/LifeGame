@@ -26,18 +26,20 @@ public static class Controls
         new("walk_back", new[] { Key.S, Key.Down }, null),
         new("walk_left", new[] { Key.A, Key.Left }, null),
         new("walk_right", new[] { Key.D, Key.Right }, null),
+        // Hints show in this order: walking, then picking up and making things (the
+        // first things a new player needs), then the rest.
+        new("pick_up", new[] { Key.Space }, "Pick up", "Space picks up what lies at your feet"),
+        new("craft", new[] { Key.C }, "Make things", "C to make things from what you carry"),
         new("turn_left", new[] { Key.Q }, "Turn the view", "Q and E turn the view", KeyText: "Q  E"),
         new("turn_right", new[] { Key.E }, null),
         new("camera_drag", Array.Empty<Key>(), "Turn the view freely (hold and drag)", Mouse: MouseButton.Right, KeyText: "Right drag"),
         new("key_help", new[] { Key.F1 }, null, "Hold F1 to see every key"),
         new("sneak", new[] { Key.Shift }, "Sneak (hold)", "Hold Shift to sneak up on animals", OnRequest: true),
         new("use", new[] { Key.G }, "Use what's in front of you"),
-        new("pick_up", new[] { Key.Space }, "Pick up", "Space picks up what lies at your feet"),
         new("dig", new[] { Key.F }, "Dig", "F digs the ground in front of you"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
         // with these keys; they join the key list once those lanes land.
         new("strike", None, "Strike", "Click to strike", OnRequest: true),
-        new("craft", new[] { Key.C }, "Make things", "C to make things from what you carry"),
         new("craft_play_minigame", None, "Work a craft by hand (hold while starting)"),
         new("eat", new[] { Key.X }, "Eat", "X eats the best food you carry"),
         new("drink", None, "Drink"),

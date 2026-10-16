@@ -48,6 +48,8 @@ namespace LifeGame.Shared
         RawMutton = 190,
         CookedMutton = 191,
         BurntMutton = 192,
+        Wool = 193,
+        SheepHide = 194,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -117,7 +119,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
             new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true },
-            new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton" });
+            new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton" },
+            new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true },
+            new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 
