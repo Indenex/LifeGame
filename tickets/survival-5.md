@@ -3,7 +3,7 @@ Lane: Survival
 Owner: Survival thread (session_01EzhhyMEiXNWShq9e1gpQ4w)
 Status: in_review
 Branch: claude/survival-needs-g7yrhi (restarted from main cab7fe4 after #48 merged)
-PR: (not yet)
+PR: #75
 
 ## Goal
 Rain and wading make you wet; wetness builds and fades gradually. Being wet makes cold bite harder, folded into the existing rain +50% (D-034's cold rules) rather than stacked on top. Shelter stops it building, and standing by a fire dries you about twice as fast. Shown subtly on the body (darker skin and leaves, a faint drip), with no new HUD element (D-045). Uses Atmosphere's server rain state.
