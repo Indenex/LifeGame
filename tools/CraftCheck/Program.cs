@@ -144,8 +144,10 @@ for (int top = 0; top < 12; top++)
     lastError = null;
     conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
     Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
-    if (lastError != null) break;
+    if (lastError == "The fire is burning as high as it will") break;
+    if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
     Gather(Item.Stick, 1);
+    WalkTo(bowFire.X, bowFire.Z);
 }
 RefusedFeed(bowFire, Item.Stick);
 
