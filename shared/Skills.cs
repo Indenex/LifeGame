@@ -107,6 +107,9 @@ namespace LifeGame.Shared
             // D-127 first-evening steps: Claims reports the marker (#174); the bench comes with ceramics-8.
             ["claim.mark"] = "Planting a claim",
             ["build.bench"] = "Building a potter's bench",
+            ["build.table"] = "Building a crafting table",
+            ["build.spindle"] = "Building a spindle station",
+            ["build.rack"] = "Building a drying rack",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -127,6 +130,11 @@ namespace LifeGame.Shared
             yield return DryHide;
             yield return Run;
             yield return "claim.mark";
+            // Building each kind of crafting station (D-098), as Structures reports it.
+            var stations = new HashSet<string>();
+            foreach (var shape in Structures.Shapes)
+                if (shape.Station != StationKind.None && stations.Add(StationInfo.BuildProcess(shape.Station)))
+                    yield return StationInfo.BuildProcess(shape.Station);
         }
 
         // Some things can't be picked up by watching someone else do them.

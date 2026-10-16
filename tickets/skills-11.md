@@ -2,7 +2,7 @@
 Lane: Journal and skills
 Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
 Status: in_progress
-Branch: claude/journal-skills-11 (stacked on claude/journal-skills-10, PR #112)
+Branch: claude/journal-skills-11 (stacked on #112 and on Crafting's #160)
 PR: (once opened)
 
 ## Goal
@@ -19,9 +19,10 @@ Husbandry keeps shearing, hunting and butchering; Toolmaking keeps cordage, bask
 ## Progress log
 - 2026-10-16 19:35: PM assigned skills-11 (D-145 never idle). Specialties and overrides done; harness shows the mapping; server type-checks.
 - 2026-10-16 19:37: D-153 (Justin): foot wraps train Leatherwork, drop spindle stays Toolmaking, as built.
+- 2026-10-16 19:50: Crafting's #160 (d947764) reports build.table / build.bench / build.spindle / build.rack via StationInfo.BuildProcess. Merged #160 into this branch. Skills.AllProcessIds yields one build id per station kind that exists; journal names; how-to lines ("C beside a crafting table to make it"); Things to try lines for the table, spindle station and drying rack; any recipe with a Station waits for that station to be built. Harness: 47 reachable, crafting table always before the basket; server type-checks.
 
 ## Open questions / blockers
-- Station build ids: asked Crafting (owner of #160) to have finishing a station report `build.<station>` (build.table, build.bench, build.spindle, build.rack).
+- (none)
 
 ## Next step
-When #160 merges: merge main, add station requirements and station hints to NextSteps; open the PR (stacked on #112 until it merges).
+Open a draft PR (stacked on #112 and #160), wait for CI; when #112 and #160 merge, merge main and mark ready.
