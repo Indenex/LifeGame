@@ -449,11 +449,19 @@ public partial class BuildingSystem : Node
         return null;
     }
 
-    Structure? NearestSite() =>
-        rows.Values
-            .Where(s => !s.Complete && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, Structures.WorkReach))
-            .OrderBy(s => new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared())
-            .FirstOrDefault();
+    // A plain loop: this runs every frame for the Use key and the prompt (bugfix-8).
+    Structure? NearestSite()
+    {
+        Structure? best = null;
+        float bestD = float.MaxValue;
+        foreach (var s in rows.Values)
+        {
+            if (s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, Structures.WorkReach)) continue;
+            float d = new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared();
+            if (d < bestD) { best = s; bestD = d; }
+        }
+        return best;
+    }
 
     void UpdatePrompt()
     {
