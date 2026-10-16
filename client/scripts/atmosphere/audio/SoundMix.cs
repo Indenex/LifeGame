@@ -6,7 +6,7 @@ namespace LifeGame;
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
-public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place }
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -1461,7 +1461,7 @@ public sealed class SoundMix
             for (int k = active.Count - 1; k >= 0; k--)
             {
                 var v = active[k];
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, _ => 0.4f };
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1507,6 +1507,26 @@ public sealed class SoundMix
                             v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
                             float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
                             s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
+                            break;
+                        }
+                        case Cue.Hit:
+                        {
+                            // A blow landing: a dull thud dropping in pitch, a slap of cloth and flesh.
+                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
+                            float slap = v.Band.Process(x, 1100f * v.Pitch, 0.7f, rate) * Burst(t, 0f, 0.03f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.15f + slap * 0.225f;
+                            break;
+                        }
+                        case Cue.Crit:
+                        {
+                            // A sneak attack's bonus: the same thud, a sharp crack over it and a
+                            // short bright ring that says it was a good one.
+                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
+                            v.Phase2 += 2f * MathF.PI * 1480f * v.Pitch * dt;
+                            float crack = v.Band.Process(x, 3600f, 0.6f, rate) * Burst(t, 0f, 0.012f);
+                            float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
+                            send = ring * 0.024f;
                             break;
                         }
                         case Cue.Learn:
