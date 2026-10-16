@@ -1,8 +1,8 @@
 # env-9: Seeing further (distant land and tree silhouettes)
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_progress
-Branch: claude/environment-farland (stacked on claude/environment-props / PR #284)
+Status: in_review
+Branch: claude/environment-farland
 PR: (once opened)
 
 ## Goal
@@ -20,4 +20,4 @@ Hills, heath tops, valleys and the woods read from a distance, so players can st
 - To see out to the fog (about 240 m), Main's water plane needs to grow to about 500 m (Integration's file). Ask once A is confirmed.
 
 ## Next step
-Once #284 merges, merge main into claude/environment-farland and open the env-9 PR (Render's hilltop shots were requested from session_015S96hNrEu92FrCoNZqZZjs).
+Wait for CI on the env-9 PR, send the PM the green sha; it merges after #293 and #289 (Render's hilltop shots were requested from session_015S96hNrEu92FrCoNZqZZjs).
