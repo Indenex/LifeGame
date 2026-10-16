@@ -46,6 +46,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 19:00: model-1 baseline sent to Modeling and the PM (8f3e255). Puppet gained sql/feed/place/build/store; bugfix-18, bugfix-19 and ceramics-6 jar scenes are in queue.jobs.
 - 2026-10-16 19:05: new: claims-7 f85c3b9 (session_013ECn821EbTpbj4h7d3PepH) Trade-with prompt in the wild (scene claims-7-ask.txt; --debug-position is client-only, so the scene moves A on the server by SQL); model-1 style now eb8b399 (+ clothes view).
 - 2026-10-16 19:10: new: skills-10 (session_013QuyGdXAWemhkois2ictmc, PR #112, head of claude/journal-skills-10): journal hints after pickups + fire, then after a pinch pot. Puppet `pickup` step. PR #103 green on f6140df; pushed tooling update 4326fdf.
+- 2026-10-16 19:20: ui-9 mock sent to the PM and UX/UI (bb7b06e): in the 'changed' shot Mara stays green although the amber line says both accepts cleared; no amounts in offer lists; no 'before Mara accepts' shot possible.
 
 ## Open questions / blockers
 - (none)
