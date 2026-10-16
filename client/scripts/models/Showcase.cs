@@ -342,19 +342,19 @@ public partial class Showcase : Node3D
         camera.LookAtFromPosition(new Vector3(0, 3.2f, 5.2f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
     }
 
-    // Batch devices (D-195): each device empty-ish (fill 1) in front, full behind.
+    // Batch devices (D-195): each at fill 1 idle in front, full and working behind.
     void Devices()
     {
-        var builds = new (string, System.Func<int, List<StructureModel.Piece>>)[]
+        var builds = new (string, System.Func<int, bool, List<StructureModel.Piece>>)[]
         {
-            ("Slaking trough", StationMeshes.SlakingTrough), ("Mortar", StationMeshes.Mortar), ("Wedging slab", StationMeshes.WedgingSlab),
+            ("Settling tub", StationMeshes.SettlingTub), ("Crushing block", StationMeshes.CrushingBlock), ("Tempering trough", StationMeshes.TemperingTrough),
         };
         for (int i = 0; i < builds.Length; i++)
             for (int row = 0; row < 2; row++)
             {
                 var root = new Node3D { Position = new Vector3((i - 1f) * 2.2f, 0, row * -2f), Rotation = new Vector3(0, 0.35f, 0) };
                 AddChild(root);
-                foreach (var piece in builds[i].Item2(row == 0 ? 1 : 3))
+                foreach (var piece in builds[i].Item2(row == 0 ? 1 : 3, row == 1))
                     if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
                 if (row == 0) Label(builds[i].Item1, root.Position + new Vector3(0, -0.7f, 0.5f));
             }
