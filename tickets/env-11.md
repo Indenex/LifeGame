@@ -1,9 +1,9 @@
 # env-11: Heath hotfix (heather amount and colour)
 Lane: Environment
 Owner: Environment lane (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-heath-hotfix
-PR: #318
+PR: #318 (merged 2026-10-16)
 
 ## Goal
 Justin, playtesting, hated the hilltop heath: heather carpeted the open ground at an even density in saturated pink-purple. Done means heather grows in a few irregular patches with plenty of open grass between them (about a fifth of the old amount or less), gorse is rarer, and heather reads as muted dusky green-brown most of the year, with only a soft, desaturated mauve in late-summer bloom, close to the grass in brightness. Client only, no wipe.
@@ -16,4 +16,4 @@ Justin, playtesting, hated the hilltop heath: heather carpeted the open ground a
 - (none)
 
 ## Next step
-Wait for CI on PR #318; send the PM the green sha. Render the hilltop heath (e.g. (-4,46)) for Justin.
+None: merged as #318 (CI run https://github.com/Indenex/LifeGame/actions/runs/38976971707 green on 27adf0f). Render was asked for the hilltop heath before/after.
