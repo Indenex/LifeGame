@@ -24,10 +24,11 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-17 01:00: Animals agreed to the deer and recorded the swap in tickets/animals-14.md (claude/animals-deer-5gkntn; their session handed off, D-159). If my env PR lands after #219 is on main, I make the swap in Sheep.cs myself: `deerMesh = DeerFigure.Build(false, plainMaterial); stagMesh = DeerFigure.Build(true, plainMaterial);` and drop BuildDeer. Drying rack: three peg loops at x -0.75, 0, 0.75 on the 0.99 m bar (where Animals hangs hides).
 - 2026-10-17 01:15: Justin (via Environment, env-5): landmarks placed many times must look different each time. PropMeshes now has seeded shape variants: `Outcrop(int)` x6 (3 to 5 layers, dip and direction, size, step-back, split block, fallen blocks, moss ledges), `RiverStone(int)` x6 (round, long, wedge, split pair, notched, domed), `Birch(int)`, `Heather(int)`, `Gorse(int)` x3 each; counts in `PropMeshes.*Variants`; any int wraps. Showcase `env --variants` shows them all.
 - 2026-10-17 01:30: Environment asked for more variants: `Rock(int)` x4 (worn lumps, tall split stone, low slab, cracked round stone, all ~1 m with moss) and `FallenLog(int)` x2 (straight with splintered end; uprooted, broken in two with a forked crown). Trunk and Stump stay single (Environment varies them by scale, lean, tint).
+- 2026-10-17 01:40: #197 merged (green on d4640a5, run 38959597611). Merged main into claude/model-2-env; build and smoke renders (items, deer, cooking, env, stations) fine. Opening the follow-up PR.
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.
 - Most stations are on other lanes' unmerged branches; hooks wait until those merge, so models land first as standalone meshes plus Showcase views.
 
 ## Next step
-Wait for CI on #197 (head 00e4d24) and send the green sha to the PM; when #197 merges, merge main into claude/model-2-env and open its PR (env-4 props, CookingMeshes).
+Wait for CI on the model-2-env PR and send the green sha to the PM. Pending swaps by whichever lane merges second: deer (Animals #219, Sheep.cs), cooking pot (Ceramics, SimmerView.Show), potter's bench (Ceramics, BenchModel), crafting table (Crafting, CraftingTableModel), distaff/drying rack (Animals' StationModels), env props (Environment, Terrain/LandmarkProps).
