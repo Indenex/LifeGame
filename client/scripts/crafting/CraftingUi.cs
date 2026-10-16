@@ -90,6 +90,7 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
+        DeviceUse.Register(conn, this);
         // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
         Use.Register(new UseHandler
         {
@@ -271,7 +272,13 @@ public partial class CraftingUi : CanvasLayer
             panel.Visible = true;
             Refresh();
         }
-        if (score is { } s && conn != null) conn.Reducers.StartCraft(def.Id, s);
+        var device = deviceDone;
+        deviceDone = null;
+        if (score is { } s && conn != null)
+        {
+            if (device != null) device(s);
+            else conn.Reducers.StartCraft(def.Id, s);
+        }
     }
 
     // What is missing to run a process, and where to get it, or null when

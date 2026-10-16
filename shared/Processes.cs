@@ -44,6 +44,9 @@ namespace LifeGame.Shared
         PottersBench,
         Spindle,
         DryingRack,
+        ClayTub,
+        CrushBlock,
+        TemperTrough,
     }
 
     public static class StationInfo
@@ -57,6 +60,9 @@ namespace LifeGame.Shared
             StationKind.PottersBench => "potter's bench",
             StationKind.Spindle => "spindle station",
             StationKind.DryingRack => "leather drying rack",
+            StationKind.ClayTub => "settling tub",
+            StationKind.CrushBlock => "crushing block",
+            StationKind.TemperTrough => "tempering trough",
             _ => "",
         };
 
@@ -67,6 +73,7 @@ namespace LifeGame.Shared
             StationKind.PottersBench => "build.bench",
             StationKind.Spindle => "build.spindle",
             StationKind.DryingRack => "build.rack",
+            StationKind.ClayTub or StationKind.CrushBlock or StationKind.TemperTrough => "build.table",
             _ => "build.frame",
         };
     }

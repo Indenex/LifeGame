@@ -42,6 +42,8 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
+                "SELECT * FROM device_job",
+                "SELECT * FROM device_output",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -212,6 +214,66 @@ WalkTo(table.X, table.Z);
 Craft("weave.basket", 0, Item.Basket);
 Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
 Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
+
+// Crafting-23: a batch device (D-195). A settling tub cleans clay on its own, but poorly;
+// stay and work it and it does better work and more of it.
+{
+    if (CountOf(Item.Clay) < 12) Fail($"only {CountOf(Item.Clay)} clay for the tub check");
+    Gather(Item.Stick, 6);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    WalkTo(table.X, table.Z);
+    var tub = BuildHere(StructureKind.SettlingTub);
+    Console.WriteLine($"Built a settling tub at ({tub.X:F1}, {tub.Z:F1})");
+    WalkTo(tub.X, tub.Z);
+
+    uint CleanClay() => conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.CleanClay).Aggregate(0u, (n, r) => n + r.Count);
+    DeviceOutput[] Waiting() => conn.Db.DeviceOutput.Iter().Where(o => o.StructureId == tub.Id).ToArray();
+
+    // A tub that is not loaded has nothing to collect; one tub does only its own process.
+    lastError = null;
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => lastError != null, 5, "collecting from an empty tub to be refused");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.grit", 1);
+    Pump(() => lastError != null, 5, "the wrong process to be refused");
+    Console.WriteLine($"Empty tub: {lastError}");
+
+    // Unattended: one unit.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => lastError != null, 5, "loading a working tub to be refused");
+    Pump(() => Waiting().Length > 0, 40, "the unattended unit to finish");
+    var plain = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the unattended clay to be collected");
+    Console.WriteLine($"Unattended unit: {plain.Count} clean clay at quality {plain.Quality}");
+
+    // Attended: five units, worked at once with a perfect score.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
+    conn.Reducers.WorkDevice(tub.Id, 1f);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) is { Attended: true }, 5, "the round to be worked");
+    lastError = null;
+    conn.Reducers.WorkDevice(tub.Id, 1f);
+    Pump(() => lastError != null, 5, "working a round twice to be refused");
+    Pump(() => Waiting().Length > 0, 60, "the attended round to finish");
+    var worked = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 + worked.Count, 5, "the attended clay to be collected");
+    if (worked.Count != 6) Fail($"five units worked with a perfect score made {worked.Count} clean clay, not 6");
+    if (worked.Quality <= plain.Quality) Fail($"working the tub ({worked.Quality}) was no better than leaving it ({plain.Quality})");
+    Console.WriteLine($"Attended round: {worked.Count} clean clay at quality {worked.Quality} (left alone: 1 at {plain.Quality})");
+}
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.

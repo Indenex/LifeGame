@@ -16,6 +16,9 @@ public enum StructureKind
     Gate,
     CraftingTable,
     Hearth,
+    SettlingTub,
+    CrushingBlock,
+    TemperingTrough,
 }
 
 // One material a structure's current stage still needs.

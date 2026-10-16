@@ -38,5 +38,7 @@ public static class Subscriptions
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
         $"SELECT * FROM structure WHERE {range}",
+        "SELECT * FROM device_job",
+        "SELECT * FROM device_output",
     };
 }

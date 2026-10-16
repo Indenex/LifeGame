@@ -146,6 +146,32 @@ namespace LifeGame.Shared
                 Indoor = true,
                 Stages = new[] { "Stone ring", "Clay surround" },
             },
+            // Batch devices (crafting-23, D-195): load one and it works through a batch on its own.
+            new StructureShape
+            {
+                Name = "Settling tub",
+                Round = true, Radius = 0.55f,
+                Clearance = 1.0f,
+                Solid = true,
+                Station = StationKind.ClayTub,
+                Stages = new[] { "Tub" },
+            },
+            new StructureShape
+            {
+                Name = "Crushing block",
+                HalfWidth = 0.45f, HalfDepth = 0.45f,
+                Clearance = 0.9f,
+                Station = StationKind.CrushBlock,
+                Stages = new[] { "Block" },
+            },
+            new StructureShape
+            {
+                Name = "Tempering trough",
+                HalfWidth = 0.85f, HalfDepth = 0.4f,
+                Clearance = 1.0f,
+                Station = StationKind.TemperTrough,
+                Stages = new[] { "Trough" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -220,6 +246,21 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stone, 4u) },
                 new[] { (Item.Daub, 3u) },
+            },
+            // Settling tub (D-195): Tub
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Cordage, 2u), (Item.Log, 1u) },
+            },
+            // Crushing block (D-195): Block
+            new[]
+            {
+                new[] { (Item.Log, 1u), (Item.Stone, 3u) },
+            },
+            // Tempering trough (D-195): Trough
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
         };
 
