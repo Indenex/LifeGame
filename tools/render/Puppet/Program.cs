@@ -13,6 +13,8 @@
 //                     step at once (to snap mid-stride); "arrive" waits for it
 //   say hello there   send a chat line ("/me waves" works too)
 //   snap              save the screen to <snap prefix>-<n>.png (n counts from 1)
+//   burst 6 0.8       snap 6 times, 0.8 s apart (the camera client lags a few
+//                     seconds in software rendering; keep the best frame)
 //   clip 6            record 6 s of the screen to <snap prefix>-<n>.mp4
 //   give 193 8 60     the database owner puts 8 of item 193 at quality 60 in my hands
 //   craft cord.spin_wool   start a recipe (as the server's own default score) and wait for it
@@ -173,6 +175,20 @@ foreach (var line in steps)
             Run("import", $"-display {Display()} -window root {prefix}-{shots}.png");
             Console.WriteLine($"puppet: saved {prefix}-{shots}.png");
             break;
+        case "burst":
+        {
+            var b = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            int count = int.Parse(b[0]);
+            double gap = double.Parse(b[1], System.Globalization.CultureInfo.InvariantCulture);
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0) Pump(gap);
+                shots++;
+                Run("import", $"-display {Display()} -window root {prefix}-{shots}.png");
+                Console.WriteLine($"puppet: saved {prefix}-{shots}.png");
+            }
+            break;
+        }
         case "clip":
             shots++;
             Run("ffmpeg", $"-loglevel error -y -f x11grab -video_size 1600x900 -framerate 10 -t {rest} -i {Display()} -pix_fmt yuv420p {prefix}-{shots}.mp4");
