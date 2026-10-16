@@ -153,9 +153,21 @@ a.Conn.Reducers.Dig(digX, digZ);
 Pump(() => a.Depth(digX, digZ) > depth || a.LastError != null, 5, "owner dig");
 Check(a.LastError == null, "A can dig in their own claim");
 
-// Once invited, B can dig, pick up and use the stash.
-a.Conn.Reducers.AddClaimMember(b.PlayerId);
-Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "membership");
+// claims-4: the owner adds B by name (any case), and a calm line says so.
+string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";
+b.Conn.Reducers.SetName(bName);
+Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
+ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
+ulong chatBeforeAdd = b.Conn.Db.ChatMessage.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
+a.LastError = null;
+a.Conn.Reducers.AddClaimMemberByName(" " + bName.ToUpperInvariant() + " ");
+Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId) || a.LastError != null, 5, "membership");
+Check(b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), $"the owner can add someone by name ({a.LastError ?? "ok"})");
+Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBeforeAdd && m.SenderId == 0 && m.Text.StartsWith(bName + " now shares")), 5, "added line");
+Check(true, "a chat line says who now shares the land");
+ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName(bName), "already a member", "adding a member twice is refused");
+
+// Once added, B can dig, pick up and use the stash.
 b.LastError = null;
 b.Conn.Reducers.PickUp(stone.Id);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "member pick up");
@@ -203,7 +215,11 @@ Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take
 
 // --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
 float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
-// Not on claimed land with fighting off.
+// Not on claimed land with fighting off. Tend first: CI gives claims only 30 s.
+Walk(a, claim.X + 1.5f, claim.Z);
+long tendedBefore = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0;
+a.Conn.Reducers.TendClaim(claim.Id);
+Pump(() => (a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > tendedBefore, 5, "tend before fighting");
 a.Conn.Reducers.SetClaimPvp(claim.Id, false);
 Pump(() => a.MyClaim()?.AllowPvp == false, 5, "pvp off");
 Walk(a, claim.X + 4, claim.Z);
@@ -246,8 +262,11 @@ a.X = woke.X; a.Z = woke.Z;
 
 if (decay)
 {
-    var expires = a.MyClaim()!.ExpiresAt.MicrosecondsSinceUnixEpoch;
-    Console.WriteLine($"Waiting for the marker to fall ({(expires - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)...");
+    // CI gives the claim 30 s, which the fight above can already use up.
+    var expires = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch;
+    Console.WriteLine(expires is { } e
+        ? $"Waiting for the marker to fall ({(e - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)..."
+        : "The marker already fell");
     Pump(() => a.MyClaim() == null, 120, "decay");
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");

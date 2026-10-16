@@ -391,14 +391,22 @@ sealed class Bot
         return null;
     }
 
-    // Starts a craft and waits for it to finish.
+    // Starts a craft and waits for it to finish. The job row can reach us after the
+    // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
+    // until the job has come and gone, or the made item has turned up.
     public void Craft(string processId, Action<int> pump)
     {
-        Conn.Reducers.StartCraft(processId, 0.6f);
         var def = Processes.Find(processId)!;
-        pump(200);
+        uint before = CountOf(def.Makes);
+        Conn.Reducers.StartCraft(processId, 0.6f);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds + 5);
-        while (Conn.Db.MyCraftJob.Count > 0 && DateTime.UtcNow < until) pump(100);
+        bool seen = false;
+        while (DateTime.UtcNow < until)
+        {
+            pump(100);
+            if (Conn.Db.MyCraftJob.Count > 0) seen = true;
+            else if (seen || CountOf(def.Makes) > before) break;
+        }
         pump(200);
     }
 

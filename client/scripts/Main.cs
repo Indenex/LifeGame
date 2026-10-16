@@ -37,7 +37,7 @@ public partial class Main : Node3D
     readonly Avatar me = new("You");
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
-    readonly Dictionary<ulong, Node3D> items = new();
+    readonly GroundItems items = new();
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -66,6 +66,7 @@ public partial class Main : Node3D
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
+        view.AddChild(items);
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
@@ -447,19 +448,13 @@ public partial class Main : Node3D
 
     void AddItem(WorldItem item)
     {
-        if (items.ContainsKey(item.Id)) return;
-        var node = new MeshInstance3D { Mesh = ItemLook.MeshFor((Item)item.Item) };
+        if (items.Has(item.Id)) return;
         float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
-        node.Position = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        node.Rotation = new Vector3(0, yaw, 0);
-        items[item.Id] = node;
-        view.AddChild(node);
+        var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
 
-    void RemoveItem(ulong id)
-    {
-        if (items.Remove(id, out var node)) node.QueueFree();
-    }
+    void RemoveItem(ulong id) => items.Remove(id);
 
     // --- Frame loop -------------------------------------------------------
 

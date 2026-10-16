@@ -1,7 +1,7 @@
 # animals-3: Hunting sheep for meat and hide (D-039)
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_review
+Status: done
 Branch: claude/animals-sheep-5gkntn (developed locally as animals-3-local until #23 merged)
 PR: #23 (shearing and hunting together, per the PM)
 
@@ -31,4 +31,4 @@ Sheep can be killed with a spear or blade after a short chase, lie down calmly w
 - UX lane to add an OnRequest "strike" hint row (asked).
 
 ## Next step
-Wait for CI on #23, send the green sha to the PM (session cse_01HQQLrCgy3JhRUA9YMTqyL1).
+Done: merged in #23 (129c166). Next animals milestone is the PM's call (more species, hide use).
