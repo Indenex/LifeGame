@@ -93,7 +93,7 @@ Gather(Item.Fiber, kilnRun ? 12u : 4u);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 8u : 12u;
+uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -388,10 +388,11 @@ int KilnCheck()
 // filled at the water, berries picked, broth simmered, taken off and eaten.
 int PotCheck()
 {
-    while (CountOf(Item.CleanClay) < 4) Craft("clay.clean", 0, Item.CleanClay);
+    // Two coil pots, so one cracking in the pit (a chance) doesn't void the run.
+    while (CountOf(Item.CleanClay) < 6) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
-    Craft("clay.temper_grit", 0, Item.TemperedClay);
-    Craft("clay.temper_grit", 0, Item.TemperedClay);
+    Craft("clay.grit", 0, Item.Grit);
+    for (int i = 0; i < 3; i++) Craft("clay.temper_grit", 0, Item.TemperedClay);
 
     float fx = 2f, fz = 2f;
     WalkTo(fx, fz, 1.2f);
@@ -402,30 +403,37 @@ int PotCheck()
     fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
     KeepFireGoing();
     Craft("clay.coil_pot", 0.9f, null);
-    var pot = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot)
-        ?? throw new Exception("no coil pot drying");
+    Craft("clay.coil_pot", 0.9f, null);
+    var coils = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).Select(p => p.Id).ToList();
+    if (coils.Count != 2) Fail($"expected 2 coil pots drying, have {coils.Count}");
     var watch = Stopwatch.StartNew();
-    while (MoistureOf(pot.Id) > ClayRules.SafeToFire)
+    while (coils.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
-        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("coil pot never dried");
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("coil pots never dried");
         KeepFireGoing();
         Pump(() => false, 5, null);
     }
-    KeepFireGoing();
-    WalkTo(pot.X, pot.Z, 1.2f);
-    lastError = null;
-    conn.Reducers.TendClay(pot.Id, false);
-    Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(pot.Id)?.Stage == (byte)ClayStage.Firing, 3, "the coil pot to go in the fire");
-    if (lastError != null) Fail($"firing: {lastError}");
+    int newsBefore = news.Count;
+    foreach (var id in coils)
+    {
+        KeepFireGoing();
+        var piece = conn.Db.ClayPiece.Id.Find(id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(id)?.Stage == (byte)ClayStage.Firing, 3, "a coil pot to go in the fire");
+        if (lastError != null) Fail($"firing: {lastError}");
+    }
     watch.Restart();
-    while (conn.Db.ClayPiece.Id.Find(pot.Id) != null)
+    while (coils.Any(id => conn.Db.ClayPiece.Id.Find(id) != null))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(6)) Fail("firing never finished");
         Pump(() => false, 2, null);
     }
-    if (!news.Last().Contains("whole"))
+    Pump(() => news.Count >= newsBefore + 2, 5, "firing news");
+    if (!news.Skip(newsBefore).Any(n => n.Contains("whole")))
     {
-        Log("The coil pot cracked in the fire (a chance); pot cooking not checked this run");
+        Log("Both coil pots cracked in the fire (a small chance); pot cooking not checked this run");
         conn.Disconnect();
         return 0;
     }
