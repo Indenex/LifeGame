@@ -131,8 +131,18 @@ Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
 foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
+// A freshly lit fire is already as high as it burns (D-090): feeding is refused and the stick is kept.
+var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+WalkTo(bowFire.X, bowFire.Z);
+RefusedFeed(bowFire, Item.Stick);
+
+// The first fire has burned a while; once half a stick fits under the cap it is taken.
+// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
 WalkTo(fire.X, fire.Z);
-long fuelBefore = fire.FuelUntil.MicrosecondsSinceUnixEpoch;
+float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+float roomNeeded = Items.Def(Item.Stick).FuelSeconds * Fires.MinFitShare + 2;
+Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 60, "room for a stick on the first fire");
+long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
 lastError = null;
 conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
@@ -150,13 +160,8 @@ if (Trees.Felling)
     Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
     Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
 }
-WalkTo(fire.X, fire.Z);
-fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
-lastError = null;
-conn.Reducers.FeedFire(fire.Id, (ushort)Item.Log);
-Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "a log to burn");
-if (lastError != null) Fail($"feeding the fire a log: {lastError}");
-Console.WriteLine("Fed the fire a log");
+WalkTo(bowFire.X, bowFire.Z);
+RefusedFeed(bowFire, Item.Log);
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
@@ -214,6 +219,19 @@ void OffRocks(Fire f)
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
                 if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
             }
+}
+
+// Feeding a full fire is refused with D-090's message, and the fuel stays in the bag.
+void RefusedFeed(Fire target, Item fuel)
+{
+    var before = CountOf(fuel);
+    lastError = null;
+    conn.Reducers.FeedFire(target.Id, (ushort)fuel);
+    Pump(() => lastError != null, 5, $"a full fire to refuse {fuel}");
+    if (lastError != "The fire is burning as high as it will") Fail($"feeding a full fire {fuel}: {lastError}");
+    Pump(() => false, 0.5f, null);
+    if (CountOf(fuel) != before) Fail($"a full fire ate {fuel} ({before} -> {CountOf(fuel)})");
+    Console.WriteLine($"A full fire refused {fuel} and it was kept");
 }
 
 // The standing tree nearest the bot, by the same rules the server uses.

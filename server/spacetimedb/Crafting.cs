@@ -195,13 +195,17 @@ public static partial class Module
             throw new Exception("That will not burn");
         if (CountOf(ctx, (Item)item) < 1)
             throw new Exception("You are not carrying that");
-        Take(ctx, (Item)item, 1);
 
+        // A full fire refuses more fuel and the fuel is kept (D-090). The cap grows
+        // with the feeder's Firecraft.
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        long until = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now)
-            + (long)(Items.Def((Item)item).FuelSeconds * 1_000_000);
-        until = Math.Min(until, now + (long)(Fires.MaxSeconds * 1_000_000));
-        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
+        long fuel = (long)(Items.Def((Item)item).FuelSeconds * 1_000_000);
+        long cap = now + (long)(Fires.MaxSecondsFor(SkillRank(ctx, pos.PlayerId, "fire.hand_drill")) * 1_000_000);
+        long from = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now);
+        if (cap - from < fuel * Fires.MinFitShare)
+            throw new Exception("The fire is burning as high as it will");
+        Take(ctx, (Item)item, 1);
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(Math.Min(from + fuel, cap)) });
     }
 
     // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
