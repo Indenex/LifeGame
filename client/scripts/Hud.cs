@@ -44,7 +44,14 @@ public partial class Hud : CanvasLayer
         toast.GrowVertical = Control.GrowDirection.Begin;
         toast.HorizontalAlignment = HorizontalAlignment.Center;
         toast.Position = new Vector2(0, -NoteLane);
-        root.AddChild(toast);
+        // Notes draw above panels (layer 2), so "You put on the wool tunic" never hides
+        // behind the window that caused it.
+        var notes = new CanvasLayer { Layer = 3 };
+        AddChild(notes);
+        var noteRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        noteRoot.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        notes.AddChild(noteRoot);
+        noteRoot.AddChild(toast);
 
         // --screenshot-hud fills the HUD with sample things, for screenshots without a server.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-hud") >= 0)
@@ -110,7 +117,11 @@ public partial class Hud : CanvasLayer
         float dt = (float)delta;
         toastTime -= dt;
         // A note sits clear of the inventory, even when the row wraps onto two lines.
-        toast.Position = new Vector2(toast.Position.X, toast.GetParentAreaSize().Y - NoteLane - Mathf.Max(0f, inventory.Top - 76f));
+        // While a panel covers the middle, a note sits near the top, under the status
+        // line; otherwise it sits clear of the inventory, even when the row wraps.
+        float noteY = Panels.Open() ? TopNote
+            : toast.GetParentAreaSize().Y - NoteLane - Mathf.Max(0f, inventory.Top - 76f);
+        toast.Position = new Vector2(toast.Position.X, noteY);
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
@@ -121,6 +132,8 @@ public partial class Hud : CanvasLayer
     // (minigames) and the G prompt. Each sits clear of the one below, and all stay in
     // the lower third so the player in the middle is never covered.
     public const float NoteLane = 150f, WorkLane = 156f;
+    // Where a note sits from the top edge while a full panel is open.
+    const float TopNote = 52f;
 
     // Puts a box (a minigame card) in the work lane: centred, its foot WorkLane above
     // the bottom edge, growing upward. A box too tall for the lower third shrinks
