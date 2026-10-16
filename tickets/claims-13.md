@@ -3,7 +3,7 @@ Lane: Claims, chat and PvP rules
 Owner: Claims lane (Sonnet session)
 Status: in_progress
 Branch: claude/claims-13-authority
-PR: (none yet)
+PR: #315
 
 ## Goal
 Every Claims, Chat, Trading, stash and fighting reducer validates reach, ownership, cooldowns and limits on the server, and no public table leaks values that should stay hidden. Gaps get closed in small PRs with SocialTest checks.
