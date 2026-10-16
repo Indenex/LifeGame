@@ -17,9 +17,13 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:15: render request from Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN): atmosphere-12 work sounds, af3bd67, audio clip from tools/SoundPreview.
 - 2026-10-16 17:15: render request from Animals (session_01SAcVBUUfPFFk1rdXuiQZRU): animals-8, PR #90 at 573a057: tier-2 crafting menu with the three wool recipes, inventory with spindle/yarn/cloth, items on the ground.
 - 2026-10-16 17:15: Queue: #66 (running), main day/night proof, claims-6 scene, atmosphere-12 audio, animals-8.
+- 2026-10-16 17:35: root cause of the stuck shots: at ~0.5 fps Godot capped game time at 8 physics steps a frame, so a 30 s timer took ~10 real minutes. render.sh now writes an untracked client/override.cfg (20 physics ticks, 60 max steps) in the render checkout; shots take ~1-2 min each.
+- 2026-10-16 17:40: atmosphere-12 audio sent to the PM (renders/audio/atmosphere-12-af3bd67-work-sounds.mp3, e1c6231).
+- 2026-10-16 17:50: #66 six stills sent to the PM (renders/atmosphere-10-11-dca2a0f-1..6.png, 169f4ec).
+- 2026-10-16 17:50: added tools/render/scene.sh + Puppet (scripted second player; can be the camera, give items via owner SQL, craft, drop, press keys, snap/clip on cue). Scenes: tools/render/scenes/claims-6-chat.txt, animals-8-wool.txt (untested).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Run `tools/render/setup.sh`, then `tools/render/render.sh render-1 origin/main "--time-of-day=0.45" "--time-of-day=0.02"` and send the two PNGs to the PM.
+When main 217dc13 day/night finishes (running), send them to the PM; then `tools/render/scene.sh claims-6 origin/claude/claims-chat-pvp-vk2qak tools/render/scenes/claims-6-chat.txt`, then the animals-8 scene at 573a057.
