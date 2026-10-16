@@ -269,7 +269,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("sneak", Key.Shift);
+        Bind("sneak", Key.Ctrl);
     }
 
     // --- Networking -------------------------------------------------------
