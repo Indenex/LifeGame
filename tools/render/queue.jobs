@@ -1,6 +1,7 @@
 # One job per line: <name> <command...>. queue.sh rereads this file between jobs,
 # so jobs can be added or reordered while it runs. Live scenes go last.
 env-2 tools/render/scenes/env-2.sh
+atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
 ceramics-8 env BENCH=1 TICKET=ceramics-8 tools/render/scenes/ceramics-7.sh a432ab6 0.45
 ceramics-8-panel tools/render/render.sh ceramics-8-panel a432ab6 "--time-of-day=0.45 --screenshot-craft=3"
@@ -32,7 +33,6 @@ ui-12b rm -f $HOME/.local/share/godot/app_userdata/LifeGame/settings.cfg; env RE
 survival-7 env RENDER_SIZE=1280x720 tools/render/scene.sh survival-7 8a03451 tools/render/scenes/survival-7-run.txt
 ui-10c env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 78b834b "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
 building-8 tools/render/scene.sh building-8 969a7ae tools/render/scenes/building-8-fence.txt
-atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
 crafting-15 tools/render/scenes/crafting-15.sh 859f25e
 ui-13 tools/render/scenes/ui-13.sh 2cdbc1c
 animals-11 tools/render/scene.sh animals-11 de48c3f tools/render/scenes/animals-11-stations.txt
@@ -50,6 +50,7 @@ atmosphere-66-clouds tools/render/scene.sh atmosphere-66-clouds dca2a0f tools/re
 anim-1-side env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1 27ac03c tools/render/scenes/anim-1-side.txt
 anim-1-turn env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-turn 27ac03c tools/render/scenes/anim-1-turn.txt
 anim-1-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-1-work 27ac03c tools/render/scenes/anim-1-work.txt
+tour-main tools/render/scenes/tour.sh origin/main
 animals-8-spin tools/render/scene.sh animals-8-spin 4233255 tools/render/scenes/animals-8-spin.txt
 ui-9-liveA tools/render/scene.sh ui-9-liveA 88d7cf2 tools/render/scenes/ui-9-live-a.txt
 ui-9-liveB tools/render/scene.sh ui-9-liveB 88d7cf2 tools/render/scenes/ui-9-live-b.txt

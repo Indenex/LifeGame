@@ -71,6 +71,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 22:30: ceramics-7 day captured (prompts and labels as asked); dusk running. New: env-2 land reshape before 2a6b8eb / after ee46b71 (Environment), put first in the queue (fresh in-memory server: never Justin's world).
 - 2026-10-16 22:35: new: survival-8 arrival badge on main aa3e443 (Survival): scene survival-8-arrival.txt, queued second.
 - 2026-10-16 22:40: ceramics-8 a432ab6 (Ceramics) replaces the 1da6609 cooking pot: bench + broth via ClayCheck (ceramics-7.sh with BENCH=1), crafting panel still; queued after survival-8.
+- 2026-10-16 22:45: PM rule D-145: never idle; when the queue empties, render a what's-new tour of latest main (scenes/tour.sh, in queue.jobs before the live scenes). Priority: env-2 (#175) then atmosphere-16 seasons (#173), now first and second in the queue.
 
 ## Open questions / blockers
 - (none)
