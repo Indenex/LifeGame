@@ -17,10 +17,15 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
 - 2026-10-16 23:55: Justin picked all three (a, b, c), via the PM. Added (b) god rays to the prototype (client 0 errors). At a low clear sun: sun volumetric energy +1.8 x rays, volumetric fog density x(1 + 1.2 x rays), anisotropy up to 0.85, everywhere rather than only in woods. Quality level `Atmosphere.GodRays`: 0 off, 1 normal, 2 high (x1.25, fog length 112 m instead of 64). `--godrays=0|1|2` overrides it, and UX is asked for an Options line. Still behind --grade until Justin sees the renders.
 - Justin's original reference screenshots are not in this container or the repo. I asked the PM to have them re-shared (ideally into docs/reference/) and am tuning to D-002's wording meanwhile.
 - 2026-10-17 00:00: UX (session_01V6qgbNbvTwniqW946KACLr) asked me to carry the Options line. client/scripts/ui/OptionsPage.cs gets a Graphics heading and a "Light rays: Off / Normal / High" button that cycles Atmosphere.GodRays and saves it as graphics/light_rays. ReadyGrade loads it (default 1), and --godrays still overrides it. UX may restyle later.
+- 2026-10-17 00:05: retuned to Justin's reference images (docs/art-reference/, #368). The references are faded and warm with lifted violet blacks, so contrast now goes down (1.08 to 0.96), not up. A colour-correction curve lifts darks to (0.075, 0.065, 0.11) and eases lights to cream (0.98, 0.96, 0.89).
+  - Shadows are blue-violet all day: ambient toward (0.40, 0.42, 0.66), 30% plus another 30% at low sun. Snow therefore reads warm white with blue shade.
+  - Gentle bloom: HDR threshold 1.1 to 0.85, so fire glows; intensity +0.15 and bloom +0.06, swelling further at low sun.
+  - The far land gets a little softer: the camera's existing far depth-of-field blur goes 0.05 to 0.08.
+  - There is no lava in the game, so the emissive glow applies to fires and lit doorways.
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
-- Justin's reference screenshots (re-share requested).
+- (Reference images are now on main in docs/art-reference/.)
 
 ## Next step
 Wait for Justin's pick (via the PM) and the Render with/without pairs (requested from session_015S96hNrEu92FrCoNZqZZjs). Then make the picked option the default and open the PR.

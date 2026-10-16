@@ -6,9 +6,12 @@ namespace LifeGame;
 // lighting" direction (atmosphere-25, options a + c to the PM). Off by default
 // until Justin picks (D-154); --grade=1 turns it on fully, in-between values blend.
 //
-// At golden hour the sun turns honey-warm and a little stronger while the shadows
-// go cool blue-teal (more of the ambient light from a cool colour, less from the
-// sky), and the bloom swells. Nights lean deeper blue. The sky gives the clouds
+// Tuned to Justin's reference images (docs/art-reference/): a slightly faded, warm
+// grade (blacks lifted toward violet, highlights a touch creamy, a little less
+// contrast), blue-violet shadows all day (so snow is warm white with blue shade),
+// gentle bloom that lets fire and other bright light glow, and the far land a bit
+// softer out of focus. At golden hour the sun turns honey-warm and the bloom swells;
+// nights lean deeper blue. The sky gives the clouds
 // near a low sun warm glowing rims. At dawn and dusk the air everywhere, not only
 // in the woods, thickens a little and scatters toward the sun, so beams of light
 // fan out over the hills (god rays, option b).
@@ -21,7 +24,19 @@ public partial class Atmosphere
     float grade;
 
     public static int GodRays = 1;
+    GradientTexture1D? curve;
     int raysApplied = -1;
+
+    // The faded warm curve: each channel's darks lifted toward violet, its lights
+    // eased toward cream, the mids left alone.
+    static GradientTexture1D FadedCurve() => new()
+    {
+        Gradient = new Gradient
+        {
+            Offsets = new[] { 0f, 0.5f, 1f },
+            Colors = new[] { new Color(0.075f, 0.065f, 0.11f), new Color(0.51f, 0.50f, 0.49f), new Color(0.98f, 0.96f, 0.89f) },
+        },
+    };
 
     void ReadyGrade()
     {
@@ -40,12 +55,21 @@ public partial class Atmosphere
 
         sun.LightColor = sun.LightColor.Lerp(new Color(1f, 0.70f, 0.40f), 0.35f * lowSun);
         sun.LightEnergy *= 1f + 0.15f * lowSun;
-        env.AmbientLightColor = env.AmbientLightColor.Lerp(new Color(0.30f, 0.42f, 0.64f), 0.55f * lowSun).Lerp(new Color(0.12f, 0.18f, 0.40f), 0.35f * night);
-        env.AmbientLightSkyContribution = 0.75f - 0.35f * lowSun - 0.15f * night;
-        env.GlowIntensity += 0.35f * lowSun;
-        env.GlowBloom = 0.08f + 0.12f * lowSun;
-        env.AdjustmentSaturation += 0.08f * grade;
-        env.AdjustmentContrast = 1.08f + 0.05f * grade;
+        // Shadows take a blue-violet cast all day, more at golden hour, deep blue at night.
+        env.AmbientLightColor = env.AmbientLightColor
+            .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.3f * grade + 0.3f * lowSun)
+            .Lerp(new Color(0.12f, 0.16f, 0.40f), 0.35f * night);
+        env.AmbientLightSkyContribution = 0.75f - 0.2f * grade - 0.2f * lowSun - 0.1f * night;
+        // Gentle bloom: a softer threshold so fire and bright light glow, swelling at low sun.
+        env.GlowIntensity += 0.15f * grade + 0.3f * lowSun;
+        env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;
+        env.GlowHdrThreshold = 1.1f - 0.25f * grade;
+        // Faded and warm: a touch less contrast, darks lifted, lights creamy.
+        env.AdjustmentSaturation += 0.04f * grade;
+        env.AdjustmentContrast = 1.08f - 0.12f * grade;
+        env.AdjustmentColorCorrection = grade > 0.5f ? (curve ??= FadedCurve()) : null;
+        if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)
+            lens.DofBlurAmount = 0.05f + 0.03f * grade;
 
         // God rays: the low sun lights the air across the whole view, not just the woods.
         if (raysApplied != GodRays)
