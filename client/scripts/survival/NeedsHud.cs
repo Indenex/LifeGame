@@ -7,6 +7,9 @@ namespace LifeGame;
 // edges as you get cold, and a quiet fade to black when you die.
 public partial class NeedsHud : CanvasLayer
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NAmount = "amount";
+
     static readonly Color FoodColor = new(0.86f, 0.55f, 0.32f);
     static readonly Color WaterColor = new(0.45f, 0.72f, 0.82f);
     public static readonly Color WarmColor = new(1.0f, 0.66f, 0.30f);
@@ -119,8 +122,8 @@ public partial class NeedsHud : CanvasLayer
         load.Visible = a > 0.01f;
 
         var material = (ShaderMaterial)frost.Material;
-        float current = (float)material.GetShaderParameter("amount");
-        material.SetShaderParameter("amount", Mathf.Lerp(current, frostAmount, 1f - Mathf.Exp(-2f * (float)delta)));
+        float current = (float)material.GetShaderParameter(NAmount);
+        material.SetShaderParameter(NAmount, Mathf.Lerp(current, frostAmount, 1f - Mathf.Exp(-2f * (float)delta)));
     }
 
     // Icy blue creeping in from the corners, with a crystalline edge.

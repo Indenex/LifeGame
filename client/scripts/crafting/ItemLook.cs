@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using Godot;
 using LifeGame.Shared;
@@ -14,9 +15,10 @@ public static class ItemLook
         if (Meshes.TryGetValue(item, out var mesh)) return mesh;
         mesh = ClayItemLook.MeshFor(item) ?? SurvivalItemLook.MeshFor(item) ?? item switch
         {
-            Item.Stick => Lying(new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.04f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.15f)),
+            // Raw materials are a little oversized and light so a new player spots them in the grass.
+            Item.Stick => Lying(new CylinderMesh { TopRadius = 0.04f, BottomRadius = 0.05f, Height = 1.0f, RadialSegments = 5 }, new Color(0.58f, 0.45f, 0.32f)),
             Item.Stone => Look.Faceted(new SphereMesh { Radius = 0.14f, Height = 0.18f, RadialSegments = 6, Rings = 3 }, Look.Rock),
-            Item.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.07f, Height = 0.12f, RadialSegments = 7 }, Look.LeafWarm),
+            Item.Fiber => Look.Faceted(new CylinderMesh { TopRadius = 0.15f, BottomRadius = 0.1f, Height = 0.2f, RadialSegments = 7 }, Look.LeafWarm.Lightened(0.15f)),
             Item.Tinder => Look.Faceted(new SphereMesh { Radius = 0.1f, Height = 0.1f, RadialSegments = 7, Rings = 3 }, Look.LeafWarm.Lightened(0.2f)),
             Item.Flake => Look.Faceted(new PrismMesh { Size = new Vector3(0.12f, 0.03f, 0.08f) }, Look.Rock.Darkened(0.2f)),
             Item.HandAxe => Look.Faceted(new PrismMesh { Size = new Vector3(0.14f, 0.06f, 0.2f) }, Look.Rock.Darkened(0.15f)),
@@ -62,6 +64,9 @@ public static class ItemLook
             verts[i] = tilt * verts[i];
             normals[i] = tilt * normals[i];
         }
+        // Rest it on the ground instead of half buried in the grass.
+        float bottom = verts.Min(v => v.Y);
+        for (int i = 0; i < verts.Length; i++) verts[i].Y -= bottom;
         arrays[(int)Mesh.ArrayType.Vertex] = verts;
         arrays[(int)Mesh.ArrayType.Normal] = normals;
         var mesh = new ArrayMesh();

@@ -77,6 +77,7 @@ jobs:
       - name: Check chat, claim and PvP rules with two players
         run: |
           (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          (cd server && spacetimedb-cli call lifegame --server local set_newcomer_grace 0)
           cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
       # The compiled module, so a host can publish it without the .NET SDK:

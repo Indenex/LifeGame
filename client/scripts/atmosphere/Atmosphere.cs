@@ -16,6 +16,23 @@ namespace LifeGame;
 // --debug-position=x,z to hold the player somewhere for screenshots.
 public partial class Atmosphere : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NClouds = "clouds";
+    static readonly StringName NWetness = "wetness";
+    static readonly StringName NWindStrength = "wind_strength";
+    static readonly StringName NCloudCover = "cloud_cover";
+    static readonly StringName NCloudOffset = "cloud_offset";
+    static readonly StringName NPlayerPosition = "player_position";
+    static readonly StringName NViewCameraPosition = "view_camera_position";
+    static readonly StringName NTopColor = "top_color";
+    static readonly StringName NHorizonColor = "horizon_color";
+    static readonly StringName NGroundColor = "ground_color";
+    static readonly StringName NSunColor = "sun_color";
+    static readonly StringName NSunDir = "sun_dir";
+    static readonly StringName NMoonDir = "moon_dir";
+    static readonly StringName NDaylight = "daylight";
+    static readonly StringName NStars = "stars";
+
     public Node3D? Player;
 
     DirectionalLight3D sun = null!;
@@ -73,7 +90,7 @@ public partial class Atmosphere : Node3D
         env.Sky.SkyMaterial = sky;
         env.Sky.ProcessMode = Sky.ProcessModeEnum.Incremental;
         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
-        sky.SetShaderParameter("clouds", Look.Clouds);
+        sky.SetShaderParameter(NClouds, Look.Clouds);
         sun.ShadowEnabled = true;
 
         AddChild(rain);
@@ -142,7 +159,8 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
+        KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
     }
 
     void OnClock(WorldClock c)
@@ -209,18 +227,18 @@ public partial class Atmosphere : Node3D
 
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
-        RenderingServer.GlobalShaderParameterSet("wetness", wetness);
-        RenderingServer.GlobalShaderParameterSet("wind_strength", wind);
-        RenderingServer.GlobalShaderParameterSet("cloud_cover", cloud);
-        RenderingServer.GlobalShaderParameterSet("cloud_offset", cloudOffset);
+        RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
+        RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
+        RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
 
         ApplyLight();
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
-        RenderingServer.GlobalShaderParameterSet("player_position", focus);
+        RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
         if (GetViewport()?.GetCamera3D() is { } camera)
         {
-            RenderingServer.GlobalShaderParameterSet("view_camera_position", camera.GlobalPosition);
+            RenderingServer.GlobalShaderParameterSet(NViewCameraPosition, camera.GlobalPosition);
             terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
             terrain?.ShowGhosts(camera.GlobalPosition, focus);
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
@@ -315,16 +333,16 @@ public partial class Atmosphere : Node3D
         float grey = overcast * 0.75f;
         float dim = 1f - 0.35f * storm;
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
-        sky.SetShaderParameter("top_color", top);
-        sky.SetShaderParameter("horizon_color", horizon);
-        sky.SetShaderParameter("ground_color", Grey(mood.Ground, grey, 1f) * dim);
-        sky.SetShaderParameter("sun_color", sunColor * (1f - overcast * 0.8f));
-        sky.SetShaderParameter("sun_dir", sunDir);
-        sky.SetShaderParameter("moon_dir", moonDir);
-        sky.SetShaderParameter("daylight", daylight);
-        sky.SetShaderParameter("cloud_cover", cloud);
-        sky.SetShaderParameter("cloud_offset", cloudOffset);
-        sky.SetShaderParameter("stars", (1f - daylight) * (1f - overcast));
+        sky.SetShaderParameter(NTopColor, top);
+        sky.SetShaderParameter(NHorizonColor, horizon);
+        sky.SetShaderParameter(NGroundColor, Grey(mood.Ground, grey, 1f) * dim);
+        sky.SetShaderParameter(NSunColor, sunColor * (1f - overcast * 0.8f));
+        sky.SetShaderParameter(NSunDir, sunDir);
+        sky.SetShaderParameter(NMoonDir, moonDir);
+        sky.SetShaderParameter(NDaylight, daylight);
+        sky.SetShaderParameter(NCloudCover, cloud);
+        sky.SetShaderParameter(NCloudOffset, cloudOffset);
+        sky.SetShaderParameter(NStars, (1f - daylight) * (1f - overcast));
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
@@ -339,8 +357,8 @@ public partial class Atmosphere : Node3D
         if (flash > 0.001f)
         {
             var bolt = new Color(0.75f, 0.8f, 1f);
-            sky.SetShaderParameter("top_color", top.Lerp(bolt, flash * 0.6f));
-            sky.SetShaderParameter("horizon_color", horizon.Lerp(bolt, flash * 0.75f));
+            sky.SetShaderParameter(NTopColor, top.Lerp(bolt, flash * 0.6f));
+            sky.SetShaderParameter(NHorizonColor, horizon.Lerp(bolt, flash * 0.75f));
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
