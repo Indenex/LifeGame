@@ -292,10 +292,16 @@ public partial class CeramicsView : Node
     UseOffer? FillOffer(Vector3 me3)
     {
         if (conn == null || !Carrying(i => ClayRules.FilledItem(i) != null)) return null;
-        // Water within reach: any ground point nearby below the water line.
-        for (float dx = -World.Reach; dx <= World.Reach; dx += 0.5f)
-            for (float dz = -World.Reach; dz <= World.Reach; dz += 0.5f)
-                if (dx * dx + dz * dz <= World.Reach * World.Reach && heightAt(me3.X + dx, me3.Z + dz) < World.WaterLevel)
+        // Water within reach, checked as the server's NearWater does: a grid point under
+        // the water line. A point between grid points can dip below it on a sloped bank
+        // where the server finds none (bugfix-22). Reach is trimmed a little, as for
+        // Drink, so a position the server has not caught up with yet still agrees.
+        float reach = World.Reach - 0.2f;
+        int r = (int)MathF.Ceiling(reach);
+        int cx = World.CellOf(me3.X), cz = World.CellOf(me3.Z);
+        for (int gx = cx - r; gx <= cx + r; gx++)
+            for (int gz = cz - r; gz <= cz + r; gz++)
+                if ((gx - me3.X) * (gx - me3.X) + (gz - me3.Z) * (gz - me3.Z) <= reach * reach && heightAt(gx, gz) < World.WaterLevel)
                     return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
         return null;
     }

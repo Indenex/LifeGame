@@ -25,6 +25,9 @@ public partial class Avatar : Node3D
         figure = BuildFigure();
         AddChild(figure);
         animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        // Breath in the cold leaves the mouth (Head joint, or a "HeadAttach" bone attachment).
+        if ((figure.FindChild("HeadAttach", true, false) ?? figure.FindChild("Head", true, false)) is Node3D head)
+            head.AddChild(new Breath { Position = new Vector3(0, 0.03f, 0.17f) });
 
         nameplate = new Label3D
         {
@@ -109,6 +112,13 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
+
+    // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
+    public void Face(float x, float z)
+    {
+        float dx = x - Position.X, dz = z - Position.Z;
+        if (dx * dx + dz * dz > 1e-4f) Rotation = new Vector3(0, Mathf.Atan2(dx, dz), 0);
+    }
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
