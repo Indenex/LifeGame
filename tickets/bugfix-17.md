@@ -1,9 +1,9 @@
 # bugfix-17: G feeds the fire instead of picking up a pot fired in it
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-17
-PR: (not yet)
+PR: #99
 
 ## Goal
 After a pit firing, the news says "Your pinch pot is fired, and whole. G picks it up." Pressing G at the fire picks up the fired pot (or the sherds of a cracked one); it never puts a stick in the fire. Away from fires, G on clay goods works as before.
@@ -14,9 +14,10 @@ Fix (client/scripts/ceramics/CeramicsView.cs): a second handler, ceramics.take_f
 
 ## Progress log
 - 2026-10-16: fresh-world bot checks on main all pass (LoadTest, BuildTest, SpawnCheck, CraftCheck; SocialTest only fails without the newcomer-grace setup, which #77 fixed). A code review of the clay path found this bug as the worst; checked by reading Use.Best, Ceramics.cs and Main.cs. Fixed; the client builds.
+- 2026-10-16: pushed d368899 (merged with main 679ede5), opened #99. Render requested 679ede5.
 
 ## Open questions / blockers
 - Idea sent to the PM: should feeding a fire that is already at its 20-minute cap be refused instead of eating the fuel? (separate from this fix)
 
 ## Next step
-Push, open the PR, record the CI run link here, send a render request (G prompt at a fire with a fired pot on its ring).
+Wait for CI on #99 and record the run link here; then send the PM the green sha.
