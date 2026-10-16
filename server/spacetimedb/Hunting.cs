@@ -11,9 +11,6 @@ using SpacetimeDB;
 public static partial class Module
 {
     const string HuntProcess = "animal.kill";
-    // Rank in the hunting skill (Husbandry, Apprentice) at which a sneaking spear strike kills a deer outright.
-    // There is no separate sneak skill yet; Journal and skills may swap this for one.
-    const int SneakKillRank = 20;
     const string ButcherProcess = "animal.butcher";
     // A lamb is born this grown and reaches 100 after LambGrowMicros.
     const byte LambGrowth = 35;
@@ -67,22 +64,55 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         if (now - mind.StruckAt < StrikeEveryMicros) return;
 
-        // A spear takes two good strikes, a stone blade about three. A deer is only
-        // killed in one strike by a hunter who sneaks up on it unalarmed and is skilled
-        // enough (Justin, Q13); otherwise the strike wounds and the chase begins.
+        // A spear takes two good strikes, a stone blade about three (a deer needs a few
+        // more: 100 health). Every strike does its normal damage; a sneak attack (see
+        // SneakCrit) may add a large bonus.
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
-        if (spear != null && animal.Species == AnimalSpecies.Deer && animal.State != AnimalState.Run
-            && ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null
-            && SkillRank(ctx, player.PlayerId, HuntProcess) >= SneakKillRank)
-            damage = mind.Health;
+        int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
-        if (damage >= mind.Health)
+        HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
+    }
+
+    // Justin's rule (Q13): a sneak attack (the hunter is sneaking and the animal is not
+    // alarmed) has a chance, from Stalking skill, to land a large bonus on top of normal
+    // damage, shown as a crit. Returns the extra damage, 0 when it doesn't trigger.
+    // Stand-in until Journal's Progression.Effect(SneakCritChance / SneakCritBonus) lands
+    // (#237): Husbandry rank, a front-loaded curve, chance 5% to 60% and a bonus of
+    // 0.3x to 1.2x the normal damage, so a master's crit on a deer kills it outright and
+    // a novice's does not.
+    static int SneakCrit(ReducerContext ctx, uint playerId, Animal animal, int damage)
+    {
+        if (animal.State == AnimalState.Run || ctx.Db.PlayerSneaking.PlayerId.Find(playerId) == null) return 0;
+        float t = Math.Clamp(SkillRank(ctx, playerId, HuntProcess) / 100f, 0f, 1f);
+        t = 1f - (1f - t) * (1f - t);
+        float chance = 0.05f + 0.55f * t, bonus = 0.3f + 0.9f * t;
+        return ctx.Rng.NextDouble() < chance ? (int)MathF.Round(damage * bonus) : 0;
+    }
+
+    // One hit landed, for the client's flash (and a distinct burst when it was a crit).
+    [SpacetimeDB.Table(Accessor = "AnimalHit", Public = true, Event = true)]
+    public partial struct AnimalHit
+    {
+        public ulong AnimalId;
+        public float X;
+        public float Z;
+        public bool Crit;
+        public bool Killed;
+    }
+
+    // Damage lands: it dies if that is all the health it has, otherwise it is wounded
+    // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
+    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
+    {
+        bool kills = damage >= mind.Health;
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, Crit = crit, Killed = kills });
+        if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
             return;
         }
 
-        float dx = animal.X - pos.X, dz = animal.Z - pos.Z;
+        float dx = animal.X - fromX, dz = animal.Z - fromZ;
         float d = MathF.Max(0.01f, MathF.Sqrt(dx * dx + dz * dz));
         ctx.Db.AnimalMind.AnimalId.Update(mind with
         {
@@ -92,7 +122,7 @@ public static partial class Module
             FleeX = dx / d,
             FleeZ = dz / d,
         });
-        float lx = animal.X + dx / d * StartleLeap, lz = animal.Z + dz / d * StartleLeap;
+        float lx = animal.X + dx / d * leap, lz = animal.Z + dz / d * leap;
         if (!AnimalCanStand(lx, lz) || AnimalStepBlocked(ctx, animal.X, animal.Z, lx, lz)) (lx, lz) = (animal.X, animal.Z);
         ctx.Db.Animal.Id.Update(animal with
         {
