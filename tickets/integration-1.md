@@ -31,6 +31,7 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:20: correction: #110 x #111 was a false positive (survey modeled the first merge with one parent; #111 contains #110). Pairwise check now uses `git commit-tree <tree> -p origin/main -p origin/<first>`. Other conflicts confirmed.
 - 2026-10-16 18:40: Justin's merge permission for this session not in place (PM's session refused to add the rule; Justin adds it himself), so the PM keeps merging; this lane sends green shas. #121 green on 777ff5e, sent. Survey vs 235fe50: all 16 open PRs clean; only #108 x #105 conflict (ceramics).
 - 2026-10-16 18:42: D-129: exactly one world wipe, with Environment's env-2 land reshape, on a date Justin confirms. This lane helps Environment with `shared/World.cs` and the upgrade check, and flags any other PR that would wipe.
+- 2026-10-16 18:48: prepared option 1 on `claude/integration-wipe-label` (not a PR yet): `world-wipe` label skips the upgrade check and prints a warning; `pull_request` also triggers on labeled/unlabeled.
 
 ## Open questions / blockers
 - Sent to PM 18:45: how env-2's intended wipe passes CI's upgrade check (options in the message).
