@@ -1,7 +1,7 @@
 # bugfix-24: hardening audit (anti-cheat before outside players join)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-24
 PR: (open after #228 and #221 land, one PR for the two items)
 
@@ -48,9 +48,11 @@ Sizes: S = under half a day, M = about a day, L = several days.
 
 - 2026-10-16: BuildTest also needed the pacing change (it hung locally and failed once in CI with "B: Out of reach", Clay hut stage 1): bots now advance only while the server is within 0.8 m, keep reporting Move after arriving, and wait for the server to be within 0.3 m at the end of WalkTo (`Lag()`). CI green on 1a2befd: https://github.com/Indenex/LifeGame/actions/runs/38975334238. Debug print removed. A local loop of fresh-world BuildTest runs found no failure (see PM thread). Status: in_review, merges after the wipe release (PM).
 
+- 2026-10-16: #254 merged (f01b830): scheduled reducers are server-only, Move has a distance budget; CI green on 8f66879 (https://github.com/Indenex/LifeGame/actions/runs/38977443976). The rest of the audit list stays todo until the PM schedules it (D-182).
+
 ## Open questions / blockers
 - Items 7 and 2 touch other lanes' files; the PM should tell those lanes when they are scheduled.
 - Does Justin want a server setting to switch the hardening on, so local test servers and CI keep working? Recommended: on by default, off with a `--dev` flag.
 
 ## Next step
-Wait for #228 and #221 to land, merge main, open the PR for the Move budget and RequireServer, send the PM the green sha. The remaining audit items stay todo until the PM schedules them.
+The PM picks which audit items to schedule (item 2, shared collision, and item 7, hidden values, are the big ones).
