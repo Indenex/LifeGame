@@ -46,6 +46,10 @@ namespace LifeGame.Shared
             return h * keep + (0.1f + hills * 0.3f) * (1f - keep);
         }
 
+        // Meters from the nearest stream's center line, for telling stream water from
+        // pond water (the sound of running water, D-079). About ten noise lookups.
+        public static float StreamDistance(int x, int z) => RiverDistance(x, z);
+
         static float River(int x, int z) =>
             x + RiverOffset + (World.Noise(x, z, 120f, 71) - 0.5f) * 70f + (World.Noise(x, z, 40f, 74) - 0.5f) * 18f;
 
