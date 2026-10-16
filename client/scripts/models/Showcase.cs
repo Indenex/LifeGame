@@ -28,10 +28,11 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
+            else if (view == "props") Props();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -143,6 +144,34 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // World props for Environment (model-2), tinted the way Terrain tints them.
+    void Props()
+    {
+        ShaderMaterial Tinted(ShaderMaterial source, Color color)
+        {
+            var material = (ShaderMaterial)source.Duplicate();
+            material.SetShaderParameter("albedo", color);
+            return material;
+        }
+        var bark = Tinted(Look.BarkSurface, Look.Bark.Lightened(0.15f));
+        var stone = Tinted(Look.RockSurface, Look.Rock);
+        var props = new (Mesh, Material, Vector3)[]
+        {
+            (PropMeshes.Trunk, bark, new Vector3(-2.4f, 0, -0.6f)),
+            (PropMeshes.Rock, stone, new Vector3(-0.8f, 0, 0.2f)),
+            (PropMeshes.FallenLog, bark, new Vector3(1.2f, 0, -0.4f)),
+            (PropMeshes.Stump, bark, new Vector3(2.8f, 0, 0.6f)),
+        };
+        foreach (var (mesh, material, at) in props)
+            AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = material, Position = at, Rotation = new Vector3(0, 0.4f, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(0.2f, 0, 1.0f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
     }
 
     // Work stations side by side (model-2), with a player for scale.
