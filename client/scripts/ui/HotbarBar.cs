@@ -11,8 +11,9 @@ namespace LifeGame;
 // assigned keybind"). Ten round slots along the bottom edge in the bag row's quiet
 // style (D-045), each with its key in the corner. A new kind of item takes the first
 // empty slot by itself; drag a slot onto another to swap them, or off the bar to clear
-// it. The key uses the item through the server (UseItem): eat, drink, wear, or take a
-// tool in hand. A slot keeps its item while you have none left, shown faded.
+// it. The key uses the item through the server (UseItem): eat, drink or wear. Tools
+// need no key (Justin): they work from the bag or the tools section, so they don't
+// fill slots by themselves. A slot keeps its item while you have none left, shown faded.
 // The row dims when nothing changes and brightens when you gain or use something; a
 // newly gained item's name floats up above its slot.
 public partial class HotbarBar : Control
@@ -115,7 +116,7 @@ public partial class HotbarBar : Control
 
     void Fill(Item item)
     {
-        if (SlotOf(item) >= 0) return;
+        if (SlotOf(item) >= 0 || Items.UseOf(item) == UseAction.Tool) return;
         int free = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
         if (free < 0) return;
         Link.Set(free, item);
@@ -126,13 +127,12 @@ public partial class HotbarBar : Control
 
     void Refresh()
     {
-        var held = Link.Held;
         for (int i = 0; i < Slots; i++)
         {
             var item = Link.SlotItem(i);
             uint n = item is { } it ? carried.GetValueOrDefault(it) : 0;
             views[i].Show(item, n, item is { } x && labels.TryGetValue(x, out var l) ? l : item is { } y ? ItemName(y) : "",
-                held != null && item == held, KeyName(i));
+                KeyName(i));
         }
     }
 
@@ -171,6 +171,7 @@ public partial class HotbarBar : Control
         if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
         if (Placeable(item)) { PlaceRequested?.Invoke(item); return; }
         if (Items.UseOf(item) == UseAction.None) { Note($"{what} is used in making things"); return; }
+        if (Items.UseOf(item) == UseAction.Tool) { Note($"The {what.ToLowerInvariant()} works by itself while you carry it"); return; }
         Link.Use(item);
     }
 
@@ -284,7 +285,7 @@ public partial class HotbarSlotView : PanelContainer
         stack.AddChild(key);
     }
 
-    public void Show(Item? what, uint n, string label, bool held, string keyName)
+    public void Show(Item? what, uint n, string label, string keyName)
     {
         item = what;
         picture.Texture = what is { } i ? ItemIcon.For(i) : null;
@@ -293,9 +294,7 @@ public partial class HotbarSlotView : PanelContainer
         count.Text = n > 1 ? n.ToString() : "";
         key.Text = keyName;
         TooltipText = label;
-        // The tool in hand gets a brighter, thicker ring.
-        style.BorderColor = new Color(Look.Cream, held ? 0.85f : what == null ? 0.14f : 0.28f);
-        style.SetBorderWidthAll(held ? 2 : 1);
+        style.BorderColor = new Color(Look.Cream, what == null ? 0.14f : 0.28f);
         style.BgColor = new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
     }
 

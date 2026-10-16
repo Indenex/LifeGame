@@ -89,14 +89,16 @@ namespace LifeGame.Shared
         public string Count(uint n) => n == 1 ? Name : Plural;
     }
 
-    // What using an item from the hotbar does; the server's UseItem runs the matching rule.
+    // What using an item does (its hotbar key, a double-click in the bag); the server's
+    // UseItem runs the matching rule.
     public enum UseAction : byte
     {
         None = 0,
         Eat = 1,
         Drink = 2,
         Wear = 3,
-        Hold = 4,
+        // A tool: it works from the tools section of the player doll (ui-18), or from the bag.
+        Tool = 4,
     }
 
     [System.Flags]
@@ -127,10 +129,10 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Clay, Name = "Clay", Plural = "Clay" },
             new ItemDef { Id = Item.Tinder, Name = "Tinder bundle", Plural = "Tinder bundles", FuelSeconds = 10, Tags = ItemTags.Kindling },
             new ItemDef { Id = Item.Flake, Name = "Stone flake", Plural = "Stone flakes", Tags = ItemTags.Cutting, HasQuality = true },
-            new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true, Use = UseAction.Hold },
+            new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
-            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true, Use = UseAction.Hold },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true, Use = UseAction.Hold },
+            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true, Use = UseAction.Tool },
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.CleanClay, Name = "Clean clay", Plural = "Clean clay" },
             new ItemDef { Id = Item.Grit, Name = "Stone grit", Plural = "Stone grit" },
             new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
@@ -148,12 +150,12 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true },
             new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true, Use = UseAction.Eat },
             new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true, Use = UseAction.Eat },
-            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Use = UseAction.Hold },
-            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Use = UseAction.Hold },
+            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Use = UseAction.Tool },
+            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
-            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, Use = UseAction.Hold },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries", Use = UseAction.Eat },

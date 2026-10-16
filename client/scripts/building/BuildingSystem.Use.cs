@@ -205,6 +205,10 @@ public partial class BuildingSystem
         basketInside = new BagGrid
         {
             Kind = "basket", Width = 5, Empty = "Nothing",
+            // A jar holds fewer stacks than a basket (Structures.StoreStacksFor); the server enforces it.
+            Capacity = () => openBasket is { } id && rows.TryGetValue(id, out var r)
+                ? Structures.StoreStacksFor((int)r.Kind, conn()?.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality)
+                : 0,
             Source = () => conn() is { } c && openBasket is { } id
                 ? c.Db.BasketItem.Iter().Where(b => b.StructureId == id).Select(b => new BagStack((Item)b.Item, b.Quality, b.Count, b.Id))
                 : Enumerable.Empty<BagStack>(),

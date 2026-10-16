@@ -72,6 +72,8 @@ public partial class BagGrid : GridContainer
     public Func<Godot.Collections.Dictionary, bool> Accepts = _ => false;
     public Action<Godot.Collections.Dictionary> Receive = _ => { };
     public string Empty = "Your hands are empty";
+    // How many stacks a store holds (a basket more than a jar); free room shows as empty rings.
+    public Func<int>? Capacity;
     // A click on a slot (with Shift held: all of it). Set by store panels, where a
     // click moves things; when it's null, a double-click uses the thing instead.
     public Action<BagStack, bool>? Clicked;
@@ -99,7 +101,7 @@ public partial class BagGrid : GridContainer
     static int Group(Item item) => Items.UseOf(item) switch
     {
         UseAction.Eat or UseAction.Drink => 0,
-        UseAction.Hold => 1,
+        UseAction.Tool => 1,
         UseAction.Wear => 2,
         _ => 3,
     };
@@ -108,12 +110,14 @@ public partial class BagGrid : GridContainer
     {
         var stacks = (Source?.Invoke() ?? Link.Carried())
             .OrderBy(s => Group(s.Item)).ThenBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
-        string now = string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}"));
+        string now = (Capacity?.Invoke() ?? 0) + "|" + string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}"));
         if (now == shown) return;
         shown = now;
         foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
         foreach (var s in stacks) AddChild(new BagSlotView { Stack = s, Grid = this });
-        if (stacks.Count == 0)
+        int room = Capacity?.Invoke() ?? 0;
+        for (int i = stacks.Count; i < room; i++) AddChild(new BagSlotView { Grid = this });
+        if (stacks.Count == 0 && room == 0)
         {
             var none = Hud.Text(Empty, 14);
             none.Modulate = new Color(1, 1, 1, 0.5f);
@@ -152,22 +156,24 @@ public partial class BagGrid : GridContainer
 // One round slot in the bag grid.
 public partial class BagSlotView : PanelContainer
 {
-    public BagStack Stack = null!;
+    // Null for a free place in a store: an empty ring that still takes drops.
+    public BagStack? Stack;
     public BagGrid Grid = null!;
 
     public override void _Ready()
     {
         CustomMinimumSize = new Vector2(BagGrid.Slot, BagGrid.Slot);
         MouseFilter = MouseFilterEnum.Stop;
-        TooltipText = Stack.Label;
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.09f, 0.10f, 0.07f, 0.7f),
-            BorderColor = new Color(Look.Cream, 0.28f),
+            BgColor = new Color(0.09f, 0.10f, 0.07f, Stack == null ? 0.35f : 0.7f),
+            BorderColor = new Color(Look.Cream, Stack == null ? 0.14f : 0.28f),
         };
         style.SetBorderWidthAll(1);
         style.SetCornerRadiusAll((int)(BagGrid.Slot / 2) - 2);
         AddThemeStyleboxOverride("panel", style);
+        if (Stack == null) return;
+        TooltipText = Stack.Label;
 
         var stack = new Control { MouseFilter = MouseFilterEnum.Ignore };
         AddChild(stack);
@@ -196,7 +202,7 @@ public partial class BagSlotView : PanelContainer
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left } b) return;
+        if (Stack == null || e is not InputEventMouseButton { ButtonIndex: MouseButton.Left } b) return;
         // A click acts on release, so pressing to start a drag doesn't move anything.
         if (Grid.Clicked != null && !b.Pressed && GetGlobalRect().HasPoint(b.GlobalPosition))
         {
@@ -215,6 +221,7 @@ public partial class BagSlotView : PanelContainer
 
     public override Variant _GetDragData(Vector2 atPosition)
     {
+        if (Stack == null) return default;
         var preview = new TextureRect
         {
             Texture = ItemIcon.For(Stack.Item),

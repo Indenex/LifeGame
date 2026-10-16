@@ -1,7 +1,8 @@
 // The hotbar (UX and UI, ui-19): ten slots along the bottom of the screen, each
 // remembering a kind of item, and UseItem, which does what that item's Def says
-// (Items.UseOf): eat, drink, wear or hold. Placing goes through PlaceItem, because the
-// client first shows where. A slot keeps its item while you have none, so it fills
+// (Items.UseOf): eat, drink or wear. Tools need no key (Justin): they work from the
+// bag or the tools section. Placing goes through PlaceItem, because the client first
+// shows where. A slot keeps its item while you have none, so it fills
 // again when you pick more up.
 using System;
 using System.Linq;
@@ -28,18 +29,6 @@ public static partial class Module
     [SpacetimeDB.View(Accessor = "MyHotbar", Public = true)]
     public static System.Collections.Generic.List<HotbarSlot> MyHotbar(ViewContext ctx) =>
         ctx.Db.HotbarSlot.Owner.Filter(ctx.Sender).ToList();
-
-    // The tool in a player's hand, if any. Public so other clients can draw it later.
-    [SpacetimeDB.Table(Accessor = "HeldItem", Public = true)]
-    public partial struct HeldItem
-    {
-        [PrimaryKey]
-        public uint PlayerId;
-        [SpacetimeDB.Index.BTree]
-        public Identity Owner;
-        public ushort Item;
-        public byte Quality;
-    }
 
     // Puts a kind of item on a slot (0 clears it). If that item sat on another slot,
     // the two slots swap, so an item is only ever on one slot.
@@ -85,7 +74,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void UseItem(ReducerContext ctx, ushort item)
     {
-        var player = RequirePlayer(ctx);
+        RequirePlayer(ctx);
         if (!Items.IsKnown(item)) throw new Exception("Unknown item");
         var stack = BestStack(ctx, (Item)item) ?? throw new Exception("You are not carrying that");
         switch (Items.UseOf((Item)item))
@@ -93,20 +82,9 @@ public static partial class Module
             case UseAction.Eat: Eat(ctx, item); break;
             case UseAction.Drink: DrinkFrom(ctx, item); break;
             case UseAction.Wear: Wear(ctx, item, stack.Quality); break;
-            case UseAction.Hold: Hold(ctx, player, stack); break;
+            case UseAction.Tool: throw new Exception("Tools work by themselves while you carry them");
             default: throw new Exception("You can't use that on its own");
         }
-    }
-
-    // Takes a tool in hand, or puts it away if it is already there.
-    static void Hold(ReducerContext ctx, Player player, InventoryItem stack)
-    {
-        if (ctx.Db.HeldItem.PlayerId.Find(player.PlayerId) is { } held)
-        {
-            ctx.Db.HeldItem.PlayerId.Delete(player.PlayerId);
-            if (held.Item == stack.Item) return;
-        }
-        ctx.Db.HeldItem.Insert(new HeldItem { PlayerId = player.PlayerId, Owner = ctx.Sender, Item = stack.Item, Quality = stack.Quality });
     }
 
     static HotbarSlot? SlotAt(ReducerContext ctx, byte index) =>
