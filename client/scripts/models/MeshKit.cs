@@ -77,6 +77,10 @@ public sealed class MeshKit
     // Bones and weights only when the mesh will be skinned; static items skip them.
     public bool Skinned = true;
 
+    // For meshes drawn with the grass shader: UV.y runs from 0 at y = 0 to 1 at
+    // this height, and the shader sways vertices by it. Zero writes no UVs.
+    public float SwayHeight;
+
     void Vertex(Vector3 p, Vector3 n)
     {
         st.SetColor(color);
@@ -86,7 +90,9 @@ public sealed class MeshKit
             st.SetWeights(new[] { 1f, 0f, 0f, 0f });
         }
         st.SetNormal(Xform.Basis * n);
-        st.AddVertex(Xform * p);
+        var at = Xform * p;
+        if (SwayHeight > 0f) st.SetUV(new Vector2(0f, Mathf.Clamp(at.Y / SwayHeight, 0f, 1f)));
+        st.AddVertex(at);
     }
 
     public Godot.Collections.Array CommitToArrays()

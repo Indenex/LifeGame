@@ -46,7 +46,7 @@ public partial class FirstEvening : Node
 
         // Your first fire is burning.
         if (litOne)
-            Tip("fire_fed", $"A fire burns down unless you feed it. Stand by it and press {Key("use", "G")} to add a stick.");
+            Tip("fire_fed", $"A fire burns down unless you feed it. Stand by it and press {Key("use", "E")} to add a stick.");
 
         // Your claim marker is up.
         if (c.Db.Claim.Iter().Any(k => k.OwnerPlayerId == me))
