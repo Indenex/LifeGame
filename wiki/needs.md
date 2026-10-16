@@ -3,7 +3,7 @@
 You have four needs: food, water, warmth and staying dry. They drain slowly, so you have time to react. They pause while you are offline.
 
 ## Food and water
-Both go down over time. Water runs out faster than food. Eat with X or by using food sources; drink at rivers and ponds. Cooked food fills you more than raw. Once you can make a container, you can carry water.
+Both go down over time. Water runs out faster than food. Press X to eat the best food you carry; face water and use it to drink. Cooked food fills you more than raw. Once you can make a container, you can carry water.
 
 ## Cold
 You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster. A burning fire nearby keeps you warm. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be.

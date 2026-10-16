@@ -1,7 +1,7 @@
 # wiki-2: Rewrite the player wiki in a plain voice
 Lane: Wiki
 Owner: Wiki session (Opus, D-064)
-Status: in_progress
+Status: in_review
 Branch: claude/wiki-2
 PR: (once opened)
 
@@ -11,9 +11,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-064).
 - 2026-10-16: started on claude/wiki-2 (harness gave a detached HEAD, no branch name); facts checked against DECISIONS.md D-001..D-064 and KEYMAP.md.
+- 2026-10-16: full rewrite of all 11 pages pushed (f44a82a, 4961468 + follow-up). Added missing facts: Shift+G bar, Z strike, Ctrl master-play, learning by watching/notes, basket and claim-owner rules, tree felling.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Read `wiki/` and `DECISIONS.md` on main, rewrite `wiki/spirit.md` and `wiki/getting-started.md` first, push, then the rest.
+Wait for the PM/Justin's tone verdict on the PR; apply any requested wording changes on claude/wiki-2.
