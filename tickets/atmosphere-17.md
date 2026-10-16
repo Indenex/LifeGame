@@ -1,7 +1,7 @@
 # atmosphere-17: Mist that settles where the land is low
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-17-valley-mist
 PR: #248
 
@@ -15,8 +15,10 @@ Picked under D-145 after atmosphere-13 to 16; Justin picked A (valley mist at da
 
 - 2026-10-16 20:40: Justin picked A. Render requested da2c2fb (Render session_015S96hNrEu92FrCoNZqZZjs). Opening the PR.
 
+- 2026-10-16 21:06: #248 CI green on 0ab4ef6 (https://github.com/Indenex/LifeGame/actions/runs/38963115528), merged by the PM.
+
 ## Open questions / blockers
 - Best shown after Environment's #175 (land reshape) merges with the one world wipe.
 
 ## Next step
-Wait for the PR's CI; send the green sha to the PM.
+None; done. Tune from the Render lane's shots in a small follow-up if they show a need.
