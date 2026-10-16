@@ -296,3 +296,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-072 — 2026-10-16 — Hear other players' work, quieter
 **Decision:** Crafting work sounds play for everyone nearby, not only your own; other players' work sounds play about 60% quieter than your own (atmosphere-12). Needs other players' running jobs to be visible to clients; Atmosphere agrees the table or hook with Crafting and Integration.
 **Who:** Justin ("Everyone's sounds, but make it other player ones like 60% quieter than your own")
+
+## D-073 — 2026-10-16 — Animation and Modeling lanes
+**Decision:** Two new Opus lanes for look and immersion. **Modeling** makes and upgrades the 3D models (player, animals, tools, items, structures, plants); it owns `client/assets/models/` and `client/scripts/models/`, and may change the existing in-code meshes owned by other lanes (e.g. `Sheep.cs`, `StructureModel*.cs`, `PotMesh.cs`, `ItemLook.cs`) in small PRs, telling the owning lane. **Animation** makes characters and creatures move well (player walk/idle/work/gather, sheep, felling, crafting gestures); it owns `client/scripts/animation/` and takes over `client/scripts/Avatar.cs` from Integration. Both send their work to the Render lane, and Justin sees it before it merges. Both keep to Linux and Windows performance budgets (32 players, CI load test).
+**Who:** Justin ("start an animation worker, and a dedicated modeler")
