@@ -177,21 +177,25 @@ public partial class Showcase : Node3D
     // Work stations side by side (model-2), with a player for scale.
     void Stations()
     {
-        var stations = new[] { ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()) };
+        var stations = new[]
+        {
+            ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()),
+            ("Distaff stand", StationMeshes.Distaff()), ("Drying rack", StationMeshes.DryingRack()),
+        };
         for (int i = 0; i < stations.Length; i++)
         {
-            var root = new Node3D { Position = new Vector3((i - (stations.Length - 1) / 2f) * 2.2f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) };
+            var root = new Node3D { Position = new Vector3((i % 2 - 0.5f) * 2.6f, 0, (i / 2) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
             AddChild(root);
             foreach (var piece in stations[i].Item2)
                 if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
             Label(stations[i].Item1, root.Position + new Vector3(0, -0.9f, 0));
         }
         var figure = PlayerModel.Build();
-        figure.Position = new Vector3(-2.3f, 0, 0.4f);
+        figure.Position = new Vector3(-2.6f, 0, 0.6f);
         AddChild(figure);
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0, 2.0f, 4.2f), new Vector3(0, 0.5f, 0), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(0, 3.2f, 5.2f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.

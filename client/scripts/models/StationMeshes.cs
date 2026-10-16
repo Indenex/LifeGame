@@ -179,6 +179,88 @@ public static class StationMeshes
         return list;
     }
 
+    static readonly Color Fleece = new(0.86f, 0.82f, 0.72f);
+    static readonly Color Yarn = new(0.80f, 0.76f, 0.66f);
+
+    // The distaff stand (Animals' spindle station): a forked staff set in a ring
+    // of stones with a fleece bound on top, a drop spindle hanging from a thread,
+    // a log stool, and a basket of carded wool at its foot.
+    public static List<StructureModel.Piece> Distaff()
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(0.6f, 0.4f));
+        var k = new Kit();
+        var foot = new Vector3(-0.25f, 0, -0.15f);
+        var top = foot + new Vector3(0.05f, 1.3f, 0.06f);
+        k.Wood.Paint(Bark).Tube(new[] { foot, foot.Lerp(top, 0.5f) + new Vector3(-0.01f, 0, 0.01f), top }, 0.032f, 6, 0.024f);
+        k.Wood.Paint(Bark, 0.92f).Tube(new[] { top - new Vector3(0, 0.12f, 0), top + new Vector3(0.07f, 0.1f, 0.02f) }, 0.016f, 5, 0.01f);
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * Mathf.Tau / 6f + H(i, 11);
+            k.Stone.Paint(Look.Rock, 0.8f + H(i, 12) * 0.25f).Ellipsoid(foot + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 0.13f + Vector3.Up * 0.04f,
+                new Vector3(0.07f, 0.055f, 0.06f) * (0.8f + H(i, 13) * 0.4f), 6, 3, new Basis(Vector3.Up, a), 0.5f);
+        }
+        // The fleece, wound on and tied with a cord.
+        var fleeceAt = top - new Vector3(0, 0.2f, 0);
+        k.Plant.Paint(Fleece).Ellipsoid(fleeceAt, new Vector3(0.1f, 0.18f, 0.1f), 8, 5);
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * 2.4f;
+            k.Plant.Paint(Fleece, 0.92f + H(i, 14) * 0.1f).Ellipsoid(fleeceAt + new Vector3(Mathf.Cos(a) * 0.07f, (H(i, 15) - 0.5f) * 0.25f, Mathf.Sin(a) * 0.07f), Vector3.One * 0.06f, 6, 3);
+        }
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(fleeceAt + Vector3.Down * 0.02f, Vector3.Up, 0.105f, 18, 1.5f, 0.06f), 0.006f, 4);
+        // A drop spindle hanging from a thread drawn off the fleece.
+        var spindleTop = fleeceAt + new Vector3(0.22f, -0.55f, 0.12f);
+        k.Plain.Paint(Yarn).Tube(new[] { fleeceAt + new Vector3(0.08f, -0.08f, 0.04f), spindleTop }, 0.003f, 3);
+        k.Wood.Paint(Split).Tube(new[] { spindleTop, spindleTop - Vector3.Up * 0.27f }, 0.007f, 5, 0.006f);
+        k.Plain.Paint(Yarn).Ellipsoid(spindleTop - Vector3.Up * 0.09f, new Vector3(0.022f, 0.055f, 0.022f), 7, 5);
+        k.Stone.Paint(Look.Rock.Lightened(0.1f)).Ellipsoid(spindleTop - Vector3.Up * 0.16f, new Vector3(0.036f, 0.008f, 0.036f), 8, 3);
+        // A log stool for the spinner, and a basket of carded wool.
+        var stool = new Vector3(0.3f, 0, 0.25f);
+        k.Wood.Paint(Bark, 0.85f).Loft(stool, stool + Vector3.Up * 0.38f, new MeshKit.Ring[] { new(0f, 0.18f, 0.17f), new(1f, 0.16f, 0.16f) }, 8, 0.02f);
+        k.Wood.Paint(EndGrain).Ellipsoid(stool + Vector3.Up * 0.383f, new Vector3(0.145f, 0.006f, 0.145f), 8, 2);
+        var basket = new Vector3(0.35f, 0, -0.25f);
+        k.Plant.Paint(Weave()).Loft(basket, basket + Vector3.Up * 0.16f, new MeshKit.Ring[] { new(0f, 0.11f, 0.11f), new(1f, 0.15f, 0.15f) }, 9, 0.02f);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * 2.4f;
+            k.Plant.Paint(Fleece, 0.95f + H(i, 16) * 0.08f).Ellipsoid(basket + new Vector3(Mathf.Cos(a) * 0.06f, 0.16f, Mathf.Sin(a) * 0.06f), new Vector3(0.06f, 0.035f, 0.035f), 6, 3, new Basis(Vector3.Up, a));
+        }
+        k.AddTo(list, 0);
+        return list;
+    }
+
+    static Color Weave() => new(0.72f, 0.58f, 0.32f);
+
+    // The frame of the leather drying rack (Animals' station): two forked posts
+    // braced against the pull, a crossbar lashed into the forks at 0.99 m where the
+    // hides hang (the hides themselves are Animals' HideRacks meshes).
+    public const float RackBarY = 0.99f, RackHalfWidth = 1.15f;
+
+    public static List<StructureModel.Piece> DryingRack()
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(1.2f, 0.35f));
+        var k = new Kit();
+        foreach (float x in new[] { -RackHalfWidth, RackHalfWidth })
+        {
+            int i = x < 0 ? 1 : 2;
+            var foot = new Vector3(x * 1.02f, 0, 0);
+            var fork = new Vector3(x, RackBarY - 0.04f, 0);
+            k.Wood.Paint(Bark, 0.9f + H(i, 17) * 0.1f).Tube(new[] { foot, foot.Lerp(fork, 0.5f) + new Vector3(0, 0, 0.012f), fork }, 0.045f, 6, 0.038f);
+            // The two prongs of the fork.
+            k.Wood.Paint(Bark, 0.95f).Tube(new[] { fork, fork + new Vector3(0, 0.12f, 0.05f) }, 0.022f, 5, 0.014f);
+            k.Wood.Paint(Bark, 0.95f).Tube(new[] { fork, fork + new Vector3(0, 0.12f, -0.05f) }, 0.022f, 5, 0.014f);
+            // A brace leaning in from outside, against the weight of wet hides.
+            k.Wood.Paint(Bark, 0.8f).Tube(new[] { new Vector3(x * 1.32f, 0, 0.02f), new Vector3(x * 1.01f, 0.62f, 0) }, 0.025f, 5, 0.02f);
+            Lash(k.Plant, new Vector3(x * 1.01f, 0.62f, 0), Vector3.Up, 0.05f, 2f);
+            Lash(k.Plant, new Vector3(x, RackBarY + 0.01f, 0), Vector3.Right, 0.04f, 3f);
+        }
+        k.Wood.Paint(Split, 0.82f).Tube(new[] { new Vector3(-RackHalfWidth - 0.15f, RackBarY + 0.01f, 0), new Vector3(0, RackBarY + 0.025f, 0.005f), new Vector3(RackHalfWidth + 0.17f, RackBarY + 0.01f, 0) }, 0.032f, 6, 0.028f);
+        k.AddTo(list, 0);
+        return list;
+    }
+
     static ArrayMesh PlacedPot(ClayForm form, ulong seed, Vector3 at, float scale)
     {
         var arrays = PotMesh.For(form, seed).SurfaceGetArrays(0);
