@@ -20,7 +20,7 @@ D-115: a new character's first 30 minutes online, cold drains at half speed, so 
 
 - 2026-10-16: Atmosphere seasons (claude/atmosphere-16-seasons, c41b1e6): winter offset -16 C, so winter days sit near 0 C (cold ~1.9x) and nights about -8 C (2x, the cap). No code change needed: AirTemperature includes the season. Snow doesn't wet (Weather.Rain is liquid only; snowfall is Module.Snowfall). In winter the new-arrival half-speed cold matters all day, not just at night.
 
-- 2026-10-16: D-134: falling snow wets at half rain's rate. Survival.Precipitation = Rain + Needs.SnowWetting (0.5) x snowfall, through a partial hook SnowfallAt(ctx, ref snow) that Atmosphere implements with Module.Snowfall, so either PR can merge first (0 until theirs lands).
+- 2026-10-16: D-134: falling snow wets at half rain's rate. Survival.Precipitation = Rain + Needs.SnowWetting (0.5) x snowfall, through a partial hook SnowfallAt(ctx, ref snow) that Atmosphere implements with Module.Snowfall. Order is one-way (CS0759): this PR merges first, then Atmosphere adds the body in WorldClock.cs; send them (session_01KvVF5vpkYEHTKNRpHC18WN) the PR number on open and on merge.
 
 ## Open questions / blockers
 - (none)
