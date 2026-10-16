@@ -14,9 +14,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16: full rewrite of all 11 pages pushed (f44a82a, 4961468 + follow-up). Added missing facts: Shift+G bar, Z strike, Ctrl master-play, learning by watching/notes, basket and claim-owner rules, tree felling.
 - 2026-10-16: opened PR #87; sent the PM the link, three sample sentences and a terseness question.
 - 2026-10-16 17:00: #87 merged; Justin chose "As is" for the tone; PM republished the web page. Done.
+- 2026-10-16 17:15: PM: the wiki must match main. Removed the sleeping mat (#61), wetness (#75) and tree felling (#70) lines; none is on main yet. D-065..D-068 need no wiki text (the wiki does not mention skill toasts).
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).
 
 ## Next step
-None for wiki-2. Ongoing: when a merged decision or PR changes what players experience, update `wiki/` on a fresh branch from main and send the PM the PR link.
+When the PM says #61 (sleeping mat), #75 (wetness) or #70 (tree felling) merged, re-add its wiki line (needs.md death and wetness, building-and-claims.md, crafting-and-skills.md) on a fresh branch from main and send the PM the PR link.
