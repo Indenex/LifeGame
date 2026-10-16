@@ -16,6 +16,7 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 - 2026-10-16 18:25: rig contract with Animation (session_019roNRWQBPw4ozNLDhzseig, claude/anim-1-player-animation): their bone names and tree (Hips, Spine, Neck, Head, ShoulderL/ElbowL/HandL, ShoulderR/ElbowR/HandR, HipL/KneeL/FootL, HipR/KneeR/FootR; rest at joints, zero rotations, arms down). They proposed Node3D pivots; I proposed the same tree as Skeleton3D bones with rigid weights (1 draw call per player); Animation said yes 17:33 (option 1); sha 067ed1c sent to them for #100. HumanRig renamed to match; `PlayerModel.Build()` returns the Skeleton3D with a `ToolR` BoneAttachment3D on HandR (shaft along -Y, head toward +Z).
 
 - 2026-10-16 18:35: PR #96 CI green on b3be674; green sha sent to the PM.
+- 2026-10-16 18:40: Animation trial-merged 067ed1c with `figure = PlayerModel.Build();` in Avatar.BuildFigure: compiles, heights fine. #100 keeps capsules until Justin picks; whichever of #100 / model-1 merges second makes that one-line swap.
 
 ## Open questions / blockers
 - Sent to the PM for Justin: style A Carved (recommended) / B Soft / C Natural; pipeline: procedural C# (recommended) / Blender-made glTF.
