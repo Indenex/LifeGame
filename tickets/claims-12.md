@@ -28,6 +28,7 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
   - Local build passes; all social checks pass.
 
 - 2026-10-16: merged main. Wrote GateOpenHook (ClaimFences.cs) and SnapFenceHook (client/scripts/social/BuildingSystem.ClaimFences.cs, plus SocialLayer.ClaimBorderNear and one Main.cs line). Yaw checked: SnapToClaimBorder's tangent (-sin a, cos a) equals the ghost's fence axis (cos yaw, -sin yaw), so conventions match. A throwaway merge of #202's head (2ca220c) was conflict-free, but this sandbox has no dotnet, so NOT built or tested. Does not compile on its own until #202 merges (hooks undeclared).
+- 2026-10-16 22:24: PR #300 head c159f13: CI green (Client Linux, Client Windows, Server module and load test) https://github.com/Indenex/LifeGame/actions/runs/38973731025. Sent the PM the sha.
 
 ## Agreed split (House building, session_01RrKHUxWRH973Ndnxsad9nv, 2026-10-16)
 - Claims, in `server/spacetimedb/ClaimFences.cs`: implements `static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed)`. Building declares it in BuildingStorage.cs and calls it in ToggleDoor for gates. If allowed is false, they throw "Only the claim's members can open this gate". Default: barring a claim gate is members-only too (CanLock is still theirs; raise it with them if Q2a holds).
@@ -44,6 +45,7 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - From House building: the building-9 sha with the two hook declarations.
 
 ## Next step
+Wait for the PM to merge #300. Then pick the next Claims item (D-145). Old plan, done:
 When House building's PR #202 merges:
 1. Merge main into this branch.
 2. Build server, client, and run SocialTest (code for both hooks is already written).
