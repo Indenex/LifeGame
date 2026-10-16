@@ -12,8 +12,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 - 2026-10-16: queued (D-085).
 - 2026-10-16 20:00: started from main after #173 (seasons) merged.
 
+- 2026-10-16 20:10: new AtmosphereFronts.cs: reads Weather.TargetCloud/TargetRain (the weather the server is turning to); front amount = smoothstep(0.05, 0.35, how much worse it is about to get), eased over 8 s. Sky shader: on the upwind side (opposite WindDirection), low in the sky, cloud cover rises to the target and clouds darken with target rain; grey rain curtains under them down to the horizon. Rainbow at 42 degrees from the antisolar point, red outside, for 1 to 4 min after rain while the sun is out and between about 6 and 35 degrees high. Args --front=1, --rainbow=1. Client builds; render requested.
+
 ## Open questions / blockers
 - Idea to offer the PM with this ticket (D-059 options): after Environment's env-2 reshape (#175: stream 45 m west of spawn, ponds, gentler hills, water still at -1 m), mist that lies in valleys and over ponds and the stream at dawn and dusk, using World.BaseHeight and the existing atmosphere-11 Mist (which already pools in hollows by depth). Options to send: A (rec) extend Mist to read terrain height so valleys and water fill first; B leave dawn mist as is.
 
 ## Next step
-Design the storm front: server Weather gives the next front (NextChangeAt, targets); show it on the sky's upwind side before it arrives (darker clouds and rain curtains toward the wind's source).
+Wait for the Render lane's shots; open the PR (renders don't block merges, D-142) once CI is green.
