@@ -626,3 +626,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-153 — 2026-10-16 — Foot wraps train Leatherwork; the drop spindle stays Toolmaking
 **Decision:** Leather foot wraps train Leatherwork; making the drop spindle trains Toolmaking.
 **Who:** Justin (wraps: "Leatherwork", as recommended; spindle: Journal's default)
+
+## D-154 — 2026-10-16 — Crucial look-and-feel choices wait for Justin's pick
+**Decision:** Crucial look-and-feel choices (player/creature model style, overall art style, UI look, world palette) are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145 never idle). D-142 (merges don't wait on renders) does not cover these choices. Context: #172 merged style A as a default without Justin's pick; that pick is now being taken.
+**Who:** Justin ("For something as crucial as a player model style I want at least the proposed descriptions of things even if a render isn't available.")
