@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment lane (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_review
 Branch: claude/environment-features-2 (from main; the first branch, claude/environment-features, was stacked on the dropped far-land work)
-PR: (opening)
+PR: #371
 
 ## Goal
 Convert the Landmark / world-feature family to data, per docs/CONTENT.md: one `FeatureDef` per feature in `shared/Features.cs` (append-only `FeatureId`, ground, collision kind, one-per-square size and salt, spread, placement rule, model id) and one registry `Features.All`. Terrain drawing and collision read the registry instead of having one branch per landmark, and client builders are keyed by model id in `LandmarkProps`. Behaviour does not change: the same landmarks stand in the same places, looking the same. After this, a new landmark is a Def row, a placement rule and a builder. Justin sees nothing new.
