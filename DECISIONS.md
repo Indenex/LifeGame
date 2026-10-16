@@ -903,3 +903,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
 **Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
 **Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).
