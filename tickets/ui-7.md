@@ -1,7 +1,7 @@
 # ui-7: Minigame box and toasts get their own lanes (playtest2)
 Lane: UX and UI
 Owner: UX and UI thread (session cse_01NAW5B3eCSw3JtCiFrZeSNz)
-Status: in_review
+Status: done
 Branch: claude/ux-ui-xlrh2s
 PR: #46 (rides with ui-6 and ui-5)
 
@@ -12,9 +12,10 @@ From playtest2: the hand-drill minigame box sat dead centre over the player and 
 - 2026-10-16 04:30: Hud.cs defines the bottom lanes (NoteLane 150 for toasts, WorkLane 156 for work boxes) and `Hud.PlaceLow(box)`, which anchors a box centre-bottom and shrinks it (down to 70%) so its top stays within the lower third. CraftingUi.cs (Crafting's file) calls `Hud.PlaceLow(card)` instead of centring, and `--screenshot-minigame` opens the drill box without a server. Build 0 errors. Screenshots: /mnt/project-files/screenshots/ui-12-before-drill-box.png, ui-12-after-720p.png, ui-12-after-900p.png.
 
 - 2026-10-16 04:40: pushed 0272910 onto #46 (with main merged and ui-5's music slider and Shift+G row); PM told.
+- 2026-10-16 04:50: #46 merged at 63dda46 (CI run https://github.com/Indenex/LifeGame/actions/runs/38851687321 green on 9234fea).
 
 ## Open questions / blockers
-- PM may still want ui-7 as its own PR from a second branch; waiting on their word.
+- (none)
 
 ## Next step
-Check CI on #46's head; send the green sha to the PM.
+None; done.
