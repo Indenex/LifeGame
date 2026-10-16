@@ -27,6 +27,18 @@
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
+// Soak test (audio-hotfix-1): hours of game time of random weather, seasons and events
+// through the mix, checking every block stays finite and nothing throws.
+//   dotnet run -c Release -- --soak=6 [--seed=1] [--fuzz] [--inject]    (6 game hours)
+// --fuzz hands the mix NaN, infinite and out-of-range inputs; --inject makes bad blocks and
+// exceptions on purpose to prove the mix recovers.
+if (args.FirstOrDefault(a => a.StartsWith("--soak=")) is { } soakArg)
+{
+    double hours = double.Parse(soakArg[7..], System.Globalization.CultureInfo.InvariantCulture);
+    int soakSeed = args.FirstOrDefault(a => a.StartsWith("--seed=")) is { } sa ? int.Parse(sa[7..]) : 1;
+    Environment.Exit(Soak.Run(hours, soakSeed, args.Contains("--fuzz"), args.Contains("--inject")));
+}
+
 bool music = !args.Contains("--no-music");
 // Slider positions, 0 to 1 (0.5 default): --master=0.7 --music= --effects= --ambience=
 float Slider(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}=")) is { } a
