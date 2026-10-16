@@ -1,7 +1,7 @@
 # release-2: Launcher polish: shortcut, self-update, server start, SpacetimeDB install
 Lane: Release & Launcher (D-131)
 Owner: Release & Launcher lane; handed off by session_015Je3JR5vZrzA7TwQYBSPgM to a fresh Sonnet session (D-159)
-Status: in_review
+Status: in_progress
 Branch: claude/release-1 (restarted from main after #161; release-2 work continues here)
 PR: #201
 
@@ -31,8 +31,10 @@ Justin does zero work after downloading the launcher once (PM, D-145 never idle)
 - 2026-10-16 21:25: PR #201 open; Integration approved release.yml; took its hardening (workflow_run fields via env). Ran the pick script locally for workflow_run (green main: skips the already-released 02153f2; PR run: skipped) and schedule (newest green Build already released: skipped).
 - 2026-10-16 21:15: first real release: https://github.com/Indenex/LifeGame/releases/tag/build-680-02153f2 (Release run 38956847322 green, from Build 680). Assets and release.json sha256 match. Found: upload-artifact drops the exec bit, so LifeGameLauncher.x86_64 in that zip isn't executable; make-release.sh now restores it (checked). With the bit set by hand, the release's own Linux launcher started the local server, updated the existing world to 680 (data kept), and installed the game.
 
+- 2026-10-16 20:35: #201 merged. Releases after it were not produced: concurrency group `release` keeps one pending run, so merge traffic replaced queued Release runs (and my manual dispatch, run 38961384868, cancelled). Fix: group per head commit (`release-<workflow_run head sha>`, schedule/dispatch share `release-manual`). PR opened (release-3 branch work on claude/release-1). PM freezes merges and asks for a dispatch once #238, #228 are merged (the wipe release).
+
 ## Open questions / blockers
 - (none yet)
 
 ## Next step
-When CI on PR #201 is green (head a42b0d5 or later), send the PM the head sha; after it merges, check the next release (Actions > Release) has an executable LifeGameLauncher.x86_64 and `launcher.version` in release.json, then tell the PM it is the launcher Justin should download.
+Get the concurrency fix PR green and merged (PM); when the PM says #238 and #228 are merged and merges are frozen, run Actions > Release > Run workflow (or the dispatch API), wait for the release, check LifeGameLauncher.x86_64 is executable and release.json has launcher.version, then send the PM the release link.
