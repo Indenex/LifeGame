@@ -1,7 +1,7 @@
 // What can be worn, in which slot, and how warm it keeps you (Animals lane).
 // Clothes are put on in the equipment panel (D-074); only worn pieces count.
 // Insulation is the share of the cold's bite a piece takes away: a tunic at 0.10
-// makes you lose warmth 8% slower. Pieces in different slots add up. Numbers
+// makes you lose warmth 10% slower. Pieces in different slots add up. Numbers
 // start low and climb slowly as better clothing arrives (D-075).
 using System;
 using System.Collections.Generic;
