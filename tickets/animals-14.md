@@ -24,10 +24,12 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 20:15 (UTC): Justin picked Q12 (a) deer. Merged #195's main merge (54d2175) in; server + client build; upgrade check against main passed. Crafting answered: add Roast venison 205 + Burnt venison 206 and a `cook.venison` ProcessDef copied from cook.meat (Outcome.Roast, Tier 1, Seconds 1) in this PR; check Roasting.cs's burnt mapping covers venison. Antler use goes to Justin as options (a, rec: antler soft hammer = Hammer tag with +10 knap.* cap / b: pressure flaker tool for a new fine-flake recipe / c: plain material for now). Modeling will model the deer in the carved style (specs sent: same skeleton/gait, DeerHeadAt/DeerHips, 3 coats, stags 1/3 +10% with antlers, items 202-204). Animation will smooth Sheep.cs _Process species-neutrally after Modeling's #197.
 
+- 2026-10-16 20:12 (UTC): Modeling made the carved red deer: client/scripts/models/DeerFigure.cs on claude/model-2-env (lands with Modeling's follow-up PR after #197). Same bones, rests and two surfaces as the stand-in. When it is on main, in Sheep.cs set `deerMesh = DeerFigure.Build(false, plainMaterial); stagMesh = DeerFigure.Build(true, plainMaterial);` and delete BuildDeer (or let Modeling make the swap). Item models for 202-204 are done there too.
+
 ## Open questions / blockers
 - Q13 (one spear strike kills a deer, 2 venison per deer) with the PM; built on (a), keep as is.
 - Antler use: send the PM Crafting's 3 options above (D-059) if not yet sent.
-- Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN) asked to gate Sheep.Seen on Species == Sheep in client/scripts/atmosphere/Atmosphere.cs (deer would bleat) and to have Audio give deer an alarm bark / autumn roar. Not yet answered.
+- Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
 - Justin wants durability on hand tools and worn clothing (tunic, wraps): Crafting (new Sonnet session, tickets/crafting-19.md) proposes how it plays; coordinate for clothing (Clothing.cs / worn_item).
 
 ## Lane handoff (2026-10-16, D-159): everything the Animals lane has open
