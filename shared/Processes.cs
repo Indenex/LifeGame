@@ -165,6 +165,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
+            },
+            new ProcessDef
+            {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
                 Seconds = 6, Outcome = Outcome.Placed,

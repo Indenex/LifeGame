@@ -66,6 +66,7 @@ public static partial class Module
 
         // A spear takes two good strikes, a stone blade about three.
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
+        damage = (int)(damage * Traits(animal.Species).StrikeScale);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
         if (damage >= mind.Health)
         {
@@ -152,10 +153,14 @@ public static partial class Module
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
 
-        // A grown sheep gives a few cuts and a hide; a lamb gives one small cut.
+        // A grown sheep gives a few cuts and a hide; a lamb gives one small cut. A deer
+        // gives venison, its hide and an antler; a fawn one small cut.
         bool grown = carcass.Growth >= 80;
-        for (int i = 0; i < (grown ? 3 : 1); i++) DropNear(ctx, carcass, Item.RawMutton, quality);
-        if (grown) DropNear(ctx, carcass, Item.SheepHide, quality);
+        bool deer = carcass.Species == AnimalSpecies.Deer;
+        var meat = deer ? Item.RawVenison : Item.RawMutton;
+        for (int i = 0; i < (grown ? (deer ? 2 : 3) : 1); i++) DropNear(ctx, carcass, meat, quality);
+        if (grown) DropNear(ctx, carcass, deer ? Item.DeerHide : Item.SheepHide, quality);
+        if (grown && deer) DropNear(ctx, carcass, Item.Antler, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }
 
