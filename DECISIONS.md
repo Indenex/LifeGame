@@ -244,3 +244,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-059 — 2026-10-16 — Ideas come as choices; a dedicated Render lane
 **Decision:** (1) Whenever the PM or a worker has an idea, it goes to Justin as a short question with 2 to 4 concrete options, recommended first, answerable in a word; work continues on the recommended option meanwhile. (2) A dedicated Render lane makes all screenshots, clips and mockups. Other lanes send it a render request (ticket, branch, sha, what to show, short summary) instead of rendering themselves; when done, the Render lane sends the images and the requester's summary to the PM, who presents them to Justin. Images still go under /mnt/project-files/screenshots/ (D-034).
 **Who:** Justin
+
+## D-060 — 2026-10-16 — Chopped trees fall
+**Decision:** Chopping a tree with the stone axe fells it after 3 logs; it regrows in 2 hours (`Trees.Felling` on, crafting-9, #70).
+**Who:** Justin ("Fell it", which the PM recommended)
+
+## D-061 — 2026-10-16 — Keep the sleeping mat
+**Decision:** The woven grass mat (8 fiber, laid inside a finished hut or house) stays: you wake there after dying (building-5, #61).
+**Who:** Justin ("Keep it", which the PM recommended)
+
+## D-062 — 2026-10-16 — Wetness numbers as proposed
+**Decision:** Heavy rain soaks you in 2 minutes, drizzle in 10, wading in 10 seconds; drying takes 5 minutes, 2.5 by a fire; cold is multiplied by 1 + 0.5 x wetness (survival-5, #75).
+**Who:** Justin ("As proposed", which the PM recommended)

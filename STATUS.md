@@ -15,7 +15,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | Found in lane tickets 2026-10-16, not yet answered: (1) felling trees vs deadwood only, #70 crafting-9, default felling; (2) sleeping mat respawn, #61 building-5/7, default keep; (3) water and sky look, #66 atmosphere-10/11; (4) wetness numbers, #75 survival-5; (5) carry-limit numbers, survival-3 (shipped as default); (6) burnt mutton 10% hunger, survival-4; (7) toast only at new titles, skills-8. PM decides: Shift+G bars doors (building-3, UX/UI confirms) |
+| Waiting on Justin | Water and sky look, #66 atmosphere-10/11: Render lane rendering it, then Justin decides. Still to ask: carry-limit numbers (survival-3, shipped as default); burnt mutton 10% hunger (survival-4); toast only at new titles (skills-8). Answered 2026-10-16: D-060 felling, D-061 mat, D-062 wetness. PM decides: Shift+G bars doors (building-3, UX/UI confirms) |
 | Next PM action | Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
