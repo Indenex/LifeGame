@@ -9,7 +9,7 @@ public enum Ground { Grass, Earth, Water, Clay, Floor }
 // crickets and owls by night, footsteps, and a slow generative score in a
 // forest-sized reverb. Plain C# with no engine types, so tools/SoundPreview can
 // render it to a file without the game.
-public sealed class SoundMix
+public sealed partial class SoundMix
 {
     public readonly int Rate;
 
@@ -71,6 +71,8 @@ public sealed class SoundMix
         water = new WaterVoice(rate, rng);
         frogs = new Frogs(rate, rng);
         steps = new Steps(rate, noise, rng);
+        work = new WorkVoice(rate, noise, rng);
+        felling = new Felling(rate, noise, rng);
         sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
@@ -121,6 +123,7 @@ public sealed class SoundMix
         sheep.Render(outL, outR, sendL, sendR, count);
         water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
         frogs.Render(outL, outR, sendL, sendR, count, Water * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
+        felling.Render(outL, outR, sendL, sendR, count);
         float coverCoef = Lowpass.Coef(1.2f, Rate), wall = Lowpass.Coef(650f, Rate);
         for (int i = 0; i < count; i++)
         {
@@ -144,6 +147,8 @@ public sealed class SoundMix
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
         steps.Render(stepL, stepR, count);
+        // The work in the player's hands sits on the same close bus as their feet.
+        work.Render(stepL, stepR, count);
         for (int i = 0; i < count; i++)
         {
             left[i] += stepL[i] * stepGain;

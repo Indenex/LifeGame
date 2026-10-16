@@ -161,6 +161,10 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
+        // The work in the player's hands is heard while it lasts (CraftingUi shows its progress).
+        conn.Db.MyCraftJob.OnInsert += (_, j) => sound.Working(SoundMix.WorkFor(j.ProcessId),
+            (j.FinishAt.MicrosecondsSinceUnixEpoch - j.StartedAt.MicrosecondsSinceUnixEpoch) / 1_000_000f);
+        conn.Db.MyCraftJob.OnDelete += (_, _) => sound.Working(Work.None, 0f);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
@@ -265,6 +269,10 @@ public partial class Atmosphere : Node3D
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
+            listener = focus;
+            listenerRight = ear.GlobalBasis.X;
+            fallsThisFrame = 0;
+            if (terrain != null && !hearingFalls) { terrain.TreeFalls += TreeFalls; hearingFalls = true; }
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
         }
@@ -480,6 +488,21 @@ public partial class Atmosphere : Node3D
     }
 
     Terrain? terrain;
+
+    // A tree toppling somewhere near: heard from its side, softer and duller the
+    // farther off, and only a few at once when a whole patch is cleared.
+    Vector3 listener, listenerRight;
+    int fallsThisFrame;
+    bool hearingFalls;
+
+    void TreeFalls(Vector3 at)
+    {
+        var offset = new Vector3(at.X - listener.X, 0f, at.Z - listener.Z);
+        float d = offset.Length();
+        if (d > 80f || ++fallsThisFrame > 3) return;
+        float pan = d < 1f ? 0f : offset.Normalized().Dot(new Vector3(listenerRight.X, 0f, listenerRight.Z).Normalized());
+        sound.Fell(SoundMix.FellGain(d), pan * Mathf.Clamp(d / 4f, 0f, 1f), SoundMix.FellNear(d));
+    }
 
     // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
     // density the terrain plants its trees by. Sampled every few metres out to

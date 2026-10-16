@@ -12,6 +12,9 @@
 // on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
+// Work scenes stand still: chop (chopping a log in the woods, then the tree falls
+// right there), fellfar (trees felled 15 m and 40 m away), knap, drill (hand-drill
+// fire), bowdrill, shape (shaping clay).
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -45,6 +48,7 @@ foreach (var scene in scenes)
         "midday" => (1f, 0f, 0.25f, 0f, 0.5f),
         "evening" => (0.6f, 0f, 0.2f, 0f, 0.73f),
         "woods" or "meadow" => (1f, 0f, 0.8f, 0f, 0.5f),
+        "chop" or "fellfar" => (1f, 0f, 0.35f, 0f, 0.42f),
         "clay" => (0.9f, 0f, 0.3f, 0.8f, 0.4f),
         "approach" or "pond" => (1f, 0f, 0.45f, 0f, 0.42f),
         "pondrain" => (0.75f, 0.6f, 0.55f, 1f, 0.45f),
@@ -52,9 +56,23 @@ foreach (var scene in scenes)
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
-    mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
+    mix.Foliage = parts[0] is "woods" or "chop" or "fellfar" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
+    bool working = parts[0] is "chop" or "fellfar" or "knap" or "drill" or "bowdrill" or "shape";
+    var work = parts[0] switch
+    {
+        "chop" => Work.Chop, "knap" => Work.Knap, "drill" => Work.HandDrill, "bowdrill" => Work.BowDrill, "shape" => Work.Clay, _ => Work.None,
+    };
+    // Each job runs from 1 s in until 2 s before the scene ends; a chop ends with the tree falling.
+    float jobSeconds = seconds - 3f;
+    bool jobStarted = false, jobEnded = false;
+    var falls = parts[0] switch
+    {
+        "chop" => new List<(double At, float Distance)> { (1.3 + jobSeconds, 3f) },
+        "fellfar" => new List<(double At, float Distance)> { (2, 15f), (9, 40f) },
+        _ => new List<(double At, float Distance)>(),
+    };
     int total = (int)(seconds * rate), done = 0;
-    double sum = 0, nextStep = 0;
+    double sum = 0, nextStep = 0, scenePeak = 0;
     while (done < total)
     {
         int n = Math.Min(1024, total - done);
@@ -74,7 +92,16 @@ foreach (var scene in scenes)
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && t < seconds / 2;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && !working && t < seconds / 2;
+        if (work != Work.None && !jobStarted && t >= 1) { mix.Working(work, jobSeconds); jobStarted = true; }
+        if (work != Work.None && !jobEnded && t >= 1 + jobSeconds) { mix.Working(Work.None, 0f); jobEnded = true; }
+        for (int f = falls.Count - 1; f >= 0; f--)
+            if (t >= falls[f].At)
+            {
+                float d = falls[f].Distance;
+                mix.Fell(SoundMix.FellGain(d), 0.5f, SoundMix.FellNear(d));
+                falls.RemoveAt(f);
+            }
         if (walks && t >= nextStep)
         {
             mix.Step(ground, ground == Ground.Floor ? 0f : mix.Wetness);
@@ -94,14 +121,15 @@ foreach (var scene in scenes)
         mix.Render(left, right, n);
         for (int i = 0; i < n; i++)
         {
-            peak = Math.Max(peak, Math.Max(Math.Abs(left[i]), Math.Abs(right[i])));
+            scenePeak = Math.Max(scenePeak, Math.Max(Math.Abs(left[i]), Math.Abs(right[i])));
+            peak = Math.Max(peak, scenePeak);
             sum += left[i] * left[i] + right[i] * right[i];
             samples.Add((short)Math.Clamp(left[i] * 32767f, -32768f, 32767f));
             samples.Add((short)Math.Clamp(right[i] * 32767f, -32768f, 32767f));
         }
         done += n;
     }
-    Console.WriteLine($"{parts[0],-6} {seconds,4}s  rms {20 * Math.Log10(Math.Sqrt(sum / (2.0 * total)) + 1e-9):F1} dBFS");
+    Console.WriteLine($"{parts[0],-6} {seconds,4}s  rms {20 * Math.Log10(Math.Sqrt(sum / (2.0 * total)) + 1e-9):F1} dBFS  peak {20 * Math.Log10(scenePeak + 1e-9):F1}");
 }
 Console.WriteLine($"peak {20 * Math.Log10(peak + 1e-9):F1} dBFS");
 

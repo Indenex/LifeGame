@@ -86,6 +86,8 @@ public partial class SoundScape : Node
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
+    public void Working(Work kind, float seconds) => events.Enqueue(m => m.Working(kind, seconds));
+    public void Fell(float gain, float pan, float near) => events.Enqueue(m => m.Fell(gain, pan, near));
 
     void Synthesize()
     {

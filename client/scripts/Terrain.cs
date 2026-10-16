@@ -31,6 +31,10 @@ public partial class Terrain : Node3D
 
     public void Refresh(int x, int z) => dirty.Add((World.ChunkOfCell(x), World.ChunkOfCell(z)));
 
+    // A standing tree started to topple on a cell that was just cleared (felled,
+    // or built over), with where its trunk stands, so it can be heard falling.
+    public event Action<Vector3>? TreeFalls;
+
     // Ground height at a world position, blended between the four nearest cells.
     public float HeightAt(float x, float z)
     {
@@ -123,7 +127,11 @@ public partial class Terrain : Node3D
                 long key = World.CellKey(x, z);
                 bool cleared = Cleared?.Invoke(x, z) == true;
                 bool was = cleared ? !wasCleared.Add(key) : wasCleared.Remove(key);
-                if (rebuilt && was != cleared) clearChanges[key] = (now, cleared);
+                if (rebuilt && was != cleared)
+                {
+                    clearChanges[key] = (now, cleared);
+                    if (cleared && TreeStands(x, z)) TreeFalls?.Invoke(Trunk(x, z));
+                }
                 else if (clearChanges.TryGetValue(key, out var c) && now - c.At > ClearFadeSeconds + 1f) clearChanges.Remove(key);
             }
     }
@@ -229,6 +237,16 @@ public partial class Terrain : Node3D
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
 
+    // A forest that thins out into a clearing where new players wake up.
+    static float Forest(int x, int z) => World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
+    static bool GrowsTree(int x, int z) => x * x + z * z >= 12 * 12 && Hash01(x, z, 11) < Forest(x, z);
+    // Whether this cell's tree is drawn: the forest grows one and the ground is untouched.
+    bool TreeStands(int x, int z) =>
+        GrowsTree(x, z) && !depths.ContainsKey(World.CellKey(x, z)) && TileHeight(x, z) >= Look.WaterLevel + 0.1f;
+    // Where the trunk of the tree on this cell stands, jittered within the cell.
+    Vector3 Trunk(int x, int z) =>
+        new(x + (Hash01(x, z, 12) - 0.5f) * 0.5f, TileHeight(x, z), z + (Hash01(x, z, 13) - 0.5f) * 0.5f);
+
     void AddVegetation(Node3D root, int cx, int cz)
     {
         EnsureMeshes();
@@ -255,17 +273,14 @@ public partial class Terrain : Node3D
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
 
-                bool nearSpawn = x * x + z * z < 12 * 12;
                 float roll = Hash01(x, z, 11);
-                float fx = x + (Hash01(x, z, 12) - 0.5f) * 0.5f, fz = z + (Hash01(x, z, 13) - 0.5f) * 0.5f;
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
                 float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
                 var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
-                var at = new Transform3D(basis, new Vector3(fx, top, fz));
+                var at = new Transform3D(basis, Trunk(x, z) with { Y = top });
 
-                // A forest that thins out into a clearing where new players wake up.
-                float forest = World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
-                if (!nearSpawn && roll < forest)
+                float forest = Forest(x, z);
+                if (GrowsTree(x, z))
                 {
                     trunks.Add((at, Look.Bark, custom));
                     if (Hash01(x, z, 16) < 0.4f)
