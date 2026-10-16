@@ -22,7 +22,7 @@ namespace LifeGame.Shared
         // One jump costs this share of the bar (bugfix-25; Justin picked 8%).
         public const float JumpCost = 0.08f;
 
-        // A good meal (Needs.GoodMeal) adds this much run time for a while.
+        // A good meal (FoodDef.GoodMeal) adds this much run time for a while.
         public const float WellFedBonus = 0.25f;
         public const long WellFedMicros = 10L * 60 * 1_000_000;
 

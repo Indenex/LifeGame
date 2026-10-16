@@ -126,8 +126,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WeatherTick(ReducerContext ctx, WeatherTickTimer timer)
     {
-        if (!ctx.SenderAuth.IsInternal)
-            throw new Exception("Only the server changes the weather");
+        RequireServer(ctx);
         EnsureWorldClock(ctx);
         var clock = ctx.Db.WorldClock.Id.Find(0)!.Value;
         ctx.Db.WorldClock.Id.Update(clock with { ServerNow = ctx.Timestamp });
