@@ -22,7 +22,16 @@ public partial class FireView : Node3D
 
     public void Attach(DbConnection conn)
     {
-        conn.Db.Fire.OnInsert += (_, f) => Upsert(f);
+        conn.Db.Fire.OnInsert += (_, f) =>
+        {
+            Upsert(f);
+            // A fire lit close by makes its sound; fires that were already burning when
+            // you arrived (login catch-up) stay quiet.
+            long ageMicros = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - f.LitAt.MicrosecondsSinceUnixEpoch;
+            if (ageMicros < 10_000_000 && Stations.PlayerAt(conn) is { } at
+                && new Vector2(f.X - at.X, f.Z - at.Z).Length() < 6f)
+                Sfx.Play(Cue.FireLit);
+        };
         conn.Db.Fire.OnUpdate += (_, _, f) => Upsert(f);
         conn.Db.Fire.OnDelete += (_, f) =>
         {

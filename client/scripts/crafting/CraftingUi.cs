@@ -218,6 +218,7 @@ public partial class CraftingUi : CanvasLayer
             _ => null,
         };
         if (minigame == null) MinigameFor(def, ref minigame);
+        if (minigame == null) AnimalsMinigameFor(def, ref minigame);
         if (minigame == null)
         {
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
@@ -237,6 +238,8 @@ public partial class CraftingUi : CanvasLayer
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
+    // The same for Animals (animals/CraftingUi.Spin.cs): a partial has one body, and Ceramics has MinigameFor.
+    partial void AnimalsMinigameFor(ProcessDef def, ref Minigame_? game);
 
     // Skill hooks, implemented in journal/CraftingUi.Skills.cs: skip the minigame
     // with this score, and how many steps (strikes, coils, strokes) it takes.
@@ -355,6 +358,7 @@ public partial class CraftingUi : CanvasLayer
             ItemTags.Digging => "a digging tool",
             ItemTags.FireBow => "a bow drill",
             ItemTags.Container => "a container",
+            ItemTags.Spindle => "a spindle",
             _ => t.ToString().ToLowerInvariant(),
         }));
 
