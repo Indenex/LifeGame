@@ -14,17 +14,17 @@ A big fired-clay storage jar, the reward for building a kiln. Done when:
 5. ClayCheck --jar runs the chain on a scratch db: shape, dry, kiln fire, place, put and take a stack.
 Justin sees screenshots via the Render lane: wet jar drying, the fired jar, the placed jar opened.
 
-Numbers (sent to the PM as defaults, not yet Justin's): 4 tempered clay, kiln only, 8 stacks, weathers after 336 h.
+Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed by the PM 2026-10-16 17:11). As built: 4 tempered clay, kiln only, 8 stacks, weathers after 336 h.
 
 ## Progress log
 - 2026-10-16: ceramics-2/3/5 closed (merged as #44); kiln blueprint (D-035) was already shipped there. Asked the PM for the next milestone with 4 options; started on the recommended one, this ticket. Toolchain (dotnet 8, spacetimedb-cli, Godot 4.6.2 mono) being installed in the container.
 - 2026-10-16: items 1-4 done in cf5cc32; server, client build. Bindings: tools/gen-bindings.sh was refused by the sandbox (its rm -rf); ran its generate line directly on a fresh clone.
 - 2026-10-16: ClayCheck --jar added (implies --kiln); --ceramics-demo=jar row (wet, leather-hard, dry, kiln-fired jar, coil pot for scale). Running ClayCheck --jar on scratch db c6jar1.
+- 2026-10-16 17:11: PM: Justin approved ceramics-6 with these numbers (D-066). Asked the PM to confirm kiln-only vs the 60% pit crack first mentioned. Upgrade check vs origin/main passed locally (no wipe).
 
 ## Open questions / blockers
-- PM: next milestone = storage jar? (sent 2026-10-16 with options cooking pot, roof tiles, polish). Working on the jar meanwhile.
-- PM/Justin: jar numbers above. I first told the PM "pit firing cracks it 60%"; went with "kiln only" instead (clearer to a player, reason to build the kiln).
-- Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Tell them when the PR opens.
+- PM/Justin: the message Justin approved said "pit firing cracks it 60%"; built is "kiln only" (a campfire refuses it). Asked the PM 2026-10-16 to confirm with Justin; kiln-only stays meanwhile.
+- Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Messaged House building (session_01RrKHUxWRH973Ndnxsad9nv) 2026-10-16.
 
 ## Next step
 Check the ClayCheck --jar result on c6jar1 (local server on 127.0.0.1:3000; rerun `cd tools/ClayCheck && dotnet run -c Release -- http://127.0.0.1:3000 <scratch db> --jar` after publishing to a new scratch db if the session restarted), then send the Render lane a request and open the PR.
