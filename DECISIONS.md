@@ -300,3 +300,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-073 — 2026-10-16 — Animation and Modeling lanes
 **Decision:** Two new Opus lanes for look and immersion. **Modeling** makes and upgrades the 3D models (player, animals, tools, items, structures, plants); it owns `client/assets/models/` and `client/scripts/models/`, and may change the existing in-code meshes owned by other lanes (e.g. `Sheep.cs`, `StructureModel*.cs`, `PotMesh.cs`, `ItemLook.cs`) in small PRs, telling the owning lane. **Animation** makes characters and creatures move well (player walk/idle/work/gather, sheep, felling, crafting gestures); it owns `client/scripts/animation/` and takes over `client/scripts/Avatar.cs` from Integration. Both send their work to the Render lane, and Justin sees it before it merges. Both keep to Linux and Windows performance budgets (32 players, CI load test).
 **Who:** Justin ("start an animation worker, and a dedicated modeler")
+
+## D-074 — 2026-10-16 — Clothes go on through an equipment panel
+**Decision:** Players wear clothing through a paper-doll equipment panel (slots such as body and feet), not automatically. Animals builds the worn-slots server side (animals-9); UX/UI builds the panel; Modeling and Animation show worn clothes on the figure.
+**Who:** Justin ("Equipment panel"; the PM had recommended auto-worn)
+
+## D-075 — 2026-10-16 — Start low, grow slowly (all numbers)
+**Decision:** Every number and stat in the game (gear bonuses, skill gains, yields, speeds, capacities, durability) starts on the low end and grows slowly, so each new piece of equipment or step up is worth having. The game is meant to take a long time to progress through. The curve rises faster through roughly the first 15% of progression, so new players feel early gains, and then flattens into a slow climb. Applies to all new numbers; lanes re-check existing numbers against it and propose changes to the PM. First case: clothing warmth starts small (well under the 25%/10% proposed).
+**Who:** Justin ("ALL numbers, Stats, etc. should start on the lower ends and scale up slowly ... faster at the first 15% or so")
+
+## D-076 — 2026-10-16 — Storage jar is kiln-only
+**Decision:** The storage jar can only be fired in a kiln; a campfire refuses it.
+**Who:** Justin ("Kiln only", which the PM recommended)
+
+## D-077 — 2026-10-16 — Trades may overload you
+**Decision:** A trade that takes a player over their carry limit is allowed; they walk slower, as with picking things up.
+**Who:** Justin ("Allow, walk slower", which the PM recommended)

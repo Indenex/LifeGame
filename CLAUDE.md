@@ -30,6 +30,10 @@ Whenever the PM or any worker has an idea (a feature, a look, a number, a differ
 - A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
 - New sessions started for a lane (e.g. `create_session`) use Opus.
 
+## Design principles
+
+- **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
+
 ## The no-handoff rule
 
 Any session can stop at any moment (usage limits, account switch). So:
