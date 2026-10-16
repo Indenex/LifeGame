@@ -21,6 +21,8 @@ cp "$art/LifeGame-Server/StdbModule.wasm" "$out/StdbModule.wasm"
 (cd "$art/LifeGame-Windows/windows" && zip -qry "$out/LifeGame-Windows.zip" .)
 for l in Linux Windows; do
   if [ -d "$art/LifeGameLauncher-$l" ]; then
+    # Artifacts lose the exec bit; restore it so the unzipped launcher runs on a double-click.
+    chmod +x "$art/LifeGameLauncher-$l"/LifeGameLauncher.* 2>/dev/null || true
     (cd "$art/LifeGameLauncher-$l" && zip -qry "$out/LifeGameLauncher-$l.zip" .)
   fi
 done
