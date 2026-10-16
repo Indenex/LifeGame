@@ -97,7 +97,7 @@ public partial class CeramicsView : Node
 
     void KilnSite(Structure s)
     {
-        if ((int)s.Kind != ClayRules.KilnStructureKind || !s.Complete || kilns.ContainsKey(s.Id)) return;
+        if (s.Kind != StructureKind.Kiln || !s.Complete || kilns.ContainsKey(s.Id)) return;
         var view = new KilnView { Position = new Vector3(s.X, heightAt(s.X, s.Z), s.Z), Rotation = new Vector3(0, s.Yaw, 0) };
         kilns[s.Id] = view;
         world.AddChild(view);

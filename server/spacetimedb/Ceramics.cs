@@ -121,6 +121,7 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         var piece = ctx.Db.ClayPiece.Id.Find(pieceId) ?? throw new Exception("That clay is gone");
         RequireReach(pos, piece.X, piece.Z);
+        RequireClaimAccess(ctx, piece.X, piece.Z);
         if (piece.Stage != (byte)ClayStage.Drying)
             throw new Exception("It is in the fire");
 
@@ -151,6 +152,7 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         var fire = ctx.Db.Fire.Id.Find(fireId) ?? throw new Exception("That fire is out");
         RequireReach(pos, fire.X, fire.Z);
+        RequireClaimAccess(ctx, fire.X, fire.Z);
         RequireFuelForFiring(ctx, fire);
 
         var pots = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)

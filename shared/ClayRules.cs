@@ -71,8 +71,8 @@ namespace LifeGame.Shared
         // crack and come out a little better than from a pit.
         // Building gives this process to everyone who helps finish a kiln stage.
         public const string KilnProcess = "clay.kiln";
-        // StructureKind.Kiln once Building and Claims are on main: kinds are appended,
-        // after LeanTo, ClayHut and ClaimMarker (D-035).
+        // StructureKind.Kiln as a number, for shared code (the enum is the server's);
+        // appended after LeanTo, ClayHut and ClaimMarker (D-035).
         public const int KilnStructureKind = 3;
         public const string KilnFireProcess = "clay.kiln_fire";
         public const int KilnCapacity = 6;
