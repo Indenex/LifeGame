@@ -159,6 +159,9 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.TryBuild(id);
+        if (Environment.GetEnvironmentVariable("DEBUGB") != null)
+            foreach (var bot in bots)
+                Console.WriteLine($"DBG {bot.MyId}: bot ({bot.X:F1},{bot.Z:F1}) lag {bot.Lag():F1} struct ({s.X:F1},{s.Z:F1}) front ({front.x:F1},{front.z:F1})");
         Pump(650);
     }
     Pump(300);
@@ -381,7 +384,7 @@ sealed class Bot
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
-            if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && actionTimer <= 0)
+            if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
@@ -400,7 +403,7 @@ sealed class Bot
             targetItem = item?.Id ?? 0;
             if (item == null) return;
         }
-        if (Step(item.X, item.Z, dt) < 1.2f && actionTimer <= 0)
+        if (Step(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
         {
             actionTimer = 0.3f;
             Conn.Reducers.PickUp(item.Id);
@@ -423,6 +426,9 @@ sealed class Bot
         throw new Exception("No clay nearby");
     }
 
+    // How far the server still has this player from where the bot thinks it stands.
+    public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
+
     // Moves up to one tick's walk toward a point and returns the distance left.
     float Step(float tx, float tz, float dt)
     {
@@ -432,19 +438,27 @@ sealed class Bot
             float step = MathF.Min(dist, 5f * dt);
             // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 1.5f)
+            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
             {
                 X += dx / dist * step;
                 Z += dz / dist * step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
+        else if (Lag() > 0.05f)
+            Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
         return MathF.Max(0, dist - 5f * dt);
     }
 
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
     {
         while (Step(tx, tz, 0.1f) > within) pump(100);
+        // The server limits the pace (bugfix-24): keep reporting until it has us here too.
+        for (int i = 0; i < 300 && Lag() > 0.3f; i++)
+        {
+            Conn.Reducers.Move(X, Z, 0f);
+            pump(100);
+        }
         pump(300);
     }
 
