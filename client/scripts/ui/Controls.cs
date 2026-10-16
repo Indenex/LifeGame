@@ -59,6 +59,9 @@ public static class Controls
         new("claim_open", None, "Your claim", "{key} shows the land you claim"),
         new("chat", None, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
+        // The equipment panel (ui-10, D-074); its hint waits until you first carry clothes.
+        // Help stays null (out of the F1 list) until animals-9 lands and I does something.
+        new("equipment", new[] { Key.I }, null, "{key} shows what you wear", OnRequest: true, Name: "What you wear"),
         // Interim: Ceramics reads V directly until tending clay moves to G.
         new("tend_clay", new[] { Key.V }, "Tend clay", Fixed: true),
     };

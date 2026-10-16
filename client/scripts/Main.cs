@@ -85,11 +85,15 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        // What you wear (ui-10, D-074).
+        var equipment = new EquipmentPanel { Note = hud.Note };
+        AddChild(equipment);
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
-            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true
+            || equipment.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));

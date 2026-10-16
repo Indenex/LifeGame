@@ -25,6 +25,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
+| I | What you wear: the equipment panel (body and feet slots; click a slot, then what to put on). I or Esc closes | UX/UI | new, ui-10 (D-074) |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
