@@ -1,16 +1,31 @@
 # Keys and controls
 
-You do not need to memorise anything. The game teaches keys as you need them with small hints, and **holding F1 shows every key** at any moment.
+The game shows a hint for each key the first time you need it. **Hold F1** at any time to see every key.
 
-The defaults, in short:
+## Default keys
 
-- **W A S D** walk; **Q / E** or holding the **right mouse button** turns the view.
-- **G** is the **Use** key: it does whatever the prompt under you says.
-- **Space** picks things up; **F** digs.
-- **C** opens crafting, **X** eats, **B** opens the build menu.
-- **J** is your journal, **K** your claim, **Enter** opens chat.
-- **Hold Shift** to sneak.
-- **Left click** strikes.
-- **M** toggles music, **Esc** opens the menu.
+| Key | Action |
+|---|---|
+| W A S D | Walk |
+| Q / E, or hold right mouse and drag | Turn the view |
+| Hold Shift | Sneak (walk slowly) |
+| Space | Pick up |
+| F | Dig |
+| G | **Use**: act on what you are facing (the prompt shows what it will do) |
+| Shift+G | Bar or unbar a door you are allowed to lock |
+| C | Crafting panel |
+| X | Eat the best food you carry |
+| B | Build menu |
+| J | Journal |
+| K | Claim panel |
+| Enter | Chat |
+| Left click or Z | Strike |
+| Hold Ctrl when starting a craft | Play the minigame even when your skill lets you skip it |
+| M | Music on or off |
+| Esc | Menu |
 
-Every key can be changed from the Controls page in the Esc menu. If this page disagrees with the game, trust the game.
+Panels and minigames have their own keys, shown on screen while they are open.
+
+## Changing keys
+
+Every key can be rebound on the Controls page of the Esc menu. If you rebind a key, the in-game hints and prompts follow your choice; this page shows only the defaults.

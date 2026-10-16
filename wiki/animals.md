@@ -1,11 +1,12 @@
 # Animals
 
-Sheep wander the meadows in flocks.
+Sheep live in flocks in open ground.
 
-- **Be calm.** Sheep are skittish. Walk slowly (hold Shift to sneak) and they will let you come close. Run at them and they will bolt.
-- **Wool.** A gentle shearer gets wool. Try it.
-- **Meat and hide.** Hunting is possible with the right tools. Meat is best cooked. Flocks grow back slowly over time, so take what you need.
+- **Approaching.** Sheep run from players who move quickly near them. Hold Shift to sneak and they stay calm.
+- **Wool.** Sheep can be sheared with Use.
+- **Meat and hide.** Sheep can be killed with a weapon or cutting tool (strike with left click). The rest of the flock flees. Butchering gives meat and hide. Cook meat at a fire before eating it.
+- **Regrowth.** Flocks recover slowly over in-game days and never disappear completely.
 
-Tending animals is a survival skill and gets easier with practice.
+Shearing and butchering train husbandry, a survival basic.
 
 Next: [Other players](other-players.md)
