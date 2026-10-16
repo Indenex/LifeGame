@@ -88,8 +88,6 @@ public partial class Atmosphere : Node3D
     float woods;
 
     Vector2? debugPosition;
-    float stepPhase;
-    Vector3 lastPlayerPos;
 
     public float TimeOfDay => timeOfDay;
 
@@ -109,6 +107,7 @@ public partial class Atmosphere : Node3D
         AddChild(mist);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
+        ReadySeasons();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -161,6 +160,7 @@ public partial class Atmosphere : Node3D
         conn.Db.WorldClock.OnUpdate += (_, _, c) => OnClock(c);
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
+        ConnectSeasons(conn);
         // Sheep bleat; Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
         conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
@@ -171,7 +171,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
     }
@@ -261,6 +261,7 @@ public partial class Atmosphere : Node3D
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
+        UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
         // Dawn mist glows with the same light as the fog: warm at sunrise.
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
@@ -350,7 +351,7 @@ public partial class Atmosphere : Node3D
         float h = Mathf.Clamp(sunHeight, 0f, 1f);
         Color sunColor = h < 0.4f ? low.Lerp(mid, Mathf.SmoothStep(0f, 0.4f, h)) : mid.Lerp(high, Mathf.SmoothStep(0.4f, 1f, h));
         Color moonColor = new(0.56f, 0.66f, 1.0f);
-        sun.LightColor = Grey(isDay ? sunColor : moonColor, overcast * 0.6f, 1f);
+        sun.LightColor = Grey(isDay ? sunColor.Lerp(new Color(0.9f, 0.94f, 1f), 0.45f * WinterLight) : moonColor, overcast * 0.6f, 1f);
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
@@ -386,7 +387,8 @@ public partial class Atmosphere : Node3D
         env.AmbientLightColor = mood.Ambient;
         env.AmbientLightEnergy = mood.AmbientEnergy * (1f + 0.35f * overcast);
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
-        env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight);
+        env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
+        env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         if (flash > 0.001f)
@@ -475,75 +477,12 @@ public partial class Atmosphere : Node3D
     static Vector3 Toward(float elevationDeg, float azimuthDeg) =>
         Basis.FromEuler(new Vector3(Mathf.DegToRad(-elevationDeg), Mathf.DegToRad(azimuthDeg), 0)).Z;
 
-    // --- Footsteps --------------------------------------------------------------
-
-    // One step per stride, matching the avatar's leg swing.
-    void Footsteps()
-    {
-        if (Player == null || !Player.IsInsideTree()) return;
-        var pos = Player.GlobalPosition;
-        var flat = pos - lastPlayerPos;
-        flat.Y = 0;
-        lastPlayerPos = pos;
-        float distance = flat.Length();
-        if (distance > 2f || distance < 0.0005f) return;
-        float before = stepPhase;
-        stepPhase += distance * 2.4f;
-        if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
-
-        int cx = World.CellOf(pos.X), cz = World.CellOf(pos.Z);
-        terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
-        var ground = Sheltered?.Invoke(pos) == true ? Ground.Floor
-            : pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
-            : World.IsClay(cx, cz) ? Ground.Clay
-            : terrain?.Cleared?.Invoke(cx, cz) == true ? Ground.Earth
-            : Ground.Grass;
-        sound.Step(ground, wetness);
-    }
-
     Terrain? terrain;
 
     // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
     // density the terrain plants its trees by (Forest.Density, env-1). Sampled every few metres out to
     // about 12 m; the mixer eases between values, so walking into the trees fades
     // the leaves in.
-    // Where the nearest open water is, looked over a few times a second: the closer
-    // and the more of it, the louder it laps; the sound comes from its side.
-    float waterLook;
-
-    void WaterSound(float dt, Vector3 focus, Vector3 right)
-    {
-        waterLook -= dt;
-        if (waterLook > 0f || terrain == null) return;
-        waterLook = 0.25f;
-        const int Reach = 20, Step = 2;
-        int cx = World.CellOf(focus.X), cz = World.CellOf(focus.Z);
-        float nearest = float.MaxValue;
-        Vector2 toward = Vector2.Zero;
-        int wet = 0, near = 0;
-        for (int dx = -Reach; dx <= Reach; dx += Step)
-            for (int dz = -Reach; dz <= Reach; dz += Step)
-            {
-                float d2 = dx * dx + dz * dz;
-                if (d2 > Reach * Reach) continue;
-                if (d2 <= 10 * 10) near++;
-                if (terrain.TileHeight(cx + dx, cz + dz) >= Look.WaterLevel - 0.05f) continue;
-                float d = Mathf.Sqrt(d2);
-                nearest = Mathf.Min(nearest, d);
-                if (d2 <= 10 * 10) wet++;
-                toward += new Vector2(dx, dz) / (1f + d2 * 0.05f);
-            }
-        if (nearest == float.MaxValue)
-        {
-            sound.Water = 0f;
-            return;
-        }
-        // A puddle-sized dip laps quietly; the shore of a wide pond laps fully.
-        float amount = Mathf.Clamp(wet / (float)near * 3f, 0.35f, 1f);
-        sound.Water = (1f - Mathf.SmoothStep(1.5f, Reach, nearest)) * amount;
-        sound.WaterPan = toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(new Vector2(right.X, right.Z)), -1f, 1f) : 0f;
-    }
-
     static float Woodedness(Vector3 at)
     {
         int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);

@@ -108,7 +108,7 @@ public partial class StructureView : Node3D
             if (!solid.Contains(i)) pieces[i].holder.Visible = false;
     }
 
-    // --- Door (clay huts and brick houses) -------------------------------
+    // --- Door (clay huts, brick houses and gates) ------------------------
 
     // The doorway in the building's frame: the door hangs from jamb a and closes
     // onto jamb b, swinging inward when open.
@@ -118,6 +118,8 @@ public partial class StructureView : Node3D
 
     (Vector3 a, Vector3 b, float height) DoorFrame() => Kind == 5
         ? StructureModel.HouseDoor
+        : LifeGame.Shared.Structures.IsGate(Kind)
+        ? StructureModel.GateDoor
         : (new Vector3(Mathf.Sin(DoorHalfAngle), 0, Mathf.Cos(DoorHalfAngle)) * DoorRadius,
            new Vector3(Mathf.Sin(-DoorHalfAngle), 0, Mathf.Cos(-DoorHalfAngle)) * DoorRadius, DoorHeight);
 
