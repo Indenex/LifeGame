@@ -15,7 +15,7 @@ public partial class Avatar : Node3D
     readonly PlayerAnimator animator;
     readonly Label3D nameplate;
     readonly MeshInstance3D heldR = new() { Scale = Vector3.One * 0.75f }, heldL = new() { Scale = Vector3.One * 0.75f };
-    float speed, turnRate, lastHeading, creepTime;
+    float speed, turnRate, lastHeading;
     Vector3 lastPosition;
 
     static ShaderMaterial? skin, hair, leaves;
@@ -106,6 +106,11 @@ public partial class Avatar : Node3D
     static void Mesh(Node3D parent, Mesh mesh, Material material, Vector3 at, Vector3 rotation = default) =>
         parent.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = material, Position = at, Rotation = rotation });
 
+    // Set from player_sneaking for other players; tracks the key for your own.
+    public bool Sneaking;
+    // Your own avatar: fired when you start or stop sneaking, so the server can tell others.
+    public event System.Action<bool>? SneakChanged;
+
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
 
@@ -140,11 +145,13 @@ public partial class Avatar : Node3D
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
-        // The server doesn't know who is sneaking, so other players read as sneaking when
-        // they keep creeping along at about sneak speed (not just slowing down to stop).
-        bool creeping = speed > 0.4f && speed < Shared.World.SneakSpeed + 0.3f;
-        creepTime = creeping ? creepTime + dt : 0f;
-        bool sneaking = Remote ? creepTime > 0.4f : Input.IsActionPressed(SneakAction);
+        // Your own sneak is the key; other players' comes from the server (player_sneaking).
+        bool sneaking = Remote ? Sneaking : Input.IsActionPressed(SneakAction);
+        if (!Remote && sneaking != Sneaking)
+        {
+            Sneaking = sneaking;
+            SneakChanged?.Invoke(sneaking);
+        }
         // Hidden avatars (offline players) cost nothing.
         if (IsVisibleInTree()) animator.Update(dt, speed, turnRate, sneaking);
     }
