@@ -1,8 +1,8 @@
 # building-10: Log cabin
 Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
-Status: in_progress
-Branch: local building-10 (worktree /home/user/lg-cabin), backed up on claude/house-building-8ueqz2-cabin; stacked on building-9
+Status: in_review
+Branch: claude/house-building-8ueqz2 (restarted from main after #202 merged; old backup claude/house-building-8ueqz2-cabin)
 PR: (not yet)
 
 ## Goal
@@ -24,9 +24,10 @@ Justin sees a cabin of round logs with crossed corners, a log lintel over the do
 
 - 2026-10-16 20:05: `dotnet run -- log-cabin` passed locally in 437 s. Each bot made a stone axe and chopped 10 logs, both built the cabin, standing inside is sheltered, it survived a reconnect, and the door hung, opened, barred and unbarred.
 - 2026-10-16 20:05: HANDOFF to a Sonnet session (D-159). Not yet merged with the latest main; stacked on building-9 (#202).
+- 2026-10-16 21:25 (Sonnet session): #202 merged. Fast-forwarded the branch to main and merged the cabin branch. Conflicts resolved: Structures.cs (Station and Room flags both kept), StructureModel switch (Hearth, then IsRoom => LogCabin), BuildTest Craft (score parameter kept with crafting-16's 1.2x wait). LogCabin is the last kind (after Hearth). Walls: the cabin has Room = true, so bugfix-23's Collide already runs it through HouseWalls; no extra collision code. Local: server builds, bindings regen, `BuildTest log-cabin` passed (412 s), upgrade-check vs origin/main passed, LoadTest and SpawnCheck passed.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-After #202 (building-9) merges: on claude/house-building-8ueqz2, reset to origin/main (the branch then holds only merged history), merge origin/claude/house-building-8ueqz2-cabin, resolve StructureKind order (LogCabin goes at the very end of the enum, Shapes and StageCosts), run tools/gen-bindings.sh, then BuildTest (both, and log-cabin), LoadTest, SpawnCheck, CraftCheck, SocialTest and tools/upgrade-check.sh origin/main. Push, open the building-10 PR, request a render (log cabin in a clearing, door open, plus a half-built one with log walls going up) and send the PM the green sha. Watch for Crafting's crafting-16 changing Bot.Craft's wait in tools/BuildTest; building-10 adds a `score` parameter to the same method.
+Wait for CI on the building-10 PR, then send the PM the green sha. Request a render (log cabin in a clearing, door open; plus a half-built one with log walls going up). If another PR takes the next kind first, merge main and re-append LogCabin after the last kind, then rerun tools/upgrade-check.sh origin/main.
