@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -28,12 +29,13 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
             else if (view == "props") Props();
             else if (view == "env") EnvProps();
+            else if (view == "cooking") Cooking();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -173,6 +175,28 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
+    }
+
+    // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
+    // floating in it, roughly as SimmerView draws it.
+    void Cooking()
+    {
+        AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = new Vector3(0, 0, -0.55f) });
+        var dishes = new[] { (CookingMeshes.Dish.Broth, new Color(0.35f, 0.08f, 0.10f)), (CookingMeshes.Dish.Stew, new Color(0.38f, 0.24f, 0.12f)), (CookingMeshes.Dish.Tallow, new Color(0.80f, 0.74f, 0.58f)) };
+        var line = PotMesh.WaterLine(ClayForm.CoilPot) * PotView.Size;
+        for (int i = 0; i < dishes.Length; i++)
+        {
+            var root = new Node3D { Position = new Vector3((i - 1) * 0.75f, -0.02f, 0) };
+            AddChild(root);
+            root.AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 0), Scale = Vector3.One * PotView.Size, MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 0) });
+            root.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Under });
+            var liquid = new StandardMaterial3D { AlbedoColor = dishes[i].Item2, Roughness = 0.2f };
+            root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.002f, RadialSegments = 20 }, MaterialOverride = liquid, Position = new Vector3(0, line.Y, 0) });
+            root.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Floaters(dishes[i].Item1, line.X), Position = new Vector3(0, line.Y + 0.002f, 0) });
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.9f, 1.9f), new Vector3(0, 0.15f, 0), Vector3.Up);
     }
 
     // Environment's env-4 props, drawn the way Terrain draws them: a MultiMesh
