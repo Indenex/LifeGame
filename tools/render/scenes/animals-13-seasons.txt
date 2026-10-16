@@ -1,0 +1,20 @@
+# animals-13 (04f4712): the spawn flock through the seasons. Camera = puppet; the render
+# camera frames the nearest sheep from ~8 m. Season and snow are set as the db owner.
+client-as-puppet
+client --rain=0 --render-cam=8,3.5,30,0.4 --render-cam-target=sheep
+wait 35
+# 1. deep winter snow: the flock bunches and stands
+call set_season 0.82
+sql UPDATE season_state SET snow_cover = 1.0
+wait 90
+burst 3 3
+# 2. a clear summer day: spread out and grazing
+call set_season 0.3
+sql UPDATE season_state SET snow_cover = 0.0
+wait 90
+burst 3 3
+# 3. spring with the flock below full size: a lamb beside its mother
+sql DELETE FROM animal WHERE id = (SELECT MIN(id) FROM animal)
+call set_season 0.02
+wait 150
+burst 4 3
