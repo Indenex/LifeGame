@@ -14,10 +14,9 @@ public partial class PotView : Node3D
 
     readonly MeshInstance3D body = new();
     readonly MeshInstance3D water = new();
-    // A soft warm glow on the ground under the piece, so small fresh clay is easy to
-    // find: faint while you are nearby, brighter on the piece G would tend.
-    readonly MeshInstance3D glow = new() { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
-    static StandardMaterial3D? glowFaint, glowNear;
+    // A soft warm rim light on fresh clay, so small pieces are easy to find in the
+    // grass: faint while you are nearby, brighter on the piece G would tend.
+    static ShaderMaterial? glowFaint, glowNear;
     readonly Label3D label = new()
     {
         Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
@@ -45,7 +44,6 @@ public partial class PotView : Node3D
         water.Scale = Vector3.One * Size;
         AddChild(body);
         AddChild(water);
-        AddChild(glow);
         AddChild(label);
     }
 
@@ -56,29 +54,29 @@ public partial class PotView : Node3D
     // 0 hides the glow, 1 is the faint nearby glow, 2 marks the piece G would tend.
     public int Highlight
     {
-        set
-        {
-            glow.Visible = value > 0 && stage != ClayStage.Firing;
-            if (glow.Visible) glow.MaterialOverride = value > 1 ? (glowNear ??= GlowMaterial(0.42f)) : (glowFaint ??= GlowMaterial(0.16f));
-        }
+        set => body.MaterialOverlay = value <= 0 || stage == ClayStage.Firing ? null
+            : value > 1 ? (glowNear ??= Glow(0.4f)) : (glowFaint ??= Glow(0.18f));
     }
 
-    static StandardMaterial3D GlowMaterial(float alpha)
+    static ShaderMaterial Glow(float strength)
     {
-        var gradient = new Gradient();
-        gradient.SetColor(0, new Color(Look.Cream, alpha));
-        gradient.SetColor(1, new Color(Look.Cream, 0f));
-        return new StandardMaterial3D
+        var m = new ShaderMaterial
         {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            AlbedoTexture = new GradientTexture2D
+            Shader = new Shader
             {
-                Gradient = gradient, Fill = GradientTexture2D.FillEnum.Radial,
-                FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(0.5f, 0f), Width = 64, Height = 64,
+                Code = @"shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+uniform vec3 tint;
+uniform float strength;
+void fragment() {
+    float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+    ALBEDO = tint * rim * strength;
+}",
             },
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
         };
+        m.SetShaderParameter("tint", new Vector3(Look.Cream.R, Look.Cream.G, Look.Cream.B));
+        m.SetShaderParameter("strength", strength);
+        return m;
     }
 
     public void Show(ulong potId, ClayForm potForm, ClayStage potStage, FireKind potFire, float potMoisture, double since, float dryRate, bool full = false)
@@ -93,9 +91,6 @@ public partial class PotView : Node3D
         body.Mesh = PotMesh.For(form, id);
         Rotation = new Vector3(0, (id % 97) / 97f * Mathf.Tau, 0);
         label.Position = new Vector3(0, PotMesh.Height(form) * Size + 0.25f, 0);
-        float across = (form switch { ClayForm.CoilPot => 0.128f, ClayForm.Brick => 0.12f, _ => 0.1f }) * Size * 3.2f;
-        glow.Mesh = new PlaneMesh { Size = new Vector2(across, across) };
-        glow.Position = new Vector3(0, 0.025f, 0);
         lastStep = -1;
         Refresh();
 
