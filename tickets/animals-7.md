@@ -21,6 +21,8 @@ Atmosphere counted about 5+ sheep mesh nodes per sheep at spawn. Cut sheep draw 
 ## Progress log
 - 2026-10-16 05:00: written, builds, measured. Daytime screenshot screenshots/animals-09-skinned-sheep.png looks the same as animals-07-day-after.png (before).
 
+- 2026-10-16 05:10: PM fold-in: playtest saw sheep crowd a kiln. AnimalFires.cs now also treats a firing kiln as a fire, measured from its wall (0.8 m out). Pit firings were already covered: they need a fueled Fire, which #69 avoids. Server builds; not live-tested (no kiln in the local world).
+
 ## Open questions / blockers
 - (none)
 
