@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_progress
 Branch: crafting-craft-times
-PR: (not yet)
+PR: #192
 
 ## Goal
 D-092/D-113/D-126: craft times scale. Cheap, simple items are fast; higher tiers and better results take longer; skill shortens them (Journal's linear DurationScale, unchanged), and so does a better tool (D-089).
