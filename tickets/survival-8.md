@@ -16,8 +16,10 @@ D-115: a new character's first 30 minutes online, cold drains at half speed, so 
 ## Progress log
 - 2026-10-16: built server and client per design; look proposed to UX/UI (options A badge [building], B glow on warmth ring, C sprout by the stamina bar). Not compiled locally (no dotnet).
 
+- 2026-10-16: UX/UI agreed look A (badge after the warmth ring, no number per D-107). It already fades with the needs row under panels (it sits in the same panel) and the end note goes through hud.Note.
+
 ## Open questions / blockers
-- UX/UI to confirm the look (session_01V6qgbNbvTwniqW946KACLr).
+- (none)
 
 ## Next step
 After #119 merges: merge main into claude/survival-arrival, open the survival-8 PR, wait for CI, send green sha to the PM, and a render request (badge on a fresh character) to the Render lane.
