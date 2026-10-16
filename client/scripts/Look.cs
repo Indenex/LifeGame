@@ -20,6 +20,11 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Wildflowers in the grass (Environment's undergrowth).
+    public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
+    public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
+    public static readonly Color FlowerViolet = new(0.62f, 0.50f, 0.80f);
+    public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
