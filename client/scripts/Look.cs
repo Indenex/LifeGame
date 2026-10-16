@@ -431,7 +431,7 @@ public static class Look
                 gust = smoothstep(0.2, 1.0, wave);
                 float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
                 float wind = (0.45 + wind_strength * 1.8) * (0.7 + 0.6 * wind_gust);
-                vec3 bend = vec3(0.6, 0.0, 0.8) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
+                vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
                 vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
                 VERTEX.xz += local.xz * tip * tip;
                 VERTEX.y -= gust * 0.06 * tip * tip;
