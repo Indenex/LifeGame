@@ -549,3 +549,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-134 — 2026-10-16 — Snow wets you at half rain's rate
 **Decision:** Falling snow makes you wet at half the rate of rain. Seasons run about +8 °C in summer and −16 °C in winter (winter days near freezing, nights about −8 °C), with Survival's chill still capped.
 **Who:** Justin ("Half as fast as rain", as recommended)
+
+## D-135 — 2026-10-16 — Sheep through the seasons
+**Decision:** Flocks huddle tighter and graze less in snow, and lambs are born only in spring (up to 2 per flock each spring) instead of all year.
+**Who:** Justin ("Behaviour + spring lambing", as recommended)
+
+## D-136 — 2026-10-16 — Milder winter days
+**Decision:** Winter days only cool you; the harsh cold comes at night. Atmosphere and Survival tune the winter day temperature or cold drain so winter days aren't near-freezing all day.
+**Who:** Justin ("Milder winter days"; the PM had recommended keeping it for now)
