@@ -1,0 +1,37 @@
+# bugfix-18 (6f697c9): a dry pot beside a fire, three setups.
+# (a) full ring, fuel ~15 min, sticks in hand: "Pick up the pot"; G bags it, sticks unchanged.
+# (c) fuel under 4 min, no fuel carried: "Pick up the pot".
+# (b) fuel under 4 min, ring not full, sticks in hand: "Feed the fire"; after feeding, "Fire the pot".
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 12 50
+give 5 1 50
+give 102 3 60
+give 111 4 100
+face 0
+craft fire.hand_drill
+wait 2
+firepots
+craft clay.pinch_pot
+sql UPDATE clay_piece SET moisture = 0.0 WHERE fire_id = 0
+wait 3
+burst 3 1.5
+key g
+burst 3 1.5
+# the ring's pots finish after 4 min; the fire drops under 4 min of fuel after ~11
+craft clay.pinch_pot
+sql UPDATE clay_piece SET moisture = 0.0 WHERE fire_id = 0
+wait 700
+# (c) no fuel carried
+sql DELETE FROM inventory_item WHERE item = 1
+wait 3
+burst 3 1.5
+# (b) sticks in hand again
+give 1 6 50
+wait 3
+burst 3 1.5
+feed 1
+feed 1
+wait 3
+burst 3 1.5
