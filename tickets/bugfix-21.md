@@ -1,7 +1,7 @@
 # bugfix-21: loose sticks, stones and fiber spawn under water
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-21
 PR: #179
 
@@ -14,9 +14,10 @@ Found in the PM-requested playtest on env-2 (claude/environment-env-2, 608c712),
 
 ## Progress log
 - 2026-10-16: on a fresh env-2 world, 45 of 768 ground items were under water. With this fix applied to env-2: 0 of 766. Server builds on main.
+- 2026-10-16: CI run https://github.com/Indenex/LifeGame/actions/runs/38955642831 green on 2082cbb; merged as #179.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on the PR, record the run link here, then send the PM the green sha.
+None; merged.
