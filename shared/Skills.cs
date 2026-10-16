@@ -92,6 +92,9 @@ namespace LifeGame.Shared
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
             [Run] = "Running",
+            // D-127 first-evening steps, once Claims and Ceramics report them.
+            ["claim.mark"] = "Planting a claim",
+            ["build.bench"] = "Building a potter's bench",
         };
 
         // Everything the journal counts toward "still to discover".

@@ -11,6 +11,11 @@ namespace LifeGame;
 // is never suggested, so new processes stay quiet until someone writes a line.
 public static class NextSteps
 {
+    // Steps of D-127's first evening that other lanes report: planting a claim marker
+    // (Claims) and building the potter's bench (Ceramics, ceramics-8). Until they report
+    // these ids, both stay quiet and nothing waits on them.
+    const string Claim = "claim.mark", Bench = "build.bench";
+
     // One line per process. {action} becomes that action's key.
     static readonly Dictionary<string, string> Lines = new()
     {
@@ -41,6 +46,8 @@ public static class NextSteps
         ["clay.temper_grit"] = "Clean clay alone cracks in the fire. It needs something worked into it.",
         ["clay.temper_grog"] = "Crushed sherds temper clay even better than grit.",
         ["clay.pinch_pot"] = "Tempered clay can be pinched into a small pot.",
+        [Claim] = "Plant a claim marker away from the clearing, and the land around it is yours to build on.",
+        [Bench] = "A potter's bench in your claim, made from a log and two stones, is where clay is shaped.",
         ["clay.coil_pot"] = "Rolled into coils, tempered clay builds a bigger pot.",
         ["clay.brick"] = "Clay and fiber, pressed into shape and dried, make a brick.",
         ["clay.daub"] = "Clay mixed with fiber makes a plaster for walls.",
@@ -90,6 +97,15 @@ public static class NextSteps
         [Skills.Kill] = new[] { Cutting.Append("lash.spear").ToArray() },
         [Skills.Butcher] = new[] { new[] { Skills.Kill } },
         [Skills.DryHide] = new[] { new[] { "hide.stretch" } },
+        [Claim] = new[] { new[] { Skills.Forage } },
+        [Bench] = new[] { new[] { "chop.log" }, new[] { Claim } },
+    };
+
+    // Crafting jobs that also need a place to work, on top of their ingredients.
+    static readonly Dictionary<string, string[][]> AlsoAfter = new()
+    {
+        ["clay.pinch_pot"] = new[] { new[] { Bench } },
+        ["clay.coil_pot"] = new[] { new[] { Bench } },
     };
 
     // Where things come from when no crafting job makes them.
@@ -113,12 +129,14 @@ public static class NextSteps
         [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
-    // The first evening's road (D-081): fire, food, shelter, then a fired pot.
-    // Hints on it come first; one slot is kept for something off the road.
+    // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone
+    // axe and a log for the potter's bench, then clay to a fired pot. Hints on it come
+    // first; one slot is kept for something off the road.
     static readonly string[] Road =
     {
-        Skills.Forage, "gather.tinder", "fire.hand_drill", Skills.Berries,
-        "build.frame", "build.roof", Skills.Dig, "clay.clean", "clay.grit", "clay.temper_grit",
+        Skills.Forage, "gather.tinder", "fire.hand_drill", Claim, Skills.Berries,
+        "build.frame", "build.roof", "knap.hand_axe", "cord.twist", "lash.stone_axe", "chop.log", Bench,
+        Skills.Dig, "clay.clean", "clay.grit", "clay.temper_grit",
         "clay.pinch_pot", ClayRules.PitFireProcess, ClayRules.FillProcess,
     };
 
@@ -131,7 +149,8 @@ public static class NextSteps
     {
         var have = Reachable(known);
         var order = Skills.AllProcessIds().ToList();
-        var open = order.Where(id => !known.Contains(id) && Lines.ContainsKey(id) && CanTry(id, known, have)).ToList();
+        var exists = order.ToHashSet();
+        var open = order.Where(id => !known.Contains(id) && Lines.ContainsKey(id) && CanTry(id, known, have, exists)).ToList();
         // Steps past the furthest one you've reached come first, so a skipped
         // early step doesn't hide the way on; skipped ones follow.
         int reached = Array.FindLastIndex(Road, known.Contains);
@@ -146,14 +165,21 @@ public static class NextSteps
         return picked;
     }
 
-    static bool CanTry(string id, IReadOnlySet<string> known, HashSet<Item> have)
+    static bool CanTry(string id, IReadOnlySet<string> known, HashSet<Item> have, HashSet<string> exists)
     {
-        if (After.TryGetValue(id, out var groups))
-            return groups.All(g => g.Any(known.Contains));
+        if (After.TryGetValue(id, out var groups)) return Met(groups, known, exists);
         if (Processes.Find(id) is not { } def) return false;
+        if (AlsoAfter.TryGetValue(id, out var also) && !Met(also, known, exists)) return false;
         if (def.NeedsTool != ItemTags.None && !have.Any(i => (Items.Def(i).Tags & def.NeedsTool) != 0)) return false;
         return def.Consumes.All(c => have.Contains(c.Item));
     }
+
+    // Every group needs one of its processes known. Processes the game doesn't have
+    // yet don't count, and a group made only of those is skipped.
+    static bool Met(string[][] groups, IReadOnlySet<string> known, HashSet<string> exists) =>
+        groups.Select(g => g.Where(exists.Contains).ToArray())
+              .Where(g => g.Length > 0)
+              .All(g => g.Any(known.Contains));
 
     // Items you could get hold of: what you know how to make or find, plus anything
     // nothing makes at all, which just lies around.
