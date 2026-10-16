@@ -61,7 +61,7 @@ public partial class CeramicsView : Node
         };
         conn.Db.ClayNews.OnInsert += (_, n) =>
         {
-            if (n.PlayerId == MyId) note(n.Text);
+            if (n.PlayerId == MyId) note(n.Text.Replace("{use}", Controls.KeyFor("use") ?? "G"));
         };
         conn.Db.MyCraftJob.OnDelete += (_, j) =>
         {
@@ -142,7 +142,11 @@ public partial class CeramicsView : Node
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         Use.Register(new UseHandler { Id = "ceramics.tend", Priority = 12, Find = TendOffer });
         Use.Register(new UseHandler { Id = "ceramics.fill", Priority = 11, Find = FillOffer });
+        Use.Register(new UseHandler { Id = "ceramics.pick_up", Priority = 10, Find = PickUpOffer });
     }
+
+    // Fresh clay is small; pieces this close get a faint glow on the ground under them.
+    const float SpotRange = 8f;
 
     public override void _Process(double delta)
     {
@@ -165,7 +169,12 @@ public partial class CeramicsView : Node
         // The G drying line says what the label would, and sits where it would; so
         // while it shows, the floating labels step aside.
         bool promptShowing = Engine.GetProcessFrames() - dryingOfferFrame <= 2;
-        foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst && !promptShowing;
+        foreach (var view in pieces.Values)
+        {
+            view.ShowLabel = view == nearest && !kilnFirst && !promptShowing;
+            float d = new Vector2(view.Position.X - me.Position.X, view.Position.Z - me.Position.Z).Length();
+            view.Highlight = view == nearest && !kilnFirst ? 2 : d < SpotRange ? 1 : 0;
+        }
         foreach (var view in kilns.Values) view.ShowLabel = kilnFirst && view == kiln.view;
     }
 
@@ -260,6 +269,28 @@ public partial class CeramicsView : Node
                     return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
         return null;
     }
+
+    // Fired pots and dry bricks on the ground: G picks them up, as Space does.
+    UseOffer? PickUpOffer(Vector3 me3)
+    {
+        if (conn == null) return null;
+        WorldItem? best = null;
+        float bestD = World.Reach;
+        foreach (var w in conn.Db.WorldItem.Iter())
+        {
+            if (!IsClayGood((Item)w.Item)) continue;
+            float d = new Vector2(w.X - me3.X, w.Z - me3.Z).Length();
+            if (d <= bestD) { best = w; bestD = d; }
+        }
+        if (best == null) return null;
+        ulong id = best.Id;
+        string name = Items.Def((Item)best.Item).Name.ToLowerInvariant();
+        return new UseOffer($"Pick up the {name}", bestD, () => conn.Reducers.PickUp(id),
+            Target: new Vector3(best.X, heightAt(best.X, best.Z), best.Z));
+    }
+
+    static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
+        or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()

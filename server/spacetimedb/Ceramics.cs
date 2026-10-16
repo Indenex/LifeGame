@@ -270,7 +270,7 @@ public static partial class Module
         else
         {
             DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0);
-            News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} came out of the fire whole. It will hold water.");
+            News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} is fired, and whole. {{use}} picks it up.");
         }
     }
 
@@ -406,6 +406,7 @@ public static partial class Module
         });
     }
 
+    // "{use}" in the text becomes the player's Use key on their screen.
     static void News(ReducerContext ctx, uint playerId, string text) =>
         ctx.Db.ClayNews.Insert(new ClayNews { PlayerId = playerId, Text = text });
 
