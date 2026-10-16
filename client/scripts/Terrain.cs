@@ -12,6 +12,8 @@ namespace LifeGame;
 public partial class Terrain : Node3D
 {
     readonly Dictionary<(int, int), Node3D> chunks = new();
+    // Each chunk's node of see-through tree copies, looked up once when it is built.
+    readonly Dictionary<(int, int), Node3D> ghostHolders = new();
     readonly Dictionary<long, short> depths = new();
     readonly HashSet<(int, int)> dirty = new();
     (int, int) center = (int.MinValue, int.MinValue);
@@ -77,6 +79,7 @@ public partial class Terrain : Node3D
                 {
                     chunks[key].QueueFree();
                     chunks.Remove(key);
+                    ghostHolders.Remove(key);
                 }
             foreach (var key in keep)
                 if (!chunks.ContainsKey(key))
@@ -100,6 +103,8 @@ public partial class Terrain : Node3D
             var node = BuildChunk(key.Item1, key.Item2);
             AddChild(node);
             chunks[key] = node;
+            if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
+            else ghostHolders.Remove(key);
         }
 
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
@@ -321,8 +326,60 @@ public partial class Terrain : Node3D
             CastShadow = castShadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
         });
         // Trees in the way of the camera fade; their ghost draws them see-through.
+        // Ghosts sit under one node per chunk so ShowGhosts can switch them off
+        // wherever nothing can be in the way.
         if (Look.GhostOf(material) is { } ghost)
-            root.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        {
+            if (root.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts)
+            {
+                ghosts = new Node3D { Name = GhostsName, Visible = false };
+                root.AddChild(ghosts);
+            }
+            ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+    }
+
+    const string GhostsName = "Ghosts";
+
+    // Only chunks the line from the camera to the player passes near can have a tree
+    // in the way, so only their see-through copies are drawn. Saves three draw calls
+    // for nearly every chunk.
+    public void ShowGhosts(Vector3 camera, Vector3 player)
+    {
+        const float Margin = 6f; // the widest canopy plus the fade's reach
+        int n = World.ChunkSize;
+        var a = new Vector2(camera.X, camera.Z);
+        var b = new Vector2(player.X, player.Z);
+        foreach (var ((cx, cz), ghosts) in ghostHolders)
+        {
+            var min = new Vector2(cx * n - 0.5f - Margin, cz * n - 0.5f - Margin);
+            var max = new Vector2((cx + 1) * n - 0.5f + Margin, (cz + 1) * n - 0.5f + Margin);
+            bool show = SegmentHitsBox(a, b, min, max);
+            if (ghosts.Visible != show) ghosts.Visible = show;
+        }
+    }
+
+    // Liang-Barsky: does the segment from a to b touch the box?
+    static bool SegmentHitsBox(Vector2 a, Vector2 b, Vector2 min, Vector2 max)
+    {
+        float t0 = 0f, t1 = 1f;
+        var d = b - a;
+        for (int axis = 0; axis < 2; axis++)
+        {
+            float p = axis == 0 ? d.X : d.Y, start = axis == 0 ? a.X : a.Y;
+            float lo = axis == 0 ? min.X : min.Y, hi = axis == 0 ? max.X : max.Y;
+            if (Mathf.Abs(p) < 1e-6f)
+            {
+                if (start < lo || start > hi) return false;
+                continue;
+            }
+            float ta = (lo - start) / p, tb = (hi - start) / p;
+            if (ta > tb) (ta, tb) = (tb, ta);
+            t0 = Mathf.Max(t0, ta);
+            t1 = Mathf.Min(t1, tb);
+            if (t0 > t1) return false;
+        }
+        return true;
     }
 
     static void EnsureMeshes()
