@@ -719,3 +719,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-176 — 2026-10-16 — Stalking is a real skill
 **Decision:** The "sneak skill" in D-171 means a real skill. Journal & skills adds Stalking (skills-12). Until it exists, Animals uses Husbandry of at least 20 as a stand-in.
 **Who:** Justin (D-171: "One spear strike kills if your sneak skill is high enough."), read by the PM as a real sneak skill
+
+## D-177 — 2026-10-16 — Skill curve shape and Pace constant (extends D-175)
+**Decision:** The shared skill curve is logarithmic on rank with b=12: benefit at rank 10/25/50/100 is 31/54/76/100%. Today's fast gain stays for testing, but leveling must become much slower later, to OSRS or Retro Dofus level. A single Pace constant will later slow leveling many-fold.
+**Who:** Justin ("Keep things fast for now for testing, but things should be muuuuch slower later. Like, OSRS or Retro Dofus level slow leveling.")
+
+## D-178 — 2026-10-16 — Bow numbers: Standard
+**Decision:** The bow is "Standard": range 40 m, a ±25° auto-aim cone, hit chance 95% falling to 30% with distance, ×0.55 against a running target. A crude bow does about 21 damage per hit; a red deer has 100 HP, so a kill takes 3 to 6 hits (extends D-171).
+**Who:** Justin ("Standard")
