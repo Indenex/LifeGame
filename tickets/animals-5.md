@@ -1,8 +1,8 @@
 # animals-5: Sheep hide scraped and dried into leather
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
-Branch: developed locally as animals-5-local on top of animals-4; goes to claude/animals-sheep-5gkntn once #51 merges
+Status: in_review
+Branch: claude/animals-sheep-5gkntn (restarted from main after #51 merged; developed locally as animals-5-local)
 PR: (after #51)
 
 ## Goal
@@ -26,11 +26,12 @@ A Sheep Hide from butchering becomes Leather the way clay dries: scrape it with 
 - 2026-10-16 01:20: server + client written, builds. Local run: scrape gave Scraped Hide q35, stretch placed a rack (rate 0.0250/s with a TEMP 40 s dry time), TakeLeather gave Leather q35 + 2 sticks and removed the rack. TEMP reverted to 360 s.
 - 2026-10-16 01:45: draped hide mesh; screenshots screenshots/animals-06-hide-racks.png (wet rack in front, dry one behind) and animals-06-hide-racks-wide.png.
 - 2026-10-16 01:50: merged main (via #51's branch, e8a767e). Upgrade check passed.
-
 - 2026-10-16 01:50: switched to the AnimalsOnPlaced hook; local stretch still places a rack.
 
+- 2026-10-16 03:45: #51 merged; branch restarted from main 896e9bd+ with animals-5 merged in; server + client build, upgrade check passed.
+
 ## Open questions / blockers
-- (none) PM answered: hide.* maps to Husbandry for now (Skills lane adds the mapping in their next PR; asked); own PR after #51; used-up cordage is fine.
+- (none) PM answered: hide.* maps to Husbandry for now (Skills lane added it to skills-10); own PR after #51; used-up cordage is fine.
 
 ## Next step
-When #51 merges, fast-forward claude/animals-sheep-5gkntn to animals-5-local merged with main, push, and open the animals-5 PR.
+Wait for CI on the animals-5 PR, then send the PM the green sha.
