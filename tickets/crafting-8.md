@@ -1,7 +1,7 @@
 # crafting-8: Batch items lying on the ground
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: in_review
 Branch: crafting-batch-items
 PR: (not yet)
 
@@ -14,9 +14,10 @@ Items on the ground (sticks, stones, fiber, dropped tools) draw as one MultiMesh
   - Compatibility (`--rendering-method gl_compatibility --rendering-driver opengl3`): draw calls about 2,520 before, 2,210 after; objects 2,730 to 2,340; nodes 5,118 to 4,579.
   - Forward+ (Vulkan): draw calls about 500 either way, since Forward+ already merges identical meshes; objects 2,500 to 2,300.
 - Before and after screenshots from the same spot show the same items in the same places.
+- 2026-10-16 03:55: removal check. A temporary (uncommitted) verifier compared every MultiMesh slot with the tracked items every few seconds while a script deleted half the world_item rows and the server respawned more. Every sample matched (live items = client rows, all slots correct, 0 bad). Picking up goes through conn.Db.WorldItem, not the nodes, so it is unchanged.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Check items vanish correctly when picked up (delete half the world_item rows while the client runs, compare screenshots), then open the PR.
+Wait for CI on the PR, then the PM merges.
