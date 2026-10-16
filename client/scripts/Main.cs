@@ -104,7 +104,7 @@ public partial class Main : Node3D
         AddChild(useKey);
         AddChild(new Hints());
         // First-evening tips for a brand-new player (ui-14, M2).
-        AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId });
+        AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.

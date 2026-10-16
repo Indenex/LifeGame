@@ -14,6 +14,8 @@ public partial class FirstEvening : Node
 {
     public Func<DbConnection?> Conn = () => null;
     public Func<uint> MyId = () => 0;
+    // 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset (Atmosphere); set by Main.
+    public Func<float> TimeOfDay = () => 0.5f;
 
     const float Every = 0.5f;
     float wait = Every;
@@ -27,6 +29,16 @@ public partial class FirstEvening : Node
         if (Conn() is not { } c || MyId() is var me && me == 0) return;
 
         bool litOne = c.Db.Fire.Iter().Any(f => f.LitBy == me);
+
+        // The first and clearest tip (Survival's first-evening test: not knowing how to
+        // make fire is the real risk). It shows once, whichever comes first: you carry
+        // sticks and fiber, or dusk falls and you have no fire.
+        float t = TimeOfDay();
+        bool dusk = t > 0.68f || t < 0.2f;
+        bool makings = Carried(c, Item.Stick) >= 2 && (Carried(c, Item.Fiber) >= 2 || Carried(c, Item.Tinder) >= 1);
+        if (!litOne && (makings || dusk))
+            Tip("fire_how", (!makings && t > 0.68f && t < 0.8f ? "Night is coming. " : "")
+                + $"A fire needs two sticks and some tinder. Plant fiber shreds into tinder. Make both with {Key("craft", "C")}.");
 
         // You carry what a fire needs, and haven't lit one yet.
         if (!litOne && Carried(c, Item.Stick) >= 2 && Carried(c, Item.Tinder) >= 1)
