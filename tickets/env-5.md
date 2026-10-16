@@ -15,7 +15,7 @@ Give players things to steer by and name (D-081, a world to get lost in): deer t
 
 ## Open questions / blockers
 - Justin picked A (via PM) with a condition: repeated landmarks must look quite different every time (no recognisable pre-made copies), and big ones like the giant oak stay rare.
-- Modeling has seeded variants on claude/model-2-env (PR after #197): PropMeshes.Outcrop(int) x6, RiverStone(int) x6, Birch/Heather/Gorse(int) x3 each (counts in PropMeshes.*Variants; any int wraps; one MultiMesh per variant). Rock x4 and FallenLog x2 requested. Wire in once on main: pick variant from the landmark seed, keep per-instance scale/tilt/tint.
+- Modeling has seeded variants on claude/model-2-env (PR after #197): PropMeshes.Outcrop(int) x6, RiverStone(int) x6, Birch/Heather/Gorse(int) x3 each (counts in PropMeshes.*Variants; any int wraps; one MultiMesh per variant). Also Rock(int) x4 and FallenLog(int) x2 (now methods, not properties). One MultiMesh per rock variant: bucket rocks by Hash01 into 4 lists. Wire in once on main: pick variant from the landmark seed, keep per-instance scale/tilt/tint.
 
 ## Next step
 Render requested at dc01ca3 (giant trees (30,12) (11,-40) (-34,57); outcrops (36,61) (-13,80) (79,-29); fords (-46,27) (-47,-13 log) (-42,-53); a trail). Open the PR after #213 merges; bump Terrain.ShowGhosts margin for giant crowns once #223 is on main.
