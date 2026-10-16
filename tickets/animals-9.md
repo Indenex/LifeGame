@@ -20,6 +20,7 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 ## Progress log
 - 2026-10-16 17:30: questions Q3-Q5 and the hook asks sent to the PM; started.
 - 2026-10-16 19:10: D-074/D-075 relayed. Reworked to worn slots: worn_item table, my_worn, Wear/TakeOff, BeforeDeathDrop; numbers lowered to 0.08/0.03 with quality share. Local bot test: carried clothes change nothing; wearing the q35 tunic gives x0.9356 (matches), + wraps x0.9115, a stick is refused, taking the tunic off goes back to wraps only. Upgrade check passed.
+- 2026-10-16 19:45: Modeling built the tunic and foot wraps on claude/model-1-style eb8b399 (client/scripts/models/Garments.cs): worn, ground, icon and held models; Animation wires worn_item to PlayerModel.Wear. Nothing more needed from the server; dye later = a colour per row.
 - 2026-10-16 19:30: Survival reviewed both hooks (OK; after #75 the factor goes on the line ending `* Chill(ctx, v.Wetness)`). UX merged 5cc840a into claude/ux-ui-equip-xlrh2s (1931044), subscribes my_worn in Subscriptions.cs, OK with worn not counting toward carry; wants the animals-9 PR number. Animation will skin garments to the player skeleton and read worn_item once Modeling's PlayerModel and this branch are on main.
 - 2026-10-16 19:20: death drop tested (TEMP TestDie): both worn pieces cleared from worn_item and lie on the ground.
 - 2026-10-16 18:35: merged animals-8's spin minigame branch in.
