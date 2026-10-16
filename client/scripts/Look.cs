@@ -68,6 +68,7 @@ public static class Look
         Add("season_autumn", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("snow_cover", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -241,6 +242,8 @@ public static class Look
         global uniform float season_autumn;
         global uniform float snow_cover;
         global uniform float snowing;
+        // How far through the year it is: 0 spring, 0.25 summer, 0.5 autumn, 0.75 winter.
+        global uniform float season_year;
         const vec3 SNOW = vec3(0.86, 0.89, 0.94);
 
         // How bare broadleaf trees are: bare through winter, leafing out again early
@@ -314,7 +317,7 @@ public static class Look
             varying float shade;
             varying float wet;
             // Environment's season code per instance (INSTANCE_CUSTOM.w): 1 broadleaf
-            // canopy, 2 flower, 0 no seasonal change.
+            // canopy, 2 flower, 3 heather, 0 no seasonal change.
             varying float season_kind;
 
             void vertex() {
@@ -402,6 +405,11 @@ public static class Look
                     vec3 turned = mix(vec3(0.62, 0.42, 0.08), vec3(0.58, 0.16, 0.06), seed);
                     turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
                     color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
+                }
+                // Heather flowers purple through late summer, in speckles over the bush.
+                if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
+                    float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
+                    color = mix(color, vec3(0.55, 0.22, 0.52) * (1.0 + paint * 2.0), bloom * 0.75 * smoothstep(0.3, 0.6, h));
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
