@@ -216,3 +216,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-052 — 2026-10-16 — Carrying too much slows you down
 **Decision:** Over the carrying limit (D-042) you can still pick things up, but you walk slower: easing down to half speed at the overload cap, never slower. This is what survival-3 (#39) already does.
 **Who:** Justin ("Slower walk")
+
+## D-053 — 2026-10-16 — Player fighting: as proposed, and killers are marked
+**Decision:** PvP follows Claims' proposal: left click strikes a player in reach (fists ~12 hits to kill, hand axe ~6); fighting is open in the wild, blocked inside claims unless the owner allows it and within 20 m of spawn; new players are protected for 10 minutes; dying to a player is like any death (drop what you carry, keep skills); one chat line says who struck whom. Added: a killer's name shows red to others for 30 minutes. Being hurt shows as a soft dark-red screen edge instead of a health ring (Claims' change, shown to Justin).
+**Who:** Justin ("Mark killers")
