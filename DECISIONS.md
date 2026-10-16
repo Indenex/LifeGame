@@ -819,3 +819,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-201 — 2026-10-16 — See-through buildings work like Project Zomboid (extends D-168)
 **Decision:** Buildings go see-through the way Project Zomboid does it. Inside a building its roof is hidden entirely, and walls between the camera and you are cut or faded, so the room reads as a cutaway; far walls stay solid. Outside, behind a building, only the blocking walls fade around you; other buildings stay solid. Owner: House building (building-11).
 **Who:** Justin ("It should do it like Project Zomboid does it.")
+
+## D-202 — 2026-10-16 — Fires can be placed where the player wants (Choose the spot)
+**Decision:** The player can put a fire where they want nearby. A placement ghost shows the spot, using the same flow as item placing (crafting-21). Only spots inside a boulder or trunk are refused.
+**Who:** Justin ("You should be able to place fires where you want."), picking "Choose the spot".
+
+## D-203 — 2026-10-16 — Roof clears in a soft circle when you are behind a building (extends D-201)
+**Decision:** When the player is behind a building, seen from outside, its roof also clears in a soft circle around them, in addition to the walls fading. Owner: House building (building-11).
+**Who:** Justin, picking "Soft clear circle".
