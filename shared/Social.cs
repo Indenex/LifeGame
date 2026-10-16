@@ -131,6 +131,15 @@ namespace LifeGame.Shared
         // The process a finished claim marker reports (Journal's "Things to try").
         public const string MarkProcess = "claim.mark";
 
+        // claims-11: the stash log keeps this many entries per claim; the same person
+        // putting in or taking the same thing within a minute folds into one entry.
+        public const int StashLogKeep = 20;
+        public const long StashLogFoldMicros = 60_000_000;
+
+        // "Tam took 2 sticks", "You left a stone".
+        public static string StashLine(string who, ItemDef def, int count) =>
+            $"{who} {(count > 0 ? "left" : "took")} {GiftPhrase(def, (uint)Math.Abs(count))}";
+
         // claims-9: a claim's name, as the owner gave it: trimmed, single-spaced, at
         // most ClaimNameMax characters. Empty means unnamed.
         public const int ClaimNameMax = 28;

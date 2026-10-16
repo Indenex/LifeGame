@@ -49,6 +49,7 @@ public partial class SocialLayer : Node
         hud = overlay;
         avatarOf = avatars;
         panel.Conn = connection;
+        panel.MyId = () => myId;
 
         conn.Db.ChatMessage.OnInsert += (_, m) => OnChat(m);
         conn.Db.Claim.OnInsert += (_, c) => OnClaim(c);
@@ -59,6 +60,9 @@ public partial class SocialLayer : Node
         conn.Db.ClaimName.OnInsert += (_, _) => panel.MarkDirty();
         conn.Db.ClaimName.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.ClaimName.OnDelete += (_, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnInsert += (_, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnUpdate += (_, _, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnDelete += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnInsert += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnDelete += (_, _) => panel.MarkDirty();
@@ -129,7 +133,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
 
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
         if (chunk != chatChunk)
