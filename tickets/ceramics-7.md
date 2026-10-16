@@ -20,7 +20,7 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 - 2026-10-16 18:12: Survival's shape applied (0835adc) and approved by Survival.
 
 ## Open questions / blockers
-- Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): D-098 stations. Proposed all clay basic, jar to a station, cooking stays at the fire; options sent 2026-10-16 18:22. Unchanged meanwhile.
+- Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): D-098 stations. Crafting adopted: all clay basic, storage jar at the Crafting Table, broth/stew at the fire; with the PM for Justin. When Crafting's station framework lands (they ping the sha) and Justin approves, set `Station = StationKind.Table` on clay.storage_jar.
 - Survival agreed broth 45/30, stew 65/30 (option 1) and reviewed/approved the hooks at 0835adc (Needs.EatenFrom, Eat keeps stack quality, weights 4). PM: record the numbers as a D-number; then add it to the Needs.cs comment.
 
 ## Next step
