@@ -18,6 +18,8 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 - 2026-10-16 20:40: #217 merged; merged main into this branch (clean), builds. Opening the PR.
 
+- 2026-10-16 20:35: Justin picked A, campfire light reaches about 14 m at night (10 m by day). Added Atmosphere.Night (0 day to 1 night, updated every frame); Crafting (session_01N9APthjRDfjknUvCweqzzN) adds `light.OmniRange = 10f + 4f * Atmosphere.Night;` in FireView's Campfire._Process after #245 merges.
+
 ## Open questions / blockers
 - (none)
 

@@ -269,6 +269,7 @@ public partial class Atmosphere : Node3D
         // Dawn mist glows with the same light as the fog: warm at sunrise.
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
+        Night = 1f - daylight;
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
@@ -429,6 +430,11 @@ public partial class Atmosphere : Node3D
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
     }
+
+    // How much of night it is, 0 full day to 1 full night, for other lanes that
+    // change with the dark (e.g. campfire light reaching about 14 m at night instead
+    // of 10 m by day, Justin's pick). Updated every frame.
+    public static float Night { get; private set; }
 
     // How bright a campfire burns from moment to moment: a slow breathing as the
     // flames rise and settle, quicker licks over it, and now and then a dip as a
