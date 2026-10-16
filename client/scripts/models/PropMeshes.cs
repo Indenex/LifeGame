@@ -152,6 +152,74 @@ public static class PropMeshes
         }
     }
 
+    // A pine of stacked tiers with jagged, drooping edges, like the reference art
+    // (docs/art-reference, D-232): each tier a ring of points hanging down, a
+    // notch between each, and the underside in shade. Same trunk and height as
+    // Terrain's pine, so it can sit on PropMeshes.Trunk. Prototype for model-4.
+    public static Mesh ScallopPine => scallopPine ??= BuildScallopPine();
+    static Mesh? scallopPine, leafClumps;
+
+    static ArrayMesh BuildScallopPine()
+    {
+        var k = Kit();
+        float[] radii = { 1.35f, 1.1f, 0.85f, 0.55f };
+        for (int t = 0; t < radii.Length; t++)
+        {
+            float bottom = 1.5f + t * 0.72f, top = bottom + 1.3f - t * 0.1f, r = radii[t];
+            int points = 11 - t;
+            var apex = new Vector3(0, top, 0);
+            var under = new Vector3(0, bottom + 0.35f, 0);
+            var rim = new Vector3[points * 2];
+            for (int i = 0; i < points * 2; i++)
+            {
+                float a = (i + H(t, i) * 0.3f) * Mathf.Pi / points + t * 0.7f;
+                bool tip = i % 2 == 0;
+                float rr = tip ? r * (0.95f + H(t, i + 20) * 0.12f) : r * 0.72f;
+                float y = tip ? bottom - 0.12f - H(t, i + 40) * 0.08f : bottom + 0.14f;
+                rim[i] = new Vector3(Mathf.Sin(a) * rr, y, Mathf.Cos(a) * rr);
+            }
+            for (int i = 0; i < rim.Length; i++)
+            {
+                var a = rim[i];
+                var b = rim[(i + 1) % rim.Length];
+                var outward = (((a + b) * 0.5f) with { Y = 0 }).Normalized();
+                k.Paint(Colors.White, 0.96f + 0.04f * t).Tri(apex, a, b, outward + Vector3.Up * 0.6f, outward + Vector3.Up * 0.6f, outward + Vector3.Up * 0.6f);
+                k.Paint(Colors.White, 0.6f).Tri(under, b, a, Vector3.Down, Vector3.Down, Vector3.Down);
+            }
+        }
+        return Done(k);
+    }
+
+    // A broadleaf crown of rounded leaf clumps, each with a jagged lower edge, for
+    // the reference look's leafy trees. Sits on PropMeshes.Trunk (top at 2.8 m).
+    public static Mesh LeafClumps => leafClumps ??= BuildLeafClumps();
+
+    static ArrayMesh BuildLeafClumps()
+    {
+        var k = Kit();
+        void Clump(Vector3 at, float r, int seed)
+        {
+            k.Paint(Colors.White, 0.92f + H(seed, 1) * 0.1f).Ellipsoid(at, new Vector3(r, r * 0.78f, r), 9, 5, new Basis(Vector3.Up, H(seed, 2) * 3f), 0.85f);
+            // A skirt of points round the lower edge.
+            int points = 9;
+            for (int i = 0; i < points; i++)
+            {
+                float a = (i + H(seed, i + 3) * 0.4f) * Mathf.Tau / points;
+                var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                var root = at + dir * r * 0.82f + Vector3.Down * r * 0.15f;
+                var tip = at + dir * r * 1.08f + Vector3.Down * r * (0.42f + H(seed, i + 13) * 0.12f);
+                k.Paint(Colors.White, 0.8f).Blade(root, tip, dir, r * 0.5f, 0f);
+            }
+        }
+        Clump(new Vector3(0, 3.75f, 0), 1.0f, 1);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * Mathf.Tau / 5 + 0.3f;
+            Clump(new Vector3(Mathf.Sin(a) * 0.95f, 3.05f + 0.15f * (i % 2), Mathf.Cos(a) * 0.95f), 0.75f + 0.08f * (i % 3), i + 2);
+        }
+        return Done(k);
+    }
+
     // A cut stump with a pale face and rings, for where trees were felled.
     public static Mesh Stump => stump ??= BuildStump();
 

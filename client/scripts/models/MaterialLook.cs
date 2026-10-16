@@ -9,14 +9,18 @@ namespace LifeGame;
 //   A  32 px painted patterns in a few flat tones, pixel-sharp (Valheim-like).
 //   B  the same patterns at 64 px, smoothly filtered (storybook).
 //   C  B plus a slight tint shift per placed object (variety, D-166).
+//   D  matched to Justin's reference art (docs/art-reference, D-232): light in
+//      2 to 3 crisp bands with blue-violet shade, a soft dark rim at the edges,
+//      painted strokes in 3 tones (scallops on foliage, bark stripes, stone
+//      cracks, grass blades), and the reference palette.
 // Colours still come from the vertex colours and albedo, so palettes stay as they are.
 public static class MaterialLook
 {
-    public enum Variant { Current, A, B, C }
-    public enum Pattern { Plain, Wood, Bark, Stone, Leaves, Straw, Wool, Skin }
+    public enum Variant { Current, A, B, C, D }
+    public enum Pattern { Plain, Wood, Bark, Stone, Leaves, Straw, Wool, Skin, Grass }
 
     static Shader? shader;
-    static readonly Dictionary<(Pattern, int, bool), ImageTexture> textures = new();
+    static readonly Dictionary<(Pattern, int, bool, bool), ImageTexture> textures = new();
     static readonly Dictionary<(Pattern, Variant, Color), ShaderMaterial> materials = new();
 
     // How many times a pattern repeats per metre, how it is stretched along u and v,
@@ -30,6 +34,7 @@ public static class MaterialLook
         Pattern.Straw => (0.8f, new Vector2(1f, 1f), 1f),
         Pattern.Wool => (3.5f, Vector2.One, 0.8f),
         Pattern.Skin => (1.5f, Vector2.One, 0.25f),
+        Pattern.Grass => (1.2f, Vector2.One, 1f),
         _ => (0.6f, Vector2.One, 0.45f),
     };
 
@@ -39,15 +44,23 @@ public static class MaterialLook
         if (materials.TryGetValue((pattern, variant, color), out var done)) return done;
         shader ??= new Shader { Code = Code };
         var (scale, stretch, strength) = Layout(pattern);
-        bool sharp = variant == Variant.A;
+        bool sharp = variant == Variant.A, painted = variant == Variant.D;
+        if (painted)
+        {
+            // The reference palette: stone leans grey-violet, foliage olive.
+            if (pattern == Pattern.Stone) color *= new Color(0.92f, 0.9f, 1.08f);
+            if (pattern == Pattern.Leaves) color *= new Color(1.0f, 1.0f, 0.78f);
+            if (pattern == Pattern.Leaves) (scale, stretch) = (0.8f, Vector2.One);
+        }
         var material = new ShaderMaterial { Shader = shader };
         material.SetShaderParameter("albedo", color);
-        material.SetShaderParameter(sharp ? "tex_sharp" : "tex_soft", Texture(pattern, sharp ? 32 : 64, sharp));
+        material.SetShaderParameter(sharp ? "tex_sharp" : "tex_soft", Texture(pattern, sharp ? 32 : 64, sharp || painted, painted));
         material.SetShaderParameter("sharp", sharp);
         material.SetShaderParameter("scale", scale);
         material.SetShaderParameter("stretch", stretch);
         material.SetShaderParameter("strength", strength);
-        material.SetShaderParameter("vary", variant == Variant.C ? 0.18f : 0f);
+        material.SetShaderParameter("vary", variant is Variant.C or Variant.D ? 0.18f : 0f);
+        material.SetShaderParameter("banded", painted);
         materials[(pattern, variant, color)] = material;
         return material;
     }
@@ -70,20 +83,20 @@ public static class MaterialLook
 
     // --- Painted textures: a grey value per texel (0 dark, 1 light), tiling.
 
-    static ImageTexture Texture(Pattern p, int n, bool tones)
+    static ImageTexture Texture(Pattern p, int n, bool tones, bool painted)
     {
-        if (textures.TryGetValue((p, n, tones), out var done)) return done;
+        if (textures.TryGetValue((p, n, tones, painted), out var done)) return done;
         var image = Image.CreateEmpty(n, n, true, Image.Format.L8);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
             {
-                float v = Mathf.Clamp(Value(p, (x + 0.5f) / n, (y + 0.5f) / n), 0f, 1f);
+                float v = Mathf.Clamp(painted ? Painted(p, (x + 0.5f) / n, (y + 0.5f) / n) : Value(p, (x + 0.5f) / n, (y + 0.5f) / n), 0f, 1f);
                 // A few flat tones, like paint laid down in strokes.
-                if (tones) v = Mathf.Round(v * 3f) / 3f;
+                if (tones) v = painted ? Mathf.Round(v * 2f) / 2f : Mathf.Round(v * 3f) / 3f;
                 image.SetPixel(x, y, new Color(v, v, v));
             }
         image.GenerateMipmaps();
-        return textures[(p, n, tones)] = ImageTexture.CreateFromImage(image);
+        return textures[(p, n, tones, painted)] = ImageTexture.CreateFromImage(image);
     }
 
     // Value noise on a lattice that wraps every `period` cells, so textures tile.
@@ -183,6 +196,86 @@ public static class MaterialLook
         }
     }
 
+    // Variant D's strokes, after the reference art: three tones (dark 0, mid 0.5,
+    // light 1) with crisp edges.
+    static float Painted(Pattern p, float u, float v)
+    {
+        switch (p)
+        {
+            case Pattern.Leaves:
+            {
+                // Rows of downward points: light at the tips, mid above, dark in the
+                // shade under the row above.
+                float row = Mathf.Floor(v * 4f);
+                float fu = Mathf.PosMod(u * 5f + row * 0.5f + MeshKit.Hash((int)row, 80) * 0.3f, 1f);
+                float fv = Mathf.PosMod(v * 4f, 1f);
+                float edge = 0.32f * Mathf.Abs(2f * fu - 1f) + 0.05f * MeshKit.Hash((int)(u * 5f), (int)row + 81);
+                if (fv < edge) return 0f;
+                float t = (fv - edge) / (1f - edge);
+                return t < 0.45f ? 1f : t < 0.8f ? 0.5f : 0f;
+            }
+            case Pattern.Bark:
+            {
+                // Long vertical stripes: mid bark, narrow dark furrows, a light edge
+                // beside each.
+                float f = Mathf.PosMod(u * 6f + Noise(u * 6, v * 2, 6, 4) * 0.35f, 1f);
+                return f < 0.16f ? 0f : f < 0.32f ? 1f : 0.5f;
+            }
+            case Pattern.Stone:
+            {
+                // Big soft planes: light on the upper part of each cell, a dark crack
+                // between cells.
+                const int cells = 2;
+                float best = 9f, second = 9f;
+                Vector2 centre = Vector2.Zero;
+                for (int i = -1; i <= cells; i++)
+                    for (int j = -1; j <= cells; j++)
+                    {
+                        int wi = ((i % cells) + cells) % cells, wj = ((j % cells) + cells) % cells;
+                        var c = new Vector2((i + MeshKit.Hash(wi, wj + 40)) / cells, (j + MeshKit.Hash(wi + 7, wj + 41)) / cells);
+                        float d = c.DistanceTo(new Vector2(u, v));
+                        if (d < best) { second = best; best = d; centre = c; }
+                        else if (d < second) second = d;
+                    }
+                if (second - best < 0.025f) return 0f;
+                return v > centre.Y + 0.05f ? 1f : 0.5f;
+            }
+            case Pattern.Wood:
+            {
+                float wave = Noise(u * 3, v * 4, 3, 1) * 0.6f;
+                float f = Mathf.PosMod(v * 4f + wave, 1f);
+                return f < 0.1f ? 0f : f < 0.25f ? 1f : 0.5f;
+            }
+            case Pattern.Grass:
+            {
+                // Short blades scattered over mid green: light blades, dark roots.
+                float best = 0.5f;
+                for (int k = 0; k < 14; k++)
+                {
+                    var c = new Vector2(MeshKit.Hash(k, 90), MeshKit.Hash(k, 91));
+                    for (int ox = -1; ox <= 1; ox++)
+                        for (int oy = -1; oy <= 1; oy++)
+                        {
+                            float du = u - c.X - ox, dv = v - c.Y - oy;
+                            float lean = (MeshKit.Hash(k, 92) - 0.5f) * 0.6f;
+                            float x = du - dv * lean;
+                            if (dv > 0f && dv < 0.16f && Mathf.Abs(x) < 0.025f * (1f - dv / 0.16f)) best = 1f;
+                            else if (dv <= 0f && dv > -0.02f && Mathf.Abs(du) < 0.03f) best = Mathf.Min(best, 0f);
+                        }
+                }
+                return best;
+            }
+            case Pattern.Straw:
+            {
+                float column = Mathf.Floor(u * 16f);
+                float f = Mathf.PosMod(u * 16f, 1f);
+                return f < 0.2f ? 0f : MeshKit.Hash((int)column, 60) > 0.6f ? 1f : 0.5f;
+            }
+            default:
+                return Mathf.Clamp(Value(p, u, v), 0f, 1f);
+        }
+    }
+
     const string Code = """
         shader_type spatial;
         render_mode cull_disabled;
@@ -195,6 +288,9 @@ public static class MaterialLook
         uniform vec2 stretch = vec2(1.0);
         uniform float strength = 1.0;
         uniform float vary = 0.0;
+        // Variant D: light in crisp bands, shade leaning blue-violet, dark rims.
+        uniform bool banded = false;
+        uniform vec3 shade_tint : source_color = vec3(0.55, 0.52, 0.82);
 
         varying vec3 tint;
         varying vec3 obj;
@@ -228,8 +324,25 @@ public static class MaterialLook
             w /= (w.x + w.y + w.z);
             float t = paint(obj.zy) * w.x + paint(obj.xz) * w.y + paint(obj.xy) * w.z;
             ALBEDO = clamp(tint * mix(1.0, mix(0.55, 1.2, t), strength), 0.0, 1.0);
+            if (banded) {
+                // A soft dark line round each shape's silhouette.
+                float rim = 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+                ALBEDO *= mix(1.0, 0.62, smoothstep(0.62, 0.86, rim));
+            }
             ROUGHNESS = 0.92;
-            SPECULAR = 0.2;
+            SPECULAR = banded ? 0.0 : 0.2;
+        }
+
+        void light() {
+            float l = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
+            if (banded) {
+                // Shade, mid and lit, with crisp edges; the shade band leans violet.
+                float lit = 0.35 * smoothstep(0.06, 0.1, l) + 0.65 * smoothstep(0.42, 0.47, l);
+                vec3 tone = mix(shade_tint, vec3(1.0), smoothstep(0.06, 0.1, l));
+                DIFFUSE_LIGHT += LIGHT_COLOR * tone * (0.18 + 0.82 * lit) / PI;
+            } else {
+                DIFFUSE_LIGHT += LIGHT_COLOR * l / PI;
+            }
         }
         """;
 }

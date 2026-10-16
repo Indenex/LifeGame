@@ -375,10 +375,11 @@ public partial class Showcase : Node3D
     {
         var variant = args.GetValueOrDefault("look", "A") switch
         {
-            "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, _ => MaterialLook.Variant.A,
+            "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, "D" => MaterialLook.Variant.D, _ => MaterialLook.Variant.A,
         };
         string time = args.GetValueOrDefault("time", "golden");
         bool now = variant == MaterialLook.Variant.Current;
+        bool d = variant == MaterialLook.Variant.D;
 
         Material Pick(Material original, MaterialLook.Pattern? pattern = null, Color? color = null)
         {
@@ -415,12 +416,12 @@ public partial class Showcase : Node3D
         foreach (var (x, z, s) in new[] { (-6.5f, -3.5f, 1.1f), (-8.5f, -0.5f, 0.9f), (-5f, -7.5f, 1.25f) })
         {
             Place(PropMeshes.Trunk, bark, new Vector3(x, 0, z), x, s);
-            Place(pine, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Pine), new Vector3(x, 0, z), x, s);
+            Place(d ? PropMeshes.ScallopPine : pine, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Pine), new Vector3(x, 0, z), x, s);
         }
         foreach (var (x, z, s) in new[] { (6.5f, -3f, 1.1f), (8.5f, 0.5f, 0.95f), (5.5f, -8f, 1.2f) })
         {
             Place(PropMeshes.Trunk, bark, new Vector3(x, 0, z), z, s);
-            Place(leafy, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Leaf), new Vector3(x, 0, z), z, s);
+            Place(d ? PropMeshes.LeafClumps : leafy, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Leaf), new Vector3(x, 0, z), z, s);
         }
         var rock = Pick(Look.RockSurface, MaterialLook.Pattern.Stone, Look.Rock);
         Place(PropMeshes.Rock(0), rock, new Vector3(-3f, 0, 1.2f), 0.4f, 1.1f);
@@ -449,7 +450,7 @@ public partial class Showcase : Node3D
         // Ground: today's grass, or the painted plain pattern in grass colour.
         foreach (var child in GetChildren())
             if (child is MeshInstance3D { Mesh: PlaneMesh } ground && !now)
-                ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
+                ground.MaterialOverride = d ? MaterialLook.For(MaterialLook.Pattern.Grass, variant, new Color(0.5f, 0.62f, 0.27f)) : MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
 
         // Light for the time of day.
         foreach (var child in GetChildren())
