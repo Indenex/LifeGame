@@ -176,6 +176,19 @@ Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != nu
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
+// claims-12: a fence near the border snaps onto it, both ends on the circle.
+{
+    bool ok = true;
+    foreach (var (px, pz) in new[] { (19.4f, 0.6f), (-3f, 20.8f), (13f, -14.5f) })
+    {
+        var (fx, fz, yaw) = Social.SnapToClaimBorder(100f, 50f, 100f + px, 50f + pz);
+        var (e1, e2) = Structures.FenceEnds(fx, fz, yaw);
+        foreach (var (ex, ez) in new[] { e1, e2 })
+            ok &= MathF.Abs(MathF.Sqrt((ex - 100f) * (ex - 100f) + (ez - 50f) * (ez - 50f)) - Social.ClaimRadius) < 0.05f;
+    }
+    Check(ok && Social.NearClaimBorder(0, 0, 19f, 0) && !Social.NearClaimBorder(0, 0, 10f, 0), "a fence near the border snaps onto it");
+}
+
 // claims-10: whisper and shout.
 Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
     && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
@@ -331,11 +344,21 @@ b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // A member may lay out a building on the claim.
+// The land is hilly now, so the first spot may be too steep or wet: try spots round the claim's
+// middle until the server accepts one. Any other refusal (rights, reach) still fails the check.
 float hx = claim.X + 6, hz = claim.Z + 5;
-Walk(b, hx - 2, hz);
-b.LastError = null;
-b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
-Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+for (int ring = 0, tries = 0; ring < 3 && tries < 20; ring++)
+    for (int k = 0; k < 8; k++, tries++)
+    {
+        float r = 6f + 4f * ring, ang = MathF.Tau * k / 8f + 0.6f;
+        hx = claim.X + MathF.Cos(ang) * r;
+        hz = claim.Z + MathF.Sin(ang) * r;
+        Walk(b, hx - 2, hz);
+        b.LastError = null;
+        b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
+        Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+        if (b.LastError == null || !(b.LastError.Contains("steep") || b.LastError.Contains("wet"))) { ring = 99; break; }
+    }
 var hut = b.Conn.Db.Structure.Iter().FirstOrDefault(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity);
 Check(hut != null, $"member B can lay out a building in the claim ({b.LastError ?? "ok"})");
 

@@ -3,7 +3,7 @@ Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
 Status: in_review
 Branch: claude/claims-10-voice
-PR: (not yet)
+PR: https://github.com/Indenex/LifeGame/pull/191
 
 ## Goal
 Chat gets two more voices (PM, D-145; the runner-up Justin saw for claims-9).
@@ -15,6 +15,7 @@ Chat gets two more voices (PM, D-145; the runner-up Justin saw for claims-9).
 - The chat hint and KEYMAP list the commands.
 
 ## Progress log
+- 2026-10-16 19:56: handoff (D-159: the lane moves to a Sonnet session). PR open; CI run https://github.com/Indenex/LifeGame/actions/runs/38956660542 in progress at handoff (both client jobs green, server job running). Head is on claude/claims-10-voice. This copy of the ticket is updated on claude/claims-12-fences; the PR branch's copy says "PR: (not yet)", which was left alone to avoid restarting CI.
 - 2026-10-16 19:45: #174 merged; merged main in. Opening the PR.
 - 2026-10-16 19:40: built.
   - Shared: `Social.Voice`, `VoiceOf`, `VoiceBody`, `RangeOf`, `WhisperRange` 4, `ShoutRange` 60, and `ChatDim(distance, range)`.
@@ -32,4 +33,4 @@ Chat gets two more voices (PM, D-145; the runner-up Justin saw for claims-9).
 - (none)
 
 ## Next step
-Wait for CI on the claims-10 PR; when it's green, send the head sha to the PM.
+Watch CI on PR #191 (head 3e9614e; run linked above). When it is green, send the PM the head sha for the merge (D-119). If it is red, fix it on claude/claims-10-voice, then merge that branch into claude/claims-11-stash-log and claude/claims-12-fences.
