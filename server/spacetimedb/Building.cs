@@ -11,8 +11,9 @@ public enum StructureKind
     Kiln,
     Basket,
     BrickHouse,
+    StorageJar,
     CraftingTable,
-    // Animals stations (D-098, animals-11); numbers allocated by House building.
+    // Animals stations (D-098, animals-11); numbered by merge order: always at the end.
     SpindleStation,
     DryingRack,
 }

@@ -270,6 +270,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // Too big for a campfire: it is fired in a kiln (ceramics-6).
+                Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
+                Seconds = 16, Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
                 Id = "clay.brick", Name = "Mold a brick", Doing = "Molding a brick", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Fiber) },
                 Seconds = 5, Outcome = Outcome.Placed,

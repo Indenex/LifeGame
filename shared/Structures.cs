@@ -88,6 +88,19 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
+            // Fired clay doesn't rot, so it weathers only after two weeks untouched.
+            new StructureShape
+            {
+                Name = "Storage jar",
+                Round = true, Radius = 0.32f,
+                Clearance = 0.6f,
+                Solid = true,
+                // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
+                StoreStacks = JarStacksMax,
+                WeatherAfter = 336,
+                Stages = new[] { "Set the jar" },
+            },
             // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
             new StructureShape
             {
@@ -162,12 +175,17 @@ namespace LifeGame.Shared
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
             },
+            // Storage jar (Ceramics): set down one kiln-fired jar
+            new[]
+            {
+                new[] { (Item.StorageJar, 1u) },
+            },
             // Crafting table (D-112): Table
             new[]
             {
                 new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
-            // Spindle station: your drop spindle becomes part of it (Q10 a, pending Justin)
+            // Spindle station: your drop spindle becomes part of it (D-137)
             new[]
             {
                 new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
@@ -199,6 +217,21 @@ namespace LifeGame.Shared
         public const float ClosedDoorWarmth = 0.9f;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
+        // Stacks a storage jar holds (ceramics-6, D-093): 4 for a poor jar up to 8 for
+        // a fine one. The first 15% of quality gives 40% of the gain, so an early,
+        // better-made jar is quickly worth it; then it climbs slowly (D-075).
+        public const int JarStacksMin = 4, JarStacksMax = 8;
+
+        public static int JarStacks(byte quality)
+        {
+            float t = Math.Clamp(quality / 100f, 0f, 1f);
+            float curve = t < 0.15f ? t / 0.15f * 0.4f : 0.4f + (t - 0.15f) / 0.85f * 0.6f;
+            return JarStacksMin + (int)MathF.Round((JarStacksMax - JarStacksMin) * curve);
+        }
+
+        // Stacks a finished store of this kind and quality holds.
+        public static int StoreStacksFor(int kind, byte quality) =>
+            kind == ClayRules.JarStructureKind ? JarStacks(quality) : Shape(kind).StoreStacks;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.

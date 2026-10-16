@@ -558,3 +558,31 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Decision:** Winter days only cool you; the harsh cold comes at night. Atmosphere and Survival tune the winter day temperature or cold drain so winter days aren't near-freezing all day.
 **Who:** Justin ("Milder winter days"; the PM had recommended keeping it for now)
 **Final values (2026-10-16):** Mid-winter is about 12.6 °C at clear noon (chill about 1.16x), 10 °C overcast, 6 °C in rain and wind, and about −8.6 °C at night (at the 2x cap). Snow falls mostly at night and lasts into the afternoon.
+
+## D-137 — 2026-10-16 — Spindle station
+**Decision:** One wool station, a distaff stand with a log stool, built from your drop spindle + 4 sticks + 2 cordage + 1 stone. Both spinning (D-070 minigame) and weaving happen there.
+**Who:** Justin ("One wool station", as recommended)
+
+## D-138 — 2026-10-16 — Leather drying rack
+**Decision:** A frame of two forked posts and a crossbar holding up to 3 hides; you scrape and stretch at it. It costs 6 sticks + 2 cordage, and existing racks keep drying where they stand.
+**Who:** Justin ("Frame holding 3 hides", as recommended)
+
+## D-139 — 2026-10-16 — Foot wraps wait for the rack (amends D-128)
+**Decision:** The leather foot wraps (and with them the worn slots) ship once, already made at the Leather drying rack, not first as a hand craft.
+**Who:** Justin ("Hold for the rack"; the PM had recommended shipping now)
+
+## D-140 — 2026-10-16 — Name your camp
+**Decision:** A claim's owner can name the claim in the claim panel; walking in shows the name softly for a moment ("Mira's camp" by default), and the land chip uses it.
+**Who:** Justin ("Name your camp", as recommended)
+
+## D-141 — 2026-10-16 — Forest light ships before the screenshots
+**Decision:** atmosphere-13 (sun shafts and dappled light through the canopy, #136) merges without Justin having seen it; it gets tuned afterwards from the Render shots.
+**Who:** Justin ("Merge now, tune later"; the PM had recommended waiting for the pictures)
+
+## D-142 — 2026-10-16 — Renders never block merges
+**Decision:** A PR that is green and matches decisions merges without waiting for Render shots or for Justin to see them. Renders still get made and shown to Justin afterwards, and any changes he asks for come as follow-up PRs. Wipes still need his confirmation of the date (D-129).
+**Who:** Justin ("Don't hold up merges waiting on rendering, they can go in before I see them, but the work should continue and be logged correctly")
+
+## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
+**Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
+**Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
