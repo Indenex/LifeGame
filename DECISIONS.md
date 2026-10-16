@@ -863,3 +863,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-212 — 2026-10-16 — Rain sounds like natural steady rain
 **Decision:** Rain must sound like natural, steady rain (hiss and patter), with no bouncy, pulsing or creature-like element. The bouncy part is taken out. Owner: Audio (#291).
 **Who:** Justin ("I don't like the weird bouncy animal sound of the rain in general, I just want it to sound like normal rain. can that part be taken out?")
+
+## D-213 — 2026-10-16 — Ceramics next: roof tiles; Justin wipes his world manually on build 980
+**Decision:** Ceramics' next feature is roof tiles ("Roof tiles"), not slip decoration. Separately, Justin is wiping his world manually on build 980, because the launcher's wipe confirm is broken; the Release lane is fixing it.
+**Who:** Justin, picking "Roof tiles".
