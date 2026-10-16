@@ -13,6 +13,8 @@ Option A of three sent to the PM 2026-10-16 (recommended; the default until the 
 
 - 2026-10-16: pushed dc26f57. Atmosphere.ApplyLight: shafts = woods (Woodedness eased over 3 s) x lowSun (smoothstep 0.02-0.12 sun height, gone by 0.3-0.55) x fair ((1-overcast)^2 x (1 - 2*rain)); volumetric fog density x(1 + 1.6 shafts), anisotropy 0.6 + 0.25 shafts, sun fog energy + 1.4 shafts. Client builds; not seen yet (no Godot in this container). Render requested dc26f57 (before 47a151d / after, woods -44,-46 at 0.27, 0.35, 0.5, 0.72 fair; 0.3 overcast; meadow 0.3). Compatibility fallback not done: wait for the shots and Justin first.
 
+- 2026-10-16: agreed a split with Environment (session_012hVejTxLoxBpZyX3GQmNL9): they own Terrain.cs, client/scripts/environment/, shore dressing and forest-floor tint, and add Forest.Density, switching Atmosphere.Woodedness to call it in their PR. I own light, sky, weather, the water surface shader and the ghost-fade shader code. Added global wind_dir (vec2, (0.6, 0.8), the direction the clouds already drift) for their foliage, b6e6528. Audio lane took atmosphere-12 (merged 68392c7 into claude/audio-1-work-sounds); merging main into #66 is fine, but don't edit audio code.
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
