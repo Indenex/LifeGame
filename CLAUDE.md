@@ -15,7 +15,7 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
-- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default. Never idle (D-145): when your ticket is done or waiting on CI or a merge, pick the next most useful item for your lane from the milestones (`STATUS.md`, D-081) or the design docs, start it, and tell the PM what you picked. Design choices Justin would notice go to the PM as options while you work on the recommended one.
 - **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. The PM executes merges, and lanes send green shas to the PM (D-119). Integration prepares merge-readiness.
 - **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
 - **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
@@ -37,6 +37,7 @@ Whenever the PM or any worker has an idea (a feature, a look, a number, a differ
 
 - **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
 - **Fun first, some realism (D-081).** Survival is light: needs nudge players along, never punish; no death spirals. Aesthetics and a world to get lost in come first; everything a player makes should look real on the ground, in hand and in the inventory.
+- **Crafted things are not chores (D-148).** Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Check new features against this.
 - **Lanes never edit `STATUS.md` on their branches.** Send STATUS changes to the PM.
 
 ## The no-handoff rule
