@@ -24,6 +24,7 @@ public partial class NeedsHud : CanvasLayer
     readonly Label deathTitle = new();
     readonly Label deathLine = new();
     float frostAmount;
+    PanelContainer? gaugePanel;
 
     public NeedsHud()
     {
@@ -47,7 +48,7 @@ public partial class NeedsHud : CanvasLayer
         gauges.AddChild(warmth);
         // The load ring only fades in when you near your carrying limit.
         gauges.AddChild(load);
-        var gaugePanel = Hud.Panel(gauges, Vector2.Zero);
+        gaugePanel = Hud.Panel(gauges, Vector2.Zero);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
@@ -95,6 +96,9 @@ public partial class NeedsHud : CanvasLayer
         loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
 
+    // True while the death card covers the screen, so nothing offers itself over it.
+    public bool Mourning => fade.Color.A > 0.02f;
+
     public void ShowDeath(string cause)
     {
         deathTitle.Text = cause switch
@@ -117,6 +121,12 @@ public partial class NeedsHud : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // The rings fade out while a panel (journal, claims, menu) covers the world.
+        if (gaugePanel != null)
+        {
+            float shown = Panels.Open() ? 0f : 1f;
+            gaugePanel.Modulate = new Color(1, 1, 1, Mathf.MoveToward(gaugePanel.Modulate.A, shown, (float)delta * 4f));
+        }
         float a = Mathf.MoveToward(load.Modulate.A, loadAlpha, (float)delta * 2f);
         load.Modulate = new Color(1, 1, 1, a);
         load.Visible = a > 0.01f;

@@ -64,6 +64,9 @@ public partial class Herd : Node3D
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
         Strike.Register("animals.animal", OfferStrike);
+        var racks = new HideRacks();
+        AddChild(racks);
+        racks.Bind(conn, terrain);
     }
 
     const float BoltHintRange = 10f;

@@ -148,6 +148,7 @@ public partial class ClaimPanel : CanvasLayer
         standing.Text = StandsFor(claim);
         content.AddChild(standing);
         content.AddChild(Button("Tend the marker", () => Conn.Reducers.TendClaim(claim.Id)));
+        content.AddChild(Note("Working on the land keeps it tended too."));
 
         if (owner)
         {
@@ -231,16 +232,9 @@ public partial class ClaimPanel : CanvasLayer
         return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
     }
 
-    static string StandsFor(Claim claim)
-    {
-        long left = (claim.ExpiresAt.MicrosecondsSinceUnixEpoch - SocialLayer.NowMicros) / 1_000_000;
-        if (left <= 0) return "The marker is falling.";
-        var span = TimeSpan.FromSeconds(left);
-        string time = span.TotalDays >= 1 ? $"{(int)span.TotalDays} d {span.Hours} h"
-            : span.TotalHours >= 1 ? $"{span.Hours} h {span.Minutes} min"
-            : span.TotalMinutes >= 1 ? $"{span.Minutes} min {span.Seconds} s" : $"{span.Seconds} s";
-        return $"Stands for {time} unless tended";
-    }
+    // claims-5: "Tended 2 days ago · stands 1 more day".
+    static string StandsFor(Claim claim) =>
+        Social.TendedLine(claim.TendedAt.MicrosecondsSinceUnixEpoch, claim.ExpiresAt.MicrosecondsSinceUnixEpoch, SocialLayer.NowMicros);
 
     static Label Heading(string text, int size)
     {
