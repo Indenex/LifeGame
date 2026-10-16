@@ -28,7 +28,8 @@ public partial class OptionsPage : Control
     readonly HSlider[] sliders = new HSlider[Levels.Length];
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
-    Button distantLand = null!;
+    HSlider view = null!;
+    Label viewName = null!;
 
     public override void _Ready()
     {
@@ -86,20 +87,20 @@ public partial class OptionsPage : Control
         var graphics = new Label { Text = "Graphics", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(graphics, 15, 0.6f);
         column.AddChild(graphics);
-        distantLand = ControlsPage.TextButton(DistantLandText(), () =>
+        // Four steps, Short to Very far; the name shows beside the slider.
+        view = ControlsPage.SliderRow(column, "View distance", 0, ViewDistance.Names.Length - 1, 1, (int)ViewDistance.Setting, v =>
         {
-            ViewDistance.Setting = (ViewDistance.Level)(((int)ViewDistance.Setting + 1) % ViewDistance.Names.Length);
-            distantLand.Text = DistantLandText();
+            ViewDistance.Setting = (ViewDistance.Level)(int)v;
+            viewName.Text = ViewDistance.Names[(int)v];
         });
-        distantLand.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-        column.AddChild(distantLand);
+        viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
+        Hud.Soft(viewName, 16, 0.7f);
+        view.GetParent().AddChild(viewName);
 
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);
     }
-
-    static string DistantLandText() => $"View distance: {ViewDistance.Names[(int)ViewDistance.Setting]}";
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
@@ -111,6 +112,8 @@ public partial class OptionsPage : Control
             sliders[i].SetValueNoSignal(v);
             percents[i].Text = Percent(v);
         }
+        view.SetValueNoSignal((int)ViewDistance.Setting);
+        viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
         Visible = true;
     }
 
