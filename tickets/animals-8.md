@@ -1,7 +1,7 @@
 # animals-8: Wool spun into yarn and woven into cloth
 Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
-Status: in_progress
+Status: in_review
 Branch: claude/animals-wool-cloth-5gkntn (from main after #76 merged; rebuild was needed because the first animals-8 local branch was lost with an old container)
 PR: (to open)
 
@@ -19,9 +19,10 @@ Raw wool from shearing becomes cloth with plain tier-2 crafting: make a drop spi
 
 ## Progress log
 - 2026-10-16: PR #76 (animals-7) green on 93043c5, sha sent to the PM. Started animals-8; items and processes written. Installing .NET + SpacetimeDB in this container to build.
+- 2026-10-16 17:10: #76 merged (a5e5b1e); merged main in. Server + client build. Local bot test (scratch WoolCheck with a TEMP give-wool reducer, not committed): flake -> drop spindle q35, 4x spin -> 4 yarn q36-37, weave -> 1 wool cloth q38, spindle kept, no yarn left. Upgrade check against main passed.
 
 ## Open questions / blockers
 - Sent to the PM (D-059 options): spinning feel (no minigame [default] / reuse Drill rhythm / new Spin minigame); skill (Toolmaking via cord/weave prefixes [default] / Husbandry / new Weaver spec).
 
 ## Next step
-Build server + client locally (server: `spacetimedb-cli build`; `tools/gen-bindings.sh`; client `dotnet build`), then run CraftCheck-style local test of spin and weave, commit and push.
+Wait for CI on the animals-8 PR, then send the PM the green sha; then start animals-9 (clothing from wool cloth and leather).
