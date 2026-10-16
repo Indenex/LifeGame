@@ -857,5 +857,5 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("Drop the line")
 
 ## D-211 — 2026-10-16 — Storms are seasonal
-**Decision:** Storm frequency follows the season: summer about 1 front in 45, spring and autumn about 1 in 50, winter about 1 in 150. The PM's message did not state the unit of "1 in N".
+**Decision:** Storm frequency follows the season. About 1 in 45 weather fronts becomes a thunderstorm in summer, 1 in 50 in spring and autumn, and 1 in 150 in winter.
 **Who:** Justin, picking "Seasonal".
