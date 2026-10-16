@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_review
 Branch: crafting-batch-items
-PR: (not yet)
+PR: #62
 
 ## Goal
 Items on the ground (sticks, stones, fiber, dropped tools) draw as one MultiMesh per item type per 32 m patch instead of one MeshInstance3D each, cutting draw calls in the Compatibility (OpenGL) renderer. Nothing looks different and picking up still works.
