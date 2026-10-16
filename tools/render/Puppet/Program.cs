@@ -9,6 +9,8 @@
 //   near 3            walk to 3 m from the camera player
 //   away 20           walk straight away from the camera player until 20 m off
 //   goto x z          walk to a point
+//   front 2           walk to 2 m in front of the camera player, as the game camera
+//                     first looks (yaw 45 deg: forward is -x, -z), and face them
 //   stroll dx dz      start walking dx, dz metres from here and go on to the next
 //                     step at once (to snap mid-stride); "arrive" waits for it
 //   say hello there   send a chat line ("/me waves" works too)
@@ -180,6 +182,13 @@ bool Step(string line)
             float dx = x - ax, dz = z - az, d = MathF.Sqrt(dx * dx + dz * dz);
             if (d < 0.1f) { dx = 1; dz = 0; d = 1; }
             WalkTo(ax + dx / d * want, az + dz / d * want);
+            break;
+        }
+        case "front":
+        {
+            float d = float.Parse(rest, System.Globalization.CultureInfo.InvariantCulture);
+            var (ax, az) = Target();
+            WalkTo(ax - 0.7071f * d, az - 0.7071f * d);
             break;
         }
         case "goto":
