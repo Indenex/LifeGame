@@ -598,3 +598,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-146 — 2026-10-16 — Streams are wadeable
 **Decision:** Streams are shallow enough to walk across (bed at water level minus 0.25 m; you get wet quickly per D-062); ponds stay deep. Every part of the land must be reachable on foot from spawn and from respawn points.
 **Who:** Justin ("Wade across", as recommended), after Bug fixes found env-2's stream blocked all crossing
+
+## D-147 — 2026-10-16 — Clay oil lamp
+**Decision:** ceramics-9 is a clay oil lamp, pinched at the Potter's bench and pit-fired, fuelled with tallow (1 tallow per 2 raw mutton, rendered at a fire), with a warm glow about 4 m across. Each tallow lasts 30 minutes (3x the proposed 10), and lamps refill automatically from tallow in nearby chests and storage.
+**Who:** Justin ("1, but lamp lights should auto-pull from chests if there's tallow in them, make them last 3* as long too")
+
+## D-148 — 2026-10-16 — Crafted things are not chores
+**Decision:** A design principle. Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Lanes check new features against this.
+**Who:** Justin ("I don't want things to feel 'chorish'. Once something is crafted it shouldn't become just one more thing to take care of all the time.")
