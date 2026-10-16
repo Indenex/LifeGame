@@ -8,8 +8,10 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    // Warmth per second from standing right by a fire at full strength.
-    const float FireHeat = 1f / 30f;
+    // Warmth per second from standing right by a fire at full strength: a basic
+    // campfire warms you from frozen to full in about a minute (Justin, D-103).
+    // Later hearths can be faster.
+    const float FireHeat = 1f / 60f;
 
     [SpacetimeDB.Table(Accessor = "Vitals")]
     public partial struct Vitals
@@ -42,6 +44,15 @@ public static partial class Module
         public float Wetness;
         [Default(0f)]
         public float WetnessRate;
+        // Until when (microseconds since the epoch) a good meal lets you run longer (D-111).
+        [Default(0L)]
+        public long WellFedUntil;
+        // A new character's first half hour online (D-115): seconds left at AsOf,
+        // and -1 while online, 0 while offline or once it has run out.
+        [Default(0f)]
+        public float ArrivalLeft;
+        [Default(0f)]
+        public float ArrivalRate;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -105,13 +116,14 @@ public static partial class Module
             AsOf = ctx.Timestamp,
             LastDeath = "",
             DiedAt = ctx.Timestamp,
+            ArrivalLeft = Needs.ArrivalSeconds,
         }, pos, online: true));
     }
 
     static void SurvivalDisconnected(ReducerContext ctx, Player player)
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
-            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 });
+            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 });
         ctx.Db.Drenched.PlayerId.Delete(player.PlayerId);
     }
 
@@ -137,6 +149,9 @@ public static partial class Module
         {
             Food = Math.Min(1f, v.Food + food),
             Water = Math.Min(1f, v.Water + water),
+            WellFedUntil = Needs.GoodMeal((Item)item)
+                ? ctx.Timestamp.MicrosecondsSinceUnixEpoch + Stamina.WellFedMicros
+                : v.WellFedUntil,
         });
     }
 
@@ -172,6 +187,29 @@ public static partial class Module
         RemoveFromStack(ctx, stack, 1);
         AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
+    }
+
+    // When each player last reported a stretch of running (Endurance, D-123).
+    [SpacetimeDB.Table(Accessor = "RunReport")]
+    public partial struct RunReport
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public Timestamp At;
+    }
+
+    // The client ran for Stamina.RunPerUse seconds: train Endurance. Reports closer
+    // together than a stretch could take are ignored, so a client can't speed it up.
+    [SpacetimeDB.Reducer]
+    public static void Ran(ReducerContext ctx)
+    {
+        var player = RequirePlayer(ctx);
+        var last = ctx.Db.RunReport.PlayerId.Find(player.PlayerId);
+        if (last is { } r && SecondsBetween(r.At, ctx.Timestamp) < Stamina.RunPerUse * 0.9f) return;
+        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp };
+        if (last is null) ctx.Db.RunReport.Insert(row);
+        else ctx.Db.RunReport.PlayerId.Update(row);
+        OnProcessPerformed(ctx, player.PlayerId, Stamina.RunProcess, Items.RawQuality, false);
     }
 
     [SpacetimeDB.Reducer]
@@ -214,7 +252,8 @@ public static partial class Module
             var next = WithSurroundings(ctx, now, pos, online: true);
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
-                || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f)
+                || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f
+                || next.ArrivalRate != v.ArrivalRate)
                 ctx.Db.Vitals.PlayerId.Update(next);
             ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
@@ -285,6 +324,8 @@ public static partial class Module
             Water = Needs.RespawnWater,
             Warmth = Needs.RespawnWarmth,
             Wetness = 0,
+            WellFedUntil = 0,
+            ArrivalLeft = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,
@@ -341,6 +382,7 @@ public static partial class Module
             Water = Needs.At(v.Water, v.WaterRate, s),
             Warmth = Needs.At(v.Warmth, v.WarmthRate, s),
             Wetness = Needs.At(v.Wetness, v.WetnessRate, s),
+            ArrivalLeft = Math.Max(0f, v.ArrivalLeft + v.ArrivalRate * s),
             AsOf = ctx.Timestamp,
         };
     }
@@ -349,22 +391,36 @@ public static partial class Module
     static Vitals WithSurroundings(ReducerContext ctx, Vitals v, PlayerPos pos, bool online)
     {
         if (!online)
-            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 };
+            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 };
         float heat = HeatAt(ctx, pos.X, pos.Z);
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, v.Wetness);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, v.Wetness)
+            * (v.ArrivalLeft > 0f ? Needs.ArrivalChill : 1f);
         return v with
         {
-            WetnessRate = Needs.WetnessRate(CurrentWeather(ctx).Rain, rainCover, wet, heat > 0),
+            WetnessRate = Needs.WetnessRate(Precipitation(ctx), rainCover, wet, heat > 0),
             FoodRate = -Needs.FoodDrain,
             WaterRate = -Needs.WaterDrain,
             WarmthRate = heat - cold,
+            ArrivalRate = v.ArrivalLeft > 0f ? -1f : 0f,
             NearHeat = heat > 0,
             Wet = wet,
         };
     }
+
+    // What wets you from the sky, 0 to 1: rain, plus falling snow at half its
+    // rate (Justin, D-134). Shelter's rain cover blocks both alike.
+    static float Precipitation(ReducerContext ctx)
+    {
+        float snow = 0;
+        SnowfallAt(ctx, ref snow);
+        return Math.Clamp(CurrentWeather(ctx).Rain + Needs.SnowWetting * snow, 0f, 1f);
+    }
+
+    // Seasons: Atmosphere implements this with Module.Snowfall (0..1, falling now).
+    static partial void SnowfallAt(ReducerContext ctx, ref float snow);
 
     // Crafted fires: Crafting implements this with Module.WarmthAt, setting warmth
     // to 0..1 for the strongest burning fire near (x, z).
@@ -378,16 +434,15 @@ public static partial class Module
         return warmth * FireHeat;
     }
 
-    // How much faster the cold bites than on a mild day: 1x at 15 °C, rising to
-    // 2x at 0 °C and below; rain adds half again unless you are under cover.
     // How much harder the cold bites: down to freezing it doubles, and being
-    // soaked adds half again (rain itself only matters by making you wet).
+    // soaked adds half again (rain itself only matters by making you wet). The
+    // two together never pass Needs.MaxChill (D-099), so no weather kills fast.
     static float Chill(ReducerContext ctx, float wetness)
     {
         float celsius = AirTemperature(ctx);
         float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
         float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
-        return cold * wet;
+        return Math.Min(cold * wet, Needs.MaxChill);
     }
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open

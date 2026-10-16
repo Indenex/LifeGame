@@ -21,6 +21,8 @@ public static class ClayItemLook
             Item.CoilPotOfWater => Pot(ClayForm.CoilPot, ClayStage.Fired, true),
             Item.UnfiredPinchPot => Pot(ClayForm.PinchPot, ClayStage.Drying, false),
             Item.UnfiredCoilPot => Pot(ClayForm.CoilPot, ClayStage.Drying, false),
+            Item.StorageJar => Jar(ClayStage.Fired),
+            Item.UnfiredStorageJar => Jar(ClayStage.Drying),
             Item.Brick => Baked(PotMesh.For(ClayForm.Brick, 1), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 1), PotView.Size),
             Item.Potsherd => Sherd(),
             // Each stage of clay has its own shape, so they tell apart at a glance in
@@ -54,6 +56,10 @@ public static class ClayItemLook
         }
         return mesh;
     }
+
+    // A jar on the ground is kiln-fired, so it takes the kiln's darker red.
+    static Mesh Jar(ClayStage stage) =>
+        Baked(PotMesh.For(ClayForm.StorageJar, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
 
     // A copy of a mesh, scaled, with its material baked in, since ground items
     // are drawn without a material override.

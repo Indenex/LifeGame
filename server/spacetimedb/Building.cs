@@ -11,6 +11,7 @@ public enum StructureKind
     Kiln,
     Basket,
     BrickHouse,
+    StorageJar,
 }
 
 // One material a structure's current stage still needs.

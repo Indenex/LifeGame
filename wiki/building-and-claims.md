@@ -5,13 +5,15 @@ Open the build menu (B) and place a blueprint, a see-through outline of the buil
 
 A lean-to is the simplest shelter. Larger buildings need more and better materials, and give more protection from cold and rain.
 
+Inside a finished shelter you have a right to (you placed it, helped build it, or belong to its claim), you can lay a sleeping mat. After you die, you respawn on it. You can have one mat at a time; laying a new one rolls up the old one. If the building is taken down or weathers away, the mat no longer works as a respawn point.
+
 Some structures, such as the kiln, are also built from the build menu rather than crafted.
 
 ## Doors
 Doors can be hung, opened and shut with Use. Anyone can open an unbarred door. The player who hung a door, or any member of the claim it stands in, can bar it (Shift+G); a barred door opens only for them.
 
 ## Storage
-Storage baskets hold items. Outside a claim, anyone can take from a basket. Inside a claim, only members can.
+Storage baskets hold items. A storage jar is a larger store made from clay; it is too big for an open fire and must be fired in a kiln. A better-made jar holds more. Outside a claim, anyone can take from a basket. Inside a claim, only members can.
 
 ## Claims
 A claim marker, placed from the build menu, claims an area of land. Each player can own one claim. You cannot claim land close to the spawn area.

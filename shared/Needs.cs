@@ -40,6 +40,9 @@ namespace LifeGame.Shared
         // down to 0 °C, and rain adds half again unless you are under cover.
         public const float MildCelsius = 15f;
         public const float RainChill = 0.5f;
+        // Cold and wet together bite at most this much harder than a mild dry day
+        // (Justin, D-099): about 8 minutes from warm to frozen at worst, away from fire.
+        public const float MaxChill = 2f;
 
         // Getting wet (survival-5). Wetness runs from 0 (dry) to 1 (soaked). Full
         // rain soaks you in two minutes and wading in about ten seconds; you dry
@@ -50,6 +53,13 @@ namespace LifeGame.Shared
         public const float WadeWetting = 1f / 10f;
         public const float Drying = 1f / 300f;
         public const float FireDrying = 2f;
+        // Falling snow wets you at half rain's rate (Justin, D-134).
+        public const float SnowWetting = 0.5f;
+
+        // A new arrival (D-115): a new character's first half hour online, the cold
+        // drains at half speed, so a winter start isn't a race. Not after a death.
+        public const float ArrivalSeconds = 30 * 60;
+        public const float ArrivalChill = 0.5f;
 
         // How fast wetness changes: rain under the sky (0 to 1, less any cover),
         // standing in water, and whether a fire is near.
@@ -85,6 +95,10 @@ namespace LifeGame.Shared
         };
 
         public static bool Edible(Item item) => Nourishment(item).food > 0f;
+
+        // A cooked meal, which lets you run longer for a while (D-111). Berries and
+        // burnt food don't count.
+        public static bool GoodMeal(Item item) => item is Item.CookedMutton;
 
         // Which of the foods you carry to eat at this hunger: the most filling one
         // that doesn't waste much, or else the smallest, so a roast isn't spent on a
