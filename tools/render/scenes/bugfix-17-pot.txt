@@ -1,0 +1,21 @@
+# bugfix-17 (PR #99): after a pit firing, G picks up the fired pot instead of feeding
+# the fire. Run on the fix and on main for the before shot. Camera = puppet.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+# sticks (2 for the drill, 6 carried), a tinder bundle, a dry pinch pot (quality 100: 4% crack)
+give 1 8 50
+give 5 1 50
+give 111 1 100
+face 0
+craft fire.hand_drill
+wait 2
+firepots
+burst 1 1
+# the firing takes 240 s
+wait 250
+# facing the fire with the fired pot on its ring: the G prompt
+face 0
+burst 4 1.5
+key g
+burst 4 1.5

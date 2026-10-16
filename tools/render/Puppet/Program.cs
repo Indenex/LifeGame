@@ -21,6 +21,8 @@
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
+//   face 0            turn to that heading in degrees (0 = +z); fires are lit 1.2 m ahead
+//   firepots          set every unfired pot I carry into the fire I lit
 //   mouse 660 850     move the mouse there in the camera client's window (tooltips)
 //   frames 300 / frames +72   (movie scenes) wait until the camera client has
 //                     written that many frames (or that many more)
@@ -58,7 +60,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job" });
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire" });
     })
     .OnConnectError(e => { Console.WriteLine($"puppet: connect error {e.Message}"); Environment.Exit(1); })
     .Build();
@@ -238,6 +240,18 @@ foreach (var line in steps)
         case "mark":
             Console.WriteLine($"puppet: mark {rest} frame={Frames()}");
             break;
+        case "face":
+            conn.Reducers.Move(x, z, float.Parse(rest, System.Globalization.CultureInfo.InvariantCulture) * MathF.PI / 180f);
+            Pump(0.5);
+            break;
+        case "firepots":
+        {
+            var fire = conn.Db.Fire.Iter().LastOrDefault(f => f.LitBy == myId);
+            if (fire == null) { Console.WriteLine("puppet: server said no fire of mine"); break; }
+            conn.Reducers.FirePots(fire.Id);
+            Pump(1.0);
+            break;
+        }
         case "mouse":
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
             Pump(0.3);
