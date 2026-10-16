@@ -1,9 +1,9 @@
 # claims-12: Claim fences
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules lane (handed to a new Sonnet session 2026-10-16, D-159; previous session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-12-fences (stacked on claude/claims-11-stash-log; merge after #196)
-PR: (not yet)
+PR: #300
 
 ## Goal
 Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim with House building's fences (Fence and Gate StructureKinds, #153); the gate keeps outsiders out. Claims owns the claim side:
