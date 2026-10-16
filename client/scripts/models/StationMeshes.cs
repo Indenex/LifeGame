@@ -190,7 +190,7 @@ public static class StationMeshes
     public static List<StructureModel.Piece> Distaff()
     {
         var list = new List<StructureModel.Piece>();
-        StructureModel.Site(list, Corners(0.5f, 0.3f));
+        StructureModel.Site(list, Corners(0.6f, 0.4f));
         var k = new Kit();
         var foot = new Vector3(-0.25f, 0, -0.15f);
         var top = foot + new Vector3(0.05f, 1.3f, 0.06f);
@@ -221,12 +221,34 @@ public static class StationMeshes
         var stool = new Vector3(0.3f, 0, 0.25f);
         k.Wood.Paint(Bark, 0.85f).Loft(stool, stool + Vector3.Up * 0.38f, new MeshKit.Ring[] { new(0f, 0.18f, 0.17f), new(1f, 0.16f, 0.16f) }, 8, 0.02f);
         k.Wood.Paint(EndGrain).Ellipsoid(stool + Vector3.Up * 0.383f, new Vector3(0.145f, 0.006f, 0.145f), 8, 2);
-        var basket = new Vector3(0.35f, 0, -0.25f);
+        var basket = new Vector3(0.5f, 0, -0.02f);
         k.Plant.Paint(Weave()).Loft(basket, basket + Vector3.Up * 0.16f, new MeshKit.Ring[] { new(0f, 0.11f, 0.11f), new(1f, 0.15f, 0.15f) }, 9, 0.02f);
         for (int i = 0; i < 5; i++)
         {
             float a = i * 2.4f;
             k.Plant.Paint(Fleece, 0.95f + H(i, 16) * 0.08f).Ellipsoid(basket + new Vector3(Mathf.Cos(a) * 0.06f, 0.16f, Mathf.Sin(a) * 0.06f), new Vector3(0.06f, 0.035f, 0.035f), 6, 3, new Basis(Vector3.Up, a));
+        }
+        // A small weaving frame of four lashed sticks leaning at the back, the
+        // cloth half woven, the warp still bare above it.
+        var frameFoot = new Vector3(0.12f, 0, -0.32f);
+        var up = new Vector3(0, Mathf.Cos(0.3f), -Mathf.Sin(0.3f));
+        foreach (float x in new[] { -0.27f, 0.27f })
+            k.Wood.Paint(Bark, 0.9f).Tube(new[] { frameFoot + new Vector3(x, 0, 0), frameFoot + new Vector3(x, 0, 0) + up * 0.88f }, 0.014f, 5);
+        foreach (float t in new[] { 0.1f, 0.8f })
+        {
+            var at = frameFoot + up * t;
+            k.Wood.Paint(Bark, 0.85f).Tube(new[] { at + new Vector3(-0.33f, 0, 0.012f), at + new Vector3(0.33f, 0, 0.012f) }, 0.012f, 5);
+            foreach (float x in new[] { -0.27f, 0.27f })
+                Lash(k.Plant, at + new Vector3(x, 0, 0.006f), Vector3.Right, 0.02f, 2f);
+        }
+        k.Plain.Paint(Yarn, 0.95f).Loft(frameFoot + up * 0.11f + new Vector3(0, 0, 0.012f), frameFoot + up * 0.45f + new Vector3(0, 0, 0.012f), new MeshKit.Ring[]
+        {
+            new(0f, 0.25f, 0.006f), new(1f, 0.25f, 0.006f),
+        }, 4, 0f, 0f);
+        for (int i = 0; i < 9; i++)
+        {
+            float x = -0.24f + i * 0.06f;
+            k.Plain.Paint(Yarn, 0.9f).Tube(new[] { frameFoot + up * 0.45f + new Vector3(x, 0, 0.012f), frameFoot + up * 0.8f + new Vector3(x, 0, 0.012f) }, 0.0025f, 3);
         }
         k.AddTo(list, 0);
         return list;
