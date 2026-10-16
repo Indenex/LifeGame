@@ -1,6 +1,6 @@
 # claims-12: Claim fences
 Lane: Claims, chat and PvP rules
-Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
+Owner: Claims, chat and PvP rules lane (handed to a new Sonnet session 2026-10-16, D-159; previous session session_013ECn821EbTpbj4h7d3PepH)
 Status: in_progress
 Branch: claude/claims-12-fences (stacked on claude/claims-11-stash-log; merge after #196)
 PR: (not yet)
@@ -12,6 +12,13 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - what happens to fences when a claim lapses.
 
 ## Progress log
+- 2026-10-16 19:56: handoff.
+  - Done so far on this branch:
+    - `Social.SnapToClaimBorder` and `NearClaimBorder`, with a SocialTest check;
+    - `server/spacetimedb/ClaimFences.cs`, which holds `ClaimGateAllows` (members only on claimed land). The GateOpenHook implementation is written there but commented out, until House building's declaration exists.
+  - Waiting on House building's building-9 PR sha with the two hook declarations.
+  - Waiting on Justin (via the PM) for Q2 to Q4.
+  - The lane's other work: PR #191 (claims-10) and PR #196 (claims-11, merge after #191). See their tickets.
 - 2026-10-16 20:20: the lived-in marker (the earlier claims-12 default) is dropped; its code is parked on `claude/claims-12-lived-marker` at 5294de1.
   - Correction from House building: the client already stops players at finished fences and shut gates (BuildingSystem.Collide). The server doesn't enforce player walls at all, and that's out of scope. So Q1 is dropped.
   - Sent the PM 4 questions for Justin (below) and proposed a file split to House building.
@@ -33,4 +40,10 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - From House building: the building-9 sha with the two hook declarations.
 
 ## Next step
-When House building sends the building-9 sha: merge it locally, write ClaimFences.cs (GateOpenHook) and BuildingSystem.ClaimFences.cs (SnapFenceHook), and add SocialTest checks (an outsider can't open a claim gate; a member can).
+When House building sends the building-9 sha with `GateOpenHook` and `SnapFenceHook`:
+1. Merge it into this branch.
+2. Uncomment GateOpenHook in ClaimFences.cs.
+3. Add `client/scripts/social/BuildingSystem.ClaimFences.cs` (a `public partial class BuildingSystem` implementing SnapFenceHook). It should call Social.SnapToClaimBorder when the target is NearClaimBorder of a claim the player has rights in, then set done = true.
+4. Add SocialTest checks: an outsider can't open a claim gate; a member can.
+5. Build, test, push.
+Then ask House building to make barring a claim gate members-only in their CanLock, if Justin keeps Q2a.
