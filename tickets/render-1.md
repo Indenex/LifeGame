@@ -76,6 +76,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 23:00: PM priority: #172 new player figure and item models on main 71f7c7c: close-ups, item row on the ground + hotbar icons (scene model-172-items.txt), walking clip; queued right after env-2. audio-2c seasons clip sent (addcf73). claims-10 queued.
 - 2026-10-16 23:05: env-2 sent (ffea990; straight-edged water flagged). Modeling request 4: model-2 427d0cb replaces the eb8b399 style job (all 12 Showcase views), queued after atmosphere-16.
 - 2026-10-16 23:10: new: animals-13 seasonal sheep 04f4712 (Animals): scene animals-13-seasons.txt (owner `call set_season`, SQL snow_cover; lamb attempt after deleting one sheep).
+- 2026-10-16 23:20: anim-2 1eec5b4 (new figure + animation) replaces the queued anim-1 movies (side incl. run, turn, work; no axe chop). env-2 reshoot at 0abbc0c running. animals-13 queued.
 
 ## Open questions / blockers
 - (none)
