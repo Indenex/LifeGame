@@ -58,6 +58,8 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
                 "SELECT * FROM lamp",
+                "SELECT * FROM animal",
+                "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree",
@@ -471,8 +473,9 @@ int LampCheck()
         conn.Disconnect();
         return 0;
     }
-    Log($"Waiting for 2 raw mutton in the inventory of {me}");
-    Pump(() => CountOf(Item.RawMutton) >= 2, 300, "raw mutton");
+    // Hunt a sheep for its mutton (Animals: a spear and a quiet approach), unless a
+    // debug hook already put some in the bag.
+    if (CountOf(Item.RawMutton) < 2) HuntMutton();
     WalkTo(waterX, waterZ, 1.5f);
     if (CountOf(Item.CoilPotOfWater) == 0)
     {
@@ -504,6 +507,57 @@ int LampCheck()
     Log("Lamp check passed: tallow rendered, and a fired lamp set down and lit");
     conn.Disconnect();
     return 0;
+}
+
+// Raw mutton the way a player gets it (ceramics-9): lash a spear, sneak up on the
+// nearest sheep, strike until it falls, butcher it with the stone axe and pick up the
+// cuts. Sheep never bolt from a player who moves in short steps.
+void HuntMutton()
+{
+    if (CountOf(Item.Spear) == 0)
+    {
+        if (CountOf(Item.Stone) < 1) Gather(Item.Stone, 1);
+        if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 1);
+        if (CountOf(Item.Fiber) < 3 && CountOf(Item.Cordage) < 1) Gather(Item.Fiber, 3);
+        Craft("knap.flake", 0.95f, Item.Flake);
+        if (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, Item.Cordage);
+        Craft("lash.spear", 0, Item.Spear);
+    }
+    var sheep = conn.Db.Animal.Iter().OrderBy(a => DistanceTo(a.X, a.Z, x, z)).FirstOrDefault();
+    if (sheep == null) Fail("no sheep to hunt in this world");
+    ulong id = sheep!.Id;
+    Log($"Hunting sheep {id}, {DistanceTo(sheep.X, sheep.Z, x, z):0} m away");
+    var clock = Stopwatch.StartNew();
+    while (conn.Db.AnimalCarcass.Iter().All(c => c.AnimalId != id))
+    {
+        if (clock.Elapsed > TimeSpan.FromMinutes(4)) Fail("could not bring the sheep down");
+        var a = conn.Db.Animal.Id.Find(id);
+        if (a == null) Fail("the sheep vanished without a carcass");
+        while (DistanceTo(a!.X, a.Z, x, z) > 2.0f)
+        {
+            // Short steps, so the sheep isn't startled.
+            float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            x += dx / d * 0.15f;
+            z += dz / d * 0.15f;
+            conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
+            Pump(() => false, 0.1f, null);
+            a = conn.Db.Animal.Id.Find(id);
+            if (a == null) break;
+        }
+        if (a == null) continue;
+        lastError = null;
+        conn.Reducers.StrikeAnimal(id);
+        Pump(() => false, 1.1f, null);
+        if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
+    }
+    var carcass = conn.Db.AnimalCarcass.Iter().First(c => c.AnimalId == id);
+    WalkTo(carcass.X, carcass.Z, 1.5f);
+    lastError = null;
+    conn.Reducers.ButcherCarcass(carcass.Id);
+    Pump(() => lastError != null || CountOf(Item.RawMutton) >= 2 || conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)Item.RawMutton) >= 3, 5, "the butchering");
+    if (lastError != null) Fail($"butchering: {lastError}");
+    Gather(Item.RawMutton, 2);
+    Log("STAGE mutton-hunted");
 }
 
 int PotCheck()
