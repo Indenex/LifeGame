@@ -85,11 +85,21 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        // Trading face to face (ui-9, D-069).
+        var trade = new TradeWindow
+        {
+            Players = () => others.Where(kv => kv.Value.Visible).Select(kv => (kv.Key, names.GetValueOrDefault(kv.Key, "Wanderer"), kv.Value.Position)),
+            Me = () => me.Position,
+            Dead = () => survival.Mourning,
+            Note = hud.Note,
+        };
+        AddChild(trade);
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
-            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true
+            || trade.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));

@@ -11,8 +11,10 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 ## Progress log
 - 2026-10-16 17:16: assigned by the PM. Started the branch from ui-8 (6dd68f5).
 
+- 2026-10-16 17:45: window built against a mock. `ui/Trade.cs` holds `ITradeLink` (the contract the window needs) and `MockTradeLink` (Mara). `ui/TradeWindow.cs` draws the window: both offers side by side, item pictures, an Accept button, green borders and ticks when a side accepts, an amber "The offer changed, so both accepts were cleared" line, a carry-limit warning from `Carry.Of`, and Esc, walking 5 m apart or death to call it off. G on a player within 2.5 m asks; the asked player sees "Mara wants to trade    Esc says no" above the G prompt, and G says yes. Main has a small hook (players, Me, Dead, Panels.Open). Until claims-7 lands, G on a player only does anything with `--mock-trade` or `--screenshot-trade`. Previews: `--screenshot-trade`, `=asked`, `=accepted`, `=changed`. Client builds with 0 errors.
+
 ## Open questions / blockers
 - Server contract from Claims (claims-7) not received yet; building against a mock meanwhile.
 
 ## Next step
-Build the trade window against a mock trade model in client/scripts/ui/, then send Render a mockup request.
+Send Render the mockup request for the pushed sha; when Claims sends the claims-7 contract, write a real ITradeLink over the bindings.
