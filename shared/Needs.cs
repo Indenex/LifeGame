@@ -32,7 +32,7 @@ namespace LifeGame.Shared
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
-        // Cooked in a pot (ceramics-7, agreed by Survival and Ceramics): better than
+        // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than
         // the same food eaten raw or roasted, and it quenches some thirst too.
         public const float BrothFood = 0.45f, BrothWater = 0.3f;
         public const float StewFood = 0.65f, StewWater = 0.3f;
