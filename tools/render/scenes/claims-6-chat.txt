@@ -1,0 +1,25 @@
+# claims-6 (PR #71): stacked bubbles, /me, dimmer far chat. Camera = A, puppet = B.
+# The camera client shows things 2-4 s late in software rendering, so each beat
+# takes a burst of snaps; keep the best.
+client --time-of-day=0.45 --rain=0 --cloud=0.2
+name B
+find
+wait 30
+near 3
+wait 4
+# 1. three lines: older ones higher and dimmer
+say hello
+wait 1.5
+say nice fire
+wait 1.5
+say want some clay?
+burst 8 0.8
+# 2. /me: slanted bubble over B, "B waves" in italics in A's log
+wait 3
+say /me waves
+burst 7 0.8
+# 3. far line dimmer in A's log than the close lines above it
+away 20
+wait 2
+say can you hear me?
+burst 7 0.8

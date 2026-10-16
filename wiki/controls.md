@@ -8,7 +8,7 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 |---|---|
 | W A S D | Walk |
 | Q / E, or hold right mouse and drag | Turn the view |
-| Hold Shift | Sneak (walk slowly) |
+| Hold Ctrl | Sneak (walk slowly) |
 | Space | Pick up |
 | F | Dig |
 | G | **Use**: act on what you are facing (the prompt shows what it will do) |
@@ -20,7 +20,7 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 | K | Claim panel |
 | Enter | Chat |
 | Left click or Z | Strike |
-| Hold Ctrl when starting a craft | Play the minigame even when your skill lets you skip it |
+| Hold Ctrl when starting a craft in the crafting panel | Play the minigame even when your skill lets you skip it |
 | M | Music on or off |
 | Esc | Menu |
 

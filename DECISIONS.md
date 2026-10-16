@@ -409,3 +409,79 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
 **Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
 **Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
+
+## D-100 — 2026-10-16 — First clothes, worn weight, carry limit, run speed
+**Decision:** Wool tunic takes 10% off the cold drain and leather foot wraps 4% (14% together at best quality, scaling with quality). Worn clothes do not count toward the carry load. Carry limit: 20 bare, basket +10 (30). Running is 5.6 m/s (walking stays 4.2).
+**Who:** Justin (tunic and wraps "10% / 4%"; the PM had recommended 8%/3%. Worn weight "No", carry "20 / +10", run "5.6 m/s", which the PM recommended)
+
+## D-101 — 2026-10-16 — Stamina shown as a bar; running is free; food unchanged
+**Decision:** Stamina shows as a small bar under your character, only while not full. Running costs no food or water. Food values stay: berries 12% each, roast mutton 40%, burnt 10%. Stamina duration and refill are set from researched "carrot on a stick" progression curves (see `docs/PROGRESSION.md`, being written), which all lanes then use as the base for number suggestions.
+**Who:** Justin ("Small bar under your character"; the PM had recommended an arc by the rings. "No"; "Keep as is". Stamina: "Research common logarithms for fun/invested 'carrot on a stick' values and use them for suggestion bases.")
+
+## D-102 — 2026-10-16 — Scribe lane keeps the decision log
+**Decision:** A Sonnet Scribe lane (session_01He77u9z8pt5DtP7it3NMAQ) records Justin's decisions in `DECISIONS.md` and applies the `STATUS.md` changes the PM sends, merging its own docs-only PRs. The PM keeps asking Justin and relaying decisions to the lanes.
+**Who:** Justin ("pass decision logging work off to a dedicated sonnet worker, and keep my questions coming")
+
+## D-103 — 2026-10-16 — Campfire warms in 60 s
+**Decision:** A basic campfire takes about 60 s to warm you from frozen to full (was 30 s). Later hearths and stone-ringed fires can be faster.
+**Who:** Justin ("60 s"; the PM had recommended keeping 30 s)
+
+## D-104 — 2026-10-16 — Chopping trains Foraging
+**Decision:** Chopping logs (`chop.log`) trains Foraging.
+**Who:** Justin ("Foraging", which the PM recommended)
+
+## D-105 — 2026-10-16 — Things to try hints in the journal
+**Decision:** skills-10 adds 2 to 3 gentle "Things to try" hints in the journal pointing at the next undiscovered thing, without recipes (D-063), so a new player always has a next goal. Each lane supplies one hint line per new process.
+**Who:** Justin ("Things to try hints", which the PM recommended)
+
+## D-106 — 2026-10-16 — Ceramics makes a cooking pot next
+**Decision:** ceramics-7 is a cooking pot: a coil pot of water on a fire makes broth from berries or mutton. Hunger values are agreed with Survival and kept generous (D-081).
+**Who:** Justin ("Cooking pot", which the PM recommended)
+
+## D-107 — 2026-10-16 — Effect values stay hidden
+**Decision:** The game shows effects in words only ("Keeps a little of the cold off"), never numbers, in the equipment panel and elsewhere. The values live in shared code the client can read, so dataminers can find them; that is accepted, and hiding them from the UI is still the rule.
+**Who:** Justin ("I want values to remain hidden I think. If it's not reasonable against people datamining etc. then I suppose we could just show it."); the PM had recommended showing numbers
+
+## D-108 — 2026-10-16 — Interim training for hides and sewing
+**Decision:** Until Leatherwork and Weaver exist, hide work trains Husbandry and sewing trains Toolmaking.
+**Who:** Justin ("Hides: Husbandry, sewing: Toolmaking", which the PM recommended)
+
+## D-109 — 2026-10-16 — Cold hearths last 1 h outside claims
+**Decision:** A burned-out fire leaves a cold hearth that lasts 1 hour outside a claim; inside a claim it follows normal claim rules (it does not weather away).
+**Who:** Justin ("1 hour outside a claim, normal weathering inside a claim")
+
+## D-110 — 2026-10-16 — Chat bubbles stay about 3 s plus reading time
+**Decision:** Each speech bubble stays about 3 s plus time to read its length; up to 3 stacked.
+**Who:** Justin ("About 3 s plus reading time", which the PM recommended)
+
+## D-111 — 2026-10-16 — Stamina numbers
+**Decision:** From full, a new player runs 8 s, and the bar refills from empty in 12 s. Refill starts 1 s after you stop running and is faster when the bar is low (Valheim-style). Both improve linearly with Survival skill, to 16 s of running and a 7 s refill at Master (per `docs/PROGRESSION.md`). A good meal gives +25% run time for 10 minutes.
+**Who:** Justin ("8 s run / 12 s refill" and "Yes, +25% run for 10 min", both the PM's recommendation, from the researched curves)
+
+## D-112 — 2026-10-16 — Station split (amends D-098)
+**Decision:** These stay basic in the C menu: tinder, fires, knapping, digging stick, cordage, bricks, clay preparation (clean, grit, grog, temper, daub), and the first hafted tools (spear, knife, axe, bow drill), so you can survive anywhere. Shaping pots (pinch pot, coil pot, storage jar) moves to a new Potter's bench station. Crafting Table: basket, drop spindle, wool tunic. Spindle: spin wool, weave cloth. Leather drying rack: hide work, leather wraps. Broth, stew and roasting stay at the fire. The Crafting Table costs 4 sticks, 2 cordage and a log (so an axe comes first). A station draws from your inventory, from baskets and jars within 4 m, and from the claim stash.
+**Who:** Justin ("Pots at a Potter's bench"; the PM had recommended keeping all clay basic. "Also a log"; the PM had recommended 4 sticks + 2 cordage. "Storage within 4 m + claim stash" and "Hand craft" for first tools, both as recommended)
+
+## D-113 — 2026-10-16 — Craft-time formula
+**Decision:** Craft time = tier base (t0 3 s, t1 6 s, t2 12 s, t3 20 s, times a per-recipe effort of 0.5 to 3) × quality (0.8 + 0.4 × target quality/100) × skill (1 − 0.6 × the D-075 curve of rank: ×1.00 at rank 0, ×0.76 at 15, ×0.61 at 50, ×0.40 at Master) × tool (up to 15% faster, D-089). Examples from rank 0 to Master: basket 28→13 s, stone axe 17→8 s, coil pot 38→18 s, storage jar 56→26 s.
+**Who:** Justin ("Ship this formula", which the PM recommended)
+
+## D-114 — 2026-10-16 — Seasons: pace, first content, order
+**Decision:** The test cycle is one in-game day (90 min) per season, so a year is 6 real hours. Seasons come right after atmosphere-13 (forest light) and before atmosphere-14 and 15. Cold and snow land first: seasonal temperature (about +8 °C in summer, −12 °C in winter, through AirTemperature and under the 2x chill cap), snowfall below about 0.5 °C, snow cover that builds and melts, and winter light. Admin commands `/season` and `/season-speed`.
+**Who:** Justin ("1 day per season", "Cold and snow", "Seasons next", all the PM's recommendation)
+
+## D-115 — 2026-10-16 — Visible new-arrival warmth
+**Decision:** New characters get a visible "new arrival" warmth buff: for their first 30 minutes cold drains at half speed, and a small visible marker shows it. It does not apply after a death.
+**Who:** Justin ("Give them a new arrival warmth buff they can see"; the PM had recommended an invisible version)
+
+## D-116 — 2026-10-16 — Shelter warmth re-cut (amends D-057)
+**Decision:** Warmth (the share of cold blocked) is: lean-to 0.2 with rain cover 0.6; hut 0.4 (0.5 with the door shut) with rain cover 0.9; house 0.5 (0.55 with the door shut) with rain cover 1.0. A fire inside the house still makes it fully warm.
+**Who:** Justin (as the PM recommended)
+
+## D-117 — 2026-10-16 — Fence and gate costs
+**Decision:** Fence posts cost 2 sticks, rails 2 sticks + 1 fiber; gate posts 2 sticks, hurdle 3 sticks + 2 fiber. A 10 m pen comes to about 23 sticks + 6 fiber. A shut gate gives no warmth.
+**Who:** Justin ("Cheap", as recommended)
+
+## D-118 — 2026-10-16 — Cooking pot meals
+**Decision:** Berry broth (coil pot of water + 3 berries) gives 45% hunger + 30% thirst and takes 60 s; mutton stew (water + 1 raw mutton + 2 berries) gives 65% + 30% and takes 90 s. Eating returns the pot; the pot never burns and keeps simmering if the fire dies; at most 2 pots per fire and 2 per player.
+**Who:** Justin ("As proposed", as recommended)

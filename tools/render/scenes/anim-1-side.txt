@@ -1,0 +1,31 @@
+# anim-1: player animation, side view (render cam 3 m to the side). Movie at 24 fps of
+# game time. The camera is the puppet, and keys drive the camera client's own player.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=3,0.55,90,0.3
+frames 360
+mark idle-start
+frames +192
+mark idle-end
+mark walk-start
+keydown w
+frames +72
+keyup w
+frames +12
+mark walk-end
+frames +24
+mark startstop-start
+frames +12
+keydown w
+frames +48
+keyup w
+frames +36
+mark startstop-end
+mark sneak-start
+keydown shift
+keydown w
+frames +96
+keyup w
+keyup shift
+frames +12
+mark sneak-end

@@ -20,9 +20,9 @@ namespace LifeGame.Shared
         // The clearing where new players wake up has no trees.
         public static bool NearSpawn(int x, int z) => x * x + z * z < 12 * 12;
 
-        // Chance a cell of untouched ground grows a tree: a forest that thins out
-        // over clay and into the spawn clearing.
-        public static float Forest(int x, int z) => World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
+        // Chance a cell of untouched ground grows a tree: groves with glades between
+        // them, thinning over clay and into the spawn clearing (shared/Forest.cs, env-1).
+        public static float Forest(int x, int z) => Shared.Forest.TreeChance(Shared.Forest.Density(x, z));
 
         // Whether a tree grows on this cell before anyone digs, builds or chops there.
         public static bool GrowsAt(int x, int z) =>
