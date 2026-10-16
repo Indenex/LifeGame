@@ -32,7 +32,9 @@ godot=${GODOT:-$(ls "$HOME"/tools/godot/*/Godot_v*_mono_linux.x86_64 | head -1)}
 port=${RENDER_PORT:-3300}
 
 if [ -z "${RENDER_OUT:-}" ]; then
-  if mkdir -p /mnt/project-files/screenshots 2>/dev/null && [ -w /mnt/project-files/screenshots ]; then
+  # Only the real shared folder: never create /mnt/project-files on a machine without it.
+  if [ -d /mnt/project-files/screenshots ] && [ -w /mnt/project-files/screenshots ] \
+     && mountpoint -q /mnt/project-files 2>/dev/null; then
     RENDER_OUT=/mnt/project-files/screenshots
   else
     RENDER_OUT=$repo/renders
@@ -61,7 +63,9 @@ if [ ! -d "$tree/client/.godot/imported" ]; then
 fi
 
 # 3. A fresh in-memory server for this run.
-spacetimedb-cli start --in-memory --listen-addr "127.0.0.1:$port" >>"$log" 2>&1 &
+# Its own data dir, so two renders can run at once on different RENDER_PORTs.
+rm -rf "$work/stdb-$port"
+spacetimedb-cli start --in-memory --data-dir "$work/stdb-$port" --listen-addr "127.0.0.1:$port" >>"$log" 2>&1 &
 server=$!
 trap 'kill $server 2>/dev/null || true' EXIT
 for _ in $(seq 1 30); do curl -sf "http://127.0.0.1:$port/v1/ping" >/dev/null && break; sleep 1; done
