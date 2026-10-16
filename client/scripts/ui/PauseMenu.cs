@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace LifeGame;
@@ -15,11 +16,13 @@ public partial class PauseMenu : CanvasLayer
     // Main supplies them; when any says yes, Esc is theirs.
     public Func<bool> OthersOpen = () => false;
     public KeyHelp Keys = null!;
+    // The world's music (Atmosphere's SoundScape), for the music slider; Main sets it.
+    public Func<SoundScape?> Sound = () => null;
 
     readonly List<Control> rows = new();
     Control root = null!, column = null!;
     readonly ControlsPage page = new();
-    HSlider volume = null!;
+    Button music = null!;
     float alpha;
     int focus;
 
@@ -57,8 +60,22 @@ public partial class PauseMenu : CanvasLayer
 
         column.AddChild(Entry("Resume", Close));
         column.AddChild(Entry("Controls", ShowControls));
-        column.AddChild(VolumeRow());
-        column.AddChild(Entry("Music on or off", () => Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true })));
+        column.AddChild(SliderRow("Volume", Settings.Get("sound", "volume", 0.8f), v =>
+        {
+            SetVolume((float)v);
+            Settings.Set("sound", "volume", v);
+        }));
+        // Music volume and on or off live in Atmosphere's SoundScape, which saves them.
+        column.AddChild(SliderRow("Music", Sound()?.MusicVolume ?? 1f, v =>
+        {
+            if (Sound() is { } sound) sound.MusicVolume = (float)v;
+        }, () => Sound()?.MusicVolume));
+        music = Entry("Music on", () =>
+        {
+            if (Sound() is { } sound) sound.MusicOn = !sound.MusicOn;
+            else Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true });
+        });
+        column.AddChild(music);
         column.AddChild(Entry("Quit", () => GetTree().Quit()));
 
         page.Back = HideControls;
@@ -90,8 +107,8 @@ public partial class PauseMenu : CanvasLayer
         {
             case Key.W or Key.Up: Move(-1); break;
             case Key.S or Key.Down: Move(1); break;
-            case Key.A or Key.Left when rows[focus] == volume.GetParent(): volume.Value -= 0.1; break;
-            case Key.D or Key.Right when rows[focus] == volume.GetParent(): volume.Value += 0.1; break;
+            case Key.A or Key.Left when SliderIn(rows[focus]) is { } down: down.Value -= 0.1; break;
+            case Key.D or Key.Right when SliderIn(rows[focus]) is { } up: up.Value += 0.1; break;
             case Key.Enter or Key.KpEnter or Key.Space: (rows[focus] as Button)?.EmitSignal(BaseButton.SignalName.Pressed); break;
         }
         GetViewport().SetInputAsHandled();
@@ -102,6 +119,7 @@ public partial class PauseMenu : CanvasLayer
         alpha = Mathf.MoveToward(alpha, IsOpen ? 1f : 0f, (float)delta * 6f);
         root.Modulate = new Color(1, 1, 1, alpha);
         root.Visible = alpha > 0f;
+        if (IsOpen) music.Text = Sound()?.MusicOn == false ? "Music off" : "Music on";
         for (int i = 0; i < rows.Count; i++)
             rows[i].Modulate = new Color(1, 1, 1, IsOpen && i == focus ? 1f : 0.62f);
     }
@@ -110,6 +128,7 @@ public partial class PauseMenu : CanvasLayer
     {
         IsOpen = true;
         focus = 0;
+        foreach (var refresh in refreshers) refresh();
         Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
@@ -152,17 +171,23 @@ public partial class PauseMenu : CanvasLayer
         return button;
     }
 
-    Control VolumeRow()
+    readonly List<Action> refreshers = new();
+
+    static HSlider? SliderIn(Control row) => row.GetChildren().OfType<HSlider>().FirstOrDefault();
+
+    // A labelled slider row; current, when given, re-reads the value each time the
+    // menu opens (the M key can change music while the menu is shut).
+    Control SliderRow(string text, float value, Action<double> changed, Func<float?>? current = null)
     {
         var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         row.AddThemeConstantOverride("separation", 16);
-        var label = new Label { Text = "Volume" };
+        var label = new Label { Text = text, CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right };
         Hud.Soft(label, 22, 1f);
         row.AddChild(label);
-        volume = new HSlider
+        var slider = new HSlider
         {
             MinValue = 0, MaxValue = 1, Step = 0.05,
-            Value = Settings.Get("sound", "volume", 0.8f),
+            Value = value,
             CustomMinimumSize = new Vector2(180, 24),
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
             FocusMode = Control.FocusModeEnum.None,
@@ -171,15 +196,13 @@ public partial class PauseMenu : CanvasLayer
         track.SetCornerRadiusAll(2);
         var fill = new StyleBoxFlat { BgColor = new Color(Look.Cream, 0.85f), ContentMarginTop = 1, ContentMarginBottom = 1 };
         fill.SetCornerRadiusAll(2);
-        volume.AddThemeStyleboxOverride("slider", track);
-        volume.AddThemeStyleboxOverride("grabber_area", fill);
-        volume.AddThemeStyleboxOverride("grabber_area_highlight", fill);
-        volume.ValueChanged += v =>
-        {
-            SetVolume((float)v);
-            Settings.Set("sound", "volume", v);
-        };
-        row.AddChild(volume);
+        slider.AddThemeStyleboxOverride("slider", track);
+        slider.AddThemeStyleboxOverride("grabber_area", fill);
+        slider.AddThemeStyleboxOverride("grabber_area_highlight", fill);
+        slider.ValueChanged += v => changed(v);
+        if (current != null)
+            refreshers.Add(() => { if (current() is { } now) slider.SetValueNoSignal(now); });
+        row.AddChild(slider);
         int index = rows.Count;
         row.MouseEntered += () => focus = index;
         rows.Add(row);
