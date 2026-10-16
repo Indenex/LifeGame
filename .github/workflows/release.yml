@@ -18,9 +18,14 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
-# Releases go out in order; none is cancelled.
+# GitHub keeps only one pending run per concurrency group and cancels the older one, so a single
+# shared group let each merge replace the queued release run (and the manual button's run).
+# Per head commit instead: runs for different commits never replace each other, and a repeat for
+# the same commit waits (the pick job then skips it as already released). Cancelled and red
+# Builds exit in the pick job within seconds, so the parallel runs stay cheap. Schedule and
+# manual runs share one group of their own.
 concurrency:
-  group: release
+  group: release-${{ github.event.workflow_run.head_sha || 'manual' }}
   cancel-in-progress: false
 
 env:
