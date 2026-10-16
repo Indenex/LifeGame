@@ -1,8 +1,8 @@
 # env-2: Reshape the land (ponds, a stream, gentler hills)
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: todo
-Branch: claude/environment-env-1 (stack on it after #113 merges; a new branch name may be assigned)
+Status: in_progress
+Branch: claude/environment-env-2
 PR: (once opened)
 
 ## Goal
@@ -23,9 +23,12 @@ Justin chose to reshape the land after groves and glades (D-084). Done means: a 
 - 2026-10-16 19:10: first prototype in `tools/env-preview/land.py` (ascii map, `python3 -I tools/env-preview/land.py`). Gentler hills (48 m broad octave) plus pond basins (36 m field above 0.78) give about 6% water and 3 to 4 ponds within 120 m, spawn kept dry. Lesson: the water plane is flat at -1.0, so a stream cut by subtracting depth leaves dry trenches over hills; next try lowers a broad valley (about 20 m falloff) along the river line and carves the bed to a fixed depth below water.
 - 2026-10-16 19:50: prototype v2 in `tools/env-preview/land.py`. The stream now sits in a broad valley (hills sink toward a floor just above water within about 26 m of the river line), with a channel about 3 m wide cut to a fixed bed 0.35 m below water. Distance from the river line uses noise value divided by its gradient; a plain value threshold made 17% of the map stream bed where the noise is flat. Ponds are round hollows (36 m field above 0.86) filled to 0.4 m below water. Spawn is blended to a gentle dry rise within 18 to 32 m. Result: about 6% water, a meandering stream about 66 m east of spawn, a second one further west, a few small ponds. Issues to fix: the river line is the 0.5 contour of 2-D noise, so it also makes closed loops (rings around hills); try clipping loops by keeping only contour segments longer than some length, or use a warped 1-D line instead.
 - 2026-10-16 20:00: prototype v3. Loops are fixed: the river line is now `x + 66 + warp(x, z)`, with the warp's slope kept under 1, crossing multiples of 300 m. That gives one stream every 300 m running roughly north to south and wandering, never doubling back. The first stream passes about 66 m west of spawn. Distance uses the offset divided by the gradient. A few small ponds; spawn dry.
+- 2026-10-16 20:10: Justin approved building env-2 now (D-129): ONE world wipe, landing once env-2 and the in-flight PRs are in. The PM brings Justin a wipe date and merges this PR at that time. Do NOT merge it and do NOT publish to Justin's world. Coordinate with Integration (`shared/World.cs`, upgrade check) and with Crafting, Ceramics and Animals (trees, clay, sheep). Before and after renders go through Render first.
+- 2026-10-16 20:30: `shared/Land.cs` (C# port of the preview, checked equal to `tools/env-preview/land.py` at sample points); `World.BaseHeight` now returns `Land.Height` (one-line hook in an Integration-owned file). Stats over 301x301 m: water 8.7% (old 1.3%), clay 38.6% (old 37.3%), trees 0.071 per cell, max neighbour step 0.38 m (old 0.21), no cell steeper than 0.5. One stream wanders north to south about 40 to 60 m west of spawn; about 6 ponds within 90 m; spawn is a dry rise within 18 m. 1M heights take 0.4 s. Pond banks are a wide dip (field 0.36 to 0.74 toward -0.6) before the pond proper, and the stream channel slopes over 1 to 6 m, which keeps slopes gentle. Pond noise is offset off the lattice, because the shared hash is weak on the axes and ponds lined up in rows.
+- 2026-10-16 20:45: on a fresh local world, LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck and SocialTest all pass. ClayCheck once failed with "pot set down out of the fire's reach", but that run reused a database with CraftCheck's old fire nearby. On a fresh world the fire lands at (2.1, 2.1), same as main, and firing succeeds. A full ClayCheck run (water now at (-35,-35)) is in progress.
 
 ## Open questions / blockers
 - Wipe timing: PM confirms with Justin before anything that wipes is run or merged.
 
 ## Next step
-Port `tools/env-preview/land.py` v3 to `shared/Land.cs` (C#, same noise), check walkable slopes and clay/tree counts, then ask Render for top-down previews to send the PM as options. No wipe without the PM's go-ahead.
+Finish the ClayCheck run on a fresh local world, get Render's before and after shots, open the env-2 PR marked do-not-merge (wipe), and send its green sha to the PM, not to Integration.
