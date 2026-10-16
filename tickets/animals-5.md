@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
 Status: in_review
 Branch: claude/animals-sheep-5gkntn (restarted from main after #51 merged; developed locally as animals-5-local)
-PR: (after #51)
+PR: #63
 
 ## Goal
 A Sheep Hide from butchering becomes Leather the way clay dries: scrape it with a blade, stretch it on a small stick rack set down in the world, and leave it. It dries over a few minutes, slower in rain and faster by a fire, visibly changing from pale wet hide to tan leather. When it is dry, G takes it down as Leather. Done when Justin can butcher a sheep and end up with leather in a build.
