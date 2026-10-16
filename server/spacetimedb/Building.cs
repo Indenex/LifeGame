@@ -9,6 +9,7 @@ public enum StructureKind
     ClayHut,
     ClaimMarker,
     Kiln,
+    Basket,
 }
 
 // One material a structure's current stage still needs.
@@ -114,6 +115,11 @@ public static partial class Module
             new[] { (Item.Brick, 4u) },
             new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
         },
+        // Storage basket: Weave
+        new[]
+        {
+            new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+        },
     };
 
     // Lays out a footprint. The structure exists from here on, at stage 0 with nothing added.
@@ -145,7 +151,7 @@ public static partial class Module
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
 
-        ctx.Db.Structure.Insert(new Structure
+        var placed = ctx.Db.Structure.Insert(new Structure
         {
             Id = 0,
             Kind = kind,
@@ -161,6 +167,7 @@ public static partial class Module
             Builders = 0,
             PlacedAt = ctx.Timestamp,
         });
+        TouchStructure(ctx, placed.Id);
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.
@@ -209,6 +216,7 @@ public static partial class Module
         if (RecordBuilder(ctx, structureId))
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
         ctx.Db.Structure.Id.Update(s);
+        TouchStructure(ctx, s.Id);
         if (s.Complete) OnStructureComplete(ctx, s);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -243,7 +251,7 @@ public static partial class Module
         {
             float a = (float)(ctx.Rng.NextDouble() * MathF.Tau), r = (float)ctx.Rng.NextDouble() * spread;
             float ix = s.X + MathF.Cos(a) * r, iz = s.Z + MathF.Sin(a) * r;
-            ctx.Db.WorldItem.Insert(new WorldItem
+            var dropped = ctx.Db.WorldItem.Insert(new WorldItem
             {
                 Id = 0,
                 Item = (ushort)item,
@@ -253,12 +261,22 @@ public static partial class Module
                 ChunkX = World.ChunkOf(ix),
                 ChunkZ = World.ChunkOf(iz),
             });
+            TouchGroundItem(ctx, dropped);
         }
 
-        foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId).ToList())
+        SpillBasket(ctx, s);
+        RemoveStructure(ctx, s);
+    }
+
+    // Deletes a structure and everything hanging off it (builders, door, weathering clock).
+    static void RemoveStructure(ReducerContext ctx, Structure s)
+    {
+        foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(s.Id).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
-        ctx.Db.StructureProgress.StructureId.Delete(structureId);
-        ctx.Db.Structure.Id.Delete(structureId);
+        ctx.Db.StructureProgress.StructureId.Delete(s.Id);
+        ctx.Db.StructureDoor.StructureId.Delete(s.Id);
+        ctx.Db.StructureTouch.StructureId.Delete(s.Id);
+        ctx.Db.Structure.Id.Delete(s.Id);
         OnStructureRemoved(ctx, s);
         CeramicsStructureRemoved(ctx, s);
     }
@@ -289,8 +307,9 @@ public static partial class Module
         {
             if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
             var shape = Structures.Shape((int)s.Kind);
-            if (shape.RainCover > best.RainCover || shape.Warmth > best.Warmth)
-                best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, shape.Warmth), s.Id);
+            float warmth = DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, Structures.ClosedDoorWarmth) : shape.Warmth;
+            if (shape.RainCover > best.RainCover || warmth > best.Warmth)
+                best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }
         return best;
     }
