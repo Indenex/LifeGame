@@ -1,7 +1,7 @@
 # integration-2: Server-side sneak flag for other players' avatars
 Lane: Integration
 Owner: Integration session session_01Rf5965nk4Lvd3f2QDteZSq
-Status: in_review
+Status: done
 Branch: claude/integration-sneak
 PR: #121
 
@@ -15,8 +15,10 @@ Other players see you crouch while you sneak (Animation lane, anim-1, PR #100; P
 
 - 2026-10-16 18:30: CI green on 9272510 (https://github.com/Indenex/LifeGame/actions/runs/38945043618), clean vs main 031141c; sha sent to the PM.
 
+- 2026-10-16 18:42: merged to main (#121).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-PM merges #121 (green 9272510, sent 18:30); after it merges, tell the Animation lane (session_019roNRWQBPw4ozNLDhzseig) that #100 can follow.
+Done: merged to main as #121. Client side is anim-1 (#100).

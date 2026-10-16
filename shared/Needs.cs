@@ -89,6 +89,10 @@ namespace LifeGame.Shared
 
         public static bool Edible(Item item) => Nourishment(item).food > 0f;
 
+        // A cooked meal, which lets you run longer for a while (D-111). Berries and
+        // burnt food don't count.
+        public static bool GoodMeal(Item item) => item is Item.CookedMutton;
+
         // Which of the foods you carry to eat at this hunger: the most filling one
         // that doesn't waste much, or else the smallest, so a roast isn't spent on a
         // nibble. Null if nothing carried is edible.

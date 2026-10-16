@@ -78,6 +78,14 @@ public partial class Atmosphere : Node3D
 
     readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
     Vector2 cloudOffset;
+    // Which way the wind blows (x, z), shared with shaders as wind_dir. Fixed for now;
+    // the clouds drift with it.
+    public static readonly Vector2 WindDirection = new(0.6f, 0.8f);
+    static readonly StringName NWindDir = "wind_dir";
+
+    // How wooded it is around the player, eased over a few seconds: where the sun
+    // shafts between the trunks show.
+    float woods;
 
     Vector2? debugPosition;
     float stepPhase;
@@ -163,8 +171,9 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
+        WorkSounds.Connect(conn, sound);
     }
 
     void OnClock(WorldClock c)
@@ -230,7 +239,7 @@ public partial class Atmosphere : Node3D
         wetness = Mathf.Lerp(wetness, wet, snap ? 1f : 1f - Mathf.Exp(-dt / 10f));
 
         // Clouds drift with the wind, the same way the grass leans.
-        cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
+        cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
@@ -238,6 +247,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NRainAmount, rainAmount);
         RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
         RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
+        RenderingServer.GlobalShaderParameterSet(NWindDir, WindDirection);
 
         ApplyLight();
 
@@ -261,12 +271,15 @@ public partial class Atmosphere : Node3D
         sound.Wetness = wetness;
         sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
         sound.TimeOfDay = timeOfDay;
-        sound.Foliage = Woodedness(focus);
+        float wooded = Woodedness(focus);
+        woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        sound.Foliage = wooded;
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
+            WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
         }
     }
 
@@ -342,6 +355,14 @@ public partial class Atmosphere : Node3D
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
 
+        // Sun shafts in the woods: at a low sun on a fair day the air between the
+        // trunks thickens a little and scatters forward, so the light slants through
+        // the canopy in beams. Gone at midday, under cloud and in rain.
+        float lowSun = Mathf.SmoothStep(0.02f, 0.12f, sunHeight) * (1f - Mathf.SmoothStep(0.3f, 0.55f, sunHeight));
+        float fair = (1f - overcast) * (1f - overcast) * (1f - Mathf.Clamp(rainAmount * 2f, 0f, 1f));
+        float shafts = woods * lowSun * fair;
+        sun.LightVolumetricFogEnergy += 1.4f * shafts;
+
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
         float dim = 1f - 0.35f * storm;
@@ -360,7 +381,8 @@ public partial class Atmosphere : Node3D
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
         env.VolumetricFogAlbedo = Grey(mood.Mist, grey, 1f) * (1f - 0.25f * storm);
-        env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm);
+        env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm + 1.6f * shafts);
+        env.VolumetricFogAnisotropy = 0.6f + 0.25f * shafts;
         env.AmbientLightColor = mood.Ambient;
         env.AmbientLightEnergy = mood.AmbientEnergy * (1f + 0.35f * overcast);
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
