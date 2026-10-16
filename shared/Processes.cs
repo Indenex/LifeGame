@@ -162,6 +162,19 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // Mutton fat rendered in a pot of water by a fire (ceramics-9): lamp fuel.
+                Id = "cook.tallow", Name = "Render tallow", Doing = "Setting a pot of mutton fat by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
+            },
+            new ProcessDef
+            {
+                Id = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawVenison) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedVenison,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
@@ -232,6 +245,12 @@ namespace LifeGame.Shared
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
+            },
+            new ProcessDef
+            {
+                Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
             },
             new ProcessDef
             {
@@ -323,6 +342,12 @@ namespace LifeGame.Shared
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
                 Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {

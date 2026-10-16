@@ -912,10 +912,26 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Decision:** Pressing B opens a centred picture panel with category tabs: Shelter, Storage, Crafting, Fences and gates, Fire. Each tile in its grid shows a picture rendered from the real model, the name, and costs as item icons, greyed when short. Clicking a tile starts the ghost placement. Justin chose this over a strip above the hotbar and a radial wheel. Owner: UX (ui-20).
 **Who:** Justin (relayed by the PM; no direct quote).
 
-## D-225 — 2026-10-16 — Admin interface to add items (PM default pending Justin's confirmation)
-**Decision:** Justin asked for an admin interface to add items. The PM default, pending Justin's confirmation, is admin-1: a hidden F10 panel with a searchable item list and quantity, admin-only, with a server-checked `admin_give` reducer and a private admin table.
-**Who:** Justin asked for the interface; the specific design is the PM's default and awaits his confirmation.
+## D-225 — 2026-10-16 — Admin tools are chat commands, not an F10 panel
+**Decision:** Justin asked for an admin interface to add items, and answered with chat commands instead of a panel. The admin tools are chat commands: `/fly` (very fast flying), `/season`, `/time` (time of day), and `/give`, which opens a searchable item menu to spawn items. All of them are server-checked and admin-only. There is no F10 panel. This replaces the earlier PM default (admin-1: a hidden F10 panel).
+**Who:** Justin ("just chat commands to get it done faster, but yes, I want a flying option that's super fast, seasons, time of day, spawn items (give me a menu with a search for that one.)")
 
 ## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
 **Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
 **Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
+
+## D-227 — 2026-10-16 — View distance is a four-step slider in Settings → Graphics (follows D-222)
+**Decision:** View distance is a slider with four steps: Short (48 m, today), Near (80 m), Far (128 m) and Very far (160 m and up). It lives in Settings → Graphics and is saved per player. The world edge always fades into haze, with no LoD pop-in. Far is the PM's proposed default, not yet confirmed by Justin.
+**Who:** Justin ("yeah, just make a slider of like short (today), near, far, very far for view distances. It can go in the settings menu -> graphics for people to adjust themselves.")
+
+## D-228 — 2026-10-16 — A roof takes 12 roof tiles (follows D-213)
+**Decision:** A roof takes 12 roof tiles. Each tile costs 1 tempered clay and takes 2 kiln firings. This replaces the proposed defaults of 24 tiles and 504 h.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-229 — 2026-10-16 — House-type buildings are claim-only; outside a claim, basics only and fast decay
+**Decision:** House-type buildings must be built inside a claim only. Allowed outside a claim: the lean-to, clay hut, campfire and hearth, crafting table, and storage basket and jar. Everything else is claim-only. Anything outside a claim that sits untouched for 48 h starts falling apart, as extreme weathering that manages server performance and world cleanliness. The idea is that players cooperate and build cities together.
+**Who:** Justin ("House-type buildings HAVE to be built inside of a claim ONLY. Temporrary shelters or the small hut can be built outside, and basic crafting tables, but not much else. Essentialy, basic survival, and anything outside of a claim has extreme weathering applied to manage server performance and world 'cleanliness'. The idea is players can cooperate and build cities and stuff together."), with his picks of what stays allowed outside a claim.
+
+## D-230 — 2026-10-16 — Atmosphere next: falling leaves and blossom
+**Decision:** Atmosphere's next work is falling leaves and blossom: leaves drifting under broadleaf trees in autumn, petals in spring, and more of both in wind. Justin chose it over the dawn valley mist and the sky reflected in still water. Owner: Atmosphere.
+**Who:** Justin, picking falling leaves and blossom (relayed by the PM; no direct quote).

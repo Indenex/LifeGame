@@ -102,6 +102,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RegrowTrees(ReducerContext ctx, TreeTimer timer)
     {
+        RequireServer(ctx);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         long after = (long)((Trees.Felling ? Trees.RegrowSeconds : Trees.DeadwoodSeconds) * 1_000_000);
         foreach (var row in ctx.Db.ChoppedTree.Iter().ToList())
