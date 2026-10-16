@@ -227,15 +227,17 @@ public static class PropMeshes
     }
 
     // Heather on the hilltop heath: a low mound of fine clumps, about 0.6 m across,
-    // purple-tipped. Variants differ in clump count, spread, height and how much is
+    // tipped with flower heads. Variants differ in clump count, spread, height and how much is
     // in flower. Colors in the vertices; tint near white.
     public static Mesh Heather(int variant) => Variant("heather", variant, HeatherVariants, BuildHeather);
 
     static ArrayMesh BuildHeather(int v)
     {
         var k = Kit();
-        var green = new Color(0.36f, 0.42f, 0.26f);
-        var purple = new Color(0.62f, 0.42f, 0.62f);
+        // Dusky green-brown with faded brown flower heads, close to the grass in
+        // brightness so it blends; the late-summer bloom tint comes from the shader.
+        var green = new Color(0.35f, 0.37f, 0.24f);
+        var purple = new Color(0.42f, 0.35f, 0.30f);
         int clumps = 12 + (int)(V(v, 1) * 9f);
         float spread = 0.2f + V(v, 2) * 0.12f, tall = 0.8f + V(v, 3) * 0.5f, flowering = 0.55f + V(v, 4) * 0.45f;
         // Some mounds are long rather than round.

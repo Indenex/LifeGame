@@ -456,10 +456,11 @@ public static class Look
                     turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
                     color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
                 }
-                // Heather flowers purple through late summer, in speckles over the bush.
+                // Heather takes a soft, dusky mauve through late summer, over its upper
+                // sprigs; muted and about as bright as the grass, so it blends in.
                 if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
                     float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
-                    color = mix(color, vec3(0.55, 0.22, 0.52) * (1.0 + paint * 2.0), bloom * 0.75 * smoothstep(0.3, 0.6, h));
+                    color = mix(color, vec3(0.46, 0.38, 0.43) * (1.0 + paint * 2.0), bloom * 0.45 * smoothstep(0.3, 0.6, h));
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
