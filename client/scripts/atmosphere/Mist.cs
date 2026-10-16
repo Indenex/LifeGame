@@ -1,21 +1,28 @@
+using System;
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Low mist that gathers in the hollows around dawn and burns off by mid-morning.
-// Two thin layers float just above the low ground; each is only as thick as the
-// air between it and the ground below, so the mist pools in dips and by the water
-// and thins to nothing on the rises. It drifts slowly with the wind.
+// Low mist that gathers in the hollows around dawn and burns off by mid-morning,
+// and returns faintly on still, damp evenings. Two thin layers float just above
+// the low ground around the player (a low percentile of the land's height nearby,
+// so a valley among hills fills as well as the pond shores); each is only as thick
+// as the air between it and the ground below, so the mist pools in dips, valleys
+// and by the water and thins to nothing on the rises. It drifts with the wind.
 public partial class Mist : Node3D
 {
-    // Heights of the two layers: low ground sits under them, rises poke through.
-    static readonly float[] Layers = { -0.45f, -0.1f };
+    // Heights of the two layers above the low ground nearby (at the water line they
+    // sit where they always did, -0.45 and -0.1): low ground sits under them, rises
+    // poke through.
+    static readonly float[] Layers = { 0.55f, 0.9f };
     const float Size = 140f;
 
     readonly ShaderMaterial material = new() { Shader = MistShader };
     readonly MeshInstance3D[] planes = new MeshInstance3D[Layers.Length];
-    float drift;
+    float drift, lookIn, low = Look.WaterLevel, lowTarget = Look.WaterLevel;
     Vector2 offset;
+    readonly float[] samples = new float[225];
 
     static readonly StringName NAmount = "amount", NColor = "mist_color", NOffset = "drift", NFocus = "focus";
 
@@ -41,10 +48,20 @@ public partial class Mist : Node3D
         drift += dt;
         offset += new Vector2(0.6f, 0.8f) * (0.15f + wind * 0.8f) * dt;
         bool show = amount > 0.005f;
+        if (show)
+        {
+            lookIn -= dt;
+            if (lookIn <= 0f)
+            {
+                lookIn = 0.5f;
+                lowTarget = LowGround(focus);
+            }
+            low = Mathf.Lerp(low, lowTarget, 1f - Mathf.Exp(-dt / 3f));
+        }
         for (int i = 0; i < planes.Length; i++)
         {
             planes[i].Visible = show;
-            planes[i].GlobalPosition = new Vector3(Mathf.Round(focus.X), Layers[i], Mathf.Round(focus.Z));
+            planes[i].GlobalPosition = new Vector3(Mathf.Round(focus.X), low + Layers[i], Mathf.Round(focus.Z));
         }
         if (!show) return;
         material.SetShaderParameter(NAmount, amount);
@@ -53,12 +70,30 @@ public partial class Mist : Node3D
         material.SetShaderParameter(NFocus, new Vector2(focus.X, focus.Z));
     }
 
+    // The low ground around a point: the 20th percentile of the land's height over a
+    // 84 m square (a 15 by 15 grid, 6 m apart), never below the water. The water
+    // counts at its surface, so ponds and the stream are low ground too.
+    float LowGround(Vector3 focus)
+    {
+        int cx = World.CellOf(focus.X), cz = World.CellOf(focus.Z), n = 0;
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -7; dz <= 7; dz++)
+                samples[n++] = Math.Max(World.BaseHeight(cx + dx * 6, cz + dz * 6), Look.WaterLevel);
+        Array.Sort(samples, 0, n);
+        return samples[n / 5];
+    }
+
     // How misty it is at this time of day (0 midnight, 0.25 sunrise): gathering in
-    // the last of the night, thickest just after sunrise, gone by mid-morning.
-    // Wind stirs it away and rain beats it down.
-    public static float Amount(float timeOfDay, float wind, float rain) =>
-        Mathf.SmoothStep(0.16f, 0.24f, timeOfDay) * (1f - Mathf.SmoothStep(0.29f, 0.38f, timeOfDay))
-        * Mathf.Clamp(1.3f - wind * 1.6f, 0f, 1f) * (1f - 0.6f * Mathf.Clamp(rain * 2f, 0f, 1f));
+    // the last of the night, thickest just after sunrise, gone by mid-morning; and a
+    // thinner mist settling after sunset when the ground is damp. Wind stirs it away
+    // and rain beats it down.
+    public static float Amount(float timeOfDay, float wind, float rain, float wetness = 0f)
+    {
+        float dawn = Mathf.SmoothStep(0.16f, 0.24f, timeOfDay) * (1f - Mathf.SmoothStep(0.29f, 0.38f, timeOfDay));
+        float dusk = Mathf.SmoothStep(0.75f, 0.81f, timeOfDay) * (1f - Mathf.SmoothStep(0.88f, 0.95f, timeOfDay))
+            * 0.45f * Mathf.SmoothStep(0.2f, 0.7f, wetness);
+        return Mathf.Max(dawn, dusk) * Mathf.Clamp(1.3f - wind * 1.6f, 0f, 1f) * (1f - 0.6f * Mathf.Clamp(rain * 2f, 0f, 1f));
+    }
 
     static readonly Shader MistShader = new()
     {

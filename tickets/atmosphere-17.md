@@ -11,9 +11,11 @@ Picked under D-145 after atmosphere-13 to 16; sent to the PM as options (A recom
 ## Progress log
 - 2026-10-16 20:45: started from main (after #217). Options sent to the PM.
 
+- 2026-10-16 20:55: Mist layers now sit 0.55 and 0.9 m above the local low ground (the 20th percentile of World.BaseHeight over an 84 m grid around the player, water counted at its surface, re-sampled every 0.5 s and eased over 3 s). At the water line that is the old -0.45/-0.1. Dusk mist added: up to 0.45 of dawn's, between time 0.75 and 0.95, only when the ground is damp (wetness 0.2 to 0.7). Client builds.
+
 ## Open questions / blockers
 - Justin's pick (A valley mist / B leave as is), via the PM.
 - Best shown after Environment's #175 (land reshape) merges with the one world wipe.
 
 ## Next step
-Read client/scripts/atmosphere/Mist.cs and World.BaseHeight; add a low-ground factor (local height below the average of a ring of samples, plus water) that scales the mist amount and lowers its planes into valleys.
+Push; render request (dawn over a valley and a pond, dusk after rain); PR once Justin picks A, or right away if the PM says so.
