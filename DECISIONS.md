@@ -867,3 +867,43 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-213 — 2026-10-16 — Ceramics next: roof tiles; Justin wipes his world manually on build 980
 **Decision:** Ceramics' next feature is roof tiles ("Roof tiles"), not slip decoration. Separately, Justin is wiping his world manually on build 980, because the launcher's wipe confirm is broken; the Release lane is fixing it.
 **Who:** Justin, picking "Roof tiles".
+
+## D-214 — 2026-10-16 — UX next: finish inventory and drag and drop, then a 10-slot hotbar with keybinds
+**Decision:** The UI/UX worker finishes the inventory and drag and drop next, then adds a hotbar along the bottom of the screen. The hotbar fills up to 10 slots, each with an assigned keybind, and hitting the keybind uses the item in that slot. Owner: UX (ui-18 inventory, ui-19 hotbar).
+**Who:** Justin ("I want the UI/UX worker to finish inventory, drag and drop stuff, etc. next, and assign keybinds to slots on the bottom of the screen. These slots should fill up to 10 slots, and have the item be usable by hitting the assigned keybind.")
+
+## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
+**Decision:** The chat leak is fixed with private per-player delivery: each message is delivered only to its recipients. Owner: Claims (claims-13).
+**Who:** Justin, picking "Private per-player delivery".
+
+## D-216 — 2026-10-16 — Heather is sparse, patchy and muted (revises D-164's purple bloom)
+**Decision:** The hilltop heath's heather must be sparse, in irregular patches, and muted in colour: a soft desaturated mauve, only in bloom, close to the grass in brightness. This revises the purple bloom of D-164. Hotfix owner: Environment, with Atmosphere.
+**Who:** Justin ("I HATE this, the color, the quantity, it's crazy.")
+
+## D-217 — 2026-10-16 — Hotbar: the row becomes the hotbar (extends D-214)
+**Decision:** The bottom row becomes the hotbar: a round row of 10 slots with key numbers. The bag moves to the I panel. Owner: UX (ui-19).
+**Who:** Justin, picking "Row becomes hotbar".
+
+## D-218 — 2026-10-16 — Hotbar fills automatically with new items
+**Decision:** New items auto-fill into the hotbar slots.
+**Who:** Justin, picking "Auto-fill new items".
+
+## D-219 — 2026-10-16 — Tools live in a tools section on the player doll, outside inventory space and weight
+**Decision:** Tools only need to be in the player's inventory to be usable. A tools section is created on the player doll. Tools do not take up inventory space and add no weight.
+**Who:** Justin ("as long as they're in your inventory it's fine, and honestly, create a tools section on the player doll. Tools shouldn't take up inventory space or add weight.")
+
+## D-220 — 2026-10-16 — Bag order: a sort button and manual arrangement
+**Decision:** The bag offers both a sort button and manual arrangement.
+**Who:** Justin, picking "Both, a sort button, and manual arrangement".
+
+## D-221 — 2026-10-16 — Camera angle can be tilted a little with the existing right-click controls
+**Decision:** The player can change the camera angle a bit, a little up and a little down, using the right-click mouse controls that already exist, so they can see the new sky changes and so on coming up. Owner: Integration.
+**Who:** Justin ("I want to be able to change the angle of the camera a bit, so I can see the new sky changes etc. coming up. a little up, a little down, just controlled by the right click mouse controls we already have")
+
+## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
+**Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
+**Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).

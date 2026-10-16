@@ -116,7 +116,7 @@ public partial class StructureView : Node3D
     Node3D? doorHinge, doorBar;
     bool? doorClosed;
 
-    (Vector3 a, Vector3 b, float height) DoorFrame() => Kind == 5
+    (Vector3 a, Vector3 b, float height) DoorFrame() => LifeGame.Shared.Structures.IsRoom(Kind)
         ? StructureModel.HouseDoor
         : LifeGame.Shared.Structures.IsGate(Kind)
         ? StructureModel.GateDoor
