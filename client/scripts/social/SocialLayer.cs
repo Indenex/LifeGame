@@ -56,6 +56,9 @@ public partial class SocialLayer : Node
         conn.Db.Claim.OnDelete += (_, c) => OnClaimGone(c);
         conn.Db.ClaimMember.OnInsert += (_, _) => RefreshClaims();
         conn.Db.ClaimMember.OnDelete += (_, _) => RefreshClaims();
+        conn.Db.ClaimName.OnInsert += (_, _) => panel.MarkDirty();
+        conn.Db.ClaimName.OnUpdate += (_, _, _) => panel.MarkDirty();
+        conn.Db.ClaimName.OnDelete += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnInsert += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnDelete += (_, _) => panel.MarkDirty();
@@ -106,6 +109,7 @@ public partial class SocialLayer : Node
         layer.AddChild(landChip);
         AddChild(layer);
         ReadyFighting();
+        ReadyPlaces();
     }
 
     static void Bind(string action, params Key[] keys)
@@ -125,7 +129,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
 
         // Chat carries a little further than a chunk, so listen two chunks out.
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
@@ -371,6 +375,7 @@ public partial class SocialLayer : Node
         }
         landChip.Visible = true;
         var here = ClaimAt(myPos.X, myPos.Z);
+        ArriveAt(here);
         if (here == null)
         {
             float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
@@ -379,7 +384,8 @@ public partial class SocialLayer : Node
             return;
         }
         string whose = IsMine(here) ? "Your land" : HasRights(here) ? $"{here.OwnerName}'s land (you are welcome)" : $"{here.OwnerName}'s land";
-        landLabel.Text = $"{whose}   ·   {(here.AllowPvp ? "fighting allowed" : "peaceful")}";
+        string fighting = here.AllowPvp ? "fighting allowed" : "peaceful";
+        landLabel.Text = PlaceName(here.Id) is { } place ? $"{place}   ·   {whose}   ·   {fighting}" : $"{whose}   ·   {fighting}";
     }
 
     static Vector2 Flat(Claim c) => new(c.X, c.Z);

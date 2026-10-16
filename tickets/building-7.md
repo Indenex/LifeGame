@@ -1,7 +1,7 @@
 # building-7: Playtest fixes for laying out and building
 Lane: House building
 Owner: House building thread
-Status: in_progress
+Status: done
 Branch: claude/house-building-8ueqz2 (riding on #61 with the mat, per the PM)
 PR: #61
 
@@ -18,6 +18,8 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 - 2026-10-16 05:36: CI green on 56d830c (run https://github.com/Indenex/LifeGame/actions/runs/38855592389).
 - 2026-10-16: D-061, Justin keeps the mat, so #61 merges with building-5 as is. Merged main in (clean, no conflicts); all local checks green. Pushed for a fresh CI run.
 
+- 2026-10-16: #61 merged (green fb3e604). Justin picked option A of the D-075 shelter options as D-116; it ships in building-8.
+
 ## Open questions / blockers
 - Next building ticket sent to the PM 2026-10-16 (default: fence and gate). Note for Ceramics: the jar's stage costs now go in `Structures.StageCosts` in shared/Structures.cs, not Building.cs.
 
@@ -33,4 +35,4 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 - Environment lane (session_012hVejTxLoxBpZyX3GQmNL9) builds around buildings; Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm) may upgrade StructureModel meshes and will say first.
 
 ## Next step
-Wait for CI on #61's new head, then send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
+Done (merged as #61).
