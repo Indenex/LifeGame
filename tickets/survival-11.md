@@ -8,15 +8,17 @@ PR: (none yet)
 ## Goal
 D-144: in cold air every player's breath shows as a soft white puff every few seconds (no camera shake). Denser and longer-lasting the colder it is; none above about 6 C. Remote players too.
 
-## Design (proposed to Atmosphere, session_01KvVF5vpkYEHTKNRpHC18WN)
-- client/scripts/survival/BreathPuff.cs: GPUParticles3D at the mouth, unshaded blue-white, alpha ~0.35, drifts up and fades ~1 s, one puff per ~3 s.
-- Needs the air temperature on the client: asked Atmosphere whether they can expose Atmosphere.AirCelsius (same formula as the server), or else a coarse AirC on a public server row.
+## Design
+- Animation (session_019roNRWQBPw4ozNLDhzseig, anim-2) draws the puffs: a small faint puff from each nearby player's mouth every ~3.5 s, pooled particles.
+- Survival provides `SurvivalClient.AirColdness` (static, 0..1): Needs.Breath(Vitals.AirCold), starting at about 6 C and full at 0 C. Vitals.AirCold ([Default(0f)], twentieths) = Needs.AirCold(AirTemperature) where the player stands, written by WithSurroundings; the tick rewrites when it changes. The cold drain now uses the same Needs.AirCold, so breath and cold always agree.
 
 ## Progress log
 - 2026-10-16: assigned (D-144). Proposal sent to Atmosphere.
 
+- 2026-10-16: built AirCold / AirColdness. Local: module builds, publishes over the existing local world (no wipe), client builds.
+
 ## Open questions / blockers
-- Client air temperature source (Atmosphere).
+- (none)
 
 ## Next step
-When Atmosphere answers, build BreathPuff.cs and hook it on the local player and remote avatars (SurvivalClient.AvatarOf).
+Open the PR from claude/survival-next (with survival-10's tool), wait for CI, send the green sha to the PM; Animation reads SurvivalClient.AirColdness.
