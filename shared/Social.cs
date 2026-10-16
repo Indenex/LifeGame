@@ -100,11 +100,15 @@ namespace LifeGame.Shared
             return Math.Clamp(age, 0f, 1f);
         }
 
-        // claims-7: handing things over. Face someone within GiveReach and offer; the
-        // server allows a little more for lag. An offer lapses after GiftKeepMicros.
-        public const float GiveReach = 3f;
-        public const float GiveReachSlack = 1f;
-        public const long GiftKeepMicros = 60_000_000;
+        // claims-7: trading (D-069). Start within TradeReach (the server allows
+        // TradeReachSlack more for lag); farther apart than TradeBreakDistance ends it.
+        public const float TradeReach = 3f;
+        public const float TradeReachSlack = 1f;
+        public const float TradeBreakDistance = 4f;
+        public const long TradeAskMicros = 30_000_000;
+        public const int TradeMaxStacks = 8;
+        public const byte TradeAsked = 0, TradeOpen = 1;
+        public const byte SideA = 0, SideB = 1;
 
         // "a stone flake", "an axe", "some clay", "3 sticks": how a gift reads in a line.
         public static string GiftPhrase(ItemDef def, uint count)
