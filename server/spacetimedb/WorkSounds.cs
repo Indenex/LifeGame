@@ -15,12 +15,9 @@ public static partial class Module
         public bool Failed;
     }
 
-    // Crafting calls these when a job starts (StartCraft) and ends (FinishCraft,
-    // which also runs for a player who disconnected mid-job). Crafting declares them
-    // in Crafting.cs on crafting-12 (branch crafting-work-hooks); until that merges
-    // they are declared here too. DELETE THESE TWO LINES when merging after it.
-    static partial void OnCraftStarted(ReducerContext ctx, CraftJob job);
-    static partial void OnCraftEnded(ReducerContext ctx, CraftJob job);
+    // Crafting declares and calls these (Crafting.cs, crafting-12) when a job starts
+    // (StartCraft) and ends (FinishCraft, which also runs for a player who
+    // disconnected mid-job).
 
     static partial void OnCraftStarted(ReducerContext ctx, CraftJob job)
     {
