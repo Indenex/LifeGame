@@ -19,6 +19,7 @@ Players can strike each other in the wild with the Strike key (left click / Z, s
 - Justin's answer on the PvP card (from the PM).
 - When survival-3 lands: switch Combat.cs to Survival's `KillPlayer(ctx, victim, "slain")` and `NeedsNow(ctx, id)` (stable names from the Survival lane) instead of calling Die/Snapshot directly.
 - When UX #33 and ui-4 land: land chip uses Hud.Soft and fades out while `Panels.Open()` is true (UX asked; playtest found it showing through the journal). Keep ClaimPanel a direct child of SocialLayer with public IsOpen (UX's Main reads it).
+- When UX #46 lands: ClaimPanel close hint uses `$"{Controls.KeyFor(\"claim_open\") ?? \"K\"} or Esc to close"` (leave ChatPanel's Enter text as is).
 - Strike key: Animals owns the dispatch (client/scripts/animals/Strike.cs, lands with PR #23). Register `Strike.Register("claims.player", (at, facing) => StrikeOffer?)` for the nearest player in front within 1.6 m; Animals moves its weapon-carry check into its own offer so fists work for PvP.
 
 ## Next step
