@@ -16,6 +16,8 @@ Per D-098, spinning and weaving happen at a Spindle station, and hide work (scra
 ## Progress log
 - 2026-10-16 20:15: D-098 and D-099 (seasons later; Animals owns seasonal fauna) relayed by the PM. Asked Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) for the framework's shapes and ETA. Asked the PM (Q8) whether #90 merges now as a hand craft (recommended) or waits.
 
+- 2026-10-16 20:45: Crafting's planned shape (crafting-15, branch crafting-stations, pending Justin): `StationKind` enum in shared/Processes.cs (None, Table, Spindle, DryingRack; append new at end), `ProcessDef.Station` (default None) means 'start only within reach of a finished station of that kind in a usable claim'; placement through Building's PlaceStructure with one StructureKind per station; Crafting.cs CountFor/TakeFor draw inventory then storage near the station; over-time work via a per-station slot table and Outcome.Slot (hide_rack may stay at first). Crafting agrees #90 merges now as a hand craft.
+
 ## Open questions / blockers
 - Blocked on Crafting's station framework (branch, process-to-station field, placement, nearby-storage input, timed slots).
 - Q8 with the PM: merge #90 now or hold.

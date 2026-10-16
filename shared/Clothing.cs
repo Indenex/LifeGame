@@ -1,6 +1,6 @@
 // What can be worn, in which slot, and how warm it keeps you (Animals lane).
 // Clothes are put on in the equipment panel (D-074); only worn pieces count.
-// Insulation is the share of the cold's bite a piece takes away: a tunic at 0.08
+// Insulation is the share of the cold's bite a piece takes away: a tunic at 0.10
 // makes you lose warmth 8% slower. Pieces in different slots add up. Numbers
 // start low and climb slowly as better clothing arrives (D-075).
 using System;
@@ -31,8 +31,8 @@ namespace LifeGame.Shared
         public const float MinQualityShare = 0.7f;
 
         public static readonly IReadOnlyDictionary<Item, Wearable> All = Build(
-            new Wearable { Item = Item.WoolTunic, Slot = ClothingSlot.Body, Insulation = 0.08f, Effect = "Keeps a little of the cold off" },
-            new Wearable { Item = Item.LeatherWraps, Slot = ClothingSlot.Feet, Insulation = 0.03f, Effect = "Keeps your feet off the cold ground" });
+            new Wearable { Item = Item.WoolTunic, Slot = ClothingSlot.Body, Insulation = 0.10f, Effect = "Keeps a little of the cold off" },
+            new Wearable { Item = Item.LeatherWraps, Slot = ClothingSlot.Feet, Insulation = 0.04f, Effect = "Keeps your feet off the cold ground" });
 
         public static Wearable? Find(ushort item) => All.TryGetValue((Item)item, out var w) ? w : null;
 
@@ -51,7 +51,7 @@ namespace LifeGame.Shared
             return Math.Min(sum, MaxInsulation);
         }
 
-        // "8% less cold" for the panel.
+        // "10% less cold" for the panel.
         public static string Percent(ushort item, byte quality) =>
             $"{MathF.Round(InsulationOf(item, quality) * 100f)}% less cold";
 

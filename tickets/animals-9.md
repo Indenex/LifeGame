@@ -10,7 +10,7 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 
 ## How it works
 - Items (animals range): WoolTunic 200, LeatherWraps 201, HasQuality.
-- `shared/Clothing.cs` (Animals-owned, the shared contract with UX): Item -> slot (Body 0, Feet 1), insulation at full quality, a plain effect line. Insulation scales with quality from 70% (q0) to 100% (q100). Defaults (proposed to the PM per D-075): tunic 0.08, wraps 0.03; cap 0.6.
+- `shared/Clothing.cs` (Animals-owned, the shared contract with UX): Item -> slot (Body 0, Feet 1), insulation at full quality, a plain effect line. Insulation scales with quality from 70% (q0) to 100% (q100). D-100 (Justin): tunic 0.10, wraps 0.04 (14% together at best); cap 0.6.
 - Processes, tier 2: `sew.wool_tunic` (3 Wool cloth + 1 Wool yarn, needs Cutting, 25 s); `sew.leather_wraps` (1 Leather + 1 Cordage, needs Cutting, 10 s). `sew` trains Toolmaking (Skills lane mapped it in PR #43, 7b28d4a).
 - Server `server/spacetimedb/Clothing.cs`: public table `worn_item` (Id, Owner, PlayerId, Slot, Item, Quality) so every client can show what others wear; view `my_worn`. Reducers `Wear(item, quality)` (takes one from the inventory, server picks the slot, swaps the old piece back) and `TakeOff(slot)`. Worn pieces are out of the inventory, so they don't count toward the carry load.
 - Survival.cs hooks (OK'd by the PM and Survival): `ClothingWarmthHook(ctx, playerId, ref insulation)`: cold drain x (1 - insulation), worn pieces only. `BeforeDeathDrop(ctx, player)` at the top of Die: worn clothes go back to the inventory so they drop with everything else.
@@ -20,6 +20,7 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 ## Progress log
 - 2026-10-16 17:30: questions Q3-Q5 and the hook asks sent to the PM; started.
 - 2026-10-16 19:10: D-074/D-075 relayed. Reworked to worn slots: worn_item table, my_worn, Wear/TakeOff, BeforeDeathDrop; numbers lowered to 0.08/0.03 with quality share. Local bot test: carried clothes change nothing; wearing the q35 tunic gives x0.9356 (matches), + wraps x0.9115, a stick is refused, taking the tunic off goes back to wraps only. Upgrade check passed.
+- 2026-10-16 20:45: D-100 applied (0.10 / 0.04). Journal 'Things to try' lines sent to Skills.
 - 2026-10-16 20:10: Modeling added ground/icon/held models for spindle, yarn, cloth (claude/model-1-style 8502136, ItemModels.cs); leather and scraped hide already done. Fixes the default lump UX saw in the panel shots once Modeling merges.
 - 2026-10-16 19:55: merged main cc75409 (#75 in): the insulation factor now sits on the wetness cold line `... * Chill(ctx, v.Wetness)`. Server + client build, ClothCheck passes (same ratios, death drop), upgrade check passed.
 - 2026-10-16 19:45: Modeling built the tunic and foot wraps on claude/model-1-style eb8b399 (client/scripts/models/Garments.cs): worn, ground, icon and held models; Animation wires worn_item to PlayerModel.Wear. Nothing more needed from the server; dye later = a colour per row.
@@ -30,7 +31,7 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 
 ## Open questions / blockers
 - Answered: D-074 paper-doll panel (UX builds it); D-075 low numbers that climb slowly. PM OK'd the Survival hooks; Survival agreed to ClothingWarmthHook (told about BeforeDeathDrop).
-- Numbers proposed to the PM (tunic 8%, wraps 3%, quality 70-100%).
+- Answered D-100: tunic 10%, wraps 4%, scaled by quality; worn clothes don't count toward carry.
 - Survival's #75 reworks the cold line: after it merges, merge main in and re-apply `* (1f - Math.Clamp(insulation, 0f, 1f))` on the new `cold` line only.
 
 ## Next step
