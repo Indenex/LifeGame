@@ -37,7 +37,7 @@ public partial class ChatPanel : CanvasLayer
         lines.MouseFilter = Control.MouseFilterEnum.Ignore;
         column.AddChild(lines);
 
-        input.PlaceholderText = "Say something   (Enter to send, Esc to close, /me to act, /name to rename)";
+        input.PlaceholderText = "Say something   (Enter to send, Esc to close, /me act, /w whisper, /s shout, /name rename)";
         input.MaxLength = LifeGame.Shared.Social.ChatMaxLength;
         input.AddThemeFontSizeOverride("font_size", 15);
         input.AddThemeColorOverride("font_color", Look.Cream);
