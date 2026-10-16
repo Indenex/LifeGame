@@ -13,6 +13,8 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 16:50: Integration session started on `claude/integration-lane`. Installed .NET 8.0.426 and SpacetimeDB 2.12.0 locally (no Godot yet).
 - 2026-10-16 16:50: last finished CI on main: run 340 on ca1ce9f, green (https://github.com/Indenex/LifeGame/actions/runs/38860380562). Runs 343 (84f44d2) and 345 (217dc13, docs-only PM merges) in progress.
 - 2026-10-16 16:50: test-merged all 11 open PRs into main 217dc13 (`git merge-tree`). Text-clean: #77, #76, #75, #73, #71, #66, #61, #47, #43, #35. Conflict: #70 crafting-chop-wood in `client/scripts/crafting/CraftingUi.cs`. `STATUS.md` "Next merges" list is stale (#10, #8, #23, #21, #26, #27, #25, #28 no longer open).
+- 2026-10-16 17:10: all 11 open PRs green in CI on their own heads (3 checks each), but most were based on old main. Built each merged onto main 217dc13 locally (server module, bindings, client `dotnet build`, all tools): #77, #76, #75, #73, #71, #66 build with 0 errors.
+- 2026-10-16 17:15: #70 crafting-9: merged main into `crafting-chop-wood`, resolved `CraftingUi.cs` (kept main's `reopenAfterMinigame` field and the branch's `Start(ProcessDef)`), local build green, pushed 546afd3.
 
 ## Open questions / blockers
 - (none)
