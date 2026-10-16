@@ -486,6 +486,22 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Decision:** Berry broth (coil pot of water + 3 berries) gives 45% hunger + 30% thirst and takes 60 s; mutton stew (water + 1 raw mutton + 2 berries) gives 65% + 30% and takes 90 s. Eating returns the pot; the pot never burns and keeps simmering if the fire dies; at most 2 pots per fire and 2 per player.
 **Who:** Justin ("As proposed", as recommended)
 
+## D-119 — 2026-10-16 — PM keeps merging
+**Decision:** Justin allowed the Integration lane to merge, but an agent can't change sessions' permission settings, so the PM keeps executing merges and Integration prepares merge-readiness.
+**Who:** Justin ("I do not want to do ANY work if I can help it"; he doesn't want to do any setup work himself)
+
+## D-120 — 2026-10-16 — Hold wool until stations
+**Decision:** #90 (wool to cloth plus the spin minigame) waits and ships together with the Spindle station; no temporary hand-craft spinning.
+**Who:** Justin ("Hold for stations"; the PM had recommended merging now)
+
+## D-121 — 2026-10-16 — Full fires refuse any overflow
+**Decision:** A fire refuses fuel if any of the item's burn time would go past the cap; the fuel is kept.
+**Who:** Justin ("Refuse any overflow"; the PM had recommended accepting when at least half fits)
+
+## D-122 — 2026-10-16 — Wading chill stays uncapped
+**Decision:** Standing in water (3x chill) stays outside the 2x chill cap; you can always step out.
+**Who:** Justin ("Leave it", as recommended)
+
 ## D-123 — 2026-10-16 — Endurance skill
 **Decision:** A new basic skill, Endurance, is trained by running (`move.run` process). Stamina run time and refill (D-111) grow with Endurance rank.
 **Who:** Justin ("New 'Endurance' skill", as recommended)
