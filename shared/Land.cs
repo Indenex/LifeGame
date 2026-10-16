@@ -23,11 +23,14 @@ namespace LifeGame.Shared
             // The water is a flat plane, so a stream runs in a valley: within about
             // 26 m of its line the hills sink toward a floor just above the water,
             // then a channel about 6 m wide slopes gently down to a bed below it.
+            // The bed stays shallow enough to wade (the client turns players back
+            // below WaterLevel - 0.3), so a stream never walls anyone in; ponds
+            // are deeper and are walked round.
             float meters = RiverDistance(x, z);
             float valley = 1f - SmoothStep(4f, 26f, meters);
             float bed = 1f - SmoothStep(1.0f, 6.0f, meters);
             float h = hills * (1f - 0.85f * valley) - 0.55f * 0.85f * valley;
-            h = h * (1f - bed) + (World.WaterLevel - 0.35f) * bed;
+            h = h * (1f - bed) + (World.WaterLevel - 0.22f) * bed;
 
             // Ponds: round hollows filled to a fixed depth, in a wider dip so the banks
             // slope gently. The offsets keep them off the noise lattice, where they

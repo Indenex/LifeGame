@@ -37,7 +37,7 @@ def land(x, z):
     valley = 1 - ss(4, 26, meters)
     bed = 1 - ss(1.0, 6.0, meters)
     h = hills * (1 - 0.85 * valley) - 0.55 * 0.85 * valley
-    h = h * (1 - bed) + (WL - 0.35) * bed
+    h = h * (1 - bed) + (WL - 0.22) * bed  # wadeable, see Land.cs
     # Ponds: round hollows filled to a fixed depth, in a wider dip so banks slope
     # gently. Offsets keep them off the
     # noise lattice (and off the axes, where the hash is weak).
