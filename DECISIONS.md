@@ -751,3 +751,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-184 — 2026-10-16 — Stalking crit values: rarer, bigger (extends D-179)
 **Decision:** Stalking crit chance runs from 3% to 40% and the bonus damage from +50% to +200%, both on the shared front-loaded curve (D-175, D-177).
 **Who:** Justin ("Rarer, bigger")
+
+## D-185 — 2026-10-16 — Crit cue look: "!" only
+**Decision:** A Stalking crit shows an amber "!" with a starburst over the animal, bigger on a kill. No numbers, and plain hits stay quiet (extends D-179).
+**Who:** Justin ("Crit '!' only")
+
+## D-186 — 2026-10-16 — Hardening behind a dev flag
+**Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
+**Who:** PM (technical decision)
