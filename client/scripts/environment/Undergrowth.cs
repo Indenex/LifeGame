@@ -16,6 +16,14 @@ public static class Undergrowth
     public static Mesh Flowers => flowers ??= BuildFlowers();
     public static Mesh Bush => bush ??= BuildBush();
 
+    // Heath and wetland colors (env-4), until the Atmosphere lane adds them to Look.
+    public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
+    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
+    public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
+    public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
+    public static readonly Color Moss = new(0.20f, 0.31f, 0.12f);
+
     // Wildflower colors, from the Look palette.
     public static readonly Color[] FlowerColors = { Look.FlowerWhite, Look.FlowerButtercup, Look.FlowerViolet, Look.FlowerPink };
 
