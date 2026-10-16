@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_progress
 Branch: crafting-fire-cap (stacked on crafting-cold-hearth, PR #92)
-PR: (not yet)
+PR: #122
 
 ## Goal
 D-090 (amends D-054), from Justin via the PM on 2026-10-16:
@@ -25,4 +25,4 @@ D-090 (amends D-054), from Justin via the PM on 2026-10-16:
 - Default chosen: "full" = less than half the item's burn time fits. Tell the PM if Justin wants it stricter (any overflow refused) or looser.
 
 ## Next step
-Open the PR against main once #92 merges (merge main in first); until then the PR would include #92's commits.
+Wait for CI on #122; when #92 merges, merge main in and send the PM the green sha.
