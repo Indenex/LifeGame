@@ -1,7 +1,7 @@
 # survival-3: Carrying limit
 Lane: Survival needs
 Owner: Survival thread
-Status: in_review
+Status: done
 Branch: claude/survival-needs-g7yrhi (restarted from main after #12 merged)
 PR: #39
 
@@ -19,4 +19,4 @@ Justin chose a carrying limit (D-042). Every item has a load (roughly kilograms)
 - Justin's card on the numbers is open; slower walk is the shipped default.
 
 ## Next step
-The PM merges #39. Then do the ui-4 follow-ups (Panels fade, Use Target, Hints.Done) and D-039 mutton eating once those items exist.
+Done: #39 merged as 56b9b95. Next is survival-4.

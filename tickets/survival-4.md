@@ -2,7 +2,7 @@
 Lane: Survival needs
 Owner: Survival thread
 Status: in_progress
-Branch: claude/survival-needs-g7yrhi (local commits until #39 merges)
+Branch: claude/survival-needs-g7yrhi (restarted from main after #39 merged)
 PR: (not yet)
 
 ## Goal
@@ -17,4 +17,4 @@ Roast mutton fills 40% of hunger (Justin, D-039). Burnt mutton fills 10% (our de
 - (none for ui-4: done locally)
 
 ## Next step
-After #39 merges, push these commits. Do the ui-4 items once #38 is on main, then open the survival-4 PR.
+Wait for CI on the survival-4 PR, then send the green sha to the PM.
