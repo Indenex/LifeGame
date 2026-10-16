@@ -19,6 +19,7 @@ public partial class Atmosphere : Node3D
     // Cached names: a string here would build a new StringName every frame.
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
+    static readonly StringName NPuddles = "puddles";
     static readonly StringName NWindStrength = "wind_strength";
     static readonly StringName NWindGust = "wind_gust";
     static readonly StringName NRainAmount = "rain_amount";
@@ -61,6 +62,9 @@ public partial class Atmosphere : Node3D
     float cloud = 0.2f, rainAmount, wind = 0.3f, wetness;
     float targetCloud = 0.2f, targetRain, targetWind = 0.3f, targetWetness;
     float? argCloud, argRain, argWind, argWetness;
+    // Standing water after rain, eased; --puddles=1 holds it for screenshots.
+    float puddleLevel;
+    float? argPuddles;
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
@@ -124,6 +128,7 @@ public partial class Atmosphere : Node3D
         argRain = ArgFloat("rain");
         argWind = ArgFloat("wind");
         argWetness = ArgFloat("wetness");
+        argPuddles = ArgFloat("puddles");
         if (Arg("debug-position")?.Split(',') is [var px, var pz]
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
@@ -244,6 +249,10 @@ public partial class Atmosphere : Node3D
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        // Puddles stand once the ground is well soaked, and frozen ground holds none.
+        float puddleTarget = Mathf.SmoothStep(0.45f, 0.9f, wetness) * (1f - Mathf.SmoothStep(0.3f, 0.8f, SnowCover));
+        puddleLevel = Mathf.Lerp(puddleLevel, argPuddles ?? puddleTarget, snap ? 1f : 1f - Mathf.Exp(-dt / 20f));
+        RenderingServer.GlobalShaderParameterSet(NPuddles, puddleLevel);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
         RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);

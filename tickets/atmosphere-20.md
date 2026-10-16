@@ -1,8 +1,8 @@
 # atmosphere-20: Wet world after rain
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: todo
-Branch: (set when started)
+Status: in_progress
+Branch: claude/atmosphere-20-wet-world
 PR: (none yet)
 
 ## Goal
@@ -11,8 +11,10 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 ## Progress log
 - 2026-10-16 21:45: ticket opened.
 
+- 2026-10-16 22:00: started from main while #281 runs CI. New global `puddles` (0 to 1): smoothstep(0.45, 0.9, wetness), none on snowy ground, eased over 20 s; --puddles=1 holds it. Look painted shader, ground material only (puddles_ok = 1 via WithPuddles): puddles on flat ground (normal.y 0.93 to 0.99) in the low spots of the detail noise at 0.035 scale, covering up to about 42% as puddles goes to 1; darker (x0.5), roughness 0.05, specular 0.5, normal flattened to the water plane, sun glint via wet. Wet darkening and sheen elsewhere unchanged. Client builds.
+
 ## Open questions / blockers
 - (none yet)
 
 ## Next step
-Start after atmosphere-19 is in review.
+Push; render request (meadow and path in rain, just after, later); open the PR.
