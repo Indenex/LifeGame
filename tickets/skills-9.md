@@ -24,7 +24,16 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 17:24: Animals lane (via the PM, D-071): `sew.*` (animals-9: wool tunic, leather wraps) trains Toolmaking; prefix added now so it works when animals-9 lands. A capped Weaver specialty takes spinning, weaving and likely sewing later.
 
 ## Open questions / blockers
-- (none)
+- D-075 skill curve review (PM asked 17:24), sent to the PM as options. Uses to reach a rank, one skill, ~30 s per use with gathering:
+  | Rank | Now | A (rec.) gain=max(3, 30/(1+pts/700)) | B gain=max(2, 20/(1+pts/600)) |
+  |---|---|---|---|
+  | 15 | 18 (9 min) | 103 (52 min) | 169 (1.4 h) |
+  | 20 Apprentice | 25 (12 min) | 162 (1.4 h) | 266 (2.2 h) |
+  | 40 Journeyman | 67 (34 min) | 511 (4.3 h) | 860 (7 h) |
+  | 60 Expert | 150 (1.3 h) | 1,069 (9 h) | 1,826 (15 h) |
+  | 80 Artisan | 394 (3.3 h) | 1,736 (14 h) | 2,826 (24 h) |
+  | 100 Master | 794 (6.6 h) | 2,403 (20 h) | 3,826 (32 h) |
+  Effects (quality cap 35 to 100, speed to 40% time, minigame steps -75%) stay linear per rank by default; option to soften speed to 60% time and steps to -50%. Stored points are kept, so no wipe; existing players keep their ranks. Default until answered: no change.
 
 ## Next step
 Wait for CI on PR #43 (head after the 7e79d22 merge); when green, log the run link here and send the PM the sha.
