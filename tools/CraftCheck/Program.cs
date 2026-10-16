@@ -242,6 +242,9 @@ conn.Disconnect();
 return 0;
 
 // Lays out a structure on clear, level ground near the bot and builds it from the bag.
+// Just past the server's keep-out for claims (Claims.CheckStructureSite).
+const float ClaimKeepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+
 Structure BuildHere(StructureKind kind)
 {
     float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
@@ -251,6 +254,8 @@ Structure BuildHere(StructureKind kind)
         {
             float a = k * MathF.Tau / 16, sx = x + MathF.Cos(a) * r, sz = z + MathF.Sin(a) * r;
             if (Structures.GroundProblem((int)kind, sx, sz, 0f, H) != null) continue;
+            // The server refuses claims in the spawn clearing; the search must not drift back into it.
+            if (kind == StructureKind.ClaimMarker && sx * sx + sz * sz < ClaimKeepOut * ClaimKeepOut) continue;
             if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
             if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
             site = (sx, sz);
