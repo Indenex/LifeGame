@@ -11,7 +11,7 @@ Justin wants trading (D-069). Claims builds the server side and the "Trade with 
 - Each adds items from what they carry, then both press Accept. Any change to either offer clears both accepts.
 - The swap happens all at once, checked by the server.
 - The trade is cancelled if they move more than 4 m apart, if either presses Esc, or if either dies.
-- One chat line announces a finished trade.
+- Bystanders see nothing in chat when a trade finishes (D-080).
 
 ## Contract (for ui-9; names are final unless this section changes)
 
@@ -56,7 +56,7 @@ Items stay in the owner's inventory until the swap; they are not reserved.
 | `AcceptTrade(ulong tradeId, uint version, bool accept)` | A or B, while Open | accept true: sets your Accept if version matches; when both have accepted, the swap (below). accept false: clears only your own Accept, Version unchanged (asked by ui-9) | "That trade is gone", "The offer changed; look again" (version mismatch), "Nothing to trade" (both sides empty) |
 | `CancelTrade(ulong tradeId)` | A or B, any state | deletes it, TradeEnded "cancelled" | none (no-op if gone) |
 
-The swap: in one transaction, recheck reach and that each side still carries every listed stack. If anything is short, the second Accept fails with "<Name> no longer has <item>" and nothing changes. The trade stays open, and the short side fixes it by changing their offer, which clears both accepts. Otherwise the items move, the trade and its items are deleted, TradeEnded "done" is sent, and one chat line goes to everyone nearby: "Mira and Tam trade" when both sides gave something, "Mira hands Tam a flint" when only one side did (a gift).
+The swap: in one transaction, recheck reach and that each side still carries every listed stack. If anything is short, the second Accept fails with "<Name> no longer has <item>" and nothing changes. The trade stays open, and the short side fixes it by changing their offer, which clears both accepts. Otherwise the items move, the trade and its items are deleted, and TradeEnded "done" is sent. Nothing is posted in chat (D-080): only the two traders see their own confirmation.
 
 A 1 s server watch runs while any trade exists. It cancels with "apart" when the players are more than TradeBreakDistance apart or either is offline; a death respawns the player far away, so it counts as "apart". It ends asks older than TradeAskMicros with "lapsed".
 
@@ -66,6 +66,7 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - `SocialLayer.PanelOpen` (already hooked into Main's `Panels.Open` and the PauseMenu `OthersOpen`) can include ui-9's window if UX/UI wants that.
 
 ## Progress log
+- 2026-10-16 17:40: D-080: removed the bystander chat line; traders get TradeEnded "done".
 - 2026-10-16 17:35: ui-9 asked for un-accept, so AcceptTrade now takes `bool accept`. Integration set Priority 5. D-077 recorded.
 - 2026-10-16 18:50: server side built to the contract: server/spacetimedb/Trading.cs, Social trade constants, and the claims.trade G handler in SocialLayer.Trading.cs (my_trade, my_trade_items and trade_ended are subscribed there for ui-9). The one-way hand-over code is removed. Local build passes; SocialTest passes all checks (14 trade checks: reach, one at a time, decline, empty, carried only, version, both accept, gift line, change clears accepts, walking apart).
 - 2026-10-16 18:20: PM repurposed claims-7 from the one-way hand-over to the server side of trading (D-069). Wrote the contract above first. The earlier hand-over code (Giving.cs, GivePanel, SocialLayer.Giving.cs) will be replaced.
@@ -75,10 +76,9 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 ## Decisions / defaults
 - PM defaults from D-069 are as in Goal.
 - D-077: a trade may overload a player; they walk slower (no hard cap).
-- Bystanders see that a trade happened, not what was traded (sent to the PM as a question).
+- D-080: completed trades post nothing to bystanders. Requests lapse after 30 s.
 
 ## Open questions / blockers
-- With Justin via PM: chat line detail (who traded only [recommended] / list the items), ask lapse 30 s.
 - (resolved) Integration: no new hook; claims.trade uses Use.Register with a Target at Priority 5.
 
 ## Next step
