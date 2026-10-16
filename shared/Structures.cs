@@ -198,8 +198,6 @@ namespace LifeGame.Shared
         // The skill each stage practices, for the journal and skills (build.* process ids).
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
             DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave", DoorProcess = "build.door";
-        // Building a potter's bench (ceramics-8); the journal's "Things to try" listens for it.
-        public const string BenchProcess = "build.bench";
 
         // A hurdle door on a finished clay hut: what hanging it takes, and the warmth it keeps in when shut.
         public const int DoorSticks = 4, DoorFiber = 2;
@@ -244,7 +242,8 @@ namespace LifeGame.Shared
             4 => WeaveProcess,
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
-            _ when Shape(kind).Station == StationKind.PottersBench => BenchProcess,
+            // Each crafting station reports its own id, so the journal knows it is built.
+            _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 

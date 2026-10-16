@@ -27,6 +27,7 @@ Repeat until the ticket's goal is met:
 1. Local build green: push.
 2. **[WRITE]** record the CI run link in the ticket, and set `Next step` to wait for it.
 3. When it finishes: **[WRITE]** update the ticket. Green: open or update the PR, set `in_review`, and ask the PM for the merge. Red: note the failing step in the ticket first, then fix. Never sit idle while a PR waits: send the PM the green head sha (the PM merges, D-119), then start your next ticket right away, stacked on your branch if needed.
+4. Never idle (D-145): when your ticket is done or waiting, pick your next item from the milestones or the design docs, start it, and tell the PM.
 
 ## 3. Session-end checklist
 

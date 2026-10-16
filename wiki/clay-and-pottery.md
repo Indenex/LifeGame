@@ -9,6 +9,6 @@ A fired clay pot is the first major goal. Pots carry water and lead into cooking
 - **Fire it.** Fire turns dry clay into pottery. A pot fired before it is dry will crack. Cracked pieces are not wasted: they can be used to improve later clay.
 
 ## Later
-A kiln fires several pots at once and gives better results than an open fire. Bricks and daub are needed for stronger buildings. Finding out how to make them is up to you.
+A kiln fires several pots at once and gives better results than an open fire. Some large pieces, such as the storage jar, can only be fired in a kiln. Bricks and daub are needed for stronger buildings. Finding out how to make them is up to you.
 
 Next: [Building and claims](building-and-claims.md)

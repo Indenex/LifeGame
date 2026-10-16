@@ -6,10 +6,13 @@ You have four needs: food, water, warmth and staying dry. They drain slowly, so 
 Both go down over time. Water runs out faster than food. Press X to eat the best food you carry; face water and use it to drink. Cooked food fills you more than raw. Once you can make a container, you can carry water.
 
 ## Cold
-You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster, and rain makes it worse unless you are under cover. A burning fire nearby keeps you warm, and standing by one warms you back up quickly. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be.
+You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster, and rain makes it worse unless you are under cover. A burning fire nearby keeps you warm, and standing by one warms you back up. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be.
 
 ## Wetness
 Rain and wading make you wet. Heavy rain soaks you faster than drizzle, and wading soaks you very quickly. The wetter you are, the faster you lose warmth. Cold, rain and wetness add up only to a point, so even the worst weather gives you time to find shelter. You dry off over time, faster under cover and faster still beside a fire.
+
+## Stamina
+Hold Shift to run. Running uses stamina, shown as a small bar under your character while you are short of breath. When it runs out you walk until it refills. It refills after you stop running. A good meal lets you run longer for a while.
 
 ## Carrying
 You can only carry so much. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
