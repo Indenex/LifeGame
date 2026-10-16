@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Godot;
 using SpacetimeDB.Types;
 
@@ -96,7 +97,7 @@ public static class TimeCommands
     }
 
     public static bool IsAdmin(DbConnection? conn) =>
-        conn?.Identity is { } me && conn.Db.WorldAdmin.Identity.Find(me) is not null;
+        conn != null && conn.Db.MyAdmin.Iter().Any();
 
     public static IEnumerable<(string Keys, string Help)> HelpFor(DbConnection? conn) =>
         IsAdmin(conn) ? Help : Array.Empty<(string, string)>();

@@ -185,7 +185,7 @@ public static partial class Module
     // Who may change the time from the game. The publisher (the claims admin) can
     // always; they add a player with `spacetime call <db> make_admin '"Name"'`,
     // since a game client signs in with its own identity, not the publisher's.
-    [SpacetimeDB.Table(Accessor = "WorldAdmin", Public = true)]
+    [SpacetimeDB.Table(Accessor = "WorldAdmin")] // private (admin-1): clients read only their own row through my_admin
     public partial struct WorldAdmin
     {
         [PrimaryKey]

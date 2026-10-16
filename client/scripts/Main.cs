@@ -46,6 +46,7 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly AdminPanel admin = new();
     readonly StationPanel station = new();
     bool spawned;
     Vector3 velocity;
@@ -88,13 +89,15 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         building.MayBar = social.HasRightsAt;
         building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
+        AddChild(admin);
+        admin.Note = hud.Note;
         // The panel at a crafting station (ui-13, D-098).
         station.Conn = () => conn;
         station.Crafting = crafting;
@@ -107,7 +110,7 @@ public partial class Main : Node3D
             || trade.IsOpen
             || station.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -118,7 +121,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -332,6 +335,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        admin.Attach(conn);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -509,7 +513,7 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
