@@ -18,6 +18,8 @@ Numbers (sent to the PM as defaults, not yet Justin's): 4 tempered clay, kiln on
 
 ## Progress log
 - 2026-10-16: ceramics-2/3/5 closed (merged as #44); kiln blueprint (D-035) was already shipped there. Asked the PM for the next milestone with 4 options; started on the recommended one, this ticket. Toolchain (dotnet 8, spacetimedb-cli, Godot 4.6.2 mono) being installed in the container.
+- 2026-10-16: items 1-4 done in cf5cc32; server, client build. Bindings: tools/gen-bindings.sh was refused by the sandbox (its rm -rf); ran its generate line directly on a fresh clone.
+- 2026-10-16: ClayCheck --jar added (implies --kiln); --ceramics-demo=jar row (wet, leather-hard, dry, kiln-fired jar, coil pot for scale). Running ClayCheck --jar on scratch db c6jar1.
 
 ## Open questions / blockers
 - PM: next milestone = storage jar? (sent 2026-10-16 with options cooking pot, roof tiles, polish). Working on the jar meanwhile.
@@ -25,4 +27,4 @@ Numbers (sent to the PM as defaults, not yet Justin's): 4 tempered clay, kiln on
 - Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Tell them when the PR opens.
 
 ## Next step
-Implement items 1-3 server side (shared/Items.cs, Processes.cs, ClayRules.cs, Ceramics.cs, Kiln.cs, Structures.cs, Building.cs cost row) and build the server module.
+Check the ClayCheck --jar result on c6jar1 (local server on 127.0.0.1:3000; rerun `cd tools/ClayCheck && dotnet run -c Release -- http://127.0.0.1:3000 <scratch db> --jar` after publishing to a new scratch db if the session restarted), then send the Render lane a request and open the PR.
