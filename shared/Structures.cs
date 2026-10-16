@@ -150,24 +150,23 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Settling tub",
-                Round = true, Radius = 0.55f,
+                HalfWidth = 0.6f, HalfDepth = 0.25f,
                 Clearance = 1.0f,
-                Solid = true,
                 Station = StationKind.ClayTub,
                 Stages = new[] { "Tub" },
             },
             new StructureShape
             {
                 Name = "Crushing block",
-                HalfWidth = 0.45f, HalfDepth = 0.45f,
-                Clearance = 0.9f,
+                Round = true, Radius = 0.3f,
+                Clearance = 0.8f,
                 Station = StationKind.CrushBlock,
                 Stages = new[] { "Block" },
             },
             new StructureShape
             {
                 Name = "Tempering trough",
-                HalfWidth = 0.85f, HalfDepth = 0.4f,
+                HalfWidth = 0.5f, HalfDepth = 0.3f,
                 Clearance = 1.0f,
                 Station = StationKind.TemperTrough,
                 Stages = new[] { "Trough" },
