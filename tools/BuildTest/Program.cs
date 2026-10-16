@@ -150,7 +150,9 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 
     // Both stand at the open front and add what they carry until it stands.
     var shape = Structures.Shape((int)kind);
-    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, shape.Round ? shape.Radius + 0.6f : Math.Max(1.9f, shape.HalfDepth + 0.6f));
+    // A fence is thin: stand close, since a walk can stop a meter short and reach is 2.2 m past its line.
+    float stand = shape.Round ? shape.Radius + 0.6f : shape.Fence ? 0.9f : Math.Max(1.9f, shape.HalfDepth + 0.6f);
+    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, stand);
     b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
