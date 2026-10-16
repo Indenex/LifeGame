@@ -19,6 +19,7 @@ Split with House building: they keep Weathering.cs and Structures.cs kinds; Clai
 
 ## Progress log
 - 2026-10-16: survey done, options and split sent. Waiting on the PM (timing) and House building (any pending change to Weathering.cs or the constants).
+- 2026-10-16: the old House building session agreed to the split. As of its handoff nothing of theirs touches Weathering.cs or the constants. Watch building-10 (log cabin, branch claude/house-building-8ueqz2-cabin, no PR yet): its shape sets `WeatherAfter = 168` like the brick house; if the per-kind overrides go, the cabin's goes too. The new House building session (reach it through the PM) needs to confirm nothing has changed since 20:05.
 
 ## Open questions / blockers
 - Timing pick (a/b/c) from Justin via the PM.
