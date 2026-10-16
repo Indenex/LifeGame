@@ -39,8 +39,8 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - To PM for Justin 2026-10-16 (building on the recommended default for each):
   - Q1 dropped (fences already stop people on the client).
   - Q2 answered: a, members only (open, bar and unbar).
-  - Q3 border placement (a snap [recommended] / b free);
-  - Q4 lapse (a fences stay and weather [recommended] / b fall with the marker).
+  - Q3 answered: snap to the border.
+  - Q4 answered: fences stay as ordinary fences, gates open to anyone, everything weathers if untouched (D-046). ClaimAt only counts standing claims, so no code is needed.
 - From House building: the building-9 sha with the two hook declarations.
 
 ## Next step
