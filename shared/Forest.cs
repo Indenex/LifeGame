@@ -25,8 +25,9 @@ namespace LifeGame.Shared
             // Clay ground is boggy and thinly wooded; so is low ground by the water.
             d *= 1f - 0.75f * SmoothStep(0.55f, 0.7f, World.ClayScore(x, z));
             d *= SmoothStep(-0.9f, -0.4f, World.BaseHeight(x, z));
-            // Hilltops open into heath, with only the odd lone tree.
-            d *= 1f - 0.85f * Heath(x, z);
+            // Hilltops open into heath, with only the odd lone tree: the trees thin out
+            // early, so even the heath's edge reads as open ground.
+            d *= 1f - 0.97f * SmoothStep(0.15f, 0.6f, Heath(x, z));
             // Deer trails keep a path open through the trees (env-5).
             d *= 1f - 0.9f * Landmarks.Trail(x, z);
             return d;
@@ -48,6 +49,13 @@ namespace LifeGame.Shared
 
         // Chance a cell holds a full-grown tree.
         public static float TreeChance(float density) => 0.004f + 0.16f * density;
+
+        // The same, with the heath's lone trees kept rare: only the odd oak stands on
+        // an open hilltop. Trees.Forest grows the server's trees by this.
+        public static float TreeChance(float density, float heath) =>
+            TreeChance(density) * (1f - 0.8f * SmoothStep(0.3f, 0.8f, heath));
+
+        public static float TreeChanceAt(int x, int z) => TreeChance(Density(x, z), Heath(x, z));
 
         static float SmoothStep(float from, float to, float x)
         {
