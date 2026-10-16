@@ -10,16 +10,34 @@ def ss(a, b, x):
     t = min(max((x - a) / (b - a), 0), 1)
     return t * t * (3 - 2 * t)
 
+WL = -1.0  # World.WaterLevel
+
+def river(x, z):
+    return VN(x, z, 140, 71) * 0.8 + VN(x, z, 35, 74) * 0.2
+
+# Meters from the river line (where river() crosses 0.5): the value's offset
+# divided by its slope, so flat stretches of noise don't widen the stream.
+def river_distance(x, z):
+    r = river(x, z)
+    gx = (river(x + 1, z) - river(x - 1, z)) / 2
+    gz = (river(x, z + 1) - river(x, z - 1)) / 2
+    return abs(r - 0.5) / max(math.hypot(gx, gz), 0.002)
+
 def land(x, z):
     hills = VN(x, z, 48, 1) * 2.0 + VN(x, z, 8, 2) * 0.4 - 0.6
-    pond = ss(0.78, 0.92, VN(x, z, 36, 70)) * 2.4
-    # The water plane is flat (World.WaterLevel), so a stream must run in a valley:
-    # TODO lower the hills broadly along the river line, then carve the bed to a
-    # fixed depth below water instead of subtracting.
-    w = abs(VN(x, z, 110, 71) - 0.5)
-    stream = (1 - ss(0.006, 0.02, w)) * 1.6 * ss(0.2, 0.5, VN(x, z, 200, 73) + 0.3)
-    keep = ss(18, 32, math.hypot(x, z))
-    return hills * (0.4 + 0.6 * keep) + 0.1 * (1 - keep) - max(pond, stream) * keep
+    # The water plane is flat, so the stream runs in a broad valley: hills sink
+    # toward a floor just above water within ~26 m of the river line, then a
+    # channel ~3 m wide is cut to a fixed bed below water.
+    meters = river_distance(x, z)
+    valley = 1 - ss(4, 26, meters)
+    bed = 1 - ss(1.2, 3.5, meters)
+    h = hills * (1 - 0.85 * valley) - 0.55 * 0.85 * valley
+    h = h * (1 - bed) + (WL - 0.35) * bed
+    # Ponds: round hollows filled to a fixed depth.
+    pond = ss(0.86, 0.95, VN(x, z, 36, 70))
+    h += (min(h, WL - 0.4) - h) * pond
+    keep = ss(18, 32, math.hypot(x, z))  # spawn stays a dry, gentle rise
+    return h * keep + (0.1 + hills * 0.3) * (1 - keep)
 
 water = n = 0
 for z in range(-120, 121, 4):
