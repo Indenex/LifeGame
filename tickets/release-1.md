@@ -37,6 +37,8 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 - 2026-10-16 19:55: per Integration: the wipe flag now comes from every PR merged since the previous release (`tools/release/merged-prs.sh`, REST compare + commits/pulls), since Build concurrency can skip a merge's own release; notes list those PRs; release only for head_branch main. Tested merged-prs.sh read-only against the real repo (115a22e..45f8913 gives #146, #147) and make-release.sh with a wipe PR in the list.
 - 2026-10-16 19:40: Q3 check (does a `lifegame` database exist on Maincloud under his login?) not done: probing Maincloud and the CLI login from this sandbox was refused by the session's permission checks, and the launcher can't verify it without touching his login. Told the PM.
 
+- 2026-10-16 20:10: Render shots (renders/release-1-02ae54a-1..4.png on claude/render-1-013qe8) and PM asks: the wipe question is now a launcher-styled overlay below the title; focus on "Keep my world", so Enter keeps, and Esc keeps; disabled buttons dim instead of brightening. Checked under Xvfb with xdotool: Enter and Esc each left the world on 474 ("Nothing changed"). Added `--press` (clicks the main button once, for screenshots). PM dropped Q3.
+
 ## Open questions / blockers
 - ANSWERED (Justin): Q1 a, Q2 a. Q3 unsure; see log.
 - Q1 (to PM, for Justin, sent 19:05): public GitHub Releases (recommended; no login needed) vs private repo vs Actions artifacts (both need a GitHub token on his PC). Default: build everything, enable nothing until answered.

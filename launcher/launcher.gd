@@ -23,6 +23,8 @@ extends Control
 #   --no-server          only update the game; for friends joining someone else's world
 #   --auto               press "Update and play" at start; --no-play stops before playing,
 #                        --quit exits when done (code 0 ok, 1 failed, 2 waiting on a wipe OK)
+#   --press              click the main button once at start (unlike --auto, a wipe question
+#                        stays open; for screenshots)
 #   --screenshot=PATH    save the window to PATH once the launcher is idle, then quit
 
 const WIPE_MARK := "<!-- world-wipe -->"
@@ -60,7 +62,11 @@ var world_button: Button
 var play_button: Button
 var log_button: Button
 var log_box: TextEdit
-var confirm: ConfirmationDialog
+var wipe_overlay: Control
+var wipe_text: Label
+var keep_button: Button
+
+signal wipe_answered(go: bool)
 
 func _ready() -> void:
 	_parse_args()
@@ -68,6 +74,8 @@ func _ready() -> void:
 	_load_state()
 	_log("Launcher home: " + home)
 	await _refresh()
+	if opts.has("press"):
+		_on_main()  # like a click: a wipe question stays open, for screenshots
 	if opts.has("auto"):
 		await _update_and_play()
 		if opts.has("quit"):
@@ -218,13 +226,64 @@ func _build_ui() -> void:
 	log_button.pressed.connect(func(): log_box.visible = not log_box.visible)
 	row.add_child(log_button)
 
-	confirm = ConfirmationDialog.new()
-	confirm.title = "This update wipes the world"
-	confirm.ok_button_text = "Wipe and update"
-	confirm.cancel_button_text = "Keep my world"
-	confirm.dialog_autowrap = true
-	confirm.min_size = Vector2i(460, 0)
-	add_child(confirm)
+	_build_wipe_overlay()
+
+# The wipe question sits over the whole launcher, in its own style. "Keep my world" has the
+# focus, so Enter keeps; Esc keeps too. Only a deliberate click on the other button wipes.
+func _build_wipe_overlay() -> void:
+	wipe_overlay = Control.new()
+	wipe_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wipe_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	wipe_overlay.visible = false
+	add_child(wipe_overlay)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.65)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wipe_overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.offset_top = 112  # below the title, so the launcher still says what it is
+	center.offset_bottom = -12
+	wipe_overlay.add_child(center)
+	var box := PanelContainer.new()
+	box.custom_minimum_size = Vector2(540, 0)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.11, 0.12, 0.09)
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(26)
+	sb.border_color = Color(WARN, 0.45)
+	sb.set_border_width_all(1)
+	box.add_theme_stylebox_override("panel", sb)
+	center.add_child(box)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	box.add_child(col)
+	var title := Label.new()
+	title.text = "This update wipes the world"
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", WARN)
+	col.add_child(title)
+	wipe_text = _small("", CREAM)
+	wipe_text.add_theme_font_size_override("font_size", 15)
+	wipe_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(wipe_text)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	col.add_child(row)
+	keep_button = _button("Keep my world", true)
+	keep_button.pressed.connect(func(): wipe_answered.emit(false))
+	row.add_child(keep_button)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(gap)
+	var go := _button("Wipe and update", false, true)
+	go.pressed.connect(func(): wipe_answered.emit(true))
+	row.add_child(go)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if wipe_overlay.visible and event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		wipe_answered.emit(false)
 
 func _small(text: String, color: Color) -> Label:
 	var l := Label.new()
@@ -233,7 +292,7 @@ func _small(text: String, color: Color) -> Label:
 	l.add_theme_color_override("font_color", color)
 	return l
 
-func _button(text: String, primary: bool) -> Button:
+func _button(text: String, primary: bool, danger := false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, 44 if primary else 36)
@@ -243,20 +302,21 @@ func _button(text: String, primary: bool) -> Button:
 		st.set_corner_radius_all(8)
 		st.content_margin_left = 22 if primary else 14
 		st.content_margin_right = st.content_margin_left
-		var base := ACCENT if primary else Color(CREAM, 0.10)
+		var base := ACCENT if primary else Color(WARN, 0.16) if danger else Color(CREAM, 0.10)
 		match s:
-			"hover": base = base.lightened(0.12)
+			"hover": base = base.lightened(0.12) if primary else Color(base, base.a + 0.08)
 			"pressed": base = base.darkened(0.15)
-			"disabled": base = Color(base, 0.35)
+			"disabled": base = Color(base.darkened(0.35), base.a * 0.45)
 			"focus":
 				st.draw_center = false
 				st.border_color = Color(CREAM, 0.5)
 				st.set_border_width_all(1)
 		st.bg_color = base
 		b.add_theme_stylebox_override(s, st)
-	b.add_theme_color_override("font_color", BG if primary else CREAM)
-	b.add_theme_color_override("font_hover_color", BG if primary else CREAM)
-	b.add_theme_color_override("font_disabled_color", Color(CREAM, 0.4))
+	var fc := BG if primary else WARN if danger else CREAM
+	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(k, fc)
+	b.add_theme_color_override("font_disabled_color", Color(CREAM, 0.28))
 	return b
 
 func _set_status(text: String, detail := "", color := CREAM) -> void:
@@ -488,19 +548,13 @@ func _fail() -> bool:
 
 func _ask_wipe() -> bool:
 	var from := ("build %d" % state.server_build) if state.server_build > 0 else "the build it's on"
-	confirm.dialog_text = ("Build %d starts a fresh world. Everything built, carried and stored in your current world (%s) will be gone, for everyone.\n\n" +
+	wipe_text.text = ("Build %d starts a fresh world. Everything built, carried and stored in your current world (%s) will be gone, for everyone.\n\n" +
 		"Only go ahead if the Project Manager told you this wipe is planned.") % [latest.build, from]
-	var st := {"answer": false, "done": false}
-	var ok := func(): st.answer = true; st.done = true
-	var no := func(): st.done = true
-	confirm.confirmed.connect(ok, CONNECT_ONE_SHOT)
-	confirm.canceled.connect(no, CONNECT_ONE_SHOT)
-	confirm.popup_centered()
-	while not st.done:
-		await get_tree().process_frame
-	if confirm.confirmed.is_connected(ok): confirm.confirmed.disconnect(ok)
-	if confirm.canceled.is_connected(no): confirm.canceled.disconnect(no)
-	return st.answer
+	wipe_overlay.visible = true
+	keep_button.grab_focus()
+	var go: bool = await wipe_answered
+	wipe_overlay.visible = false
+	return go
 
 # --- World (SpacetimeDB) ----------------------------------------------------------
 
