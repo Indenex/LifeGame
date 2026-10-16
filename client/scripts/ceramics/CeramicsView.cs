@@ -69,7 +69,7 @@ public partial class CeramicsView : Node
                 note(form == ClayForm.Brick
                     ? "The brick is drying. It turns pale when it is ready."
                     : "Your pot is drying. It turns pale when it is ready to fire.");
-                Tip("clay_dry_fire", "Clay dries twice as fast beside a burning fire.");
+                Tip("ceramics.dry_by_fire", "Clay dries twice as fast beside a burning fire.");
             }
         };
     }
@@ -207,7 +207,7 @@ public partial class CeramicsView : Node
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
         ulong id = piece.id;
         if (row?.MadeBy == MyId)
-            Tip("clay_tend", "Press G by your clay to see how long it has left. Once it turns pale, G picks it up, or fires it beside a fire.");
+            Tip("ceramics.tend", "G by your drying clay shows how long it has left. Once it turns pale, G picks it up, or fires it beside a fire.");
         if (dry)
             return besideFire
                 ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
