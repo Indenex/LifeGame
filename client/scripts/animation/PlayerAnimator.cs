@@ -32,7 +32,7 @@ public sealed class PlayerAnimator
         // 0 is a stroll (sneaking, heavy loads), 1 the brisk pace of a normal walk.
         gait = Mathf.Lerp(gait, Smooth(1.8f, 4.0f, speed), k);
         // Above the brisk walk-jog (4.2 m/s) a held run takes over (D-088).
-        run = Mathf.Lerp(run, Smooth(4.6f, 6.2f, speed), k);
+        run = Mathf.Lerp(run, Smooth(4.5f, 5.5f, speed), k);
         // Longer steps at speed keep the feet from skating.
         float stepLength = 0.6f + 0.2f * speed;
         phase = Mathf.PosMod(phase + speed * dt / stepLength * Mathf.Pi, Mathf.Tau);
