@@ -31,6 +31,7 @@ public static class Recipes
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
         ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",
+        [Skills.Run] = "Hold {run} to run. Running far builds Endurance; slow down to get your breath back.",
         [Skills.DryHide] = "Leave a stretched hide on its rack until it dries, then take the leather with {use}.",
     };
 
@@ -74,7 +75,7 @@ public static class Recipes
 
     internal static string Keys(string text)
     {
-        foreach (var action in new[] { "pick_up", "use", "dig", "build_mode", "sneak", "strike", "craft" })
+        foreach (var action in new[] { "pick_up", "use", "dig", "build_mode", "sneak", "strike", "craft", "run" })
             text = text.Replace("{" + action + "}", KeyOf(action));
         return text;
     }

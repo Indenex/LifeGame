@@ -15,6 +15,7 @@ public static class NextSteps
     static readonly Dictionary<string, string> Lines = new()
     {
         [Skills.Forage] = "Sticks, stones and plant fiber lie all around. {pick_up} picks them up.",
+        [Skills.Run] = "Hold {run} to run. The more you run, the farther you can go.",
         [Skills.Berries] = "Some bushes carry ripe berries. Food for the road.",
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
         ["gather.tinder"] = "Fire needs something fine and dry to catch. Plant fiber can be shredded.",
@@ -74,6 +75,7 @@ public static class NextSteps
         [Skills.Forage] = Array.Empty<string[]>(),
         [Skills.Berries] = Array.Empty<string[]>(),
         [Skills.Dig] = Array.Empty<string[]>(),
+        [Skills.Run] = Array.Empty<string[]>(),
         [ClayRules.PitFireProcess] = new[] { new[] { "fire.hand_drill", "fire.bow_drill" }, new[] { "clay.pinch_pot", "clay.coil_pot" } },
         [ClayRules.FillProcess] = new[] { new[] { ClayRules.PitFireProcess, ClayRules.KilnFireProcess } },
         [ClayRules.KilnProcess] = new[] { new[] { "clay.brick" }, new[] { "clay.daub" } },
@@ -106,7 +108,7 @@ public static class NextSteps
     // Rough tier for activities outside Processes.List, so hints come in a sensible order.
     static readonly Dictionary<string, int> Tier = new()
     {
-        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Dig] = 1, ["build.frame"] = 1,
+        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
         [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };

@@ -17,6 +17,7 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 
 ## Progress log
 - 2026-10-16 17:50: PM was offered 4 options (hints / visible gains / road-ahead checklist / hints then gains); started option 1 as the stated default. Branch made from #43's head plus main (merged cleanly).
+- 2026-10-16 18:45: Survival asked (D-123) for Endurance: new basic skill, prefix `move`, `move.run` named "Running" (fed every 20 s of running from Survival's stamina, claude/survival-arrival). Added to shared/Skills.cs, how-to line and Things to try line (key read from the `run` action). Running can't be learned by watching: Skills.Watchable, checked in Knowledge.TeachOnlookers. Server module type-checks locally (dotnet build without the wasi target); harness green.
 - 2026-10-16 18:28: Animals' hint lines in: hides, shearing, hunting, butchering replaced with theirs; drop spindle, spinning, wool cloth and sewing added (quiet until animals-9 lands). Harness still reaches all 42.
 - 2026-10-16 18:21: Justin (via PM): D-104 chopping trains Foraging; D-105 skills-10 is option 1, Things to try. Ask each lane for one hint line per new process. Green shas go to Integration (D-095).
 - 2026-10-16 18:19: CI green on 131e27d (run https://github.com/Indenex/LifeGame/actions/runs/38942933136; Godot client builds Linux and Windows); PR marked ready, sha sent to the PM.
