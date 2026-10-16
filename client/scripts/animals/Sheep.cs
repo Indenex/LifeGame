@@ -33,6 +33,8 @@ public partial class Sheep : Node3D
     float growth = 1f, growthTarget = 1f;
     // Lying down for good: -1 while alive, then seconds since it lay down.
     float lying = -1f;
+    // Lambs skip about now and then: seconds until the next little hop.
+    float frolic = 4f;
     // Fading away after butchering: -1 until then.
     float fading = -1f;
     const float LieSeconds = 1.4f, FadeSeconds = 1.2f;
@@ -176,6 +178,13 @@ public partial class Sheep : Node3D
         legs[1].Rotation = new Vector3(Mathf.Lerp(-s, front, run), 0, 0);
         legs[2].Rotation = new Vector3(Mathf.Lerp(-s, back, run), 0, 0);
         legs[3].Rotation = new Vector3(Mathf.Lerp(s, back, run), 0, 0);
+
+        // A lamb at rest gives a little skip every so often.
+        if (growthTarget < 0.95f && state != AnimalState.Run && speed < 0.4f && (frolic -= dt) <= 0f)
+        {
+            hop = 0f;
+            frolic = 5f + Terrain.Hash01((int)(time * 10f), 5, 3) * 9f;
+        }
 
         // Startled hop, bouncing run, gentle bob while walking, slow breathing at rest.
         hop = Mathf.Min(hop + dt, HopSeconds);
