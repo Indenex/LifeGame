@@ -35,6 +35,8 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 19:30: Survival's #167 merged; merged main and added `SnowfallAt` body in WorldClock.cs (D-134 done). Upgrade check, LoadTest 5x5, SpawnCheck, CraftCheck pass locally.
 
+- 2026-10-16 19:36: Atmosphere.AirCelsius (server SeasonState.Temperature, eased) for Survival's visible breath (D-144). 6cd0a18 pushed with a compile error (field shadowed by a parameter); fixed in dca3538, which builds. CI on 6cd0a18 will be red; dca3538 is the head to judge. Audio (audio-2) will move Footsteps()/WaterSound() into atmosphere/audio/AtmosphereSound.cs after #173; names Year, Season, SeasonWarmth, SnowCover, Snowfall, AirCelsius promised stable.
+
 ## Open questions
 - (answered) D-134: falling snow wets you at half rain's rate; Survival wires it from Module.Snowfall (told them). Justin is fine with the -16 C winter. / blockers
 
