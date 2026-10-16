@@ -839,3 +839,27 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-206 — 2026-10-16 — Scalable development: every content family is data on a shared base
 **Decision:** Every content family (animals, tools, crafting stations and so on) is data on a shared base: a Def plus a registry in `shared/`. New content is a Def entry plus assets, so a new animal means only modelling, animating, texturing and perhaps adjusting AI, not rebuilding code. Each family is converted gradually, the next time a lane adds to it. Integration writes `docs/CONTENT.md` and sends the Scribe the CLAUDE.md principle wording.
 **Who:** Justin ("Are we using software best practices as far as like scalable development goes? Like, for an animal do we have a base animal function to work from so things aren't being built from scratch every time? e.g. animal.Deer, animal.Sheep... That way we're only modeling/animating/texturing, and not fully rebuilding code, maybe adjusting AI". Then: "option 3, but yes ALL development should be this way, shouldn't it? e.g. tool.Axe, craftingTable.Pottery, etc.?")
+
+## D-207 — 2026-10-16 — Scribe self-merges doc-only PRs immediately
+**Decision:** The Scribe self-merges its doc-only PRs immediately, with no CI wait and no merge freeze. It only touches doc files (`DECISIONS.md`, `STATUS.md`, `CLAUDE.md`, `WORKER_LOOP.md`, `docs/*.md`). Direct pushes to `main` were blocked by the session safety classifier, so the PR route stays.
+**Who:** Justin ("Scribe should just be able to modify text files, it can skip all safety checks, it's not allowed to touch anything but it's docs files anyway.")
+
+## D-208 — 2026-10-16 — Environment env-9: See further
+**Decision:** Environment's next feature (env-9) is "See further": low-detail distant terrain and tree silhouettes beyond about 56 m. Not picked: gatherables by habitat, small life, wearing paths.
+**Who:** Justin, picking "See further".
+
+## D-209 — 2026-10-16 — Device quality applies only to minigame processes (refines D-200)
+**Decision:** A process with no minigame gets nothing special from a device: it is simply crafted for now and can be queued up as a plain batch. The unattended penalty and attended bonus of D-200 apply only to processes that have minigames.
+**Who:** Justin ("If they don't have minigames, nothing special happens, it can just be crafted for now, and queued up.")
+
+## D-210 — 2026-10-16 — Journal step cards do not show Speed %
+**Decision:** Journal step cards drop the Speed % line; no Speed % is shown.
+**Who:** Justin ("Drop the line")
+
+## D-211 — 2026-10-16 — Storms are seasonal
+**Decision:** Storm frequency follows the season. About 1 in 45 weather fronts becomes a thunderstorm in summer, 1 in 50 in spring and autumn, and 1 in 150 in winter.
+**Who:** Justin, picking "Seasonal".
+
+## D-212 — 2026-10-16 — Rain sounds like natural steady rain
+**Decision:** Rain must sound like natural, steady rain (hiss and patter), with no bouncy, pulsing or creature-like element. The bouncy part is taken out. Owner: Audio (#291).
+**Who:** Justin ("I don't like the weird bouncy animal sound of the rain in general, I just want it to sound like normal rain. can that part be taken out?")
