@@ -20,6 +20,7 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 - 2026-10-16 18:12: Survival's shape applied (0835adc) and approved by Survival.
 
 ## Open questions / blockers
+- Survival #119 (D-111 well fed) touches Survival.Eat next to our pot-return lines and adds `Needs.GoodMeal`. On the main merge after #119: keep both sides, and make GoodMeal `item is Item.CookedMutton or Item.PotOfBroth or Item.PotOfStew`.
 - Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): D-098 stations. Crafting adopted: all clay basic, storage jar at the Crafting Table, broth/stew at the fire; with the PM for Justin. When Crafting's station framework lands (they ping the sha) and Justin approves, set `Station = StationKind.Table` on clay.storage_jar.
 - Survival agreed broth 45/30, stew 65/30 (option 1) and reviewed/approved the hooks at 0835adc (Needs.EatenFrom, Eat keeps stack quality, weights 4). PM: record the numbers as a D-number; then add it to the Needs.cs comment.
 
