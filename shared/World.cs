@@ -44,13 +44,9 @@ namespace LifeGame.Shared
 
         public static long CellKey(int x, int z) => ((long)x << 32) | (uint)z;
 
-        // Base height in meters at a grid point, before any digging.
-        public static float BaseHeight(int x, int z)
-        {
-            float broad = ValueNoise(x, z, 32f, 1u) * 3.0f;
-            float detail = ValueNoise(x, z, 8f, 2u) * 0.6f;
-            return broad + detail - 1.5f;
-        }
+        // Base height in meters at a grid point, before any digging: hills, streams
+        // and ponds (shared/Land.cs, env-2).
+        public static float BaseHeight(int x, int z) => Land.Height(x, z);
 
         // Clay shows up in patches, more often in low ground near water.
         public static bool IsClay(int x, int z) => ClayScore(x, z) > 0.62f;

@@ -630,3 +630,32 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-154 — 2026-10-16 — Crucial look-and-feel choices wait for Justin's pick
 **Decision:** Crucial look-and-feel choices (player/creature model style, overall art style, UI look, world palette) are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145 never idle). D-142 (merges don't wait on renders) does not cover these choices. Context: #172 merged style A as a default without Justin's pick; that pick is now being taken.
 **Who:** Justin ("For something as crucial as a player model style I want at least the proposed descriptions of things even if a render isn't available.")
+
+## D-155 — 2026-10-16 — Chore check: campfires need feeding, hand tools wear
+**Decision:** A follow-up to D-148. Open campfires keep needing feeding (sticks 90 s, logs 6 min). Building tools/stations and structures have no durability, but hand tools and worn equipment do have durability (new; Crafting will propose how it plays, with Animals for clothing).
+**Who:** Justin ("open fires need feeding, building tools don't have durability, but hand tools and equipment does.")
+
+## D-156 — 2026-10-16 — Next animal: red deer
+**Decision:** The next animal is the red deer (animals-14): shy woodland-edge herds that bolt at 30 m, hunted for venison, hide and antler.
+**Who:** Justin (picked "Red deer (Recommended)")
+
+## D-157 — 2026-10-16 — Claim fences
+**Decision:** claims-12: members fence the soft border of a claim with a members-only gate, built with House building's Fence/Gate (Building owns the structure and model, Claims owns the membership rule and placement). The lived-in marker was not chosen.
+**Who:** Justin (picked "Claim fences")
+
+## D-158 — 2026-10-16 — Model style: Justin picks from renders
+**Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
+**Who:** Justin ("I've seen renders of these, go find them since they've already been made.")
+**Pick (2026-10-16):** Style A, "Carved", for people. Sheep: "I like a carved, but I want the sheep to be shorter, legs are too long, and I dont like the fluff. It has too much depth/texture and stands out from everything. It should be softer, cartoonier, fluffier. More stylized with our aesthetic."
+
+## D-159 — 2026-10-16 — Sonnet workers do the coding; Opus for player-visual work
+**Decision:** Coding can be done by Sonnet workers, and lanes start transitioning over to them. Anything related to modelling, texture work or player-visual things stays with Opus. This replaces D-058's "Opus for any session that writes code". Applied split. Sonnet: Integration, Release, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio (the Scribe is already Sonnet). Opus: Modeling, Animation, Environment, Atmosphere, UX/UI (player-visual), Wiki (writing voice, D-064), and the PM. Lanes hand off at a checkpoint (ticket current, `HANDOFF READY` to the PM), then the PM starts a fresh Sonnet session on the ticket. Sonnet lanes may still use an Opus helper for player-visual parts.
+**Who:** Justin ("Let's update that coding can be done by sonnet workers, and start transitioning them over to it. Anything that's related to modelling, texture work, or player-visual things can be opus.")
+
+## D-160 — 2026-10-16 — Claim gates are members only
+**Decision:** Only the owner and members of a claim can open, bar or unbar a gate in it (claims-12).
+**Who:** Justin ("Members only")
+
+## D-161 — 2026-10-16 — Every pickup has a sound
+**Decision:** Every pickup plays a soft rustle and knock (audio-3).
+**Who:** Justin ("Yes, every pickup")

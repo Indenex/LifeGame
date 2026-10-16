@@ -26,12 +26,13 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 Whenever the PM or any worker has an idea (a feature, a look, a number, a different approach), it reaches Justin as a short question with 2 to 4 concrete options, the recommended one first and marked, each with a one-line trade-off, answerable in a word. Workers send ideas to the PM in that shape; the PM batches them and asks Justin. Until he answers, keep working on the recommended option.
 
-## Models (D-058)
+## Models (D-058, D-159)
 
-- **Opus** for any session or agent that writes or designs code: the PM, every lane session, and coding subagents.
-- **Sonnet** for small, basic tasks: searching, reading logs, summarizing, ticket and status bookkeeping, mechanical one-file edits, running checks.
-- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
-- New sessions started for a lane (e.g. `create_session`) use Opus.
+- **Sonnet** workers do the coding for these lanes: Integration, Release & Launcher, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio, and the Scribe.
+- **Opus** for anything related to modelling, texture work or player-visual things: Modeling, Animation, Environment, Atmosphere, UX and UI, the Wiki (writing voice, D-064), and the PM. A Sonnet lane may use an Opus helper for player-visual parts.
+- Lanes move from Opus to Sonnet at a checkpoint: the ticket is current and the lane tells the PM `HANDOFF READY`, then the PM starts a fresh Sonnet session on the ticket.
+- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to subagents with the cheapest fitting model (Agent tool `model: "sonnet"`), keeping player-visual design with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
+- New sessions started for a lane (e.g. `create_session`) use the model its lane has above.
 
 ## Design principles
 
