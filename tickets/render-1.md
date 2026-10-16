@@ -127,6 +127,14 @@ New requester sessions (PM, 2026-10-16 23:50): Journal session_013iTXrpndd1fMtDL
 Many requested shas will have merged into main by now; if a branch moved, use the requester's latest sha.
 - 2026-10-16 23:55: handoff (D-159). Queue loop stopped after env-4 (sent). Everything committed and pushed; the Handoff section above has the queue and recipe.
 
+### Lighting presets from Atmosphere (2026-10-16, for Modeling's test renders)
+- Golden hour: `--time-of-day=0.70 --cloud=0.15 --rain=0 --wind=0.2 --wetness=0` (light shafts best in woods facing the sun).
+- Night by a fire: `--time-of-day=0.92 --cloud=0.1` with a lit campfire (light reaches further at night).
+- Misty dawn: `--time-of-day=0.26 --cloud=0.2 --wind=0.05 --wetness=0.6` (low ground/water, facing the sun; denser mist in #347).
+- Optional `--season=0.3` summer green, `0.62` autumn. Tell Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN) if a preset looks flat.
+- Season values: 0 spring, 0.25 summer, 0.5 autumn; heather bloom 0.30-0.56. `--screenshot-yaw` takes whole 45 degree steps. render-cam yaw is added to the game camera's 45 degrees: the camera sits at (sin a, cos a) from the player with a = 45 + yaw.
+- `render.sh` shot options: `--offline`, `--engine=gl_compatibility`; env `RENDER_PATCH=<script>` (tools/render/patches/) patches the render tree only (pitch.sh with RENDER_PITCH, buildtab.sh with RENDER_TAB).
+
 ## Open questions / blockers
 - (none)
 
