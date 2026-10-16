@@ -2,7 +2,7 @@
 Lane: Modeling
 Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
 Status: in_progress
-Branch: claude/model-2 (#197), claude/model-2-env (#235), claude/model-2-worn (#277), all merged; batch devices on claude/model-2-devices
+Branch: claude/model-2 (#197), claude/model-2-env (#235), claude/model-2-worn (#277), all merged; batch devices claude/model-2-devices (#287), merged; station swaps on claude/model-2-next
 PR: #197 (send green shas to the PM, D-119)
 
 ## Goal
@@ -36,10 +36,11 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-16 22:08: docs/CONTENT.md (Justin's content-as-data rule): models are assets looked up by a `Model` id on each Def. Modeling keeps builders public in client/scripts/models and adds a `Models.Structure(id)` / `Models.Item(id)` lookup by dotted id once a family's Def carries `Model` (told Integration; the converting lane sends the ids).
 - 2026-10-16 22:36: Justin playtested and disliked saturated pink heather; Environment's hotfix #318 muted PropMeshes.BuildHeather (body 0.35/0.37/0.24, flower heads muted purple 0.46/0.34/0.46 (Atmosphere's shader keys on that purple); mauve only from Atmosphere's shader). Rule for props: keep plant colours muted, near grass brightness.
 - 2026-10-16 22:55: #287 green on 654b9cf4 (run https://github.com/Indenex/LifeGame/actions/runs/38976691223). PM: it conflicted with main's Hearths.cs (bugfix-26 #307); merged main and took main's Hearths.cs and CraftCheck (port dropped). Server, client and CraftCheck build.
+- 2026-10-16 23:25: #287 merged (green on 4a19ad26, run 38978623711). On claude/model-2-next: Distaff gains the small half-woven weaving frame Animals' spindle station had, footprint 0.6 x 0.4 to match; StructureModel's Spindle and DryingRack arms now use StationMeshes.Distaff / DryingRack (bar 0.99, half-width 1.15 as before, so HideRacks hides still hang right). Crafting table swap left to Crafting (#267 also edits that switch).
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.
 - Most stations are on other lanes' unmerged branches; hooks wait until those merge, so models land first as standalone meshes plus Showcase views.
 
 ## Next step
-Wait for CI on the devices PR (claude/model-2-devices) and send the green sha to the PM; Crafting swaps the devices into its crafting-22 views. When Crafting #267 merges, add the per-(item, wear) ground MultiMesh in ItemLook/GroundItems (follow-up PR). Pending swaps by whichever lane merges second: deer (Animals #219, Sheep.cs), cooking pot (Ceramics, SimmerView.Show), crafting table and repair table (Crafting #267), env props (Environment).
+Wait for CI on the model-2-next PR (Distaff/DryingRack swap) and send the green sha to the PM. When Crafting #285 merges, add the device Station-switch arms (ClayTub/CrushBlock/TemperTrough -> StationMeshes.SettlingTub/CrushingBlock/TemperingTrough) unless Crafting already did; when #267 merges, the worn-tool ground hook (per-(item, wear) MultiMesh via ItemModels.WearLevel). Pending swaps by other lanes: deer (Animals #219, Sheep.cs), crafting and repair table (Crafting).
