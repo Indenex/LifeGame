@@ -12,6 +12,8 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16: ticket written by the PM (D-059).
 - 2026-10-16 17:10: session started. Installed dotnet 8, spacetimedb-cli 2.12.0, Godot 4.6.2 mono, mesa-vulkan-drivers. Existing capture is built into the client: `--screenshot=path --screenshot-delay=s` (Main.cs), `--time-of-day`, `--rain`, `--debug-position` (Atmosphere.cs). Wrote `tools/render/setup.sh` (installs toolchain) and `tools/render/render.sh <ticket> <ref> "shot opts" ...` (worktree of the sha, server build, bindings, client build, in-memory server on :3300, one Xvfb Forward+ client run per shot). /mnt/project-files is not mounted here, so images default to `renders/` in the repo.
 - 2026-10-16 17:20: render request from the PM: Atmosphere PR #66 (atmosphere-10/11) at dca2a0f: pond calm by day, pond in rain, rain close-up, cloud shadows, dawn mist (pond and spawn). Running alongside the main proof (217dc13).
+- 2026-10-16 17:06: render request from Claims (session_013ECn821EbTpbj4h7d3PepH): claims-6, PR #71 at c126163: stacked speech bubbles, /me bubble and italic log line, dimmer far chat. Needs a second scripted player (B). Queued after #66.
+- 2026-10-16 17:06: 4 cores here; two software-rendered clients at once never reached the screenshot in 15 min. Run one render at a time.
 
 ## Open questions / blockers
 - (none)
