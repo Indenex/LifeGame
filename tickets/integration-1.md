@@ -33,9 +33,10 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:42: D-129: exactly one world wipe, with Environment's env-2 land reshape, on a date Justin confirms. This lane helps Environment with `shared/World.cs` and the upgrade check, and flags any other PR that would wipe.
 - 2026-10-16 18:48: prepared option 1 on `claude/integration-wipe-label` (not a PR yet): `world-wipe` label skips the upgrade check and prints a warning; `pull_request` also triggers on labeled/unlabeled.
 - 2026-10-16 18:42: #121 (integration-2, sneak flag) merged by the PM; Animation told #100 can follow after Justin sees the clips.
+- 2026-10-16 18:45: D-130: Justin chose the `world-wipe` label. PR from `claude/integration-wipe-label` carries it plus these ticket entries. Environment lane is session_012hVejTxLoxBpZyX3GQmNL9.
 
 ## Open questions / blockers
-- Sent to PM 18:45: how env-2's intended wipe passes CI's upgrade check (options in the message).
+- (none; wipe path answered: D-130 label)
 
 ## Next step
 After each merge to main, re-run the conflict survey (`git merge-tree` each open PR vs main and pairwise) and send the PM which PRs need main merged in; get #121 (integration-2) green and to the PM.
