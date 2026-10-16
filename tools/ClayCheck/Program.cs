@@ -28,6 +28,7 @@ bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
 Fire fire = null!;
+Structure bench = null!, marker = null!;
 uint myId = 0;
 bool subscribed = false;
 string? lastError = null;
@@ -54,6 +55,8 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM simmer_pot",
                 "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree",
+                "SELECT * FROM claim",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
             });
@@ -86,9 +89,12 @@ var (clayX, clayZ) = Nearest((cx, cz) => World.IsClay(cx, cz), 0, 0);
 var (waterX, waterZ) = Nearest((cx, cz) => World.BaseHeight(cx, cz) < World.WaterLevel - 0.1f, 0, 0);
 Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 
-Gather(Item.Stone, 3);
-Gather(Item.Stick, 10);
-Gather(Item.Fiber, kilnRun ? 12u : 4u);
+// Stones: a hammer that is never used up, one for the hand axe, two for the
+// potter's bench and up to two for grit. Sticks and fiber: also the axe's haft and
+// cordage, and the claim marker.
+Gather(Item.Stone, 6);
+Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
+Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
@@ -108,6 +114,11 @@ while (CountOf(Item.Clay) < clayWanted)
     Pump(() => false, 0.65f, null);
 }
 Log($"Dug {CountOf(Item.Clay)} clay");
+
+// Pots are shaped at a potter's bench inside a claim (D-112): make a stone axe, chop
+// a log, claim land past the spawn clearing and build the bench there. All the clay
+// work below happens round the bench.
+SetUpBench();
 
 if (kilnRun) return KilnCheck();
 if (potRun) return PotCheck();
