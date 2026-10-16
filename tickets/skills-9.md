@@ -19,10 +19,10 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 00:35: screenshot /mnt/project-files/screenshots/journal-recipes.png; PR #43 opened.
 - 2026-10-16 00:28: CI green on b1ef4d7 (https://github.com/Indenex/LifeGame/actions/runs/38828736929); merged main (#38, ef1c26b), builds locally; CI re-running on the merge.
 - 2026-10-16 (new session): CI green on 643475a (run 38829787501). Main had moved to 7c65c0f; merged it cleanly. Main added hides (hide.*), which trained no skill and `hide.dry` had no name: hides now train Husbandry (default, sent to the PM as a choice), `hide.dry` named "Drying leather" with a how-to line and counted in "still to discover". No .NET/SpacetimeDB in this container, so CI builds it.
+- 2026-10-16 17:12: PM relayed Justin: D-065 hide work gets its own capped Leatherwork specialty later, once leather has more uses; until then it trains Husbandry (as shipped). D-067 toasts only at new titles (as built in skills-8).
 
 ## Open questions / blockers
-- Hides train Husbandry (default) vs Toolmaking vs a later Leatherwork skill: sent to the PM as a choice.
-- Toasts only at new titles vs every rank (skills-8): PM asking Justin; the current default stays.
+- (none)
 
 ## Next step
 Wait for CI on PR #43 head 13fcbce; when green, log the run link here and send the PM the sha.
