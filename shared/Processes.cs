@@ -236,8 +236,9 @@ namespace LifeGame.Shared
     // Campfires: how long they burn and how far their warmth reaches.
     public static class Fires
     {
-        // A freshly lit fire burns this long before it needs feeding.
-        public const float StartSeconds = 60;
+        // A freshly lit fire burns this long before it needs feeding: about the two
+        // sticks it was lit with, so a new player has time to look around before it dies.
+        public const float StartSeconds = 180;
         // Fuel stacks up to this many seconds ahead.
         public const float MaxSeconds = 20 * 60;
         // Warmth falls off to nothing at this distance, in meters.

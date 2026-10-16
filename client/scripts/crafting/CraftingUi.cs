@@ -272,7 +272,8 @@ public partial class CraftingUi : CanvasLayer
         {
             Item.Stick => $"Pick them up under the trees{Key("pick_up")}.",
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
-            Item.Clay => $"Dig{Key("dig")} where the ground is grey clay, near water.",
+            Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
+            Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
             _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => $"Make it first: {maker.Name}.",
             _ => "",
         };
