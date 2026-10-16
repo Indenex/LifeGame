@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LifeGame;
 
-public enum Ground { Grass, Earth, Water, Clay, Floor }
+public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -1156,8 +1156,9 @@ public sealed class SoundMix
     // --- Footsteps --------------------------------------------------------------
 
     // Soft swishes on grass, duller thuds on bare earth, a heavy sticky press on
-    // clay, a hollow knock on a hut's floor, a squelch when the ground is wet and a
-    // splash in water. Every step is a little different.
+    // clay, a hollow knock on a hut's floor, a grainy shuffle on sand, a crunch in
+    // snow, a squelch when the ground is wet and a splash in water. Every step is a
+    // little different.
     sealed class Steps
     {
         readonly int rate;
@@ -1215,6 +1216,28 @@ public sealed class SoundMix
                         s = hp * attack * MathF.Exp(-t / 0.09f) * 0.28f;
                         step.BubblePhase += 2f * MathF.PI * (320f + 9000f * Math.Min(t, 0.06f)) * step.Pitch * dt;
                         s += MathF.Sin(step.BubblePhase) * MathF.Exp(-t / 0.05f) * 0.05f;
+                    }
+                    else if (step.Ground == Ground.Snow)
+                    {
+                        // Snow packing under the foot: a quick run of tiny crackles
+                        // that thins out, over a soft, muffled press.
+                        float grain = MathF.Abs(noise.Next()) > 0.82f - 0.5f * Math.Min(1f, t / 0.12f) ? 1f : 0.12f;
+                        float crunch = step.Swish.Process(x * grain, 2100f * step.Pitch, 0.7f, rate);
+                        float env = attack * Math.Min(1f, t / 0.02f + 0.3f) * MathF.Exp(-t / 0.075f);
+                        step.Phase += 2f * MathF.PI * 70f * step.Pitch * dt;
+                        float press = MathF.Sin(step.Phase) * MathF.Exp(-t / 0.04f) * attack;
+                        s = crunch * env * 0.34f + press * 0.1f;
+                    }
+                    else if (step.Ground == Ground.Sand)
+                    {
+                        // Sand giving way: a grainy, hissing shuffle and a soft thud.
+                        // Wet sand packs firmer, so it hisses less and thuds more.
+                        float grain = MathF.Abs(noise.Next()) > 0.55f ? 1f : 0.35f;
+                        float hiss = step.Swish.Process(x * grain, 3600f * step.Pitch, 0.8f, rate);
+                        float env = MathF.Exp(-t / 0.05f) + 0.35f * MathF.Exp(-MathF.Max(0f, t - 0.06f) / 0.04f) * (t > 0.06f ? 1f : 0f);
+                        step.Phase += 2f * MathF.PI * 75f * step.Pitch * dt;
+                        float thud = MathF.Sin(step.Phase) * MathF.Exp(-t / 0.03f) * attack;
+                        s = hiss * env * attack * 0.2f * (1f - 0.55f * step.Wet) + thud * (0.12f + 0.1f * step.Wet);
                     }
                     else if (step.Ground == Ground.Floor)
                     {

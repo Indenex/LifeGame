@@ -9,7 +9,8 @@
 // bolts halfway; about a third are lambs), dawn (the dawn chorus), midday,
 // evening (evening song thinning out), woods (a windy day among trees), meadow
 // (the same wind over open grass), hut (steady rain heard from inside, walking
-// on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
+// on the floor), earth, clay (walking on bare earth or wet clay), sand, shallows,
+// snow (walking on a stream bank, through shallow water, through snow), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
 // Seasons (audio-2): spring, summer, autumn, winter (snow on the ground), each a
@@ -81,11 +82,11 @@ foreach (var scene in scenes)
     }
     mix.Working(work);
     bool workEnded = false;
-    var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
+    var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, "sand" => Ground.Sand, "shallows" => Ground.Water, "snow" or "winter" => Ground.Snow, _ => Ground.Grass };
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
     // Season scenes: a breezy morning (or night) in light woods at the middle of
     // that season; winter has snow on the ground. Other scenes are early summer.
-    string seasonName = parts[0].Replace("night", "");
+    string seasonName = parts[0] == "snow" ? "winter" : parts[0].Replace("night", "");
     mix.Year = seasonName switch { "spring" => 0.125f, "summer" => 0.375f, "autumn" => 0.625f, "winter" => 0.875f, _ => 0.3f };
     mix.SnowCover = seasonName == "winter" ? 0.8f : 0f;
     if (seasonName is "spring" or "summer" or "autumn" or "winter") mix.Foliage = 0.7f;

@@ -2,7 +2,7 @@
 Lane: Audio
 Owner: Audio session (session_01LeXCWTFVBQcCNVEDdhPek3, Opus)
 Status: in_progress
-Branch: claude/audio-2-land-seasons
+Branch: claude/audio-2-land-seasons (2c, PR #189); claude/audio-2b-footsteps (2b)
 PR: (small PRs, listed below as they open)
 
 ## Goal
@@ -14,6 +14,7 @@ Three small PRs, each with a SoundPreview clip for Justin via Render and the PM:
 ## Progress log
 - 2026-10-16 20:35: PM assigned audio-2 (M1). Branch claude/audio-2-land-seasons from main c09f9b8 + audio-1 ticket commits. Read env-2 (shared/Land.cs: RiverDistance is private) and atmosphere-16 (shared/Seasons.cs: Season, Warmth, Autumn; Atmosphere.Year/Season/SnowCover/Snowfall on the client). Footstep and water sensing live in Atmosphere.cs (Footsteps(), WaterSound()). Asked Environment for a public stream-distance call and Atmosphere to let Audio own that sensing in a partial file under atmosphere/audio/.
 - 2026-10-16 21:10: 2c built: SoundMix.Year/SnowCover, SeasonSound.Of(year) (cold, summer, leaves, dry, birds, chorus, insects, frogs); winter wind slightly stronger/higher, bare-twig whistle, dry autumn leaves, snow hushes grass, NightVoices insect factor (owls kept), new DayInsects (summer drone + bee flybys), frogs by season. SoundScape.Year/SnowCover setters. SoundPreview scenes spring/summer/autumn/winter(+night). Standing levels, 40 s each, no music: spring -32.3, summer -29.9, autumn -32.5, winter -29.7 (mostly wind), nights -33 to -37. Existing scenes unchanged (storm -19.3, peak -5.2). Client + SoundPreview build. Game hook (Atmosphere sets sound.Year/SnowCover) waits for #173.
+- 2026-10-16 21:30: #189 opened for 2c (head 955028d), Render requested 955028d. 2b on branch claude/audio-2b-footsteps (stacked on #189): Ground.Sand (grainy shuffle, firmer when wet) and Ground.Snow (crunch of crackles over a soft press); shallow water keeps the existing splash. SoundPreview sand/shallows/snow scenes. Loudest 50 ms of steps over their beds: grass -33.2, earth -32.5, sand -32.6, shallows -31.1, snow -30.9 dBFS. Sensing (which surface is underfoot) waits on Atmosphere's answer about moving Footsteps().
 
 ## Open questions / blockers
 - Environment: public `Land.StreamDistance(x, z)` (meters to the nearest stream line) for 2a.
