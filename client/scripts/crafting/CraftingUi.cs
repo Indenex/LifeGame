@@ -277,7 +277,7 @@ public partial class CraftingUi : CanvasLayer
         conn?.Db.MyInventory.Iter().Any(i => Items.IsKnown(i.Item) && (Items.Def((Item)i.Item).Tags & tags) == tags) ?? false;
 
     // What a tool tag reads as in a sentence: "using a cutting edge".
-    static string ToolName(ItemTags tags) => string.Join(" and ", Enum.GetValues<ItemTags>()
+    internal static string ToolName(ItemTags tags) => string.Join(" and ", Enum.GetValues<ItemTags>()
         .Where(t => t != ItemTags.None && tags.HasFlag(t))
         .Select(t => t switch
         {

@@ -15,9 +15,10 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 
 ## Progress log
 - 2026-10-16 00:15: PM approved (skills-9). Started.
+- 2026-10-16 00:30: Recipes.cs (how-to line per discovery card, keys from InputMap); carve/haft train Toolmaking; kiln names. Client and server build. CraftingUi.ToolName made internal (one-word hook). Screenshot rendering.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Write client/scripts/journal/Recipes.cs and use it in JournalPanel.EntryRow; then screenshot.
+Check the screenshot of the journal with how-to lines, send it to the PM, open the PR.
