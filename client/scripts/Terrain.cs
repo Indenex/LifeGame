@@ -75,9 +75,15 @@ public partial class Terrain : Node3D
         dirty.Add((cx, World.ChunkOfCell(z + 1)));
     }
 
+    // The land past the loaded chunks, drawn coarse so hills and woods read from afar.
+    FarLand? farLand;
+
     // Loads chunks within view of (chunkX, chunkZ) and frees the ones that fell out.
     public void Focus(int chunkX, int chunkZ)
     {
+        if (farLand == null) AddChild(farLand = new FarLand());
+        farLand.Update(chunkX, chunkZ);
+
         int r = World.ViewRadiusChunks;
         if (center != (chunkX, chunkZ))
         {
