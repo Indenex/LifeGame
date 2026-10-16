@@ -314,8 +314,8 @@ public partial class Terrain : Node3D
                 float edge = Forest.Edge(density);
                 // Heath on the hilltops, wetland by the water (env-4).
                 float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
-                float tree = Forest.TreeChance(density); // the same as Trees.Forest(x, z)
-                float sapling = tree + 0.03f * edge;
+                float tree = Forest.TreeChance(density, heath); // the same as Trees.Forest(x, z)
+                float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
                 float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
                 if (!nearSpawn && roll < sapling)

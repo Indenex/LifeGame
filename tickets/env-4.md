@@ -14,6 +14,7 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 - 2026-10-16 22:00: merged env-2's terrain speed-up (3f908b9). On a fresh local world, CraftCheck and SpawnCheck pass.
 - 2026-10-16 22:05: Render requested at branch head: heath hilltop (-4,46) from (-4,40), wetland bank (-42,-18) from (-36,-14), forest (-46,-46); noon and dusk.
 - 2026-10-16 22:15: #175 (env-2) and #173 (seasons, palette) are on main; merged main and switched heath and wetland colours to the Look palette. Client and server build.
+- 2026-10-16 23:05: the PM's render note said the heath hilltop shot was mostly canopy. Trees now thin early on the heath (density x (1 - 0.97 SmoothStep(0.15, 0.6, heath))) and `Forest.TreeChance(density, heath)` cuts the base chance by up to 80% there (`Trees.Forest` now calls `Forest.TreeChanceAt`; Crafting told). There are no saplings on heath. Heath tree rate is 0.65% -> 0.08% of cells, about one lone oak per 35 m; overall 0.053 trees per cell. Heather bushes carry w = 3 (Justin said yes to the late-summer bloom; Atmosphere #217).
 
 ## Open questions / blockers
 - Justin picked A (D-152). Justin also said yes to heather blooming purple in late summer: heather bushes carry w = 3 (Atmosphere #217 adds the bloom; until then it acts like 0).
