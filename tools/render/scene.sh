@@ -61,7 +61,8 @@ sleep 2
 echo "scene: $(basename "$scene") with client ${client_opts[*]:-}"
 userdir=$HOME/.local/share/godot/app_userdata/LifeGame
 mkdir -p "$userdir"
-rm -f "$userdir/token_camera.txt" "$work/puppet-token"
+rm -f "$userdir/token_camera.txt" "$work/puppet-token" "$work/live.txt"
+# A "live" step in the scene reads further steps appended to $work/live.txt.
 size=${RENDER_SIZE:-1600x900}
 engine_opts=()
 movie_dir=$work/movie-$sha
@@ -74,7 +75,7 @@ if [ "$movie_fps" != 0 ]; then
 fi
 
 # The puppet joins first; the camera client follows (as the puppet, if asked).
-PUPPET_MOVIE_DIR=$movie_dir PUPPET_TOKEN_OUT=$work/puppet-token DISPLAY=$disp timeout "${RENDER_SCENE_TIMEOUT:-1800}" \
+PUPPET_LIVE=$work/live.txt PUPPET_MOVIE_DIR=$movie_dir PUPPET_TOKEN_OUT=$work/puppet-token DISPLAY=$disp timeout "${RENDER_SCENE_TIMEOUT:-1800}" \
   "$tree/tools/render/Puppet/bin/Release/net8.0/Puppet" "http://127.0.0.1:$port" lifegame "$steps" "$RENDER_OUT/$ticket-$sha" \
   > "$work/puppet.log" 2>&1 &
 puppet=$!

@@ -23,6 +23,9 @@
 //   keydown w / keyup w   hold and release a key
 //   face 0            turn to that heading in degrees (0 = +z); fires are lit 1.2 m ahead
 //   firepots          set every unfired pot I carry into the fire I lit
+//   click 660 850     move there and left-click
+//   live              take further steps from the file in PUPPET_LIVE (appended
+//                     while running, one step per line) until a line "end"
 //   mouse 660 850     move the mouse there in the camera client's window (tooltips)
 //   frames 300 / frames +72   (movie scenes) wait until the camera client has
 //                     written that many frames (or that many more)
@@ -132,7 +135,7 @@ void Run(string file, string arguments)
     if (p.ExitCode != 0) Console.WriteLine($"puppet: {file} failed: {p.StandardError.ReadToEnd()}");
 }
 
-foreach (var line in steps)
+bool Step(string line)
 {
     var parts = line.Split(' ', 2);
     string verb = parts[0], rest = parts.Length > 1 ? parts[1].Trim() : "";
@@ -252,6 +255,10 @@ foreach (var line in steps)
             Pump(1.0);
             break;
         }
+        case "click":
+            Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest} click 1");
+            Pump(0.3);
+            break;
         case "mouse":
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
             Pump(0.3);
@@ -268,8 +275,32 @@ foreach (var line in steps)
             break;
         default:
             Console.WriteLine($"puppet: unknown step '{line}'");
-            return 2;
+            return false;
     }
+    return true;
+}
+
+foreach (var line in steps)
+{
+    if (line == "live")
+    {
+        string live = Environment.GetEnvironmentVariable("PUPPET_LIVE") ?? "live.txt";
+        int done = 0;
+        Console.WriteLine($"puppet: live, reading {live}");
+        while (true)
+        {
+            var lines = File.Exists(live) ? File.ReadAllLines(live) : Array.Empty<string>();
+            if (done < lines.Length)
+            {
+                var next = lines[done++].Trim();
+                if (next == "end") break;
+                if (next.Length > 0 && !next.StartsWith('#')) Step(next);
+            }
+            else Pump(0.3);
+        }
+        continue;
+    }
+    if (!Step(line)) return 2;
 }
 conn.Disconnect();
 return 0;
