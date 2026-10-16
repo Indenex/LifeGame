@@ -35,7 +35,8 @@ public sealed class SoundMix
     public bool MusicOn = true;
     // The music's own level, 0 to 1, under the master volume (the menu's music slider).
     public float MusicVolume = 1f;
-    public float Volume = 1.3f;
+    // Master level. Raised from 1.3 (audio-1): Justin heard the mix as quiet.
+    public float Volume = 1.7f;
 
     readonly Noise noise;
     readonly WindVoice wind;
@@ -58,6 +59,7 @@ public sealed class SoundMix
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
     float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
     float[] stepL = Array.Empty<float>(), stepR = Array.Empty<float>();
+    float[] workL = Array.Empty<float>(), workR = Array.Empty<float>();
     // How loud the surroundings are (smoothed RMS), so footsteps sit just above them.
     float ambience = 0.01f;
     Lowpass wallL, wallR;
@@ -154,6 +156,8 @@ public sealed class SoundMix
             outR = new float[count];
             stepL = new float[count];
             stepR = new float[count];
+            workL = new float[count];
+            workR = new float[count];
         }
         Array.Clear(left, 0, count);
         Array.Clear(right, 0, count);
@@ -195,22 +199,24 @@ public sealed class SoundMix
         for (int i = 0; i < count; i++) power += left[i] * left[i] + right[i] * right[i];
         float rms = (float)Math.Sqrt(power / (2.0 * count));
         ambience += (1f - MathF.Exp(-count / (float)Rate / 1.5f)) * (rms - ambience);
-        float stepGain = StepGain(ambience);
+        float stepGain = StepGain(ambience), workGain = WorkGain(ambience);
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
+        Array.Clear(workL, 0, count);
+        Array.Clear(workR, 0, count);
         steps.Render(stepL, stepR, count);
-        work.Render(stepL, stepR, count);
+        work.Render(workL, workR, count);
         foreach (var (player, voice) in others)
         {
-            voice.Render(stepL, stepR, count);
+            voice.Render(workL, workR, count);
             if (voice.Idle) quiet.Add(player);
         }
         foreach (var player in quiet) others.Remove(player);
         quiet.Clear();
         for (int i = 0; i < count; i++)
         {
-            left[i] += stepL[i] * stepGain;
-            right[i] += stepR[i] * stepGain;
+            left[i] += stepL[i] * stepGain + workL[i] * workGain;
+            right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
         music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
         reverb.Process(sendL, sendR, left, right, count);
@@ -236,6 +242,12 @@ public sealed class SoundMix
     // Footstep level for an ambience RMS: about 0.17 (-15 dB) over a still dawn bed
     // near -45 dBFS, so steps land about 5 dB above it, rising to full in a storm.
     public static float StepGain(float ambienceRms) => Math.Clamp(0.12f + 9f * ambienceRms, 0.12f, 1f);
+
+    // Work level for an ambience RMS. Work is what you are paying attention to, so
+    // it gets its own floor well above the footsteps': about 0.55 (-5 dB) on a
+    // still morning bed near -42 dBFS, putting hits clearly over the bed and about
+    // level with the music, rising to 1 in a storm (audio-1).
+    public static float WorkGain(float ambienceRms) => Math.Clamp(0.55f + 5f * ambienceRms, 0.55f, 1f);
 
     static float Sq(float x) => x * x;
 
@@ -1185,17 +1197,17 @@ public sealed class SoundMix
                     if (rng.NextDouble() < 0.35) Add(HitKind.Flake, Range(rng, 0.07f, 0.16f), 1f);
                     return Range(rng, 0.7f, 1.3f);
                 case Work.Clay:
-                    Add(HitKind.Pat, 0f, 1f);
+                    Add(HitKind.Pat, 0f, 0.6f);
                     return Range(rng, 0.42f, 0.8f);
                 case Work.Fibre:
                     Add(HitKind.Rustle, 0f, 1f);
                     return Range(rng, 0.22f, 0.55f);
                 case Work.Lash:
-                    if (rng.NextDouble() < 0.45) Add(HitKind.Creak, 0f, 1f);
-                    else Add(HitKind.Rustle, 0f, 0.7f);
+                    if (rng.NextDouble() < 0.45) Add(HitKind.Creak, 0f, 2f);
+                    else Add(HitKind.Rustle, 0f, 1.3f);
                     return Range(rng, 0.35f, 0.8f);
                 case Work.Carve:
-                    Add(HitKind.Shave, 0f, 1f);
+                    Add(HitKind.Shave, 0f, 1.25f);
                     return Range(rng, 0.5f, 0.9f);
                 default:
                     return 1f;
@@ -1229,7 +1241,7 @@ public sealed class SoundMix
                     float f = friction.Process(x, 600f + 900f * speed, 0.5f, rate);
                     float heat = Math.Min(1f, time / 3f);
                     float h = x - smokeLow.Process(x, smoke);
-                    s += f * MathF.Pow(speed, 0.8f) * (0.16f + 0.06f * heat) + h * heat * speed * 0.025f;
+                    s += f * MathF.Pow(speed, 0.8f) * (0.1f + 0.04f * heat) + h * heat * speed * 0.016f;
                 }
                 else if (sounding == Work.Rasp)
                 {

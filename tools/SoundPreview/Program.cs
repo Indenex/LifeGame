@@ -15,7 +15,8 @@
 // Work scenes stand still on a calm morning and work for all but the last second:
 // knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
 // (knap-fail). others: you knap while another player drills 8 m to your left
-// and a third carves 20 m to the right.
+// and a third carves 20 m to the right. still: the same calm morning with no work,
+// the bed the work scenes are measured against.
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -61,7 +62,7 @@ foreach (var scene in scenes)
         "knap" => "knap.flake", "drill" => "fire.hand_drill", "fibre" => "cord.twist", "lash" => "lash.spear",
         "pat" => "clay.brick", "rasp" => "hide.scrape", "carve" => "carve.digging_stick", _ => "",
     });
-    if (work != Work.None) (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
+    if (work != Work.None || name == "still") (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
     if (name == "others")
     {
         (work, day, rain, wind, wet, time) = (Work.Knap, 0.9f, 0f, 0.15f, 0f, 0.33f);
@@ -95,7 +96,7 @@ foreach (var scene in scenes)
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
