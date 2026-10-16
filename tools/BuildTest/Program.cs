@@ -3,7 +3,8 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|brick-house|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// brick-house runs on its own, since its bricks take minutes to dry.
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -72,11 +73,41 @@ if (which is "basket" or "both")
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
 
+// Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
+if (which is "brick-house")
+{
+    ulong house = BuildTogether(StructureKind.BrickHouse,
+        new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
+        new() { [Item.Fiber] = 19, [Item.Clay] = 70 },
+        prepareA: () =>
+        {
+            for (int i = 0; i < 2; i++) a.Craft("cord.twist", Pump);
+            Check(a.CountOf(Item.Cordage) >= 2, $"twisted cordage for the rafters ({a.Carried()})");
+        },
+        // B cleans the clay, mixes daub, and molds and dries sixteen bricks.
+        prepareB: () =>
+        {
+            for (int i = 0; i < 35; i++) b.Craft("clay.clean", Pump);
+            for (int i = 0; i < 3; i++) b.Craft("clay.daub", Pump);
+            for (int i = 0; i < 16; i++) b.Craft("clay.brick", Pump);
+            WaitFor(() => b.Conn.Db.ClayPiece.Iter().Count(p => p.Form == (byte)ClayForm.Brick) >= 16, 10, "sixteen bricks set down to dry");
+            var until = clock.Elapsed + TimeSpan.FromMinutes(12);
+            while (b.CountOf(Item.Brick) < 16 && clock.Elapsed < until)
+            {
+                foreach (var piece in b.Conn.Db.ClayPiece.Iter().Where(p => p.Form == (byte)ClayForm.Brick).ToList())
+                    b.Conn.Reducers.TendClay(piece.Id, false);
+                Pump(5000);
+            }
+            Check(b.CountOf(Item.Brick) >= 16 && b.CountOf(Item.Daub) >= 6, $"dried bricks and mixed daub for the walls ({b.Carried()})");
+        });
+    HangDoor(house);
+}
+
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
 
-ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null)
+ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null, Action? prepareA = null)
 {
     string name = Structures.Shape((int)kind).Name;
     Console.WriteLine($"--- {name}");
@@ -84,13 +115,14 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Gather side by side.
     a.Wants = forA;
     b.Wants = forB;
-    var until = clock.Elapsed + TimeSpan.FromSeconds(240);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(420);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
         Pump(100);
     }
     Check(bots.All(x => x.HasWants), $"both gathered materials for the {name} ({a.Carried()} / {b.Carried()})");
+    prepareA?.Invoke();
     prepareB?.Invoke();
 
     // A lays out a footprint on dry, level ground nearby.
@@ -107,7 +139,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 
     // Both stand at the open front and add what they carry until it stands.
     var shape = Structures.Shape((int)kind);
-    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, shape.Round ? shape.Radius + 0.6f : 1.9f);
+    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, shape.Round ? shape.Radius + 0.6f : Math.Max(1.9f, shape.HalfDepth + 0.6f));
     b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
@@ -149,7 +181,7 @@ void HangDoor(ulong hut)
     }
     Check(a.HasWants, $"gathered sticks and fiber for a door ({a.Carried()})");
     var s = a.Conn.Db.Structure.Id.Find(hut)!;
-    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 2.3f);
+    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ + 0.6f);
     a.WalkTo(door.x - 0.4f, door.z, 0.3f, Pump);
     b.WalkTo(door.x + 0.4f, door.z, 0.3f, Pump);
     a.Conn.Reducers.HangDoor(hut);
@@ -244,6 +276,7 @@ sealed class Bot
                         "SELECT * FROM structure",
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
+                        "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
                     });

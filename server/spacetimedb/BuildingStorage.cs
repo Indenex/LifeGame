@@ -40,8 +40,8 @@ public static partial class Module
     public static void HangDoor(ReducerContext ctx, ulong structureId)
     {
         var (s, player) = RequireFinishedInReach(ctx, structureId);
-        if (s.Kind != StructureKind.ClayHut)
-            throw new Exception("Only a clay hut has a doorway");
+        if (!Structures.HasDoorway((int)s.Kind))
+            throw new Exception("That has no doorway");
         if (ctx.Db.StructureDoor.StructureId.Find(structureId) is not null)
             throw new Exception("It already has a door");
         if (CountOf(ctx, Item.Stick) < Structures.DoorSticks || CountOf(ctx, Item.Fiber) < Structures.DoorFiber)
@@ -126,6 +126,21 @@ public static partial class Module
         else ctx.Db.BasketItem.Id.Update(row with { Count = row.Count - count });
         AddToInventory(ctx, ctx.Sender, (Item)row.Item, count, row.Quality);
         TouchStructure(ctx, s.Id);
+    }
+
+    // A burning fire within a brick house's walls: the whole room is warm.
+    static bool FireInside(ReducerContext ctx, Structure s)
+    {
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        for (int cx = World.ChunkOf(s.X - 3f); cx <= World.ChunkOf(s.X + 3f); cx++)
+        for (int cz = World.ChunkOf(s.Z - 3f); cz <= World.ChunkOf(s.Z + 3f); cz++)
+        foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx, cz)))
+        {
+            if (fire.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
+            var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, fire.X, fire.Z);
+            if (MathF.Abs(lx) < Structures.HouseWallX && MathF.Abs(lz) < Structures.HouseWallZ) return true;
+        }
+        return false;
     }
 
     static bool DoorClosed(ReducerContext ctx, ulong structureId) =>

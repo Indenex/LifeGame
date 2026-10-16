@@ -77,7 +77,8 @@ public partial class BuildingSystem
     float Weathered(ulong structureId)
     {
         if (!touched.TryGetValue(structureId, out var at)) return 0f;
-        double hours = (DateTimeOffset.UtcNow - at).TotalHours - Structures.WeatherAfterHours;
+        double hours = (DateTimeOffset.UtcNow - at).TotalHours
+            - (rows.TryGetValue(structureId, out var s) ? Structures.WeatherAfterFor((int)s.Kind) : Structures.WeatherAfterHours);
         return hours <= 0 ? 0f : (float)Math.Min(1.0, hours / Structures.WeatherForHours);
     }
 
@@ -106,10 +107,10 @@ public partial class BuildingSystem
     {
         if (s.Kind == StructureKind.Basket)
             return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
-        if (s.Kind != StructureKind.ClayHut) return false;
+        if (!Structures.HasDoorway((int)s.Kind)) return false;
         // Within a step of the doorway, inside or out.
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, p.X, p.Z);
-        return new Vector2(lx, lz - 1.7f).Length() < 1.2f;
+        return new Vector2(lx, lz - Structures.Shape((int)s.Kind).DoorwayZ).Length() < 1.2f;
     }
 
     // G on a finished hut's doorway or a basket. Priority sits just under adding materials (30).
@@ -126,7 +127,7 @@ public partial class BuildingSystem
                 if (s.Kind == StructureKind.Basket)
                     return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
                 // The doorway, so the hut you face wins over a basket beside you.
-                var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 1.7f);
+                var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ);
                 var doorway = new Vector3(dx, at.Y, dz);
                 if (!doors.TryGetValue(s.Id, out var door))
                     return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
@@ -153,7 +154,7 @@ public partial class BuildingSystem
     // The door costs show beside the doorway when you can't hang one yet.
     string? UsePrompt()
     {
-        if (UsableNear() is not { } s || s.Kind != StructureKind.ClayHut || doors.ContainsKey(s.Id)) return null;
+        if (UsableNear() is not { } s || !Structures.HasDoorway((int)s.Kind) || doors.ContainsKey(s.Id)) return null;
         return $"A door takes {Structures.DoorSticks} sticks and {Structures.DoorFiber} fiber";
     }
 
