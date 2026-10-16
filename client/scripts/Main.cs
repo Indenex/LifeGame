@@ -89,6 +89,9 @@ public partial class Main : Node3D
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        // The hotbar's number keys (ui-19) rest while something else has the keys.
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Note = hud.Note;
         social.HideChip = () => survival.Mourning;
         building.MayBar = social.HasRightsAt;
         building.ClaimBorderNear = social.ClaimBorderNear;
@@ -332,6 +335,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);

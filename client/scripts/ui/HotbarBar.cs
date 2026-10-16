@@ -1,0 +1,325 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using LifeGame.Shared;
+
+namespace LifeGame;
+
+// The hotbar (ui-19, Justin: "assign keybinds to slots on the bottom of the screen.
+// These slots should fill up to 10 slots, and have the item be usable by hitting the
+// assigned keybind"). Ten round slots along the bottom edge in the bag row's quiet
+// style (D-045), each with its key in the corner. A new kind of item takes the first
+// empty slot by itself; drag a slot onto another to swap them, or off the bar to clear
+// it. The key uses the item through the server (UseItem): eat, drink, wear, or take a
+// tool in hand. A slot keeps its item while you have none left, shown faded.
+// The row dims when nothing changes and brightens when you gain or use something; a
+// newly gained item's name floats up above its slot.
+public partial class HotbarBar : Control
+{
+    public const int Slots = IHotbarLink.Slots;
+    public const float Slot = 54f;
+    const float IdleAlpha = 0.45f, IdleAfter = 6f, Gap = 12f;
+
+    public IHotbarLink Link { get; private set; } = new MockHotbarLink();
+    // True while something else has the keys (a panel, chat, building).
+    public Func<bool> Blocked = () => false;
+    public Action<string> Note = _ => { };
+    // A placeable item's key (ui-16 opens the ghost when it is wired).
+    public event Action<Item>? PlaceRequested;
+
+    readonly HBoxContainer row = new() { MouseFilter = MouseFilterEnum.Ignore };
+    readonly HotbarSlotView[] views = new HotbarSlotView[Slots];
+    readonly Label name = new() { HorizontalAlignment = HorizontalAlignment.Center };
+    readonly Dictionary<Item, uint> carried = new();
+    readonly Dictionary<Item, string> labels = new();
+    float sinceChange = IdleAfter, nameTime, alpha = 1f, cover;
+    int nameAt = -1;
+    string? floatingName;
+    // When gains may sound and fill slots; set on the first update after login.
+    double quietUntil = -1;
+    bool filledOnce;
+
+    // How far above the bottom edge the row reaches; notes sit above it.
+    public float Top => Size.Y - row.Position.Y;
+
+    static readonly StringName[] Actions = Enumerable.Range(1, Slots).Select(i => new StringName($"hotbar_{i}")).ToArray();
+
+    public override void _Ready()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        row.AddThemeConstantOverride("separation", (int)Gap);
+        AddChild(row);
+        for (int i = 0; i < Slots; i++)
+        {
+            views[i] = new HotbarSlotView { Index = i, Bar = this };
+            row.AddChild(views[i]);
+        }
+        Hud.Style(name, 14, 0.85f);
+        name.Modulate = new Color(1, 1, 1, 0);
+        AddChild(name);
+        Attach(Link);
+    }
+
+    public void Attach(IHotbarLink link)
+    {
+        Link = link;
+        Link.Changed += Refresh;
+        filledOnce = false;
+        Refresh();
+    }
+
+    // Everything you carry, from Main whenever the inventory changes.
+    public void SetBag(IReadOnlyList<InventoryEntry> items)
+    {
+        var before = new Dictionary<Item, uint>(carried);
+        carried.Clear();
+        labels.Clear();
+        foreach (var e in items)
+        {
+            carried[e.Item] = carried.GetValueOrDefault(e.Item) + e.Count;
+            labels.TryAdd(e.Item, e.Label);
+        }
+
+        double now = Time.GetTicksMsec() / 1000.0;
+        if (quietUntil < 0) quietUntil = now + 2.0;
+        bool quiet = now < quietUntil && Link is ServerHotbarLink;
+        var gained = items.Select(e => e.Item).Distinct()
+            .Where(i => carried[i] > before.GetValueOrDefault(i)).ToList();
+        if (gained.Count > 0 && !quiet) Sfx.Play(Cue.Pickup);
+
+        // A new kind of item takes the first empty slot (Justin's "fill up to 10").
+        // At login the bar fills once from the whole bag if it is empty.
+        if (!quiet && !filledOnce && Enumerable.Range(0, Slots).All(i => Link.SlotItem(i) == null))
+            foreach (var item in carried.Keys) Fill(item);
+        else if (!quiet)
+            foreach (var item in gained.Where(i => !before.ContainsKey(i))) Fill(item);
+        if (!quiet) filledOnce = true;
+
+        if (gained.Count > 0 || before.Count != carried.Count || before.Any(kv => carried.GetValueOrDefault(kv.Key) != kv.Value))
+        {
+            sinceChange = 0f;
+            if (gained.LastOrDefault() is var g && gained.Count > 0)
+            {
+                floatingName = labels[g];
+                nameAt = SlotOf(g);
+                nameTime = 2.6f;
+            }
+        }
+        Refresh();
+    }
+
+    void Fill(Item item)
+    {
+        if (SlotOf(item) >= 0) return;
+        int free = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
+        if (free < 0) return;
+        Link.Set(free, item);
+        Hints.Request("hotbar_1");
+    }
+
+    int SlotOf(Item item) => Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == item, -1);
+
+    void Refresh()
+    {
+        var held = Link.Held;
+        for (int i = 0; i < Slots; i++)
+        {
+            var item = Link.SlotItem(i);
+            uint n = item is { } it ? carried.GetValueOrDefault(it) : 0;
+            views[i].Show(item, n, item is { } x && labels.TryGetValue(x, out var l) ? l : item is { } y ? ItemName(y) : "",
+                held != null && item == held, KeyName(i));
+        }
+    }
+
+    static string ItemName(Item item) => Items.All.TryGetValue(item, out var def) ? def.Name : "";
+
+    static string KeyName(int i)
+    {
+        var events = InputMap.HasAction(Actions[i]) ? InputMap.ActionGetEvents(Actions[i]) : new Godot.Collections.Array<InputEvent>();
+        return events.FirstOrDefault() is InputEventKey k ? OS.GetKeycodeString(k.PhysicalKeycode) : "";
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (e is not InputEventKey { Pressed: true, Echo: false } || Blocked()) return;
+        for (int i = 0; i < Slots; i++)
+        {
+            if (!InputMap.HasAction(Actions[i]) || !e.IsActionPressed(Actions[i])) continue;
+            UseSlot(i);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+    }
+
+    public void UseSlot(int i)
+    {
+        if (Link.SlotItem(i) is not { } item) return;
+        views[i].Pop();
+        sinceChange = 0f;
+        string what = labels.TryGetValue(item, out var l) ? l : ItemName(item);
+        if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
+        if (Placeable(item)) { PlaceRequested?.Invoke(item); return; }
+        if (Items.UseOf(item) == UseAction.None) { Note($"{what} is used in making things"); return; }
+        Link.Use(item);
+    }
+
+    // Placeable items open the placing ghost; read from the item's Def once crafting-21
+    // adds the flag (ui-16 wires PlaceRequested).
+    public static Func<Item, bool> Placeable = _ => false;
+
+    // Drags between slots and off the bar (HotbarSlotView calls these).
+    internal void Dropped(int from, int to)
+    {
+        if (from != to) Link.Move(from, to);
+    }
+
+    // The slot being dragged, if any (the drag data is gone by the time it ends).
+    internal int DraggingFrom = -1;
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationDragEnd || DraggingFrom < 0) return;
+        // A slot let go anywhere that didn't take it comes off the bar; the items stay in the bag.
+        if (!GetViewport().GuiIsDragSuccessful()) Link.Set(DraggingFrom, null);
+        DraggingFrom = -1;
+    }
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        sinceChange += dt;
+        alpha = Mathf.MoveToward(alpha, sinceChange < IdleAfter ? 1f : IdleAlpha, dt * (sinceChange < IdleAfter ? 4f : 0.6f));
+        // Steps aside while a panel covers the world.
+        cover = Mathf.MoveToward(cover, Panels.Open() ? 1f : 0f, dt * 6f);
+        row.Modulate = new Color(1, 1, 1, alpha * (1f - cover));
+        nameTime -= dt;
+        name.Text = floatingName ?? "";
+        name.Modulate = new Color(1, 1, 1, Mathf.Clamp(nameTime, 0f, 1f) * (1f - cover));
+
+        // Centred along the bottom edge; a narrow window shrinks it a little.
+        float natural = Slots * Slot + (Slots - 1) * Gap;
+        float scale = Mathf.Clamp((Size.X - 80f) / natural, 0.7f, 1f);
+        row.Scale = new Vector2(scale, scale);
+        row.Size = new Vector2(natural, Slot);
+        row.Position = new Vector2((Size.X - natural * scale) / 2, Size.Y - Slot * scale - 22);
+        var nameSize = name.GetCombinedMinimumSize();
+        name.Size = nameSize;
+        float overX = nameAt >= 0 ? (nameAt * (Slot + Gap) + Slot / 2) * scale : natural * scale / 2;
+        name.Position = row.Position + new Vector2(overX - nameSize.X / 2, -nameSize.Y - 6);
+    }
+}
+
+// One round slot of the hotbar: the item's picture, how many you carry, the key in the
+// corner. Drag it onto another slot to swap them.
+public partial class HotbarSlotView : PanelContainer
+{
+    public int Index;
+    public HotbarBar Bar = null!;
+
+    readonly StyleBoxFlat style = new()
+    {
+        BgColor = new Color(0.09f, 0.10f, 0.07f, 0.62f),
+        BorderColor = new Color(Look.Cream, 0.28f),
+        ShadowColor = new Color(0, 0, 0, 0.25f),
+        ShadowSize = 6,
+        ShadowOffset = new Vector2(0, 2),
+    };
+    readonly TextureRect picture = new()
+    {
+        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+        MouseFilter = MouseFilterEnum.Ignore,
+    };
+    Label count = null!, key = null!;
+    Item? item;
+    float pop;
+
+    public override void _Ready()
+    {
+        CustomMinimumSize = new Vector2(HotbarBar.Slot, HotbarBar.Slot);
+        MouseFilter = MouseFilterEnum.Stop;
+        style.SetBorderWidthAll(1);
+        // Just under half the slot: a radius of exactly half leaves a seam down the middle.
+        style.SetCornerRadiusAll((int)(HotbarBar.Slot / 2) - 2);
+        AddThemeStyleboxOverride("panel", style);
+        PivotOffset = new Vector2(HotbarBar.Slot, HotbarBar.Slot) / 2;
+
+        var stack = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(stack);
+        picture.SetAnchorsPreset(LayoutPreset.FullRect);
+        picture.OffsetLeft = picture.OffsetTop = 2;
+        picture.OffsetRight = picture.OffsetBottom = -2;
+        stack.AddChild(picture);
+
+        count = Hud.Text("", 13);
+        count.SetAnchorsPreset(LayoutPreset.FullRect);
+        count.HorizontalAlignment = HorizontalAlignment.Right;
+        count.VerticalAlignment = VerticalAlignment.Bottom;
+        count.OffsetRight = -3;
+        count.OffsetBottom = 1;
+        stack.AddChild(count);
+
+        // The key sits just outside the top-left of the ring, small and soft.
+        key = Hud.Text("", 11);
+        key.Modulate = new Color(1, 1, 1, 0.7f);
+        key.Position = new Vector2(-4, -8);
+        stack.AddChild(key);
+    }
+
+    public void Show(Item? what, uint n, string label, bool held, string keyName)
+    {
+        item = what;
+        picture.Texture = what is { } i ? ItemIcon.For(i) : null;
+        // A slot whose item has run out keeps its picture, faded.
+        picture.Modulate = new Color(1, 1, 1, n > 0 ? 1f : 0.3f);
+        count.Text = n > 1 ? n.ToString() : "";
+        key.Text = keyName;
+        TooltipText = label;
+        // The tool in hand gets a brighter, thicker ring.
+        style.BorderColor = new Color(Look.Cream, held ? 0.85f : what == null ? 0.14f : 0.28f);
+        style.SetBorderWidthAll(held ? 2 : 1);
+        style.BgColor = new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+    }
+
+    // A small bounce when its key is pressed.
+    public void Pop() => pop = 1f;
+
+    public override void _Process(double delta)
+    {
+        pop = Mathf.MoveToward(pop, 0f, (float)delta * 5f);
+        float s = 1f + 0.12f * Mathf.Sin(pop * Mathf.Pi);
+        Scale = new Vector2(s, s);
+    }
+
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        if (item is not { } i) return default;
+        var preview = new TextureRect
+        {
+            Texture = ItemIcon.For(i),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            Size = new Vector2(HotbarBar.Slot, HotbarBar.Slot),
+            Position = -new Vector2(HotbarBar.Slot, HotbarBar.Slot) / 2,
+            Modulate = new Color(1, 1, 1, 0.8f),
+        };
+        var holder = new Control();
+        holder.AddChild(preview);
+        SetDragPreview(holder);
+        Bar.DraggingFrom = Index;
+        return new Godot.Collections.Dictionary { ["hotbar"] = Index, ["item"] = (int)i };
+    }
+
+    public override bool _CanDropData(Vector2 atPosition, Variant data) =>
+        data.Obj is Godot.Collections.Dictionary d && (d.ContainsKey("hotbar") || d.ContainsKey("bag"));
+
+    public override void _DropData(Vector2 atPosition, Variant data)
+    {
+        if (data.Obj is not Godot.Collections.Dictionary d) return;
+        if (d.TryGetValue("hotbar", out var from)) Bar.Dropped(from.AsInt32(), Index);
+        // From the bag panel (ui-18): put that kind of item on this slot.
+        else if (d.TryGetValue("bag", out var it)) Bar.Link.Set(Index, (Item)it.AsInt32());
+    }
+}
