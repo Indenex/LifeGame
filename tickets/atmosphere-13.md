@@ -11,8 +11,10 @@ Option A of three sent to the PM 2026-10-16 (recommended; the default until the 
 ## Progress log
 - 2026-10-16: ticket opened. Renderer is Forward+ (project.godot sets no rendering_method); Main.cs enables volumetric fog (density 0.007, anisotropy 0.6, length 64); Atmosphere.cs drives VolumetricFogDensity from mood.MistDensity and storm, and sun.LightVolumetricFogEnergy from sun height.
 
+- 2026-10-16: pushed dc26f57. Atmosphere.ApplyLight: shafts = woods (Woodedness eased over 3 s) x lowSun (smoothstep 0.02-0.12 sun height, gone by 0.3-0.55) x fair ((1-overcast)^2 x (1 - 2*rain)); volumetric fog density x(1 + 1.6 shafts), anisotropy 0.6 + 0.25 shafts, sun fog energy + 1.4 shafts. Client builds; not seen yet (no Godot in this container). Render requested dc26f57 (before 47a151d / after, woods -44,-46 at 0.27, 0.35, 0.5, 0.72 fair; 0.3 overcast; meadow 0.3). Compatibility fallback not done: wait for the shots and Justin first.
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
 ## Next step
-In Atmosphere.cs's sun/fog update, add a low-sun forest term: fog density x (1 + k * woods * lowSun * fair), anisotropy toward 0.8 at low sun; then send a render request (woods at --debug-position=-44,-46, times 0.27, 0.35, 0.5, 0.72, fair and --cloud=0.9).
+Wait for the Render lane's dc26f57 shots; tune the shaft numbers from them; then decide the Compatibility fallback.
