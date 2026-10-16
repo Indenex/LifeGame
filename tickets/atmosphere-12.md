@@ -19,5 +19,7 @@ From the PM, 2026-10-16, for Crafting's chopping (#70): rhythmic axe thunks with
 ## Open questions / blockers
 - The Drill, Strike, Shape and Coil minigames are Crafting's files and make no sound yet; the job sound plays after them (or for the whole work when a Master skips the minigame). Crafting could call Atmosphere.Sound.Working(...) while a minigame is open if Justin wants sound during it.
 
+- 2026-10-16 05:30: Crafting's #74 adds `static partial void MinigameSound(ProcessDef def, bool playing)` in CraftingUi (true when any minigame opens, false when it closes). Once #74 is on main, implement it in client/scripts/atmosphere/CraftingUi.Sound.cs: playing → Atmosphere's SoundScape.Working(Drill → HandDrill or BowDrill by def.Id, Strike → Knap, Shape/Coil → Clay, def.Seconds); else Working(Work.None, 0). It needs a static handle to the SoundScape (e.g. a static Atmosphere.Current set in _Ready).
+
 ## Next step
 Send clips to the PM; push to claude/atmosphere-sound-hlqfke once #66 merges (merge main, gen-bindings, build, push, open PR).
