@@ -2,8 +2,8 @@
 Lane: House building
 Owner: House building thread
 Status: in_progress
-Branch: local `building-7-wip` (from main 896e9bd); goes on `claude/house-building-8ueqz2` after #61 and building-6
-PR: (not yet)
+Branch: claude/house-building-8ueqz2 (riding on #61 with the mat, per the PM)
+PR: #61
 
 ## Goal
 The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs are unchanged.
@@ -19,4 +19,4 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 - None. Note for Ceramics: the jar's stage costs now go in `Structures.StageCosts` in shared/Structures.cs, not Building.cs.
 
 ## Next step
-Push and open a PR after building-6, then rebase this onto it. Both add rows to StageCosts, and that conflict is trivial.
+Wait for CI on #61. If Justin turns down the mat, revert the building-5 commits on this branch and #61 merges as fixes only.
