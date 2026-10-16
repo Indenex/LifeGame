@@ -38,6 +38,7 @@ public partial class Main : Node3D
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
+    readonly Woodcutting woodcutting = new();
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -74,6 +75,7 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
@@ -321,6 +323,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
+        woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
