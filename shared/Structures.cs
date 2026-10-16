@@ -122,7 +122,7 @@ namespace LifeGame.Shared
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
         // Stacks a storage jar holds (ceramics-6).
-        public const int JarStacks = 8;
+        public const int JarStacks = 6;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
