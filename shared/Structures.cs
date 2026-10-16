@@ -18,6 +18,12 @@ namespace LifeGame.Shared
         public float RainCover, Warmth;
         // Round shapes only: players can't walk into the footprint once the first stage is done.
         public bool Solid;
+        // Where a hung door goes: the doorway's center on the local +Z axis, 0 when it has none.
+        public float DoorwayZ;
+        // Hours untouched before it starts to weather (D-046); 0 uses WeatherAfterHours.
+        public double WeatherAfter;
+        // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
+        public int StoreStacks;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -40,6 +46,7 @@ namespace LifeGame.Shared
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
                 RainCover = 1f, Warmth = 0.75f,
+                DoorwayZ = 1.7f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
             // A land claim's marker post (Claims.cs makes the claim when it is finished).
@@ -59,6 +66,27 @@ namespace LifeGame.Shared
                 Solid = true,
                 Stages = new[] { "Base", "Dome" },
             },
+            new StructureShape
+            {
+                Name = "Storage basket",
+                Round = true, Radius = 0.35f,
+                Clearance = 0.6f,
+                Solid = true,
+                StoreStacks = BasketStacks,
+                Stages = new[] { "Weave" },
+            },
+            // A mud-brick house: a bigger room with a hearth. A fire lit inside warms
+            // the whole room, and it weathers slower than wattle and daub.
+            new StructureShape
+            {
+                Name = "Mud-brick house",
+                HalfWidth = 2.4f, HalfDepth = 2.0f,
+                Clearance = 3.2f,
+                RainCover = 1f, Warmth = 0.85f,
+                DoorwayZ = 1.8f,
+                WeatherAfter = 168,
+                Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -74,13 +102,36 @@ namespace LifeGame.Shared
 
         // The skill each stage practices, for the journal and skills (build.* process ids).
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
-            DaubProcess = "build.daub", RoofProcess = "build.roof";
+            DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave", DoorProcess = "build.door";
+
+        // A hurdle door on a finished clay hut: what hanging it takes, and the warmth it keeps in when shut.
+        public const int DoorSticks = 4, DoorFiber = 2;
+        public const float ClosedDoorWarmth = 0.9f;
+        // Stacks a storage basket holds.
+        public const int BasketStacks = 12;
+
+        // Weathering (D-046): outside claims, anything players made that nobody has
+        // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
+        public const double WeatherAfterHours = 72, WeatherForHours = 24;
+
+        // Whether a finished building of this kind takes a door, and where its doorway is.
+        public static bool HasDoorway(int kind) => Shape(kind).DoorwayZ > 0;
+        public static bool IsStore(int kind) => Shape(kind).StoreStacks > 0;
+
+        public static double WeatherAfterFor(int kind) =>
+            Shape(kind).WeatherAfter > 0 ? Shape(kind).WeatherAfter : WeatherAfterHours;
+
+        // Inside a brick house's walls, where a fire warms the whole room.
+        public const float HouseWallX = 2.2f, HouseWallZ = 1.8f;
 
         public static string StageProcess(int kind, int stage) => kind switch
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
             ClayRules.KilnStructureKind => ClayRules.KilnProcess,
+            4 => WeaveProcess,
+            // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
+            5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 

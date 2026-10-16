@@ -25,23 +25,51 @@ public partial class Sheep : Node3D
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
+    readonly MeshInstance3D fleece;
+    Color woolColor;
+    float wool = 1f, woolTarget = 1f;
+    // Grown size (varies per sheep), and how grown up this one is (lambs are small).
+    readonly float adultSize;
+    float growth = 1f, growthTarget = 1f;
+    // Lying down for good: -1 while alive, then seconds since it lay down.
+    float lying = -1f;
+    // Lambs skip about now and then: seconds until the next little hop.
+    float frolic = 4f;
+    // Fading away after butchering: -1 until then.
+    float fading = -1f;
+    const float LieSeconds = 1.4f, FadeSeconds = 1.2f;
 
     static readonly Color Face = new(0.17f, 0.14f, 0.12f);
     // Mostly cream, some oatmeal, and the odd dark sheep.
     static readonly Color[] Fleeces =
     {
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.80f, 0.74f, 0.62f),
-        new(0.80f, 0.74f, 0.62f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
+        // Unwashed wool, not paper white: a brighter fleece glows against the
+        // grass at dusk and at night instead of dimming with everything else.
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.68f, 0.62f, 0.52f),
+        new(0.68f, 0.62f, 0.52f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
         new(0.34f, 0.27f, 0.22f),
     };
     static readonly Dictionary<int, Material> WoolMaterials = new();
-    static Mesh? woolMesh, headMesh, legMesh;
+    static Mesh? woolMesh, skinMesh, headMesh, legMesh;
+    static Material? skinMaterial;
+    static readonly Color Skin = new(0.80f, 0.66f, 0.58f);
     static Material? faceMaterial;
+
+    // Wool takes the painted shader's relief, so the crevices between curls shade
+    // in like the ground and rocks do.
+    static ShaderMaterial WoolLook(Color color)
+    {
+        var material = Look.Solid(color);
+        material.SetShaderParameter("detail_scale", 3.0f);
+        material.SetShaderParameter("bump", 1.2f);
+        material.SetShaderParameter("cavity", 0.3f);
+        return material;
+    }
 
     public Sheep(ulong id, Terrain terrain)
     {
@@ -49,11 +77,16 @@ public partial class Sheep : Node3D
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
         BuildMeshes();
 
-        int fleece = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
-        if (!WoolMaterials.TryGetValue(fleece, out var wool))
-            WoolMaterials[fleece] = wool = Look.Solid(Fleeces[fleece]);
+        int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
+        if (!WoolMaterials.TryGetValue(color, out var wool))
+            WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
+        woolColor = Fleeces[color];
 
-        body.AddChild(new MeshInstance3D { Mesh = woolMesh, MaterialOverride = wool });
+        // A shorn sheep is a slim pink body; the fleece shrinks into it when shorn
+        // and swells back out as the wool regrows.
+        body.AddChild(new MeshInstance3D { Mesh = skinMesh, MaterialOverride = skinMaterial });
+        fleece = new MeshInstance3D { Mesh = woolMesh, MaterialOverride = wool };
+        body.AddChild(fleece);
         head.AddChild(new MeshInstance3D { Mesh = headMesh, MaterialOverride = faceMaterial });
         // A tuft of wool on top of the head, in the same fleece as the body.
         head.AddChild(new MeshInstance3D { Mesh = WoolCap, MaterialOverride = wool });
@@ -69,8 +102,36 @@ public partial class Sheep : Node3D
         AddChild(body);
 
         // Not every sheep is the same size.
-        Scale = Vector3.One * (0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f);
+        adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f;
+        Scale = Vector3.One * adultSize;
     }
+
+    // Lambs are born at 35 and grow to 100. A lamb is a little over half size.
+    static float GrownFraction(byte growth) => Mathf.Lerp(0.55f, 1f, Mathf.Clamp((growth - 35) / 65f, 0f, 1f));
+
+    // The animal has died: it settles onto its side and stays there. Kept quiet
+    // and gentle on purpose (D-036). Called on a fresh node too, already lying.
+    public void LieDown(float x, float z, float heading, byte fleece, byte grown, bool gently)
+    {
+        to = from = new Vector2(x, z);
+        glide = 1f;
+        targetHeading = heading;
+        woolTarget = fleece / 100f;
+        growthTarget = GrownFraction(grown);
+        if (lying < 0f && !gently)
+        {
+            wool = woolTarget;
+            growth = growthTarget;
+            Position = new Vector3(x, terrain.HeightAt(x, z), z);
+            Rotation = new Vector3(0, heading, 0);
+        }
+        lying = gently ? Mathf.Max(lying, 0f) : LieSeconds;
+        state = AnimalState.Idle;
+    }
+
+    // Butchered: sink softly into the grass and go.
+    public void FadeAway() => fading = 0f;
+
 
     public void Apply(Animal a, bool snap)
     {
@@ -90,6 +151,11 @@ public partial class Sheep : Node3D
             glide = 0f;
         }
         if (a.State == AnimalState.Run && state != AnimalState.Run && !snap) hop = 0f;
+        woolTarget = a.Fleece / 100f;
+        growthTarget = GrownFraction(a.Growth);
+        if (snap) (wool, growth) = (woolTarget, growthTarget);
+        // Just shorn: the fleece comes off in a soft burst of tufts.
+        else if (woolTarget < wool - 0.5f) Tufts();
         state = a.State;
     }
 
@@ -97,6 +163,11 @@ public partial class Sheep : Node3D
     {
         float dt = (float)delta;
         float time = Time.GetTicksMsec() / 1000f + seed;
+        if (lying >= 0f)
+        {
+            Lie(dt, time);
+            return;
+        }
 
         glide = Mathf.Min(glide + dt / GlideSeconds, 1f);
         var flat = from.Lerp(to, glide);
@@ -120,6 +191,13 @@ public partial class Sheep : Node3D
         legs[1].Rotation = new Vector3(Mathf.Lerp(-s, front, run), 0, 0);
         legs[2].Rotation = new Vector3(Mathf.Lerp(-s, back, run), 0, 0);
         legs[3].Rotation = new Vector3(Mathf.Lerp(s, back, run), 0, 0);
+
+        // A lamb at rest gives a little skip every so often.
+        if (growthTarget < 0.95f && state != AnimalState.Run && speed < 0.4f && (frolic -= dt) <= 0f)
+        {
+            hop = 0f;
+            frolic = 5f + Terrain.Hash01((int)(time * 10f), 5, 3) * 9f;
+        }
 
         // Startled hop, bouncing run, gentle bob while walking, slow breathing at rest.
         hop = Mathf.Min(hop + dt, HopSeconds);
@@ -151,6 +229,65 @@ public partial class Sheep : Node3D
         pitch = Mathf.Lerp(pitch, targetPitch, 1f - Mathf.Exp(-4f * dt));
         yaw = Mathf.Lerp(yaw, targetYaw, 1f - Mathf.Exp(-3f * dt));
         head.Rotation = new Vector3(pitch, yaw, 0);
+
+        // Wool shrinks away quickly when shorn and creeps back as it regrows.
+        wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
+        fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, wool);
+        growth = Mathf.Lerp(growth, growthTarget, 1f - Mathf.Exp(-0.5f * dt));
+        Scale = Vector3.One * adultSize * growth;
+    }
+
+    void Lie(float dt, float time)
+    {
+        lying = Mathf.Min(lying + dt, LieSeconds);
+        // Ease down: legs fold, then the body rolls gently onto its side.
+        float t = Mathf.SmoothStep(0f, 1f, lying / LieSeconds);
+        float roll = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((lying / LieSeconds - 0.3f) / 0.7f, 0f, 1f));
+        float ground = terrain.HeightAt(to.X, to.Y);
+        Position = new Vector3(to.X, ground, to.Y);
+        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-4f * dt)), 0);
+        // The body pivots at the hooves, so rolling over needs a lift to keep the
+        // fleece resting on the grass rather than sinking into the ground.
+        body.Position = new Vector3(0, -0.12f * t * (1f - roll) + 0.24f * roll, 0);
+        body.Rotation = new Vector3(0, 0, roll * 1.35f);
+        body.Scale = Vector3.One;
+        // Legs tuck in, front ones back and hind ones forward, like a sheep asleep.
+        for (int i = 0; i < 4; i++)
+            legs[i].Rotation = new Vector3((i < 2 ? -1.1f : 1.1f) * t, 0, -roll * 0.2f);
+        pitch = Mathf.Lerp(pitch, 0.35f, 1f - Mathf.Exp(-3f * dt));
+        head.Rotation = new Vector3(pitch, 0, 0);
+        fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, woolTarget);
+        Scale = Vector3.One * adultSize * growthTarget;
+
+        if (fading < 0f) return;
+        fading += dt;
+        float f = Mathf.Clamp(fading / FadeSeconds, 0f, 1f);
+        Scale = Vector3.One * adultSize * growthTarget * (1f - f * 0.6f);
+        Position += Vector3.Down * f * 0.3f;
+        if (f >= 1f) QueueFree();
+    }
+
+    void Tufts()
+    {
+        var puff = new CpuParticles3D
+        {
+            Emitting = true,
+            OneShot = true,
+            Amount = 18,
+            Lifetime = 1.4f,
+            Explosiveness = 0.85f,
+            Direction = Vector3.Up,
+            Spread = 70f,
+            InitialVelocityMin = 0.8f,
+            InitialVelocityMax = 1.8f,
+            Gravity = new Vector3(0, -1.6f, 0),
+            ScaleAmountMin = 0.7f,
+            ScaleAmountMax = 1.3f,
+            Mesh = new SphereMesh { Radius = 0.05f, Height = 0.08f, RadialSegments = 6, Rings = 3, Material = Look.Solid(woolColor) },
+            Position = new Vector3(0, 0.7f, 0),
+        };
+        AddChild(puff);
+        GetTree().CreateTimer(1.8).Timeout += puff.QueueFree;
     }
 
     // --- Meshes, built once and shared by every sheep ----------------------
@@ -184,6 +321,11 @@ public partial class Sheep : Node3D
         // A stubby tail.
         Ellipsoid(st, center + new Vector3(0, 0.04f, -0.48f), new Vector3(0.08f, 0.09f, 0.07f), 0.96f, 8, 5);
         woolMesh = st.Commit();
+
+        st = Begin();
+        Ellipsoid(st, center + new Vector3(0, -0.03f, 0), core * 0.78f, 1f, 12, 7);
+        skinMesh = st.Commit();
+        skinMaterial = Look.Solid(Skin);
 
         st = Begin();
         // Skull, muzzle and ears that stick out sideways.

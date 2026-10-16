@@ -73,6 +73,9 @@ public partial class CraftingUi : CanvasLayer
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
         progressPanel.Position = new Vector2(-150, -130);
         root.AddChild(progressPanel);
+        // --screenshot-minigame shows the hand-drill game's box without a server.
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-minigame") >= 0)
+            AddChild(new DrillGame(Processes.List.First(p => p.Minigame == Minigame.Drill)).Root);
     }
 
     public void Attach(DbConnection conn)
@@ -92,7 +95,7 @@ public partial class CraftingUi : CanvasLayer
             Priority = 25,
             Find = at =>
             {
-                var (roast, seconds) = MyRoasts().FirstOrDefault(r => Roasting.Done(r.seconds));
+                var (roast, seconds) = OldestDoneRoast();
                 if (roast == null) return null;
                 float d = new Vector2(roast.X - at.X, roast.Z - at.Z).Length();
                 if (d > World.Reach) return null;
@@ -185,13 +188,16 @@ public partial class CraftingUi : CanvasLayer
 
     // --- Starting a process ----------------------------------------------
 
+    bool reopenAfterMinigame;
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
         if (job != null) { Notice?.Invoke("Your hands are busy"); return; }
         if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
 
-        panel.Visible = false;
+        // The panel stays open after a craft, so pressing the same number repeats
+        // it; it only steps aside while a minigame is played.
         // Skill hook (journal/CraftingUi.Skills.cs): a Master just does the work.
         float? skipped = null;
         if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
@@ -212,8 +218,17 @@ public partial class CraftingUi : CanvasLayer
             conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
             return;
         }
+        reopenAfterMinigame = panel.Visible;
+        panel.Visible = false;
         AddChild(minigame.Root);
+        MinigameSound(def, true);
     }
+
+    // Sound hook: Atmosphere implements this in its own file to play the work sounds
+    // (Sound.Working) while any minigame is open, Drill and Strike here or Shape and
+    // Coil from Ceramics, so the hands-on part is never silent (D-036). Unimplemented,
+    // the compiler drops the calls.
+    static partial void MinigameSound(ProcessDef def, bool playing);
 
     // Other lanes add their own minigames in their own folder (see ceramics/CraftingUi.Clay.cs).
     partial void MinigameFor(ProcessDef def, ref Minigame_? game);
@@ -245,26 +260,62 @@ public partial class CraftingUi : CanvasLayer
         var def = minigame.Process;
         minigame.Root.QueueFree();
         minigame = null;
+        MinigameSound(def, false);
+        if (reopenAfterMinigame)
+        {
+            panel.Visible = true;
+            Refresh();
+        }
         if (score is { } s && conn != null) conn.Reducers.StartCraft(def.Id, s);
     }
 
-    // What is missing to run a process, or null when everything is at hand.
+    // What is missing to run a process, and where to get it, or null when
+    // everything is at hand. Shown under a greyed-out recipe and as a notice.
     string? Missing(ProcessDef def)
     {
         foreach (var input in def.Consumes)
-            if (Count(input.Item) < input.Count)
-                return $"You need {input.Count} {Items.Def(input.Item).Count(input.Count).ToLowerInvariant()}";
+        {
+            uint have = Count(input.Item);
+            if (have >= input.Count) continue;
+            uint lacking = input.Count - have;
+            string what = Items.Def(input.Item).Count(lacking).ToLowerInvariant();
+            return $"You need {(have > 0 ? lacking + " more" : lacking.ToString())} {what}. {WhereFrom(input.Item)}";
+        }
         if (def.NeedsTool.HasFlag(ItemTags.Hammer))
         {
             // The stone being worked cannot also be the one striking it.
             uint used = def.Consumes.Where(i => Items.Def(i.Item).Tags.HasFlag(ItemTags.Hammer)).Aggregate(0u, (n, i) => n + i.Count);
             if (HammerCount() < used + 1)
-                return "You need a second stone to strike with";
+                return $"You need {(used > 0 ? "a second stone" : "a stone")} to strike with. {WhereFrom(Item.Stone)}";
         }
         else if (def.NeedsTool != ItemTags.None && !HasTool(def.NeedsTool))
-            return $"You need {ToolName(def.NeedsTool)}";
+        {
+            // Name the simplest thing that would do, and how it is made.
+            var tool = Items.All.Values.Where(d => (d.Tags & def.NeedsTool) == def.NeedsTool)
+                .OrderBy(d => Processes.List.FirstOrDefault(p => p.Makes == d.Id)?.Tier ?? 0).FirstOrDefault();
+            return tool == null ? "You need the right tool"
+                : $"You need {Article(tool.Name.ToLowerInvariant())}. {WhereFrom(tool.Id)}";
+        }
         return null;
     }
+
+    // One short line on where a new player gets an item.
+    static string WhereFrom(Item item)
+    {
+        string Key(string action) =>
+            Controls.World.FirstOrDefault(b => b.Action == action) is { } b && Controls.KeysFor(b) is { } k ? $" ({k})" : "";
+        return item switch
+        {
+            Item.Stick => $"Pick them up under the trees{Key("pick_up")}.",
+            Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
+            Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
+            Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
+            _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => $"Make it first: {maker.Name}.",
+            _ => "",
+        };
+    }
+
+    static string Article(string noun) => ("aeiou".Contains(noun[0]) ? "an " : "a ") + noun;
 
     uint Count(Item item) =>
         conn?.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count) ?? 0;
@@ -342,10 +393,11 @@ public partial class CraftingUi : CanvasLayer
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
             if (def.NeedsTool != ItemTags.None) inputs += $", using {ToolName(def.NeedsTool)}";
-            bool ready = Missing(def) == null;
+            string? missing = Missing(def);
+            bool ready = missing == null;
             var button = new Button
             {
-                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}",
+                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}" + (missing != null ? $"\n      {missing}" : ""),
                 Alignment = HorizontalAlignment.Left,
                 Disabled = !ready,
                 Flat = true,
@@ -362,6 +414,22 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // Your roasts on fires nearby, with how long each has been cooking.
+    // The roast that has been on longest among those done, as the panel orders them.
+    // A plain loop: the Use key asks every frame (bugfix-8).
+    (Roast? roast, float seconds) OldestDoneRoast()
+    {
+        (Roast? roast, float seconds) best = (null, 0f);
+        if (conn?.Identity is not { } me) return best;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        foreach (var r in conn.Db.Roast.Iter())
+        {
+            if (r.Owner != me) continue;
+            float seconds = (now - r.PutAt.MicrosecondsSinceUnixEpoch) / 1_000_000f;
+            if (Roasting.Done(seconds) && (best.roast == null || seconds > best.seconds)) best = (r, seconds);
+        }
+        return best;
+    }
+
     IEnumerable<(Roast roast, float seconds)> MyRoasts()
     {
         if (conn?.Identity is not { } me) return Enumerable.Empty<(Roast, float)>();
@@ -436,9 +504,8 @@ public partial class CraftingUi : CanvasLayer
             box.AddChild(Bar);
             box.AddChild(Hint);
             card.AddChild(box);
-            card.SetAnchorsPreset(Control.LayoutPreset.Center);
-            card.GrowHorizontal = Control.GrowDirection.Both;
-            card.GrowVertical = Control.GrowDirection.Both;
+            // Low on the screen, so the player and the fire stay in view (Hud's lanes).
+            Hud.PlaceLow(card);
             Root = card;
         }
 

@@ -3,7 +3,8 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|brick-house|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// brick-house runs on its own, since its bricks take minutes to dry.
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -48,7 +49,8 @@ if (which is "lean-to" or "both")
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
 if (which is "clay-hut" or "both")
-    BuildTogether(StructureKind.ClayHut,
+{
+    ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
         new() { [Item.Stick] = 11, [Item.Fiber] = 14, [Item.Clay] = 12 },
         // B turns the clay into daub for the walls: clean it, then mix in fiber.
@@ -58,12 +60,54 @@ if (which is "clay-hut" or "both")
             for (int i = 0; i < 6; i++) b.Craft("clay.daub", Pump);
             Check(b.CountOf(Item.Daub) >= 12, $"mixed daub for the walls ({b.Carried()})");
         });
+    HangDoor(hut);
+}
+if (which is "basket" or "both")
+    StoreInBasket(BuildTogether(StructureKind.Basket,
+        new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
+        new() { [Item.Fiber] = 9 },
+        // B twists two cordage for the basket's stitching.
+        prepareB: () =>
+        {
+            for (int i = 0; i < 2; i++) b.Craft("cord.twist", Pump);
+            Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
+        }));
+
+// Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
+if (which is "brick-house")
+{
+    ulong house = BuildTogether(StructureKind.BrickHouse,
+        new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
+        new() { [Item.Fiber] = 19, [Item.Clay] = 70 },
+        prepareA: () =>
+        {
+            for (int i = 0; i < 2; i++) a.Craft("cord.twist", Pump);
+            Check(a.CountOf(Item.Cordage) >= 2, $"twisted cordage for the rafters ({a.Carried()})");
+        },
+        // B cleans the clay, mixes daub, and molds and dries sixteen bricks.
+        prepareB: () =>
+        {
+            for (int i = 0; i < 35; i++) b.Craft("clay.clean", Pump);
+            for (int i = 0; i < 3; i++) b.Craft("clay.daub", Pump);
+            for (int i = 0; i < 16; i++) b.Craft("clay.brick", Pump);
+            WaitFor(() => b.Conn.Db.ClayPiece.Iter().Count(p => p.Form == (byte)ClayForm.Brick) >= 16, 10, "sixteen bricks set down to dry");
+            var until = clock.Elapsed + TimeSpan.FromMinutes(12);
+            while (b.CountOf(Item.Brick) < 16 && clock.Elapsed < until)
+            {
+                foreach (var piece in b.Conn.Db.ClayPiece.Iter().Where(p => p.Form == (byte)ClayForm.Brick).ToList())
+                    b.Conn.Reducers.TendClay(piece.Id, false);
+                Pump(20000);
+            }
+            Check(b.CountOf(Item.Brick) >= 16 && b.CountOf(Item.Daub) >= 6, $"dried bricks and mixed daub for the walls ({b.Carried()})");
+        });
+    HangDoor(house);
+}
 
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
 
-void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null)
+ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null, Action? prepareA = null)
 {
     string name = Structures.Shape((int)kind).Name;
     Console.WriteLine($"--- {name}");
@@ -71,13 +115,14 @@ void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<I
     // Gather side by side.
     a.Wants = forA;
     b.Wants = forB;
-    var until = clock.Elapsed + TimeSpan.FromSeconds(240);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(420);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
         Pump(100);
     }
     Check(bots.All(x => x.HasWants), $"both gathered materials for the {name} ({a.Carried()} / {b.Carried()})");
+    prepareA?.Invoke();
     prepareB?.Invoke();
 
     // A lays out a footprint on dry, level ground nearby.
@@ -93,7 +138,8 @@ void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<I
     WaitFor(() => b.Conn.Db.Structure.Id.Find(id) != null, 10, "the other player sees the footprint");
 
     // Both stand at the open front and add what they carry until it stands.
-    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, Structures.Shape((int)kind).Round ? 2.5f : 1.9f);
+    var shape = Structures.Shape((int)kind);
+    var front = Structures.ToWorld(sx, sz, s.Yaw, 0.6f, shape.Round ? shape.Radius + 0.6f : Math.Max(1.9f, shape.HalfDepth + 0.6f));
     b.WalkTo(front.x + 0.6f, front.z, 1f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 1f, Pump);
     until = clock.Elapsed + TimeSpan.FromSeconds(180);
@@ -109,12 +155,73 @@ void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<I
     Check(b.Conn.Db.Structure.Id.Find(id) is { Complete: true }, "the other player sees it finished");
 
     // Walk in and check the spot counts as sheltered.
-    a.WalkTo(sx, sz, 0.3f, Pump);
-    Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
+    if (Structures.Shape((int)kind).RainCover > 0)
+    {
+        a.WalkTo(sx, sz, 0.3f, Pump);
+        Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
+    }
 
     // Reconnect and find it still there.
     a.Reconnect(Pump);
     WaitFor(() => a.Ready && a.Conn.Db.Structure.Id.Find(id) is { Complete: true }, 20, "still standing after reconnecting");
+    return id;
+}
+
+// A hangs a door in the hut's doorway; B, who didn't make it, opens and shuts it.
+void HangDoor(ulong hut)
+{
+    Console.WriteLine("--- Door");
+    a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
+    b.Wants = new();
+    var until = clock.Elapsed + TimeSpan.FromSeconds(120);
+    while (!a.HasWants && clock.Elapsed < until)
+    {
+        a.GatherStep(0.1f);
+        Pump(100);
+    }
+    Check(a.HasWants, $"gathered sticks and fiber for a door ({a.Carried()})");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ + 0.6f);
+    a.WalkTo(door.x - 0.4f, door.z, 0.3f, Pump);
+    b.WalkTo(door.x + 0.4f, door.z, 0.3f, Pump);
+    a.Conn.Reducers.HangDoor(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "door hung, shut");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the other player opened it");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "and shut it again");
+
+    // A, who hung it, bars it; B can't open it then; A unbars it and B can again.
+    a.Conn.Reducers.ToggleLock(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: true, Closed: true }, 10, "A barred the door");
+    b.Conn.Reducers.ToggleLock(hut);
+    b.Conn.Reducers.ToggleDoor(hut);
+    Pump(1500);
+    Check(a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: true, Closed: true }, "B can't unbar or open it");
+    a.Conn.Reducers.ToggleLock(hut);
+    WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: false }, 10, "A unbarred it");
+    b.Conn.Reducers.ToggleDoor(hut);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "and B can open it again");
+}
+
+// A puts sticks in the basket; B takes one out.
+void StoreInBasket(ulong basket)
+{
+    Console.WriteLine("--- Storing");
+    var s = a.Conn.Db.Structure.Id.Find(basket)!;
+    a.WalkTo(s.X + 0.9f, s.Z, 0.3f, Pump);
+    b.WalkTo(s.X - 0.9f, s.Z, 0.3f, Pump);
+    uint sticks = a.CountOf(Item.Stick);
+    Check(sticks >= 2, $"A carries sticks to store ({a.Carried()})");
+    var stack = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick);
+    a.Conn.Reducers.BasketPut(basket, stack.Item, stack.Quality, 2);
+    WaitFor(() => b.Conn.Db.BasketItem.Iter().Any(i => i.StructureId == basket && i.Count == 2), 10, "two sticks in the basket, seen by the other player");
+    Check(a.CountOf(Item.Stick) == sticks - 2, "they left A's hands");
+    uint bSticks = b.CountOf(Item.Stick);
+    var row = b.Conn.Db.BasketItem.Iter().First(i => i.StructureId == basket);
+    b.Conn.Reducers.BasketTake(row.Id, 1);
+    WaitFor(() => b.CountOf(Item.Stick) == bSticks + 1, 10, "B took one out");
+    WaitFor(() => a.Conn.Db.BasketItem.Iter().Any(i => i.StructureId == basket && i.Count == 1), 10, "one left inside");
 }
 
 sealed class Bot
@@ -167,6 +274,9 @@ sealed class Bot
                         "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit",
                         "SELECT * FROM structure",
+                        "SELECT * FROM structure_door",
+                        "SELECT * FROM basket_item",
+                        "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
                     });
@@ -281,14 +391,22 @@ sealed class Bot
         return null;
     }
 
-    // Starts a craft and waits for it to finish.
+    // Starts a craft and waits for it to finish. The job row can reach us after the
+    // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
+    // until the job has come and gone, or the made item has turned up.
     public void Craft(string processId, Action<int> pump)
     {
-        Conn.Reducers.StartCraft(processId, 0.6f);
         var def = Processes.Find(processId)!;
-        pump(200);
+        uint before = CountOf(def.Makes);
+        Conn.Reducers.StartCraft(processId, 0.6f);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds + 5);
-        while (Conn.Db.MyCraftJob.Count > 0 && DateTime.UtcNow < until) pump(100);
+        bool seen = false;
+        while (DateTime.UtcNow < until)
+        {
+            pump(100);
+            if (Conn.Db.MyCraftJob.Count > 0) seen = true;
+            else if (seen || CountOf(def.Makes) > before) break;
+        }
         pump(200);
     }
 

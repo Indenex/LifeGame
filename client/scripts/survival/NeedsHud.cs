@@ -2,11 +2,14 @@ using Godot;
 
 namespace LifeGame;
 
-// Three soft ring gauges in the bottom-right corner (food, water, warmth), a
-// prompt for whatever you can do nearby, frost creeping in from the screen
+// Soft ring gauges in the bottom-right corner (food, water, warmth, and load
+// when it matters), frost creeping in from the screen
 // edges as you get cold, and a quiet fade to black when you die.
 public partial class NeedsHud : CanvasLayer
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NAmount = "amount";
+
     static readonly Color FoodColor = new(0.86f, 0.55f, 0.32f);
     static readonly Color WaterColor = new(0.45f, 0.72f, 0.82f);
     public static readonly Color WarmColor = new(1.0f, 0.66f, 0.30f);
@@ -15,18 +18,17 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge food = new(NeedGauge.Glyph.Berry);
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
-    readonly Label prompt = new();
-    readonly PanelContainer promptPanel;
+    readonly NeedGauge load = new(NeedGauge.Glyph.Sack) { Visible = false, Modulate = new Color(1, 1, 1, 0) };
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly Label deathTitle = new();
     readonly Label deathLine = new();
     float frostAmount;
+    PanelContainer? gaugePanel;
 
     public NeedsHud()
     {
         Layer = 2;
-        promptPanel = Hud.Panel(prompt, Vector2.Zero);
     }
 
     public override void _Ready()
@@ -44,20 +46,15 @@ public partial class NeedsHud : CanvasLayer
         gauges.AddChild(food);
         gauges.AddChild(water);
         gauges.AddChild(warmth);
-        var gaugePanel = Hud.Panel(gauges, Vector2.Zero);
+        // The load ring only fades in when you near your carrying limit.
+        gauges.AddChild(load);
+        gaugePanel = Hud.Panel(gauges, Vector2.Zero);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
         gaugePanel.Position = new Vector2(-20, -20);
         root.AddChild(gaugePanel);
 
-        Hud.Style(prompt, 16, 0.95f);
-        promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
-        promptPanel.GrowHorizontal = Control.GrowDirection.Both;
-        promptPanel.GrowVertical = Control.GrowDirection.Begin;
-        promptPanel.Position = new Vector2(0, -112);
-        promptPanel.Visible = false;
-        root.AddChild(promptPanel);
 
         fade.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(fade);
@@ -84,11 +81,23 @@ public partial class NeedsHud : CanvasLayer
         frostAmount = Mathf.Clamp((0.55f - warmthValue) / 0.5f, 0f, 1f);
     }
 
-    public void SetPrompt(string? text)
+    static readonly Color LoadColor = new(0.86f, 0.80f, 0.66f);
+    static readonly Color OverloadColor = new(1f, 0.66f, 0.30f);
+    float loadAlpha;
+
+    // A sack ring next to the needs, shown from 80% of your limit. It fills toward
+    // the limit, and turns amber and breathes once the load slows you down.
+    public void SetLoad(float carried, float limit)
     {
-        promptPanel.Visible = text != null;
-        if (text != null) prompt.Text = text;
+        float fraction = limit > 0 ? carried / limit : 0f;
+        bool over = carried > limit;
+        load.Set(Mathf.Clamp(fraction, 0f, 1f), over ? OverloadColor : LoadColor);
+        load.Alert = over;
+        loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
+
+    // True while the death card covers the screen, so nothing offers itself over it.
+    public bool Mourning => fade.Color.A > 0.02f;
 
     public void ShowDeath(string cause)
     {
@@ -97,6 +106,7 @@ public partial class NeedsHud : CanvasLayer
             "cold" => "You froze to death.",
             "thirst" => "You died of thirst.",
             "hunger" => "You starved.",
+            "slain" => "You were struck down.",
             _ => "You died.",
         };
         deathLine.Text = "You wake at the edge of the wilderness with nothing.\nWhat you learned stays with you.";
@@ -111,9 +121,19 @@ public partial class NeedsHud : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // The rings fade out while a panel (journal, claims, menu) covers the world.
+        if (gaugePanel != null)
+        {
+            float shown = Panels.Open() ? 0f : 1f;
+            gaugePanel.Modulate = new Color(1, 1, 1, Mathf.MoveToward(gaugePanel.Modulate.A, shown, (float)delta * 4f));
+        }
+        float a = Mathf.MoveToward(load.Modulate.A, loadAlpha, (float)delta * 2f);
+        load.Modulate = new Color(1, 1, 1, a);
+        load.Visible = a > 0.01f;
+
         var material = (ShaderMaterial)frost.Material;
-        float current = (float)material.GetShaderParameter("amount");
-        material.SetShaderParameter("amount", Mathf.Lerp(current, frostAmount, 1f - Mathf.Exp(-2f * (float)delta)));
+        float current = (float)material.GetShaderParameter(NAmount);
+        material.SetShaderParameter(NAmount, Mathf.Lerp(current, frostAmount, 1f - Mathf.Exp(-2f * (float)delta)));
     }
 
     // Icy blue creeping in from the corners, with a crystalline edge.

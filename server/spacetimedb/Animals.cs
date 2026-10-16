@@ -55,6 +55,12 @@ public static partial class Module
         public AnimalState State;
         public int ChunkX;
         public int ChunkZ;
+        // How much wool a sheep carries, 0 (just shorn) to 100 (full fleece).
+        [Default((byte)100)]
+        public byte Fleece;
+        // How grown up the animal is: lambs are born at LambGrowth and reach 100.
+        [Default((byte)100)]
+        public byte Growth;
     }
 
     // What each animal is thinking. Server only.
@@ -73,6 +79,21 @@ public static partial class Module
         public float FleeX;
         public float FleeZ;
         public long StateUntil;
+        // When the animal was last shorn, or 0 if never.
+        [Default(0L)]
+        public long ShornAt;
+        // 100 is unhurt; at 0 the animal dies.
+        [Default((byte)100)]
+        public byte Health;
+        // When the animal was last struck, or 0 if never.
+        [Default(0L)]
+        public long StruckAt;
+        // When a lamb was born, or 0 for animals placed as adults.
+        [Default(0L)]
+        public long BornAt;
+        // A lamb's mother, whom it trails until it is grown; 0 for none.
+        [Default(0UL)]
+        public ulong MotherId;
     }
 
     [SpacetimeDB.Table(Accessor = "Flock")]
@@ -84,6 +105,12 @@ public static partial class Module
         public AnimalSpecies Species;
         public float HomeX;
         public float HomeZ;
+        // How many animals the flock grows back to. 0 until first counted.
+        [Default((byte)0)]
+        public byte Size;
+        // When the flock last gained a lamb (or a stray), or 0.
+        [Default(0L)]
+        public long LastBirthAt;
     }
 
     // Where each online player was at the last animal tick, so animals can tell
@@ -138,34 +165,44 @@ public static partial class Module
     static void SpawnFlock(ReducerContext ctx, AnimalSpecies species, float x, float z, int size, float search)
     {
         var (homeX, homeZ) = AnimalOpenestNear(x, z, search);
-        var flock = ctx.Db.Flock.Insert(new Flock { FlockId = 0, Species = species, HomeX = homeX, HomeZ = homeZ });
+        var flock = ctx.Db.Flock.Insert(new Flock { FlockId = 0, Species = species, HomeX = homeX, HomeZ = homeZ, Size = (byte)size });
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         for (int i = 0; i < size; i++)
         {
             float angle = (float)(ctx.Rng.NextDouble() * MathF.Tau);
             float r = i == 0 ? 0f : 1.2f + (float)ctx.Rng.NextDouble() * 2.5f;
-            var (ax, az) = AnimalNearestDry(homeX + MathF.Sin(angle) * r, homeZ + MathF.Cos(angle) * r);
-            var animal = ctx.Db.Animal.Insert(new Animal
-            {
-                Id = 0,
-                Species = species,
-                X = ax,
-                Z = az,
-                Heading = (float)(ctx.Rng.NextDouble() * MathF.Tau),
-                State = AnimalState.Graze,
-                ChunkX = World.ChunkOf(ax),
-                ChunkZ = World.ChunkOf(az),
-            });
-            ctx.Db.AnimalMind.Insert(new AnimalMind
-            {
-                AnimalId = animal.Id,
-                FlockId = flock.FlockId,
-                Leader = i == 0,
-                TargetX = ax,
-                TargetZ = az,
-                StateUntil = now + (long)(ctx.Rng.NextDouble() * 6_000_000),
-            });
+            SpawnAnimal(ctx, flock, homeX + MathF.Sin(angle) * r, homeZ + MathF.Cos(angle) * r, i == 0, 100, now);
         }
+    }
+
+    static void SpawnAnimal(ReducerContext ctx, Flock flock, float x, float z, bool leader, byte growth, long now, ulong mother = 0)
+    {
+        var (ax, az) = AnimalNearestDry(x, z);
+        var animal = ctx.Db.Animal.Insert(new Animal
+        {
+            Id = 0,
+            Species = flock.Species,
+            X = ax,
+            Z = az,
+            Heading = (float)(ctx.Rng.NextDouble() * MathF.Tau),
+            State = AnimalState.Graze,
+            ChunkX = World.ChunkOf(ax),
+            ChunkZ = World.ChunkOf(az),
+            Fleece = 100,
+            Growth = growth,
+        });
+        ctx.Db.AnimalMind.Insert(new AnimalMind
+        {
+            AnimalId = animal.Id,
+            FlockId = flock.FlockId,
+            Leader = leader,
+            TargetX = ax,
+            TargetZ = az,
+            StateUntil = now + (long)(ctx.Rng.NextDouble() * 6_000_000),
+            Health = 100,
+            BornAt = growth < 100 ? now : 0,
+            MotherId = mother,
+        });
     }
 
     struct AnimalWatcher
@@ -185,6 +222,8 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         var watchers = AnimalWatchPlayers(ctx, now);
         if (watchers.Count == 0) return;
+        ClearOldCarcasses(ctx, now);
+        DryHides(ctx, now);
 
         foreach (var flock in ctx.Db.Flock.Iter().ToList())
         {
@@ -194,6 +233,7 @@ public static partial class Module
                 .Select(m => m!.Value)
                 .OrderBy(m => m.Body.Id)
                 .ToList();
+            if (FlockRegrow(ctx, flock, members, now)) continue;
             if (members.Count == 0) continue;
 
             float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
@@ -244,7 +284,8 @@ public static partial class Module
         // order sheep are processed in does not matter.
         var before = members.ToArray();
         var leader = before.FirstOrDefault(m => m.Mind.Leader);
-        if (!leader.Mind.Leader) leader = before[0];
+        if (!leader.Mind.Leader) leader = before.FirstOrDefault(m => m.Body.Growth >= 100);
+        if (!leader.Mind.Leader && leader.Body.Growth < 100) leader = before[0];
 
         for (int i = 0; i < before.Length; i++)
         {
@@ -254,10 +295,18 @@ public static partial class Module
             var was = body;
 
             AnimalSense(ref mind, body, before, watchers, out bool calmedByStillPlayer);
-            AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
-            AnimalMove(ref body, ref mind, before, i);
+            AnimalShyFromFires(ctx, ref mind, body);
+            var mother = AnimalFindMother(ref mind, body, before);
+            if (mother is { } ewe)
+                LambDecide(ctx, ref body, ref mind, ewe, now);
+            else
+                AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
+            AnimalMove(ctx, ref body, ref mind, before, i);
+            RegrowFleece(ref body, mind, now);
+            AnimalGrowAndHeal(ref body, ref mind, now);
 
-            if (body.X != was.X || body.Z != was.Z || body.State != was.State || MathF.Abs(body.Heading - was.Heading) > 0.01f)
+            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece || body.Growth != was.Growth
+                || MathF.Abs(body.Heading - was.Heading) > 0.01f)
             {
                 body.ChunkX = World.ChunkOf(body.X);
                 body.ChunkZ = World.ChunkOf(body.Z);
@@ -429,7 +478,7 @@ public static partial class Module
         mind.StateUntil = now + AnimalMicros(12f, 16f, ctx);
     }
 
-    static void AnimalMove(ref Animal body, ref AnimalMind mind, FlockMember[] flock, int self)
+    static void AnimalMove(ReducerContext ctx, ref Animal body, ref AnimalMind mind, FlockMember[] flock, int self)
     {
         if (body.State is not (AnimalState.Walk or AnimalState.Run)) return;
 
@@ -437,6 +486,9 @@ public static partial class Module
         float d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 0.01f) return;
         float speed = body.State == AnimalState.Run ? SheepRunSpeed : d > 5f ? SheepTrotSpeed : SheepWalkSpeed;
+        // A wounded animal can't keep up its full gallop, and lambs are a bit slower.
+        if (body.State == AnimalState.Run)
+            speed *= (0.6f + 0.4f * mind.Health / 100f) * (body.Growth < 100 ? 0.85f : 1f);
         float step = MathF.Min(speed * AnimalDt, d);
         float nx = body.X + dx / d * step, nz = body.Z + dz / d * step;
 
@@ -453,11 +505,11 @@ public static partial class Module
             }
         }
 
-        if (!AnimalCanStand(nx, nz))
+        if (!AnimalCanStand(nx, nz) || AnimalStepBlocked(ctx, body.X, body.Z, nx, nz))
         {
             if (body.State == AnimalState.Run)
             {
-                // Swerve along the shore instead of running into the water.
+                // Swerve along the shore (or round a fire) instead of running into it.
                 float c = MathF.Cos(1.1f), s = MathF.Sin(1.1f);
                 (mind.FleeX, mind.FleeZ) = (mind.FleeX * c - mind.FleeZ * s, mind.FleeX * s + mind.FleeZ * c);
             }

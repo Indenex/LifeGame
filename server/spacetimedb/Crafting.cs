@@ -73,9 +73,11 @@ public static partial class Module
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
 
-    // Processes with Outcome.Placed set something down at the job's X and Z; the
-    // lane that owns the process implements this (Ceramics.cs for clay.*).
+    // Processes with Outcome.Placed set something down at the job's X and Z. Each
+    // lane implements its own hook and ignores process ids it doesn't own
+    // (Ceramics.cs for clay.*, Leather.cs for hide.*).
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
+    static partial void AnimalsOnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
 
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
@@ -163,7 +165,10 @@ public static partial class Module
         if (def.Outcome == Outcome.Fire)
             LightFire(ctx, job.PlayerId, job.X, job.Z);
         else if (def.Outcome == Outcome.Placed)
+        {
             OnPlaced(ctx, job, def);
+            AnimalsOnPlaced(ctx, job, def);
+        }
         else if (def.Outcome == Outcome.Roast)
             PutOnFire(ctx, job, def, job.Quality);
         else

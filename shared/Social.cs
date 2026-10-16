@@ -33,6 +33,45 @@ namespace LifeGame.Shared
         // land is free again. It starts to look weathered in the last quarter.
         public const long DefaultClaimLifetimeSeconds = 3 * 24 * 60 * 60;
         public const float WeatheredFrom = 0.75f;
+        // claims-5: working inside your claim tends it, at most this often.
+        public const long WorkTendEverySeconds = 60;
+        // The "tended … · stands …" line shows above a marker within this distance.
+        public const float MarkerLineDistance = 5f;
+
+        // --- Fighting (claims-3, D-053) ---
+        public const float MaxHealth = 100f;
+        // A strike lands on someone in front of you within this reach. The server
+        // allows a little slack for movement still in flight.
+        public const float StrikeReach = 1.6f;
+        public const float StrikeReachSlack = 0.6f;
+        public const long StrikeCooldownMicros = 800_000;
+        // Health comes back this fast once nobody has hit you for a while, if you are
+        // fed and watered (above WellFed).
+        public const float HealthRegenPerSecond = 0.5f;
+        public const long RegenDelayMicros = 10_000_000;
+        public const float WellFed = 0.2f;
+        // New players can't strike or be struck for this long after first waking.
+        public const long NewcomerGraceMicros = 10L * 60 * 1_000_000;
+
+        // A player who strikes someone down shows a red name for this long (D-053).
+        public const long KillerMarkMicros = 30L * 60 * 1_000_000;
+
+        // Damage by the best weapon carried: about 12 bare-handed hits to kill, about 6
+        // with a hand axe.
+        public static float StrikeDamage(bool spear, bool handAxe, bool flake) =>
+            spear ? 20f : handAxe ? 17f : flake ? 12f : 8.5f;
+
+        public static bool InSpawnClearing(float x, float z) =>
+            x * x + z * z < SpawnClearRadius * SpawnClearRadius;
+
+        // Health now, given the last recorded value and when it was last hit.
+        public static float HealthAt(float health, long asOfMicros, long lastHitMicros, long nowMicros, bool fed)
+        {
+            if (!fed || health >= MaxHealth) return Math.Min(health, MaxHealth);
+            long from = Math.Max(asOfMicros, lastHitMicros + RegenDelayMicros);
+            if (nowMicros <= from) return health;
+            return Math.Min(MaxHealth, health + (nowMicros - from) / 1_000_000f * HealthRegenPerSecond);
+        }
 
         public static bool InClaim(float claimX, float claimZ, float x, float z)
         {
@@ -46,6 +85,25 @@ namespace LifeGame.Shared
             if (lifetimeSeconds <= 0) return 1f;
             float age = (nowMicros - tendedAtMicros) / 1_000_000f / lifetimeSeconds;
             return Math.Clamp(age, 0f, 1f);
+        }
+
+        // "Tended 2 days ago · stands 1 more day": what a marker and the claim panel say.
+        public static string TendedLine(long tendedAtMicros, long expiresAtMicros, long nowMicros)
+        {
+            long ago = Math.Max(0, (nowMicros - tendedAtMicros) / 1_000_000);
+            long left = (expiresAtMicros - nowMicros) / 1_000_000;
+            string tended = ago < 60 ? "Tended just now" : $"Tended {Span(ago)} ago";
+            string stands = left <= 0 ? "falling now" : left < 60 ? "stands a few more moments" : $"stands {Span(left, more: true)}";
+            return $"{tended} · {stands}";
+        }
+
+        // "3 days", "5 h", "12 min"; with more: "3 more days", "5 more hours", "12 more minutes".
+        static string Span(long seconds, bool more = false)
+        {
+            if (seconds >= 86400) { long d = seconds / 86400; return more ? $"{d} more {(d == 1 ? "day" : "days")}" : $"{d} {(d == 1 ? "day" : "days")}"; }
+            if (seconds >= 3600) { long h = seconds / 3600; return more ? $"{h} more {(h == 1 ? "hour" : "hours")}" : $"{h} h"; }
+            long m = Math.Max(1, seconds / 60);
+            return more ? $"{m} more {(m == 1 ? "minute" : "minutes")}" : $"{m} min";
         }
     }
 }
