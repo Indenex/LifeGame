@@ -355,30 +355,36 @@ public static partial class Module
         RemoveClaim(ctx, claim);
     }
 
+    // claims-14: move a whole stack (or part of one) in one call; the stash panel's
+    // drag and drop sends the stack size. The bag's own limit still applies.
     [SpacetimeDB.Reducer]
-    public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality)
+    public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        if (count == 0) throw new Exception("Nothing to leave");
         var claim = RequireStashAccess(ctx, claimId);
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
-        RemoveFromStack(ctx, stack, 1);
+        if (stack.Count < count) throw new Exception("You are not carrying that many");
+        RemoveFromStack(ctx, stack, count);
         if (FindStash(ctx, claim.Id, item, quality) is { } row)
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + 1 });
+            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + count });
         else
-            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = 1 });
-        LogStash(ctx, claim.Id, item, 1);
+            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = count });
+        LogStash(ctx, claim.Id, item, (int)count);
     }
 
     [SpacetimeDB.Reducer]
-    public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality)
+    public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        if (count == 0) throw new Exception("Nothing to take");
         var claim = RequireStashAccess(ctx, claimId);
         var row = FindStash(ctx, claim.Id, item, quality) ?? throw new Exception("The stash has none of that");
-        if (row.Count <= 1)
+        if (row.Count < count) throw new Exception("The stash doesn't have that many");
+        if (row.Count == count)
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         else
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - 1 });
-        AddToInventory(ctx, ctx.Sender, (Item)item, 1, quality);
-        LogStash(ctx, claim.Id, item, -1);
+            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - count });
+        AddToInventory(ctx, ctx.Sender, (Item)item, count, quality);
+        LogStash(ctx, claim.Id, item, -(int)count);
     }
 
     // Database owner only: how long markers stand untended. Applies to markers
