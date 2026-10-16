@@ -34,9 +34,11 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:48: prepared option 1 on `claude/integration-wipe-label` (not a PR yet): `world-wipe` label skips the upgrade check and prints a warning; `pull_request` also triggers on labeled/unlabeled.
 - 2026-10-16 18:42: #121 (integration-2, sneak flag) merged by the PM; Animation told #100 can follow after Justin sees the clips.
 - 2026-10-16 18:45: D-130: Justin chose the `world-wipe` label. PR from `claude/integration-wipe-label` carries it plus these ticket entries. Environment lane is session_012hVejTxLoxBpZyX3GQmNL9.
+- 2026-10-16 19:00: #148 (world-wipe label, D-130) merged; on its PR run the upgrade check ran and the wipe step was skipped. Reviewed Release's #161 (release.yml): blocker (wipe flag read only from the head commit's PR, missed superseded builds) fixed in 057b278; approved.
+- 2026-10-16 19:10: check-in vs main c70d2fb: #105 (StorageJar = StructureKind 6, implicit) makes #160, #165, #90 (CraftingTable) and #153 (Fence/Gate) conflict in Building.cs, Structures.cs, StructureModel.cs. Told lanes: append after StorageJar, keep Shapes/StageCosts lists in the same order, prove with tools/upgrade-check.sh. Order: #160, then #165 and #90; #153 either side. Clean: #163, #161, #151, #149, #122, #119, #112, #108, #100.
 
 ## Open questions / blockers
-- (none; wipe path answered: D-130 label)
+- Suggested to House building: explicit StructureKind values so enum clashes show in review (their file; no decision needed).
 
 ## Next step
 After each merge to main, re-run the conflict survey (`git merge-tree` each open PR vs main and pairwise) and send the PM which PRs need main merged in; get #121 (integration-2) green and to the PM.
