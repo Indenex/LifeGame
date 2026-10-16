@@ -131,7 +131,7 @@ public partial class Journal : CanvasLayer
                 if (!caughtUp) WhileYouWereAway();
                 caughtUp = true;
             })
-            .OnError((_, e) => say($"Journal subscription error: {e.Message}"))
+            .OnError((_, e) => ServerCheck.Failed(e.Message, say, "Journal subscription error: "))
             .Subscribe(new[]
             {
                 "SELECT * FROM my_journal",

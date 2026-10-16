@@ -123,7 +123,7 @@ public partial class SocialLayer : Node
 
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
-                .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+                .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
                 .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event" });
 
         // Chat carries a little further than a chunk, so listen two chunks out.
