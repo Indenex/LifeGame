@@ -17,6 +17,7 @@ The PM's playtest-3 findings (screenshots /mnt/project-files/screenshots/playtes
 
 ## Open questions / blockers
 - #44 must merge first (same branch).
+- Bug fixes #68 (bugfix-13) and UX #73 change CeramicsView.cs and ClayItemLook.cs; merge main after they land and keep their Targets and the twice-registered TendOffer (ceramics.fire_pot 22, ceramics.tend 12).
 
 ## Next step
 Run ClayCheck (pit chain) on a fresh scratch db; once #44 merges, merge main into claude/clay-ceramics-kfr4kr, cherry-pick the ceramics-5 commit, push, open the PR.
