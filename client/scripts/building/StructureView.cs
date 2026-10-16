@@ -111,6 +111,10 @@ public partial class StructureView : Node3D
     readonly Dictionary<(Material, StructureModel.PieceRole), ShaderMaterial> seeThroughMaterials = new();
     readonly Dictionary<int, MeshInstance3D> ghostMeshes = new();
 
+    // How cut away the building is right now, 0 solid to 1 fully (the larger of roof and walls), for
+    // anything that sits on it and should fade with it, such as a doorway glow (D-168).
+    public float SeeThroughAmount => Mathf.Max(roofFade, wallFade);
+
     // True while anything is still faded, so callers can keep it ticking until it is solid again.
     public bool Fading => roofFade > 0.001f || wallFade > 0.001f;
 

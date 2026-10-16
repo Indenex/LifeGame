@@ -468,6 +468,10 @@ public partial class BuildingSystem : Node
         }
     }
 
+    // How far the structure is cut away for the player right now, 0 solid to 1 fully clear
+    // (0 for a structure with no view). Doorway glows and the like fade with it.
+    public float SeeThroughOf(ulong structureId) => views.TryGetValue(structureId, out var v) ? v.SeeThroughAmount : 0f;
+
     // The world-space box a shelter fills, roof included, for the see-through test.
     static Aabb Footprint(Structure s, StructureShape shape, float ground)
     {
