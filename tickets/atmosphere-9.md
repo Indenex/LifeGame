@@ -3,7 +3,7 @@ Lane: World atmosphere and sound
 Owner: Atmosphere thread
 Status: in_review
 Branch: claude/atmosphere-sound-hlqfke
-PR: (none yet)
+PR: #60
 
 ## Goal
 From Bug fixes' profiling (PR #55), via the PM, 2026-10-16:
