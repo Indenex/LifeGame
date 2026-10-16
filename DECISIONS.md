@@ -671,3 +671,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-164 — 2026-10-16 — Heather blooms purple in late summer
 **Decision:** Heather blooms purple in late summer (Atmosphere and Environment seasonal visuals).
 **Who:** Justin ("Yes, purple bloom")
+
+## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
+**Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
+**Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
