@@ -12,7 +12,8 @@
 // on the floor), earth, clay (walking on bare earth or wet clay), sand, shallows,
 // snow (walking on a stream bank, through shallow water, through snow), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
-// (the same in steady rain), pondnight (at the edge at night, with frogs).
+// (the same in steady rain), pondnight (at the edge at night, with frogs),
+// stream (standing on a stream bank), streamwalk (walking up to one).
 // Seasons (audio-2): spring, summer, autumn, winter (snow on the ground), each a
 // breezy morning in light woods; add "night" for the same at night (summernight).
 // Work scenes stand still on a calm morning and work for all but the last second:
@@ -58,7 +59,7 @@ foreach (var scene in scenes)
         "evening" => (0.6f, 0f, 0.2f, 0f, 0.73f),
         "woods" or "meadow" => (1f, 0f, 0.8f, 0f, 0.5f),
         "clay" => (0.9f, 0f, 0.3f, 0.8f, 0.4f),
-        "approach" or "pond" => (1f, 0f, 0.45f, 0f, 0.42f),
+        "approach" or "pond" or "stream" or "streamwalk" => (1f, 0f, 0.45f, 0f, 0.42f),
         "pondrain" => (0.75f, 0.6f, 0.55f, 1f, 0.45f),
         "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
         "spring" or "summer" or "autumn" or "winter" => (1f, 0f, 0.45f, 0f, 0.36f),
@@ -109,9 +110,13 @@ foreach (var scene in scenes)
         // Ponds lie a little to the left; walking up to one, it grows from nothing.
         float water = parts[0] == "approach" ? (float)Math.Min(1.0, t / (seconds * 0.8)) : parts[0].StartsWith("pond") ? 1f : 0f;
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
+        // Streams lie a little to the right; streamwalk walks up to the bank.
+        float stream = parts[0] == "stream" ? 1f : parts[0] == "streamwalk" ? (float)Math.Min(1.0, t / (seconds * 0.8)) : 0f;
+        mix.Stream = stream * stream;
+        mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);

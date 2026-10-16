@@ -32,6 +32,9 @@ public sealed class SoundMix
     // Open water nearby: how close and how much of it (0 none, 1 at the edge of a
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
+    // A running stream nearby, the same way: how close (0 none, 1 at its bank) and
+    // which side (audio-2, env-2's streams).
+    public float Stream, StreamPan;
     // How far through the year it is, 0 to 1 (Seasons.YearFraction): 0 the first day
     // of spring, 0.25 summer, 0.5 autumn, 0.75 winter. Sets which creatures are
     // about, what the trees have on them and how cold the wind sounds (audio-2).
@@ -59,6 +62,7 @@ public sealed class SoundMix
     readonly WaterVoice water;
     readonly Frogs frogs;
     readonly DayInsects insects;
+    readonly StreamVoice stream;
     readonly Steps steps;
     readonly WorkVoice work;
     // Other players at work nearby, by player id (D-072).
@@ -93,6 +97,7 @@ public sealed class SoundMix
         water = new WaterVoice(rate, rng);
         frogs = new Frogs(rate, rng);
         insects = new DayInsects(rate, noise, rng);
+        stream = new StreamVoice(rate, noise, rng);
         steps = new Steps(rate, noise, rng);
         work = new WorkVoice(rate, noise, rng);
         sheep = new Sheep(rate, rng);
@@ -195,6 +200,7 @@ public sealed class SoundMix
         insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
         sheep.Render(outL, outR, sendL, sendR, count);
         water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
+        stream.Render(outL, outR, count, Stream, StreamPan, Rain);
         frogs.Render(outL, outR, sendL, sendR, count, Water * season.Frogs * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
         float coverCoef = Lowpass.Coef(1.2f, Rate), wall = Lowpass.Coef(650f, Rate);
         for (int i = 0; i < count; i++)
@@ -925,6 +931,87 @@ public sealed class SoundMix
                 sr[i] += s * gr;
             }
             if (owlTime > 2.2f) owlTime = -1f;
+        }
+    }
+
+    // --- Streams -------------------------------------------------------------------
+
+    // Water running over stones: a soft, steady wash with many small bubbles
+    // popping up through it, quick rising blips scattered across the stream's
+    // width. Fuller after rain. Fades with distance and comes from the stream's side.
+    sealed class StreamVoice
+    {
+        readonly int rate;
+        readonly Noise noise;
+        readonly Random rng;
+        readonly List<Bubble> bubbles = new();
+        BandPass washL, washR;
+        Lowpass swellL, swellR, level, side;
+        float untilBubble, heard;
+
+        sealed class Bubble
+        {
+            public float Freq, Rise, Decay, Gain, Pan, Age, Phase;
+        }
+
+        public StreamVoice(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        public void Render(float[] l, float[] r, int n, float near, float pan, float rain)
+        {
+            float dt = 1f / rate;
+            float ease = Lowpass.Coef(0.6f, rate), swell = Lowpass.Coef(0.7f, rate);
+            float target = Math.Clamp(near, 0f, 1f) * (1f + 0.3f * rain);
+            for (int i = 0; i < n; i++)
+            {
+                float lv = heard = level.Process(target, ease);
+                float p = side.Process(pan, ease);
+                if (lv < 0.002f) continue;
+                // Two slowly wandering washes, a little apart in pitch.
+                float a = 0.6f + 6f * swellL.Process(noise.Next(), swell);
+                float b = 0.6f + 6f * swellR.Process(noise.Next(), swell);
+                float wl = washL.Process(noise.Next(), 700f + 250f * a, 0.9f, rate) * a;
+                float wr = washR.Process(noise.Next(), 820f + 250f * b, 0.9f, rate) * b;
+                float g = 0.05f * lv;
+                // Spread a little around where the stream lies.
+                l[i] += (wl * Pan(p - 0.3f, true) + wr * Pan(p + 0.3f, true)) * g;
+                r[i] += (wl * Pan(p - 0.3f, false) + wr * Pan(p + 0.3f, false)) * g;
+
+                untilBubble -= dt;
+                if (untilBubble <= 0f)
+                {
+                    untilBubble = Range(rng, 0.008f, 0.06f) / (0.3f + lv);
+                    if (bubbles.Count < 24)
+                        bubbles.Add(new Bubble
+                        {
+                            Freq = Range(rng, 450f, 1900f),
+                            Rise = Range(rng, 2f, 6f),
+                            Decay = Range(rng, 0.012f, 0.035f),
+                            Gain = Range(rng, 0.3f, 1f),
+                            Pan = Math.Clamp(p + Range(rng, -0.6f, 0.6f), -1f, 1f),
+                        });
+                }
+            }
+
+            for (int k = bubbles.Count - 1; k >= 0; k--)
+            {
+                var bub = bubbles[k];
+                float pl = Pan(bub.Pan, true), pr = Pan(bub.Pan, false);
+                for (int i = 0; i < n; i++)
+                {
+                    // A bubble's ring rises in pitch as it reaches the surface.
+                    bub.Phase += 2f * MathF.PI * bub.Freq * (1f + bub.Rise * bub.Age) * dt;
+                    float v = MathF.Sin(bub.Phase) * MathF.Exp(-bub.Age / bub.Decay) * bub.Gain * 0.012f * heard;
+                    l[i] += v * pl;
+                    r[i] += v * pr;
+                    bub.Age += dt;
+                }
+                if (bub.Age > bub.Decay * 6f) bubbles.RemoveAt(k);
+            }
         }
     }
 
