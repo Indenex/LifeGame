@@ -25,4 +25,27 @@ public static partial class Module
         AddToInventory(ctx, ctx.Sender, (Item)item, count, made);
         Log.Info($"admin_give: {ctx.Sender} gave themselves {count} x {def.Name} (quality {made})");
     }
+
+    // Admins who are flying (/fly). Private: only the server reads it.
+    [SpacetimeDB.Table(Accessor = "AdminFlyer")]
+    public partial struct AdminFlyer
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+    }
+
+    [SpacetimeDB.Reducer]
+    public static void AdminFly(ReducerContext ctx, bool on)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can fly");
+        var player = RequirePlayer(ctx);
+        bool now = ctx.Db.AdminFlyer.PlayerId.Find(player.PlayerId) is not null;
+        if (on && !now) ctx.Db.AdminFlyer.Insert(new AdminFlyer { PlayerId = player.PlayerId });
+        else if (!on && now) ctx.Db.AdminFlyer.PlayerId.Delete(player.PlayerId);
+        Log.Info($"admin_fly: {ctx.Sender} {(on ? "took off" : "landed")}");
+    }
+
+    // A flying admin; checked again as an admin each time, so losing admin ends the exemption.
+    static bool IsFlyingAdmin(ReducerContext ctx, uint playerId) =>
+        ctx.Db.AdminFlyer.PlayerId.Find(playerId) is not null && IsWorldAdmin(ctx);
 }

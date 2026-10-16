@@ -20,6 +20,7 @@ public static class TimeCommands
         ("/night", "Admin: set the time to night"),
         ("/time hh:mm", "Admin: set the time: 06:30, or dawn, noon, dusk, night (or 0-1 through the day)"),
         ("/give item n", "Admin: give yourself items; /give alone opens the list"),
+        ("/fly", "Admin: fly (Space up, Ctrl down); again to land"),
         ("/season name", "Admin: jump to spring, summer, autumn or winter (or 0-1 through the year)"),
         ("/season-speed days", "Admin: in-game days each season lasts"),
     };

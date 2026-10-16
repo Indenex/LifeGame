@@ -13,12 +13,28 @@ public static class AdminCommands
     const byte DefaultQuality = 80;
 
     public static AdminPanel? Menu;
+    // Flips flight on the local player; set by Main.
+    public static Func<bool>? IsFlying;
+    public static Action<bool>? SetFlying;
 
     // Handles the text if it is an admin item command; returns false to let chat go on.
     public static bool Try(DbConnection conn, string text, Action<string> note)
     {
         string t = text.Trim();
         string lower = t.ToLowerInvariant();
+        if (lower == "/fly")
+        {
+            if (!TimeCommands.IsAdmin(conn))
+            {
+                note("Only the world's admin can fly");
+                return true;
+            }
+            bool on = !(IsFlying?.Invoke() ?? false);
+            conn.Reducers.AdminFly(on);
+            SetFlying?.Invoke(on);
+            note(on ? "You fly. Space rises, Ctrl sinks. /fly again to land" : "You come down");
+            return true;
+        }
         if (lower != "/give" && !lower.StartsWith("/give ")) return false;
         if (!TimeCommands.IsAdmin(conn))
         {

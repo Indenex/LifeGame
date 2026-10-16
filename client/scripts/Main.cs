@@ -99,6 +99,8 @@ public partial class Main : Node3D
         AddChild(admin);
         admin.Note = hud.Note;
         AdminCommands.Menu = admin;
+        AdminCommands.IsFlying = () => flying;
+        AdminCommands.SetFlying = SetFlying;
         // The panel at a crafting station (ui-13, D-098).
         station.Conn = () => conn;
         station.Crafting = crafting;
@@ -433,7 +435,7 @@ public partial class Main : Node3D
             // Before spawning we wait for the area around us (see Subscribe).
             if (!spawned) return;
             // The server clamps impossible moves; snap back if we drifted too far.
-            if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+            if (!flying && new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
                 me.Position = at;
             return;
         }
@@ -539,6 +541,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        if (flying) { Fly(dt, input); return; }
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(Input.IsActionPressed(NSneak), input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
