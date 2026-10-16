@@ -9,6 +9,7 @@ PR: (not opened yet)
 A claim owner can add a member by typing their name in the claim panel, whether that person is nearby, far away or offline. Members can already build on the claim and lock and unlock its doors (D-048). When someone is added, a calm chat line appears near the marker ("Tobin now shares Justin's land"), and the new member hears it too wherever they are. The nearby "Invite" buttons stay.
 
 ## Progress log
+- 2026-10-16 02:30: `AddClaimMemberByName` (Claims.cs, shares `AddMember` with the nearby Invite), name box and Add button in ClaimPanel.cs (kept across panel rebuilds; SocialLayer.Typing covers it so Main stops walking while typing; Esc stops typing). No schema change. SocialTest: 4 new checks (unknown name, add by name in any case, the chat line, adding twice); all social checks pass locally.
 - 2026-10-16 02:10: started from main d486a87. Plan: `AddClaimMemberByName(string name)` reducer in Claims.cs, a name box and Add button in ClaimPanel.cs, chat lines via SayNearby, SocialTest checks.
 
 ## Decisions / defaults
@@ -19,4 +20,4 @@ A claim owner can add a member by typing their name in the claim panel, whether 
 - When UX #46 lands: ClaimPanel close hint uses `$"{Controls.KeyFor(\"claim_open\") ?? \"K\"} or Esc to close"`.
 
 ## Next step
-Implement AddClaimMemberByName and the panel's name box, then add SocialTest checks.
+Open the PR, wait for CI, send the green sha and a claim panel screenshot to the PM.
