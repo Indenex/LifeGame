@@ -3,7 +3,7 @@ Lane: House building
 Owner: House building thread
 Status: in_progress
 Branch: claude/house-building-8ueqz2 (restarted from main 58d50e0 after #10 merged)
-PR: (opening)
+PR: #41
 
 ## Goal
 Ceramics can place an updraft kiln from the B menu as a blueprint (D-035): Building provides the Solid round-shape flag and the CeramicsStructureRemoved hook (done in #10). A finished clay hut can get a woven hurdle door that G opens and closes; closed, it keeps more warmth. A coiled-fiber storage basket can be placed from the B menu and holds items that G opens.
