@@ -39,16 +39,16 @@ public partial class Terrain
     {
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
-        if (Trees.NearSpawn(x, z) || depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        float top = TileHeight(x, z);
+        if (top < Look.WaterLevel + 0.1f) return false;
         float roll = Trees.Hash01(x, z, 11);
-        // Cheap reject: nothing grows on most cells.
         float density = Forest.Density(x, z);
         float tree = Trees.Forest(x, z);
         float sapling = tree + 0.03f * Forest.Edge(density);
-        float top = TileHeight(x, z);
-        if (top < Look.WaterLevel + 0.1f) return false;
         float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
-        if (roll < sapling)
+        // Trees don't grow in the spawn clearing, but boulders can (as in AddVegetation).
+        if (!Trees.NearSpawn(x, z) && roll < sapling)
         {
             if (roll >= tree) scale *= 0.45f + Hash01(x, z, 21) * 0.3f;
             radius = TrunkRadius(scale);
