@@ -1,7 +1,7 @@
 # skills-11: Leatherwork and Weaver specialties
 Lane: Journal and skills
 Owner: Journal and skills lane (handed off 2026-10-16 19:56 by session_013QuyGdXAWemhkois2ictmc to a fresh Sonnet session, D-159)
-Status: in_progress
+Status: in_review
 Branch: claude/journal-skills-11 (stacked on #112 and on Crafting's #160)
 PR: #193 (draft)
 
@@ -36,4 +36,4 @@ Husbandry keeps shearing, hunting and butchering; Toolmaking keeps cordage, bask
 - Ceramics-8 adds the potter's bench shape; Things to try already handles `build.bench` once it exists.
 
 ## Next step
-Wait for CI on #193 (head after push), then send the green sha to the PM. Merging #237 (skills-12) first or second needs a small conflict fix in shared/Skills.cs: keep both sets of specializations and SpecOverrides.
+CI green on 9f1fb09 (run 38962363538), sha sent to the PM. Wait for the merge. Merging #237 (skills-12) first or second needs a small conflict fix in shared/Skills.cs: keep both sets of specializations and SpecOverrides.
