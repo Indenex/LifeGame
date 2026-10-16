@@ -59,6 +59,32 @@ namespace LifeGame.Shared
         // Skills.PointsPerRank as well.
         public const float Pace = 1f;
 
+        // Combat skills level slower (Justin): their pace is this fraction of the base Pace.
+        public const float CombatPaceFactor = 0.5f;
+
+        // Skills whose gains use CombatPaceFactor; every other skill uses the base Pace.
+        public static bool IsCombat(string specId) => specId == "stalking" || specId == "archery";
+
+        public static float PaceFor(string? specId) =>
+            specId != null && IsCombat(specId) ? Pace * CombatPaceFactor : Pace;
+
+        // The top value (at Master) of every effect that is not already a named constant
+        // elsewhere. Raising the game's ceiling later means changing one number here.
+        public static class Ceiling
+        {
+            public const float QualityCap = 100f;
+            public const float WorkTime = 0.4f;
+            public const float MinigameSteps = 0.25f;
+            public const float DugClayBonus = 35f;
+            public const float SecondLumpChance = 0.5f;
+            public const float SneakDistance = 3f;
+            public const float SneakCritChance = 0.4f;
+            public const float SneakCritBonus = 2f;
+            public const float ArcheryDamage = 2.4f;
+            public const float ArcheryHitChance = 1f;
+            public const float ArcheryDrawTime = 0.8f;
+        }
+
         // 0 to 1 share of the full effect at progress p (rank / MaxRank).
         public static float Curve(float p)
         {
@@ -79,26 +105,26 @@ namespace LifeGame.Shared
         // "proposal" are for Animals to tune with the PM.
         public static readonly EffectDef[] Effects =
         {
-            new(EffectKind.QualityCap, "Best quality", 35f, 100f, "quality"),
-            new(EffectKind.WorkTime, "Work time", 1f, 0.4f, "x"),
-            new(EffectKind.MinigameSteps, "Minigame steps", 1f, 0.25f, "x"),
-            new(EffectKind.DugClayBonus, "Dug clay quality", 0f, 35f, "quality"),
-            new(EffectKind.SecondLumpChance, "Second lump of clay", 0f, 0.5f, "chance"),
+            new(EffectKind.QualityCap, "Best quality", 35f, Ceiling.QualityCap, "quality"),
+            new(EffectKind.WorkTime, "Work time", 1f, Ceiling.WorkTime, "x"),
+            new(EffectKind.MinigameSteps, "Minigame steps", 1f, Ceiling.MinigameSteps, "x"),
+            new(EffectKind.DugClayBonus, "Dug clay quality", 0f, Ceiling.DugClayBonus, "quality"),
+            new(EffectKind.SecondLumpChance, "Second lump of clay", 0f, Ceiling.SecondLumpChance, "chance"),
             new(EffectKind.FireSeconds, "Longest fire", Fires.MaxSeconds, Fires.MasterMaxSeconds, "s"),
             new(EffectKind.RunSeconds, "Run time", Stamina.StartRunSeconds, Stamina.MasterRunSeconds, "s"),
             new(EffectKind.RefillSeconds, "Breath refill", Stamina.StartRefillSeconds, Stamina.MasterRefillSeconds, "s"),
             // Proposal: sheep notice a walker at 14 m and never a sneaker, so a wary animal
             // (deer) bolts a novice sneaker at 10 m and a Master at 3 m.
-            new(EffectKind.SneakDistance, "Sneak distance", 10f, 3f, "m"),
+            new(EffectKind.SneakDistance, "Sneak distance", 10f, Ceiling.SneakDistance, "m"),
             // Animals' values (Justin: normal damage scaling plus a bonus-damage trigger chance
             // when Stalking adds its bonus). With a ~60 spear hit on a 100-health deer, a
             // novice crit adds ~18 (wounded) and a Master crit ~72 (kills).
-            new(EffectKind.SneakCritChance, "Sneak crit chance", 0.03f, 0.4f, "chance"),
-            new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.5f, 2f, "x damage"),
+            new(EffectKind.SneakCritChance, "Sneak crit chance", 0.03f, Ceiling.SneakCritChance, "chance"),
+            new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.5f, Ceiling.SneakCritBonus, "x damage"),
             // Animals' proposal for Archery (values go to Justin through the PM).
-            new(EffectKind.ArcheryDamage, "Arrow damage", 0.6f, 2.4f, "x"),
-            new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, 1f, "x"),
-            new(EffectKind.ArcheryDrawTime, "Draw time", 2f, 0.8f, "s"),
+            new(EffectKind.ArcheryDamage, "Arrow damage", 0.6f, Ceiling.ArcheryDamage, "x"),
+            new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, Ceiling.ArcheryHitChance, "x"),
+            new(EffectKind.ArcheryDrawTime, "Draw time", 2f, Ceiling.ArcheryDrawTime, "s"),
         };
 
         public static EffectDef Get(EffectKind kind)

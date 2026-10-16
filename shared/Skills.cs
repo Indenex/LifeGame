@@ -190,13 +190,14 @@ namespace LifeGame.Shared
         // feels good, slower near mastery, never zero: rank 10 after about 11 uses,
         // rank 50 after about 100, Master after about 800, so masters stay rare
         // (Justin's choice). A failed attempt still teaches, at half the rate.
-        public static int Gain(int points, bool failed)
+        public static int Gain(int points, bool failed, string? specId = null)
         {
             float left = 1f - Math.Clamp(points, 0, MaxPoints) / (float)MaxPoints;
             int gain = Math.Max(5, (int)MathF.Round(100f * left * left));
             if (failed) gain = Math.Max(1, gain / 2);
-            // One global pace for all skills (Progression.Pace): 1 now for testing.
-            return Math.Max(1, (int)MathF.Round(gain * Progression.Pace));
+            // One global pace for all skills (Progression.Pace, 1 now for testing); combat skills
+            // level slower (Progression.CombatPaceFactor).
+            return Math.Max(1, (int)MathF.Round(gain * Progression.PaceFor(specId)));
         }
 
         // The best quality, 1 to 100, a player can produce: 35 at first, anything at Master.

@@ -96,6 +96,9 @@ Justin: one formula handles all skill gains and what they help, so every skill h
 
 - **Pace:** `Progression.Pace` (1.0 now) scales every point gain. Justin: keep leveling fast for testing, and much slower later, OSRS or Retro Dofus level. The planned later change is lowering this one number (0.05 is about 20x slower); effects, curves and tables stay as they are.
 
+- **Combat pace:** combat skills (Stalking, Archery) level at `Progression.CombatPaceFactor` (0.5) of the base Pace, so half as fast now and in step with any later global slowdown (Justin: slower combat progression). Add a skill to `Progression.IsCombat` to put it in the category.
+- **Ceiling:** every effect's Master value is one named constant in `Progression.Ceiling`. To raise the game's ceiling later, change that constant; ranks, curve and gains stay. Skill rank should matter much more than an item's base stats, so weapons and tools keep small bases and let the skill effect carry the range.
+
 This stacks with the front-loaded gain (see "Do not front-load twice" above), so mid-game ranks give more than before. The rule in that section is superseded for rank-based effects by Justin's pick.
 
 ## 3. Rewards between the steps (variable ratio, light)
