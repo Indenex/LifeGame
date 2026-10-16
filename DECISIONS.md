@@ -715,3 +715,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-175 — 2026-10-16 — One shared formula for all skill gains and rank effects
 **Decision:** A single shared progression formula handles all skill gains and how much ranks help (D-075). Lanes declare only start and end values, and no skill gets its own formula unless absolutely necessary, so things always have the right scaling feel and sense of progression. The effect curve is front-loaded: the first ~15% of ranks give ~40% of the benefit. Owner: Journal & skills (skills-12).
 **Who:** Justin ("I think we also need a formula that handles all skill gains, how much they help certain things, etc. I don't want each skill to have its own formulas unless absolutely necessary, so that things always have the right scaling feel and sense of progression." Effect curve: "Front-loaded")
+
+## D-176 — 2026-10-16 — Stalking is a real skill
+**Decision:** The "sneak skill" in D-171 means a real skill. Journal & skills adds Stalking (skills-12). Until it exists, Animals uses Husbandry of at least 20 as a stand-in.
+**Who:** Justin (D-171: "One spear strike kills if your sneak skill is high enough."), read by the PM as a real sneak skill
