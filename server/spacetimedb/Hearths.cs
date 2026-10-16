@@ -134,10 +134,13 @@ public static partial class Module
             ctx.Db.ColdHearth.Id.Delete(hearth.Id);
     }
 
+    // A cold hearth in the open weathers away after Fires.ColdSeconds. Inside a
+    // standing claim it stays as long as the claim does (D-109).
     static void ClearOldHearths(ReducerContext ctx)
     {
         foreach (var hearth in ctx.Db.ColdHearth.Iter().ToList())
-            if (hearth.Until.MicrosecondsSinceUnixEpoch < ctx.Timestamp.MicrosecondsSinceUnixEpoch)
+            if (hearth.Until.MicrosecondsSinceUnixEpoch < ctx.Timestamp.MicrosecondsSinceUnixEpoch
+                && ClaimAt(ctx, hearth.X, hearth.Z) is null)
                 ctx.Db.ColdHearth.Id.Delete(hearth.Id);
     }
 

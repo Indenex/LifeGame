@@ -272,7 +272,8 @@ namespace LifeGame.Shared
         public const float MinFitShare = 0.5f;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
-        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // A burned-out fire leaves a cold hearth of stones and ash this long outside a
+        // claim; inside one it stays while the claim stands (D-109). Lighting
         // a fire beside it rekindles it in place.
         public const float ColdSeconds = 60 * 60;
         // The stone ring's reach from the fire's middle, in meters, and how far apart
