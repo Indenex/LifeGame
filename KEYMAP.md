@@ -11,7 +11,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Key | Action | Lane | Today |
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
-| Hold right mouse + drag | Turn the view, eased (D-050). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17 |
+| Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
