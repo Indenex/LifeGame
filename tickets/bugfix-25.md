@@ -30,9 +30,11 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 ## Progress log
 - 2026-10-16: ticket and plan written from the PM's message; no code yet. Waiting for #228 (collision) and #221 to land, since this builds on #228's `CollideVegetation`.
 
+- 2026-10-16: Claims confirmed: a claim fence is any Fence or Gate inside a standing claim's radius (Social.InClaim); no flag or table. Client: `SocialLayer.HasRightsAt(x, z)` (owner or member of the standing claim there) is public and already passed to Building as `building.MayBar`. Careful: it returns false both with no claim and with a claim you don't belong to, so a fence is a claim fence only if a standing claim covers it (the private claim lookup near SocialLayer.cs line 361; ask Claims to make it public or add `ClaimStandingAt(x, z)`). Server: `ClaimAt(ctx, x, z)` plus `HasClaimRights(ctx, claim, ctx.Sender)`; lapsed claims are ignored, so after a lapse fences count as ordinary.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
-- Claim fences from the Claims lane (claims-12) are ordinary Fence structures inside a claim; confirm with Claims that a "claim fence" means exactly that.
+- (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
 
 ## Next step
 Branch off main once #228 has merged; write shared/Jump.cs with a unit check in tools, then the client hooks.
