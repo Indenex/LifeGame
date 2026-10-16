@@ -544,7 +544,27 @@ sealed class Bot
         return MathF.Max(0, dist - 5f * dt);
     }
 
+    // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
+    // trunk or boulder on the way (they block movement now) can hold the server's position back while
+    // the bot believes it arrived, and every Build after that is "Out of reach". When the server is
+    // still short, adopt where it has us and go round the side, a little wider each time.
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
+    {
+        for (int attempt = 0; attempt < 6; attempt++)
+        {
+            WalkStraight(tx, tz, within, pump);
+            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
+            float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
+            if (left <= within + 1f) return;
+            X = seen.X;
+            Z = seen.Z;
+            float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
+            float side = (attempt % 2 == 0 ? 1f : -1f) * (3f + attempt);
+            if (d > 0.1f) WalkStraight(X - dz / d * side, Z + dx / d * side, 0.5f, pump);
+        }
+    }
+
+    void WalkStraight(float tx, float tz, float within, Action<int> pump)
     {
         while (Step(tx, tz, 0.1f) > within) pump(100);
         // The server limits the pace (bugfix-24): keep reporting until it has us here too.
