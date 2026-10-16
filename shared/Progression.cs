@@ -87,11 +87,11 @@ namespace LifeGame.Shared
             // Proposal: sheep notice a walker at 14 m and never a sneaker, so a wary animal
             // (deer) bolts a novice sneaker at 10 m and a Master at 3 m.
             new(EffectKind.SneakDistance, "Sneak distance", 10f, 3f, "m"),
-            // Placeholders until Animals proposes values (Justin: normal damage scaling plus a
-            // large bonus-damage trigger chance when Stalking adds its bonus). Replaces the
-            // Husbandry >= 20 one-strike stand-in.
-            new(EffectKind.SneakCritChance, "Sneak crit chance", 0.05f, 0.5f, "chance"),
-            new(EffectKind.SneakCritBonus, "Sneak crit bonus", 1f, 3f, "x damage"),
+            // Animals' values (Justin: normal damage scaling plus a bonus-damage trigger chance
+            // when Stalking adds its bonus). With a ~60 spear hit on a 100-health deer, a
+            // novice crit adds ~18 (wounded) and a Master crit ~72 (kills).
+            new(EffectKind.SneakCritChance, "Sneak crit chance", 0.05f, 0.6f, "chance"),
+            new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.3f, 1.2f, "x damage"),
         };
 
         public static EffectDef Get(EffectKind kind)
