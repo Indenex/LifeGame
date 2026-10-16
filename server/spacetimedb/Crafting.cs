@@ -71,7 +71,6 @@ public static partial class Module
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
     // Lanes refuse a craft before its inputs are taken by setting refusal (bugfix-20).
     static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal);
-
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
