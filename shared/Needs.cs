@@ -40,6 +40,9 @@ namespace LifeGame.Shared
         // down to 0 °C, and rain adds half again unless you are under cover.
         public const float MildCelsius = 15f;
         public const float RainChill = 0.5f;
+        // Cold and wet together bite at most this much harder than a mild dry day
+        // (Justin, D-099): about 8 minutes from warm to frozen at worst, away from fire.
+        public const float MaxChill = 2f;
 
         // Getting wet (survival-5). Wetness runs from 0 (dry) to 1 (soaked). Full
         // rain soaks you in two minutes and wading in about ten seconds; you dry

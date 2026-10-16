@@ -1,8 +1,8 @@
 # survival-6: Survival numbers against D-075 (start low, grow slowly)
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_progress
-Branch: claude/survival-numbers (stacked on survival-5 / #75 head 28e9537 plus a ticket commit)
+Status: in_review
+Branch: claude/survival-numbers (main after #75 merged)
 PR: (none yet)
 
 ## Goal
@@ -27,8 +27,16 @@ Milestone context (PM): M2 "the first evening", a new player reaches a fired pot
 - 2026-10-16: started after D-075; collected current numbers; options sent to PM. No code changed yet.
 - 2026-10-16: PM relayed D-081 (light survival); re-cut the options (above) and resent.
 
+- 2026-10-16: D-099 (Justin): cap combined chill at 2x. Done: Needs.MaxChill = 2, applied in Survival.Chill (cold x wet). Standing in water (WetChill 3x) stays outside the cap: you can always step out. Seasons (Atmosphere leads) will feed AirTemperature later; Survival owns how season temperature feeds cold. Opened PR for the cap alone; carry/food/fire picks follow when Justin answers.
+
+- 2026-10-16: D-100: carry 20 bare, basket +10 (pick 1A). D-101: food unchanged (pick 2A). Carry.BasketBonus 15 -> 10 in #124. Fire warmth (pick 3) still with Justin; keep 30 s.
+
+- 2026-10-16: D-103: a basic campfire warms you from frozen to full in 60 s (pick 3, option A after all). FireHeat 1/30 -> 1/60 in #124. All four survival-6 picks are now decided.
+
 ## Open questions / blockers
-- Waiting on Justin (via PM) for the four picks above. Survival-3's carry-limit question is folded into item 1.
+- Seasons (Atmosphere, session_01KvVF5vpkYEHTKNRpHC18WN): seasonal offset goes into AirTemperature (about +8 C summer, -12 C winter); no Survival change needed thanks to the 2x cap. Snow doesn't wet players for now; if Justin agrees (Atmosphere asks), falling snow wets at half rain's rate via SeasonState.Snow.
+- Sent to PM: winter starts for new players. A) 30 min of half-speed cold for new characters [rec], B) a lit campfire at the spawn edge in winter, C) nothing. Nothing ships until Justin picks.
+- None of the four picks remain (D-099, D-100, D-101, D-103). Survival-3's carry-limit question is folded into item 1.
 
 ## Next step
-When the PM relays Justin's picks, change Carry.BasketBonus (and the others if picked) and add the chill cap in Survival.Chill, update the carry HUD test values if any, push, open a PR.
+Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM.
