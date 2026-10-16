@@ -2,7 +2,7 @@
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
 Status: in_progress
-Branch: local time-1-wip; goes to claude/atmosphere-sound-hlqfke once #52 merges (front of the queue)
+Branch: claude/atmosphere-sound-hlqfke
 PR: (after #52)
 
 ## Goal
