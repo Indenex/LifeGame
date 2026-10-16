@@ -14,7 +14,7 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 
 ## Open questions / blockers
 - Justin picked A (D-152).
-- Modeling (model-2, claude/model-2) has PropMeshes.Trunk/Rock/FallenLog/Stump; swap them in once on main. Asked them for birch trunk, heather, gorse, cattails, hilltop outcrop, riverbank stones.
+- Modeling (model-2, claude/model-2) has PropMeshes.Trunk/Rock/FallenLog/Stump; swap them in once on main. Asked them for birch trunk, heather, gorse, cattails, hilltop outcrop, riverbank stones. Done on claude/model-2-env (PR after #197): PropMeshes.Birch (top (0,2.8,0), reuses leafy canopy, tint (0.86,0.84,0.80) with BarkSurface), Heather and Gorse (real colours in vertices, near-white tint, Look.Foliage), Cattails (Grass shader, 1.5 m), Outcrop (2.7 x 1.8 m, RockSurface), RiverStone(0..2) (0.3 m, scale 0.7 to 1.3). Swap in once on main.
 - Look.BirchBark/Heather/Gorse/Sedge/HeathGround/Moss are on Atmosphere's #173 with the same values; switch `Undergrowth.cs` to them once #173 merges. If Justin wants heather to bloom in late summer (Atmosphere asks the PM), give heather bushes w = 3.
 
 ## Next step
