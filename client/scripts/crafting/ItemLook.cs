@@ -13,7 +13,16 @@ public static class ItemLook
     public static Mesh MeshFor(Item item)
     {
         if (Meshes.TryGetValue(item, out var mesh)) return mesh;
-        mesh = ClayItemLook.MeshFor(item) ?? SurvivalItemLook.MeshFor(item) ?? item switch
+        mesh = ItemModels.GroundMesh(item) ?? OldMeshFor(item);
+        Meshes[item] = mesh;
+        return mesh;
+    }
+
+    // The simple shapes from before the Modeling lane's models (model-1); the
+    // fallback for items without one yet, and the "before" in comparisons.
+    public static Mesh OldMeshFor(Item item)
+    {
+        return ClayItemLook.MeshFor(item) ?? SurvivalItemLook.MeshFor(item) ?? item switch
         {
             // Raw materials are a little oversized and light so a new player spots them in the grass.
             Item.Stick => Lying(new CylinderMesh { TopRadius = 0.04f, BottomRadius = 0.05f, Height = 1.0f, RadialSegments = 5 }, new Color(0.58f, 0.45f, 0.32f)),
@@ -35,8 +44,6 @@ public static class ItemLook
             Item.Spear or Item.StoneAxe => Lying(new CylinderMesh { TopRadius = 0.025f, BottomRadius = 0.03f, Height = item == Item.Spear ? 1.6f : 0.7f, RadialSegments = 5 }, Look.Bark.Lightened(0.25f)),
             _ => Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.16f, RadialSegments = 7, Rings = 4 }, Look.Clay),
         };
-        Meshes[item] = mesh;
-        return mesh;
     }
 
     // "Fine stone flake", or just "Stick" for raw materials.

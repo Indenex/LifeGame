@@ -50,3 +50,18 @@ New sounds go on one of these buses; say which in your request if it isn't obvio
 Keep new sounds inside these: a one-off event lands about where work hits do; nothing but thunder should peak above -6 dBFS.
 
 SoundPreview takes the sliders too: `--master=0.7 --music=0.3 --effects=0.5 --ambience=0`.
+
+## Seasons (audio-2)
+
+`SoundMix.Year` (0 to 1, as `Seasons.YearFraction`) and `SoundMix.SnowCover` drive `SeasonSound.Of(year)`:
+
+| | Spring | Summer | Autumn | Winter |
+|---|---|---|---|---|
+| Birds | busiest, stronger dawn chorus | normal | fewer | a rare few |
+| Leaves | budding in | full | drier, crisper rattle | bare: thin twig whistle |
+| Insects | some crickets at night | day drone, a bee now and then, full crickets | crickets thinning | none (owls stay) |
+| Frogs | busiest | yes | fading | none |
+| Wind | | | | a little stronger and higher; grass hushed under snow |
+
+SoundPreview: `spring`, `summer`, `autumn`, `winter` (and `...night`). Other scenes stay at early summer.
+
