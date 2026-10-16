@@ -1,9 +1,9 @@
 # audio-1: Take over audio; finish work sounds
 Lane: Audio
 Owner: Audio session (session_01LeXCWTFVBQcCNVEDdhPek3, Opus)
-Status: in_progress
+Status: in_review
 Branch: claude/audio-1-work-sounds (continues claude/atmosphere-12-work-sounds 9965c81, merged with main 1ade969; stacked on #66)
-PR: (once opened)
+PR: #120
 
 ## Goal
 Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmosphere lane's in-progress work sounds (atmosphere-12, `claude/atmosphere-12-work-sounds`, stacked on #66) are taken over and finished: each craft sounds like itself, plus other players' work at about 60% quieter (D-072), which needs a small public "who is doing what" signal agreed with Crafting and Integration; (2) a short `client/scripts/atmosphere/audio/AUDIO.md` describing how other lanes request sounds and the mix levels; (3) a balanced overall mix (ambience, fire, animals, work, music). The first render (audio clip) of the work sounds was judged quiet: Justin listens with volume up. Justin hears clips via the Render lane before merges.
@@ -17,10 +17,11 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 18:05: Render requested b7fde7a (SoundPreview still, each craft, knap-fail, others, midday with music). Asked PM for Justin: own work vs music, A level with music (default, in use) / B under / C over.
 - 2026-10-16 18:10: Render delivered the old af3bd67 clip to the PM (renders/audio/atmosphere-12-af3bd67-work-sounds.mp3 on claude/render-1-013qe8, -38 to -40 dBFS rms). Told the PM it is superseded by the b7fde7a clip.
 - 2026-10-16 18:15: Render delivered b7fde7a clip to the PM: renders/audio/audio-1-b7fde7a-work-sounds.mp3 on claude/render-1-013qe8 (87 s, peak -9.7 dBFS; crafts -25 to -28 rms, knap -30.9). Knap's lower rms is intended: sparse clicks every 0.7-1.3 s; its loudest 50 ms (-28.8) matches the others.
+- 2026-10-16 19:05: #66 merged; merged main 4dc416c. Merged #97's branch (crafting-work-hooks 927e22a) and dropped the duplicate OnCraft declarations in WorkSounds.cs, so this builds in either merge order. Server, client, SoundPreview build; tools/upgrade-check.sh origin/main passes. Opened PR #120; waiting for CI.
 
 ## Open questions / blockers
 - Justin: own work level vs music, A level (default) / B under / C over. Sent to PM 18:05.
-- Depends on #66 (stacked) and #97 (crafting-12 hook declarations); see the 17:40 log line for the merge step.
+- (#66 merged; #97 folded in, either merge order works.)
 
 ## Next step
-Wait for Render to send the work-sound clip (requested at the pushed sha) to the PM; then when #66 and #97 merge, merge main (drop the duplicate hook declarations) and open the PR.
+Wait for CI on PR #120; when green, send the head sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU) for merge.
