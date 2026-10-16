@@ -186,7 +186,14 @@ public partial class SurvivalClient : Node
     void UpdateLoad()
     {
         if (conn == null) return;
-        var (load, limit) = Carry.Of(conn.Db.MyInventory.Iter().Select(i => ((Item)i.Item, i.Count)));
+        float load = 0f;
+        bool basket = false;
+        foreach (var i in conn.Db.MyInventory.Iter())
+        {
+            load += Carry.Weight((Item)i.Item) * i.Count;
+            if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;
+        }
+        float limit = Carry.Limit(basket);
         WalkFactor = Carry.WalkFactor(load, limit);
         needsHud.SetLoad(load, limit);
         bool burdened = load > limit;
@@ -208,7 +215,14 @@ public partial class SurvivalClient : Node
         }
     }
 
-    bool Carrying(Item item) => conn?.Db.MyInventory.Iter().Any(i => i.Item == (ushort)item && i.Count > 0) == true;
+    // Plain loops here: the Use finders run every frame, so no LINQ allocations.
+    bool Carrying(Item item)
+    {
+        if (conn == null) return false;
+        foreach (var i in conn.Db.MyInventory.Iter())
+            if (i.Item == (ushort)item && i.Count > 0) return true;
+        return false;
+    }
 
     // The smallest pot of water you carry, so the big one is saved for later.
     Item? PotOfWater() =>
@@ -219,13 +233,18 @@ public partial class SurvivalClient : Node
     {
         if (conn == null) return null;
         var p = player.Position;
-        return conn.Db.ForageBush.Iter()
-            .Where(IsRipe)
-            .Select(b => (b, d: new Vector2(b.X - p.X, b.Z - p.Z).Length()))
-            .Where(t => t.d <= Needs.BushReach - 0.2f)
-            .OrderBy(t => t.d)
-            .Select(t => t.b)
-            .FirstOrDefault();
+        ForageBush? best = null;
+        float bestDistance = Needs.BushReach - 0.2f;
+        foreach (var b in conn.Db.ForageBush.Iter())
+        {
+            float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();
+            if (d <= bestDistance && IsRipe(b))
+            {
+                best = b;
+                bestDistance = d;
+            }
+        }
+        return best;
     }
 
     // Mirrors the server: any ground below the water line within reach.
