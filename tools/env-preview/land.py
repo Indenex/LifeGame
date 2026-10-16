@@ -1,4 +1,4 @@
-# env-2 prototype: an ascii map of a candidate reshaped height (ponds, stream,
+# env-2: an ascii map of the reshaped height in shared/Land.cs (keep the two in step) (ponds, stream,
 # gentler hills) built on a Python copy of shared/World.cs noise. Scratch tooling
 # for the Environment lane; nothing in the game reads it.
 # Run: python3 -I tools/env-preview/land.py
@@ -10,16 +10,41 @@ def ss(a, b, x):
     t = min(max((x - a) / (b - a), 0), 1)
     return t * t * (3 - 2 * t)
 
+WL = -1.0  # World.WaterLevel
+
+# Streams run roughly north to south, one every RiverSpacing meters, wandering
+# side to side by a warp gentle enough (slope under 1) that a stream never
+# doubles back into a loop.
+RiverSpacing = 300.0
+
+def river(x, z):
+    warp = (VN(x, z, 120, 71) - 0.5) * 70 + (VN(x, z, 40, 74) - 0.5) * 18
+    return x + 66 + warp  # the first stream passes about 66 m west of spawn
+
+def river_distance(x, z):
+    u = river(x, z)
+    off = abs(u - RiverSpacing * round(u / RiverSpacing))
+    gx = (river(x + 1, z) - river(x - 1, z)) / 2
+    gz = (river(x, z + 1) - river(x, z - 1)) / 2
+    return off / max(math.hypot(gx, gz), 0.2)
+
 def land(x, z):
     hills = VN(x, z, 48, 1) * 2.0 + VN(x, z, 8, 2) * 0.4 - 0.6
-    pond = ss(0.78, 0.92, VN(x, z, 36, 70)) * 2.4
-    # The water plane is flat (World.WaterLevel), so a stream must run in a valley:
-    # TODO lower the hills broadly along the river line, then carve the bed to a
-    # fixed depth below water instead of subtracting.
-    w = abs(VN(x, z, 110, 71) - 0.5)
-    stream = (1 - ss(0.006, 0.02, w)) * 1.6 * ss(0.2, 0.5, VN(x, z, 200, 73) + 0.3)
-    keep = ss(18, 32, math.hypot(x, z))
-    return hills * (0.4 + 0.6 * keep) + 0.1 * (1 - keep) - max(pond, stream) * keep
+    # The water plane is flat, so the stream runs in a broad valley: hills sink
+    # toward a floor just above water within ~26 m of the river line, then a
+    # channel ~3 m wide is cut to a fixed bed below water.
+    meters = river_distance(x, z)
+    valley = 1 - ss(4, 26, meters)
+    bed = 1 - ss(1.2, 3.5, meters)
+    h = hills * (1 - 0.85 * valley) - 0.55 * 0.85 * valley
+    h = h * (1 - bed) + (WL - 0.35) * bed
+    # Ponds: round hollows filled to a fixed depth. Offsets keep them off the
+    # noise lattice (and off the axes, where the hash is weak).
+    field = VN(x + 5113, z - 2971, 26, 70) * 0.6 + VN(x - 3307, z + 7741, 16.4, 75) * 0.4
+    pond = ss(0.66, 0.78, field)
+    h += (min(h, WL - 0.4) - h) * pond
+    keep = ss(18, 32, math.hypot(x, z))  # spawn stays a dry, gentle rise
+    return h * keep + (0.1 + hills * 0.3) * (1 - keep)
 
 water = n = 0
 for z in range(-120, 121, 4):
