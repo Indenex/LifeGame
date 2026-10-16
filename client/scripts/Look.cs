@@ -40,7 +40,7 @@ public static class Look
     public const float WaterLevel = -1.0f;
 
     static Shader? paintedShader, ghostShader, grassShader;
-    static ShaderMaterial? ground, bark, rock, foliage, grass;
+    static ShaderMaterial? ground, bark, rock, foliage, grass, grassTufts;
     static NoiseTexture2D? brush, detail, clouds;
 
     // Weather every surface reads, set each frame by the atmosphere: how soaked the
@@ -173,12 +173,17 @@ public static class Look
 
     // Grass has its own shader: blades take their tile's color at the root, so the
     // carpet and the ground read as one surface, and rolling gusts sweep across it.
-    public static ShaderMaterial Grass => grass ??= MakeGrass();
+    public static ShaderMaterial Grass => grass ??= MakeGrass(0f);
 
-    static ShaderMaterial MakeGrass()
+    // The same grass for the tufts Environment plants only near the player: they
+    // shrink away between about 31 and 48 m, before the chunks that have none.
+    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f);
+
+    static ShaderMaterial MakeGrass(float fadeFar)
     {
         var material = new ShaderMaterial { Shader = GrassShader };
         material.SetShaderParameter("clouds", Clouds);
+        material.SetShaderParameter("fade_far", fadeFar);
         return material;
     }
 
@@ -538,6 +543,12 @@ public static class Look
             shader_type spatial;
             render_mode cull_disabled, specular_disabled;
 
+            // Tufts shrink to nothing between 0.65 x fade_far and fade_far metres
+            // from the player (0 = never), so they are gone before the chunks
+            // that carry none (GrassTufts).
+            uniform float fade_far = 0.0;
+            global uniform vec3 player_position;
+
             varying vec3 tint;
             varying float tip;
             varying float gust;
@@ -545,6 +556,10 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                if (fade_far > 0.0) {
+                    float away = length(MODEL_MATRIX[3].xz - player_position.xz);
+                    VERTEX *= 1.0 - smoothstep(0.65 * fade_far, fade_far, away);
+                }
                 // Flowers (season code 2) bloom only in spring and summer; snow
                 // presses all grass down.
                 float flowering = INSTANCE_CUSTOM.w > 1.5 ? smoothstep(-0.25, 0.1, season_warmth) * (1.0 - smoothstep(0.1, 0.4, season_autumn)) : 1.0;
