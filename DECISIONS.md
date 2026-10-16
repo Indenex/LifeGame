@@ -208,3 +208,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-050 — 2026-10-15 — Right-drag turns the camera
 **Decision:** Holding the right mouse button and moving the mouse turns the camera. Q/E still turn it. The UX/UI lane builds it.
 **Who:** Justin
+
+## D-051 — 2026-10-16 — Ship firelight and the moonlit early night
+**Decision:** Atmosphere's warmer firelight and the moonlit early night (#32) ship as shown.
+**Who:** Justin ("Ship it")
+
+## D-052 — 2026-10-16 — Carrying too much slows you down
+**Decision:** Over the carrying limit (D-042) you can still pick things up, but you walk slower: easing down to half speed at the overload cap, never slower. This is what survival-3 (#39) already does.
+**Who:** Justin ("Slower walk")
