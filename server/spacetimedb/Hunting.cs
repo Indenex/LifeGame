@@ -54,7 +54,7 @@ public static partial class Module
 
         var spear = BestTool(ctx, ItemTags.Piercing);
         var blade = BestTool(ctx, ItemTags.Cutting);
-        if (spear == null && blade == null) throw new Exception("You need a spear or a blade to hunt with");
+        if (spear == null && blade == null) throw new Exception(NoToolMessage(ctx, ItemTags.Piercing | ItemTags.Cutting, "You need a spear or a blade to hunt with"));
 
         // A spear reaches a little further; a running target gets some slack for
         // where the hunter saw it a moment ago.
@@ -67,6 +67,7 @@ public static partial class Module
         // A spear takes two good strikes, a stone blade about three.
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
+        WearTool(ctx, (spear ?? blade)!.Value);
         if (damage >= mind.Health)
         {
             KillAnimal(ctx, animal, mind, now);
@@ -145,12 +146,13 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception("You need a blade to butcher with");
+        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need a blade to butcher with"));
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
+        WearTool(ctx, tool);
 
         // A grown sheep gives a few cuts and a hide; a lamb gives one small cut.
         bool grown = carcass.Growth >= 80;

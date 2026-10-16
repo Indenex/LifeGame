@@ -15,6 +15,7 @@ public enum StructureKind
     Fence,
     Gate,
     CraftingTable,
+    RepairTable,
 }
 
 // One material a structure's current stage still needs.

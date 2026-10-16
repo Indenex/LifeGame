@@ -133,6 +133,15 @@ namespace LifeGame.Shared
                 Station = StationKind.Table,
                 Stages = new[] { "Table" },
             },
+            // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
+            new StructureShape
+            {
+                Name = "Repair table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Repair,
+                Stages = new[] { "Table" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -201,6 +210,11 @@ namespace LifeGame.Shared
             new[]
             {
                 new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+            },
+            // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
             },
         };
 
