@@ -14,6 +14,7 @@ namespace LifeGame;
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
+    readonly StaminaBar staminaBar = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -31,6 +32,14 @@ public partial class SurvivalClient : Node
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
     public float WalkFactor { get; private set; } = 1f;
+    // Running (D-088): hold the run key to go faster while stamina lasts.
+    static readonly StringName NRun = "run";
+    float stamina = 1f;
+    bool winded;
+    // Seconds of steady walking, to offer the run hint once on a long walk.
+    float walkedFor;
+    // Seconds since you last ran; refill waits a moment (D-111).
+    float rested = 999f;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -55,6 +64,7 @@ public partial class SurvivalClient : Node
     {
         Bind("eat", Key.X);
         AddChild(needsHud);
+        AddChild(staminaBar);
         RegisterUse();
     }
 
@@ -171,6 +181,35 @@ public partial class SurvivalClient : Node
 
         UpdateLoad();
         UpdateOthersWet();
+    }
+
+    // How fast to move this frame: sneaking, walking, or running while stamina lasts,
+    // all slowed alike by an overload. Main's Walk() calls this once per frame.
+    public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
+    {
+        bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
+        rested = running ? 0f : rested + dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        // "Hold Shift to run" shows once, the first time you walk on for a while.
+        walkedFor = moving && !sneak ? walkedFor + dt : 0f;
+        if (walkedFor > 8f && walkedFor - dt <= 8f) Hints.Request("run");
+        stamina = Stamina.Step(stamina, running, rested, StaminaRank(), wellFed, dt);
+        if (stamina <= 0f) winded = true;
+        else if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
+        float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
+        return speed * WalkFactor;
+    }
+
+    // The skill rank stamina grows with. 0 until the PM picks which skill (survival-7).
+    static int StaminaRank() => 0;
+
+    // Where the player's feet are on screen, or null when the camera can't see them.
+    Vector2? FeetOnScreen()
+    {
+        var camera = player.GetViewport()?.GetCamera3D();
+        if (camera == null || camera.IsPositionBehind(player.GlobalPosition)) return null;
+        return camera.UnprojectPosition(player.GlobalPosition);
     }
 
     // Other players look as wet as the server says (D-036), in tenths.

@@ -44,6 +44,9 @@ public static partial class Module
         public float Wetness;
         [Default(0f)]
         public float WetnessRate;
+        // Until when (microseconds since the epoch) a good meal lets you run longer (D-111).
+        [Default(0L)]
+        public long WellFedUntil;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -139,6 +142,9 @@ public static partial class Module
         {
             Food = Math.Min(1f, v.Food + food),
             Water = Math.Min(1f, v.Water + water),
+            WellFedUntil = Needs.GoodMeal((Item)item)
+                ? ctx.Timestamp.MicrosecondsSinceUnixEpoch + Stamina.WellFedMicros
+                : v.WellFedUntil,
         });
     }
 
@@ -287,6 +293,7 @@ public static partial class Module
             Water = Needs.RespawnWater,
             Warmth = Needs.RespawnWarmth,
             Wetness = 0,
+            WellFedUntil = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,
