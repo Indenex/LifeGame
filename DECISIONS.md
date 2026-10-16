@@ -529,3 +529,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-129 — 2026-10-16 — One world wipe, after the land reshape
 **Decision:** Environment builds env-2 (more ponds, a stream, gentler hills) now. There will be exactly one world wipe, landing when env-2 and the in-flight PRs (stations, stamina, trade, clothing) are in. The PM brings Justin a wipe date to confirm before anything wipes. Until then every PR must upgrade the world without a wipe.
 **Who:** Justin ("Build the reshape, then one wipe", as recommended)
+
+## D-130 — 2026-10-16 — Wipe PRs pass by label
+**Decision:** A `world-wipe` PR label makes CI skip the no-wipe upgrade check and print a loud "this PR wipes the world" notice instead. Only the PM adds it, and only after Justin confirms the wipe date; every other PR stays protected.
+**Who:** Justin ("A 'world-wipe' label", as recommended)
