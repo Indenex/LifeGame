@@ -1,9 +1,9 @@
 # bugfix-13: facing a fire hides "Fire the pot"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (after #68)
+PR: #68
 
 ## Goal
 With a dry pot beside a burning fire, G says "Fire the pot" whichever way you face. With an unfired pot in your bag at a fire, G says "Set pots in the fire". Kiln and pick-up prompts follow what you face, as KEYMAP.md asks.
@@ -17,4 +17,4 @@ Cause: none of the Ceramics Use offers passed a `Target`, so under the facing ru
 - (none)
 
 ## Next step
-Open a PR from claude/bugfix-lyle6o once #68 merges (only one pushable branch).
+Wait for CI on #68, then send the PM the green sha.
