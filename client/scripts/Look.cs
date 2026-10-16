@@ -48,6 +48,18 @@ public static class Look
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
         Add("player_position", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1000, 0));
         Add("view_camera_position", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.Zero);
+        Add("world_seconds", RenderingServer.GlobalShaderParameterType.Float, 1f);
+    }
+
+    // Seconds since the game started (from 1), shared with the shaders as
+    // world_seconds so changes to the world can ease in over time. The atmosphere
+    // advances it every frame.
+    public static float Clock { get; private set; } = 1f;
+
+    public static void Tick(float delta)
+    {
+        Clock += delta;
+        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet("world_seconds", Clock);
     }
 
     // Each surface family gets the same shader with its own detail: how fine the
@@ -196,6 +208,7 @@ public static class Look
         global uniform float wind_strength;
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
+        global uniform float world_seconds;
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
         float cloud_shadow(vec3 p) {
@@ -249,7 +262,7 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                return (1.0 - smoothstep(1.1 * size, 2.3 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                return (1.0 - smoothstep(0.9 * size, 1.9 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
             }
 
             varying vec3 tint;
@@ -261,6 +274,31 @@ public static class Look
 
             void vertex() {
                 fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+                // A tree or rock on a cell that was just cleared goes away instead of
+                // vanishing: trees topple slowly and settle into the ground, rocks sink.
+                // On a cell that comes back they grow in. Custom data: x when it started,
+                // y +1 going or -1 coming, z 1 for rocks.
+                if (INSTANCE_CUSTOM.x > 0.0) {
+                    float age = world_seconds - INSTANCE_CUSTOM.x;
+                    if (INSTANCE_CUSTOM.y < 0.0) {
+                        VERTEX *= smoothstep(0.0, 1.6, age);
+                    } else if (INSTANCE_CUSTOM.z > 0.5) {
+                        float k = smoothstep(0.0, 1.6, age);
+                        VERTEX.y -= k * 1.4;
+                        VERTEX *= 1.0 - k * k;
+                    } else {
+                        float k = clamp(age / 2.4, 0.0, 1.0);
+                        // Falls slow then fast, in a direction seeded by where the tree
+                        // stands, so every player sees it fall the same way (D-056).
+                        float dir = fract(sin(dot(floor(MODEL_MATRIX[3].xz + 0.5), vec2(12.9898, 78.233))) * 43758.5453) * 6.2832;
+                        vec3 axis = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(sin(dir), 0.0, -cos(dir)));
+                        float angle = 1.45 * smoothstep(0.0, 0.7, k) * smoothstep(0.0, 0.7, k);
+                        float cs = cos(angle), sn = sin(angle);
+                        VERTEX = VERTEX * cs + cross(axis, VERTEX) * sn + axis * dot(axis, VERTEX) * (1.0 - cs);
+                        NORMAL = NORMAL * cs + cross(axis, NORMAL) * sn + axis * dot(axis, NORMAL) * (1.0 - cs);
+                        VERTEX *= 1.0 - smoothstep(0.6, 1.0, k);
+                    }
+                }
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 if (sway > 0.0) {
                     float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);
@@ -273,6 +311,11 @@ public static class Look
                 world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
                 // Palette colors are authored in sRGB.
                 tint = pow(COLOR.rgb, vec3(2.2)) * albedo.rgb;
+                // Ground that was just cleared or grew back blends from its old color.
+                if (CUSTOM0.a > 0.0) {
+                    float k = smoothstep(0.0, 1.6, world_seconds - CUSTOM0.a);
+                    tint = mix(pow(CUSTOM0.rgb, vec3(2.2)) * albedo.rgb, tint, k);
+                }
             #ifdef GHOST
                 // The ghost draws only trees in the way; the rest collapse to nothing.
                 if (fade < 0.002) VERTEX = vec3(0.0);
@@ -353,6 +396,14 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                // Grass on a cell just cleared lies down and sinks away; grass on a
+                // cell uncleared rises back up.
+                if (INSTANCE_CUSTOM.x > 0.0) {
+                    float k = smoothstep(0.0, 1.6, world_seconds - INSTANCE_CUSTOM.x);
+                    float height = INSTANCE_CUSTOM.y > 0.0 ? 1.0 - k : k;
+                    VERTEX.y *= height;
+                    VERTEX.xz *= mix(0.7, 1.0, height);
+                }
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 world_pos = world;
                 tip = UV.y;

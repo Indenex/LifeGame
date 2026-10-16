@@ -17,10 +17,32 @@ public partial class SoundScape : Node
     public float Cover { set => mix.Cover = value; }
     public float Fire { set => mix.Fire = value; }
     public float FirePan { set => mix.FirePan = value; }
-    public bool MusicOn { get => mix.MusicOn; set => mix.MusicOn = value; }
+    // Music settings, remembered between sessions. The volume runs 0 to 1 and eases
+    // to a new level over a second or so.
+    public bool MusicOn { get => mix.MusicOn; set { mix.MusicOn = value; Save(); } }
+    public float MusicVolume { get => mix.MusicVolume; set { mix.MusicVolume = Mathf.Clamp(value, 0f, 1f); Save(); } }
+
+    const string SettingsPath = "user://sound.cfg";
+
+    void Load()
+    {
+        var config = new ConfigFile();
+        if (config.Load(SettingsPath) != Error.Ok) return;
+        mix.MusicOn = (bool)config.GetValue("music", "on", true);
+        mix.MusicVolume = Mathf.Clamp((float)config.GetValue("music", "volume", 1f), 0f, 1f);
+    }
+
+    void Save()
+    {
+        var config = new ConfigFile();
+        config.SetValue("music", "on", mix.MusicOn);
+        config.SetValue("music", "volume", mix.MusicVolume);
+        config.Save(SettingsPath);
+    }
 
     public override void _Ready()
     {
+        Load();
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.25f };
         AddChild(player);
         player.Play();
@@ -28,7 +50,7 @@ public partial class SoundScape : Node
     }
 
     public void Step(Ground ground, float wetness) => mix.Step(ground, wetness);
-    public void Bleat(float pan, float gain, bool startled) => mix.Bleat(pan, gain, startled);
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => mix.Bleat(pan, gain, startled, lamb);
     public void Thunder(float delay, float gain, float near) => mix.Thunder(delay, gain, near);
 
     public override void _Process(double delta)
