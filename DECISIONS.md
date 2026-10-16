@@ -747,3 +747,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-183 — 2026-10-16 — Launcher: two builds
 **Decision:** Two launcher builds. Justin's host launcher installs, starts and updates the server. Players get a client-only launcher that updates the game and connects to his server.
 **Who:** Justin ("Two builds")
+
+## D-184 — 2026-10-16 — Stalking crit values: rarer, bigger (extends D-179)
+**Decision:** Stalking crit chance runs from 3% to 40% and the bonus damage from +50% to +200%, both on the shared front-loaded curve (D-175, D-177).
+**Who:** Justin ("Rarer, bigger")
