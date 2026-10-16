@@ -21,6 +21,8 @@ public sealed class SoundMix
     // and where (pan -1 left to 1 right).
     public float Fire, FirePan;
     public bool MusicOn = true;
+    // The music's own level, 0 to 1, under the master volume (the menu's music slider).
+    public float MusicVolume = 1f;
     public float Volume = 1.3f;
 
     readonly Noise noise;
@@ -84,7 +86,7 @@ public sealed class SoundMix
         night.Render(left, right, sendL, sendR, count, night01 * (1f - 0.9f * Rain));
         steps.Render(left, right, count);
         sheep.Render(left, right, sendL, sendR, count);
-        music.Render(left, right, sendL, sendR, count, MusicOn, night01);
+        music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
         reverb.Process(sendL, sendR, left, right, count);
 
         for (int i = 0; i < count; i++)
@@ -836,7 +838,7 @@ public sealed class SoundMix
 
         static float Hz(int semitones) => RootHz * MathF.Pow(2f, semitones / 12f);
 
-        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, bool on, float night)
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, bool on, float volume, float night)
         {
             float dt = 1f / rate;
             float block = n * dt;
@@ -856,7 +858,7 @@ public sealed class SoundMix
             // Fade in over about six seconds and out over eight.
             float wantFade = playing && untilChange > 8f ? 1f : 0f;
             fade += Math.Clamp(wantFade - fade, -block / 8f, block / 6f);
-            gain += Math.Clamp((on ? 1f : 0f) - gain, -block / 1.5f, block / 1.5f);
+            gain += Math.Clamp((on ? Math.Clamp(volume, 0f, 1f) : 0f) - gain, -block / 1.5f, block / 1.5f);
 
             float beat = night > 0.5f ? 1.25f : 0.95f;
             if (playing && untilChange > 8f)
