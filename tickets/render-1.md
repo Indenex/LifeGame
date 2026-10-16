@@ -42,6 +42,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 18:20: claims-6 sent to the PM (frames 2, 3, 11, 20 of renders/claims-6-c126163-*.png, e5f2d45). Tools PR #103 opened (branch claude/render-1-tools).
 - 2026-10-16 18:35: queue.sh now rereads tools/render/queue.jobs between jobs (add/reorder jobs there while it runs); lib.sh makes RENDER_OUT absolute (Godot saved relative paths under client/). model-1 baseline shots done except the player close-ups (redo running with corrected camera heights: the rig focus is ~0.65 m above the feet, yaw 0 faces the player).
 - 2026-10-16 18:45: new requests: ceramics-6 storage jar e9544db (session_01Diab34HTvew38VmUaqhj5Q; demo row queued, in-game jar being worked out), bugfix-18 e80c6cf (session_01HddD17VpF2CmiCxHoPH84Y; pot pickup by a full/low fire, setup being researched), model-1 style moved to fd5c17a with items / items --old / held views (+ optional in-game dropped items and inventory icons).
+- 2026-10-16 18:47: render request bugfix-19 1877b88 (PR #109, session_01HddD17VpF2CmiCxHoPH84Y): wet pinch pot by the water while thirsty: G prompt reads Drink (not Drying); away from water it reads Drying and the floating label hides.
 
 ## Open questions / blockers
 - (none)
