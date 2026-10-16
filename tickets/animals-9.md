@@ -17,11 +17,13 @@ The first clothes: a Wool tunic (sewn from wool cloth) and Leather foot wraps (f
 
 ## Progress log
 - 2026-10-16 17:30: questions Q3-Q5 and the hook asks sent to the PM; started.
+- 2026-10-16 18:35: merged animals-8's spin minigame branch in.
 - 2026-10-16 18:00: written; server + client build. Local bot test (scratch ClothCheck with a TEMP give reducer, not committed): spin 13 yarn, weave 3 cloth, sew tunic q35 -> warmth rate -0.00104 to -0.00078 (x0.750); foot wraps -> -0.00068 (x0.650). Upgrade check against main passed. Carry limit note: 26 wool at once is over the carry limit, so players spin as they go or use a basket.
 
 ## Open questions / blockers
-- Q3 wear model, Q4 pieces and numbers, Q5 visible on the avatar (sent to the PM).
-- Survival hook OK and Skills `sew` prefix mapping (sent to the PM).
+- Q3 wear model, Q4 pieces and numbers, Q5 visible on the avatar: with Justin via the PM.
+- Answered: PM OK'd the Survival hook; Survival lane agreed (rates refresh within one 2 s tick). Survival's #75 reworks the cold line for wetness: after #75 merges, merge main in and re-apply `* (1f - Math.Clamp(insulation, 0f, 1f))` on the new `cold` line only.
+- `sew` trains Toolmaking (PM, D-071 spirit); Skills lane asked to map the prefix.
 
 ## Next step
 Wait for #90 to merge, merge main in, open the animals-9 PR and send a render request; meanwhile apply Justin's Q3-Q5 answers when the PM relays them.
