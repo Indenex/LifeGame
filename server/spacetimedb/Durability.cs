@@ -7,11 +7,33 @@ using SpacetimeDB;
 // every table that holds items, so it survives drops, baskets, stashes and trades.
 public static partial class Module
 {
+    // Playtest tuning: how much wear one use counts for. One row, normally absent (1).
+    [SpacetimeDB.Table(Accessor = "WearConfig")]
+    public partial struct WearConfig
+    {
+        [PrimaryKey]
+        public byte Id;
+        public ushort Step;
+    }
+
+    // Database owner only, for playtests and the crafting check: make each use wear a
+    // tool by this many uses (1 is normal).
+    [SpacetimeDB.Reducer]
+    public static void SetToolWearStep(ReducerContext ctx, ushort step)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Not set up");
+        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        var row = new WearConfig { Id = 0, Step = Math.Max((ushort)1, step) };
+        if (ctx.Db.WearConfig.Id.Find(0) is null) ctx.Db.WearConfig.Insert(row);
+        else ctx.Db.WearConfig.Id.Update(row);
+    }
+
     // One use of a tool: it wears a little. Tools that never wear return at once.
     static void WearTool(ReducerContext ctx, InventoryItem tool)
     {
         if (!Items.IsKnown(tool.Item) || !Durability.Wears((Item)tool.Item)) return;
-        uint wear = Durability.Pack(Durability.Used(tool.Wear) + 1, Durability.Origin(tool.Wear));
+        int step = ctx.Db.WearConfig.Id.Find(0)?.Step ?? 1;
+        uint wear = Durability.Pack(Durability.Used(tool.Wear) + step, Durability.Origin(tool.Wear));
         var owner = tool.Owner;
         RemoveFromStack(ctx, tool, 1);
         AddToInventory(ctx, owner, (Item)tool.Item, 1, tool.Quality, wear);
