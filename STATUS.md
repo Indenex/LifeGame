@@ -29,7 +29,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
 | Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 player figure, items, clothes | `claude/model-1-style` | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
 | Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-2; PR #205 | `claude/anim-2` | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
-| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-4; PR #213 | `claude/environment-env-4` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
+| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-2, env-3, env-4, env-6 done; env-7 stream meander #238 (world-wipe label); env-5 landmarks #247; Look helper for House building #243 | `claude/environment-env-4`; env-7 #238 on `claude/environment-meander` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
 | Audio (D-079) (session_01SXcxtoyeqDmypiHxkHedU6) | audio-2a+b, then audio-3 (Sonnet, D-159) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
 | Crafting (session_01N9APthjRDfjknUvCweqzzN) | #160, #203, crafting-19 durability (Sonnet, D-159) | `crafting-durability` (crafting-19) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_01RedPo6NfcLBPNHQNVhC4qf) | survival-12 PR #206, then survival-10 (Sonnet, D-159) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
@@ -37,7 +37,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Claims, chat and PvP rules (session_01CAk6p7Z42GfVwi8QMfNMhZ) | claims-12 fences; #191 and #196 merged (Sonnet, D-159) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); next visual ticket with Environment | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/` except audio |
 | House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) | #202, building-10 (Sonnet, D-159) | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
-| Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
+| Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-deer-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Sc3N1RCsurSszfX5YwGzMU) | ceramics-7+8, lamp ceramics-9 (Sonnet, D-159) | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01AeuMsF8LfzDsWW8jUh1Fkp) | #221, then bugfix-23 collision (Sonnet, D-159) | lane records | any file, minimal diffs, PM assigns |
@@ -54,7 +54,7 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
 - Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building's `Module.ShelterAt(ctx, x, z)` / `ShelterFor(ctx, playerId)` return Shelter(RainCover, Warmth, StructureId); it implements Survival's `ShelterAtHook(ctx, x, z, ref rainCover, ref warmth)`.
-- Keys: every key goes in `KEYMAP.md` (UX/UI owns it, D-033). World actions register Use handlers; never bind G.
+- Keys: every key goes in `KEYMAP.md` (UX/UI owns it, D-033). World actions register Use handlers; never bind E (the Use key, D-188).
 - Client subscriptions: `client/scripts/net/Subscriptions.cs` (#18); add new chunk queries there.
 - Placement: `PlaceStructure(kind, x, z, yaw)` and `shared/Structures.cs`; the claim marker is a new `StructureKind` with one stage.
 - Weather (`WorldClock.cs`, PR #9): `TimeOfDay`, `CurrentWeather` (Cloud, Rain, Wind, Wetness 0 to 1), `DryingRate`, `AirTemperature` in °C. `RainAt` one-liner goes in whichever of #9 or ceramics merges second.

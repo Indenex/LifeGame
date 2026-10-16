@@ -1,7 +1,7 @@
 # bugfix-22: "Fill pots with water" offered on banks where the server refuses it
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-22
 PR: #181
 
@@ -14,9 +14,10 @@ Found in the PM-requested env-2 playtest review: on env-2's land, 1,608 of 20,33
 
 ## Progress log
 - 2026-10-16: fixed; the client builds.
+- 2026-10-16: #181 merged. CI https://github.com/Indenex/LifeGame/actions/runs/38955814796 green on e4d2cbf.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on the PR, record the run link here, then send the PM the green sha.
+None; done and merged.
