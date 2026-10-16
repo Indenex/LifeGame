@@ -273,7 +273,7 @@ public partial class BuildingSystem : Node
                 if (d < keep && d > 0.01f) to = new Vector3(s.X + dx / d * keep, to.Y, s.Z + dz / d * keep);
                 continue;
             }
-            if (s.Kind == StructureKind.BrickHouse && (s.Complete || s.Stage >= 2))
+            if (shape.Room && (s.Complete || s.Stage >= 2))
             {
                 to = HouseWalls(s, from, to);
                 continue;
@@ -432,6 +432,7 @@ public partial class BuildingSystem : Node
             return;
         }
         c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
+        Sfx.Play(Cue.Place);
         StopPlacing();
     }
 

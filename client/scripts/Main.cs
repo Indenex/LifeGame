@@ -46,12 +46,14 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
     Vector3 lastSent = new(float.NaN, 0, float.NaN);
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
+    int subscribedFar = -1;
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
     readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Msaa4X, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa };
@@ -67,6 +69,7 @@ public partial class Main : Node3D
         view.AddChild(me);
         view.AddChild(herd);
         view.AddChild(cameraRig);
+        cameraRig.GroundAt = terrain.HeightAt;
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
         view.AddChild(items);
@@ -90,7 +93,11 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        // What you wear (ui-10, D-074).
+        equipment.Note = hud.Note;
+        AddChild(equipment);
         building.MayBar = social.HasRightsAt;
+        building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
@@ -104,6 +111,7 @@ public partial class Main : Node3D
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
+            || equipment.IsOpen
             || station.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
@@ -262,7 +270,7 @@ public partial class Main : Node3D
 
         water = new MeshInstance3D
         {
-            Mesh = new PlaneMesh { Size = new Vector2(260, 260) },
+            Mesh = new PlaneMesh { Size = new Vector2(500, 500) },
             MaterialOverride = Look.WaterSurface,
             Position = new Vector3(0, Look.WaterLevel, 0),
         };
@@ -331,6 +339,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -387,9 +396,12 @@ public partial class Main : Node3D
 
     void Subscribe(int chunkX, int chunkZ)
     {
-        if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
+        // Resubscribes when you cross a chunk or the far radius (view distance setting) changes.
+        if (conn == null || (subscribedChunk == (chunkX, chunkZ) && subscribedFar == Subscriptions.FarRadius)) return;
         subscribedChunk = (chunkX, chunkZ);
+        subscribedFar = Subscriptions.FarRadius;
         string range = Subscriptions.Range(chunkX, chunkZ, World.ViewRadiusChunks);
+        string farRange = Subscriptions.Range(chunkX, chunkZ, subscribedFar);
         var old = subscription;
         // Subscribe to the new area before dropping the old one so nothing pops out.
         // The first area is where we wake up: appear once it has loaded, all at once.
@@ -405,7 +417,7 @@ public partial class Main : Node3D
                 // Still wake up and walk: one failed subscription must not freeze the player.
                 if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
             })
-            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
+            .Subscribe(Subscriptions.Area(range, farRange).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
     void OnPlayer(Player p)

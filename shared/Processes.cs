@@ -91,6 +91,9 @@ namespace LifeGame.Shared
         public float FailBelow;
         // The station it is made at; None is a hand craft from the C menu.
         public StationKind Station;
+        // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
+        // guess from the id; set it on new processes.
+        public WorkMotion Motion;
     }
 
     public static class Processes
@@ -257,8 +260,15 @@ namespace LifeGame.Shared
                 Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle,
             },
 
-            // Clothing (Animals lane): cut and laced at the leather drying rack (D-139), worn in
-            // the equipment panel, slows the cold (see Clothing.cs).
+            // Clothing (Animals lane): worn in the equipment panel, slows the cold (see
+            // Clothing.cs). Foot wraps are cut and laced at the leather drying rack (D-139);
+            // the tunic is sewn from wool cloth at the crafting table.
+            new ProcessDef
+            {
+                Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 2f), Makes = Item.WoolTunic, Station = StationKind.Table,
+            },
             new ProcessDef
             {
                 Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,

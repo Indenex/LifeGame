@@ -11,7 +11,11 @@ base=$1
 uri=${2:-http://127.0.0.1:3000}
 db=upgrade-check
 root=$(cd "$(dirname "$0")/.." && pwd)
-cli=$(command -v spacetimedb-cli || command -v spacetime)
+cli=$(command -v spacetimedb-cli || command -v spacetime || true)
+for d in "$HOME/stdb" "$HOME/.local/bin" /root/stdb; do
+  [ -n "$cli" ] || { [ -x "$d/spacetimedb-cli" ] && cli="$d/spacetimedb-cli"; }
+done
+[ -n "$cli" ] || { echo "$(basename "$0"): spacetimedb-cli not found on PATH (or in ~/stdb); install SpacetimeDB 2.12.0 first." >&2; exit 1; }
 work=$(mktemp -d)
 trap 'git -C "$root" worktree remove --force "$work/base" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
 
