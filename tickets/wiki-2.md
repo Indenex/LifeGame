@@ -16,9 +16,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16 17:00: #87 merged; Justin chose "As is" for the tone; PM republished the web page. Done.
 - 2026-10-16 17:15: PM: the wiki must match main. Removed the sleeping mat (#61), wetness (#75) and tree felling (#70) lines; none is on main yet. D-065..D-068 need no wiki text (the wiki does not mention skill toasts).
 - 2026-10-16 17:35: PM: #75 wetness, #70 chopping, #71 chat bubbles and /me, #47 fire time-left prompt merged; added their wiki lines (no numbers). Sleeping mat (#61) still pending.
+- 2026-10-16 18:05: #66 (pond shimmer, rain rings, frogs, clouds, dawn mist) merged; client-side looks only, no rule or key changes, so no wiki text. Pending, add only when the PM says each PR merged: run on Shift with stamina and sneak moving to Ctrl (D-088, D-091), I opens the equipment panel, fires last longer with Firecraft (D-090), sleeping mat (#61).
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).
 
 ## Next step
-When the PM says #61 (sleeping mat) merged, re-add its lines (needs.md death section, building-and-claims.md) on a fresh branch from main and send the PM the PR link.
+When the PM reports a merge from the pending list in the log (sleeping mat #61, run/sneak keys D-088/D-091, equipment panel on I, Firecraft fire length D-090), add its wiki lines (controls.md, needs.md, building-and-claims.md, animals.md, crafting-and-skills.md as relevant) on claude/wiki-2 restarted from main, no numbers, and send the PM the PR link.
