@@ -52,6 +52,9 @@ namespace LifeGame.Shared
         ClayLamp = 118,
         // Rendered from mutton fat in a pot (ceramics-9); lamp fuel.
         Tallow = 119,
+        // Roof tiles (ceramics-10): shaped at the bench, kiln-fired only; House building roofs with them.
+        UnfiredRoofTile = 120,
+        RoofTile = 121,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -141,6 +144,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
             new ItemDef { Id = Item.UnfiredLamp, Name = "Unfired lamp", Plural = "Unfired lamps", HasQuality = true },
             new ItemDef { Id = Item.ClayLamp, Name = "Clay lamp", Plural = "Clay lamps", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredRoofTile, Name = "Unfired roof tile", Plural = "Unfired roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.RoofTile, Name = "Roof tile", Plural = "Roof tiles", HasQuality = true },
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },

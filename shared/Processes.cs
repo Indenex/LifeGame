@@ -336,6 +336,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // A pat of clay pressed over a curve into a roof tile; kiln-fired only (ceramics-10).
+                Id = "clay.tile", Name = "Press a roof tile", Doing = "Pressing a roof tile", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
