@@ -659,3 +659,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-161 — 2026-10-16 — Every pickup has a sound
 **Decision:** Every pickup plays a soft rustle and knock (audio-3).
 **Who:** Justin ("Yes, every pickup")
+
+## D-162 — 2026-10-16 — Claim fences snap to the border
+**Decision:** Claim fences snap onto the claim circle (claims-12; extends D-157).
+**Who:** Justin ("Snap to border")
+
+## D-163 — 2026-10-16 — Lapsed claim fences stay as ruins
+**Decision:** When a claim lapses, its fences stay as ruins: they become ordinary fences, gates open to anyone, and they weather per D-046.
+**Who:** Justin ("Stay as ruins")
+
+## D-164 — 2026-10-16 — Heather blooms purple in late summer
+**Decision:** Heather blooms purple in late summer (Atmosphere and Environment seasonal visuals).
+**Who:** Justin ("Yes, purple bloom")
