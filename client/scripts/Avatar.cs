@@ -25,6 +25,9 @@ public partial class Avatar : Node3D
         figure = BuildFigure();
         AddChild(figure);
         animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        // Breath in the cold leaves the mouth (Head joint, or a "HeadAttach" bone attachment).
+        if ((figure.FindChild("HeadAttach", true, false) ?? figure.FindChild("Head", true, false)) is Node3D head)
+            head.AddChild(new Breath { Position = new Vector3(0, 0.03f, 0.17f) });
 
         nameplate = new Label3D
         {
