@@ -61,6 +61,7 @@ if (which is "clay-hut" or "both")
             Check(b.CountOf(Item.Daub) >= 12, $"mixed daub for the walls ({b.Carried()})");
         });
     HangDoor(hut);
+    LayMat(hut);
 }
 if (which is "basket" or "both")
     StoreInBasket(BuildTogether(StructureKind.Basket,
@@ -204,6 +205,35 @@ void HangDoor(ulong hut)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "and B can open it again");
 }
 
+// A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
+void LayMat(ulong hut)
+{
+    Console.WriteLine("--- Sleeping mat");
+    a.Wants = new() { [Item.Fiber] = 8 };
+    var until = clock.Elapsed + TimeSpan.FromSeconds(120);
+    while (!a.HasWants && clock.Elapsed < until)
+    {
+        a.GatherStep(0.1f);
+        Pump(100);
+    }
+    Check(a.HasWants, $"gathered fiber for a mat ({a.Carried()})");
+    a.Craft("weave.mat", Pump);
+    Check(a.CountOf(Item.SleepingMat) == 1, $"wove a sleeping mat ({a.Carried()})");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var door = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ + 0.6f);
+    a.WalkTo(door.x, door.z, 0.3f, Pump);
+    var bed = Structures.ToWorld(s.X, s.Z, s.Yaw, 0.2f, -0.3f);
+    a.WalkTo(bed.x, bed.z, 0.2f, Pump);
+    var me = a.MyId;
+    a.Conn.Reducers.LayMat(hut);
+    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is { } m && m.StructureId == hut, 10, "mat laid out in the hut, seen by the other player");
+    Check(a.CountOf(Item.SleepingMat) == 0, "it left A's hands");
+    a.Conn.Reducers.RollUpMat();
+    WaitFor(() => a.CountOf(Item.SleepingMat) == 1 && a.Conn.Db.SleepingMat.PlayerId.Find(me) is null, 10, "rolled it up again");
+    a.Conn.Reducers.LayMat(hut);
+    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
+}
+
 // A puts sticks in the basket; B takes one out.
 void StoreInBasket(ulong basket)
 {
@@ -234,6 +264,7 @@ sealed class Bot
     readonly string name, uri, db;
     string? token;
     Identity? me;
+    public uint MyId => myId;
     uint myId;
     ulong targetItem;
     (int x, int z)? digCell;
@@ -276,6 +307,7 @@ sealed class Bot
                         "SELECT * FROM structure",
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
+                        "SELECT * FROM sleeping_mat",
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
