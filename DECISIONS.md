@@ -847,3 +847,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-208 — 2026-10-16 — Environment env-9: See further
 **Decision:** Environment's next feature (env-9) is "See further": low-detail distant terrain and tree silhouettes beyond about 56 m. Not picked: gatherables by habitat, small life, wearing paths.
 **Who:** Justin, picking "See further".
+
+## D-209 — 2026-10-16 — Device quality applies only to minigame processes (refines D-200)
+**Decision:** A process with no minigame gets nothing special from a device: it is simply crafted for now and can be queued up as a plain batch. The unattended penalty and attended bonus of D-200 apply only to processes that have minigames.
+**Who:** Justin ("If they don't have minigames, nothing special happens, it can just be crafted for now, and queued up.")
+
+## D-210 — 2026-10-16 — Journal step cards do not show Speed %
+**Decision:** Journal step cards drop the Speed % line; no Speed % is shown.
+**Who:** Justin ("Drop the line")
+
+## D-211 — 2026-10-16 — Storms are seasonal
+**Decision:** Storm frequency follows the season: summer about 1 front in 45, spring and autumn about 1 in 50, winter about 1 in 150. The PM's message did not state the unit of "1 in N".
+**Who:** Justin, picking "Seasonal".
