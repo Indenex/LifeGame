@@ -7,6 +7,9 @@ namespace LifeGame;
 // ("G  Pick berries") and does it on press, or every Repeat seconds while held.
 public partial class UseKey : CanvasLayer
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NUse = "use";
+
     // Where the player stands; set by Main.
     public Func<Vector3> Player = () => Vector3.Zero;
     // True while a panel, minigame or placement mode owns the keys.
@@ -57,7 +60,7 @@ public partial class UseKey : CanvasLayer
         alpha = Mathf.MoveToward(alpha, offer != null ? 1f : 0f, dt * 6f);
         panel.Modulate = new Color(1, 1, 1, alpha);
 
-        if (offer is { Repeat: > 0f } held && Input.IsActionPressed("use"))
+        if (offer is { Repeat: > 0f } held && Input.IsActionPressed(NUse))
         {
             repeatTimer -= dt;
             if (repeatTimer <= 0f)

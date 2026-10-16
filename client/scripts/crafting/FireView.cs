@@ -10,6 +10,9 @@ namespace LifeGame;
 // flickering flames, drifting sparks and a warm light that dims as the fuel runs low.
 public partial class FireView : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NAlbedo = "albedo";
+
     readonly Dictionary<ulong, Campfire> fires = new();
     readonly Dictionary<ulong, RoastView> roasts = new();
     readonly Func<float, float, float> heightAt;
@@ -111,7 +114,7 @@ public partial class FireView : Node3D
             var color = t < Roasting.BestSeconds
                 ? Raw.Lerp(Cooked, Mathf.Clamp(t / Roasting.BestSeconds, 0f, 1f))
                 : Cooked.Lerp(Charred, Mathf.Clamp((t - Roasting.BestSeconds) / (Roasting.BurnSeconds - Roasting.BestSeconds), 0f, 1f));
-            meat.SetShaderParameter("albedo", color);
+            meat.SetShaderParameter(NAlbedo, color);
         }
     }
 

@@ -77,19 +77,21 @@ public partial class Terrain : Node3D
                     dirty.Add(key);
         }
 
-        // Build a few chunks per frame so walking never hitches. Nearest first.
+        // Build chunks nearest first, within a few milliseconds a frame so walking
+        // never hitches: one chunk takes tens of ms on a slow machine.
+        if (dirty.Count == 0) return;
         var order = new List<(int, int)>(dirty);
         order.Sort((a, b) => Dist(a).CompareTo(Dist(b)));
-        int budget = 3;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         foreach (var key in order)
         {
+            if (clock.Elapsed.TotalMilliseconds > 4) break;
             dirty.Remove(key);
             if (Math.Abs(key.Item1 - chunkX) > r || Math.Abs(key.Item2 - chunkZ) > r) continue;
             if (chunks.Remove(key, out var old)) old.QueueFree();
             var node = BuildChunk(key.Item1, key.Item2);
             AddChild(node);
             chunks[key] = node;
-            if (--budget <= 0) break;
         }
 
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
@@ -106,27 +108,50 @@ public partial class Terrain : Node3D
     Mesh BuildGround(int cx, int cz)
     {
         int n = World.ChunkSize;
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
 
-        void Corner(int x, int z)
+        // Each corner is shared by up to six triangles, so work out its height,
+        // normal and color once, then lay the triangles out from the grid.
+        var heights = new float[n + 1, n + 1];
+        var normals = new Vector3[n + 1, n + 1];
+        var colors = new Color[n + 1, n + 1];
+        for (int i = 0; i <= n; i++)
+            for (int j = 0; j <= n; j++)
+            {
+                int x = cx * n + i, z = cz * n + j;
+                float h = TileHeight(x, z);
+                heights[i, j] = h;
+                normals[i, j] = NormalAt(x, z);
+                colors[i, j] = TileColor(x, z, h);
+            }
+
+        var vertices = new Vector3[n * n * 6];
+        var vertexNormals = new Vector3[vertices.Length];
+        var vertexColors = new Color[vertices.Length];
+        int k = 0;
+        void Corner(int i, int j)
         {
-            float h = TileHeight(x, z);
-            st.SetNormal(NormalAt(x, z));
-            st.SetColor(TileColor(x, z, h));
-            st.AddVertex(new Vector3(x, h, z));
+            vertices[k] = new Vector3(cx * n + i, heights[i, j], cz * n + j);
+            vertexNormals[k] = normals[i, j];
+            vertexColors[k] = colors[i, j];
+            k++;
         }
 
         // One vertex per cell; neighboring chunks share their edge row.
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
-                int x = cx * n + i, z = cz * n + j;
-                Corner(x, z); Corner(x + 1, z); Corner(x + 1, z + 1);
-                Corner(x, z); Corner(x + 1, z + 1); Corner(x, z + 1);
+                Corner(i, j); Corner(i + 1, j); Corner(i + 1, j + 1);
+                Corner(i, j); Corner(i + 1, j + 1); Corner(i, j + 1);
             }
 
-        return st.Commit();
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = vertexNormals;
+        arrays[(int)Mesh.ArrayType.Color] = vertexColors;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
     }
 
     static void Quad(SurfaceTool st, Vector3 normal, Color color, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
