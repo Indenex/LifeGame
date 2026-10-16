@@ -6,6 +6,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 **Phase:** 1, MVP. One forest region, crafting tiers 0 to 3, house building, sheep, up to 32 players, Linux and Windows.
 **Goal:** playtesters reach a fired clay pot on their own and want to keep going.
+**Milestones (D-081):** M1 Looks and feels real + M2 The first evening (in parallel) → M3 A place of your own → M4 The long road → M5 Pre-alpha playtest. Survival stays light.
 **Priority:** playable as soon as possible. Small milestones merge early; `main` is the running playtest build.
 
 ## PM

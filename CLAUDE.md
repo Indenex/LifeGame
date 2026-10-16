@@ -35,6 +35,8 @@ Whenever the PM or any worker has an idea (a feature, a look, a number, a differ
 ## Design principles
 
 - **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
+- **Fun first, some realism (D-081).** Survival is light: needs nudge players along, never punish; no death spirals. Aesthetics and a world to get lost in come first; everything a player makes should look real on the ground, in hand and in the inventory.
+- **Lanes never edit `STATUS.md` on their branches.** Send STATUS changes to the PM.
 
 ## The no-handoff rule
 
