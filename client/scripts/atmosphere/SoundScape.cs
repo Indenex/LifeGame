@@ -76,6 +76,7 @@ public partial class SoundScape : Node
     public override void _Ready()
     {
         Load();
+        Sfx.Attach(this);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
         player.Play();
@@ -87,12 +88,14 @@ public partial class SoundScape : Node
 
     public override void _ExitTree()
     {
+        Sfx.Attach(null);
         running = false;
         synth?.Join(500);
     }
 
     // One-off sounds go through a queue so the synth thread adds them between blocks.
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
+    public void Play(Cue cue) => events.Enqueue(m => m.Play(cue));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
     public void Working(Work kind) => events.Enqueue(m => m.Working(kind));

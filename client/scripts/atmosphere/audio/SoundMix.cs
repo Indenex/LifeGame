@@ -5,6 +5,9 @@ namespace LifeGame;
 
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
+// Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place }
+
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
 
@@ -62,6 +65,7 @@ public sealed class SoundMix
     readonly WaterVoice water;
     readonly Frogs frogs;
     readonly DayInsects insects;
+    readonly Cues cues;
     readonly StreamVoice stream;
     readonly Steps steps;
     readonly WorkVoice work;
@@ -97,6 +101,7 @@ public sealed class SoundMix
         water = new WaterVoice(rate, rng);
         frogs = new Frogs(rate, rng);
         insects = new DayInsects(rate, noise, rng);
+        cues = new Cues(rate, noise, rng);
         stream = new StreamVoice(rate, noise, rng);
         steps = new Steps(rate, noise, rng);
         work = new WorkVoice(rate, noise, rng);
@@ -110,6 +115,10 @@ public sealed class SoundMix
     public float Gust => wind.Gust;
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+
+    // Something that just happened to you: picked something up, ate, drank, got
+    // better at a skill, learned something, a fire caught, set something down.
+    public void Play(Cue cue) => cues.Trigger(cue);
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -243,6 +252,7 @@ public sealed class SoundMix
         Array.Clear(workR, 0, count);
         steps.Render(stepL, stepR, count);
         work.Render(workL, workR, count);
+        cues.Render(workL, workR, sendL, sendR, count);
         foreach (var (player, voice) in others)
         {
             voice.Render(workL, workR, count);
@@ -1374,6 +1384,143 @@ public sealed class SoundMix
                     step.Age += dt;
                 }
                 if (step.Age > 0.4f) active.RemoveAt(k);
+            }
+        }
+    }
+
+    // --- Cues ---------------------------------------------------------------------
+
+    // Small sounds for things that just happened, on the effects bus with the work
+    // sounds: a rustle and soft knock as something goes in your bag, crunching
+    // bites, gulps of water, a fire catching with a soft whoosh, a dull knock as
+    // something is set down. A skill's new title rings the journal's soft wooden
+    // two-note chime, and a new journal entry one faint note, both with a little of
+    // the forest's reverb.
+    sealed class Cues
+    {
+        readonly int rate;
+        readonly Noise noise;
+        readonly Random rng;
+        readonly List<Voice> active = new();
+
+        sealed class Voice
+        {
+            public Cue Cue;
+            public float Age, Pitch, Phase, Phase2;
+            public BandPass Band;
+            public Lowpass Low;
+        }
+
+        public Cues(int rate, Noise noise, Random rng)
+        {
+            this.rate = rate;
+            this.noise = noise;
+            this.rng = rng;
+        }
+
+        public void Trigger(Cue cue)
+        {
+            if (active.Count > 8) active.RemoveAt(0);
+            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f) });
+        }
+
+        // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
+        // fundamental and its bright 3.9x partial with a soft mallet, then two quiet
+        // echoes so it hangs in the air a moment.
+        static readonly (float Freq, float At, float Gain)[] Title = { (587.33f, 0f, 1f), (880f, 0.16f, 0.8f) };
+        static readonly (float Freq, float At, float Gain)[] Discovery = { (783.99f, 0f, 0.55f) };
+
+        static float Marimba(float t, (float Freq, float At, float Gain)[] notes) =>
+            Bars(t, notes) + 0.22f * Bars(t - 0.23f, notes) + 0.1f * Bars(t - 0.47f, notes);
+
+        static float Bars(float t, (float Freq, float At, float Gain)[] notes)
+        {
+            float sum = 0f;
+            foreach (var (freq, at, gain) in notes)
+            {
+                float u = t - at;
+                if (u < 0f) continue;
+                float body = MathF.Sin(MathF.Tau * freq * u) * MathF.Exp(-u * 3.2f);
+                float ring = 0.25f * MathF.Sin(MathF.Tau * freq * 3.9f * u) * MathF.Exp(-u * 14f);
+                sum += gain * Math.Min(1f, u / 0.004f) * (body + ring);
+            }
+            return sum;
+        }
+
+        static float Burst(float t, float start, float decay) => t < start ? 0f : MathF.Min(1f, (t - start) / 0.004f) * MathF.Exp(-(t - start) / decay);
+
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
+        {
+            float dt = 1f / rate;
+            for (int k = active.Count - 1; k >= 0; k--)
+            {
+                var v = active[k];
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, _ => 0.4f };
+                for (int i = 0; i < n; i++)
+                {
+                    float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
+                    switch (v.Cue)
+                    {
+                        case Cue.Pickup:
+                        {
+                            // Leaves and cloth brushing, then a soft knock in the bag.
+                            float rustle = v.Band.Process(x, 2800f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
+                            v.Phase += 2f * MathF.PI * 140f * v.Pitch * dt;
+                            s = rustle * 0.35f + MathF.Sin(v.Phase) * Burst(t, 0.07f, 0.03f) * 0.17f;
+                            break;
+                        }
+                        case Cue.Eat:
+                        {
+                            // Three bites, each a short crunchy burst.
+                            float bites = Burst(t, 0f, 0.035f) + 0.8f * Burst(t, 0.28f, 0.03f) + 0.65f * Burst(t, 0.55f, 0.03f);
+                            float grain = MathF.Abs(noise.Next()) > 0.6f ? 1f : 0.3f;
+                            s = v.Band.Process(x * grain, 1700f * v.Pitch, 0.8f, rate) * bites * 0.65f;
+                            break;
+                        }
+                        case Cue.Drink:
+                        {
+                            // Two gulps, each a short drop in pitch, over a little slosh.
+                            float g1 = Burst(t, 0.05f, 0.07f), g2 = Burst(t, 0.38f, 0.07f);
+                            float since = t < 0.38f ? t - 0.05f : t - 0.38f;
+                            v.Phase += 2f * MathF.PI * (260f - 500f * MathF.Max(0f, since)) * v.Pitch * dt;
+                            float slosh = v.Low.Process(x, Lowpass.Coef(900f, rate)) * Burst(t, 0f, 0.15f);
+                            s = MathF.Sin(v.Phase) * (g1 + g2) * 0.11f + slosh * 0.2f;
+                            break;
+                        }
+                        case Cue.FireLit:
+                        {
+                            // A soft whoosh as the flame takes, opening up as it grows.
+                            float open = Math.Min(1f, t / 0.35f);
+                            float w = v.Low.Process(x, Lowpass.Coef(300f + 2500f * open, rate));
+                            s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
+                            break;
+                        }
+                        case Cue.Place:
+                        {
+                            // Something set on the ground: a dull knock and a scuff.
+                            v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
+                            float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
+                            break;
+                        }
+                        case Cue.Learn:
+                            // One faint wooden note, G5: something new in the journal.
+                            s = Marimba(t, Discovery) * 0.017f;
+                            send = s * 0.6f;
+                            break;
+                        case Cue.SkillUp:
+                            // D5 then A5 on a wooden bar, an open fifth: a skill earned a new title.
+                            s = Marimba(t, Title) * 0.027f;
+                            send = s * 0.6f;
+                            break;
+                    }
+                    l[i] += s;
+                    r[i] += s;
+                    sl[i] += send;
+                    sr[i] += send;
+                    v.Age += dt;
+                }
+                if (v.Age > length) active.RemoveAt(k);
             }
         }
     }
