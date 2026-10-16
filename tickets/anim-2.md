@@ -23,7 +23,7 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 
 ## Open questions / blockers
 - Breath puff: single source now (Survival 19:36): read `Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius))` (0 at >=6 °C, 1 at 0 °C; shared/Needs.cs in #185 cefba1f; Atmosphere.AirCelsius in #173). Needs both on main. Atmosphere asks the puff fade in heavy snow / at night if too bright (`Atmosphere.Snowfall`); they'll review the look.
-- Sheep hit reaction (Animals, 20:34): public table AnimalHit {AnimalId, X, Z, Crit, Killed} (PR #219). Agreed: Herd.cs calls `Sheep.Flinch(bool crit, Vector3 from)` on insert (Animals may add an empty stub); Animation fills it in: normal hit = body jerk away + head snap, crit = hind-leg buckle and a 0.5 s stumble before the bolt.
+- Sheep hit reaction (Animals, 20:34): public table AnimalHit {AnimalId, X, Z, Crit, Killed} (PR #219). Agreed: Herd.cs calls `Sheep.Flinch(bool crit, Vector3 from)` on insert (stub is in #219, branch claude/animals-deer-5gkntn, marked `// anim: stub`; keep the signature; from = hitter world pos (x,0,z)); Animation fills it in: normal hit = body jerk away + head snap, crit = hind-leg buckle and a 0.5 s stumble before the bolt.
 - Sheep: Animals OK (a) 20:08: small PR on Sheep.cs _Process only, species-neutral (deer from #219 share skeleton and _Process; deer run 6.5 m/s, sheep 4.4, longer strides). Build after Modeling #197 (new sheep mesh, lower rest heights). Fix: feet skate at trot (stride from speed), turns snap via LerpAngle (add lean, head leads). Animals now a Sonnet session; follow-ups via tickets/animals-14.md and PM.
 
 ## Next step
