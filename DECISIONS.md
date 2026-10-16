@@ -525,3 +525,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-128 — 2026-10-16 — Foot wraps ship before the tunic
 **Decision:** The leather foot wraps and the equipment panel ship on their own first; the wool tunic follows with the Spindle station.
 **Who:** Justin ("Yes, ship wraps first", as recommended)
+
+## D-129 — 2026-10-16 — One world wipe, after the land reshape
+**Decision:** Environment builds env-2 (more ponds, a stream, gentler hills) now. There will be exactly one world wipe, landing when env-2 and the in-flight PRs (stations, stamina, trade, clothing) are in. The PM brings Justin a wipe date to confirm before anything wipes. Until then every PR must upgrade the world without a wipe.
+**Who:** Justin ("Build the reshape, then one wipe", as recommended)
