@@ -36,8 +36,8 @@ public partial class SocialLayer : Node
     uint myId;
     float landTimer;
 
-    // True while the chat box has focus, so Main can stop walking.
-    public bool Typing => chat.Typing;
+    // True while the chat box or the claim panel's name box has focus, so Main can stop walking.
+    public bool Typing => chat.Typing || panel.Typing;
 
     public static long NowMicros => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
 
@@ -158,7 +158,7 @@ public partial class SocialLayer : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (conn == null || chat.Typing) return;
+        if (conn == null || Typing) return;
         if (e.IsActionPressed("chat"))
         {
             chat.Open();
