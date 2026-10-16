@@ -139,11 +139,13 @@ public partial class SocialLayer : Node
         }
     }
 
+    public Func<bool> HideChip = () => false;
+
     public override void _Process(double delta)
     {
         foreach (var marker in markers.Values) marker.Near(myPos);
-        // Step aside while a full panel (journal, claim panel, menu) is open.
-        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() ? 0f : 1f, (float)delta * 6f);
+        // Step aside while a full panel (journal, claim panel, menu) or the death card is up.
+        chipAlpha = Mathf.MoveToward(chipAlpha, Panels.Open() || HideChip() ? 0f : 1f, (float)delta * 6f);
         landChip.Modulate = new Color(1, 1, 1, chipAlpha);
         ProcessFighting((float)delta);
         landTimer -= (float)delta;
