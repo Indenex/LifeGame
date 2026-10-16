@@ -1,7 +1,7 @@
 # atmosphere-10: Water and wind feel alive
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-sound-hlqfke (local atmosphere-10-wip)
 PR: (none yet)
 
@@ -10,9 +10,10 @@ From the PM, 2026-10-16 (D-036 immersion): wherever there is water (ponds below 
 
 ## Progress log
 - 2026-10-16 03:40: started from main aaaf87a. Water is one plane at Look.WaterLevel following the player (Main.cs), so "water" = any cell below that height; there are no streams yet, so no babbling, only lapping. Added Look.WaterSurface (shader: slow wind ripples stirred by gusts, rain rings, depth fade at the bank, roughness 0.32, no mirror) hooked into Main's water plane. Globals wind_gust (WindVoice's gust, read from SoundScape.Gust) and rain_amount. Grass bend and tree sway now scale with wind_gust. SoundMix: WaterVoice (lapping sets, bank gulps, rain plinks), Frogs (4 voices, night * water). Atmosphere.WaterSound samples terrain every 2 m out to 20 m, 4x a second, for distance, amount and pan.
+- 2026-10-16 04:00: ponds in this world are only ~10 cm deep (deepest within 80 m of spawn is -1.13 vs water line -1.0), so the old 0.6 m proximity fade left them nearly invisible; water now stays 85% opaque in the shallows with a 4 cm soft rim, shallow teal to deep teal, a soft sky tint at grazing angles, specular 0.12. Rain ring crests and steeper ripples catch a little sky so rings show without shine. Lapping raised to ~6 dB under the ambience. Screenshots /mnt/project-files/screenshots/atmosphere-18-pond-{calm,windy,rain,rain-closeup,night}.png; clip /mnt/project-files/audio/atmosphere-08-pond-approach-rain-night.mp3 (walk up to a pond, stand at it, steady rain on it, night with frogs). Pond near spawn: --debug-position=-17,0.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Add pond scenes to tools/SoundPreview and render a clip; render pond screenshots (find a pond cell near spawn, use --debug-position).
+Wait for the PR's CI and Justin's view of the pond screenshots via the PM; adjust the water look if he asks.
