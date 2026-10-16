@@ -73,6 +73,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 22:40: ceramics-8 a432ab6 (Ceramics) replaces the 1da6609 cooking pot: bench + broth via ClayCheck (ceramics-7.sh with BENCH=1), crafting panel still; queued after survival-8.
 - 2026-10-16 22:45: PM rule D-145: never idle; when the queue empties, render a what's-new tour of latest main (scenes/tour.sh, in queue.jobs before the live scenes). Priority: env-2 (#175) then atmosphere-16 seasons (#173), now first and second in the queue.
 - 2026-10-16 22:55: new: claims-10 whisper/shout bafe808 (Claims): scene claims-10-voice.txt.
+- 2026-10-16 23:00: PM priority: #172 new player figure and item models on main 71f7c7c: close-ups, item row on the ground + hotbar icons (scene model-172-items.txt), walking clip; queued right after env-2. audio-2c seasons clip sent (addcf73). claims-10 queued.
 
 ## Open questions / blockers
 - (none)

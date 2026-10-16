@@ -1,0 +1,11 @@
+# #172: the new figure walking, side view. Movie at 24 fps of game time.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=3,0.55,90,0.3
+frames 360
+mark walk-start
+keydown w
+frames +96
+keyup w
+frames +12
+mark walk-end
