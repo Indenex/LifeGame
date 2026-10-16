@@ -32,49 +32,8 @@ public static partial class Module
     // than a client's view radius, so animals are already moving when they come into sight.
     const float FlockWakeRange = (World.ViewRadiusChunks + 1) * World.ChunkSize * World.CellSize;
 
-    // How each species moves and reacts; sheep keep the numbers they always had.
-    sealed class AnimalTraits
-    {
-        public float Walk, Trot, Run;
-        // Players beyond this are not noticed at all.
-        public float Notice;
-        // Closing in slower than this never alarms.
-        public float CalmSpeed;
-        // How far a herd strays from home, and how far ahead a bolting animal aims.
-        public float HomeRange, FleeAhead;
-        // How far a leader wanders at a time.
-        public float WanderMin, WanderMax;
-        // The woodland it likes best, 0 open grass to 1 deep woods (AnimalWoodland).
-        public float WoodPref;
-        // Will walk up to someone who stands still for a while.
-        public bool Curious;
-        // Inside this, anyone moving at all unsettles it, however slowly; 0 for none.
-        public float Wary;
-    }
-
-    static readonly AnimalTraits SheepTraits = new()
-    {
-        Walk = 1.0f, Trot = 1.7f, Run = 4.4f, Notice = 14f, CalmSpeed = World.SneakSpeed + 0.6f,
-        HomeRange = 12f, FleeAhead = 6f, WanderMin = 3f, WanderMax = 9f, WoodPref = 0f, Curious = true,
-    };
-
-    // Deer notice you from far off and even a careful approach unsettles them; they
-    // keep to the woodland edge and bolt far into the trees. Health 100 like a sheep:
-    // a spear strike wounds, and a skilled sneak attack may crit for a kill
-    // (Hunting.cs SneakCrit).
-    static readonly AnimalTraits DeerTraits = new()
-    {
-        Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
-        HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false,
-        // Sneaking gets you close but not into spear reach: a hunter waits, still, for
-        // deer to graze near (a still player never alarms them).
-        Wary = 10f,
-    };
-
-    // Below this health a deer stops to rest as soon as nothing close is pressing it.
-    const int WoundedRestBelow = 45;
-
-    static AnimalTraits Traits(AnimalSpecies species) => species == AnimalSpecies.Deer ? DeerTraits : SheepTraits;
+    // How each species moves, senses and what it drops lives in shared/Animals.cs (AnimalDefs).
+    static AnimalDef Traits(AnimalSpecies species) => AnimalDefs.Get((byte)species);
 
     // Anyone moving slower than this, sneakers included, never frightens a sheep.
     // Ground lower than this is water or marsh; sheep stay out of it.
@@ -183,23 +142,6 @@ public static partial class Module
         public ScheduleAt ScheduledAt;
     }
 
-    // Starting flocks: one at the edge of the clearing where players wake up, the
-    // rest further out. Each settles in the most open meadow near its spot.
-    static readonly (float X, float Z, int Size, float Search)[] SheepFlocks =
-    {
-        (4f, 3f, 5, 1f),
-        (-34f, 22f, 6, 14f),
-        (30f, -36f, 4, 14f),
-        (-42f, -30f, 5, 14f),
-    };
-
-    // Deer herds, well out from the spawn clearing, each settling at the edge of a wood.
-    static readonly (float X, float Z, int Size, float Search)[] DeerHerds =
-    {
-        (70f, 45f, 4, 22f),
-        (-60f, -75f, 3, 22f),
-    };
-
     // Starts the animal clock and places the first flocks. Safe to call on every
     // connect, so worlds created before animals existed get them too.
     static void EnsureAnimals(ReducerContext ctx)
@@ -210,13 +152,11 @@ public static partial class Module
                 ScheduledId = 0,
                 ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(AnimalTickMillis)),
             });
-        if (ctx.Db.Flock.Count == 0)
-            foreach (var (x, z, size, search) in SheepFlocks)
-                SpawnFlock(ctx, AnimalSpecies.Sheep, x, z, size, search);
-        // Deer came later (animals-14): worlds that only have sheep get their herds too.
-        if (!ctx.Db.Flock.Iter().Any(f => f.Species == AnimalSpecies.Deer))
-            foreach (var (x, z, size, search) in DeerHerds)
-                SpawnFlock(ctx, AnimalSpecies.Deer, x, z, size, search);
+        // Species added later (deer, animals-14) get their first herds in worlds that lack them.
+        foreach (var def in AnimalDefs.All)
+            if (!ctx.Db.Flock.Iter().Any(f => (byte)f.Species == def.Id))
+                foreach (var spot in def.Herds)
+                    SpawnFlock(ctx, (AnimalSpecies)def.Id, spot.X, spot.Z, spot.Size, spot.Search);
     }
 
     static void SpawnFlock(ReducerContext ctx, AnimalSpecies species, float x, float z, int size, float search)
@@ -438,7 +378,7 @@ public static partial class Module
         // Fear builds faster than it fades, but a slow, careful approach never adds up to panic.
         float calm = (calmedByStillPlayer ? 0.45f : 0.3f) * AnimalDt;
         // A badly hurt deer tires: it bolts, then stops to rest, and gives chase again when pressed.
-        if (body.Species == AnimalSpecies.Deer && mind.Health < WoundedRestBelow && fear < 0.3f) calm += 0.5f * AnimalDt;
+        if (body.Species == AnimalSpecies.Deer && mind.Health < t.RestBelowHealth && fear < 0.3f) calm += 0.5f * AnimalDt;
         mind.Nervous = Math.Clamp(mind.Nervous + fear * 0.7f - calm, 0f, 1f);
 
         float len = MathF.Sqrt(awayX * awayX + awayZ * awayZ);
@@ -580,7 +520,7 @@ public static partial class Module
         float speed = body.State == AnimalState.Run ? t.Run : d > 5f ? t.Trot : t.Walk;
         // A wounded animal can't keep up its full gallop, and lambs are a bit slower.
         if (body.State == AnimalState.Run)
-            speed *= (body.Species == AnimalSpecies.Deer ? 0.3f + 0.7f * mind.Health / 100f : 0.6f + 0.4f * mind.Health / 100f)
+            speed *= (t.RunFloor + t.RunHealthShare * mind.Health / 100f)
                 * (body.Growth < 100 ? 0.85f : 1f);
         float step = MathF.Min(speed * AnimalDt, d);
         float nx = body.X + dx / d * step, nz = body.Z + dz / d * step;
