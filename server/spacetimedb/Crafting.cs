@@ -205,13 +205,19 @@ public static partial class Module
             throw new Exception("That will not burn");
         if (CountOf(ctx, (Item)item) < 1)
             throw new Exception("You are not carrying that");
-        Take(ctx, (Item)item, 1);
 
+        // Fuel that would burn past the cap is refused and kept (D-090, D-121). The cap
+        // grows with the feeder's Firecraft; a built hearth scales fuel and cap alike.
+        float scale = 1f;
+        FireFuelScaleHook(ctx, fire.X, fire.Z, ref scale);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        long until = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now)
-            + (long)(Items.Def((Item)item).FuelSeconds * 1_000_000);
-        until = Math.Min(until, now + (long)(Fires.MaxSeconds * 1_000_000));
-        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
+        long fuel = (long)(Items.Def((Item)item).FuelSeconds * scale * 1_000_000);
+        long cap = now + (long)(Fires.MaxSecondsFor(SkillRank(ctx, pos.PlayerId, "fire.hand_drill")) * scale * 1_000_000);
+        long from = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now);
+        if (from + fuel > cap)
+            throw new Exception("The fire is burning as high as it will");
+        Take(ctx, (Item)item, 1);
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel) });
     }
 
     // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
@@ -251,6 +257,8 @@ public static partial class Module
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {
         RekindleAt(ctx, x, z);
+        float scale = 1f;
+        FireFuelScaleHook(ctx, x, z, ref scale);
         ctx.Db.Fire.Insert(new Fire
         {
             Id = 0,
@@ -260,7 +268,7 @@ public static partial class Module
             ChunkZ = World.ChunkOf(z),
             LitBy = playerId,
             LitAt = ctx.Timestamp,
-            FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * 1_000_000)),
+            FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * scale * 1_000_000)),
         });
         EnsureFireTimer(ctx);
     }

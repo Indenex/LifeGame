@@ -251,6 +251,8 @@ namespace LifeGame.Shared
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
             ClayRules.KilnStructureKind => ClayRules.KilnProcess,
+            // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
+            2 => Social.MarkProcess,
             4 => WeaveProcess,
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },

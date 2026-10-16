@@ -12,6 +12,8 @@
 // on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
 // (the same in steady rain), pondnight (at the edge at night, with frogs).
+// Seasons (audio-2): spring, summer, autumn, winter (snow on the ground), each a
+// breezy morning in light woods; add "night" for the same at night (summernight).
 // Work scenes stand still on a calm morning and work for all but the last second:
 // knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
 // (knap-fail). others: you knap while another player drills 8 m to your left
@@ -58,6 +60,8 @@ foreach (var scene in scenes)
         "approach" or "pond" => (1f, 0f, 0.45f, 0f, 0.42f),
         "pondrain" => (0.75f, 0.6f, 0.55f, 1f, 0.45f),
         "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
+        "spring" or "summer" or "autumn" or "winter" => (1f, 0f, 0.45f, 0f, 0.36f),
+        "springnight" or "summernight" or "autumnnight" or "winternight" => (0f, 0f, 0.25f, 0.1f, 0.95f),
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
     string name = parts[0].Replace("-fail", "");
@@ -79,6 +83,12 @@ foreach (var scene in scenes)
     bool workEnded = false;
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
+    // Season scenes: a breezy morning (or night) in light woods at the middle of
+    // that season; winter has snow on the ground. Other scenes are early summer.
+    string seasonName = parts[0].Replace("night", "");
+    mix.Year = seasonName switch { "spring" => 0.125f, "summer" => 0.375f, "autumn" => 0.625f, "winter" => 0.875f, _ => 0.3f };
+    mix.SnowCover = seasonName == "winter" ? 0.8f : 0f;
+    if (seasonName is "spring" or "summer" or "autumn" or "winter") mix.Foliage = 0.7f;
     int total = (int)(seconds * rate), done = 0;
     double sum = 0, nextStep = 0;
     while (done < total)
