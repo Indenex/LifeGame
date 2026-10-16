@@ -15,14 +15,17 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | nothing open |
-| Next PM action | Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
+| Waiting on Justin | Water and sky look, #66 atmosphere-10/11: Render lane rendering it, then Justin decides. Still to ask: carry-limit numbers (survival-3, shipped as default); burnt mutton 10% hunger (survival-4); toast only at new titles (skills-8). Answered 2026-10-16: D-060 felling, D-061 mat, D-062 wetness. PM decides: Shift+G bars doors (building-3, UX/UI confirms) |
+| Next PM action | Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Crafting (integration owner) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/`, CI |
+| Integration (D-058) | integration-1 take over CI and builds | session_01Rf5965nk4Lvd3f2QDteZSq records its branch | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Render (D-059) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
+| Wiki (D-063, D-064: Opus) | wiki-2 rewrite in a plain voice | new Opus session records its branch | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge |
+| Crafting | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules | #8; then claims-2 (D-044) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
