@@ -2,7 +2,7 @@
 # render camera sits 4 m to the side of the walking line (default camera yaw 45 deg,
 # so "forward" is -x,-z) and follows the player.
 client-as-puppet
-client --time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=4,1.3,90,0.9
+client --time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=4,0.6,90,0.3
 wait 35
 stroll -6 -6
 wait 1.2
