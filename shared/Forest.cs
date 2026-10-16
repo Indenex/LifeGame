@@ -28,6 +28,8 @@ namespace LifeGame.Shared
             // Hilltops open into heath, with only the odd lone tree: the trees thin out
             // early, so even the heath's edge reads as open ground.
             d *= 1f - 0.97f * SmoothStep(0.15f, 0.6f, Heath(x, z));
+            // Deer trails keep a path open through the trees (env-5).
+            d *= 1f - 0.9f * Landmarks.Trail(x, z);
             return d;
         }
 

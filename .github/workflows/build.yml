@@ -1,17 +1,33 @@
 name: Build
 
+# Doc-only changes (the Scribe's, the wiki's, tickets) start no Build at all: no server,
+# load test or runners. A change that touches anything else still runs everything.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'tickets/**'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'renders/**'
+      - 'tools/wiki-page/**'
   pull_request:
     # labeled/unlabeled so adding or removing world-wipe re-runs the checks.
     types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths-ignore:
+      - '**.md'
+      - 'tickets/**'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'renders/**'
+      - 'tools/wiki-page/**'
   workflow_dispatch:
 
-# One run per branch or PR at a time. A new push to a PR cancels that PR's older run;
-# on main the running build finishes and a newer merge replaces any build still queued.
+# A new push to a PR cancels that PR's older run. Every commit on main gets its own group, so
+# no merge ever cancels or replaces another commit's Build (a release needs each one to finish).
 concurrency:
-  group: build-${{ github.event_name }}-${{ github.ref }}
+  group: build-${{ github.event_name == 'push' && github.sha || format('{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
