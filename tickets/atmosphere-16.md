@@ -19,6 +19,8 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 18:17: Survival agrees to fold the seasonal offset into AirTemperature; their cold maxes at 2x at 0 C and below (cold x wet capped 2x), so -6 C nights are no harsher than 0 C (about 8 min without fire). They'll raise winter newcomer spawns with the PM (D-081). Snow doesn't wet players for now.
 
+- 2026-10-16 18:20: Environment: all plants use my Look materials (Grass, Foliage, TreeFoliage/TreeBark), so snow and leaf colour go in my shaders. To do here: add Look.TreeLeaves (broadleaf variant of TreeFoliage, autumn colour; GhostOf covers it) and tell Environment; key seasonal shrink/fade on INSTANCE_CUSTOM.w (0 none, 1 broadleaf canopy: thins in winter and turns in autumn, 2 flower: spring and summer only; x/y/z stay the clearing animation). No snow line until env-2.
+
 ## Open questions
 - For Justin later (with the seasons render): should falling snow wet you? Options: no (Survival's current default); yes, as half of rain's rate (recommended, so snow feels cold but not drenching); same as rain. / blockers
 - PM/Justin: test cycle length and what changes first (options sent).
