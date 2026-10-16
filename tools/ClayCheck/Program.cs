@@ -11,6 +11,8 @@
 //        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
 //        dotnet run -- <uri> <db> --kiln --jar   (the kiln run plus a storage jar: a campfire refuses it,
 //        the kiln fires it, it is set down from the build menu and stores a stack; ceramics-6)
+//        dotnet run -- <uri> <db> --pot   (instead: a coil pot fired in a campfire and filled, berries
+//        picked, berry broth simmered by the fire, taken off and eaten, the pot comes back; ceramics-7)
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -21,6 +23,7 @@ string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
 bool jarRun = args.Contains("--jar");
+bool potRun = args.Contains("--pot");
 bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
@@ -48,6 +51,8 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM kiln",
                 "SELECT * FROM structure",
                 "SELECT * FROM basket_item",
+                "SELECT * FROM simmer_pot",
+                "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
@@ -88,7 +93,7 @@ Gather(Item.Fiber, kilnRun ? 12u : 4u);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : 12u;
+uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 8u : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -105,6 +110,7 @@ while (CountOf(Item.Clay) < clayWanted)
 Log($"Dug {CountOf(Item.Clay)} clay");
 
 if (kilnRun) return KilnCheck();
+if (potRun) return PotCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -374,6 +380,111 @@ int KilnCheck()
     Log("STAGE kiln-done");
     if (jarRun) JarCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
+    conn.Disconnect();
+    return 0;
+}
+
+// Cooking in a pot (ceramics-7): a coil pot dried by a fire and fired in it,
+// filled at the water, berries picked, broth simmered, taken off and eaten.
+int PotCheck()
+{
+    while (CountOf(Item.CleanClay) < 4) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    float fx = 2f, fz = 2f;
+    WalkTo(fx, fz, 1.2f);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesBefore = conn.Db.Fire.Count;
+    Craft("fire.hand_drill", 1f, null);
+    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
+    fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+    KeepFireGoing();
+    Craft("clay.coil_pot", 0.9f, null);
+    var pot = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot)
+        ?? throw new Exception("no coil pot drying");
+    var watch = Stopwatch.StartNew();
+    while (MoistureOf(pot.Id) > ClayRules.SafeToFire)
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("coil pot never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    KeepFireGoing();
+    WalkTo(pot.X, pot.Z, 1.2f);
+    lastError = null;
+    conn.Reducers.TendClay(pot.Id, false);
+    Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(pot.Id)?.Stage == (byte)ClayStage.Firing, 3, "the coil pot to go in the fire");
+    if (lastError != null) Fail($"firing: {lastError}");
+    watch.Restart();
+    while (conn.Db.ClayPiece.Id.Find(pot.Id) != null)
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(6)) Fail("firing never finished");
+        Pump(() => false, 2, null);
+    }
+    if (!news.Last().Contains("whole"))
+    {
+        Log("The coil pot cracked in the fire (a chance); pot cooking not checked this run");
+        conn.Disconnect();
+        return 0;
+    }
+    Gather(Item.CoilPot, 1);
+    WalkTo(waterX, waterZ, 1.5f);
+    lastError = null;
+    conn.Reducers.FillPots();
+    Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
+    if (lastError != null) Fail($"filling: {lastError}");
+    Log("STAGE pot-of-water");
+
+    // Berries from the nearest ripe bushes.
+    watch.Restart();
+    while (CountOf(Item.Berries) < 3)
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(3)) Fail("could not pick 3 berries");
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now)
+            .OrderBy(b => DistanceTo(b.X, b.Z, x, z)).FirstOrDefault();
+        if (bush == null) { Pump(() => false, 2, null); continue; }
+        WalkTo(bush.X, bush.Z, 1.5f);
+        lastError = null;
+        uint before = CountOf(Item.Berries);
+        conn.Reducers.Forage(bush.Id);
+        Pump(() => lastError != null || CountOf(Item.Berries) > before, 3, "berries");
+        if (lastError == "Still working") Pump(() => false, 0.7f, null);
+    }
+    Log($"Picked {CountOf(Item.Berries)} berries");
+
+    // A fresh fire if this one died while we were away.
+    fire = conn.Db.Fire.Id.Find(fire.Id) ?? fire;
+    KeepFireGoing();
+    WalkTo(fire.X + 1.2f, fire.Z, 0.3f);
+    Craft("cook.broth", 0, null);
+    Pump(() => conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == myId), 5, "the broth to go on");
+    var simmer = conn.Db.SimmerPot.Iter().First(p => p.PlayerId == myId);
+    Log($"Broth simmering by the fire at quality {simmer.Quality}");
+    Log("STAGE broth-simmering");
+
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null, 3, "an early take-off to be refused");
+    Log($"Too early: {lastError}");
+    Pump(() => false, ClayRules.BrothSeconds + 1, null);
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null || CountOf(Item.PotOfBroth) == 1, 3, "the broth to come off");
+    if (lastError != null) Fail($"taking the pot off: {lastError}");
+    Log("STAGE broth-done");
+
+    uint pots = CountOf(Item.CoilPot);
+    lastError = null;
+    conn.Reducers.Eat((ushort)Item.PotOfBroth);
+    Pump(() => lastError != null || CountOf(Item.PotOfBroth) == 0, 3, "eating the broth");
+    if (lastError != null) Fail($"eating: {lastError}");
+    Pump(() => CountOf(Item.CoilPot) == pots + 1, 3, "the empty pot back");
+    Log("Ate the broth; the coil pot came back");
+    Log("STAGE broth-eaten");
+    Log("Pot check passed: a fired pot cooks broth that feeds you");
     conn.Disconnect();
     return 0;
 }

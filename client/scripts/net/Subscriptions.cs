@@ -32,6 +32,7 @@ public static class Subscriptions
         $"SELECT * FROM roast WHERE {range}",
         $"SELECT * FROM clay_piece WHERE {range}",
         $"SELECT * FROM kiln WHERE {range}",
+        $"SELECT * FROM simmer_pot WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
         "SELECT * FROM my_craft_job",
