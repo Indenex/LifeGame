@@ -1,0 +1,12 @@
+# ui-9 live (18b4bda, real server): A's screen. Camera = A, puppet = B. Driven live:
+# A presses G facing B; B answers, adds berries and accepts by reducer.
+client --time-of-day=0.45 --rain=0 --cloud=0.2
+name B
+find
+wait 30
+give 1 6 50 camera
+give 160 6 50
+near 2.2
+wait 3
+snap
+live

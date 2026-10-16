@@ -17,6 +17,7 @@
 //                     seconds in software rendering; keep the best frame)
 //   clip 6            record 6 s of the screen to <snap prefix>-<n>.mp4
 //   give 193 8 60     the database owner puts 8 of item 193 at quality 60 in my hands
+//                     ("give 1 5 50 camera": in the camera player's hands, after find)
 //   craft cord.spin_wool   start a recipe (as the server's own default score) and wait for it
 //   craftloop knap.flake +72   (movie scenes) start the same job again and again
 //                     until the camera client has written 72 more frames: the
@@ -29,6 +30,11 @@
 //   click 660 850     move there and left-click
 //   live              take further steps from the file in PUPPET_LIVE (appended
 //                     while running, one step per line) until a line "end"
+//   trade-ask         ask the camera player to trade (needs a commit with trading)
+//   trade-answer yes  answer the open trade (yes / no)
+//   trade-add 8 5     put 5 of item 8 into my side of the trade
+//   trade-accept      accept the trade as it stands
+//   trade-cancel      call it off
 //   mouse 660 850     move the mouse there in the camera client's window (tooltips)
 //   frames 300 / frames +72   (movie scenes) wait until the camera client has
 //                     written that many frames (or that many more)
@@ -66,7 +72,11 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire" });
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire"
+#if HAS_TRADE
+                , "SELECT * FROM my_trade"
+#endif
+            });
     })
     .OnConnectError(e => { Console.WriteLine($"puppet: connect error {e.Message}"); Environment.Exit(1); })
     .Build();
@@ -214,7 +224,9 @@ bool Step(string line)
         {
             var n = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             string quality = n.Length > 2 ? n[2] : "50";
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{me}, {n[0]}, {quality}, {n[1]})\"");
+            var owner = me;
+            if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]})\"");
             Pump(1.0);
             break;
         }
@@ -278,6 +290,32 @@ bool Step(string line)
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest} click 1");
             Pump(0.3);
             break;
+#if HAS_TRADE
+        case "trade-ask":
+            conn.Reducers.AskTrade(target);
+            Pump(1.0);
+            break;
+        case "trade-answer":
+        case "trade-add":
+        case "trade-accept":
+        case "trade-cancel":
+        {
+            var trade = conn.Db.MyTrade.Iter().OrderByDescending(t => t.Id).FirstOrDefault();
+            if (trade == null) { Console.WriteLine("puppet: server said no open trade"); break; }
+            if (verb == "trade-answer") conn.Reducers.AnswerTrade(trade.Id, rest == "yes");
+            else if (verb == "trade-accept") conn.Reducers.AcceptTrade(trade.Id, trade.Version);
+            else if (verb == "trade-cancel") conn.Reducers.CancelTrade(trade.Id);
+            else
+            {
+                var t = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                ushort item = ushort.Parse(t[0]);
+                var held = conn.Db.MyInventory.Iter().FirstOrDefault(i => i.Item == item);
+                conn.Reducers.SetTradeItem(trade.Id, item, held?.Quality ?? 0, uint.Parse(t[1]));
+            }
+            Pump(1.0);
+            break;
+        }
+#endif
         case "mouse":
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
             Pump(0.3);

@@ -7,6 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Trade steps only build against commits whose server has trading (claims-7). -->
+  <PropertyGroup Condition="Exists('../../../client/module_bindings/Reducers/AskTrade.g.cs')">
+    <DefineConstants>$(DefineConstants);HAS_TRADE</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="SpacetimeDB.ClientSDK" Version="2.12.*" />
     <Compile Include="../../../client/module_bindings/**/*.cs" LinkBase="Bindings" />
