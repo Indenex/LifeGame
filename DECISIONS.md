@@ -630,3 +630,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-154 — 2026-10-16 — Crucial look-and-feel choices wait for Justin's pick
 **Decision:** Crucial look-and-feel choices (player/creature model style, overall art style, UI look, world palette) are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145 never idle). D-142 (merges don't wait on renders) does not cover these choices. Context: #172 merged style A as a default without Justin's pick; that pick is now being taken.
 **Who:** Justin ("For something as crucial as a player model style I want at least the proposed descriptions of things even if a render isn't available.")
+
+## D-155 — 2026-10-16 — Chore check: campfires need feeding, hand tools wear
+**Decision:** A follow-up to D-148. Open campfires keep needing feeding (sticks 90 s, logs 6 min). Building tools/stations and structures have no durability, but hand tools and worn equipment do have durability (new; Crafting will propose how it plays, with Animals for clothing).
+**Who:** Justin (as relayed by the PM)
+
+## D-156 — 2026-10-16 — Next animal: red deer
+**Decision:** The next animal is the red deer (animals-14): shy woodland-edge herds that bolt at 30 m, hunted for venison, hide and antler.
+**Who:** Justin (as relayed by the PM)
+
+## D-157 — 2026-10-16 — Claim fences
+**Decision:** claims-12: members fence the soft border of a claim with a members-only gate, built with House building's Fence/Gate (Building owns the structure and model, Claims owns the membership rule and placement). The lived-in marker was not chosen.
+**Who:** Justin (as relayed by the PM)
+
+## D-158 — 2026-10-16 — Model style: Justin picks from renders
+**Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
+**Who:** Justin (as relayed by the PM)
