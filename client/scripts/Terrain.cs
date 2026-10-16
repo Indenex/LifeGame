@@ -58,7 +58,7 @@ public partial class Terrain : Node3D
     float BaseHeight(long key, int x, int z)
     {
         if (baseHeights.TryGetValue(key, out var h)) return h;
-        int side = (2 * ViewRadius + 1) * World.ChunkSize + 2;
+        int side = (2 * Math.Max(focusRadius, 3) + 1) * World.ChunkSize + 2;
         if (baseHeights.Count > Math.Max(60_000, 2 * side * side)) baseHeights.Clear();
         return baseHeights[key] = World.BaseHeight(x, z);
     }
