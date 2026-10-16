@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-24-falling-leaves
-PR: (see Progress log)
+PR: #349
 
 ## Goal
 Justin's pick (2026-10-16, via the PM): leaves drift down under broadleaf trees in autumn and petals fall in spring, more in wind. Keep it cheap: GPU particles, only near the player. Done: a Render lane autumn clip in woods, and a PR green.
@@ -19,4 +19,4 @@ Justin's pick (2026-10-16, via the PM): leaves drift down under broadleaf trees 
 - (none)
 
 ## Next step
-Open the PR, then send a Render request: autumn woods clip with --season=0.62 --wind=0.5 (and a spring one with --season=0.12).
+Wait for #349 CI and send the PM the green sha. Render clip requested (autumn woods --season=0.62 --wind=0.5 --leaves=1; spring optional). Tune size, count and fall speed from it.
