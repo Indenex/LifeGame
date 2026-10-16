@@ -4,9 +4,9 @@ using Godot;
 namespace LifeGame;
 
 // The Esc menu's Options page (D-097): one slider per kind of sound, with music on or
-// off under Music. The levels live in the Audio lane's SoundScape, which saves them and
-// eases every change so dragging never clicks; new players start each at half.
-// Esc or Back returns to the menu.
+// off under Music. The levels live in SoundLevels, which saves them and hands them on
+// (the Audio lane eases each change so dragging never clicks); new players start each
+// at half. Esc or Back returns to the menu.
 public partial class OptionsPage : Control
 {
     // Back to the menu (PauseMenu sets it).
@@ -14,14 +14,14 @@ public partial class OptionsPage : Control
     // The world's soundscape; PauseMenu sets it.
     public Func<SoundScape?> Sound = () => null;
 
-    record Level(string Label, Func<SoundScape, float> Get, Action<SoundScape, float> Set);
+    record Level(string Label, string Key);
 
     static readonly Level[] Levels =
     {
-        new("Master", s => s.MasterVolume, (s, v) => s.MasterVolume = v),
-        new("Music", s => s.MusicVolume, (s, v) => s.MusicVolume = v),
-        new("Effects", s => s.EffectsVolume, (s, v) => s.EffectsVolume = v),
-        new("Ambience", s => s.AmbienceVolume, (s, v) => s.AmbienceVolume = v),
+        new("Master", "master"),
+        new("Music", "music"),
+        new("Effects", "effects"),
+        new("Ambience", "ambience"),
     };
 
     readonly HSlider[] sliders = new HSlider[Levels.Length];
@@ -50,13 +50,13 @@ public partial class OptionsPage : Control
         {
             var level = Levels[i];
             int at = i;
-            sliders[i] = ControlsPage.SliderRow(column, level.Label, 0, 1, 0.01, 0.5, v =>
+            sliders[i] = ControlsPage.SliderRow(column, level.Label, 0, 1, 0.01, SoundLevels.Get(level.Key), v =>
             {
-                if (Sound() is { } sound) level.Set(sound, (float)v);
+                SoundLevels.Set(level.Key, (float)v);
                 percents[at].Text = Percent(v);
             });
             // The level as a percentage, beside the slider.
-            percents[i] = new Label { Text = Percent(0.5), CustomMinimumSize = new Vector2(48, 0) };
+            percents[i] = new Label { Text = Percent(SoundLevels.Get(level.Key)), CustomMinimumSize = new Vector2(48, 0) };
             Hud.Soft(percents[i], 16, 0.7f);
             sliders[i].GetParent().AddChild(percents[i]);
 
@@ -81,7 +81,7 @@ public partial class OptionsPage : Control
     {
         for (int i = 0; i < Levels.Length; i++)
         {
-            double v = Sound() is { } sound ? Levels[i].Get(sound) : 0.5;
+            double v = SoundLevels.Get(Levels[i].Key);
             sliders[i].SetValueNoSignal(v);
             percents[i].Text = Percent(v);
         }

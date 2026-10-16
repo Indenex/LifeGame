@@ -30,9 +30,8 @@ public partial class PauseMenu : CanvasLayer
     public override void _Ready()
     {
         Layer = 4;
-        // The Master bus stays at full; the Options page's Master level lives in the
-        // soundscape (D-097).
-        AudioServer.SetBusVolumeDb(0, 0f);
+        SoundLevels.ApplyMaster();
+        SoundLevels.Changed += () => SoundLevels.ApplyTo(Sound());
 
         root = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -71,7 +70,6 @@ public partial class PauseMenu : CanvasLayer
         options.Back = HideControls;
         options.Sound = () => Sound();
         root.AddChild(options);
-        Callable.From(MoveOldVolume).CallDeferred();
         // Saved keys and camera settings, once every lane has bound its own keys.
         Callable.From(ControlsPage.ApplySaved).CallDeferred();
 
@@ -110,6 +108,7 @@ public partial class PauseMenu : CanvasLayer
 
     public override void _Process(double delta)
     {
+        ApplySoundLevels();
         alpha = Mathf.MoveToward(alpha, IsOpen ? 1f : 0f, (float)delta * 6f);
         root.Modulate = new Color(1, 1, 1, alpha);
         root.Visible = alpha > 0f;
@@ -151,13 +150,14 @@ public partial class PauseMenu : CanvasLayer
         column.Visible = true;
     }
 
-    // The old menu's Volume slider set the Master bus and saved [sound] volume here.
-    // A player who had set it keeps that level as the soundscape's Master, once.
-    void MoveOldVolume()
+    // The soundscape may appear after the menu; it gets the saved levels as soon as it does.
+    SoundScape? leveled;
+
+    void ApplySoundLevels()
     {
-        if (Sound() is not { } sound || !Settings.Has("sound", "volume")) return;
-        sound.MasterVolume = Settings.Get("sound", "volume", 0.5f);
-        Settings.Clear("sound");
+        if (Sound() is not { } sound || sound == leveled) return;
+        leveled = sound;
+        SoundLevels.ApplyTo(sound);
     }
 
     new void Hide() => IsOpen = false;
