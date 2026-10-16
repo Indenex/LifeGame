@@ -41,10 +41,13 @@ public partial class SoundScape : Node
     public float WaterPan { set => mix.WaterPan = value; }
     // How hard the wind is gusting in what is heard, 0 to 1.
     public float Gust => mix.Gust;
-    // Music settings, remembered between sessions. The volume runs 0 to 1 and eases
-    // to a new level over a second or so.
+    // Sound settings, remembered between sessions: music on or off, and the four
+    // sliders (D-097), each 0 to 1 with 0.5 (the designed mix) for a new player.
     public bool MusicOn { get => mix.MusicOn; set { mix.MusicOn = value; Save(); } }
-    public float MusicVolume { get => mix.MusicVolume; set { mix.MusicVolume = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float MasterVolume { get => mix.MasterLevel; set { mix.MasterLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float MusicVolume { get => mix.MusicLevel; set { mix.MusicLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float EffectsVolume { get => mix.EffectsLevel; set { mix.EffectsLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float AmbienceVolume { get => mix.AmbienceLevel; set { mix.AmbienceLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
 
     const string SettingsPath = "user://sound.cfg";
 
@@ -53,14 +56,24 @@ public partial class SoundScape : Node
         var config = new ConfigFile();
         if (config.Load(SettingsPath) != Error.Ok) return;
         mix.MusicOn = (bool)config.GetValue("music", "on", true);
-        mix.MusicVolume = Mathf.Clamp((float)config.GetValue("music", "volume", 1f), 0f, 1f);
+        // The old [music] volume (full by default) is not carried over: everyone
+        // starts the new sliders at the middle (D-097).
+        mix.MasterLevel = Level(config, "master");
+        mix.MusicLevel = Level(config, "music");
+        mix.EffectsLevel = Level(config, "effects");
+        mix.AmbienceLevel = Level(config, "ambience");
     }
+
+    static float Level(ConfigFile config, string key) => Mathf.Clamp((float)config.GetValue("volume", key, 0.5f), 0f, 1f);
 
     void Save()
     {
         var config = new ConfigFile();
         config.SetValue("music", "on", mix.MusicOn);
-        config.SetValue("music", "volume", mix.MusicVolume);
+        config.SetValue("volume", "master", mix.MasterLevel);
+        config.SetValue("volume", "music", mix.MusicLevel);
+        config.SetValue("volume", "effects", mix.EffectsLevel);
+        config.SetValue("volume", "ambience", mix.AmbienceLevel);
         config.Save(SettingsPath);
     }
 
@@ -86,6 +99,11 @@ public partial class SoundScape : Node
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
+    public void Working(Work kind) => events.Enqueue(m => m.Working(kind));
+    public void WorkDone(Work kind, bool failed) => events.Enqueue(m => m.WorkDone(kind, failed));
+    public void OtherWorking(uint player, Work kind) => events.Enqueue(m => m.OtherWorking(player, kind));
+    public void OtherWorkDone(uint player, Work kind, bool failed) => events.Enqueue(m => m.OtherWorkDone(player, kind, failed));
+    public void OtherPlace(uint player, float gain, float pan) => events.Enqueue(m => m.OtherPlace(player, gain, pan));
 
     void Synthesize()
     {
