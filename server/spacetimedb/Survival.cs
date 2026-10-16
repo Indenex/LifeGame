@@ -187,6 +187,29 @@ public static partial class Module
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 
+    // When each player last reported a stretch of running (Endurance, D-123).
+    [SpacetimeDB.Table(Accessor = "RunReport")]
+    public partial struct RunReport
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public Timestamp At;
+    }
+
+    // The client ran for Stamina.RunPerUse seconds: train Endurance. Reports closer
+    // together than a stretch could take are ignored, so a client can't speed it up.
+    [SpacetimeDB.Reducer]
+    public static void Ran(ReducerContext ctx)
+    {
+        var player = RequirePlayer(ctx);
+        var last = ctx.Db.RunReport.PlayerId.Find(player.PlayerId);
+        if (last is { } r && SecondsBetween(r.At, ctx.Timestamp) < Stamina.RunPerUse * 0.9f) return;
+        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp };
+        if (last is null) ctx.Db.RunReport.Insert(row);
+        else ctx.Db.RunReport.PlayerId.Update(row);
+        OnProcessPerformed(ctx, player.PlayerId, Stamina.RunProcess, Items.RawQuality, false);
+    }
+
     [SpacetimeDB.Reducer]
     public static void Forage(ReducerContext ctx, ulong bushId)
     {

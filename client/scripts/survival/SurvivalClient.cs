@@ -40,6 +40,8 @@ public partial class SurvivalClient : Node
     float walkedFor;
     // Seconds since you last ran; refill waits a moment (D-111).
     float rested = 999f;
+    // Seconds run since the last Endurance report.
+    float ranFor;
     // Deaths when the new-arrival half hour was last seen running, null once it ends.
     uint? arrivalDeaths;
     public bool Mourning => needsHud.Mourning;
@@ -192,6 +194,11 @@ public partial class SurvivalClient : Node
     {
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
         rested = running ? 0f : rested + dt;
+        if (running && (ranFor += dt) >= Stamina.RunPerUse)
+        {
+            ranFor -= Stamina.RunPerUse;
+            conn?.Reducers.Ran();
+        }
         bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
         // "Hold Shift to run" shows once, the first time you walk on for a while.
         walkedFor = moving && !sneak ? walkedFor + dt : 0f;
@@ -204,8 +211,14 @@ public partial class SurvivalClient : Node
         return speed * WalkFactor;
     }
 
-    // The skill rank stamina grows with. 0 until the PM picks which skill (survival-7).
-    static int StaminaRank() => 0;
+    // Endurance (D-123): stamina grows with its rank, and running trains it.
+    int StaminaRank()
+    {
+        if (conn == null) return 0;
+        foreach (var skill in conn.Db.MySkills.Iter())
+            if (skill.Spec == Stamina.Skill) return Skills.Rank(skill.Points);
+        return 0;
+    }
 
     // Where the player's feet are on screen, or null when the camera can't see them.
     Vector2? FeetOnScreen()
