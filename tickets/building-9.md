@@ -19,8 +19,10 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
   - Client: `StructureModel.Hearth.cs` (stone ring, clay surround and bowl) and a placement hint.
   - BuildTest clay-hut adds a hearth: refused outside, built inside by both, a fire lit beside it sits on it with 1350 s of fuel (900 × 1.5). It passed locally with Crafting's hooks patched in uncommitted. The patch is in the scratchpad as crafting-hearth-hooks.patch and was sent to Crafting.
 
+- 2026-10-16 19:15: Crafting pushed the hooks in #122 (crafting-fire-cap). On a scratch merge of building-9 with #122, BuildTest clay-hut passes: the fire sits on the hearth with 1800 s of fuel (#122's StartSeconds × 1.5).
+
 ## Open questions / blockers
-- Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) agreed 18:58 to add both hooks in their #122 (crafting-14) with the agreed signatures; they'll send the sha. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
+- Crafting's #122 declares and calls both hooks; tested. Building-9 waits for #122 and #153 to merge. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
 When Crafting's hook declarations reach main and #153 has merged: merge main into claude/house-building-8ueqz2 along with this branch, run all checks, open the building-9 PR and request a render.
