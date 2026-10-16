@@ -15,9 +15,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16: opened PR #87; sent the PM the link, three sample sentences and a terseness question.
 - 2026-10-16 17:00: #87 merged; Justin chose "As is" for the tone; PM republished the web page. Done.
 - 2026-10-16 17:15: PM: the wiki must match main. Removed the sleeping mat (#61), wetness (#75) and tree felling (#70) lines; none is on main yet. D-065..D-068 need no wiki text (the wiki does not mention skill toasts).
+- 2026-10-16 17:35: PM: #75 wetness, #70 chopping, #71 chat bubbles and /me, #47 fire time-left prompt merged; added their wiki lines (no numbers). Sleeping mat (#61) still pending.
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).
 
 ## Next step
-When the PM says #61 (sleeping mat), #75 (wetness) or #70 (tree felling) merged, re-add its wiki line (needs.md death and wetness, building-and-claims.md, crafting-and-skills.md) on a fresh branch from main and send the PM the PR link.
+When the PM says #61 (sleeping mat) merged, re-add its lines (needs.md death section, building-and-claims.md) on a fresh branch from main and send the PM the PR link.
