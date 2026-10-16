@@ -5,58 +5,101 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Where a piece of clothing goes on the body (D-074). Body and feet to start; more
-// slots (head, hands, back) can follow without changing the panel's shape much.
-public enum WearSlot : byte { Body = 0, Feet = 1 }
+// A piece of clothing, worn or carried, as the panel shows it. Slot and Effect come
+// from shared/Clothing.cs (Animals lane), so the panel and the server agree.
+public record WornPiece(Item Item, byte Quality, ClothingSlot Slot)
+{
+    public string Effect => Clothing.Find((ushort)Item)?.Effect ?? "";
+    // "6% less cold" at this piece's quality.
+    public string Amount => Clothing.Percent((ushort)Item, Quality);
+}
 
-// A piece of clothing, worn or carried. Effect is a short plain line for the panel
-// ("A little warmer"); numbers stay off it (D-075 keeps them small and they change).
-public record Wearable(Item Item, byte Quality, string Name, WearSlot Slot, string Effect);
-
-// What the equipment panel talks to. The server side is animals-9 (Animals lane, which
-// sends the worn-slots contract); until it lands, MockEquipLink stands in, and the real
-// link implements this over the generated bindings.
+// What the equipment panel (D-074) talks to: animals-9 on the server through
+// ServerEquipLink, or MockEquipLink for screenshots.
 public interface IEquipLink
 {
     // What you wear in a slot, or null.
-    Wearable? Worn(WearSlot slot);
+    WornPiece? Worn(ClothingSlot slot);
     // What you carry that could go in a slot.
-    IEnumerable<Wearable> Carried(WearSlot slot);
-    void Wear(Wearable piece);
-    void TakeOff(WearSlot slot);
-    // A server refusal ("Your hands are full") as one line for the HUD.
+    IEnumerable<WornPiece> Carried(ClothingSlot slot);
+    // The server picks the slot and swaps out what was there.
+    void Wear(WornPiece piece);
+    void TakeOff(ClothingSlot slot);
+    // A line for the HUD ("You put on the wool tunic").
     event Action<string>? Said;
 }
 
-// Pretend clothes for screenshots and for building the panel before the server lands.
-// Leather and wool stand in for the real items' pictures until Animals adds them.
+// Pretend clothes for screenshots: a tunic and foot wraps, plus a rougher tunic to swap.
 public sealed class MockEquipLink : IEquipLink
 {
-    readonly Dictionary<WearSlot, Wearable> worn = new();
-    readonly List<Wearable> carried = new()
+    readonly Dictionary<ClothingSlot, WornPiece> worn = new();
+    readonly List<WornPiece> carried = new()
     {
-        new(Item.Leather, 55, "Leather wrap", WearSlot.Body, "A little warmer"),
-        new(Item.Wool, 40, "Wool tunic", WearSlot.Body, "A little warmer, and dries faster"),
-        new(Item.SheepHide, 50, "Hide shoes", WearSlot.Feet, "Warmer feet; wading chills you less"),
+        new(Item.WoolTunic, 70, ClothingSlot.Body),
+        new(Item.WoolTunic, 25, ClothingSlot.Body),
+        new(Item.LeatherWraps, 50, ClothingSlot.Feet),
     };
 
     public event Action<string>? Said;
 
-    public Wearable? Worn(WearSlot slot) => worn.GetValueOrDefault(slot);
-    public IEnumerable<Wearable> Carried(WearSlot slot) => carried.Where(w => w.Slot == slot);
+    public WornPiece? Worn(ClothingSlot slot) => worn.GetValueOrDefault(slot);
+    public IEnumerable<WornPiece> Carried(ClothingSlot slot) => carried.Where(w => w.Slot == slot);
 
-    public void Wear(Wearable piece)
+    public void Wear(WornPiece piece)
     {
         if (!carried.Remove(piece)) return;
         if (worn.Remove(piece.Slot, out var old)) carried.Add(old);
         worn[piece.Slot] = piece;
-        Said?.Invoke($"You put on the {piece.Name.ToLowerInvariant()}");
+        Said?.Invoke(EquipmentPanel.PutOn(piece.Item));
     }
 
-    public void TakeOff(WearSlot slot)
+    public void TakeOff(ClothingSlot slot)
     {
         if (!worn.Remove(slot, out var old)) return;
         carried.Add(old);
-        Said?.Invoke($"You take off the {old.Name.ToLowerInvariant()}");
+        Said?.Invoke(EquipmentPanel.TookOff(old.Item));
+    }
+}
+
+// The real link: my_worn for what you wear, my_inventory for what you could put on,
+// and the Wear and TakeOff reducers. Server errors ("You can't wear that") reach the
+// HUD through Main's unhandled reducer error note.
+public sealed class ServerEquipLink : IEquipLink
+{
+    readonly SpacetimeDB.Types.DbConnection conn;
+    public event Action<string>? Said;
+
+    public ServerEquipLink(SpacetimeDB.Types.DbConnection conn)
+    {
+        this.conn = conn;
+        // Only changes you asked for are noted, not the rows that arrive when you log in.
+        // A swap deletes and inserts in one go, so only the put-on line shows.
+        conn.Db.MyWorn.OnInsert += (_, w) => { if (asked) Said?.Invoke(EquipmentPanel.PutOn((Item)w.Item)); asked = false; };
+        conn.Db.MyWorn.OnDelete += (_, w) => { if (asked && takingOff) Said?.Invoke(EquipmentPanel.TookOff((Item)w.Item)); if (takingOff) asked = false; };
+    }
+
+    bool asked, takingOff;
+
+    public WornPiece? Worn(ClothingSlot slot) =>
+        conn.Db.MyWorn.Iter().FirstOrDefault(w => w.Slot == (byte)slot) is { } w
+            ? new WornPiece((Item)w.Item, w.Quality, slot)
+            : null;
+
+    public IEnumerable<WornPiece> Carried(ClothingSlot slot) => conn.Db.MyInventory.Iter()
+        .Where(i => i.Count > 0 && Clothing.Find(i.Item)?.Slot == slot)
+        .Select(i => (i.Item, i.Quality)).Distinct()
+        .Select(k => new WornPiece((Item)k.Item, k.Quality, slot));
+
+    public void Wear(WornPiece piece)
+    {
+        asked = true;
+        takingOff = false;
+        conn.Reducers.Wear((ushort)piece.Item, piece.Quality);
+    }
+
+    public void TakeOff(ClothingSlot slot)
+    {
+        asked = takingOff = true;
+        conn.Reducers.TakeOff((byte)slot);
     }
 }

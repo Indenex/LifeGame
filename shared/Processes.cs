@@ -15,6 +15,7 @@ namespace LifeGame.Shared
         Strike, // knap: strike when the mark is in the sweet spot
         Shape,  // pinch a pot: hold to thin the wall, release in the sweet spot
         Coil,   // build a coil pot: lay each coil as the turning pot comes round
+        Spin,   // spin yarn: flick the drop spindle as it slows, before it stops (Animals, D-070)
     }
 
     // What a finished process makes.
@@ -154,6 +155,42 @@ namespace LifeGame.Shared
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
                 Seconds = 6, Outcome = Outcome.Placed,
+            },
+
+            // Wool (Animals lane): a stick and a stone whorl make a drop spindle; the
+            // spindle twists raw wool into yarn, and yarn is woven over a stick frame
+            // into cloth. Spinning and weaving train Toolmaking with cord and baskets.
+            new ProcessDef
+            {
+                Id = "carve.drop_spindle", Name = "Make a drop spindle", Doing = "Fitting a stone whorl onto a stick", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 6, Makes = Item.DropSpindle,
+            },
+            new ProcessDef
+            {
+                Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Wool, 2) }, NeedsTool = ItemTags.Spindle,
+                Seconds = 10, Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f,
+            },
+            new ProcessDef
+            {
+                Id = "weave.wool_cloth", Name = "Weave wool cloth", Doing = "Weaving yarn over a stick frame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Yarn, 4), new Ingredient(Item.Stick, 2) },
+                Seconds = 20, Makes = Item.WoolCloth,
+            },
+
+            // Clothing (Animals lane): carried clothing is worn and slows the cold (see Clothing.cs).
+            new ProcessDef
+            {
+                Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 25, Makes = Item.WoolTunic,
+            },
+            new ProcessDef
+            {
+                Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 10, Makes = Item.LeatherWraps,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,

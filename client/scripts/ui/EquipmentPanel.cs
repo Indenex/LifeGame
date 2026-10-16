@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -9,7 +10,7 @@ namespace LifeGame;
 // there. I opens and closes it; Esc closes. Main sets Link and Note.
 public partial class EquipmentPanel : CanvasLayer
 {
-    // Talks to the server (animals-9); a mock until that lands.
+    // Talks to the server (animals-9) once Main calls Attach; a mock until then.
     public IEquipLink Link = new MockEquipLink();
     // A short line for the HUD ("You put on the wool tunic").
     public Action<string> Note = _ => { };
@@ -19,15 +20,27 @@ public partial class EquipmentPanel : CanvasLayer
 
     public bool IsOpen => panel.Visible;
 
+    // Swaps the mock for the server link once Main has a connection; a
+    // --screenshot-equip preview keeps the mock.
+    public void Attach(IEquipLink link)
+    {
+        if (previewing) return;
+        Link = link;
+        Link.Said += line => Note(line);
+        live = true;
+        shown = "";
+    }
+    bool previewing;
+
     Control panel = null!;
-    readonly System.Collections.Generic.Dictionary<WearSlot, Button> slots = new();
+    readonly System.Collections.Generic.Dictionary<ClothingSlot, Button> slots = new();
     Label slotTitle = null!, wearing = null!, effect = null!;
     Button takeOff = null!;
     VBoxContainer choices = null!;
-    WearSlot selected = WearSlot.Body;
+    ClothingSlot selected = ClothingSlot.Body;
     string shown = "";
-    // Until the server side (animals-9) lands, I only opens the pretend wardrobe when
-    // asked to (--mock-equip or a --screenshot-equip preview), so playtests never show it.
+    // I opens the panel once connected (Attach), or on the pretend wardrobe with
+    // --mock-equip or a --screenshot-equip preview.
     bool live;
 
     public override void _Ready()
@@ -43,11 +56,11 @@ public partial class EquipmentPanel : CanvasLayer
         // --screenshot-equip opens the panel with a tunic on and shoes to hand;
         // =feet picks the feet slot.
         foreach (var arg in OS.GetCmdlineUserArgs())
-            if (arg.StartsWith("--screenshot-equip"))
+            if (arg.StartsWith("--screenshot-equip") && (previewing = true))
                 GetTree().CreateTimer(1.5).Timeout += () =>
                 {
-                    if (Link.Carried(WearSlot.Body).FirstOrDefault(w => w.Name == "Wool tunic") is { } tunic) Link.Wear(tunic);
-                    if (arg.EndsWith("=feet")) selected = WearSlot.Feet;
+                    if (Link.Carried(ClothingSlot.Body).FirstOrDefault() is { } tunic) Link.Wear(tunic);
+                    if (arg.EndsWith("=feet")) selected = ClothingSlot.Feet;
                     Open();
                 };
     }
@@ -76,7 +89,14 @@ public partial class EquipmentPanel : CanvasLayer
     public override void _Process(double delta)
     {
         if (IsOpen) Refresh();
+        // The first time you carry something to wear, the one-time hint teaches I.
+        else if (live && !hinted && Enum.GetValues<ClothingSlot>().Any(s => Link.Carried(s).Any()))
+        {
+            hinted = true;
+            Hints.Request(NEquipment);
+        }
     }
+    bool hinted;
 
     // --- Layout ------------------------------------------------------------
 
@@ -93,8 +113,8 @@ public partial class EquipmentPanel : CanvasLayer
         // The figure, with a slot over each part that can be dressed.
         var doll = new EquipmentFigure { CustomMinimumSize = new Vector2(220, 380) };
         columns.AddChild(doll);
-        AddSlot(doll, WearSlot.Body, new Vector2(110, 150));
-        AddSlot(doll, WearSlot.Feet, new Vector2(110, 338));
+        AddSlot(doll, ClothingSlot.Body, new Vector2(110, 150));
+        AddSlot(doll, ClothingSlot.Feet, new Vector2(110, 338));
 
         // The chosen slot: what's on it, what it does, and what you could wear there.
         var side = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
@@ -134,7 +154,7 @@ public partial class EquipmentPanel : CanvasLayer
         return outer;
     }
 
-    void AddSlot(Control doll, WearSlot slot, Vector2 centre)
+    void AddSlot(Control doll, ClothingSlot slot, Vector2 centre)
     {
         var button = new Button
         {
@@ -169,8 +189,8 @@ public partial class EquipmentPanel : CanvasLayer
     void Refresh()
     {
         var carried = Link.Carried(selected).ToList();
-        string now = selected + "|" + string.Join(",", Enum.GetValues<WearSlot>().Select(s => Link.Worn(s)?.Name))
-            + "|" + string.Join(",", carried.Select(w => w.Name + w.Quality));
+        string now = selected + "|" + string.Join(",", Enum.GetValues<ClothingSlot>().Select(s => Link.Worn(s)))
+            + "|" + string.Join(",", carried);
         if (now == shown) return;
         shown = now;
 
@@ -189,7 +209,7 @@ public partial class EquipmentPanel : CanvasLayer
         slotTitle.Text = selected.ToString();
         wearing.Text = worn != null ? $"Wearing {Label(worn)}" : "Nothing on";
         wearing.Modulate = new Color(1, 1, 1, worn != null ? 1f : 0.55f);
-        effect.Text = worn?.Effect ?? "";
+        effect.Text = worn != null ? $"{worn.Effect} ({worn.Amount})" : "";
         takeOff.Visible = worn != null;
 
         foreach (var child in choices.GetChildren()) { choices.RemoveChild(child); child.QueueFree(); }
@@ -202,7 +222,7 @@ public partial class EquipmentPanel : CanvasLayer
                 Flat = true,
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
-                TooltipText = piece.Effect,
+                TooltipText = $"{piece.Effect} ({piece.Amount})",
             };
             button.AddThemeFontSizeOverride("font_size", 15);
             button.AddThemeConstantOverride("icon_max_width", 30);
@@ -217,12 +237,12 @@ public partial class EquipmentPanel : CanvasLayer
         }
     }
 
-    // "Fine wool tunic": the grade word as items show it elsewhere, then the name.
-    static string Label(Wearable w)
-    {
-        string grade = LifeGame.Shared.Processes.Grade(w.Quality);
-        return char.ToUpperInvariant(grade[0]) + grade[1..] + " " + w.Name.ToLowerInvariant();
-    }
+    static string Label(WornPiece w) => ItemLook.Label(w.Item, w.Quality, 1);
+
+    // HUD lines for putting things on and taking them off.
+    public static string PutOn(Item item) => $"You put on the {Plain(item)}";
+    public static string TookOff(Item item) => $"You take off the {Plain(item)}";
+    static string Plain(Item item) => Items.All.TryGetValue(item, out var def) ? def.Count(1).ToLowerInvariant() : "it";
 }
 
 // A plain standing figure, drawn faint so the slots read on top of it.

@@ -33,6 +33,8 @@ public static class Subscriptions
         $"SELECT * FROM kiln WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
+        // What you wear (animals-9, read by the equipment panel, ui-10).
+        "SELECT * FROM my_worn",
         "SELECT * FROM my_craft_job",
         $"SELECT * FROM structure WHERE {range}",
     };

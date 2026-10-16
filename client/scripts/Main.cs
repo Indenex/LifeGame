@@ -44,6 +44,7 @@ public partial class Main : Node3D
     DbConnection? conn;
     Identity? myIdentity;
     uint myId;
+    readonly EquipmentPanel equipment = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -85,8 +86,9 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        building.MayBar = social.HasRightsAt;
         // What you wear (ui-10, D-074).
-        var equipment = new EquipmentPanel { Note = hud.Note };
+        equipment.Note = hud.Note;
         AddChild(equipment);
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;
@@ -322,6 +324,7 @@ public partial class Main : Node3D
         herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         fires.Attach(conn);
         clay.Attach(conn);
