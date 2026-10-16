@@ -16,7 +16,7 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
 - **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
-- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. Integration also executes routine merges (D-095): send it your green sha.
+- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. For now the PM executes routine merges, because Integration's session can't merge until Justin sets the permission himself (D-119 is pending his own setting): Integration prepares merge-readiness and sends the PM green shas.
 - **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
 - **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
 - **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059).
@@ -63,7 +63,7 @@ Each lane works in its own files so lanes don't collide:
 
 - Cloud sessions push to the branch the harness assigns (usually `claude/...`). Record the real branch name in your ticket and `STATUS.md` row.
 - Commit messages lead with the ticket id: `crafting-1: add hand-drill fire`.
-- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. Routine merges (CI green, PR matches decisions already in `DECISIONS.md`, D-032) are executed by the Integration lane (D-095); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
+- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. Routine merges (CI green, PR matches decisions already in `DECISIONS.md`, D-032) are executed by the PM for now, on Integration's green sha (D-095, D-119 pending); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
 - Commit before any checkout, rebase or merge. Never stash and walk away.
 
 ## CI

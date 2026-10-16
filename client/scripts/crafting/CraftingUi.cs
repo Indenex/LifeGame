@@ -281,9 +281,17 @@ public partial class CraftingUi : CanvasLayer
     // everything is at hand. Shown under a greyed-out recipe and as a notice.
     string? Missing(ProcessDef def)
     {
+        // Station crafts are made standing at the station (Stations.cs).
+        Structure? station = null;
+        if (def.Station != StationKind.None)
+        {
+            station = conn == null ? null : Stations.AtPlayer(conn, def.Station);
+            if (station == null)
+                return $"Made at a {StationInfo.Name(def.Station)}. Build one inside your claim and stand at it.";
+        }
         foreach (var input in def.Consumes)
         {
-            uint have = Count(input.Item);
+            uint have = Count(input.Item) + (station != null && conn != null ? Stations.StoredNear(conn, station, input.Item) : 0);
             if (have >= input.Count) continue;
             uint lacking = input.Count - have;
             string what = Items.Def(input.Item).Count(lacking).ToLowerInvariant();
@@ -403,6 +411,7 @@ public partial class CraftingUi : CanvasLayer
         {
             string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
             if (def.NeedsTool != ItemTags.None) inputs += $", using {ToolName(def.NeedsTool)}";
+            if (def.Station != StationKind.None) inputs += $", at a {StationInfo.Name(def.Station)}";
             string? missing = Missing(def);
             bool ready = missing == null;
             var button = new Button
