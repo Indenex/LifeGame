@@ -1,9 +1,9 @@
 # atmosphere-11: Sky that moves
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-sound-hlqfke after #66 merges (local atmosphere-11-wip, stacked on atmosphere-10-wip)
-PR: (after #66)
+PR: #66 (with atmosphere-10)
 
 ## Goal
 From the PM, 2026-10-16: slow drifting clouds whose cover follows the weather, soft cloud shadows sliding across the land on fair days, and low mist pooling in hollows at dawn that burns off by mid-morning. Subtle, crossfaded, Valheim-like. Done: screenshots to the PM, a PR green after #66 merges.
@@ -15,4 +15,4 @@ From the PM, 2026-10-16: slow drifting clouds whose cover follows the weather, s
 - (none)
 
 ## Next step
-When #66 merges: merge main into atmosphere-11-wip, push to claude/atmosphere-sound-hlqfke, open the PR.
+Watch #66 CI; Justin reviews water and sky together (PM).
