@@ -19,6 +19,7 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - 2026-10-16 18:37: Crafting agreed option 1 (cost) and described the framework (crafting-15, branch crafting-stations, sha in a couple of hours): StationKind enum in Processes.cs, ProcessDef.Station, StructureShape.Station, generic claim check in PlaceStructure, ingredients from inventory, nearby stores, then the claim stash.
 
 ## Open questions / blockers
+- Modeling PR #197 has `StationMeshes.PottersBench()`, a fuller bench model (all stage 0, pegs -1, +Z edge kept clear). Whichever of #197 and this PR merges second switches the StructureModel `PottersBench` case from `BenchModel.Pieces()` to `StationMeshes.PottersBench()`; if it's us, delete client/scripts/ceramics/BenchModel.cs.
 - StructureKind order: jar is 6 (#105); Building's #153 appends Fence, Gate; whichever merges second goes after the other, keeping StructureKind, Structures.Shapes and Structures.StageCosts in the same order. The bench takes the next free number at merge time (and ClayRules has KilnStructureKind/JarStructureKind ints that must match).
 - Bench cost decided: 1 log + 2 stones (D-127).
 
