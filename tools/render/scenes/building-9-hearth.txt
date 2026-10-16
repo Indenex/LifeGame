@@ -1,0 +1,43 @@
+# building-9 (5793230): a raised hearth inside a finished clay hut. Camera = puppet,
+# inside the hut at dusk. Clay hut = kind 1 (radius 1.9, doorway on +z), hearth = kind 9,
+# basket = kind 4. Half-built hearth (stone ring done, clay surround still a blueprint),
+# then finished, then a fire lit on it, a basket beside it.
+client-as-puppet
+client --time-of-day=0.74 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,1.4,0,0.2
+wait 35
+give 1 80 50
+give 2 10 50
+give 3 40 50
+give 110 30 50
+give 8 4 50
+stroll 0 -0.3
+arrive
+place 1 0 0.3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 2
+burst 2 1.5
+# the hearth, 1.2 m to the east of the hut's middle
+place 9 1.2 0.3 0
+build
+wait 3
+burst 4 1.5
+build
+wait 3
+burst 4 1.5
+face 90
+craft fire.hand_drill
+wait 3
+burst 4 2
+place 4 0.9 1.4 0
+build
+wait 3
+burst 4 2

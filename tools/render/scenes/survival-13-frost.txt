@@ -1,0 +1,17 @@
+# survival-13 (PR #218): frost at full and mid cold. Run on origin/main (before) and the
+# branch head (after). Camera = puppet; vitals set by SQL as the db owner.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+# mid cold: warmth 0.3 -> frostAmount 0.5 (the warmth rate keeps it falling, so reset before each burst)
+sql UPDATE vitals SET warmth = 0.3, warmth_rate = 0.0 WHERE player_id = {target}
+wait 9
+sql UPDATE vitals SET warmth = 0.3, warmth_rate = 0.0 WHERE player_id = {target}
+wait 3
+burst 3 1.5
+# full cold: warmth 0
+sql UPDATE vitals SET warmth = 0.0, warmth_rate = 0.0 WHERE player_id = {target}
+wait 9
+sql UPDATE vitals SET warmth = 0.0, warmth_rate = 0.0 WHERE player_id = {target}
+wait 3
+burst 3 1.5
