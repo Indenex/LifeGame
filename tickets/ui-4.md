@@ -21,6 +21,8 @@ Also carries the KEYMAP note for Survival's "drink from your pot" (priority 1) a
 
 - 2026-10-15 23:55: KEYMAP adds Building's doors (Shift+G bar, G hang/open/shut at 28) and the basket panel keys. The F1 row for Shift+G waits until building-3 is on main, so F1 never lists a key that does nothing.
 
+- 2026-10-16 00:10: PM follow-up from Crafting's playtest: the pick up and make things hints now come right after walking. The crafting panel covering the rings and the Clay tier running off screen are fixed by Bug fixes' #36 (scroll container, foot kept clear of the HUD); checking with a screenshot.
+
 ## Open questions / blockers
 - (none)
 
