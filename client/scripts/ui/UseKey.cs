@@ -18,6 +18,7 @@ public partial class UseKey : CanvasLayer
     public Func<bool> Blocked = () => false;
 
     readonly Label verb = new();
+    Label keyLabel = null!;
     Control panel = null!;
     UseOffer? offer;
     float repeatTimer, alpha;
@@ -31,7 +32,7 @@ public partial class UseKey : CanvasLayer
 
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 12);
-        row.AddChild(KeyCap("G"));
+        row.AddChild(KeyCap("G", out keyLabel));
         Hud.Soft(verb, 18, 1f);
         verb.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(verb);
@@ -56,7 +57,12 @@ public partial class UseKey : CanvasLayer
     {
         float dt = (float)delta;
         offer = Blocked() ? null : Use.Best(Player(), Facing());
-        if (offer != null) verb.Text = offer.Prompt;
+        if (offer != null)
+        {
+            verb.Text = offer.Prompt;
+            // The player's own Use key, if they moved it.
+            keyLabel.Text = Controls.KeyFor("use") ?? "G";
+        }
 
         // Fade rather than pop, so walking past things stays calm.
         alpha = Mathf.MoveToward(alpha, offer != null ? 1f : 0f, dt * 6f);
@@ -83,9 +89,9 @@ public partial class UseKey : CanvasLayer
     }
 
     // A small rounded key, like a keyboard cap.
-    static Control KeyCap(string key)
+    internal static Control KeyCap(string key, out Label label)
     {
-        var label = Hud.Text(key, 16);
+        label = Hud.Text(key, 16);
         Hud.Soft(label, 16, 1f);
         label.HorizontalAlignment = HorizontalAlignment.Center;
         label.VerticalAlignment = VerticalAlignment.Center;
