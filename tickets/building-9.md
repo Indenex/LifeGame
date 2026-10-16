@@ -36,8 +36,10 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
   - Both hook declarations are in #202. Claims was told the sha.
 - 2026-10-16 19:56: HANDOFF to a Sonnet session (D-159).
 
+- 2026-10-16 (Sonnet session): #194 is on main; merged main and added the FireTopUpHook partial to BuildingHearth.cs. Per Justin (D-160, claim gates members only), BuildingStorage.CanLock now returns HasClaimRights for a gate inside a claim, before the HungBy check; outside a claim, whoever hung the gate keeps the right. No dotnet in this container, so not built locally; CI is the check.
+
 ## Open questions / blockers
-- Crafting's #194 (FireTopUpHook): once merged, add `static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil) => HearthTopUp(ctx, fire, ref fuelUntil);` to BuildingHearth.cs.
+- (none)
 
 ## Next step
-Watch CI on #202 (subscribe to the PR). When green, send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the head sha. When Crafting's #194 (FireTopUpHook) is on main, add the one-line partial from Open questions to BuildingHearth.cs, in #202 if it's still open or as a small follow-up PR. Then building-10 (tickets/building-10.md on origin/claude/house-building-8ueqz2-cabin).
+Watch CI on #202 (subscribed). When green, send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the head sha. When Crafting's #194 (FireTopUpHook) is on main, add the one-line partial from Open questions to BuildingHearth.cs, in #202 if it's still open or as a small follow-up PR. Then building-10 (tickets/building-10.md on origin/claude/house-building-8ueqz2-cabin).

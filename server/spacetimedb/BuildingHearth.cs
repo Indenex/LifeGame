@@ -72,9 +72,11 @@ public static partial class Module
     // What it burns, in the order it takes them: logs last longest, so fewer trips.
     static readonly Item[] HearthFuels = { Item.Log, Item.Stick };
 
-    // Crafting's fire tick will ask this of every fire through FireTopUpHook (not on
-    // main yet; a one-line partial wires it up). A fire on a finished hearth that is
-    // running low takes one log, or else one stick, from a store near the hearth.
+    // Crafting's fire tick asks this of every fire through FireTopUpHook. A fire on a
+    // finished hearth that is running low takes one log, or else one stick, from a
+    // store near the hearth.
+    static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil) => HearthTopUp(ctx, fire, ref fuelUntil);
+
     static void HearthTopUp(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
