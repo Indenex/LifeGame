@@ -26,9 +26,10 @@ What's done means:
   - Client: StructureModel.House.cs (footings, hearth ring, brick courses, lintel, rafters, clay gables, thatch); door frame per kind in StructureView; HouseWalls collision; Use and doorway for any kind with a doorway.
   - Screenshots: /mnt/project-files/screenshots/building-08-brick-house.png and building-08b-brick-house-wide.png (`--building-showcase --building-house`).
 - 2026-10-16 01:00: BuildTest `brick-house` mode added. It runs alone, outside "both", because bricks take minutes to dry. Running it locally.
+- 2026-10-16 01:15: local `dotnet run -- brick-house` passed in 814 s. The bricks took about 9 minutes to dry in the open. The house was built by two players, it shelters you, it survives a reconnect, and the door and bar work.
 
 ## Open questions / blockers
 - (none; Justin kept 16 bricks and the other default costs, D-057)
 
 ## Next step
-Finish the local `dotnet run -- brick-house` BuildTest run. Then, once #41 merges, restart claude/house-building-8ueqz2 from main, apply the patch, and open the PR.
+Once #41 merges (it is in the PM's queue behind #45 and #32), restart claude/house-building-8ueqz2 from main, apply the patch, and open the PR.

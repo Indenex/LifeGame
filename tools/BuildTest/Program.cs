@@ -96,7 +96,7 @@ if (which is "brick-house")
             {
                 foreach (var piece in b.Conn.Db.ClayPiece.Iter().Where(p => p.Form == (byte)ClayForm.Brick).ToList())
                     b.Conn.Reducers.TendClay(piece.Id, false);
-                Pump(5000);
+                Pump(20000);
             }
             Check(b.CountOf(Item.Brick) >= 16 && b.CountOf(Item.Daub) >= 6, $"dried bricks and mixed daub for the walls ({b.Carried()})");
         });
