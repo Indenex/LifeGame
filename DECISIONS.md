@@ -574,3 +574,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-140 — 2026-10-16 — Name your camp
 **Decision:** A claim's owner can name the claim in the claim panel; walking in shows the name softly for a moment ("Mira's camp" by default), and the land chip uses it.
 **Who:** Justin ("Name your camp", as recommended)
+
+## D-141 — 2026-10-16 — Forest light ships before the screenshots
+**Decision:** atmosphere-13 (sun shafts and dappled light through the canopy, #136) merges without Justin having seen it; it gets tuned afterwards from the Render shots.
+**Who:** Justin ("Merge now, tune later"; the PM had recommended waiting for the pictures)
