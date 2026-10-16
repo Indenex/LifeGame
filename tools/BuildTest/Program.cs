@@ -181,6 +181,14 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     }
     Pump(300);
     var done = a.Conn.Db.Structure.Id.Find(id);
+    if (done is not { Complete: true })
+        // Say where everyone stood, so a reach failure can be told apart from a blocked walk.
+        foreach (var (bot, who) in new[] { (a, "A"), (b, "B") })
+        {
+            var seen = bot.Seen();
+            float sd = seen is { } sp ? MathF.Sqrt((sp.X - sx) * (sp.X - sx) + (sp.Z - sz) * (sp.Z - sz)) : -1f;
+            Console.WriteLine($"  {who}: bot ({bot.X:F1}, {bot.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}), {sd:F1} m from the {name}'s middle at ({sx:F1}, {sz:F1}); reach {Structures.WorkReach} m past its edge, round={shape.Round} radius={shape.Radius}");
+        }
     Check(done is { Complete: true }, $"{name} finished (stage {done?.Stage})");
     Check(done!.Builders == 2, $"both players built it (builders: {done.Builders})");
     Check(b.Conn.Db.Structure.Id.Find(id) is { Complete: true }, "the other player sees it finished");
@@ -519,6 +527,9 @@ sealed class Bot
                         return (x, z);
         throw new Exception("No clay nearby");
     }
+
+    // Where the server has this player.
+    public PlayerPos? Seen() => Conn.Db.PlayerPos.PlayerId.Find(myId);
 
     // How far the server still has this player from where the bot thinks it stands.
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
