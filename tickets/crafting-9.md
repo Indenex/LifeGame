@@ -1,7 +1,7 @@
 # crafting-9: Chop wood with the stone axe
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: in_review
 Branch: crafting-chop-wood
 PR: (not yet)
 
@@ -25,8 +25,10 @@ The stone axe finally has a use. Standing next to a tree with an axe (anything t
 ## Progress log
 - 2026-10-16 04:40: built; CraftCheck now fells the nearest tree with 3 logs and feeds a log to the fire. It passes locally on a fresh database.
 
+- 2026-10-16 04:55: screenshots from the same spot, before and after felling: /mnt/project-files/screenshots/16-tree-standing.png and 17-tree-felled.png. The leafy tree left of centre is gone and leaves a bare patch. Deleting the row brings it back.
+
 ## Open questions / blockers
 - Justin: felling or deadwood only (the PM's card). Code ships with felling on; flipping is one line in `shared/Trees.cs`.
 
 ## Next step
-Take before/after screenshots of a felled tree, then open the PR.
+Wait for CI on the PR; flip `Trees.Felling` if Justin picks deadwood only.
