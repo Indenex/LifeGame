@@ -210,7 +210,7 @@ public partial class ControlsPage : Control
         return button;
     }
 
-    static Button TextButton(string text, Action pressed)
+    internal static Button TextButton(string text, Action pressed)
     {
         var button = new Button { Text = text, Flat = true, FocusMode = FocusModeEnum.All };
         button.AddThemeFontSizeOverride("font_size", 20);
@@ -226,7 +226,7 @@ public partial class ControlsPage : Control
         return button;
     }
 
-    static HSlider SliderRow(Container column, string text, double min, double max, double step, double value, Action<double> changed)
+    internal static HSlider SliderRow(Container column, string text, double min, double max, double step, double value, Action<double> changed)
     {
         var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         row.AddThemeConstantOverride("separation", 16);
