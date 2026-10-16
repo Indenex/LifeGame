@@ -11,7 +11,7 @@ public sealed class PlayerAnimator
     readonly Pose idle = new(), walk = new(), pose = new();
     readonly float seed; // per-figure offset so a crowd never breathes or sways in step
     float time, phase;   // phase: walk cycle, a full turn is two steps
-    float walkBlend, gait, turnLean;
+    float walkBlend, gait, turnLean, crouch;
 
     public PlayerAnimator(PlayerRig rig, ulong seed)
     {
@@ -20,7 +20,7 @@ public sealed class PlayerAnimator
     }
 
     // speed: ground speed in m/s; turnRate: yaw speed in rad/s, positive turning left.
-    public void Update(float dt, float speed, float turnRate)
+    public void Update(float dt, float speed, float turnRate, bool sneaking)
     {
         time += dt;
         float k = 1f - Mathf.Exp(-6f * dt);
@@ -31,11 +31,13 @@ public sealed class PlayerAnimator
         float stepLength = 0.6f + 0.2f * speed;
         phase = Mathf.PosMod(phase + speed * dt / stepLength * Mathf.Pi, Mathf.Tau);
         turnLean = Mathf.Lerp(turnLean, Mathf.Clamp(turnRate * speed * 0.035f, -0.2f, 0.2f), k);
+        crouch = Mathf.Lerp(crouch, sneaking ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
 
         if (walkBlend < 0.995f) Idle(idle);
         if (walkBlend > 0.005f) Walk(walk);
         pose.Blend(idle, walk, walkBlend > 0.995f ? 1f : walkBlend < 0.005f ? 0f : walkBlend);
 
+        if (crouch > 0.005f) Crouch(pose, crouch);
         // Lean into turns; the head stays level.
         pose[Joint.Hips].Z -= turnLean;
         pose[Joint.Neck].Z += turnLean * 0.7f;
@@ -112,6 +114,26 @@ public sealed class PlayerAnimator
         p[Joint.ElbowR].X = -elbow - 0.35f * Mathf.Max(s, 0f);
         p[Joint.HandL] = new Vector3(-0.1f, 0, 0.06f);
         p[Joint.HandR] = new Vector3(-0.1f, 0, -0.06f);
+    }
+
+    // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,
+    // head up and hands held ready. Added on top of whatever idle or walk is doing.
+    void Crouch(Pose p, float w)
+    {
+        const float bend = 0.62f; // thigh angle; the hips drop by LegLength * (1 - cos bend)
+        p.HipsOffset.Y -= rig.LegLength * (1f - Mathf.Cos(bend)) * w;
+        p[Joint.HipL].X -= bend * w;
+        p[Joint.HipR].X -= bend * w;
+        p[Joint.KneeL].X += 2f * bend * w;
+        p[Joint.KneeR].X += 2f * bend * w;
+        p[Joint.FootL].X -= bend * w;
+        p[Joint.FootR].X -= bend * w;
+        p[Joint.Spine].X += 0.42f * w;
+        p[Joint.Neck].X -= 0.38f * w;
+        p[Joint.ShoulderL].X -= 0.3f * w;
+        p[Joint.ShoulderR].X -= 0.3f * w;
+        p[Joint.ElbowL].X -= 0.55f * w;
+        p[Joint.ElbowR].X -= 0.55f * w;
     }
 
     // One leg through the cycle; at legPhase 0 it passes under the body swinging forward.

@@ -14,10 +14,11 @@ public partial class Avatar : Node3D
     readonly Node3D figure;
     readonly PlayerAnimator animator;
     readonly Label3D nameplate;
-    float speed, turnRate, lastHeading;
+    float speed, turnRate, lastHeading, creepTime;
     Vector3 lastPosition;
 
     static ShaderMaterial? skin, hair, leaves;
+    static readonly StringName SneakAction = "sneak";
 
     public Avatar(string name)
     {
@@ -123,7 +124,12 @@ public partial class Avatar : Node3D
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
+        // The server doesn't know who is sneaking, so other players read as sneaking when
+        // they keep creeping along at about sneak speed (not just slowing down to stop).
+        bool creeping = speed > 0.4f && speed < Shared.World.SneakSpeed + 0.3f;
+        creepTime = creeping ? creepTime + dt : 0f;
+        bool sneaking = Remote ? creepTime > 0.4f : Input.IsActionPressed(SneakAction);
         // Hidden avatars (offline players) cost nothing.
-        if (IsVisibleInTree()) animator.Update(dt, speed, turnRate);
+        if (IsVisibleInTree()) animator.Update(dt, speed, turnRate, sneaking);
     }
 }
