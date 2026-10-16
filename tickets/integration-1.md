@@ -22,6 +22,7 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 17:35: opened PR #95 (this ticket and STATUS row). Merged main into #43 (8183eac) and #61 (ee769b3), taking main's STATUS.md; both build locally. Told Journal, House building and Crafting lanes; sent the PM the readiness list and a STATUS.md-on-branches question.
 - 2026-10-16 17:25: PM (D-073): `client/scripts/Avatar.cs` moves to the Animation lane (session_019roNRWQBPw4ozNLDhzseig); the Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm) may add `client/assets/models/` glTF and will need import settings and CI help from this lane.
 - 2026-10-16 17:25: Atmosphere (atmosphere-12, D-072) adds a public `craft_work` table in WorkSounds.cs. Advised: Crafting declares and calls partial `OnCraftStarted`/`OnCraftEnded` in Crafting.cs now, so there's no merge-order dependency; clear rows on disconnect and abandoned jobs. PR #95 CI run 38939185639 queued.
+- 2026-10-16 17:26: Crafting merges main into whichever of #70/#92/#47/#97 goes second; Integration keeps #61 x #70. Merge order sent to the PM: #97 (crafting-12 hook declarations) before atmosphere-12 (two defining declarations of one partial method = CS0756); Atmosphere drops its temporary declarations in its merge-main commit.
 
 ## Open questions / blockers
 - Sent to PM 17:35: lanes stop editing STATUS.md on their branches (recommended) / lanes resolve each time / PM resolves at merge. Default meanwhile: option 1.
