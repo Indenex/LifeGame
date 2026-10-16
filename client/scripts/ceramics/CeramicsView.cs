@@ -24,6 +24,7 @@ public partial class CeramicsView : Node
     DbConnection? conn;
     uint myId;
     ulong confirmPiece;
+    double dryingOfferAt = double.MinValue;
     double confirmUntil;
 
     public CeramicsView(Node parent3D, Func<float, float, float> heightAt, Node3D me, Action<string> note)
@@ -162,7 +163,10 @@ public partial class CeramicsView : Node
         // A kiln's label shows when it is the closest thing to tend.
         var kiln = NearestKiln(new Vector2(me.Position.X, me.Position.Z));
         bool kilnFirst = kiln.view != null && kiln.d < nearestDist;
-        foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst;
+        // The G drying line says what the label would, and sits where it would; so
+        // while it shows, the floating labels step aside.
+        bool promptShowing = Time.GetTicksMsec() / 1000.0 - dryingOfferAt < 0.25;
+        foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst && !promptShowing;
         foreach (var view in kilns.Values) view.ShowLabel = kilnFirst && view == kiln.view;
     }
 
@@ -215,6 +219,7 @@ public partial class CeramicsView : Node
         // Still wet: say how long it has left. Beside a fire, pressing G twice fires it
         // anyway (it cracks); away from one, G says where it would dry faster.
         string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
+        dryingOfferAt = Time.GetTicksMsec() / 1000.0;
         if (besideFire)
             return new UseOffer($"{wait} (G twice fires it wet)", piece.d, () => FireDamp(id, moisture));
         bool warm = BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
