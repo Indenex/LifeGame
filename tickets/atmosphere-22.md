@@ -13,6 +13,7 @@ Environment's env-9 "seeing further" (Justin's pick; branch claude/environment-f
 - 2026-10-16 22:15: first build (client 0 errors).
   - Look.EnsureWeatherGlobals registers `far_land_radius` (float, default 0; FarLand sets it) and `fog_tint` (colour; Atmosphere sets it to env.FogLightColor every frame).
   - Painted shader (ground, bark, rock, foliage and their see-through variant): over the outer quarter of the radius, measured flat from player_position, ALBEDO fades to 0 and EMISSION to fog_tint. Godot's own fog then finishes the job, so the rim is fog-coloured at any density. Inside 0.75 x radius nothing changes, so there is no seam with the near land.
+- 2026-10-16 22:08: at Environment's request, water fades the same way, since Integration's planned 500 m water plane reaches past the land disc. It fades to fog_tint over the outer quarter (alpha up to 1) and is discarded past far_land_radius, so nothing shows beyond the land edge.
 
 ## Open questions / blockers
 - (none) Environment sets `far_land_radius` from FarLand once this is on main.

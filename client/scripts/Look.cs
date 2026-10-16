@@ -596,6 +596,7 @@ public static class Look
         uniform vec4 shallow_color : source_color = vec4(0.30, 0.55, 0.55, 1.0);
         uniform vec4 sky_tint : source_color = vec4(0.62, 0.72, 0.78, 1.0);
         uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
+        global uniform vec3 player_position;
         varying vec3 world_pos;
 
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -678,6 +679,19 @@ public static class Look
             ROUGHNESS = mix(0.32, 0.45, rain);
             SPECULAR = 0.12;
             METALLIC = 0.0;
+
+            // Like the land, the water melts into the fog over the outer quarter of
+            // the distant land, and past its edge there is none to see.
+            if (far_land_radius > 0.0) {
+                float reach = length(world_pos.xz - player_position.xz);
+                if (reach > far_land_radius) discard;
+                float rim = smoothstep(0.75 * far_land_radius, far_land_radius, reach);
+                ALBEDO *= 1.0 - rim;
+                EMISSION = fog_tint * rim;
+                ALPHA = mix(ALPHA, 1.0, rim);
+                SPECULAR *= 1.0 - rim;
+                ROUGHNESS = mix(ROUGHNESS, 1.0, rim);
+            }
         }
         """;
 
