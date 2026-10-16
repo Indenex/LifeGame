@@ -1,7 +1,7 @@
 # Crafting and skills
 
 ## Crafting
-Open the crafting panel with C. It lists what you can make, grouped in tiers. The first tier uses bare hands and found materials. Each tool you make unlocks more recipes; a sharp stone edge, for example, does things your hands cannot. With the right tool you can chop logs from trees; a tree falls after a few logs and grows back in time.
+Open the crafting panel with C. It lists what you can make, grouped in tiers. The first tier uses bare hands and found materials. Each tool you make unlocks more recipes; a sharp stone edge, for example, does things your hands cannot. A better-quality tool also works a little faster. With the right tool you can chop logs from trees; a tree falls after a few logs and grows back in time.
 
 Some crafts are minigames, such as knapping stone and shaping clay. Your result depends on how well you play them. Press Esc to quit a minigame.
 
