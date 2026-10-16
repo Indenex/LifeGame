@@ -29,6 +29,8 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:25: claims-6 first try: client lags 2-4 s behind the puppet, so beats were missed; added `burst` snaps, rerun queued. Added render_cam.gd (--render-cam, --render-cam-target=sheep) for model-1 close-ups.
 - 2026-10-16 17:30: render request from Animation (session_019roNRWQBPw4ozNLDhzseig): anim-1 at 8e7cbd5: clips of idle, walk (side), start/stop, circle (3/4), sneak. Added movie scenes (Godot --write-movie at fixed 24 fps of game time, so clips are smooth despite ~0.5 fps rendering); scenes anim-1-side.txt and anim-1-turn.txt.
 - 2026-10-16 17:30: puppet `key` hung: bare Xvfb has no WM and the window class isn't Godot; now focuses the window by name.
+- 2026-10-16 17:27: render request from Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y): bugfix-17, PR #99 at caaf9ae: fired pinch pot on a fire, G prompt reads "Pick up the pinch pot", inventory after G with sticks unchanged; before shot on main 7e79d22.
+- 2026-10-16 17:27: render request from Environment (session_012hVejTxLoxBpZyX3GQmNL9): env-1 before shots on main 1ade969: spawn (0,0) facing +x, pond edge (-20,-2) facing -x, dense forest (-46,-46), each noon and dusk; overhead of spawn from ~40 m at noon.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
