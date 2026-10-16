@@ -19,6 +19,19 @@ cp "$art/LifeGame-Server/StdbModule.wasm" "$out/StdbModule.wasm"
 # Each zip holds the platform folder's contents at its root, so the launcher unpacks it as is.
 (cd "$art/LifeGame-Linux/linux" && chmod +x LifeGame.x86_64 && zip -qry "$out/LifeGame-Linux.zip" .)
 (cd "$art/LifeGame-Windows/windows" && zip -qry "$out/LifeGame-Windows.zip" .)
+
+# A client zip without the .NET data folder starts into "Unable to find the .NET assemblies
+# directory" (builds 1092 to 1096 shipped that way after a broken C# build). Refuse to pack
+# a release whose client zips lack the executable, LifeGame.pck, or data_LifeGame_*/LifeGame.dll.
+for z in LifeGame-Linux LifeGame-Windows; do
+  listing=$(unzip -Z1 "$out/$z.zip")
+  for need in '^LifeGame\.pck$' '^data_LifeGame_[a-z0-9_]*/LifeGame\.dll$'; do
+    if ! grep -qE "$need" <<<"$listing"; then
+      echo "::error::$z.zip is missing an entry matching $need; not releasing a broken game" >&2
+      exit 1
+    fi
+  done
+done
 for l in Linux Windows; do
   if [ -d "$art/LifeGameLauncher-$l" ]; then
     # Artifacts lose the exec bit; restore it so the unzipped launcher runs on a double-click.
