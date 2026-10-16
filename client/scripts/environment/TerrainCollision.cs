@@ -1,0 +1,61 @@
+using System.Collections.Generic;
+using Godot;
+using LifeGame.Shared;
+
+namespace LifeGame;
+
+// Which trunks and boulders block walking (bugfix-23). The forest is deterministic per
+// cell, so this re-derives the tree or rock on a cell with the same rules as
+// AddVegetation instead of keeping a second list. Keep the two in step.
+public partial class Terrain
+{
+    const float WalkerRadius = 0.3f;
+
+    // Pushes a step out of any trunk or boulder, sliding along its edge instead of stopping dead.
+    public Vector3 CollideVegetation(Vector3 to)
+    {
+        int cx = Mathf.FloorToInt(to.X + 0.5f), cz = Mathf.FloorToInt(to.Z + 0.5f);
+        for (int x = cx - 1; x <= cx + 1; x++)
+            for (int z = cz - 1; z <= cz + 1; z++)
+            {
+                if (!ObstacleAt(x, z, out float ox, out float oz, out float radius)) continue;
+                float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
+                if (d2 >= keep * keep) continue;
+                if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
+                float d = Mathf.Sqrt(d2);
+                to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
+            }
+        return to;
+    }
+
+    // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
+    // stones, ferns and fallen trunks never block.
+    bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius)
+    {
+        (ox, oz) = Trees.Trunk(x, z);
+        radius = 0f;
+        if (Trees.NearSpawn(x, z) || depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        float roll = Trees.Hash01(x, z, 11);
+        // Cheap reject: nothing grows on most cells.
+        float density = Forest.Density(x, z);
+        float tree = Trees.Forest(x, z);
+        float sapling = tree + 0.03f * Forest.Edge(density);
+        float top = TileHeight(x, z);
+        if (top < Look.WaterLevel + 0.1f) return false;
+        float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
+        if (roll < sapling)
+        {
+            if (roll >= tree) scale *= 0.45f + Hash01(x, z, 21) * 0.3f;
+            radius = 0.2f * scale;
+            return true;
+        }
+        bool shore = NearWater(x, z, top);
+        float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
+        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
+        if (roll >= rock) return false;
+        float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
+        radius = 0.4f * scale * size;
+        // Pebbles are stepped over.
+        return radius >= 0.2f;
+    }
+}

@@ -18,8 +18,10 @@ From Justin: "I want trees and houses etc. to have collision." Walking into a tr
 ## Progress log
 - 2026-10-16: ticket written from the PM's message.
 
+- 2026-10-16: trees and rocks: client/scripts/environment/TerrainCollision.cs (Terrain.CollideVegetation) plus one line in Main.Walk; client builds locally (dotnet 8 at ~/dotnet, bindings generated). Not yet walked in a running client.
+
 ## Open questions / blockers
 - Need a lookup hook in Terrain.cs from Environment (asked).
 
 ## Next step
-Read Terrain.AddVegetation and write the cell-local obstacle lookup; ask Environment about the hook.
+Audit every StructureKind in BuildingSystem.Collide for missing collision (lean-to, fires, stations).
