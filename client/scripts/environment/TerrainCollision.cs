@@ -44,14 +44,19 @@ public partial class Terrain
         if (top < Look.WaterLevel + 0.1f) return false;
         float roll = Trees.Hash01(x, z, 11);
         float density = Forest.Density(x, z);
-        float tree = Trees.Forest(x, z);
-        float sapling = tree + 0.03f * Forest.Edge(density);
+        float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
+        float tree = Forest.TreeChance(density, heath);
+        float sapling = tree + 0.03f * Forest.Edge(density) * (1f - heath);
         float scale = 1.3f + Hash01(x, z, 15) * 0.6f;
         // Trees don't grow in the spawn clearing, but boulders can (as in AddVegetation).
         if (!Trees.NearSpawn(x, z) && roll < sapling)
         {
             if (roll >= tree) scale *= 0.45f + Hash01(x, z, 21) * 0.3f;
-            radius = TrunkRadius(scale);
+            // Birch by the water is slim; the odd heath tree is a broad oak (env-4).
+            float girth = 1f;
+            if (wet > 0.4f && Hash01(x, z, 23) < 0.8f) girth = 0.6f;
+            else if (heath > 0.5f && roll < tree) girth = 1.35f;
+            radius = TrunkRadius(scale * girth);
             return true;
         }
         bool shore = NearWater(x, z, top);
