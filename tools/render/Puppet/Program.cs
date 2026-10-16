@@ -21,6 +21,7 @@
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
+//   mouse 660 850     move the mouse there in the camera client's window (tooltips)
 //   frames 300 / frames +72   (movie scenes) wait until the camera client has
 //                     written that many frames (or that many more)
 //   mark walk-start   log the current movie frame; scene.sh cuts clips between
@@ -236,6 +237,10 @@ foreach (var line in steps)
         }
         case "mark":
             Console.WriteLine($"puppet: mark {rest} frame={Frames()}");
+            break;
+        case "mouse":
+            Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
+            Pump(0.3);
             break;
         case "keydown":
         case "keyup":

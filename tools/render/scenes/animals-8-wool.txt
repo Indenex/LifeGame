@@ -8,20 +8,18 @@ give 1 4 50
 give 2 1 50
 give 193 10 60
 wait 3
-# 1. crafting panel (C), then the next tier (Tab); keep whichever shows tier 2
+craft carve.drop_spindle
+wait 2
+# 1. crafting panel (C) on its third tab, "Cord and haft" (tier 2)
 key c
-wait 4
-snap
+wait 2
 key Tab
-wait 4
-snap
+wait 2
 key Tab
-wait 4
-snap
+burst 4 1.5
 key Escape
 wait 2
-# 2. craft: spindle, 5 x yarn (10 wool), 1 cloth (4 yarn, 2 sticks) -> spindle, 1 yarn, 1 cloth
-craft carve.drop_spindle
+# 2. spin 5 yarn (10 wool), weave 1 cloth (4 yarn, 2 sticks) -> spindle, 1 yarn, 1 cloth
 craft cord.spin_wool
 craft cord.spin_wool
 craft cord.spin_wool
@@ -29,10 +27,16 @@ craft cord.spin_wool
 craft cord.spin_wool
 craft weave.wool_cloth
 wait 4
-snap
-# 3. on the ground
-drop 197
-drop 198
-drop 199
-wait 4
-snap
+burst 2 1.5
+# hover each hotbar slot for its name
+mouse 660 850
+burst 2 1.5
+mouse 730 850
+burst 2 1.5
+mouse 800 850
+burst 2 1.5
+mouse 870 850
+burst 2 1.5
+mouse 940 850
+burst 2 1.5
+mouse 800 400
