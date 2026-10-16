@@ -21,13 +21,29 @@ D-075: every number starts low and grows slowly, with faster gains through about
 3. Tool quality: a better tool works faster, from 0% (crude) to 25% (excellent), on the same curve.
 4. Fire and yield numbers stay: D-054 and D-060 set them, and yields grow through skills.
 
+## D-092 craft-time proposal (sent to the PM 2026-10-16 18:40; waiting on Justin)
+time = Base × Q × S × T
+- Base = TierSeconds[tier] × Effort. TierSeconds: tier 0 3 s, tier 1 6 s, tier 2 12 s, tier 3 20 s. Effort runs from 0.5 (shred tinder, crush grog) to 3 (storage jar).
+- Q (target quality q, the quality the job will produce, known at start) = 0.8 + 0.4 × q/100: crude 20 → 0.88, decent 60 → 1.04, excellent 95 → 1.18.
+- S (skill) = 1 − 0.6 × Growth(rank/100), on the D-075 curve: rank 0 → 1.00, 15 → 0.76, 50 → 0.61, 100 → 0.40. This replaces Journal's linear Skills.DurationScale, which keeps the same end points.
+- T (tool, D-089) = 1 − ToolSpeedup, up to 15%.
+
+Example, with no tool bonus and a typical quality per rank (35, 45, 60, 75):
+| Recipe (base) | rank 0 | 15 | 50 | 100 | today |
+|---|---|---|---|---|---|
+| Basket (t2 × 2.5 = 30 s) | 28 s | 22 s | 19 s | 13 s | 15 s |
+| Stone axe (t2 × 1.5 = 18 s) | 17 s | 13 s | 11 s | 8 s | 10 s |
+| Coil pot (t3 × 2 = 40 s) | 38 s | 30 s | 26 s | 18 s | 12 s |
+| Storage jar (t3 × 3 = 60 s) | 56 s | 45 s | 38 s | 26 s | 16 s |
+Fires (D-090) are separate: 20 min at lighting, and the cap grows from 20 to 40 min with Firecraft (PR #122).
+
 ## Progress log
 - 2026-10-16 17:45: listed Crafting's numbers and sent the proposal to the PM.
 - 2026-10-16 17:50: PM: drop Q1 (linear rank effects stay), keep Q4; Q2 and Q3 go to Justin.
 - 2026-10-16 18:20: D-089 (Q3): better tools work faster, 0% for the crudest to 15% for a perfect one, on the D-075 curve (`Processes.Growth`, `Processes.ToolSpeedup`, applied in StartCraft after the skill's DurationFor). For example, quality 15 is 5.6% faster, 50 is 9.6% and 100 is 15%. Tools without quality, like a stone used as a hammer, give nothing. Server and client build, and CraftCheck passes.
 
 ## Open questions / blockers
-- Q3 answered: D-089. Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 (craft times) is with Justin in the PM's next batch; until then the current numbers stay.
+- Q3 answered: D-089. Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 became D-092 (craft-time formula): proposal below, waiting on Justin in the PM's next batch; until then the current numbers stay.
 
 ## Next step
 When the PM relays the answers, wait for CI on the D-089 PR; apply Q2 (Seconds in shared/Processes.cs) when the PM relays Justin's answer.
