@@ -292,7 +292,7 @@ public static class Look
                         // it never drops across the player's view.
                         vec2 away = MODEL_MATRIX[3].xz - view_camera_position.xz;
                         float dir = atan(away.y, away.x) + (fract(sin(dot(MODEL_MATRIX[3].xz, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.9;
-                        vec3 axis = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(-sin(dir), 0.0, cos(dir)));
+                        vec3 axis = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(sin(dir), 0.0, -cos(dir)));
                         float angle = 1.45 * smoothstep(0.0, 0.7, k) * smoothstep(0.0, 0.7, k);
                         float cs = cos(angle), sn = sin(angle);
                         VERTEX = VERTEX * cs + cross(axis, VERTEX) * sn + axis * dot(axis, VERTEX) * (1.0 - cs);
