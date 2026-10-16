@@ -16,6 +16,7 @@ Justin sees screenshots via the Render lane: a lit lamp inside a hut at dusk.
 Numbers: Justin picked the lamp (D-147) with 30 min per tallow and self-refill from storage. Others as proposed: 2 raw mutton -> 1 tallow, max 3 tallow in a lamp, 4 m light.
 
 ## Progress log
+- 2026-10-16 19:48: ClayCheck --lamp PASSED on c9lamp1 (no bench refused, bench built, 2 lamps pinched at it, one cracked one whole in the pit, set-down refused without tallow). Not yet run: rendering tallow, lighting, refill (need raw mutton from Animals; CLAYCHECK_TALLOW=1). Added --ceramics-demo=lamp (three lit lamps and a cold one) for the Render lane.
 - 2026-10-16 19:58: D-147: 30 min per tallow; LampTimer (60 s) refills lamps about to go out from nearby stores or the claim stash.
 - 2026-10-16 19:50: server b88e065 (items 117-119, ClayForm.Lamp, clay.lamp at the bench, cook.tallow via SimmerPot giving the pot back empty, Lamps.cs SetLamp/TendLamp); client 6cb60fd (LampView flame + flickering OmniLight3D 4 m, G set down 19 / feed-light-pick up 24, KEYMAP updated, looks); ClayCheck --lamp (tallow part needs CLAYCHECK_TALLOW=1 and mutton from Animals). Running on c9lamp1.
 - 2026-10-16 19:32: PM asked for ceramics-9 options (D-145); sent lamp (recommended) / roof tiles / slip decoration; started the lamp.
