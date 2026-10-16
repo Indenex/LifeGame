@@ -8,6 +8,7 @@ public enum StructureKind
     LeanTo,
     ClayHut,
     ClaimMarker,
+    Kiln,
     Basket,
 }
 
@@ -107,6 +108,12 @@ public static partial class Module
         new[]
         {
             new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+        },
+        // Updraft kiln (Ceramics): Base, Dome
+        new[]
+        {
+            new[] { (Item.Brick, 4u) },
+            new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
         },
         // Storage basket: Weave
         new[]

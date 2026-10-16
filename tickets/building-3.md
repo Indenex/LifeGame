@@ -16,6 +16,8 @@ Ceramics can place an updraft kiln from the B menu as a blueprint (D-035): Build
 - 2026-10-15 23:55: rebased on #10 with Claims #8; Basket is StructureKind 3. Weathering and door bars use Claims' ClaimAt/HasClaimRights directly (no new hooks); Drop in Reducers.cs calls OnPlayerDroppedItem (2 lines). Weathering checked with shortened timers: an untouched lean-to outside a claim was gone after the sweep. BuildTest passes (184 s).
 - 2026-10-16 00:05: restarted from main 58d50e0 (#10 and Claims #31 in). Weathering uses Claims' InClaimHook. Hanging a door reports build.door to skills. Fixed main's build: Kiln.cs's CeramicsStructureRemoved is now the partial implementation (main failed CS0111), and ClayRules.KilnStructureKind is 4 (Basket is 3, agreed with Ceramics). LoadTest, CraftCheck and BuildTest pass (193 s); publishing over the pre-#10 schema needs no wipe.
 
+- 2026-10-16 00:25: merged main cb9d155 (#40 kiln is StructureKind 3, its Kiln.cs and ClayRules.cs taken as is); basket is now StructureKind 4. Local: LoadTest 5x5, SpawnCheck, CraftCheck, BuildTest (200 s), SocialTest and upgrade-check over main all pass.
+
 ## Open questions / blockers
 - Shift+G for barring is a default; asked the PM/UX whether a different key or gesture is wanted.
 - Ceramics' Kiln appends after Basket (4).

@@ -52,6 +52,15 @@ namespace LifeGame.Shared
             },
             new StructureShape
             {
+                // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
+                Name = "Updraft kiln",
+                Round = true, Radius = 0.85f,
+                Clearance = 1.2f,
+                Solid = true,
+                Stages = new[] { "Base", "Dome" },
+            },
+            new StructureShape
+            {
                 Name = "Storage basket",
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
@@ -89,7 +98,8 @@ namespace LifeGame.Shared
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
-            3 => WeaveProcess,
+            ClayRules.KilnStructureKind => ClayRules.KilnProcess,
+            4 => WeaveProcess,
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
