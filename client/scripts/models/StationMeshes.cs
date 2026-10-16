@@ -190,7 +190,7 @@ public static class StationMeshes
     public static List<StructureModel.Piece> Distaff()
     {
         var list = new List<StructureModel.Piece>();
-        StructureModel.Site(list, Corners(0.6f, 0.4f));
+        StructureModel.Site(list, Corners(0.5f, 0.3f));
         var k = new Kit();
         var foot = new Vector3(-0.25f, 0, -0.15f);
         var top = foot + new Vector3(0.05f, 1.3f, 0.06f);
@@ -309,6 +309,146 @@ public static class StationMeshes
             var foot = new Vector3(0.95f + i * 0.05f, 0, -0.15f + i * 0.12f);
             k.Wood.Paint(EndGrain, 0.85f + i * 0.05f).Tube(new[] { foot, foot + new Vector3(-0.17f, 0.75f + i * 0.05f, 0.02f) }, 0.016f, 5);
         }
+        k.AddTo(list, 0);
+        return list;
+    }
+
+    // Batch devices (D-195, crafting-22): one per repeated process. fill 0 to 3
+    // is how loaded the device is, 0 empty.
+    static readonly Color Slip = new(0.42f, 0.34f, 0.27f);
+    static readonly Color Grit = new(0.66f, 0.64f, 0.6f);
+    static readonly Color Sherd = new(0.7f, 0.42f, 0.28f);
+
+    // A closed loop round an oval, for rims.
+    static Vector3[] Oval(Vector3 center, float hw, float hd, int points)
+    {
+        var path = new Vector3[points + 1];
+        for (int i = 0; i <= points; i++)
+        {
+            float a = i * Mathf.Tau / points;
+            path[i] = center + new Vector3(Mathf.Sin(a) * hw, 0, Mathf.Cos(a) * hd);
+        }
+        return path;
+    }
+
+    // Clay cleaning: a hollowed log trough of slaked clay with a withy sieve laid
+    // across it, raw lumps waiting at one end and the stones and roots picked out
+    // at the other.
+    public static List<StructureModel.Piece> SlakingTrough(int fill = 1)
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(0.75f, 0.4f));
+        var k = new Kit();
+        const float rim = 0.36f;
+        // An upright loft on an oval with the top cap pressed in makes the hollow.
+        k.Wood.Paint(Bark, 0.85f).Loft(Vector3.Zero, new Vector3(0, rim, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.55f, 0.14f), new(0.4f, 0.68f, 0.25f), new(0.85f, 0.7f, 0.26f), new(1f, 0.66f, 0.23f),
+        }, 14, -0.75f);
+        k.Wood.Paint(Split, 0.9f).Tube(Oval(new Vector3(0, rim, 0), 0.66f, 0.23f, 24), 0.03f, 5, -1f, false);
+        // The slip in the hollow, higher the fuller it is.
+        float level = rim - 0.14f + fill * 0.035f;
+        k.Plain.Paint(Slip, 0.9f).Ellipsoid(new Vector3(0, level, 0), new Vector3(0.58f, 0.015f, 0.18f), 14, 2);
+        // The sieve: a withy hoop with a few woven strands, resting on the rim.
+        var hoop = new Vector3(-0.22f, rim + 0.035f, 0);
+        k.Plant.Paint(Cord, 0.95f).Tube(MeshKit.Circle(hoop, Vector3.Up, 0.2f, 18), 0.014f, 4, -1f, false);
+        for (int i = -2; i <= 2; i++)
+        {
+            float z = i * 0.07f, half = Mathf.Sqrt(0.2f * 0.2f - z * z);
+            k.Plant.Paint(Cord, 0.8f + 0.05f * (i & 1)).Tube(new[] { hoop + new Vector3(-half, -0.005f, z), hoop + new Vector3(half, -0.005f, z) }, 0.006f, 3);
+            k.Plant.Paint(Cord, 0.75f).Tube(new[] { hoop + new Vector3(z, -0.003f, -half), hoop + new Vector3(z, -0.003f, half) }, 0.006f, 3);
+        }
+        k.Plain.Paint(WetClay, 0.85f).Ellipsoid(hoop + new Vector3(0.02f, 0.03f, 0.01f), new Vector3(0.12f, 0.04f, 0.1f), 8, 4, null, 0.4f);
+        // Raw clay lumps on the ground at -X, more when loaded.
+        for (int i = 0; i < 1 + fill * 2; i++)
+        {
+            var at = new Vector3(-0.85f - H(i, 1) * 0.2f, 0.05f, -0.25f + H(i, 2) * 0.5f);
+            k.Plain.Paint(WetClay, 0.75f + H(i, 3) * 0.2f).Ellipsoid(at, new Vector3(0.09f, 0.06f, 0.08f) * (0.8f + H(i, 4) * 0.5f), 7, 4, new Basis(Vector3.Up, H(i, 5) * 3f), 0.5f);
+        }
+        // What was picked out: pebbles and a tangle of roots at +X.
+        for (int i = 0; i < 6; i++)
+        {
+            var at = new Vector3(0.82f + H(i, 6) * 0.18f, 0.02f, -0.15f + H(i, 7) * 0.3f);
+            k.Stone.Paint(Look.Rock, 0.8f + H(i, 8) * 0.3f).Ellipsoid(at, new Vector3(0.03f, 0.022f, 0.026f) * (0.7f + H(i, 9) * 0.7f), 6, 3);
+        }
+        var roots = new Vector3(0.85f, 0.015f, 0.2f);
+        for (int i = 0; i < 4; i++)
+            k.Plant.Paint(Bark, 0.7f).Tube(new[] { roots, roots + new Vector3(-0.06f + H(i, 10) * 0.12f, 0.01f, 0.05f), roots + new Vector3(-0.1f + H(i, 11) * 0.2f, 0.005f, 0.12f) }, 0.006f, 3, 0.002f);
+        k.AddTo(list, 0);
+        return list;
+    }
+
+    // Crushing grit and grog: a hollowed stone mortar with a long pounding stone
+    // in it, sherds waiting beside and a heap of crushed grit on a flat stone.
+    public static List<StructureModel.Piece> Mortar(int fill = 1)
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(0.5f, 0.45f));
+        var k = new Kit();
+        const float rim = 0.42f;
+        k.Stone.Paint(Look.Rock, 0.95f).Loft(Vector3.Zero, new Vector3(0, rim, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.3f, 0.28f), new(0.15f, 0.34f, 0.32f, 0.01f), new(0.6f, 0.33f, 0.31f, -0.01f, 0.01f), new(1f, 0.26f, 0.25f),
+        }, 9, -0.55f, 0.3f);
+        // Crushed grit in the bowl.
+        if (fill > 0)
+            k.Stone.Paint(Grit).Ellipsoid(new Vector3(0, rim - 0.12f + fill * 0.025f, 0), new Vector3(0.16f, 0.025f, 0.15f), 9, 3, null, 0.3f);
+        // The pounding stone: long and round, leaning in the bowl, handle end up toward the worker.
+        var foot = new Vector3(0.02f, rim - 0.08f, -0.02f);
+        var top = foot + new Vector3(0.08f, 0.24f, 0.14f);
+        k.Stone.Paint(new Color(0.5f, 0.48f, 0.45f)).Loft(foot, top, new MeshKit.Ring[]
+        {
+            new(0f, 0.055f, 0.05f), new(0.3f, 0.06f, 0.058f), new(1f, 0.04f, 0.038f),
+        }, 7, 0.7f);
+        // Sherds waiting to be crushed.
+        for (int i = 0; i < 2 + fill * 2; i++)
+        {
+            var at = new Vector3(-0.5f + H(i, 20) * 0.15f, 0.015f, -0.2f + H(i, 21) * 0.35f);
+            var basis = new Basis(Vector3.Up, H(i, 22) * 3f) * new Basis(Vector3.Right, (H(i, 23) - 0.5f) * 0.6f);
+            k.Plain.Paint(Sherd, 0.8f + H(i, 24) * 0.25f).Ellipsoid(at, new Vector3(0.08f, 0.014f, 0.06f) * (0.8f + H(i, 25) * 0.5f), 6, 2, basis);
+        }
+        // A flat stone with the grit heaped on it.
+        var slab = new Vector3(0.5f, 0.02f, 0.12f);
+        k.Stone.Paint(Look.Rock, 0.85f).Ellipsoid(slab, new Vector3(0.17f, 0.03f, 0.14f), 8, 3, new Basis(Vector3.Up, 0.4f), 0.5f);
+        if (fill > 0)
+            k.Stone.Paint(Grit, 0.95f).Ellipsoid(slab + new Vector3(0, 0.03f, 0), new Vector3(0.1f, 0.02f + fill * 0.015f, 0.09f), 9, 4, null, 0.2f);
+        k.AddTo(list, 0);
+        return list;
+    }
+
+    // Tempering: a flat wedging stone on two log rounds, a block of clay being
+    // folded, and the grit or grog in a little heap ready to be worked in.
+    public static List<StructureModel.Piece> WedgingSlab(int fill = 1)
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(0.5f, 0.3f));
+        var k = new Kit();
+        foreach (float x in new[] { -0.24f, 0.24f })
+        {
+            var at = new Vector3(x, 0, 0);
+            k.Wood.Paint(Bark, 0.85f).Loft(at, at + Vector3.Up * 0.42f, new MeshKit.Ring[] { new(0f, 0.13f, 0.12f), new(1f, 0.11f, 0.11f) }, 8, 0.02f);
+        }
+        const float surface = 0.5f;
+        k.Stone.Paint(new Color(0.52f, 0.51f, 0.5f)).Loft(new Vector3(-0.42f, surface - 0.035f, 0), new Vector3(0.42f, surface - 0.035f, 0.02f), new MeshKit.Ring[]
+        {
+            new(0f, 0.035f, 0.2f), new(0.3f, 0.04f, 0.25f), new(0.75f, 0.038f, 0.24f), new(1f, 0.033f, 0.19f),
+        }, 6, 0.15f, 0f);
+        // The clay block: a squared lump with a fold pressed across it.
+        var block = new Vector3(-0.1f, surface + 0.07f, 0.03f);
+        k.Plain.Paint(WetClay).Ellipsoid(block, new Vector3(0.17f, 0.08f, 0.12f), 8, 4, new Basis(Vector3.Up, 0.25f), 0.3f);
+        k.Plain.Paint(WetClay, 0.8f).Tube(new[] { block + new Vector3(-0.05f, 0.05f, -0.1f), block + new Vector3(0.0f, 0.07f, 0f), block + new Vector3(0.05f, 0.05f, 0.1f) }, 0.028f, 5);
+        // Temper heaped by it, grit grey and grog red together.
+        if (fill > 0)
+        {
+            var heap = new Vector3(0.22f, surface + 0.005f, -0.04f);
+            k.Stone.Paint(Grit).Ellipsoid(heap, new Vector3(0.09f, 0.02f + fill * 0.012f, 0.08f), 9, 4, null, 0.2f);
+            for (int i = 0; i < fill * 3; i++)
+                k.Plain.Paint(Sherd, 0.8f + H(i, 30) * 0.2f).Ellipsoid(heap + new Vector3(-0.06f + H(i, 31) * 0.12f, 0.015f + fill * 0.008f, -0.05f + H(i, 32) * 0.1f), new Vector3(0.012f, 0.008f, 0.01f), 5, 2);
+        }
+        // A water gourd at the foot for wetting the hands.
+        var gourd = new Vector3(0.5f, 0, 0.2f);
+        k.Plant.Paint(new Color(0.66f, 0.55f, 0.33f)).Ellipsoid(gourd + new Vector3(0, 0.1f, 0), new Vector3(0.09f, 0.1f, 0.09f), 9, 5);
+        k.Plant.Paint(new Color(0.6f, 0.5f, 0.3f)).Ellipsoid(gourd + new Vector3(0, 0.22f, 0), new Vector3(0.045f, 0.05f, 0.045f), 7, 4);
         k.AddTo(list, 0);
         return list;
     }

@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "devices")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -37,6 +37,7 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "devices") Devices();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -320,6 +321,30 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 3.2f, 5.2f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
+    }
+
+    // Batch devices (D-195): each device empty-ish (fill 1) in front, full behind.
+    void Devices()
+    {
+        var builds = new (string, System.Func<int, List<StructureModel.Piece>>)[]
+        {
+            ("Slaking trough", StationMeshes.SlakingTrough), ("Mortar", StationMeshes.Mortar), ("Wedging slab", StationMeshes.WedgingSlab),
+        };
+        for (int i = 0; i < builds.Length; i++)
+            for (int row = 0; row < 2; row++)
+            {
+                var root = new Node3D { Position = new Vector3((i - 1f) * 2.2f, 0, row * -2f), Rotation = new Vector3(0, 0.35f, 0) };
+                AddChild(root);
+                foreach (var piece in builds[i].Item2(row == 0 ? 1 : 3))
+                    if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+                if (row == 0) Label(builds[i].Item1, root.Position + new Vector3(0, -0.7f, 0.5f));
+            }
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(-3.4f, 0, 0.4f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.6f, 4.4f), new Vector3(0, 0.2f, -0.9f), Vector3.Up);
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
