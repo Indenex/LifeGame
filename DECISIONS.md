@@ -389,3 +389,23 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-094 — 2026-10-16 — I opens the equipment panel
 **Decision:** The equipment panel (D-074) opens with I.
 **Who:** Justin ("I", which the PM recommended)
+
+## D-095 — 2026-10-16 — Integration executes merges
+**Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
+**Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin
+
+## D-096 — 2026-10-16 — Justin sees every option set
+**Decision:** Every option set from the PM or any lane goes to Justin, small tuning included. The PM batches them.
+**Who:** Justin ("Everything"; the PM had recommended big calls only)
+
+## D-097 — 2026-10-16 — Crafting a little under the music; sound sliders in Options
+**Decision:** Your own crafting sounds sit a little under the music. The Esc menu gets an Options page with sound sliders (at least master, music, effects/work, ambience); every slider starts at 50% for a new player. Audio owns the mix and buses; UX/UI builds the page.
+**Who:** Justin ("2, but add a sound setting to Options ... Sliders should start at 50% on a new player login")
+
+## D-098 — 2026-10-16 — Hand crafting for basics, crafting stations for the rest
+**Decision:** Players hold nothing in their hands while working; small hand crafts play a simple hand-crafting animation. Only basic items and basic material processing can be made from your own crafting menu (C). Everything else needs its station: a **Crafting Table** for general and misc items, a **Spindle** for making yarn and cloth, a **Leather drying rack** for drying and working leather (more stations later as needed). Stations can only be built inside a claim. A station can use items from your inventory or from a chest/storage. Crafting proposes which recipes stay "basic" and which move to which station, for Justin to approve. Supersedes Animation's held-items work for now.
+**Who:** Justin (held items: "Nothing ... Other things require the crafting table associated with them ... These tables require a claim though ... They can pull from any item on your character, or your chest though.")
+
+## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
+**Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
+**Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
