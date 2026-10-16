@@ -311,7 +311,16 @@ public partial class Sheep : Node3D
     {
         if (sheepMesh != null) return;
         plainMaterial = Look.Solid(Colors.White);
-        sheepMesh = new ArrayMesh();
+        // The Modeling lane's sheep in the chosen style (model-2): same bones and
+        // surfaces as below, so everything else here works unchanged.
+        sheepMesh = SheepFigure.Build(PlayerModel.Style, plainMaterial).Mesh;
+    }
+
+    // The sheep from before the Modeling lane's (model-2), kept for comparisons.
+    public static ArrayMesh OldMesh()
+    {
+        plainMaterial ??= Look.Solid(Colors.White);
+        var sheepMesh = new ArrayMesh();
 
         // Surface 0, wool: a fleece made of overlapping puffs around a round core,
         // and a tuft on top of the head. Its color comes from the sheep's material.
@@ -355,6 +364,7 @@ public partial class Sheep : Node3D
         }
         st.Commit(sheepMesh);
         sheepMesh.SurfaceSetMaterial(1, plainMaterial);
+        return sheepMesh;
     }
 
     static SurfaceTool Begin()
