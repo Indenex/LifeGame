@@ -47,8 +47,12 @@ public static partial class Module
         if (CountOf(ctx, Item.Stick) < Structures.DoorSticks || CountOf(ctx, Item.Fiber) < Structures.DoorFiber)
             throw new Exception($"A door takes {Structures.DoorSticks} sticks and {Structures.DoorFiber} fiber");
         var state = RequireCooldown(ctx, player);
-        Take(ctx, Item.Stick, Structures.DoorSticks);
-        Take(ctx, Item.Fiber, Structures.DoorFiber);
+        float materials = (Take(ctx, Item.Stick, Structures.DoorSticks) + Take(ctx, Item.Fiber, Structures.DoorFiber))
+            / (Structures.DoorSticks + Structures.DoorFiber);
+        // Hanging a door practices building like a stage does.
+        byte cap = 100;
+        QualityCapFor(ctx, player.PlayerId, Structures.DoorProcess, ref cap);
+        OnProcessPerformed(ctx, player.PlayerId, Structures.DoorProcess, Processes.Quality(materials, Processes.DefaultScore, cap), false);
         ctx.Db.StructureDoor.Insert(new StructureDoor { StructureId = structureId, Closed = true, Locked = false, HungBy = ctx.Sender });
         TouchStructure(ctx, structureId);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });

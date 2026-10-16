@@ -58,7 +58,13 @@ public static partial class Module
     static partial void OnPlayerDroppedItem(ReducerContext ctx, WorldItem item);
     static partial void OnPlayerDroppedItem(ReducerContext ctx, WorldItem item) => TouchGroundItem(ctx, item);
 
-    static bool InClaim(ReducerContext ctx, float x, float z) => ClaimAt(ctx, x, z) is not null;
+    // Claims implements InClaimHook (true inside a standing claim).
+    static bool InClaim(ReducerContext ctx, float x, float z)
+    {
+        bool inClaim = false;
+        InClaimHook(ctx, x, z, ref inClaim);
+        return inClaim;
+    }
 
     static void EnsureWeatherSweep(ReducerContext ctx)
     {

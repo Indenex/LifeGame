@@ -72,8 +72,8 @@ namespace LifeGame.Shared
         // Building gives this process to everyone who helps finish a kiln stage.
         public const string KilnProcess = "clay.kiln";
         // StructureKind.Kiln once Building and Claims are on main: kinds are appended,
-        // after LeanTo, ClayHut and ClaimMarker (D-035).
-        public const int KilnStructureKind = 3;
+        // after LeanTo, ClayHut, ClaimMarker and Basket (D-035).
+        public const int KilnStructureKind = 4;
         public const string KilnFireProcess = "clay.kiln_fire";
         public const int KilnCapacity = 6;
         public const int KilnQualityBonus = 10;

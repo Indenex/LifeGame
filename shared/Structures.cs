@@ -73,7 +73,7 @@ namespace LifeGame.Shared
 
         // The skill each stage practices, for the journal and skills (build.* process ids).
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
-            DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave";
+            DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave", DoorProcess = "build.door";
 
         // A hurdle door on a finished clay hut: what hanging it takes, and the warmth it keeps in when shut.
         public const int DoorSticks = 4, DoorFiber = 2;
