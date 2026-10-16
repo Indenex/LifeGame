@@ -26,7 +26,6 @@ public partial class SimmerView : Node3D
         Visible = false,
         NoDepthTest = true,
     };
-    readonly MeshInstance3D floaters = new();
     Item dish;
     double putAt;
 
@@ -38,8 +37,6 @@ public partial class SimmerView : Node3D
     {
         body.Scale = Vector3.One * PotView.Size;
         AddChild(body);
-        // Modeling's stones the pot sits on (unscaled; built in the pot's own frame).
-        AddChild(new MeshInstance3D { Mesh = CookingMeshes.Under });
         AddChild(surface);
         AddChild(steam);
         AddChild(label);
@@ -55,10 +52,6 @@ public partial class SimmerView : Node3D
         surface.Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.004f, RadialSegments = 24 };
         surface.MaterialOverride = Look.Solid(dish == Item.PotOfStew ? Stew : Broth);
         surface.Position = new Vector3(0, line.Y, 0);
-        // What floats in it, just above the liquid disc.
-        floaters.Mesh = CookingMeshes.Floaters(dish == Item.PotOfStew ? CookingMeshes.Dish.Stew : dish == Item.Tallow ? CookingMeshes.Dish.Tallow : CookingMeshes.Dish.Broth, line.X);
-        floaters.Position = new Vector3(0, line.Y + 0.002f, 0);
-        if (floaters.GetParent() == null) AddChild(floaters);
         steam.Position = new Vector3(0, PotMesh.Height(ClayForm.CoilPot) * PotView.Size, 0);
         steam.Emitting = true;
         label.Position = new Vector3(0, PotMesh.Height(ClayForm.CoilPot) * PotView.Size + 0.3f, 0);
