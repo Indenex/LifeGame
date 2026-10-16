@@ -3,7 +3,7 @@ Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
 Status: in_progress
 Branch: claude/survival-next
-PR: (none yet)
+PR: (none yet; tools/FirstEvening merged in #185)
 
 ## Goal
 Justin picked first-evening tuning on the new land (env-2, #175, lands with the D-143 wipe). A fresh character spawning at dusk or in winter should find berries, water and the makings of a fire, and get a fire lit before the cold becomes a worry, without ever dying in the first hour (D-081). Output: measured numbers for the new land (distance from spawn to the nearest ripe bush, to drinkable water, how long a first fire takes with CraftCheck-style steps, warmth left on arrival at the fire, day and night, summer and winter) and the small tunings that fix any gap (bush density near spawn, BushRegrow, respawn warmth), proposed to the PM as options where players would notice.
@@ -20,6 +20,8 @@ Justin picked first-evening tuning on the new land (env-2, #175, lands with the 
   - First spawn (81 spots in the middle): nearest bush median 6 m / worst 11; water median 18 / worst 28; first fire (2 sticks + 2 fiber walk, shred, drill with fails) median 16 s / worst 18 s. Freeze time with the arrival buff: 32 min mild, 16 min freezing night. Fire uses at most 2% of it.
   - Respawn at the rim (24 spots): bush median 5 / worst 11; water median 38 / worst 60; first fire median 17 s / worst 22 s; freeze 8 min on a freezing night, fire uses 5%.
   - Reading: on this land distance is not the problem; the risk is a player who doesn't yet know the hand-drill recipe (Journal's discovery), not the walk. Re-run on env-2.
+
+- 2026-10-16: tools/FirstEvening merged with #185. How to run it (fresh session): install dotnet 8 (`curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir ~/.dotnet`) and SpacetimeDB 2.12.0 (`mkdir -p ~/stdb && curl -sSL https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.12.0/spacetime-x86_64-unknown-linux-gnu.tar.gz | tar xz -C ~/stdb`); `export PATH=~/stdb:~/.dotnet:$PATH DOTNET_ROOT=~/.dotnet`; `(cd server && spacetimedb-cli build)`; `spacetimedb-cli start --listen-addr 127.0.0.1:3000 &`; `(cd server && spacetimedb-cli publish lifegame --server local --yes --delete-data)`; `tools/gen-bindings.sh`; `cd tools/FirstEvening && dotnet run -c Release`. Compare with the baseline above.
 
 ## Open questions / blockers
 - Waits on env-2 (#175) for the final land; tooling can be built against current main.
