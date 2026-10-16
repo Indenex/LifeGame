@@ -1,0 +1,10 @@
+# atmosphere-24 (1abaa12): falling leaves/petals in broadleaf woods near (-46,-46). 12 fps movie;
+# the first frames let the terrain load, the clip is cut between the marks.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --season=0.62 --wind=0.5 --leaves=1 --debug-position=-46,-46 --render-cam=7,2.6,0,1.2
+sql UPDATE player_pos SET x = -46.0, z = -46.0, chunk_x = -3, chunk_z = -3
+frames 240
+mark leaves-start
+frames +96
+mark leaves-end
