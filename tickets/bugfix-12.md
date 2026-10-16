@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (after #64)
+PR: (opening)
 
 ## Goal
 A fresh player sees "New in your journal: Foraging" and hears the discovery chime once, the first time they forage, not on every stick they pick up afterwards.
@@ -17,4 +17,4 @@ Cause: `my_journal` is a view without a primary key, so when the server bumps `T
 - (none)
 
 ## Next step
-Open a PR from claude/bugfix-lyle6o once #64 merges (or push onto #64 if the PM agrees).
+Wait for CI on the PR, then send the PM the green sha.
