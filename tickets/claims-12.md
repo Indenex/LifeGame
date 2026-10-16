@@ -12,6 +12,7 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - what happens to fences when a claim lapses.
 
 ## Progress log
+- 2026-10-16 19:57: House building put both hook declarations in PR #202 (head 5793230, CI running): `GateOpenHook` in BuildingStorage.cs (called from ToggleDoor for gates) and `SnapFenceHook(Vector3 target, ref Vector3 snapped, ref float yaw, ref bool done)` in BuildingSystem.cs (called first in SnapFence). Their note: `yaw` is the ghost's heading. Check that it matches the Structures.ToWorld yaw that SnapToClaimBorder returns before wiring. Build against the hooks once #202 merges.
 - 2026-10-16 19:56: handoff.
   - Done so far on this branch:
     - `Social.SnapToClaimBorder` and `NearClaimBorder`, with a SocialTest check;
@@ -40,8 +41,8 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - From House building: the building-9 sha with the two hook declarations.
 
 ## Next step
-When House building sends the building-9 sha with `GateOpenHook` and `SnapFenceHook`:
-1. Merge it into this branch.
+When House building's PR #202 (GateOpenHook and SnapFenceHook) merges:
+1. Merge main into this branch.
 2. Uncomment GateOpenHook in ClaimFences.cs.
 3. Add `client/scripts/social/BuildingSystem.ClaimFences.cs` (a `public partial class BuildingSystem` implementing SnapFenceHook). It should call Social.SnapToClaimBorder when the target is NearClaimBorder of a claim the player has rights in, then set done = true.
 4. Add SocialTest checks: an outsider can't open a claim gate; a member can.
