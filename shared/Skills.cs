@@ -51,7 +51,8 @@ namespace LifeGame.Shared
         public const string Kill = "animal.kill";
         public const string Butcher = "animal.butcher";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
-        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
+        // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
+        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
 
         public static readonly Specialization[] Specializations =
         {
@@ -76,6 +77,8 @@ namespace LifeGame.Shared
             ["build.wattle"] = "Weaving wattle walls",
             ["build.daub"] = "Daubing walls",
             ["build.roof"] = "Thatching a roof",
+            ["build.weave"] = "Weaving a storage basket",
+            ["build.door"] = "Hanging a door",
             [Berries] = "Picking berries",
             [Shear] = "Shearing a sheep",
             [Kill] = "Hunting",
