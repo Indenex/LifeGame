@@ -12,6 +12,11 @@ ui-16 env RENDER_SIZE=1280x720 tools/render/render.sh ui-16 bc86d71 "--offline -
 building-10 tools/render/scene.sh building-10 8a30003 tools/render/scenes/building-10-cabin.txt
 building-11 tools/render/scene.sh building-11 b99e08c tools/render/scenes/building-11-seethrough.txt
 atmosphere-18 tools/render/render.sh atmosphere-18 01fce32 "--rain=0 --screenshot-delay=90 --debug-position=-46,-46 --screenshot-yaw=3 --time-of-day=0.29 --cloud=0.1 --engine=gl_compatibility" "--rain=0 --screenshot-delay=90 --debug-position=-46,-46 --screenshot-yaw=3 --time-of-day=0.29 --cloud=0.1" "--rain=0 --screenshot-delay=90 --debug-position=-46,-46 --screenshot-yaw=3 --time-of-day=0.36 --cloud=0.1 --engine=gl_compatibility" "--rain=0 --screenshot-delay=90 --debug-position=-46,-46 --screenshot-yaw=3 --time-of-day=0.36 --cloud=0.1" "--rain=0 --screenshot-delay=90 --debug-position=-17,0 --time-of-day=0.27 --wind=0.1 --engine=gl_compatibility" "--rain=0 --screenshot-delay=90 --debug-position=-17,0 --time-of-day=0.27 --wind=0.1"
+atmosphere-19-dusk10 tools/render/scene.sh atmosphere-19-dusk10 682361f tools/render/scenes/atmosphere-19-dusk10.txt
+atmosphere-19-night10 tools/render/scene.sh atmosphere-19-night10 682361f tools/render/scenes/atmosphere-19-night10.txt
+atmosphere-19-night40 tools/render/scene.sh atmosphere-19-night40 682361f tools/render/scenes/atmosphere-19-night40.txt
+atmosphere-19-shut10 tools/render/scene.sh atmosphere-19-shut10 682361f tools/render/scenes/atmosphere-19-shut10.txt
+atmosphere-19-day10 tools/render/scene.sh atmosphere-19-day10 682361f tools/render/scenes/atmosphere-19-day10.txt
 env-2 tools/render/scenes/env-2.sh
 model-172 tools/render/render.sh model-172 71f7c7c "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35" "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.4,0.6,35,0.35"
 model-172-items tools/render/scene.sh model-172-items 71f7c7c tools/render/scenes/model-172-items.txt

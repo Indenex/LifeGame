@@ -1,0 +1,44 @@
+# atmosphere-19 (682361f): a finished clay hut with a fire burning inside and an open campfire beside it.
+# Camera = puppet, standing 10 m in front of the door (door faces +z), time 0.92, door shut.
+client-as-puppet
+client --time-of-day=0.92 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 60 50
+give 2 4 50
+give 3 30 50
+give 110 20 50
+give 5 4 50
+place 1 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 2
+stroll 0 -2.2
+arrive
+face 180
+craft fire.hand_drill
+wait 2
+stroll 0 2.4
+arrive
+stroll 3 0
+arrive
+face 90
+craft fire.hand_drill
+wait 2
+stroll -3 -0.4
+arrive
+key g
+wait 2
+stroll 0 8
+arrive
+wait 6
+burst 4 2
