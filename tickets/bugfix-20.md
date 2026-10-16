@@ -1,7 +1,7 @@
 # bugfix-20: shaping clay at the 24-piece cap refunds raw-quality clay and says "Your pot is drying"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: todo
+Status: in_progress
 Branch: claude/bugfix-20
 PR: (none yet)
 
@@ -14,9 +14,10 @@ Recommended fix: refuse the craft before it starts (StartCraft in Crafting.cs wo
 
 ## Progress log
 - 2026-10-16: filed from the review; low severity (needs 24 pieces drying at once).
+- 2026-10-16: started (PM queued it; D-145). Implemented fix (a): Crafting.cs gets `static partial void CanStartCraft(ctx, playerId, def, ref string? refusal)`, called in StartCraft after the input checks and before anything is taken; Ceramics implements it and refuses clay forms at 24 pieces out ("You have too much clay drying already. Pick some up or fire it first."). OnPlaced keeps its refund as a fallback. Server builds. Asked Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) whether the 3-line hook in Crafting.cs is OK. A scratch bot (24 pots, then a 25th) is running.
 
 ## Open questions / blockers
-- Which fix: ask the PM/Crafting whether a pre-start hook in StartCraft is acceptable.
+- Crafting to confirm the CanStartCraft hook in Crafting.cs (asked 2026-10-16).
 
 ## Next step
-Ask the PM whether bugfix-20 is worth doing now, and Crafting whether a pre-start refuse hook in StartCraft is OK; then implement the chosen fix on claude/bugfix-20.
+Read the scratch bot result; if it passes, push and open the PR (note the Crafting.cs hook for Crafting).

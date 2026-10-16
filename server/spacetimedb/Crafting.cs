@@ -69,6 +69,9 @@ public static partial class Module
     // Hooks for the skills system. It implements these in its own file; until it
     // does, the compiler drops the calls and every cap stays at 100.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
+    // Lanes refuse a craft before its inputs are taken by setting refusal (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal);
+
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
@@ -111,6 +114,10 @@ public static partial class Module
         // A stone used as the hammer cannot also be the stone being knapped.
         if (def.NeedsTool.HasFlag(ItemTags.Hammer) && !HasSpareHammer(ctx, def))
             throw new Exception("You need a second stone to strike with");
+        // Another lane can refuse before anything is used up (Ceramics: too much clay out).
+        string? refusal = null;
+        CanStartCraft(ctx, player.PlayerId, def, ref refusal);
+        if (refusal != null) throw new Exception(refusal);
 
         float inputQuality = 0f;
         uint taken = 0;
