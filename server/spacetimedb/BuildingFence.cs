@@ -32,11 +32,11 @@ public static partial class Module
                 if (Structures.StepCrossesFence(s.X, s.Z, s.Yaw, fromX, fromZ, toX, toZ, FenceBody)) return true;
                 continue;
             }
-            // Walls stand once a hut's wattle or a house's brick walls are up, as the client draws them.
+            // Walls stand once a hut's wattle, or a house's or cabin's walls, are up, as the client draws them.
             bool walls = s.Kind switch
             {
                 StructureKind.ClayHut => s.Complete || s.Stage >= 1,
-                StructureKind.BrickHouse => s.Complete || s.Stage >= 2,
+                _ when Structures.IsRoom(kind) => s.Complete || s.Stage >= 2,
                 _ => false,
             };
             if (walls && Structures.StepCrossesWalls(kind, s.X, s.Z, s.Yaw, DoorClosed(ctx, s.Id), fromX, fromZ, toX, toZ))

@@ -128,7 +128,7 @@ public static partial class Module
         TouchStructure(ctx, s.Id);
     }
 
-    // A burning fire within a brick house's walls: the whole room is warm.
+    // A burning fire within a brick house's or log cabin's walls: the whole room is warm.
     static bool FireInside(ReducerContext ctx, Structure s)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
