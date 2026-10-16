@@ -44,6 +44,17 @@ public static partial class Module
         public float WetnessRate;
     }
 
+    // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
+    // can see it (D-036). Coarse on purpose: it changes only a few times as a
+    // player soaks or dries. A dry player has no row.
+    [SpacetimeDB.Table(Accessor = "Drenched", Public = true)]
+    public partial struct Drenched
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public byte Level;
+    }
+
     [SpacetimeDB.View(Accessor = "MyVitals", Public = true)]
     public static List<Vitals> MyVitals(ViewContext ctx) =>
         ctx.Db.Vitals.Owner.Filter(ctx.Sender).ToList();
@@ -101,6 +112,7 @@ public static partial class Module
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
             ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 });
+        ctx.Db.Drenched.PlayerId.Delete(player.PlayerId);
     }
 
     // --- Reducers ----------------------------------------------------------
@@ -204,7 +216,22 @@ public static partial class Module
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
                 || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f)
                 ctx.Db.Vitals.PlayerId.Update(next);
+            ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
+    }
+
+    static void ShowWetness(ReducerContext ctx, uint playerId, float wetness)
+    {
+        byte level = (byte)MathF.Round(Math.Clamp(wetness, 0f, 1f) * 10f);
+        var row = ctx.Db.Drenched.PlayerId.Find(playerId);
+        if (level == 0)
+        {
+            if (row != null) ctx.Db.Drenched.PlayerId.Delete(playerId);
+        }
+        else if (row is not { } r)
+            ctx.Db.Drenched.Insert(new Drenched { PlayerId = playerId, Level = level });
+        else if (r.Level != level)
+            ctx.Db.Drenched.PlayerId.Update(r with { Level = level });
     }
 
     // --- Death -------------------------------------------------------------
@@ -256,6 +283,7 @@ public static partial class Module
             Food = Needs.RespawnFood,
             Water = Needs.RespawnWater,
             Warmth = Needs.RespawnWarmth,
+            Wetness = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,

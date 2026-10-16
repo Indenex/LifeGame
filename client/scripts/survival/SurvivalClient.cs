@@ -19,7 +19,9 @@ public partial class SurvivalClient : Node
     Node world = null!;
     Terrain terrain = null!;
     Node3D player = null!;
-    readonly WetLook wetLook = new();
+    WetLook wetLook = null!;
+    // Finds another player's avatar by player id; Main sets it.
+    public Func<uint, Node3D?> AvatarOf { get; set; } = _ => null;
     Hud hud = null!;
     DbConnection? conn;
     Vitals? vitals;
@@ -35,6 +37,7 @@ public partial class SurvivalClient : Node
     public static IEnumerable<string> Queries(string range) => new[]
     {
         "SELECT * FROM my_vitals",
+        "SELECT * FROM drenched",
         $"SELECT * FROM forage_bush WHERE {range}",
     };
 
@@ -44,8 +47,7 @@ public partial class SurvivalClient : Node
         this.terrain = terrain;
         this.player = player;
         this.hud = hud;
-        wetLook.Dress(player);
-        AddChild(wetLook);
+        wetLook = WetLook.On(player);
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -94,6 +96,7 @@ public partial class SurvivalClient : Node
         conn = connection;
         conn.Db.MyVitals.OnInsert += (_, v) => OnVitals(v);
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
+        conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
         conn.Db.ForageBush.OnInsert += (_, b) => AddBush(b);
         conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) n.Ripe = IsRipe(b); };
         conn.Db.ForageBush.OnDelete += (_, b) => RemoveNode(bushes, b.Id);
@@ -167,6 +170,16 @@ public partial class SurvivalClient : Node
         }
 
         UpdateLoad();
+        UpdateOthersWet();
+    }
+
+    // Other players look as wet as the server says (D-036), in tenths.
+    void UpdateOthersWet()
+    {
+        if (conn == null || vitals is not { } me) return;
+        foreach (var d in conn.Db.Drenched.Iter())
+            if (d.PlayerId != me.PlayerId && AvatarOf(d.PlayerId) is { } avatar)
+                WetLook.On(avatar).Wetness = d.Level / 10f;
     }
 
     // Carrying limit (D-042): too heavy a load slows your walk.

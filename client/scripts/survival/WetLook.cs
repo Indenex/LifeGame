@@ -30,7 +30,17 @@ void fragment() {
 
     public float Wetness { get; set; }
 
-    public void Dress(Node3D body)
+    // The wet look on a body, made the first time it is needed.
+    public static WetLook On(Node3D body)
+    {
+        if (body.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } look) return look;
+        look = new WetLook { Name = nameof(WetLook) };
+        look.Dress(body);
+        body.AddChild(look);
+        return look;
+    }
+
+    void Dress(Node3D body)
     {
         foreach (var mesh in Meshes(body)) mesh.MaterialOverlay = overlay;
 
@@ -40,6 +50,7 @@ void fragment() {
             Lifetime = 0.7f,
             Emitting = false,
             Position = new Vector3(0, 1.1f, 0),
+            LocalCoords = false,
             ProcessMaterial = new ParticleProcessMaterial
             {
                 EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
@@ -66,7 +77,7 @@ void fragment() {
                 },
             },
         };
-        body.AddChild(drip);
+        AddChild(drip);
     }
 
     static IEnumerable<MeshInstance3D> Meshes(Node node)
