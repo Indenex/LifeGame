@@ -94,15 +94,15 @@ public partial class Atmosphere
         sky.SetShaderParameter(NFlashDir, (strikeDir + Vector3.Up * 0.25f).Normalized());
     }
 
-    // A jagged bolt from the cloud base to the ground, 250 to 700 m away in the
+    // A jagged bolt from the cloud base (160 m) to the ground, 130 to 230 m away in the
     // strike's direction, with a couple of thinner forks. Drawn as ribbons facing
     // the camera, unaffected by fog so the rain doesn't swallow it.
     bool DrawBolt(Vector3 focus, Vector3 eye, float near)
     {
-        float distance = Mathf.Lerp(700f, 250f, near);
+        float distance = Mathf.Lerp(230f, 130f, near);
         var foot = focus + strikeDir * distance;
         foot.Y = focus.Y - 4f;
-        var top = foot + new Vector3((GD.Randf() - 0.5f) * 80f, 230f, (GD.Randf() - 0.5f) * 80f);
+        var top = foot + new Vector3((GD.Randf() - 0.5f) * 60f, 160f, (GD.Randf() - 0.5f) * 60f);
 
         boltMesh.ClearSurfaces();
         boltMesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
