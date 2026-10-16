@@ -12,10 +12,10 @@ namespace LifeGame;
 // and by the water and thins to nothing on the rises. It drifts with the wind.
 public partial class Mist : Node3D
 {
-    // Heights of the two layers above the low ground nearby (at the water line they
-    // sit where they always did, -0.45 and -0.1): low ground sits under them, rises
-    // poke through.
-    static readonly float[] Layers = { 0.55f, 0.9f };
+    // Heights of the layers above the low ground nearby: low ground sits under them,
+    // rises poke through. The top one makes the mist knee- to waist-deep in a hollow,
+    // so it reads from across a valley, not only underfoot (atmosphere-23).
+    static readonly float[] Layers = { 0.5f, 0.95f, 1.5f };
     const float Size = 140f;
 
     readonly ShaderMaterial material = new() { Shader = MistShader };
@@ -25,6 +25,7 @@ public partial class Mist : Node3D
     readonly float[] samples = new float[225];
 
     static readonly StringName NAmount = "amount", NColor = "mist_color", NOffset = "drift", NFocus = "focus";
+    static readonly StringName NSunDir = "sun_dir", NGlow = "glow_color";
 
     public override void _Ready()
     {
@@ -42,8 +43,10 @@ public partial class Mist : Node3D
         }
     }
 
-    // amount 0 to 1; color is the light the mist glows with (the fog's light).
-    public void Follow(Vector3 focus, float amount, Color color, float wind, float dt)
+    // amount 0 to 1; color is the light the mist glows with (the fog's light);
+    // sunDir points toward the sun, and glow is the sunlight that lights the mist up
+    // when you look toward it (black when the sun is down).
+    public void Follow(Vector3 focus, float amount, Color color, Vector3 sunDir, Color glow, float wind, float dt)
     {
         drift += dt;
         offset += new Vector2(0.6f, 0.8f) * (0.15f + wind * 0.8f) * dt;
@@ -68,6 +71,8 @@ public partial class Mist : Node3D
         material.SetShaderParameter(NColor, color);
         material.SetShaderParameter(NOffset, offset);
         material.SetShaderParameter(NFocus, new Vector2(focus.X, focus.Z));
+        material.SetShaderParameter(NSunDir, sunDir);
+        material.SetShaderParameter(NGlow, glow);
     }
 
     // The low ground around a point: the 20th percentile of the land's height over a
@@ -105,6 +110,8 @@ public partial class Mist : Node3D
             uniform vec4 mist_color : source_color = vec4(0.85, 0.87, 0.88, 1.0);
             uniform vec2 drift;
             uniform vec2 focus;
+            uniform vec3 sun_dir = vec3(0.0, 1.0, 0.0);
+            uniform vec3 glow_color : source_color = vec3(0.0);
             uniform sampler2D noise : repeat_enable, filter_linear_mipmap;
             uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
             varying vec3 world_pos;
@@ -127,11 +134,14 @@ public partial class Mist : Node3D
                 float b = texture(noise, world_pos.xz * 0.05 - drift * 0.035 + 0.37).r;
                 float wisps = smoothstep(0.3, 0.9, a * 0.6 + b * 0.4);
 
-                float pool = smoothstep(0.0, 1.4, thick);
+                float pool = smoothstep(0.0, 1.8, thick);
                 // Fade toward the edge of the layer so it never shows a border.
                 float edge = 1.0 - smoothstep(45.0, 68.0, length(world_pos.xz - focus));
-                ALBEDO = mist_color.rgb;
-                ALPHA = clamp(amount * pool * (0.15 + 0.85 * wisps) * edge * 0.42, 0.0, 0.6);
+                // Looking toward a low sun, the mist lights up warm and bright.
+                vec3 look = normalize(world_pos - CAMERA_POSITION_WORLD);
+                float scatter = pow(max(dot(look, normalize(sun_dir)), 0.0), 6.0);
+                ALBEDO = mist_color.rgb + glow_color * scatter * 0.9;
+                ALPHA = clamp(amount * pool * (0.2 + 0.8 * wisps) * edge * 0.55 * (1.0 + 0.35 * scatter), 0.0, 0.72);
             }
             """,
     };
