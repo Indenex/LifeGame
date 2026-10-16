@@ -612,7 +612,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("Hearths only", as recommended), applying D-148
 
 ## D-150 — 2026-10-16 — First-time tips
-**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with E (was G, changed by D-188). (3) Your claim keeps what you build; press B. (4) The crafting table: press E at it (was G, changed by D-188).
 **Who:** Justin ("All four", as recommended)
 
 ## D-151 — 2026-10-16 — Log cabin
@@ -779,3 +779,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
 **Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
 **Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
+
+## D-192 — 2026-10-16 — Jump details (extends D-190)
+**Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
+**Who:** Justin (as relayed by the PM)
