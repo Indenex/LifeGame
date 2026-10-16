@@ -1,7 +1,7 @@
 # env-1: Cosy forest pass
 Lane: Environment
 Owner: Environment session (Opus)
-Status: in_review
+Status: done
 Branch: claude/environment-env-1
 PR: #113
 
@@ -18,6 +18,7 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 - 2026-10-16 19:20: CI run 38943475326 on 2b24f4a green (server, load test, upgrade check, crafting, social, Linux and Windows clients). Later commits only touch tickets and tools/env-preview; head CI running.
 - 2026-10-16 19:15: Crafting OK with the Trees.Forest change and non-choppable saplings; stale chopped_tree rows clear on RegrowTrees. #92 (cold hearths) uses Trees.GrowsAt too; merge main if it lands first.
 - 2026-10-16 18:55: merged main (cc75409). Main now has choppable trees (#70, `shared/Trees.cs`), so tree layout must match the server: moved `Forest` to `shared/Forest.cs` (namespace LifeGame.Shared) and `Trees.Forest` now returns `Forest.TreeChance(Forest.Density)`. Saplings stay client-only scenery. Crafting lane told. Local: server and client build, LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck, SocialTest all pass. Pushed 2b24f4a, opened PR #113, CI run https://github.com/Indenex/LifeGame/actions/runs/38943475326 (queued).
+- 2026-10-16 19:28: PR #113 merged into main (abc9a47). Follow-ups move to env-3 (seasons hook, tuning from Render shots).
 
 ## Open questions / blockers
 - Answered (D-084, via PM 2026-10-16): Justin chose A then C. env-1 = groves and glades, visual only, no wipe (milestone M1, D-081). Reshaping the land (more ponds, a stream, gentler hills) follows as env-2 through Integration for `shared/World.cs`; it wipes the world, so nothing that wipes is run or merged until the PM confirms timing with Justin, and the wipe lands in one PR with an upgrade-check note.
@@ -25,4 +26,4 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 - Seasons (D-099, Atmosphere leads, atmosphere-16), agreed 2026-10-16: Atmosphere's Look shaders handle snow, leaf colour, winter leaf-drop and out-of-season flowers, and adds `Look.TreeLeaves` (broadleaf, ghost included). Environment's part, after #113 merges: set INSTANCE_CUSTOM.w as a season code (0 = no change for pines, bushes, rocks; 1 = broadleaf canopy; 2 = flower), keeping x, y and z as they are (x, y: clearing animation; z: 1 = rock), and make `AddMulti` enable custom data whenever any w != 0; switch the leafy MultiMesh to `Look.TreeLeaves` when it lands.
 
 ## Next step
-Wait for head CI on PR #113 and the PM merge (2b24f4a was green); tune from Render shots when they arrive.
+Done. Continue in `tickets/env-3.md`.
