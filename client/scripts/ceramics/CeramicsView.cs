@@ -40,6 +40,7 @@ public partial class CeramicsView : Node
     {
         this.conn = conn;
         RegisterUse();
+        AttachSimmer(conn);
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
@@ -143,6 +144,8 @@ public partial class CeramicsView : Node
     void RegisterUse()
     {
         Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
+        // Like taking meat off a fire: ahead of feeding it.
+        Use.Register(new UseHandler { Id = "ceramics.simmer", Priority = 25, Find = SimmerOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
         Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
@@ -327,7 +330,8 @@ public partial class CeramicsView : Node
     }
 
     static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
-        or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar;
+        or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar
+        or Item.PotOfBroth or Item.PotOfStew;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()
