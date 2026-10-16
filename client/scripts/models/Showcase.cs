@@ -29,13 +29,14 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
             else if (view == "props") Props();
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
+            else if (view == "deer") Deer();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -109,7 +110,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         items.Sort();
@@ -188,6 +189,32 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
+    }
+
+    // Red deer for Animals: a hind and a stag, with a person and a sheep for scale.
+    void Deer()
+    {
+        var coat = Look.Solid(new Color(0.55f, 0.30f, 0.18f));
+        var hind = DeerFigure.Create(false, coat);
+        hind.Position = new Vector3(-0.9f, 0, 0);
+        hind.Rotation = new Vector3(0, 1.3f, 0);
+        AddChild(hind);
+        var stag = DeerFigure.Create(true, coat);
+        stag.Position = new Vector3(1.0f, 0, -0.4f);
+        stag.Rotation = new Vector3(0, 1.0f, 0);
+        AddChild(stag);
+        var wool = Look.Solid(new Color(0.74f, 0.71f, 0.63f));
+        var sheep = SheepFigure.Create(SheepFigure.Variant, wool);
+        sheep.Position = new Vector3(-2.3f, 0, 0.6f);
+        sheep.Rotation = new Vector3(0, 1.3f, 0);
+        AddChild(sheep);
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(2.6f, 0, 0.5f);
+        figure.Rotation = new Vector3(0, -0.4f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish

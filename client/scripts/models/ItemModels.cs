@@ -177,9 +177,14 @@ public static class ItemModels
         Item.SheepHide => (k => RolledHide(k, true), true),
         Item.ScrapedHide => (k => RolledHide(k, false), true),
         Item.Leather => (Leather, true),
+        Item.SleepingMat => (SleepingMat, true),
         // Clothing (D-074), by number until the items reach main.
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
+        // Red deer (animals-14), by number until the items reach main.
+        (Item)202 => (Venison, true),
+        (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
+        (Item)204 => (AntlerItem, false),
         // Wool (animals-8), by number until the items reach main.
         (Item)197 => (DropSpindle, false),
         (Item)198 => (Yarn, true),
@@ -407,10 +412,12 @@ public static class ItemModels
 
     // A hide rolled up and tied: fleece outside for a fresh sheepskin, bare pale
     // skin once it has been scraped.
-    static void RolledHide(Kit k, bool fleece)
+    static void RolledHide(Kit k, bool fleece) => RolledHide(k, fleece, Fleece);
+
+    static void RolledHide(Kit k, bool hair, Color coat)
     {
         const float half = 0.17f, radius = 0.075f;
-        var outside = fleece ? k.Plant.Paint(Fleece) : k.Plain.Paint(HideSkin);
+        var outside = hair ? k.Plant.Paint(coat) : k.Plain.Paint(HideSkin);
         outside.Loft(new Vector3(-half, radius, 0), new Vector3(half, radius, 0), new MeshKit.Ring[]
         {
             new(0f, radius * 0.95f, radius * 0.95f), new(0.15f, radius, radius), new(0.85f, radius, radius), new(1f, radius * 0.95f, radius * 0.95f),
@@ -436,6 +443,47 @@ public static class ItemModels
                 new(0f, 0.016f, 0.16f), new(0.5f, 0.018f, 0.17f), new(1f, 0.016f, 0.16f),
             }, 4, 0.15f, Mathf.Pi / 4f);
         }
+    }
+
+    // A sleeping mat of woven rushes, rolled up and tied: the weave shows in rings.
+    static void SleepingMat(Kit k)
+    {
+        const float half = 0.3f, radius = 0.09f;
+        k.Plant.Paint(Weave).Loft(new Vector3(-half, radius, 0), new Vector3(half, radius, 0), new MeshKit.Ring[]
+        {
+            new(0f, radius * 0.95f, radius * 0.95f), new(0.1f, radius, radius), new(0.9f, radius, radius), new(1f, radius * 0.95f, radius * 0.95f),
+        }, 9, 0.05f);
+        for (int i = 1; i < 12; i++)
+        {
+            float x = -half + i * 2f * half / 12f;
+            k.Plant.Paint(Weave, i % 2 == 0 ? 0.82f : 0.9f).Tube(MeshKit.Circle(new Vector3(x, radius, 0), Vector3.Right, radius + 0.002f, 18), 0.005f, 3, -1f, false);
+        }
+        for (int end = -1; end <= 1; end += 2)
+        {
+            k.Plant.Paint(Weave, 0.75f).Ellipsoid(new Vector3(end * half, radius, 0), new Vector3(0.006f, radius * 0.9f, radius * 0.9f), 9, 4);
+            k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(end * half * 0.6f, radius, 0), Vector3.Right, radius + 0.006f, 20), 0.007f, 4, -1f, false);
+        }
+    }
+
+    static readonly Color DeerCoat = new(0.55f, 0.32f, 0.2f);
+
+    // A lean, dark-red cut of venison, no rind of fat like mutton.
+    static void Venison(Kit k)
+    {
+        k.Plain.Paint(new Color(0.40f, 0.12f, 0.11f)).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.12f, 0.035f, 0.08f), 8, 4, new Basis(Vector3.Up, 0.3f), 0.5f);
+        k.Plain.Paint(new Color(0.46f, 0.15f, 0.13f)).Ellipsoid(new Vector3(0.03f, 0.05f, 0.01f), new Vector3(0.07f, 0.025f, 0.05f), 7, 3, new Basis(Vector3.Up, 0.5f), 0.5f);
+        k.Plain.Paint(new Color(0.88f, 0.84f, 0.76f)).Ellipsoid(new Vector3(-0.07f, 0.04f, -0.02f), new Vector3(0.03f, 0.012f, 0.05f), 6, 3, new Basis(Vector3.Up, 0.3f), 0.5f);
+    }
+
+    // A cast antler: a curved beam with a few tines, held by its base.
+    static void AntlerItem(Kit k)
+    {
+        var beam = new[] { new Vector3(0, 0.05f, 0), new Vector3(0, -0.15f, 0.04f), new Vector3(0.01f, -0.35f, 0.02f), new Vector3(0.02f, -0.52f, 0.08f) };
+        k.Plain.Paint(new Color(0.66f, 0.58f, 0.46f)).Ellipsoid(new Vector3(0, 0.05f, 0), new Vector3(0.03f, 0.018f, 0.03f), 6, 3);
+        k.Plain.Tube(beam, 0.02f, 5, 0.01f);
+        k.Plain.Paint(new Color(0.78f, 0.72f, 0.60f)).Tube(new[] { new Vector3(0, 0.0f, 0.02f), new Vector3(0.0f, -0.05f, 0.13f) }, 0.012f, 4, 0.004f);
+        k.Plain.Tube(new[] { new Vector3(0.005f, -0.2f, 0.035f), new Vector3(0.01f, -0.24f, 0.14f) }, 0.011f, 4, 0.004f);
+        k.Plain.Tube(new[] { new Vector3(0.02f, -0.52f, 0.08f), new Vector3(0.025f, -0.6f, 0.04f) }, 0.009f, 4, 0.003f);
     }
 
     // A wool tunic folded in a square, its cord belt coiled on top.
