@@ -39,6 +39,9 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM roast",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree",
+                "SELECT * FROM structure",
+                "SELECT * FROM claim",
+                "SELECT * FROM my_claim_stash",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -64,7 +67,7 @@ Craft("knap.hand_axe", 0.95f, Item.HandAxe);
 Craft("lash.spear", 0, Item.Spear);
 Craft("lash.stone_axe", 0, Item.StoneAxe);
 
-// Crafting-2 tools: a knife, a digging stick and a basket.
+// Crafting-2 tools: a knife and a digging stick (the basket is made at a table, below).
 Gather(Item.Stick, 5);
 Gather(Item.Stone, 3);
 Gather(Item.Fiber, 13);
@@ -72,7 +75,6 @@ Craft("knap.flake", 0.95f, Item.Flake);
 Craft("cord.twist", 0, Item.Cordage);
 Craft("haft.knife", 0, Item.StoneKnife);
 Craft("carve.digging_stick", 0, Item.DiggingStick);
-Craft("weave.basket", 0, Item.Basket);
 
 // A digging stick reaches one level below bare hands, where the clay is finer.
 var (clayX, clayZ) = Enumerable.Range(1, 40)
@@ -158,6 +160,54 @@ Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.Microse
 if (lastError != null) Fail($"feeding the fire a log: {lastError}");
 Console.WriteLine("Fed the fire a log");
 
+// Crafting-15: stations (D-098, D-112). A basket is woven at a crafting table, which
+// stands inside a claim, and part of its fiber comes from the claim's stash.
+lastError = null;
+conn.Reducers.StartCraft("weave.basket", 0);
+Pump(() => lastError != null, 5, "a basket away from a table to be refused");
+Console.WriteLine($"Basket with no table: {lastError}");
+lastError = null;
+conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
+Pump(() => lastError != null, 5, "a table outside a claim to be refused");
+if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
+Console.WriteLine($"Table outside a claim: {lastError}");
+Gather(Item.Fiber, 6);
+Craft("cord.twist", 0, Item.Cordage);
+Craft("cord.twist", 0, Item.Cordage);
+Gather(Item.Stick, 11);
+Gather(Item.Fiber, 12);
+if (CountOf(Item.Log) < 1) Fail("no log left for the table");
+
+// Claim land out past the spawn clearing, then build the table inside it.
+float claimDist = Social.SpawnClearRadius + Social.ClaimRadius + 5f;
+float ang = MathF.Atan2(z, x);
+WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist);
+var marker = BuildHere(StructureKind.ClaimMarker);
+Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
+var claim = conn.Db.Claim.Iter().First(c => c.StructureId == marker.Id);
+Console.WriteLine($"Claimed land at ({claim.X:F0}, {claim.Z:F0})");
+var table = BuildHere(StructureKind.CraftingTable);
+Console.WriteLine($"Built a crafting table at ({table.X:F1}, {table.Z:F1})");
+WalkTo(table.X, table.Z);
+
+// Stash all but 6 fiber; the basket needs 10, so 4 must come from the stash.
+WalkTo(marker.X, marker.Z);
+while (CountOf(Item.Fiber) > 6)
+{
+    var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
+    uint had = CountOf(Item.Fiber);
+    lastError = null;
+    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality);
+    Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
+    if (lastError != null) Fail($"stashing fiber: {lastError}");
+}
+uint StashFiber() => conn.Db.MyClaimStash.Iter().Where(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.Fiber).Aggregate(0u, (n, r) => n + r.Count);
+uint stashed = StashFiber();
+WalkTo(table.X, table.Z);
+Craft("weave.basket", 0, Item.Basket);
+Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
+Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
+
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
 if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
@@ -185,6 +235,39 @@ foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
 Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
+
+// Lays out a structure on clear, level ground near the bot and builds it from the bag.
+Structure BuildHere(StructureKind kind)
+{
+    float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
+    (float X, float Z)? site = null;
+    for (int r = 3; r < 30 && site == null; r++)
+        for (int k = 0; k < 16 && site == null; k++)
+        {
+            float a = k * MathF.Tau / 16, sx = x + MathF.Cos(a) * r, sz = z + MathF.Sin(a) * r;
+            if (Structures.GroundProblem((int)kind, sx, sz, 0f, H) != null) continue;
+            if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
+            if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
+            site = (sx, sz);
+        }
+    if (site is not { } at) { Fail($"no ground for a {kind}"); return null!; }
+    WalkTo(at.X, at.Z + 2f);
+    int before = conn.Db.Structure.Count;
+    lastError = null;
+    conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
+    if (lastError != null) Fail($"laying out a {kind}: {lastError}");
+    var s = conn.Db.Structure.Iter().Where(o => o.Owner == me).OrderByDescending(o => o.PlacedAt.MicrosecondsSinceUnixEpoch).First();
+    var sw = Stopwatch.StartNew();
+    while (conn.Db.Structure.Id.Find(s.Id) is { Complete: false })
+    {
+        if (sw.Elapsed.TotalSeconds > 60) Fail($"building the {kind}: {lastError}");
+        lastError = null;
+        conn.Reducers.Build(s.Id);
+        Pump(() => false, 0.35f, null);
+    }
+    return conn.Db.Structure.Id.Find(s.Id)!;
+}
 
 void Craft(string processId, float score, Item? expect)
 {

@@ -23,6 +23,8 @@ namespace LifeGame.Shared
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
         public int StoreStacks;
+        // A crafting station of this kind once finished (D-098); None for anything else.
+        public StationKind Station;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -86,6 +88,33 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
+            new StructureShape
+            {
+                Name = "Crafting table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Table,
+                Stages = new[] { "Table" },
+            },
+            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
+            new StructureShape
+            {
+                Name = "Spindle station",
+                HalfWidth = 0.6f, HalfDepth = 0.4f,
+                Clearance = 1.0f,
+                Station = StationKind.Spindle,
+                Stages = new[] { "Distaff stand" },
+            },
+            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
+            new StructureShape
+            {
+                Name = "Leather drying rack",
+                HalfWidth = 1.2f, HalfDepth = 0.35f,
+                Clearance = 1.0f,
+                Station = StationKind.DryingRack,
+                Stages = new[] { "Posts and bar" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -132,6 +161,21 @@ namespace LifeGame.Shared
                 new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
+            },
+            // Crafting table (D-112): Table
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+            },
+            // Spindle station: your drop spindle becomes part of it (Q10 a, pending Justin)
+            new[]
+            {
+                new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
+            },
+            // Leather drying rack
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
             },
         };
 

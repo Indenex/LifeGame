@@ -6,8 +6,9 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Hides drying on little stick racks (animals-5). Each rack is an A-frame of two
-// leaning sticks and a crossbar, with the scraped hide hung over it. The hide
+// Hides drying (animals-5, animals-11). A hide laced on a leather drying rack
+// station hangs from the station's bar (StationModels draws the frame); one from
+// before the stations has its own little A-frame of leaning sticks and a crossbar. The hide
 // starts pale pink and wet and darkens to tan leather as it dries; once it is dry,
 // G takes it down as leather.
 public partial class HideRacks : Node3D
@@ -37,7 +38,7 @@ public partial class HideRacks : Node3D
     {
         if (!racks.TryGetValue(r.Id, out var node))
         {
-            node = new Rack();
+            node = new Rack(frame: r.StationId == 0);
             racks[r.Id] = node;
             AddChild(node);
             node.Position = new Vector3(r.X, terrain.HeightAt(r.X, r.Z), r.Z);
@@ -71,8 +72,12 @@ public partial class HideRacks : Node3D
 
         public float Moisture => ClayRules.MoistureAt(moisture, rate, (float)(PotView.Now - at));
 
-        public Rack()
+        public Rack(bool frame)
         {
+            hide.Mesh = HideMesh();
+            hide.MaterialOverride = hideLook;
+            AddChild(hide);
+            if (!frame) return;
             var wood = Look.Solid(Wood);
             // An A-frame of two crossed sticks at each end, a crossbar resting in the forks.
             foreach (float side in new[] { -0.55f, 0.55f })
@@ -91,9 +96,6 @@ public partial class HideRacks : Node3D
                 Position = new Vector3(0, BarY, 0),
                 Rotation = new Vector3(0, 0, Mathf.Pi / 2),
             });
-            hide.Mesh = HideMesh();
-            hide.MaterialOverride = hideLook;
-            AddChild(hide);
         }
 
         const float BarY = 0.99f;

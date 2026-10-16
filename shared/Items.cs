@@ -56,7 +56,10 @@ namespace LifeGame.Shared
         SheepHide = 194,
         ScrapedHide = 195,
         Leather = 196,
-        // 197-200 are the wool items and the wool tunic (animals-8, PR #90; D-120).
+        DropSpindle = 197,
+        Yarn = 198,
+        WoolCloth = 199,
+        // 200 is the wool tunic (animals-9, D-120).
         LeatherWraps = 201,
     }
 
@@ -89,6 +92,7 @@ namespace LifeGame.Shared
         Digging = 64,   // breaks ground faster than hands
         Container = 128, // carries loose things
         FireBow = 256,   // spins a fire drill with a bowstring
+        Spindle = 512,   // twists loose fibre into yarn
     }
 
     public static class Items
@@ -134,6 +138,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
             new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
+            new ItemDef { Id = Item.DropSpindle, Name = "Drop spindle", Plural = "Drop spindles", Tags = ItemTags.Spindle, HasQuality = true },
+            new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
+            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
             new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];

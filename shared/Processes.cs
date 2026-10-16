@@ -15,6 +15,7 @@ namespace LifeGame.Shared
         Strike, // knap: strike when the mark is in the sweet spot
         Shape,  // pinch a pot: hold to thin the wall, release in the sweet spot
         Coil,   // build a coil pot: lay each coil as the turning pot comes round
+        Spin,   // spin yarn: flick the drop spindle as it slows, before it stops (Animals, D-070)
     }
 
     // What a finished process makes.
@@ -34,6 +35,33 @@ namespace LifeGame.Shared
         public Ingredient(Item item, uint count = 1) { Item = item; Count = count; }
     }
 
+    // Where a process is made (D-098, D-112): by hand anywhere, or at a finished
+    // station inside a claim you have rights to. A station is a structure whose
+    // shape names its kind (StructureShape.Station). Append new kinds at the end.
+    public enum StationKind
+    {
+        None,
+        Table,
+        PottersBench,
+        Spindle,
+        DryingRack,
+    }
+
+    public static class StationInfo
+    {
+        // A station draws ingredients from storage this close to it, after the bag (D-112).
+        public const float StorageReach = 4f;
+
+        public static string Name(StationKind kind) => kind switch
+        {
+            StationKind.Table => "crafting table",
+            StationKind.PottersBench => "potter's bench",
+            StationKind.Spindle => "spindle",
+            StationKind.DryingRack => "leather drying rack",
+            _ => "",
+        };
+    }
+
     public sealed class ProcessDef
     {
         public string Id = "";
@@ -51,6 +79,8 @@ namespace LifeGame.Shared
         public uint MakesCount = 1;
         // Below this minigame score the attempt fails and the inputs are lost.
         public float FailBelow;
+        // The station it is made at; None is a hand craft from the C menu.
+        public StationKind Station;
     }
 
     public static class Processes
@@ -126,7 +156,7 @@ namespace LifeGame.Shared
             {
                 Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
-                Seconds = 15, Makes = Item.Basket,
+                Seconds = 15, Makes = Item.Basket, Station = StationKind.Table,
             },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
@@ -155,27 +185,51 @@ namespace LifeGame.Shared
                 NeedsTool = ItemTags.Chopping, Seconds = 15, Outcome = Outcome.Chop, Makes = Item.Log,
             },
 
-            // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
-            // little stick rack to dry into leather (see Leather.cs).
+            // Hides (Animals lane): at a leather drying rack (D-098), a sheep hide is
+            // scraped clean, then laced onto the rack's bar to dry into leather (Leather.cs).
             new ProcessDef
             {
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 8, Makes = Item.ScrapedHide,
+                Seconds = 8, Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
             },
             new ProcessDef
             {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
-                Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
-                Seconds = 6, Outcome = Outcome.Placed,
+                Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Cordage) },
+                Seconds = 6, Outcome = Outcome.Placed, Station = StationKind.DryingRack,
             },
 
-            // Clothing (Animals lane): worn in the equipment panel, slows the cold (see Clothing.cs).
+            // Wool (Animals lane): a stick and a stone whorl make a drop spindle at the
+            // crafting table; built into a spindle station (D-098) it spins raw wool into
+            // yarn, and yarn is woven on the station's stick frame into cloth. Spinning
+            // and weaving train Toolmaking until a Weaver specialty exists (D-071).
+            new ProcessDef
+            {
+                Id = "carve.drop_spindle", Name = "Make a drop spindle", Doing = "Fitting a stone whorl onto a stick", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 6, Makes = Item.DropSpindle, Station = StationKind.Table,
+            },
+            new ProcessDef
+            {
+                Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Wool, 2) },
+                Seconds = 10, Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f, Station = StationKind.Spindle,
+            },
+            new ProcessDef
+            {
+                Id = "weave.wool_cloth", Name = "Weave wool cloth", Doing = "Weaving yarn over a stick frame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Yarn, 4), new Ingredient(Item.Stick, 2) },
+                Seconds = 20, Makes = Item.WoolCloth, Station = StationKind.Spindle,
+            },
+
+            // Clothing (Animals lane): cut and laced at the leather drying rack (D-139), worn in
+            // the equipment panel, slows the cold (see Clothing.cs).
             new ProcessDef
             {
                 Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 10, Makes = Item.LeatherWraps,
+                Seconds = 10, Makes = Item.LeatherWraps, Station = StationKind.DryingRack,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
