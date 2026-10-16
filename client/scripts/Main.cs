@@ -273,10 +273,8 @@ public partial class Main : Node3D
         Bind("walk_back", Key.S, Key.Down);
         Bind("walk_left", Key.A, Key.Left);
         Bind("walk_right", Key.D, Key.Right);
-        Bind("turn_left", Key.Q);
-        Bind("turn_right", Key.E);
         Bind("dig", Key.F);
-        Bind("pick_up", Key.Space);
+        Bind("pick_up", Key.E);
         Bind("craft", Key.C);
         Bind("sneak", Key.Ctrl);
     }
@@ -486,8 +484,6 @@ public partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e.IsActionPressed("turn_left")) cameraRig.Turn(1);
-        if (e.IsActionPressed("turn_right")) cameraRig.Turn(-1);
         if (e is InputEventMouseButton { Pressed: true } mb)
         {
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
