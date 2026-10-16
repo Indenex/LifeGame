@@ -11,7 +11,8 @@ model-172-walk env RENDER_SIZE=1280x720 tools/render/scene.sh model-172-walk 71f
 model-172-facefront tools/render/scene.sh model-172-face-front 71f7c7c tools/render/scenes/model-172-front.txt
 model-172-face34 tools/render/scene.sh model-172-face-34 71f7c7c tools/render/scenes/model-172-three-quarter.txt
 atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
-model-2 env TICKET=model-2 "VIEWS=stations,props,hearth" tools/render/scenes/model-1-style.sh 427d0cb
+model-2 env TICKET=model-2 "VIEWS=sheep,row,stations,props,hearth" tools/render/scenes/model-1-style.sh 00e4d24
+model-2-flock tools/render/render.sh model-2-flock 00e4d24 "--time-of-day=0.45 --rain=0 --cloud=0.2"
 animals-13 tools/render/scene.sh animals-13 04f4712 tools/render/scenes/animals-13-seasons.txt
 ceramics-9 tools/render/render.sh ceramics-9 cd30d6f "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.8 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp --building-showcase --building-door"
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
