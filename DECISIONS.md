@@ -280,3 +280,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
 **Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
 **Who:** Justin ("10%", which the PM recommended)
+
+## D-069 — 2026-10-16 — Player trading
+**Decision:** Players can trade. Claims builds the server side (claims-7, replacing the one-way hand-over); UX/UI builds the trade window (ui-9). PM defaults, Justin's to change: face a player and press Use to ask to trade; they accept or decline. A window shows both players' offers side by side; each adds items from what they carry. Both must press Accept; any change to either offer clears both accepts. The swap is all-or-nothing and checked on the server (items still held, carry limits respected, D-042). Walking away (beyond ~4 m), Esc, or either player dying cancels it. An empty side is a gift. One trade at a time per player; a chat line says when a trade completes. Claims writes the reducer and table contract into its ticket first so UX can build against it.
+**Who:** Justin ("Do a trading interface"); the flow above is the PM's default

@@ -28,12 +28,12 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_014pHdaxJ7uESzsvWekpjvsH) | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013QuyGdXAWemhkois2ictmc) | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
-| Claims, chat and PvP rules (session_013ECn821EbTpbj4h7d3PepH) | #8; then claims-2 (D-044) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
-| World atmosphere and sound (session_01KvVF5vpkYEHTKNRpHC18WN) | #27 campfire sound; firelight at night | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
+| Claims, chat and PvP rules (session_013ECn821EbTpbj4h7d3PepH) | #71 chat bubbles; claims-7 trading server side (D-069) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
+| World atmosphere and sound (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); atmosphere-12 work sounds | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/`, audio |
 | House building (session_01RrKHUxWRH973Ndnxsad9nv) | building-4 mud-brick house (D-057); building-3 merged as #41 | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
 | Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) | #23 shearing; then animals-3 kill and butcher (D-039) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Diab34HTvew38VmUaqhj5Q) | #21 kiln and deep clay; then kiln blueprint | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
-| UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #26 quieter HUD (D-045) with F1 key help; right-drag camera (D-050); Strike and Master-play keys | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
+| UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
