@@ -19,4 +19,4 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
 - Justin's pick among (a), (b) and (c) (via the PM).
 
 ## Next step
-Push, then ask Render for pairs with and without --grade=1 at golden hour (0.70), dawn (0.26) and night (0.92).
+Wait for Justin's pick (via the PM) and the Render with/without pairs (requested from session_015S96hNrEu92FrCoNZqZZjs). Then make the picked option the default and open the PR.
