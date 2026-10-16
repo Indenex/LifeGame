@@ -114,8 +114,9 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Potter's bench",
-                HalfWidth = 0.6f, HalfDepth = 0.3f,
-                Clearance = 0.9f,
+                // Modeling's bench (wedging stone, stool, pots) is about 1.3 x 1.0 m, +Z where the potter sits.
+                HalfWidth = 0.65f, HalfDepth = 0.5f,
+                Clearance = 1.0f,
                 Station = StationKind.PottersBench,
                 Stages = new[] { "Bench" },
             },
