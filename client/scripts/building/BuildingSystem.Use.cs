@@ -205,7 +205,7 @@ public partial class BuildingSystem
         columns.AddChild(Column("In the basket", basketInside, out basketInsideTitle));
         columns.AddChild(Column("You carry", basketCarried, out _));
         box.AddChild(columns);
-        var hint = Hud.Text("Click moves one, Shift+click moves all    G or Esc closes", 13);
+        var hint = Hud.Text($"Click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
         var panel = Hud.Panel(box, Vector2.Zero);
