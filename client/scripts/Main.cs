@@ -85,6 +85,7 @@ public partial class Main : Node3D
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        building.MayBar = social.HasRightsAt;
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
