@@ -34,6 +34,8 @@ namespace LifeGame.Shared
             [Item.Cordage] = 0.2f,
             [Item.Spear] = 1.5f,
             [Item.StoneAxe] = 2f,
+            [Item.Bow] = 1.5f,
+            [Item.Arrow] = 0.1f,
             [Item.CleanClay] = 2f,
             [Item.Grit] = 1f,
             [Item.TemperedClay] = 2f,
