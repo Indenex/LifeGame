@@ -1,20 +1,20 @@
 # Needs
 
-Your character has a few needs. They are gentle: you will have plenty of time to react, and they pause while you are away from the game.
+You have four needs: food, water, warmth and staying dry. They drain slowly, so you have time to react. They pause while you are offline.
 
-## Hunger and thirst
-Both drift down slowly. Eat when hungry, drink when thirsty. Cooked food is usually better than raw. Water is easier to come by than good food, but you will want a way to carry it eventually.
+## Food and water
+Both go down over time. Water runs out faster than food. Press X to eat the best food you carry; face water and use it to drink. Cooked food fills you more than raw. Once you can make a container, you can carry water.
 
 ## Cold
-Cold comes at night, in bad weather, and when you stand in water. A fire nearby keeps it away; a shelter helps too, and a good one together with a fire is cosiest.
+You lose warmth at night, in rain, and when standing in water. Colder air makes it happen faster. A burning fire nearby keeps you warm. Shelter also helps, and a good shelter with a fire inside is the warmest place you can be.
 
 ## Wetness
-Rain and wading get you wet, and being wet makes the cold bite harder. Some things dry you off faster than others. Getting under cover is a good start.
+Rain and wading make you wet. Heavy rain soaks you faster than drizzle, and wading soaks you very quickly. The wetter you are, the faster you lose warmth. You dry off over time, faster under cover and faster still beside a fire.
 
-## What you carry
-There is a limit to what you can carry. Go past it and you can still pick things up, but you will walk slower. Something woven might help you carry more.
+## Carrying
+You can only carry so much. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
 
-## If things go wrong
-If you die, you drop what you carry and keep what you have learned. You come back with a little food and water and a fresh start. Your skills stay with you.
+## Death
+If you die, you drop everything you were carrying. You keep your skills and everything in your journal. You respawn with partial food and water and full warmth. If you have laid a sleeping mat in a finished shelter, you respawn there.
 
 Next: [Crafting and skills](crafting-and-skills.md)

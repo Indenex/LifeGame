@@ -1,20 +1,20 @@
-# The spirit of play
+# How the game plays
 
-**There is no rush.** Nothing here is trying to hurry you. The light is low and warm, the grass moves in the wind, and the world carries on whether or not you are busy.
+LifeGame is a survival and crafting game in one shared, persistent world. You start with nothing. Everything you own, you make from what you find.
 
-## What you do
+## The loop
 
-- **Survive gently.** Eat, drink and stay warm. These needs are kind to you; they want attention, not panic.
-- **Learn by doing.** There is no tutorial that tells you everything. Try things, watch what happens, and write it down in your journal.
-- **Make things.** Almost everything you own, you made, from what the land gives you.
-- **Build a home.** First a rough shelter, later something you are proud of.
-- **Play with others.** Many hands build more. The world is shared, and so are its good moments.
+- **Stay alive.** You need food, water and warmth. Needs drain slowly and pause while you are offline.
+- **Learn by doing.** The game does not list every recipe up front. You find out what works by trying things. Your journal records what you have learned.
+- **Make things.** Raw materials become tools, tools let you make better things, and so on up the tiers.
+- **Build.** Start with a basic shelter. Better buildings need better materials and protect you better.
+- **Work with others.** The world is shared. Other players can help you build, teach you crafts and trade what they know.
 
-## How to enjoy it
+## What to expect
 
-- Look around before you act. The world often shows you what it wants.
-- Failing is part of the loop. A cracked pot is not wasted: it teaches you something.
-- Skill makes the tedious parts fade. Stick with a craft and it stops being a chore.
-- Ask other players. Trading hints is encouraged.
+- There is no time pressure. Nothing forces you to finish a task by a deadline.
+- Failure is part of progress. Failed attempts still give some skill, and some failed items can be reused.
+- Repetition gets easier. As a skill improves, the work goes faster and, at the top rank, the minigames can be skipped.
+- Watch the world. Plants, ground, weather and time of day all matter, and most of what you need is visible if you look.
 
 Next: [Your first hour](getting-started.md)
