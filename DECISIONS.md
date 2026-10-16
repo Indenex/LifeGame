@@ -280,3 +280,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
 **Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
 **Who:** Justin ("10%", which the PM recommended)
+
+## D-069 — 2026-10-16 — Player trading
+**Decision:** Players can trade. Claims builds the server side (claims-7, replacing the one-way hand-over); UX/UI builds the trade window (ui-9). PM defaults, Justin's to change: face a player and press Use to ask to trade; they accept or decline. A window shows both players' offers side by side; each adds items from what they carry. Both must press Accept; any change to either offer clears both accepts. The swap is all-or-nothing and checked on the server (items still held, carry limits respected, D-042). Walking away (beyond ~4 m), Esc, or either player dying cancels it. An empty side is a gift. One trade at a time per player; a chat line says when a trade completes. Claims writes the reducer and table contract into its ticket first so UX can build against it.
+**Who:** Justin ("Do a trading interface"); the flow above is the PM's default
+
+## D-070 — 2026-10-16 — Spinning gets its own minigame
+**Decision:** Spinning wool into yarn is a new minigame: flick the spindle and keep it turning (animals-8). Weaving stays a timed craft.
+**Who:** Justin ("New spin minigame"; the PM had recommended a plain timed craft)
+
+## D-071 — 2026-10-16 — Weaver becomes its own specialty later
+**Decision:** Spinning and weaving will train a capped Weaver specialty that later grows into dyes and clothing, like Leatherwork (D-065). Until it exists they train Toolmaking.
+**Who:** Justin ("Weaver later"; the PM had recommended Toolmaking)
+
+## D-072 — 2026-10-16 — Hear other players' work, quieter
+**Decision:** Crafting work sounds play for everyone nearby, not only your own; other players' work sounds play about 60% quieter than your own (atmosphere-12). Needs other players' running jobs to be visible to clients; Atmosphere agrees the table or hook with Crafting and Integration.
+**Who:** Justin ("Everyone's sounds, but make it other player ones like 60% quieter than your own")
