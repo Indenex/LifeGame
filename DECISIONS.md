@@ -907,3 +907,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
 **Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
 **Who:** Justin (relayed by the PM; no direct quote).
+
+## D-224 — 2026-10-16 — Build menu: a centred picture panel with category tabs (ui-20)
+**Decision:** Pressing B opens a centred picture panel with category tabs: Shelter, Storage, Crafting, Fences and gates, Fire. Each tile in its grid shows a picture rendered from the real model, the name, and costs as item icons, greyed when short. Clicking a tile starts the ghost placement. Justin chose this over a strip above the hotbar and a radial wheel. Owner: UX (ui-20).
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-225 — 2026-10-16 — Admin interface to add items (PM default pending Justin's confirmation)
+**Decision:** Justin asked for an admin interface to add items. The PM default, pending Justin's confirmation, is admin-1: a hidden F10 panel with a searchable item list and quantity, admin-only, with a server-checked `admin_give` reducer and a private admin table.
+**Who:** Justin asked for the interface; the specific design is the PM's default and awaits his confirmation.
+
+## D-226 — 2026-10-16 — CI batching: main pushes share one concurrency group (integration-5)
+**Decision:** Pushes to `main` share one concurrency group, so a burst of merges builds once, and releases take the newest green `main`. Merges and releases stop holding each other up. Owner: Integration (integration-5).
+**Who:** Justin (asked for it so that merges and releases stop holding each other up; relayed by the PM, no direct quote).
