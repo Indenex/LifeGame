@@ -6,7 +6,7 @@ Branch: local `building-4-local` on top of claude/house-building-8ueqz2 (PR #41)
 PR: (after #41 merges)
 
 ## Goal
-A bigger building that comes after the clay hut, now that bricks exist (D-033 deferred it). The mud-brick house is StructureKind 5, a 4.8 x 4.0 m rectangle with its door on +Z. Stages and PM-default costs (the PM is taking them to Justin):
+A bigger building that comes after the clay hut, now that bricks exist (D-033 deferred it). The mud-brick house is StructureKind 5, a 4.8 x 4.0 m rectangle with its door on +Z. Stages and costs (Justin confirmed them, D-057):
 - Footings: 6 stone, 4 sticks
 - Brick walls: 16 sun-dried bricks, 6 daub
 - Rafters: 12 sticks, 2 cordage
@@ -28,7 +28,7 @@ What's done means:
 - 2026-10-16 01:00: BuildTest `brick-house` mode added. It runs alone, outside "both", because bricks take minutes to dry. Running it locally.
 
 ## Open questions / blockers
-- Justin, through the PM: the cost and the look. 16 bricks is about 64 clay, versus 12 for the hut's daub.
+- (none; Justin kept 16 bricks and the other default costs, D-057)
 
 ## Next step
 Finish the local `dotnet run -- brick-house` BuildTest run. Then, once #41 merges, restart claude/house-building-8ueqz2 from main, apply the patch, and open the PR.
