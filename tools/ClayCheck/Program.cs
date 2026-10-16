@@ -428,7 +428,7 @@ void JarCheck(Structure kiln)
     conn.Reducers.BasketTake(stored.Id, 1);
     Pump(() => lastError != null || CountOf(Item.Stick) == sticks, 3, "the stick back out");
     if (lastError != null) Fail($"taking the stick out: {lastError}");
-    Log($"Jar stores and gives back; holds {Structures.Shape((int)StructureKind.StorageJar).StoreStacks} stacks");
+    Log($"Jar stores and gives back; at quality {jar.Quality} it holds {Structures.JarStacks(jar.Quality)} stacks");
     Log("STAGE jar-store");
 }
 

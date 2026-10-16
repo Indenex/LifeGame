@@ -28,6 +28,8 @@ public partial class BuildingSystem
         "SELECT * FROM structure_door",
         "SELECT * FROM structure_touch",
         "SELECT * FROM basket_item",
+        // A storage jar's size follows its quality (Ceramics, D-093).
+        "SELECT * FROM structure_progress",
     };
 
     void BindUse(DbConnection c)
@@ -219,7 +221,9 @@ public partial class BuildingSystem
             .Select(i => (ItemLook.Label((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
         int stacks = c.Db.BasketItem.Iter().Count(b => b.StructureId == id);
         var shape = rows.TryGetValue(id, out var s) ? Structures.Shape((int)s.Kind) : Structures.Shape((int)StructureKind.Basket);
-        basketTitle.Text = $"{shape.Name}    {stacks} of {shape.StoreStacks}";
+        byte quality = c.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality;
+        int room = s != null ? Structures.StoreStacksFor((int)s.Kind, quality) : shape.StoreStacks;
+        basketTitle.Text = $"{shape.Name}    {stacks} of {room}";
     }
 
     static void Fill(VBoxContainer list, IEnumerable<(string label, Action<bool> move)> entries)
