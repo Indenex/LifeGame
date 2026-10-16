@@ -36,6 +36,7 @@ public static class Subscriptions
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
         "SELECT * FROM my_craft_job",
+        "SELECT * FROM player_sneaking",
         $"SELECT * FROM structure WHERE {range}",
     };
 }

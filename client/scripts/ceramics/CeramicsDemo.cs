@@ -21,6 +21,9 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=shape also opens the pinch-pot minigame part way through.
     static bool ShowMinigame => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=shape");
 
+    // --ceramics-demo=jar shows the storage jar wet, leather-hard, dry and kiln-fired, a coil pot for scale (ceramics-6).
+    static bool ShowJars => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=jar");
+
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
         this.terrain = terrain;
@@ -43,6 +46,27 @@ public partial class CeramicsDemo : Node3D
                 var pot = new PotView { Position = new Vector3(-0.6f + i * 0.45f, 0, 1.2f) };
                 row.AddChild(pot);
                 pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowJars)
+        {
+            var jars = new (ClayForm form, ClayStage stage, FireKind fire, float moisture)[]
+            {
+                (ClayForm.StorageJar, ClayStage.Drying, FireKind.Pit, 1f),
+                (ClayForm.StorageJar, ClayStage.Drying, FireKind.Pit, 0.4f),
+                (ClayForm.StorageJar, ClayStage.Drying, FireKind.Pit, 0f),
+                (ClayForm.StorageJar, ClayStage.Fired, FireKind.Kiln, 0f),
+                (ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f),
+            };
+            for (int i = 0; i < jars.Length; i++)
+            {
+                var j = jars[i];
+                var pot = new PotView { Position = new Vector3((i - (jars.Length - 1) / 2f) * 0.8f, 0, 0) };
+                row.AddChild(pot);
+                pot.Show((ulong)i + 30, j.form, j.stage, j.fire, j.moisture, PotView.Now, 0f, false);
             }
             AddChild(camera);
             camera.MakeCurrent();
@@ -103,6 +127,12 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
+        if (ShowJars)
+        {
+            camera.Position = at + new Vector3(0f, 1.6f, 4.6f);
+            camera.LookAt(at + new Vector3(0f, 0.35f, 0), Vector3.Up);
+            return;
+        }
         if (ShowKilns)
         {
             camera.Position = at + new Vector3(0.2f, 2.0f, 5.6f);

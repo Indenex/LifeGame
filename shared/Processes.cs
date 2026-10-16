@@ -279,6 +279,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // Too big for a campfire: it is fired in a kiln (ceramics-6).
+                Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
+                Seconds = 16, Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
                 Id = "clay.brick", Name = "Mold a brick", Doing = "Molding a brick", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Fiber) },
                 Seconds = 5, Outcome = Outcome.Placed,
@@ -305,6 +312,13 @@ namespace LifeGame.Shared
             float q = inputQuality * 0.5f + Math.Clamp(score, 0f, 1f) * 100f * 0.5f;
             return (byte)Math.Clamp(MathF.Round(q), 1f, cap);
         }
+
+        // How much faster a better tool works (D-089): a power curve over the tool's
+        // quality (docs/PROGRESSION.md), about 7% at quality 35 and MaxToolSpeedup at 100.
+        public const float MaxToolSpeedup = 0.15f;
+        public const float ToolSpeedupPower = 0.73f;
+        public static float ToolSpeedup(byte toolQuality) =>
+            MaxToolSpeedup * MathF.Pow(Math.Clamp(toolQuality, (byte)0, (byte)100) / 100f, ToolSpeedupPower);
 
         // Words for a quality number, so players never see raw digits.
         public static string Grade(byte quality) => quality switch
