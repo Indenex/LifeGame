@@ -40,8 +40,10 @@ Local setup that worked: dotnet 8 SDK (dotnet-install.sh into ~/.dotnet, with th
 - 2026-10-16 20:20: ticket created at handoff; nothing built yet.
 - 2026-10-16 (Sonnet session): merged main into #160 (958cf73, conflict in shared/Processes.cs resolved both-keep: basket = Base(2, 2.5f) + Station Table) and #203 (b1c3f6f); both pushed, CI running. Sent PM the durability options (4 questions, recommended a/a/a/a). Reviewed bugfix-20 CanStartCraft and Ceramics VesselQuality: both approved, sent to those lanes.
 
+- 2026-10-16 20:15: PM relayed Justin's answers: at zero a tool is SPENT (stops working, not destroyed), repair always cheaper than new (~40-60% of materials), new Repair table station (claim only, StructureKind appended after the other table kinds), per-repair quality loss accumulating to a floor of 50% of original, words + worn look, clothing patched and never breaks, uses-per-life well above 40. Sent PM three number packages (A Steady 150/265/400 uses at q35/65/100, repair 40%, loss 20% of remaining gap; B Brisk 100/170/250, 50%, 5% flat; C Long 250/450/700, 40%, 3% flat). Recommended A. Quality today: cap 35 at rank 0 to 100 at rank 100 (shared/Skills.cs QualityCap).
+
 ## Open questions / blockers
-- Durability options sent to the PM 2026-10-16; building the recommended set (break and drop head, 40 to 150 uses by quality, no repair minigame, words in tooltip) unless told otherwise.
+- Waiting on the PM/Justin to pick package A, B or C. Build the mechanics now with all numbers in shared/Durability.cs.
 
 ## Next step
-Send the PM the green shas of #160 (958cf73) and #203 (b1c3f6f) when CI finishes. Meanwhile start crafting-19 server side: per-item wear storage (new table or column, check tools/upgrade-check.sh), wear in StartCraft via BestTool, break drops head.
+Send the PM the green shas of #160 (958cf73) and #203 (b1c3f6f) when CI finishes. Meanwhile build crafting-19 mechanics: shared/Durability.cs constants, defaulted wear column on InventoryItem (check tools/upgrade-check.sh), wear in StartCraft via BestTool, spent tools skipped by BestTool, repair process, RepairTable kind.
