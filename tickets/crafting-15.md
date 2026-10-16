@@ -1,7 +1,7 @@
 # crafting-15: Crafting stations (D-098)
 Lane: Crafting
 Owner: Crafting thread
-Status: blocked
+Status: in_review
 Branch: crafting-stations
 PR: (none yet)
 
@@ -43,12 +43,28 @@ Questions for Justin (recommended option first):
 - Q-C: station draws from baskets and jars within 4 m plus the claim stash (rec) / anywhere in the claim (simplest, less physical) / the stash only.
 - Q-D: hafted tools (spear, knife, axe, bow drill) basic (rec; survive anywhere) / at the table.
 
+## Decided (D-112, 2026-10-16 18:27)
+- Shaping pots (pinch, coil, storage jar) moves to a new Potter's Bench station (Ceramics builds it, in ceramics-8). Clay preparation, bricks, tinder, fires, knapping, the digging stick, cordage and the first hafted tools stay basic.
+- The Crafting Table costs 4 sticks + 2 cordage + 1 log and holds the basket, drop spindle and wool tunic. Broth, stew and roasting stay at the fire.
+- Stations draw from the inventory, storage within 4 m, then the claim stash.
+- Bench cost options went to the PM (rec 6 sticks + 2 stones + 4 fiber).
+
+## Built (this PR)
+- shared/Processes.cs: `StationKind` {None, Table, PottersBench, Spindle, DryingRack}, `StationInfo` (StorageReach 4 m, names), `ProcessDef.Station`; weave.basket is made at a Table.
+- shared/Structures.cs: `StructureShape.Station`; the Crafting table shape (one stage "Table") and its cost. Building.cs: `StructureKind.CraftingTable` (6 on main; renumber if the storage jar lands first) and a `CheckStationSite` call in PlaceStructure.
+- server/spacetimedb/Stations.cs: the site check (inside a claim you have rights to), `StationNear` (within WorkReach of the edge, in a claim you have rights to), `CountFor`/`TakeFor` (bag, then baskets and jars within 4 m, then the claim stash), and `BesideStation` (where placed things go).
+- Crafting.cs StartCraft: station check before anything is used, and counts and takes through the station.
+- Client: `Stations.NearestOf/AtPlayer/StoredNear` (client/scripts/crafting/Stations.cs; Animation uses NearestOf), and the panel shows "at a crafting table" with a "build one inside your claim" hint. CraftingTableModel draws four lashed legs with a split log on top.
+- CraftCheck: a basket away from a table is refused, and so is a table outside a claim; then the bot claims land 45 m out, builds a table, stashes fiber, and weaves a basket that takes 4 fiber from the stash.
+
 ## Progress log
+- 2026-10-16 19:30: framework built. CraftCheck, BuildTest and the upgrade check (main's world carries over, no wipe) pass locally, and server and client build.
 - 2026-10-16 18:45: Ceramics asked for the coil pot to stay basic and the jar at the Table; adopted and sent to the PM.
 - 2026-10-16 18:35: proposal written and sent to the PM. Told Animals and Animation the planned shape (StationKind, ProcessDef.Station, Stations.NearestOf).
 
 ## Open questions / blockers
-- Waiting on Justin's answers to Q-A to Q-D (via the PM). Coordinate with Building (StructureKind and placement), Claims (in-claim check), Animals (spindle, rack) and UX (station panel).
+- StructureKind numbering with Building (asked via the PM): jar 6, table 7, bench 8, spindle 9, rack 10 is the plan. Whichever of this PR and #105 merges second renumbers.
+- Known limits: the panel's greyed-out state refreshes on inventory changes, not when you walk up to a table (pressing the number still checks). The client doesn't check claim rights; the server does.
 
 ## Next step
-When the PM relays the answers, implement the framework on this branch: StationKind, ProcessDef.Station, the StartCraft check, inventory and storage draw, then CraftCheck. Ping Animals and Animation with the sha.
+Wait for CI on the PR, then send the PM the green sha; ping Animals, Animation and Ceramics with it.
