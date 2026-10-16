@@ -22,8 +22,11 @@ Justin sees a cabin of round logs with crossed corners, a log lintel over the do
   - BuildTest `log-cabin` mode, run on its own: each bot makes a stone axe and chops 10 logs, both build the cabin, then the door test.
   - Server, client and BuildTest build.
 
+- 2026-10-16 20:05: `dotnet run -- log-cabin` passed locally in 437 s. Each bot made a stone axe and chopped 10 logs, both built the cabin, standing inside is sheltered, it survived a reconnect, and the door hung, opened, barred and unbarred.
+- 2026-10-16 20:05: HANDOFF to a Sonnet session (D-159). Not yet merged with the latest main; stacked on building-9 (#202).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Run `dotnet run -- log-cabin` in tools/BuildTest against a fresh local server. Once building-9's PR has merged, merge main and open the building-10 PR, then request a render.
+After #202 (building-9) merges: on claude/house-building-8ueqz2, reset to origin/main (the branch then holds only merged history), merge origin/claude/house-building-8ueqz2-cabin, resolve StructureKind order (LogCabin goes at the very end of the enum, Shapes and StageCosts), run tools/gen-bindings.sh, then BuildTest (both, and log-cabin), LoadTest, SpawnCheck, CraftCheck, SocialTest and tools/upgrade-check.sh origin/main. Push, open the building-10 PR, request a render (log cabin in a clearing, door open, plus a half-built one with log walls going up) and send the PM the green sha. Watch for Crafting's crafting-16 changing Bot.Craft's wait in tools/BuildTest; building-10 adds a `score` parameter to the same method.
