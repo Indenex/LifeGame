@@ -31,9 +31,11 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:30: puppet `key` hung: bare Xvfb has no WM and the window class isn't Godot; now focuses the window by name.
 - 2026-10-16 17:27: render request from Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y): bugfix-17, PR #99 at caaf9ae: fired pinch pot on a fire, G prompt reads "Pick up the pinch pot", inventory after G with sticks unchanged; before shot on main 7e79d22.
 - 2026-10-16 17:27: render request from Environment (session_012hVejTxLoxBpZyX3GQmNL9): env-1 before shots on main 1ade969: spawn (0,0) facing +x, pond edge (-20,-2) facing -x, dense forest (-46,-46), each noon and dusk; overhead of spawn from ~40 m at noon.
+- 2026-10-16 17:35: animals-8 first run: crafting worked (toast "Weave wool cloth"), but panel shots missed the Cord and haft tab and the ground items weren't visible; redo queued (animals-8-wool.txt, animals-8-ground.txt).
+- 2026-10-16 17:35: queues: [1] crafting-11 (running) -> [2] ui-9, claims-6 rerun, model-1 -> [3] anim-1 movies -> [4] animals-8 redo, env-1, bugfix-17 (fix caaf9ae + before 7e79d22). Each queue waits for the previous one's "done" line in its output file.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
 
 ## Next step
-Queue running (claims-6 scene, animals-8 scene, crafting-11 stills): review each image, send to the PM; then open a PR with tools/render/ only.
+Review each finished render and send it to the PM (and to Modeling for model-1). If this session died: rerun the scenes listed above with tools/render/scene.sh / render.sh (one at a time).
