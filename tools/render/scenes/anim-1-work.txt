@@ -1,0 +1,37 @@
+# anim-1: work poses, 3/4 front at 2.5 m. Movie at 24 fps of game time; each job is
+# restarted until ~3 s of movie is recorded (the server runs in real time).
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,0.5,35,0.1
+frames 330
+give 3 200 50
+give 2 60 50
+give 4 80 50
+give 1 40 50
+give 5 20 50
+frames +30
+mark transition-start
+frames +24
+craftloop gather.tinder +72
+frames +48
+mark transition-end
+mark gather-start
+craftloop gather.tinder +72
+mark gather-end
+frames +24
+mark knap-start
+craftloop knap.flake +72
+mark knap-end
+frames +24
+mark cord-start
+craftloop cord.twist +72
+mark cord-end
+frames +24
+mark clay-start
+craftloop clay.clean +72
+mark clay-end
+frames +24
+mark drill-start
+craftloop fire.hand_drill +72
+mark drill-end
+frames +36

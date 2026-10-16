@@ -24,9 +24,11 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 17:25: Atmosphere (atmosphere-12, D-072) adds a public `craft_work` table in WorkSounds.cs. Advised: Crafting declares and calls partial `OnCraftStarted`/`OnCraftEnded` in Crafting.cs now, so there's no merge-order dependency; clear rows on disconnect and abandoned jobs. PR #95 CI run 38939185639 queued.
 - 2026-10-16 17:26: Crafting merges main into whichever of #70/#92/#47/#97 goes second; Integration keeps #61 x #70. Merge order sent to the PM: #97 (crafting-12 hook declarations) before atmosphere-12 (two defining declarations of one partial method = CS0756); Atmosphere drops its temporary declarations in its merge-main commit.
 - 2026-10-16 17:30: Animation (anim-1, draft PR #100, `claude/anim-1-player-animation`) adds one Main.cs line after `crafting.Attach(conn);`; OK'd, merges clean with every open branch. Main.cs survey: claims-7 (`claude/claims-7-hand-item`, no PR yet) x #73 conflict on the `Panels.Open`/`claimPanel` block; resolution = claims-7's lines plus #73's `Panels.Side = () => crafting.PanelOpen;` and `|| Panels.Side()` in `useKey.Blocked`. Integration fixes whichever merges second.
+- 2026-10-16 17:40: PM merged #75, #70, #47, #73, #71, #95 (main 0477696) and adopted the STATUS rule (lanes never edit STATUS.md on branches). Merged main into #61 (`shared/Items.cs`: kept Log and SleepingMat), built, ran BuildTest/SpawnCheck/CraftCheck locally (pass), pushed fb3e604. Survey vs main bdeaf3b: all 12 open PRs clean, no pairwise conflicts; claims-7 (no PR) conflicts in Main.cs with merged #73, resolution sent to the Claims lane.
+- 2026-10-16 17:40: CI backlog: 7 main runs queued at once (every merge runs the full 20-bot job). Added a `concurrency` group to build.yml: PR runs cancel superseded runs of the same PR; on main the running build finishes and only the newest queued build waits.
 
 ## Open questions / blockers
-- Sent to PM 17:35: lanes stop editing STATUS.md on their branches (recommended) / lanes resolve each time / PM resolves at merge. Default meanwhile: option 1.
+- (none; STATUS.md rule answered: option 1)
 
 ## Next step
 After each merge to main, re-run the conflict survey (scratchpad script logic: `git merge-tree` each open PR vs main and pairwise) and merge main into whichever of #61 / #70 merges second (keep both `shared/Items.cs` lines) and whichever of #73 / claims-7 merges second (Main.cs, see 17:30 entry).

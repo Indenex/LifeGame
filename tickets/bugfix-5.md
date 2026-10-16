@@ -1,7 +1,7 @@
 # bugfix-5: Fresh-world playtest, fix small cross-lane issues
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #36
 
@@ -16,4 +16,4 @@ Play a fresh world on main with the real client and a bot (walk, gather, fire, c
 - None.
 
 ## Next step
-Open the PR for claude/bugfix-lyle6o, then wait for CI and send the PM the green sha.
+None; merged.

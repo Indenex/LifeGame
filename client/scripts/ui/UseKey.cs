@@ -56,7 +56,7 @@ public partial class UseKey : CanvasLayer
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        offer = Blocked() ? null : Use.Best(Player(), Facing());
+        offer = Use.Shown = Blocked() ? null : Use.Best(Player(), Facing());
         if (offer != null)
         {
             verb.Text = offer.Prompt;

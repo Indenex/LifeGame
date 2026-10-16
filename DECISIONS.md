@@ -328,3 +328,136 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-080 — 2026-10-16 — Trades are silent; requests lapse after 30 s
 **Decision:** Completed trades post nothing to bystanders' chat (the two traders still see their own confirmation). An unanswered trade request lapses after 30 seconds.
 **Who:** Justin ("Nothing"; the PM had recommended names only. "30 seconds", which the PM recommended)
+
+## D-081 — 2026-10-16 — Pre-alpha MVP and milestones
+**Decision:** MVP: a fresh player wakes in a beautiful forest, reaches fire, food, shelter and a fired pot alone in about 1 to 2 hours, and sees a long road ahead; everything they make looks real on the ground, in their hands and in the inventory. Progression runs on three visible ladders: materials/tools tiers, skills (fast first ~15%, D-075), and home (lean-to to hut to mud-brick house). Survival is light: needs nudge players along the ladders and never punish; death is mild; cold is a reason to build; no death spirals. Fun first, with some realism. Milestones, M1 and M2 worked in parallel:
+- **M1 Looks and feels real:** proper models for every item used on the ground, as the icon and held in hand; player figure and animation; cosy forest, light and sound. (Modeling, Animation, Environment, Atmosphere, Audio, UX)
+- **M2 The first evening:** a new playtester reaches a fired pot unaided in 1 to 2 h, sees skill gains in session one, always has a next goal. (Crafting, Survival, Skills, Ceramics, Bug fixes, Wiki)
+- **M3 A place of your own:** mud-brick house, storage jar, kiln, mat, clothing and equipment panel, fences, trading.
+- **M4 The long road:** specialties, tool quality, ~20 h mastery, cooking, wool and leather chains.
+- **M5 Pre-alpha playtest:** 8 to 16 outside players, no wipes, stable servers, shareable wiki.
+**Who:** Justin ("Adopt, M1 and M2 together"; aesthetics, a world to live in and get lost in, images for all items, survival not super difficult)
+
+## D-082 — 2026-10-16 — Modeling order: player figure, then every item
+**Decision:** Modeling does the player figure first, then every item (early-game items first) as one model used on the ground, for the inventory icon and held in hand. Animation adds holding tools and items in hand.
+**Who:** Justin ("Player figure first"; the PM had recommended items first)
+
+## D-083 — 2026-10-16 — Ship the water and sky
+**Decision:** Atmosphere's water and sky (#66: shimmer, lapping, rain rings, frogs, wind sway, clouds and cloud shadows, dawn mist) ships as rendered.
+**Who:** Justin ("Ship it", which the PM recommended)
+
+## D-084 — 2026-10-16 — Groves and glades now, reshaped land after
+**Decision:** Environment builds groves and glades first (visual only, no wipe): clustered trees with open glades, undergrowth at grove edges, logs, mossy rocks, flowers, reeds and stones at the pond. After that it reshapes the land: more ponds, a stream, gentler hills. The reshape needs a world wipe; Justin chose it, and the PM confirms the timing with him before any wipe runs.
+**Who:** Justin ("1 and 3")
+
+## D-085 — 2026-10-16 — Forest light first, the other skies later
+**Decision:** Atmosphere does light through the forest next (sun shafts, dappled light at morning and evening), then weather you can see coming (rain curtains, darkening sky, rainbow), then the cosy night (firelight on trunks, starrier sky, softer moonlight).
+**Who:** Justin ("One, but I want all of these eventually")
+
+## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
+**Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
+**Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours
+
+## D-087 — 2026-10-16 — Building order: fence, hearth, cabin
+**Decision:** House building does a stick fence and gate next (building-8), then a raised hearth, then a log cabin from felled trees.
+**Who:** Justin ("All of these, but the first one first")
+
+## D-088 — 2026-10-16 — Brisk walk, run on Shift, with stamina
+**Decision:** Normal movement stays at 4.2 m/s, animated as a brisk walk-jog. Holding Shift runs faster and spends stamina; stamina refills when not running. Stamina is a light need (D-081): it shows only while it is not full, and running out just drops you back to walking. Survival builds stamina; UX/UI moves sneak off Shift (key to be confirmed with Justin); Animation adds the run. Numbers start low per D-075.
+**Who:** Justin ("Keep the brisk jog, and add a run tied to shift. It should have a stamina system though.")
+
+## D-089 — 2026-10-16 — Better tools work up to about 15-20% faster
+**Decision:** Tool quality speeds work, from 0% for a crude tool to about 15-20% for an excellent one (PM default 15% at the top, open to 20% later), on the D-075 curve.
+**Who:** Justin ("Yes, but not 25% ... Maybe 15-20%?")
+
+## D-090 — 2026-10-16 — Full fires refuse fuel; fire length grows with skill (amends D-054)
+**Decision:** Feeding a fire at its cap is refused ("The fire is burning as high as it will") and the stick is kept. A newly lit fire burns 20 minutes (was 15, D-054). The most a fire can hold grows with Firecraft from 20 minutes up to 40 minutes (+100%) at Master.
+**Who:** Justin ("Refuse. Fires should start at 20 minutes and last longer maybe up to 100% more scaled with skill.")
+
+## D-091 — 2026-10-16 — Sneak moves to held Ctrl
+**Decision:** Sneak is held Ctrl (Shift is now run, D-088). Holding Ctrl while starting a craft still plays the minigame at Master (D-047); the two happen at different moments.
+**Who:** Justin ("Hold Ctrl", which the PM recommended)
+
+## D-092 — 2026-10-16 — Craft times scale with the item and the skill
+**Decision:** Base craft times scale: cheap, simple items are quick; higher-tier items and higher-quality results take incrementally longer. Rising skill shortens craft times, noticeably as you first learn a skill (fast early, per D-075). Crafting proposes the formula and a table of examples to the PM before shipping.
+**Who:** Justin ("easier/cheaper items should be faster, and take incrementally longer ... on higher quality items ... Increases in skill level should also lower craft times")
+
+## D-093 — 2026-10-16 — Storage jar holds 4 to 8 stacks by quality
+**Decision:** A storage jar holds 4 stacks at low quality, rising to 8 at high quality, faster through the first part of the quality range (D-075).
+**Who:** Justin ("4 rising to 8 with quality"; the PM had recommended a flat 6)
+
+## D-094 — 2026-10-16 — I opens the equipment panel
+**Decision:** The equipment panel (D-074) opens with I.
+**Who:** Justin ("I", which the PM recommended)
+
+## D-095 — 2026-10-16 — Integration executes merges
+**Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
+**Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin
+
+## D-096 — 2026-10-16 — Justin sees every option set
+**Decision:** Every option set from the PM or any lane goes to Justin, small tuning included. The PM batches them.
+**Who:** Justin ("Everything"; the PM had recommended big calls only)
+
+## D-097 — 2026-10-16 — Crafting a little under the music; sound sliders in Options
+**Decision:** Your own crafting sounds sit a little under the music. The Esc menu gets an Options page with sound sliders (at least master, music, effects/work, ambience); every slider starts at 50% for a new player. Audio owns the mix and buses; UX/UI builds the page.
+**Who:** Justin ("2, but add a sound setting to Options ... Sliders should start at 50% on a new player login")
+
+## D-098 — 2026-10-16 — Hand crafting for basics, crafting stations for the rest
+**Decision:** Players hold nothing in their hands while working; small hand crafts play a simple hand-crafting animation. Only basic items and basic material processing can be made from your own crafting menu (C). Everything else needs its station: a **Crafting Table** for general and misc items, a **Spindle** for making yarn and cloth, a **Leather drying rack** for drying and working leather (more stations later as needed). Stations can only be built inside a claim. A station can use items from your inventory or from a chest/storage. Crafting proposes which recipes stay "basic" and which move to which station, for Justin to approve. Supersedes Animation's held-items work for now.
+**Who:** Justin (held items: "Nothing ... Other things require the crafting table associated with them ... These tables require a claim though ... They can pull from any item on your character, or your chest though.")
+
+## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
+**Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
+**Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
+
+## D-100 — 2026-10-16 — First clothes, worn weight, carry limit, run speed
+**Decision:** Wool tunic takes 10% off the cold drain and leather foot wraps 4% (14% together at best quality, scaling with quality). Worn clothes do not count toward the carry load. Carry limit: 20 bare, basket +10 (30). Running is 5.6 m/s (walking stays 4.2).
+**Who:** Justin (tunic and wraps "10% / 4%"; the PM had recommended 8%/3%. Worn weight "No", carry "20 / +10", run "5.6 m/s", which the PM recommended)
+
+## D-101 — 2026-10-16 — Stamina shown as a bar; running is free; food unchanged
+**Decision:** Stamina shows as a small bar under your character, only while not full. Running costs no food or water. Food values stay: berries 12% each, roast mutton 40%, burnt 10%. Stamina duration and refill are set from researched "carrot on a stick" progression curves (see `docs/PROGRESSION.md`, being written), which all lanes then use as the base for number suggestions.
+**Who:** Justin ("Small bar under your character"; the PM had recommended an arc by the rings. "No"; "Keep as is". Stamina: "Research common logarithms for fun/invested 'carrot on a stick' values and use them for suggestion bases.")
+
+## D-102 — 2026-10-16 — Scribe lane keeps the decision log
+**Decision:** A Sonnet Scribe lane (session_01He77u9z8pt5DtP7it3NMAQ) records Justin's decisions in `DECISIONS.md` and applies the `STATUS.md` changes the PM sends, merging its own docs-only PRs. The PM keeps asking Justin and relaying decisions to the lanes.
+**Who:** Justin ("pass decision logging work off to a dedicated sonnet worker, and keep my questions coming")
+
+## D-103 — 2026-10-16 — Campfire warms in 60 s
+**Decision:** A basic campfire takes about 60 s to warm you from frozen to full (was 30 s). Later hearths and stone-ringed fires can be faster.
+**Who:** Justin ("60 s"; the PM had recommended keeping 30 s)
+
+## D-104 — 2026-10-16 — Chopping trains Foraging
+**Decision:** Chopping logs (`chop.log`) trains Foraging.
+**Who:** Justin ("Foraging", which the PM recommended)
+
+## D-105 — 2026-10-16 — Things to try hints in the journal
+**Decision:** skills-10 adds 2 to 3 gentle "Things to try" hints in the journal pointing at the next undiscovered thing, without recipes (D-063), so a new player always has a next goal. Each lane supplies one hint line per new process.
+**Who:** Justin ("Things to try hints", which the PM recommended)
+
+## D-106 — 2026-10-16 — Ceramics makes a cooking pot next
+**Decision:** ceramics-7 is a cooking pot: a coil pot of water on a fire makes broth from berries or mutton. Hunger values are agreed with Survival and kept generous (D-081).
+**Who:** Justin ("Cooking pot", which the PM recommended)
+
+## D-107 — 2026-10-16 — Effect values stay hidden
+**Decision:** The game shows effects in words only ("Keeps a little of the cold off"), never numbers, in the equipment panel and elsewhere. The values live in shared code the client can read, so dataminers can find them; that is accepted, and hiding them from the UI is still the rule.
+**Who:** Justin ("I want values to remain hidden I think. If it's not reasonable against people datamining etc. then I suppose we could just show it."); the PM had recommended showing numbers
+
+## D-108 — 2026-10-16 — Interim training for hides and sewing
+**Decision:** Until Leatherwork and Weaver exist, hide work trains Husbandry and sewing trains Toolmaking.
+**Who:** Justin ("Hides: Husbandry, sewing: Toolmaking", which the PM recommended)
+
+## D-109 — 2026-10-16 — Cold hearths last 1 h outside claims
+**Decision:** A burned-out fire leaves a cold hearth that lasts 1 hour outside a claim; inside a claim it follows normal claim rules (it does not weather away).
+**Who:** Justin ("1 hour outside a claim, normal weathering inside a claim")
+
+## D-110 — 2026-10-16 — Chat bubbles stay about 3 s plus reading time
+**Decision:** Each speech bubble stays about 3 s plus time to read its length; up to 3 stacked.
+**Who:** Justin ("About 3 s plus reading time", which the PM recommended)
+
+## D-111 — 2026-10-16 — Stamina numbers
+**Decision:** From full, a new player runs 8 s, and the bar refills from empty in 12 s. Refill starts 1 s after you stop running and is faster when the bar is low (Valheim-style). Both improve linearly with Survival skill, to 16 s of running and a 7 s refill at Master (per `docs/PROGRESSION.md`). A good meal gives +25% run time for 10 minutes.
+**Who:** Justin ("8 s run / 12 s refill" and "Yes, +25% run for 10 min", both the PM's recommendation, from the researched curves)
+
+## D-112 — 2026-10-16 — Station split (amends D-098)
+**Decision:** These stay basic in the C menu: tinder, fires, knapping, digging stick, cordage, bricks, clay preparation (clean, grit, grog, temper, daub), and the first hafted tools (spear, knife, axe, bow drill), so you can survive anywhere. Shaping pots (pinch pot, coil pot, storage jar) moves to a new Potter's bench station. Crafting Table: basket, drop spindle, wool tunic. Spindle: spin wool, weave cloth. Leather drying rack: hide work, leather wraps. Broth, stew and roasting stay at the fire. The Crafting Table costs 4 sticks, 2 cordage and a log (so an axe comes first). A station draws from your inventory, from baskets and jars within 4 m, and from the claim stash.
+**Who:** Justin ("Pots at a Potter's bench"; the PM had recommended keeping all clay basic. "Also a log"; the PM had recommended 4 sticks + 2 cordage. "Storage within 4 m + claim stash" and "Hand craft" for first tools, both as recommended)
