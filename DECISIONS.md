@@ -951,3 +951,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-234 — 2026-10-16 — Lighting: prototype the colour grade, richer sky and god rays; the original reference screenshots are the target look (D-154)
 **Decision:** Prototype all three lighting options: the time-of-day colour grade, the richer sky, and god rays everywhere at low sun with a quality setting. Renders come before anything ships (D-154). Justin's original reference world, terrain and character screenshots are the target look for the game. Owner: Atmosphere.
 **Who:** Justin ("go look back at our original reference world/terrain/character screenshots I sent you. That's what the game should look like."), with his pick of all three lighting options.
+
+## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
+**Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
+**Who:** Justin (shared the images; relayed by the PM, no direct quote).
