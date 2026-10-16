@@ -2,7 +2,7 @@
 Lane: Animals
 Owner: Animals lane (Sonnet)
 Status: in_review
-Branch: claude/animals-def-5gkntn (stacked on claude/animals-deer-5gkntn / PR #219; retarget to main when #219 merges)
+Branch: claude/animals-def2-5gkntn (from main after #219; replaces claude/animals-def-5gkntn / PR #305, which was stacked on the pre-merge deer branch)
 PR: (see below)
 
 ## Goal
@@ -18,7 +18,9 @@ Justin's rule (docs/CONTENT.md): content is data on shared bases. Species-specif
 - 2026-10-16 22:25: written; server and client build, upgrade check against main passed.
 
 ## Open questions / blockers
-- Stacked on #219.
+- None.
 
 ## Next step
-Wait for #219 to merge, then retarget this PR to main (merge main in), and send the PM the green sha; update the Animal row in docs/CONTENT.md once it is on this branch.
+Wait for CI on the PR; send the PM the green sha; then update the Animal row in docs/CONTENT.md.
+
+- 2026-10-16 23:35: #219 merged. Re-applied the conversion as one commit on fresh main (the stacked branch conflicted in 7 files). Server and client build, upgrade check against main passed.
