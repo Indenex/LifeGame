@@ -22,6 +22,7 @@ Per D-098, spinning and weaving happen at a Spindle station, and hide work (scra
 
 - 2026-10-16 20:45: Crafting's planned shape (crafting-15, branch crafting-stations, pending Justin): `StationKind` enum in shared/Processes.cs (None, Table, Spindle, DryingRack; append new at end), `ProcessDef.Station` (default None) means 'start only within reach of a finished station of that kind in a usable claim'; placement through Building's PlaceStructure with one StructureKind per station; Crafting.cs CountFor/TakeFor draw inventory then storage near the station; over-time work via a per-station slot table and Outcome.Slot (hide_rack may stay at first). Crafting agrees #90 merges now as a hand craft.
 
+- 2026-10-16 22:25: Render requested de48c3f (stations, for Q10/Q11).
 - 2026-10-16 22:20: built on crafting-stations 6d6668f; server + client build. Local bot test (scratch StationCheck, TEMP give reducer, not committed): spin away from a station refused ("You need to be at a spindle in your claim"); claim, crafting table, drop spindle at the table, spindle station built (spindle consumed), 2 yarn spun and cloth woven there; drying rack built, 4 hides scraped, 3 laced on pegs 0.75 m apart along the bar, the 4th handed back; damp leather refused; dismantling the rack dropped the 3 hides as scraped hides. Upgrade check against main passed.
 
 ## Open questions / blockers
