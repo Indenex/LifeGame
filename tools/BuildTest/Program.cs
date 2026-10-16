@@ -159,9 +159,6 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.TryBuild(id);
-        if (Environment.GetEnvironmentVariable("DEBUGB") != null)
-            foreach (var bot in bots)
-                Console.WriteLine($"DBG {bot.MyId}: bot ({bot.X:F1},{bot.Z:F1}) lag {bot.Lag():F1} struct ({s.X:F1},{s.Z:F1}) front ({front.x:F1},{front.z:F1})");
         Pump(650);
     }
     Pump(300);

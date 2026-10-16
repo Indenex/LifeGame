@@ -1,7 +1,7 @@
 # bugfix-24: hardening audit (anti-cheat before outside players join)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-24
 PR: (open after #228 and #221 land, one PR for the two items)
 
@@ -45,6 +45,8 @@ Sizes: S = under half a day, M = about a day, L = several days.
   - Still todo: the dev flag (hardening on by default, flag for CI/test servers) is not needed for these two changes.
 
 - 2026-10-16: PR #254 CI: Server job failed in CraftCheck ("timed out waiting for position to settle", run 38964017711). Cause: the new Move budget now holds a bot to the real walk limit (6 m/s times Carry.WalkFactor, down to 3 m/s when overloaded), but the check tools walked at a fixed 5 m/s and, after their last Move, waited for the server to reach a spot the server had clamped short (the server only moves a player on a Move call). Not a server bug: a real client keeps sending Move and slows down with its load. Fixed the tools, not the rule: CraftCheck, ClayCheck and BuildTest only advance while the server position is within 1.5 m of theirs, and resend Move while waiting to settle. Verified locally on a fresh server: CraftCheck passes (6 min), BuildTest passes (257 s; it hung before), SpawnCheck and SocialTest pass. Local note: `spacetimedb-cli logout` after wiping a scratch server, or publish fails with Broken pipe.
+
+- 2026-10-16: BuildTest also needed the pacing change (it hung locally and failed once in CI with "B: Out of reach", Clay hut stage 1): bots now advance only while the server is within 0.8 m, keep reporting Move after arriving, and wait for the server to be within 0.3 m at the end of WalkTo (`Lag()`). CI green on 1a2befd: https://github.com/Indenex/LifeGame/actions/runs/38975334238. Debug print removed. A local loop of fresh-world BuildTest runs found no failure (see PM thread). Status: in_review, merges after the wipe release (PM).
 
 ## Open questions / blockers
 - Items 7 and 2 touch other lanes' files; the PM should tell those lanes when they are scheduled.
