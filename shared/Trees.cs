@@ -8,7 +8,7 @@ namespace LifeGame.Shared
     {
         // Chopping fells a tree after LogsPerTree logs; it grows back RegrowSeconds
         // later. With Felling off, trees stay and give one log of deadwood per
-        // DeadwoodSeconds instead.
+        // DeadwoodSeconds instead. Justin chose felling (D-060).
         public const bool Felling = true;
         public const int LogsPerTree = 3;
         public const float RegrowSeconds = 2 * 60 * 60;
