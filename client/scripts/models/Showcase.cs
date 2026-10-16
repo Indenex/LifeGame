@@ -371,12 +371,13 @@ public partial class Showcase : Node3D
     // cut, beard), the first in the default look.
     void Crowd()
     {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "0"), System.Globalization.CultureInfo.InvariantCulture));
         for (int i = 0; i < 10; i++)
         {
             var look = i == 0 ? HumanFigure.Appearance.Default : HumanFigure.Appearance.For((uint)i);
             var figure = PlayerModel.Build(look);
             figure.Position = new Vector3((i % 5 - 2f) * 0.9f, 0, (i / 5) * -1.6f);
-            figure.Rotation = new Vector3(0, i % 2 == 0 ? -0.35f : 0.35f, 0);
+            figure.Rotation = new Vector3(0, yaw + (i % 2 == 0 ? -0.35f : 0.35f), 0);
             AddChild(figure);
             PlayerModel.Wear(figure, PlayerModel.Body, (ushort)(i % 3 == 1 ? 200 : 0));
         }
