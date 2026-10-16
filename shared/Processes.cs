@@ -170,6 +170,14 @@ namespace LifeGame.Shared
                 Seconds = 6, Outcome = Outcome.Placed,
             },
 
+            // Clothing (Animals lane): worn in the equipment panel, slows the cold (see Clothing.cs).
+            new ProcessDef
+            {
+                Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 10, Makes = Item.LeatherWraps,
+            },
+
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
             new ProcessDef

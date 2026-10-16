@@ -242,6 +242,7 @@ public static partial class Module
     // of the wilderness; what they know stays with them.
     static void Die(ReducerContext ctx, Player player, Vitals v, PlayerPos pos, string cause)
     {
+        BeforeDeathDrop(ctx, player);
         foreach (var stack in ctx.Db.InventoryItem.Owner.Filter(player.Identity).ToList())
         {
             for (uint i = 0; i < stack.Count; i++)
@@ -356,7 +357,9 @@ public static partial class Module
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, v.Wetness);
+        float insulation = 0;
+        ClothingWarmthHook(ctx, v.PlayerId, ref insulation);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * (1f - Math.Clamp(insulation, 0f, 1f)) * Chill(ctx, v.Wetness);
         return v with
         {
             WetnessRate = Needs.WetnessRate(CurrentWeather(ctx).Rain, rainCover, wet, heat > 0),
@@ -390,6 +393,13 @@ public static partial class Module
         float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
         return Math.Min(cold * wet, Needs.MaxChill);
     }
+
+    // Animals (Clothing.cs) puts worn clothes back in the inventory so they drop too.
+    static partial void BeforeDeathDrop(ReducerContext ctx, Player player);
+
+    // Clothing: Animals implements this (Clothing.cs). Insulation 0 (naked) .. 1
+    // scales down the cold drain like shelter does.
+    static partial void ClothingWarmthHook(ReducerContext ctx, uint playerId, ref float insulation);
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
