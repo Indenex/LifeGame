@@ -1,8 +1,8 @@
 # model-1: Model style and first upgrades
 Lane: Modeling
-Owner: Modeling session (Opus)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
+Status: in_progress
+Branch: claude/model-1
 PR: (once opened)
 
 ## Goal
@@ -10,9 +10,10 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-073).
+- 2026-10-16 17:25: started on `claude/model-1`; read Avatar.cs, Sheep.cs, Look.cs, StructureModel.cs. No Godot or dotnet in this container, so the Render lane builds and captures.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Read the mesh files listed above, render the current player, sheep and a hut through the Render lane, and draft 2 to 3 style options for Justin.
+Wait for the Render lane's baseline renders (player, sheep, hut); meanwhile build the style-option prototypes in `client/scripts/models/`.
