@@ -16,7 +16,7 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 - 2026-10-16 19:50: bcc7f86: `animation/Breath.cs`, a CpuParticles3D on each avatar's Head (or a "HeadAttach" bone attachment on Modeling's skeleton, asked for): a 6-particle faint white puff every 3-4 s from the mouth, staying in world space, when static `Breath.Coldness` (0..1) > 0. Nothing sets Coldness yet, so it's invisible until Survival's cold signal is wired. Client builds.
 
 ## Open questions / blockers
-- Breath puff: what counts as cold (asked Survival which temperature/value to use).
+- Breath puff: Survival exposes static `SurvivalClient.AirColdness` 0..1 (0 at >=6 °C, 1 at 0 °C, local area, same curve as the cold drain) on claude/survival-next 2e8c6ed, PR coming. When it is on main: in Breath._Process read `Coldness = SurvivalClient.AirColdness` (or drop the static and read it directly).
 - Sheep: asked Animals what they want smoothed and how to hook into Sheep.cs.
 
 ## Next step
