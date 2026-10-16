@@ -2,8 +2,8 @@
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
 Status: in_progress
-Branch: claude/anim-2 (stacked on claude/anim-1-player-animation / #100 until it merges)
-PR: (after #100 merges; small PRs per piece)
+Branch: claude/anim-2
+PR: (opening: chop swing + breath scaffold)
 
 ## Goal
 After anim-1 (#100): (1) the standing "working at a station" pose plays for station crafts (D-098, Crafting #160) and the player faces the station; (2) chop.log plays a two-handed axe swing facing the tree; (3) a visible breath puff from players in cold air (D-144, with Survival); (4) smoother sheep motion (with Animals, who own Sheep.cs). Cheap for 32 players. Justin sees clips via Render (renders never hold up merges, D-142).

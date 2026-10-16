@@ -1,9 +1,9 @@
 # anim-1: Player animation pass
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_review
+Status: done
 Branch: claude/anim-1-player-animation
-PR: #100 (ready for review per D-142: renders never hold up merges)
+PR: #100 (merged 2026-10-16 19:35)
 
 ## Goal
 The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and bob. Done means: readable, grounded animation for the player: idle (breathing, weight shift), walk, sneak, and work poses for the main actions (gather/pick up, dig, knap, fire drill, chop once #70 lands, eat, strike), blended smoothly and driven from existing state (movement, CraftJob/process id, Use actions), visible on other players too. Stays cheap enough for 32 players. Coordinate with the Modeling lane (`model-1`), which may change the player mesh: agree a skeleton or part hierarchy first. Justin sees short clips from the Render lane before it merges.
@@ -46,4 +46,4 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 - PM 2026-10-16 17:31: remote sneak takes (b), a server sneak flag through Integration. Asked Integration (session_01Rf5965nk4Lvd3f2QDteZSq) to add public table player_sneaking {PlayerId PK} (row while sneaking) + reducer SetSneaking(bool) + delete on disconnect + subscription. When it lands, AvatarWork calls SetSneaking on local Shift changes and drives remote avatars from it, replacing the speed guess in Avatar.cs. Walk speed question goes to Justin.
 
 ## Next step
-When CI on #100's head is green, send that sha to the PM to merge; meanwhile, after #160 merges, merge claude/anim-1-stations in (or PR it).
+Done. Follow-ups (station pose, chop, breath, sheep, PlayerModel/clothing swap) continue in tickets/anim-2.md.
