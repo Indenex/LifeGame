@@ -153,7 +153,12 @@ public static partial class Module
         // Chopping takes a log from the tree within reach (Woodcutting.cs).
         if (def.Outcome == Outcome.Chop)
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
+        // A roast keeps its meat's quality until it comes off the fire.
+        byte quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap);
+        // Better work takes a little longer (D-113); fires and roasts keep their times.
         float seconds = def.Seconds;
+        if (def.Outcome is not (Outcome.Fire or Outcome.Roast))
+            seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
@@ -168,8 +173,7 @@ public static partial class Module
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
             FinishAt = finish,
-            // A roast keeps its meat's quality until it comes off the fire.
-            Quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap),
+            Quality = quality,
             Failed = failed,
             X = fx,
             Z = fz,
@@ -239,13 +243,24 @@ public static partial class Module
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        foreach (var fire in ctx.Db.Fire.Iter().ToList())
+        foreach (var row in ctx.Db.Fire.Iter().ToList())
+        {
+            // A fire on a raised hearth feeds itself from storage nearby (D-149, Building).
+            var fire = row;
+            var until = fire.FuelUntil;
+            FireTopUpHook(ctx, fire, ref until);
+            if (until.MicrosecondsSinceUnixEpoch != fire.FuelUntil.MicrosecondsSinceUnixEpoch)
+            {
+                fire = fire with { FuelUntil = until };
+                ctx.Db.Fire.Id.Update(fire);
+            }
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
                 LeaveColdHearth(ctx, fire);
             }
+        }
         ClearOldHearths(ctx);
     }
 

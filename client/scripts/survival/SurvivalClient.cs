@@ -40,6 +40,9 @@ public partial class SurvivalClient : Node
     float walkedFor;
     // Seconds since you last ran; refill waits a moment (D-111).
     float rested = 999f;
+    // Whether Main's Walk() asked for a speed this frame; when it didn't (a panel has
+    // the input), _Process keeps the bar refilling so it isn't frozen behind panels.
+    bool walkedThisFrame;
     // Seconds run since the last Endurance report.
     float ranFor;
     // Deaths when the new-arrival half hour was last seen running, null once it ends.
@@ -184,6 +187,8 @@ public partial class SurvivalClient : Node
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
 
+        if (!walkedThisFrame) Rest((float)delta);
+        walkedThisFrame = false;
         UpdateLoad();
         UpdateOthersWet();
     }
@@ -192,6 +197,7 @@ public partial class SurvivalClient : Node
     // all slowed alike by an overload. Main's Walk() calls this once per frame.
     public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
     {
+        walkedThisFrame = true;
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
         rested = running ? 0f : rested + dt;
         if (running && (ranFor += dt) >= Stamina.RunPerUse)
@@ -209,6 +215,16 @@ public partial class SurvivalClient : Node
         staminaBar.Set(stamina, FeetOnScreen());
         float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
         return speed * WalkFactor;
+    }
+
+    // Stamina keeps refilling while you stand still with a panel open.
+    void Rest(float dt)
+    {
+        rested += dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        stamina = Stamina.Step(stamina, false, rested, StaminaRank(), wellFed, dt);
+        if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
     }
 
     // Endurance (D-123): stamina grows with its rank, and running trains it.

@@ -1,7 +1,7 @@
 # model-1: Model style and first upgrades
 Lane: Modeling
 Owner: Modeling session session_01JKX3FNjkrEkAqoTaFJiXAm (Opus)
-Status: in_review
+Status: done
 Branch: claude/model-1-style
 PR: #172
 
@@ -24,6 +24,7 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 - 2026-10-16 20:30: PM chose to close #96 (the Scribe sets my STATUS row); closed, and STATUS.md restored to main's on this branch.
 - 2026-10-16 21:15: D-142 (renders never hold up merges): merged main, build green on db855b0, opened PR #172 (style A default). Avatar swap to PlayerModel.Build() happens in whichever of #172 / Animation's #100 merges second.
 - 2026-10-16 21:35: hearth model on branch claude/model-1-hearth (be2d9e8, stacked on this branch): `HearthModel.Ring` (one mesh, 9 varied stones) and `HearthModel.ColdAsh`; Showcase view `hearth`. Proposed the FireView.cs hook to Crafting (default: I make it in a follow-up PR after #172).
+- 2026-10-16 23:20: #172 merged by the PM (c42de30). Follow-ups continue in model-2.
 
 ## Open questions / blockers
 - Sent to the PM for Justin: style A Carved (recommended) / B Soft / C Natural; pipeline: procedural C# (recommended) / Blender-made glTF.
@@ -39,4 +40,4 @@ All are one draw call per figure; 32 players at even C is ~140k tris, well insid
 Showcase: `godot --path client res://scripts/models/Showcase.tscn -- --view=row|people|faces|sheep|walk [--yaw=deg] [--shot=out.png]`. Headless capture here needs Vulkan (lavapipe: `apt-get install mesa-vulkan-drivers`) under `xvfb-run`; the GL path renders black.
 
 ## Next step
-Wait for CI on PR #172, send the green sha to the PM and Integration (D-095); then open the hearth follow-up PR from claude/model-1-hearth (merge main, add the FireView.cs hook unless Crafting objects).
+Done; see tickets/model-2.md. Justin's style pick (A/B/C) is still open: when it comes, set `PlayerModel.Style`.

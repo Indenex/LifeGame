@@ -88,8 +88,6 @@ public partial class Atmosphere : Node3D
     float woods;
 
     Vector2? debugPosition;
-    float stepPhase;
-    Vector3 lastPlayerPos;
 
     public float TimeOfDay => timeOfDay;
 
@@ -479,75 +477,12 @@ public partial class Atmosphere : Node3D
     static Vector3 Toward(float elevationDeg, float azimuthDeg) =>
         Basis.FromEuler(new Vector3(Mathf.DegToRad(-elevationDeg), Mathf.DegToRad(azimuthDeg), 0)).Z;
 
-    // --- Footsteps --------------------------------------------------------------
-
-    // One step per stride, matching the avatar's leg swing.
-    void Footsteps()
-    {
-        if (Player == null || !Player.IsInsideTree()) return;
-        var pos = Player.GlobalPosition;
-        var flat = pos - lastPlayerPos;
-        flat.Y = 0;
-        lastPlayerPos = pos;
-        float distance = flat.Length();
-        if (distance > 2f || distance < 0.0005f) return;
-        float before = stepPhase;
-        stepPhase += distance * 2.4f;
-        if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
-
-        int cx = World.CellOf(pos.X), cz = World.CellOf(pos.Z);
-        terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
-        var ground = Sheltered?.Invoke(pos) == true ? Ground.Floor
-            : pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
-            : World.IsClay(cx, cz) ? Ground.Clay
-            : terrain?.Cleared?.Invoke(cx, cz) == true ? Ground.Earth
-            : Ground.Grass;
-        sound.Step(ground, wetness);
-    }
-
     Terrain? terrain;
 
     // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
     // density the terrain plants its trees by (Forest.Density, env-1). Sampled every few metres out to
     // about 12 m; the mixer eases between values, so walking into the trees fades
     // the leaves in.
-    // Where the nearest open water is, looked over a few times a second: the closer
-    // and the more of it, the louder it laps; the sound comes from its side.
-    float waterLook;
-
-    void WaterSound(float dt, Vector3 focus, Vector3 right)
-    {
-        waterLook -= dt;
-        if (waterLook > 0f || terrain == null) return;
-        waterLook = 0.25f;
-        const int Reach = 20, Step = 2;
-        int cx = World.CellOf(focus.X), cz = World.CellOf(focus.Z);
-        float nearest = float.MaxValue;
-        Vector2 toward = Vector2.Zero;
-        int wet = 0, near = 0;
-        for (int dx = -Reach; dx <= Reach; dx += Step)
-            for (int dz = -Reach; dz <= Reach; dz += Step)
-            {
-                float d2 = dx * dx + dz * dz;
-                if (d2 > Reach * Reach) continue;
-                if (d2 <= 10 * 10) near++;
-                if (terrain.TileHeight(cx + dx, cz + dz) >= Look.WaterLevel - 0.05f) continue;
-                float d = Mathf.Sqrt(d2);
-                nearest = Mathf.Min(nearest, d);
-                if (d2 <= 10 * 10) wet++;
-                toward += new Vector2(dx, dz) / (1f + d2 * 0.05f);
-            }
-        if (nearest == float.MaxValue)
-        {
-            sound.Water = 0f;
-            return;
-        }
-        // A puddle-sized dip laps quietly; the shore of a wide pond laps fully.
-        float amount = Mathf.Clamp(wet / (float)near * 3f, 0.35f, 1f);
-        sound.Water = (1f - Mathf.SmoothStep(1.5f, Reach, nearest)) * amount;
-        sound.WaterPan = toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(new Vector2(right.X, right.Z)), -1f, 1f) : 0f;
-    }
-
     static float Woodedness(Vector3 at)
     {
         int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);
