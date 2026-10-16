@@ -27,12 +27,14 @@ public static partial class Module
         InitChat(ctx);
         InitClaims(ctx);
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {

@@ -107,7 +107,8 @@ public static partial class Module
                 ctx.Db.StructureTouch.StructureId.Update(touch with { LastTouched = now });
                 continue;
             }
-            if (nowMicros - touch.LastTouched.MicrosecondsSinceUnixEpoch < goneAfter) continue;
+            long after = (long)((Structures.WeatherAfterFor((int)s.Kind) + Structures.WeatherForHours) * 3600e6);
+            if (nowMicros - touch.LastTouched.MicrosecondsSinceUnixEpoch < after) continue;
             foreach (var row in ctx.Db.BasketItem.StructureId.Filter(s.Id).ToList())
                 ctx.Db.BasketItem.Id.Delete(row.Id);
             RemoveStructure(ctx, s);

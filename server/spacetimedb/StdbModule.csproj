@@ -30,4 +30,6 @@
     <PackageReference Include="runtime.$(NETCoreSdkPortableRuntimeIdentifier).Microsoft.DotNet.ILCompiler.LLVM" Version="8.0.0-*" />
   </ItemGroup>
 
+  <Import Project="../../shared/BuildStamp.targets" />
+
 </Project>
