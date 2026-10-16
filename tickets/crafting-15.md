@@ -51,7 +51,7 @@ Questions for Justin (recommended option first):
 
 ## Built (this PR)
 - shared/Processes.cs: `StationKind` {None, Table, PottersBench, Spindle, DryingRack}, `StationInfo` (StorageReach 4 m, names), `ProcessDef.Station`; weave.basket is made at a Table.
-- shared/Structures.cs: `StructureShape.Station`; the Crafting table shape (one stage "Table") and its cost. Building.cs: `StructureKind.CraftingTable` (7, after the storage jar) and a `CheckStationSite` call in PlaceStructure.
+- shared/Structures.cs: `StructureShape.Station`; the Crafting table shape (one stage "Table") and its cost. Building.cs: `StructureKind.CraftingTable` (9: after StorageJar 6, Fence 7, Gate 8) and a `CheckStationSite` call in PlaceStructure.
 - server/spacetimedb/Stations.cs: the site check (inside a claim you have rights to), `StationNear` (within WorkReach of the edge, in a claim you have rights to), `CountFor`/`TakeFor` (bag, then baskets and jars within 4 m, then the claim stash), and `BesideStation` (where placed things go).
 - Crafting.cs StartCraft: station check before anything is used, and counts and takes through the station.
 - Client: `Stations.NearestOf/AtPlayer/StoredNear` (client/scripts/crafting/Stations.cs; Animation uses NearestOf), and the panel shows "at a crafting table" with a "build one inside your claim" hint. CraftingTableModel draws four lashed legs with a split log on top.
@@ -61,6 +61,7 @@ Questions for Justin (recommended option first):
 - 2026-10-16 19:30: framework built. CraftCheck, BuildTest and the upgrade check (main's world carries over, no wipe) pass locally, and server and client build.
 - 2026-10-16 19:35: PR #160 opened at 859f25e. Render requested 859f25e (crafting table, built, inside a claim).
 - 2026-10-16 19:45: merged main (StorageJar 6, CraftingTable 7); each station kind reports its own build id (build.table, build.bench, build.spindle, build.rack) for Journal; the spindle is named "spindle station" (Animals). Upgrade check against origin/main passes; CraftCheck passes.
+- 2026-10-16 20:15: merged main again after Building's fence and gate (#153): StorageJar 6, Fence 7, Gate 8, CraftingTable 9. The upgrade check and CraftCheck pass.
 - 2026-10-16 18:45: Ceramics asked for the coil pot to stay basic and the jar at the Table; adopted and sent to the PM.
 - 2026-10-16 18:35: proposal written and sent to the PM. Told Animals and Animation the planned shape (StationKind, ProcessDef.Station, Stations.NearestOf).
 

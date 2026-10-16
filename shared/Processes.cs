@@ -94,6 +94,16 @@ namespace LifeGame.Shared
 
     public static class Processes
     {
+        // A recipe's base time (D-113): its tier's seconds times how much work it is,
+        // from 0.25 (crush, mix) to 3 (a storage jar). Fires and roasting keep their own
+        // times. The job then takes longer for a better result (QualityTimeScale), and
+        // shorter with skill (Journal's DurationScale) and a better tool (ToolSpeedup).
+        static float Base(int tier, float effort) => effort * tier switch { 0 => 3f, 1 => 6f, 2 => 12f, _ => 20f };
+
+        // How much longer a job takes for the quality it will come out at (D-113):
+        // x0.88 for crude work (20), x1.04 for decent (60), x1.18 for excellent (95).
+        public static float QualityTimeScale(byte quality) => 0.8f + 0.4f * quality / 100f;
+
         public static readonly IReadOnlyList<ProcessDef> List = new[]
         {
             // Tier 0: bare hands.
@@ -101,7 +111,7 @@ namespace LifeGame.Shared
             {
                 Id = "gather.tinder", Name = "Shred tinder", Doing = "Shredding fiber into tinder", Tier = 0,
                 Consumes = new[] { new Ingredient(Item.Fiber, 2) },
-                Seconds = 3, Makes = Item.Tinder,
+                Seconds = Base(0, 1f), Makes = Item.Tinder,
             },
 
             // Tier 1: fire and the first stone edges.
@@ -115,13 +125,13 @@ namespace LifeGame.Shared
             {
                 Id = "knap.flake", Name = "Knap a flake", Doing = "Knapping a flake", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
-                Seconds = 3, Minigame = Minigame.Strike, Makes = Item.Flake, FailBelow = 0.2f,
+                Seconds = Base(1, 0.5f), Minigame = Minigame.Strike, Makes = Item.Flake, FailBelow = 0.2f,
             },
             new ProcessDef
             {
                 Id = "knap.hand_axe", Name = "Shape a hand axe", Doing = "Shaping a hand axe", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
-                Seconds = 8, Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
+                Seconds = Base(1, 1.5f), Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
             },
             new ProcessDef
             {
@@ -154,7 +164,7 @@ namespace LifeGame.Shared
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 5, Makes = Item.DiggingStick,
+                Seconds = Base(1, 1f), Makes = Item.DiggingStick,
             },
 
             // Tier 2: cordage and hafted tools.
@@ -162,44 +172,44 @@ namespace LifeGame.Shared
             {
                 Id = "cord.twist", Name = "Twist cordage", Doing = "Twisting cordage", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Fiber, 3) },
-                Seconds = 6, Makes = Item.Cordage,
+                Seconds = Base(2, 0.5f), Makes = Item.Cordage,
             },
             new ProcessDef
             {
                 Id = "lash.spear", Name = "Lash a spear", Doing = "Lashing a spear", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Flake), new Ingredient(Item.Cordage) },
-                Seconds = 8, Makes = Item.Spear,
+                Seconds = Base(2, 1f), Makes = Item.Spear,
             },
             new ProcessDef
             {
                 Id = "lash.stone_axe", Name = "Haft a stone axe", Doing = "Hafting a stone axe", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.HandAxe), new Ingredient(Item.Cordage) },
-                Seconds = 10, Makes = Item.StoneAxe,
+                Seconds = Base(2, 1.5f), Makes = Item.StoneAxe,
             },
             new ProcessDef
             {
                 Id = "haft.knife", Name = "Haft a stone knife", Doing = "Binding a flake into a handle", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Flake), new Ingredient(Item.Cordage) },
-                Seconds = 8, Makes = Item.StoneKnife,
+                Seconds = Base(2, 1f), Makes = Item.StoneKnife,
             },
             new ProcessDef
             {
                 Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
-                Seconds = 15, Makes = Item.Basket, Station = StationKind.Table,
+                Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table,
             },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
             {
                 Id = "weave.mat", Name = "Weave a sleeping mat", Doing = "Weaving a sleeping mat", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Fiber, 8) },
-                Seconds = 12, Makes = Item.SleepingMat,
+                Seconds = Base(2, 2f), Makes = Item.SleepingMat,
             },
             new ProcessDef
             {
                 Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
-                Seconds = 8, Makes = Item.BowDrill,
+                Seconds = Base(2, 1f), Makes = Item.BowDrill,
             },
             // The bow spins the drill for you: half the strokes of a hand drill, and surer.
             new ProcessDef
@@ -212,7 +222,7 @@ namespace LifeGame.Shared
             new ProcessDef
             {
                 Id = "chop.log", Name = "Chop a log", Doing = "Chopping a log", Tier = 2,
-                NeedsTool = ItemTags.Chopping, Seconds = 15, Outcome = Outcome.Chop, Makes = Item.Log,
+                NeedsTool = ItemTags.Chopping, Seconds = Base(2, 1.25f), Outcome = Outcome.Chop, Makes = Item.Log,
             },
 
             // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
@@ -221,13 +231,13 @@ namespace LifeGame.Shared
             {
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 8, Makes = Item.ScrapedHide,
+                Seconds = Base(2, 1f), Makes = Item.ScrapedHide,
             },
             new ProcessDef
             {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
-                Seconds = 6, Outcome = Outcome.Placed,
+                Seconds = Base(2, 0.5f), Outcome = Outcome.Placed,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
@@ -236,44 +246,44 @@ namespace LifeGame.Shared
             {
                 Id = "clay.clean", Name = "Clean clay", Doing = "Picking stones and roots out of the clay", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.Clay, 2) },
-                Seconds = 4, Makes = Item.CleanClay,
+                Seconds = Base(3, 0.25f), Makes = Item.CleanClay,
             },
             new ProcessDef
             {
                 Id = "clay.grit", Name = "Crush stone grit", Doing = "Crushing stone into grit", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
-                Seconds = 4, Makes = Item.Grit, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.Grit, MakesCount = 2,
             },
             new ProcessDef
             {
                 Id = "clay.grog", Name = "Crush sherds into grog", Doing = "Crushing potsherds into grog", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.Potsherd) }, NeedsTool = ItemTags.Hammer,
-                Seconds = 3, Makes = Item.Grog, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.Grog, MakesCount = 2,
             },
             new ProcessDef
             {
                 Id = "clay.temper_grit", Name = "Temper clay with grit", Doing = "Wedging grit into the clay", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Grit) },
-                Seconds = 5, Makes = Item.TemperedClay, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.TemperedClay, MakesCount = 2,
             },
             // Old pots make the best temper: the clay goes further.
             new ProcessDef
             {
                 Id = "clay.temper_grog", Name = "Temper clay with grog", Doing = "Wedging grog into the clay", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Grog) },
-                Seconds = 5, Makes = Item.TemperedClay, MakesCount = 3,
+                Seconds = Base(3, 0.25f), Makes = Item.TemperedClay, MakesCount = 3,
             },
             new ProcessDef
             {
                 Id = "clay.pinch_pot", Name = "Pinch a pot", Doing = "Pinching a pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
-                Seconds = 12, Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
@@ -286,19 +296,19 @@ namespace LifeGame.Shared
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
-                Seconds = 16, Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.brick", Name = "Mold a brick", Doing = "Molding a brick", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Fiber) },
-                Seconds = 5, Outcome = Outcome.Placed,
+                Seconds = Base(3, 0.5f), Outcome = Outcome.Placed,
             },
             new ProcessDef
             {
                 Id = "clay.daub", Name = "Mix daub", Doing = "Mixing clay and fiber into daub", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay), new Ingredient(Item.Fiber) },
-                Seconds = 4, Makes = Item.Daub, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.Daub, MakesCount = 2,
             },
         };
 
@@ -345,14 +355,19 @@ namespace LifeGame.Shared
     // Campfires: how long they burn and how far their warmth reaches.
     public static class Fires
     {
-        // A freshly lit fire burns this long before it needs feeding (D-054): long
+        // A freshly lit fire burns this long before it needs feeding (D-054, D-090): long
         // enough to shape, dry and fire a first pot without tending it.
-        public const float StartSeconds = 15 * 60;
-        // Fuel stacks up to this many seconds ahead.
+        public const float StartSeconds = 20 * 60;
+        // Fuel stacks up to this many seconds ahead. The cap grows with the feeder's
+        // Firecraft rank, from MaxSeconds at rank 0 to MasterMaxSeconds at Master (D-090).
         public const float MaxSeconds = 20 * 60;
+        public const float MasterMaxSeconds = 40 * 60;
+        public static float MaxSecondsFor(int firecraftRank) =>
+            MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
-        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // A burned-out fire leaves a cold hearth of stones and ash this long outside a
+        // claim; inside one it stays while the claim stands (D-109). Lighting
         // a fire beside it rekindles it in place.
         public const float ColdSeconds = 60 * 60;
         // The stone ring's reach from the fire's middle, in meters, and how far apart

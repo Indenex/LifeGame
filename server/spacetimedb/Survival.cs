@@ -448,7 +448,7 @@ public static partial class Module
     static float Chill(ReducerContext ctx, float wetness)
     {
         float celsius = AirTemperature(ctx);
-        float cold = 1f + Math.Clamp((Needs.MildCelsius - celsius) / Needs.MildCelsius, 0f, 1f);
+        float cold = 1f + Needs.AirCold(celsius);
         float wet = 1f + Needs.RainChill * Math.Clamp(wetness, 0f, 1f);
         return Math.Min(cold * wet, Needs.MaxChill);
     }

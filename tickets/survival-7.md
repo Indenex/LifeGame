@@ -39,4 +39,4 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 - Known gap: Walk() isn't called while a panel captures input, so stamina doesn't refill then. Minor.
 
 ## Next step
-None: merged as #119 (1be3049). Follow-ups are survival-8/9.
+None: merged as #119.
