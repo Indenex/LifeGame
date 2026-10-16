@@ -7,6 +7,9 @@ namespace LifeGame;
 // (D-038).
 public partial class KeyHelp : CanvasLayer
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NKeyHelp = "key_help";
+
     readonly GridContainer grid = new() { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
     Control root = null!;
     float alpha;
@@ -66,7 +69,7 @@ public partial class KeyHelp : CanvasLayer
 
     public override void _Process(double delta)
     {
-        bool held = Pinned || InputMap.HasAction("key_help") && Input.IsActionPressed("key_help");
+        bool held = Pinned || InputMap.HasAction("key_help") && Input.IsActionPressed(NKeyHelp);
         if (held && !open) Fill();
         open = held || open && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-keys") >= 0;
         alpha = Mathf.MoveToward(alpha, open ? 1f : 0f, (float)delta * 7f);

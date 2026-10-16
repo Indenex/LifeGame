@@ -55,11 +55,12 @@ public static class Look
     // world_seconds so changes to the world can ease in over time. The atmosphere
     // advances it every frame.
     public static float Clock { get; private set; } = 1f;
+    static readonly StringName WorldSeconds = "world_seconds"; // cached: a string would make a new StringName every frame
 
     public static void Tick(float delta)
     {
         Clock += delta;
-        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet("world_seconds", Clock);
+        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet(WorldSeconds, Clock);
     }
 
     // Each surface family gets the same shader with its own detail: how fine the
