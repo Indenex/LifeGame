@@ -13,8 +13,10 @@ From the PM, 2026-10-16: slow drifting clouds whose cover follows the weather, s
 
 - 2026-10-16 (new session): merged main (103 commits, no conflicts) into the branch as 9430732; server module, bindings, client and SoundPreview build locally. Branch is now claude/atmosphere-sound-hlqfke directly (#66 head). Render lane renders the water and sky look; Justin decides from those shots.
 
+- 2026-10-16 17:28: CI run https://github.com/Indenex/LifeGame/actions/runs/38937315648 green on 47a151d (main merged in). Audio files in this PR now belong to the Audio lane (D-079); I keep merging main but don't edit audio code.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Watch #66 CI on 9430732; keep it merged with main until Justin decides (PM relays).
+Wait for Justin's decision on the water and sky look (PM relays); merge main into the branch when it moves.
