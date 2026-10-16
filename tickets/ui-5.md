@@ -3,7 +3,7 @@ Lane: UX and UI
 Owner: UX and UI thread (session_01NAW5B3eCSw3JtCiFrZeSNz)
 Status: blocked
 Branch: claude/ux-ui-xlrh2s
-PR: (none yet)
+PR: #46 (music slider and Shift G row)
 
 ## Goal
 Small follow-ups that wait on other lanes landing on main:
@@ -14,9 +14,10 @@ Done when each is on main and Justin has a screenshot of the menu with the music
 
 ## Progress log
 - 2026-10-16 00:25: opened after ui-4 (#38) merged at ef1c26b. Told Survival, Claims, Ceramics and Building that Panels.Open, Hints.Done/Tip and UseOffer.Target are on main.
+- 2026-10-16 04:50: music slider, Music on/off and the Shift G row landed via #46 merged at 63dda46 (CI run https://github.com/Indenex/LifeGame/actions/runs/38851687321 green on 9234fea). Only the V row is left.
 
 ## Open questions / blockers
-- Waiting on Atmosphere #32 (PM: held for Justin's OK on the firelight look), building-3 and ceramics-3.
+- Waiting on ceramics-3 (all clay on G) for the V row, and on survival-4 for the KEYMAP forage_facing stopgap note.
 
 ## Next step
-When any of #32, building-3 or ceramics-3 is on main, merge main into claude/ux-ui-xlrh2s and do that item (PauseMenu.cs for music, Controls.cs rows for keys).
+When ceramics-3 is on main, drop the tend_clay row from client/scripts/ui/Controls.cs; when survival-4 is, drop forage_facing from KEYMAP's priorities. Then open a PR.

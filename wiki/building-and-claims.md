@@ -5,8 +5,6 @@ Open the build menu (B) and place a blueprint, a see-through outline of the buil
 
 A lean-to is the simplest shelter. Larger buildings need more and better materials, and give more protection from cold and rain.
 
-Inside a finished shelter you can lay a sleeping mat. After you die, you respawn on it.
-
 Some structures, such as the kiln, are also built from the build menu rather than crafted.
 
 ## Doors
