@@ -15,6 +15,6 @@ Rain and wading make you wet. Heavy rain soaks you faster than drizzle, and wadi
 You can only carry so much. Over the limit you can still pick things up, but you walk more slowly the more you carry. Some crafted items raise the limit.
 
 ## Death
-If you die, you drop everything you were carrying. You keep your skills and everything in your journal. You respawn with partial food and water and full warmth.
+If you die, you drop everything you were carrying. You keep your skills and everything in your journal. You respawn with partial food and water and full warmth. If you have laid a sleeping mat, you respawn on it; otherwise you respawn at the edge of the wilderness.
 
 Next: [Crafting and skills](crafting-and-skills.md)
