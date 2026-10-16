@@ -100,7 +100,7 @@ Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay qu
 Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
+FireCraft("fire.hand_drill", 1f);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
@@ -111,7 +111,7 @@ Gather(Item.Fiber, 2);
 Gather(Item.Stick, 3);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesNow = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 0.1f, null);
+FireCraft("fire.hand_drill", 0.1f);
 Pump(() => false, 1, null);
 if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
 if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
@@ -124,7 +124,7 @@ Craft("cord.twist", 0, Item.Cordage);
 Craft("lash.bow_drill", 0, Item.BowDrill);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesBeforeBow = conn.Db.Fire.Count;
-Craft("fire.bow_drill", 0.25f, null);
+FireCraft("fire.bow_drill", 0.25f);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
@@ -190,6 +190,27 @@ foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
 Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
+
+// Lights a fire (or tries to). The server sets a fire only on clear, level ground
+// near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
+// when it finds none here, step a few metres along and try again.
+void FireCraft(string processId, float score)
+{
+    for (int attempt = 0; ; attempt++)
+    {
+        lastError = null;
+        conn.Reducers.StartCraft(processId, score);
+        Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
+        if (lastError == null) break;
+        if (!lastError.Contains("clear, level ground") || attempt >= 8)
+            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
+        float a = attempt * MathF.PI / 4f;
+        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
+        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+    }
+    var def = Processes.Find(processId)!;
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
+}
 
 void Craft(string processId, float score, Item? expect)
 {
