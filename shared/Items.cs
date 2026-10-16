@@ -82,6 +82,12 @@ namespace LifeGame.Shared
         public ItemTags Tags;
         // Quality matters for made things; raw materials always come at a flat quality.
         public bool HasQuality;
+        // Hand tools wear with use and stop working until mended at a repair table
+        // (crafting-19, shared/Durability.cs). A wearing tool needs HasQuality. Mending
+        // takes RepairCost besides the visit, and RepairNeedsTool in hand (a cutting tool).
+        public bool Wears;
+        public Ingredient[]? RepairCost;
+        public ItemTags RepairNeedsTool;
 
         public string Count(uint n) => n == 1 ? Name : Plural;
     }
@@ -107,6 +113,9 @@ namespace LifeGame.Shared
         // Raw materials picked up or dug start at this quality (0 to 100).
         public const byte RawQuality = 50;
 
+        // Mending a lashed tool takes a length of fresh cordage.
+        static readonly Ingredient[] Lashing = { new Ingredient(Item.Cordage) };
+
         public static readonly IReadOnlyDictionary<Item, ItemDef> All = Build(
             new ItemDef { Id = Item.Stick, Name = "Stick", Plural = "Sticks", FuelSeconds = 90 },
             new ItemDef { Id = Item.Stone, Name = "Stone", Plural = "Stones", Tags = ItemTags.Hammer },
@@ -116,8 +125,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Flake, Name = "Stone flake", Plural = "Stone flakes", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.HandAxe, Name = "Hand axe", Plural = "Hand axes", Tags = ItemTags.Cutting | ItemTags.Hammer, HasQuality = true },
             new ItemDef { Id = Item.Cordage, Name = "Cordage", Plural = "Cordage", Tags = ItemTags.Binding, HasQuality = true },
-            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true },
-            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true },
+            new ItemDef { Id = Item.Spear, Name = "Spear", Plural = "Spears", Tags = ItemTags.Piercing, HasQuality = true, Wears = true, RepairCost = Lashing },
+            new ItemDef { Id = Item.StoneAxe, Name = "Stone axe", Plural = "Stone axes", Tags = ItemTags.Chopping | ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing },
             new ItemDef { Id = Item.CleanClay, Name = "Clean clay", Plural = "Clean clay" },
             new ItemDef { Id = Item.Grit, Name = "Stone grit", Plural = "Stone grit" },
             new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
@@ -135,10 +144,10 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true },
             new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true },
             new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
-            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
-            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
+            new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing },
+            new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairNeedsTool = ItemTags.Cutting },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
-            new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
+            new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true, Wears = true, RepairCost = Lashing },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
             new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true },
             new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
