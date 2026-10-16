@@ -270,7 +270,7 @@ public static partial class Module
         else
         {
             DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0);
-            News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} came out of the fire whole. It will hold water.");
+            News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} is fired, and whole. {{use}} picks it up.");
         }
     }
 
@@ -328,7 +328,10 @@ public static partial class Module
     {
         float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f;
         if (left < ClayRules.PitFireSeconds)
-            throw new Exception($"Feed the fire first: a firing needs about {ClayRules.PitFireSeconds / 60f:0} minutes of fuel");
+        {
+            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds);
+            throw new Exception($"Feed the fire first: {sticks} more {(sticks == 1 ? "stick" : "sticks")} to last the {ClayRules.PitFireSeconds / 60f:0} minute firing");
+        }
     }
 
     // The first free place in a fire's ring of pots, or null when it is full.
@@ -403,6 +406,7 @@ public static partial class Module
         });
     }
 
+    // "{use}" in the text becomes the player's Use key on their screen.
     static void News(ReducerContext ctx, uint playerId, string text) =>
         ctx.Db.ClayNews.Insert(new ClayNews { PlayerId = playerId, Text = text });
 

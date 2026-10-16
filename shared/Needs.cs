@@ -28,6 +28,10 @@ namespace LifeGame.Shared
         public const float BerryFood = 0.12f;
         public const float BerryWater = 0.02f;
         public const float SipWater = 0.2f;
+        // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
+        // ours; raw is not eaten for now.
+        public const float RoastMuttonFood = 0.4f;
+        public const float BurntMuttonFood = 0.1f;
         // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
         public const float PinchPotWater = 0.5f;
         public const float CoilPotWater = 1f;
@@ -52,6 +56,35 @@ namespace LifeGame.Shared
 
         // Below this a need is worth warning about.
         public const float Low = 0.25f;
+
+        // What eating one of an item gives: (food, water). Zero for anything inedible.
+        public static (float food, float water) Nourishment(Item item) => item switch
+        {
+            Item.Berries => (BerryFood, BerryWater),
+            Item.CookedMutton => (RoastMuttonFood, 0f),
+            Item.BurntMutton => (BurntMuttonFood, 0f),
+            _ => (0f, 0f),
+        };
+
+        public static bool Edible(Item item) => Nourishment(item).food > 0f;
+
+        // Which of the foods you carry to eat at this hunger: the most filling one
+        // that doesn't waste much, or else the smallest, so a roast isn't spent on a
+        // nibble. Null if nothing carried is edible.
+        public static Item? BestFood(float food, System.Collections.Generic.IEnumerable<Item> carried)
+        {
+            float room = 1f - food + 0.05f;
+            Item? best = null, smallest = null;
+            float bestFill = 0f, smallestFill = float.MaxValue;
+            foreach (var item in carried)
+            {
+                float fill = Nourishment(item).food;
+                if (fill <= 0f) continue;
+                if (fill <= room && fill > bestFill) { best = item; bestFill = fill; }
+                if (fill < smallestFill) { smallest = item; smallestFill = fill; }
+            }
+            return best ?? smallest;
+        }
 
         // A need's value some seconds after it was recorded at `value` changing by `rate`.
         public static float At(float value, float rate, float seconds) =>
