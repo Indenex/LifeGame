@@ -457,3 +457,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-111 — 2026-10-16 — Stamina numbers
 **Decision:** From full, a new player runs 8 s, and the bar refills from empty in 12 s. Refill starts 1 s after you stop running and is faster when the bar is low (Valheim-style). Both improve linearly with Survival skill, to 16 s of running and a 7 s refill at Master (per `docs/PROGRESSION.md`). A good meal gives +25% run time for 10 minutes.
 **Who:** Justin ("8 s run / 12 s refill" and "Yes, +25% run for 10 min", both the PM's recommendation, from the researched curves)
+
+## D-112 — 2026-10-16 — Station split (amends D-098)
+**Decision:** These stay basic in the C menu: tinder, fires, knapping, digging stick, cordage, bricks, clay preparation (clean, grit, grog, temper, daub), and the first hafted tools (spear, knife, axe, bow drill), so you can survive anywhere. Shaping pots (pinch pot, coil pot, storage jar) moves to a new Potter's bench station. Crafting Table: basket, drop spindle, wool tunic. Spindle: spin wool, weave cloth. Leather drying rack: hide work, leather wraps. Broth, stew and roasting stay at the fire. The Crafting Table costs 4 sticks, 2 cordage and a log (so an axe comes first). A station draws from your inventory, from baskets and jars within 4 m, and from the claim stash.
+**Who:** Justin ("Pots at a Potter's bench"; the PM had recommended keeping all clay basic. "Also a log"; the PM had recommended 4 sticks + 2 cordage. "Storage within 4 m + claim stash" and "Hand craft" for first tools, both as recommended)

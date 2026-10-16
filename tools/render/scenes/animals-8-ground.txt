@@ -1,0 +1,18 @@
+# animals-8: the three wool items on the ground, close render camera.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --render-cam=2.2,1.8,20,0
+wait 35
+give 197 1 60
+give 198 1 60
+give 199 1 60
+wait 2
+drop 197
+stroll 0.5 0
+arrive
+drop 198
+stroll 0 0.5
+arrive
+drop 199
+stroll -1.2 -1.2
+arrive
+burst 3 2

@@ -10,11 +10,13 @@ A dry pot sitting within 1.8 m of a burning fire (pots shaped at a campfire are 
 
 Cause: server/spacetimedb/Ceramics.cs TendClay always tried to fire a pot beside a burning fire and threw "That fire is full of pots already" or "Feed the fire first", never falling through to the pick-up. The client (CeramicsView.TendOffer) offered "Fire the pot" at priority 22, above Feed the fire (20), so G repeated the error.
 
-Fix: shared/ClayRules.FireCanTakePot(fuelSecondsLeft, potsInFire). The server's TendClay fires a dry pot only when it holds, else picks it up; the client's TendOffer counts a dry pot as beside the fire only when it holds, so its offer becomes "Pick up the pot" at priority 12, below feeding. Wet pots behave as before.
+Fix: shared/ClayRules.FireCanTakePot(fuelSecondsLeft, potsInFire). The server's TendClay fires a dry pot only when it holds, else picks it up; the client's TendOffer counts a dry pot as beside the fire only when it holds. When it doesn't, "Pick up the pot" is offered with the firing offers (priority 22, above Feed the fire 20), except when the fire only lacks fuel and you carry some: then it is offered at 12 and Feed the fire wins. Wet pots behave as before.
 
 ## Progress log
 - 2026-10-16: found in the clay-path review (see bugfix-17). Fixed; server and client build. Bot check (scratch, based on tools/ClayCheck: five pots by a fire, four fill the ring, G on the fifth) running against this module and main.
 - 2026-10-16: bot check result: on main, G on the fifth pot fails with "That fire is full of pots already"; with this fix it lands in the bag ("ok   G on a dry pot by a full fire picks it up"). The low-fuel path (Feed the fire wins, then Fire the pot returns) is client logic, built but not bot-tested; it needs the Render lane's look.
+- 2026-10-16: merged main (#99 conflict, then #109); new head 77d6990 then this merge.
+- 2026-10-16: Render lane on e80c6cf: with a full ring and sticks in hand the prompt read "Feed the fire", and G fed a stick (pick-up at 12 lost to feeding at 20). Fixed: the pick-up now goes with the firing offers at 22 unless the fire only needs fuel and you carry some. Client builds.
 
 ## Open questions / blockers
 - (none)
