@@ -5,6 +5,37 @@ static class Soak
 {
     const int Rate = 44100, Block = 256; // the game's block size
 
+    // Every public setting at the edges of its range (and just outside), one at a time. With the
+    // old unguarded mix this found the root cause of the silence: StreamPan at 0.75 or more
+    // (the stream voice pans its two halves at pan plus and minus 0.3, so Pan() took the
+    // square root of a negative number and a NaN reached the shared filters and reverb for good).
+    public static int Edges()
+    {
+        SoundMix.Fault = m => Console.WriteLine($"  FAULT: {m}");
+        float[] edges = { 0f, 1f, -0f, 1.0000001f, 0.9999999f, -1e-7f, -1f, 1.5f, 2f, 1000f, 0.5f, 0.25f, 0.75f, 0.875f, 0.125f };
+        var fields = typeof(SoundMix).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(f => f.FieldType == typeof(float)).ToArray();
+        var l = new float[Block];
+        var r = new float[Block];
+        int failures = 0;
+        foreach (var f in fields)
+            foreach (var e in edges)
+            {
+                var mix = new SoundMix(Rate, seed: 1) { Rain = 0.6f, Wind = 0.5f, Fire = 0.5f, Water = 0.5f, Stream = 0.5f };
+                f.SetValue(mix, e);
+                for (int i = 0; i < 400; i++) mix.Render(l, r, Block);
+                if (mix.Faults > 0) { Console.WriteLine($"FAILED: {f.Name} = {e:R} made the mix fault"); failures++; }
+            }
+        for (int k = 0; k <= 2000; k += 7)
+        {
+            var mix = new SoundMix(Rate, seed: 1) { Rain = 0.3f, TimeOfDay = k / 1000f, Year = k / 1000f - 0.5f };
+            for (int i = 0; i < 60; i++) mix.Render(l, r, Block);
+            if (mix.Faults > 0) { Console.WriteLine($"FAILED: TimeOfDay/Year sweep at {k / 1000f}"); failures++; }
+        }
+        Console.WriteLine(failures == 0 ? "ok: edge values" : $"{failures} edge failure(s)");
+        return failures == 0 ? 0 : 5;
+    }
+
     public static int Run(double hours, int seed, bool fuzz, bool inject)
     {
         var rng = new Random(seed);
