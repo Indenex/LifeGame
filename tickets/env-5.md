@@ -1,9 +1,9 @@
 # env-5: Landmarks and trails
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_review
+Status: done
 Branch: claude/environment-env-5
-PR: (once opened)
+PR: #247
 
 ## Goal
 Give players things to steer by and name (D-081, a world to get lost in): deer trails worn between glades, water and heath; huge lone oaks in glades; rock outcrops on the hilltop heath; stepping stones where a stream is easy to ford. All deterministic (shared seed), visual apart from trails thinning trees through `Forest.Density` (so the server's choppable trees keep paths open). No wipe. Justin sees renders of a giant oak, an outcrop, a ford and a trail through the trees.
@@ -15,10 +15,11 @@ Give players things to steer by and name (D-081, a world to get lost in): deer t
 - 2026-10-16 23:55: #213 (env-4) and #223 (tree fade) merged; merged main. Terrain.ShowGhosts margin 8 -> 12 m (giant trees' lobes reach about 11 m from the trunk). Server and client build. Opening the PR. When Bug fixes' #228 (TerrainCollision.cs) lands, add giant trunks (radius about 0.2 x girth) and outcrop boulders to it; stepping stones and logs don't block.
 - 2026-10-17 00:20: PR #247 CI run 38962995087 red in CraftCheck: "laying out a ClaimMarker: This clearing is where newcomers wake up". It passes locally on a fresh world, with the latest main merged, and in CI's exact order (LoadTest, BuildTest, SpawnCheck, CraftCheck). Cause: CraftCheck's BuildHere searches rings up to 30 m around a point just 5 m outside the claim keep-out and never excludes candidates back inside it, so with other structures or trees in the way it can pick a refused site (one local run claimed at (-22,39), far from its start). Fix: skip ClaimMarker candidates inside Social.SpawnClearRadius + ClaimRadius. Merged main. CraftCheck passes.
 - 2026-10-17 00:35: Bug fixes' collision (#228) merged; merged main. TerrainCollision.cs updated for env-5. Giant trees block with a trunk radius of 0.2 x their girth (`LandmarkProps.GiantGirth`), and an outcrop's middle cell holds no tree. Outcrop boulders spread several meters from their middle, so `CollideOutcrops` looks up the outcrop of each 48 m square within 8 m of the walker (`Landmarks.OutcropIn`), rebuilds its stones from the same seed (cached per square) and pushes out of each stone of radius 0.2 m or more. Stepping stones, logs and trails don't block. Client and server build.
+- 2026-10-17 00:50: #247 green at d0065cf (run 38970096350) and merged. Modeling's variants follow in env-8.
 
 ## Open questions / blockers
 - Justin picked A (via PM) with a condition: repeated landmarks must look quite different every time (no recognisable pre-made copies), and big ones like the giant oak stay rare.
 - Modeling has seeded variants on claude/model-2-env (PR after #197): PropMeshes.Outcrop(int) x6, RiverStone(int) x6, Birch/Heather/Gorse(int) x3 each (counts in PropMeshes.*Variants; any int wraps; one MultiMesh per variant). Also Rock(int) x4 and FallenLog(int) x2 (now methods, not properties). One MultiMesh per rock variant: bucket rocks by Hash01 into 4 lists. Wire in once on main: pick variant from the landmark seed, keep per-instance scale/tilt/tint.
 
 ## Next step
-Wait for CI on the env-5 PR, send the green sha to the PM; then wire in Modeling's variants once #235 merges.
+Done. Prop variants continue in `tickets/env-8.md`.
