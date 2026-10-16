@@ -3,7 +3,7 @@ Lane: Release & Launcher (D-131)
 Owner: Release & Launcher thread (session_015Je3JR5vZrzA7TwQYBSPgM)
 Status: in_progress
 Branch: claude/release-1 (restarted from main after #161; release-2 work continues here)
-PR: (not yet)
+PR: #201
 
 ## Goal
 Justin does zero work after downloading the launcher once (PM, D-145 never idle):
@@ -20,6 +20,7 @@ Justin does zero work after downloading the launcher once (PM, D-145 never idle)
 - 2026-10-16 21:00: tested on Linux: shortcuts written to a fake HOME (both .desktop files, executable); launcher v1 to v2 self-update against a fake release with launcher version v2: swapped, restarted itself (--headless carried over) and updated world and game to 481; SpacetimeDB installer from the launcher in an empty HOME installed 2.12.0 to ~/.local/bin and the launcher found it and carried on (the publish then failed only because that fresh test login doesn't own the test database, as expected). Windows paths (shortcut, exe swap) are untested here.
 - 2026-10-16 21:05: PM: releases kept being skipped because main Builds were cancelled by newer merges (only 639, 680 green since 19:00). release.yml now has a `pick` job plus `schedule` (every 30 min) and `workflow_dispatch`: they release the newest green push Build of main unless its commit already has a release. Tested the pick query read-only on the real repo (Build 680, 02153f2, not yet released).
 
+- 2026-10-16 21:25: PR #201 open; Integration approved release.yml; took its hardening (workflow_run fields via env). Ran the pick script locally for workflow_run (green main: skips the already-released 02153f2; PR run: skipped) and schedule (newest green Build already released: skipped).
 - 2026-10-16 21:15: first real release: https://github.com/Indenex/LifeGame/releases/tag/build-680-02153f2 (Release run 38956847322 green, from Build 680). Assets and release.json sha256 match. Found: upload-artifact drops the exec bit, so LifeGameLauncher.x86_64 in that zip isn't executable; make-release.sh now restores it (checked). With the bit set by hand, the release's own Linux launcher started the local server, updated the existing world to 680 (data kept), and installed the game.
 
 ## Open questions / blockers
