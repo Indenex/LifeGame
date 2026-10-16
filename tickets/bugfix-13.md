@@ -1,7 +1,7 @@
 # bugfix-13: facing a fire hides "Fire the pot"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #68
 
@@ -17,4 +17,4 @@ Cause: none of the Ceramics Use offers passed a `Target`, so under the facing ru
 - (none)
 
 ## Next step
-Wait for CI on #68, then send the PM the green sha.
+None; merged.
