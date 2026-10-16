@@ -27,8 +27,11 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16: `server/spacetimedb/Bow.cs` ShootAnimal reducer on option A, behind `BowShotHook` (Crafting implements: finds bow and arrow, takes the arrow, fills BowShot). Hunting.cs HurtAnimal split out of StrikeAnimal so spear and arrow share wound/kill. Not built locally; CI is the check. No client yet.
 
+- 2026-10-16: Justin picked option A (via PM). Bow.cs already implements A. Skill effects move to Progression.Effect when skills-12 (claude/journal-skills-12, Stalking skill) merges. Modeling asked for bow and arrow models; Crafting for items/recipes/tag.
+
 ## Open questions / blockers
-- Justin picks the numbers (A/B/C above).
+- Numbers decided: A.
+- Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
 - Crafting's item ids and power values.
 
 ## Next step
