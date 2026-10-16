@@ -14,6 +14,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Item | State |
 |---|---|
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK. One wipe planned with env-2 (D-129); wipe pre-approved for when env-2 is ready (D-143). |
+| Justin's launcher | build-680-02153f2 installed; keep-forever launcher comes with #201's release |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
 | Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-080 |
@@ -23,7 +24,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds; in progress. Merge-readiness only: the PM merges (Integration's session can't merge) | `claude/integration-lane` | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Integration (D-058) (session_015g3pLB5eJ4qPrXAwJUmkYT) | integration-1 take over CI and builds; in progress. Merge-readiness only: the PM merges (Integration's session can't merge); Sonnet since D-159, PR #209 | `claude/integration-lane` | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
 | Render (D-059) (session_013qe8zPzzBHx9rFPEYoKMr5) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
 | Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 player figure, items, clothes | `claude/model-1-style` | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
