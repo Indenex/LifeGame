@@ -1,7 +1,7 @@
 // Renders the game's soundscape to a WAV file without running the game, so the
 // ambience and music can be listened to and checked for level and clipping.
 //
-//   dotnet run -- out.wav [scene:seconds ...] [--no-music]
+//   dotnet run -- out.wav [scene:seconds ...] [--no-music] [--master=0.5 --music= --effects= --ambience=]
 //
 // Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
 // from under a roof), rain (same as storm), fire (a campfire at night), firerain
@@ -22,11 +22,15 @@
 using LifeGame;
 
 bool music = !args.Contains("--no-music");
-args = args.Where(a => a != "--no-music").ToArray();
+// Slider positions, 0 to 1 (0.5 default): --master=0.7 --music= --effects= --ambience=
+float Slider(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}=")) is { } a
+    ? float.Parse(a[(name.Length + 3)..], System.Globalization.CultureInfo.InvariantCulture) : 0.5f;
+float master = Slider("master"), musicLevel = Slider("music"), effects = Slider("effects"), ambienceLevel = Slider("ambience");
+args = args.Where(a => !a.StartsWith("--")).ToArray();
 string path = args.Length > 0 ? args[0] : "soundscape.wav";
 var scenes = args.Length > 1 ? args[1..] : new[] { "day:40", "rain:30", "dusk:20", "night:40" };
 const int rate = 44100;
-var mix = new SoundMix(rate, seed: 7) { MusicOn = music };
+var mix = new SoundMix(rate, seed: 7) { MusicOn = music, MasterLevel = master, MusicLevel = musicLevel, EffectsLevel = effects, AmbienceLevel = ambienceLevel };
 var samples = new List<short>();
 var left = new float[1024];
 var right = new float[1024];

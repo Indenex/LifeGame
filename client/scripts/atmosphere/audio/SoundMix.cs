@@ -33,8 +33,11 @@ public sealed class SoundMix
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
     public bool MusicOn = true;
-    // The music's own level, 0 to 1, under the master volume (the menu's music slider).
-    public float MusicVolume = 1f;
+    // The four sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
+    // player starts, is the mix as designed; see SliderGain. Effects are your
+    // footsteps and everyone's work; ambience is weather, wildlife, sheep, fire and
+    // water.
+    public float MasterLevel = 0.5f, MusicLevel = 0.5f, EffectsLevel = 0.5f, AmbienceLevel = 0.5f;
     // Master level. Raised from 1.3 (audio-1): Justin heard the mix as quiet.
     public float Volume = 1.7f;
 
@@ -62,6 +65,8 @@ public sealed class SoundMix
     float[] workL = Array.Empty<float>(), workR = Array.Empty<float>();
     // How loud the surroundings are (smoothed RMS), so footsteps sit just above them.
     float ambience = 0.01f;
+    // Slider gains, eased so a dragged slider never clicks.
+    float masterGain = 1f, effectsGain = 1f, ambienceGain = 1f;
     Lowpass wallL, wallR;
     float cover;
 
@@ -192,6 +197,11 @@ public sealed class SoundMix
 
         rain.Render(left, right, count, Rain, Wetness, Cover);
 
+        float ease = count / (Rate * 0.15f);
+        masterGain += Math.Clamp(SliderGain(MasterLevel) - masterGain, -ease, ease);
+        effectsGain += Math.Clamp(SliderGain(EffectsLevel) - effectsGain, -ease, ease);
+        ambienceGain += Math.Clamp(SliderGain(AmbienceLevel) - ambienceGain, -ease, ease);
+
         // Footsteps and the work in your hands sit a little above whatever
         // surrounds them: soft on a still dawn, firmer in a storm, never louder
         // than they need to be.
@@ -199,7 +209,16 @@ public sealed class SoundMix
         for (int i = 0; i < count; i++) power += left[i] * left[i] + right[i] * right[i];
         float rms = (float)Math.Sqrt(power / (2.0 * count));
         ambience += (1f - MathF.Exp(-count / (float)Rate / 1.5f)) * (rms - ambience);
-        float stepGain = StepGain(ambience), workGain = WorkGain(ambience);
+        // Measured before the ambience slider, so the effects follow the world
+        // itself, not how loud the player likes it.
+        for (int i = 0; i < count; i++)
+        {
+            left[i] *= ambienceGain;
+            right[i] *= ambienceGain;
+            sendL[i] *= ambienceGain;
+            sendR[i] *= ambienceGain;
+        }
+        float stepGain = StepGain(ambience) * effectsGain, workGain = WorkGain(ambience) * effectsGain;
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
         Array.Clear(workL, 0, count);
@@ -218,13 +237,13 @@ public sealed class SoundMix
             left[i] += stepL[i] * stepGain + workL[i] * workGain;
             right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
-        music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
+        music.Render(left, right, sendL, sendR, count, MusicOn, SliderGain(MusicLevel), night01);
         reverb.Process(sendL, sendR, left, right, count);
 
         for (int i = 0; i < count; i++)
         {
-            left[i] = SoftClip(left[i] * Volume);
-            right[i] = SoftClip(right[i] * Volume);
+            left[i] = SoftClip(left[i] * Volume * masterGain);
+            right[i] = SoftClip(right[i] * Volume * masterGain);
         }
     }
 
@@ -244,10 +263,14 @@ public sealed class SoundMix
     public static float StepGain(float ambienceRms) => Math.Clamp(0.12f + 9f * ambienceRms, 0.12f, 1f);
 
     // Work level for an ambience RMS. Work is what you are paying attention to, so
-    // it gets its own floor well above the footsteps': about 0.55 (-5 dB) on a
-    // still morning bed near -42 dBFS, putting hits clearly over the bed and about
-    // level with the music, rising to 1 in a storm (audio-1).
-    public static float WorkGain(float ambienceRms) => Math.Clamp(0.55f + 5f * ambienceRms, 0.55f, 1f);
+    // it gets its own floor well above the footsteps': about 0.39 (-8 dB) on a
+    // still morning bed near -42 dBFS, putting hits clearly over the bed and a
+    // little under the music (D-097), rising to 0.7 in a storm.
+    public static float WorkGain(float ambienceRms) => Math.Clamp(0.39f + 3.5f * ambienceRms, 0.39f, 0.7f);
+
+    // A slider position (0 to 1) as a gain: silent at 0, 1 (the designed mix) at
+    // the default 0.5, and 4 (+12 dB) at the top. Squared, so it feels even to the ear.
+    public static float SliderGain(float level) => 4f * Sq(Math.Clamp(level, 0f, 1f));
 
     static float Sq(float x) => x * x;
 
@@ -1508,7 +1531,7 @@ public sealed class SoundMix
             // Fade in over about six seconds and out over eight.
             float wantFade = playing && untilChange > 8f ? 1f : 0f;
             fade += Math.Clamp(wantFade - fade, -block / 8f, block / 6f);
-            gain += Math.Clamp((on ? Math.Clamp(volume, 0f, 1f) : 0f) - gain, -block / 1.5f, block / 1.5f);
+            gain += Math.Clamp((on ? Math.Clamp(volume, 0f, 4f) : 0f) - gain, -block / 1.5f, block / 1.5f);
 
             float beat = night > 0.5f ? 1.25f : 0.95f;
             if (playing && untilChange > 8f)
