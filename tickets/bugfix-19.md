@@ -1,7 +1,7 @@
 # bugfix-19: a drying pot's G line hides Drink, Fill and Pick berries
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-19
 PR: #109
 
@@ -14,10 +14,11 @@ Fix: the wet-piece line moves to its own handler `ceramics.drying` at priority 0
 
 ## Progress log
 - 2026-10-16: found in the clay-path review (see bugfix-17). Fixed; the client builds.
-- 2026-10-16: pushed, opened #109. Render requested (sha below in the next line once pushed).
+- 2026-10-16: pushed, opened #109. Render requested 1877b88.
+- 2026-10-16: CI run https://github.com/Indenex/LifeGame/actions/runs/38942346604 green on 1877b88; merged as #109.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on the PR, record the run link here, then send the PM the green sha.
+None; merged.

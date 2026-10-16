@@ -176,6 +176,18 @@ Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != nu
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
+// claims-10: whisper and shout.
+Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
+    && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
+a.Conn.Reducers.SendChat("/W  psst ");
+Check(Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/w psst"), 5), "a whisper is stored as \"/w psst\"");
+int voiceCount = b.Conn.Db.ChatMessage.Iter().Count();
+Thread.Sleep(500);
+a.Conn.Reducers.SendChat("/s");
+Wait(() => false, 1);
+Check(b.Conn.Db.ChatMessage.Iter().Count() == voiceCount, "an empty /s says nothing");
+Thread.Sleep(500);
+
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
 a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
@@ -212,6 +224,18 @@ a.LastError = null;
 a.Conn.Reducers.AddClaimMemberByName(" " + bName.ToUpperInvariant() + " ");
 Pump(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId) || a.LastError != null, 5, "membership");
 Check(b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), $"the owner can add someone by name ({a.LastError ?? "ok"})");
+
+// claims-9: the owner names the place; members see the name; an empty name clears it.
+ExpectError(b, () => b.Conn.Reducers.NameClaim("Not Yours"), "do not hold a claim", "only the owner can name the land");
+a.Conn.Reducers.NameClaim("  Willow   Hollow  ");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) != null || a.LastError != null, 5, "name");
+Check(b.Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name == "Willow Hollow", $"the owner names the land, tidied ({b.Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name ?? a.LastError ?? "-"})");
+Check(Social.CleanClaimName(new string('x', 40)).Length == Social.ClaimNameMax, "long names are cut short");
+a.Conn.Reducers.NameClaim(" ");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5, "unname");
+Check(true, "an empty name clears it");
+a.Conn.Reducers.NameClaim("Willow Hollow");
+Pump(() => b.Conn.Db.ClaimName.ClaimId.Find(claim.Id) != null, 5, "rename");
 Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBeforeAdd && m.SenderId == 0 && m.Text.StartsWith(bName + " now shares")), 5, "added line");
 Check(true, "a chat line says who now shares the land");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName(bName), "already a member", "adding a member twice is refused");
@@ -229,6 +253,9 @@ Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B'
 b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
 Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+Check(Wait(() => a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count > 0)
+    && a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count < 0), 5), "the owner sees who left and took the stone");
+Check(Social.StashLine("Tam", Items.Def(Item.Stick), -2) == "Tam took 2 sticks", "a stash line reads well");
 
 // claims-7: trading (D-069). B gives A the stone through a trade, then A trades it back.
 Check(Social.GiftPhrase(Items.Def(Item.Stone), 1) == "a stone" && Social.GiftPhrase(Items.Def(Item.Clay), 1) == "some clay"
@@ -391,6 +418,8 @@ if (decay)
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
     Check(true, "the marker post went with it");
+    Check(Wait(() => a.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5), "its name went with it");
+    Check(Wait(() => !a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.ClaimId == claim.Id), 5), "and its stash log");
     Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
@@ -452,7 +481,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

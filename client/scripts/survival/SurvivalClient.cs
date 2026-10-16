@@ -14,6 +14,7 @@ namespace LifeGame;
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
+    readonly StaminaBar staminaBar = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -31,6 +32,21 @@ public partial class SurvivalClient : Node
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
     public float WalkFactor { get; private set; } = 1f;
+    // Running (D-088): hold the run key to go faster while stamina lasts.
+    static readonly StringName NRun = "run";
+    float stamina = 1f;
+    bool winded;
+    // Seconds of steady walking, to offer the run hint once on a long walk.
+    float walkedFor;
+    // Seconds since you last ran; refill waits a moment (D-111).
+    float rested = 999f;
+    // Whether Main's Walk() asked for a speed this frame; when it didn't (a panel has
+    // the input), _Process keeps the bar refilling so it isn't frozen behind panels.
+    bool walkedThisFrame;
+    // Seconds run since the last Endurance report.
+    float ranFor;
+    // Deaths when the new-arrival half hour was last seen running, null once it ends.
+    uint? arrivalDeaths;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -55,6 +71,7 @@ public partial class SurvivalClient : Node
     {
         Bind("eat", Key.X);
         AddChild(needsHud);
+        AddChild(staminaBar);
         RegisterUse();
     }
 
@@ -155,6 +172,7 @@ public partial class SurvivalClient : Node
             var (food, water, warmth) = Current();
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
             wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
+            UpdateArrival(v);
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");
@@ -169,11 +187,78 @@ public partial class SurvivalClient : Node
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
 
+        if (!walkedThisFrame) Rest((float)delta);
+        walkedThisFrame = false;
         UpdateLoad();
         UpdateOthersWet();
     }
 
-    // Other players look as wet as the server says (D-036), in tenths.
+    // How fast to move this frame: sneaking, walking, or running while stamina lasts,
+    // all slowed alike by an overload. Main's Walk() calls this once per frame.
+    public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
+    {
+        walkedThisFrame = true;
+        bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
+        rested = running ? 0f : rested + dt;
+        if (running && (ranFor += dt) >= Stamina.RunPerUse)
+        {
+            ranFor -= Stamina.RunPerUse;
+            conn?.Reducers.Ran();
+        }
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        // "Hold Shift to run" shows once, the first time you walk on for a while.
+        walkedFor = moving && !sneak ? walkedFor + dt : 0f;
+        if (walkedFor > 8f && walkedFor - dt <= 8f) Hints.Request("run");
+        stamina = Stamina.Step(stamina, running, rested, StaminaRank(), wellFed, dt);
+        if (stamina <= 0f) winded = true;
+        else if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
+        float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
+        return speed * WalkFactor;
+    }
+
+    // Stamina keeps refilling while you stand still with a panel open.
+    void Rest(float dt)
+    {
+        rested += dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        stamina = Stamina.Step(stamina, false, rested, StaminaRank(), wellFed, dt);
+        if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
+    }
+
+    // Endurance (D-123): stamina grows with its rank, and running trains it.
+    int StaminaRank()
+    {
+        if (conn == null) return 0;
+        foreach (var skill in conn.Db.MySkills.Iter())
+            if (skill.Spec == Stamina.Skill) return Skills.Rank(skill.Points);
+        return 0;
+    }
+
+    // Where the player's feet are on screen, or null when the camera can't see them.
+    Vector2? FeetOnScreen()
+    {
+        var camera = player.GetViewport()?.GetCamera3D();
+        if (camera == null || camera.IsPositionBehind(player.GlobalPosition)) return null;
+        return camera.UnprojectPosition(player.GlobalPosition);
+    }
+
+    // New arrival (D-115): show the badge while it lasts, and say once when it ends.
+    void UpdateArrival(Vitals v)
+    {
+        float left = Mathf.Max(0f, v.ArrivalLeft + v.ArrivalRate * SecondsSince(v.AsOf));
+        needsHud.SetArrival(left / Needs.ArrivalSeconds);
+        if (left > 0f) arrivalDeaths = v.Deaths;
+        else if (arrivalDeaths is { } deaths)
+        {
+            // Dying ends it too, but the death card says enough then.
+            if (v.Deaths == deaths) hud.Note("You've found your feet. The cold bites harder now.");
+            arrivalDeaths = null;
+        }
+    }
+
+        // Other players look as wet as the server says (D-036), in tenths.
     void UpdateOthersWet()
     {
         if (conn == null || vitals is not { } me) return;

@@ -65,7 +65,7 @@ public static partial class Module
         var (s, _) = RequireFinishedInReach(ctx, structureId);
         var door = ctx.Db.StructureDoor.StructureId.Find(structureId) ?? throw new Exception("There's no door");
         if (door.Locked && !CanLock(ctx, s, door))
-            throw new Exception("The door is barred");
+            throw new Exception(Structures.IsGate((int)s.Kind) ? "The gate is barred" : "The door is barred");
         // Opening a locked door unbars it; it stays unbarred until someone locks it again.
         ctx.Db.StructureDoor.StructureId.Update(door with { Closed = !door.Closed, Locked = false });
         TouchStructure(ctx, structureId);
@@ -105,7 +105,7 @@ public static partial class Module
         var same = inside.Where(b => b.Item == item && b.Quality == quality).Select(b => (BasketItem?)b).FirstOrDefault();
         if (same is { } match)
             ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + count });
-        else if (inside.Count >= Structures.Shape((int)s.Kind).StoreStacks)
+        else if (inside.Count >= Structures.StoreStacksFor((int)s.Kind, ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? Items.RawQuality))
             throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
         else
             ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = count });

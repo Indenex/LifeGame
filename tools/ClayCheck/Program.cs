@@ -9,6 +9,8 @@
 //        dotnet run -- <uri> <db> --token=path --goto=x,z   (walk that player somewhere and stop)
 //        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln blueprint, load and fire it;
 //        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
+//        dotnet run -- <uri> <db> --kiln --jar   (the kiln run plus a storage jar: a campfire refuses it,
+//        the kiln fires it, it is set down from the build menu and stores a stack; ceramics-6)
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -18,7 +20,8 @@ string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
-bool kilnRun = args.Contains("--kiln");
+bool jarRun = args.Contains("--jar");
+bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
 Fire fire = null!;
@@ -44,6 +47,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM clay_news",
                 "SELECT * FROM kiln",
                 "SELECT * FROM structure",
+                "SELECT * FROM basket_item",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
@@ -84,7 +88,7 @@ Gather(Item.Fiber, kilnRun ? 12u : 4u);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = kilnRun ? 38u : 12u;
+uint clayWanted = jarRun ? 46u : kilnRun ? 38u : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -214,9 +218,15 @@ return 0;
 // dried in the open are loaded and fired in it.
 int KilnCheck()
 {
-    while (CountOf(Item.CleanClay) < 19) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < (jarRun ? 23 : 19)) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
     Craft("clay.temper_grit", 0, Item.TemperedClay);
+    if (jarRun)
+    {
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+    }
 
     // Two pots shaped in the open, away from any fire, so picking them up doesn't fire them.
     WalkTo(-4f, 6f, 0.5f);
@@ -225,6 +235,15 @@ int KilnCheck()
     Craft("clay.daub", 0, Item.Daub);
     var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
     if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
+    ulong jarPiece = 0;
+    if (jarRun)
+    {
+        WalkTo(-5.5f, 6f, 0.5f);
+        Craft("clay.storage_jar", 0.9f, null);
+        jarPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.StorageJar)?.Id ?? 0;
+        if (jarPiece == 0) Fail("no storage jar drying");
+        Log("STAGE jar-drying");
+    }
 
     // Eight bricks round a fire, where they dry twice as fast.
     float fx = 2f, fz = 2f;
@@ -283,10 +302,28 @@ int KilnCheck()
 
     // Wait for the pots, pick them up, load them.
     watch.Restart();
-    while (kilnPots.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    while (kilnPots.Append(jarPiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
         Pump(() => false, 5, null);
+    }
+    if (jarRun)
+    {
+        // The jar first, then a campfire must refuse it.
+        var jp = conn.Db.ClayPiece.Id.Find(jarPiece)!;
+        WalkTo(jp.X, jp.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(jarPiece, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(jarPiece) == null, 3, "picking up the dry jar");
+        if (lastError != null) Fail($"picking up the jar: {lastError}");
+        if (CountOf(Item.UnfiredStorageJar) != 1) Fail("expected an unfired storage jar");
+        KeepFireGoing();
+        WalkTo(fire.X, fire.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.FirePots(fire.Id);
+        Pump(() => lastError != null, 3, "the campfire to refuse the jar");
+        if (lastError == null || !lastError.Contains("kiln")) Fail($"campfire took the jar: {lastError}");
+        Log($"Campfire: {lastError}");
     }
     foreach (var id in kilnPots)
     {
@@ -305,9 +342,10 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == 2, 3, "the kiln to be loaded");
+    int loadWanted = jarRun ? 3 : 2;
+    Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == loadWanted, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
-    Log("Loaded 2 pots");
+    Log($"Loaded {loadWanted} pieces");
     Log("STAGE kiln-loaded");
 
     if (CountOf(Item.Stick) < 2) Gather(Item.Stick, 2);
@@ -334,9 +372,64 @@ int KilnCheck()
     if (!got.SequenceEqual(loaded)) Fail($"kiln pot qualities {string.Join(",", got)}, expected {string.Join(",", loaded)}");
     Log($"{fired.Count} kiln-fired pots at quality {string.Join(",", got)}");
     Log("STAGE kiln-done");
+    if (jarRun) JarCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();
     return 0;
+}
+
+// The fired jar (or its sherds, 2% of the time) lies by the kiln door. Pick it
+// up, set it down from the build menu, put a stack in and take it out again.
+void JarCheck(Structure kiln)
+{
+    var jar = conn.Db.WorldItem.Iter().FirstOrDefault(w => w.Item == (ushort)Item.StorageJar && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2.5f);
+    if (jar == null)
+    {
+        Log("The jar cracked in the kiln (2% chance); jar placement not checked this run");
+        return;
+    }
+    WalkTo(jar.X, jar.Z, 1.0f);
+    lastError = null;
+    conn.Reducers.PickUp(jar.Id);
+    Pump(() => lastError != null || CountOf(Item.StorageJar) == 1, 3, "picking up the jar");
+    if (lastError != null) Fail($"picking up the fired jar: {lastError}");
+    Log($"Fired jar at quality {jar.Quality}");
+    Log("STAGE jar-fired");
+
+    WalkTo(kiln.X - 3f, kiln.Z - 3f, 0.4f);
+    float jx = x + 1.2f, jz = z;
+    lastError = null;
+    conn.Reducers.PlaceStructure(StructureKind.StorageJar, jx, jz, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.StorageJar && s.Owner == me), 5, "the jar site");
+    if (lastError != null) Fail($"placing the jar: {lastError}");
+    var site = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.StorageJar && s.Owner == me);
+    for (int i = 0; i < 10 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
+    {
+        lastError = null;
+        conn.Reducers.Build(site.Id);
+        Pump(() => lastError != null || conn.Db.Structure.Id.Find(site.Id) is { Complete: true }, 3, "the jar to be set down");
+        if (lastError == "Still working") { Pump(() => false, 0.5f, null); continue; }
+        if (lastError != null) Fail($"setting the jar down: {lastError}");
+    }
+    if (conn.Db.Structure.Id.Find(site.Id) is not { Complete: true }) Fail("jar never set down");
+    if (CountOf(Item.StorageJar) != 0) Fail("the jar is still in the bag");
+    Log("STAGE jar-placed");
+
+    if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 2);
+    WalkTo(site.X, site.Z, 1.0f);
+    uint sticks = CountOf(Item.Stick);
+    var stick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Stick);
+    lastError = null;
+    conn.Reducers.BasketPut(site.Id, stick.Item, stick.Quality, 1);
+    Pump(() => lastError != null || conn.Db.BasketItem.Iter().Any(b => b.StructureId == site.Id), 3, "a stick in the jar");
+    if (lastError != null) Fail($"putting a stick in the jar: {lastError}");
+    var stored = conn.Db.BasketItem.Iter().First(b => b.StructureId == site.Id);
+    lastError = null;
+    conn.Reducers.BasketTake(stored.Id, 1);
+    Pump(() => lastError != null || CountOf(Item.Stick) == sticks, 3, "the stick back out");
+    if (lastError != null) Fail($"taking the stick out: {lastError}");
+    Log($"Jar stores and gives back; at quality {jar.Quality} it holds {Structures.JarStacks(jar.Quality)} stacks");
+    Log("STAGE jar-store");
 }
 
 void Feed(int sticks)
@@ -393,7 +486,7 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
-    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds + 5, $"{processId} to finish");
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
         Pump(() => CountOf(item) > before, 3, $"{processId} output");

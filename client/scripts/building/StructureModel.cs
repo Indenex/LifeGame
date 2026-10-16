@@ -39,7 +39,7 @@ public static partial class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(), _ => LeanTo() };
+        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }

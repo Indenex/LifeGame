@@ -49,6 +49,7 @@ public partial class SocialLayer : Node
         hud = overlay;
         avatarOf = avatars;
         panel.Conn = connection;
+        panel.MyId = () => myId;
 
         conn.Db.ChatMessage.OnInsert += (_, m) => OnChat(m);
         conn.Db.Claim.OnInsert += (_, c) => OnClaim(c);
@@ -56,6 +57,12 @@ public partial class SocialLayer : Node
         conn.Db.Claim.OnDelete += (_, c) => OnClaimGone(c);
         conn.Db.ClaimMember.OnInsert += (_, _) => RefreshClaims();
         conn.Db.ClaimMember.OnDelete += (_, _) => RefreshClaims();
+        conn.Db.ClaimName.OnInsert += (_, _) => panel.MarkDirty();
+        conn.Db.ClaimName.OnUpdate += (_, _, _) => panel.MarkDirty();
+        conn.Db.ClaimName.OnDelete += (_, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnInsert += (_, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnUpdate += (_, _, _) => panel.MarkDirty();
+        conn.Db.MyClaimStashLog.OnDelete += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnInsert += (_, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyClaimStash.OnDelete += (_, _) => panel.MarkDirty();
@@ -106,6 +113,7 @@ public partial class SocialLayer : Node
         layer.AddChild(landChip);
         AddChild(layer);
         ReadyFighting();
+        ReadyPlaces();
     }
 
     static void Bind(string action, params Key[] keys)
@@ -125,14 +133,14 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
 
-        // Chat carries a little further than a chunk, so listen two chunks out.
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
         if (chunk != chatChunk)
         {
             chatChunk = chunk;
-            int r = 2;
+            // Four chunks out (64 m) so a shout carries its full 60 m (claims-10).
+            int r = 4;
             var old = chatSub;
             chatSub = conn.SubscriptionBuilder()
                 .OnApplied(_ => old?.Unsubscribe())
@@ -203,7 +211,10 @@ public partial class SocialLayer : Node
         if (!heard.Add(m.Id)) return;
         long age = NowMicros - m.SentAt.MicrosecondsSinceUnixEpoch;
         if (age > Social.ChatKeepMicros) return;
-        if (new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length() > Social.ChatRange) return;
+        var voice = Social.VoiceOf(m.Text);
+        float range = Social.RangeOf(voice);
+        float away = new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length();
+        if (away > range) return;
 
         if (m.SenderId == 0)
         {
@@ -213,11 +224,15 @@ public partial class SocialLayer : Node
         }
         bool mine = m.SenderId == myId;
         bool emote = Social.IsEmote(m.Text);
-        string said = emote ? Social.EmoteBody(m.Text) : m.Text;
-        float dim = mine ? 1f : Social.ChatDim(new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length());
-        chat.Add(mine && !emote ? "You" : m.SenderName, said, mine, dim, emote);
+        string said = emote ? Social.EmoteBody(m.Text) : Social.VoiceBody(m.Text);
+        float dim = mine ? 1f : Social.ChatDim(away, range);
+        // claims-10: "Mira whispers" / "You shout" in the log.
+        string who = mine && !emote ? "You" : m.SenderName;
+        if (voice == Social.Voice.Whisper) who += mine ? " whisper" : " whispers";
+        else if (voice == Social.Voice.Shout) who += mine ? " shout" : " shouts";
+        chat.Add(who, said, mine, dim, emote);
         // Only fresh words get a bubble, so joining doesn't replay the last few lines at once.
-        if (age < 3_000_000) Bubble(m, said, emote);
+        if (age < 3_000_000) Bubble(m, said, emote, voice);
     }
 
     // The words float above the speaker for a few seconds, then drift up and fade.
@@ -237,7 +252,7 @@ public partial class SocialLayer : Node
 
     // claims-6: a soft line above the speaker's head. If they say more, older lines
     // drift up and dim (up to three), and an action ("/me waves") is slanted.
-    void Bubble(ChatMessage m, string said, bool emote)
+    void Bubble(ChatMessage m, string said, bool emote, Social.Voice voice = Social.Voice.Say)
     {
         string text = Wrap(said, 34);
         int lineCount = text.Split('\n').Length;
@@ -245,7 +260,8 @@ public partial class SocialLayer : Node
         {
             Text = text,
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FontSize = 30,
+            // A shout is bigger, a whisper smaller and fainter (claims-10).
+            FontSize = voice == Social.Voice.Shout ? 40 : voice == Social.Voice.Whisper ? 24 : 30,
             PixelSize = 0.0075f,
             Modulate = new Color(Look.Cream, 0f),
             OutlineSize = 8,
@@ -258,7 +274,7 @@ public partial class SocialLayer : Node
         {
             // Older lines drift up by the new one's height and dim; the oldest beyond three go.
             var older = avatar.GetChildren().OfType<Label3D>().Where(l => l.HasMeta("bubble") && !l.IsQueuedForDeletion()).ToList();
-            float rise = lineCount * BubbleLineHeight + BubbleGap;
+            float rise = lineCount * BubbleLineHeight * bubble.FontSize / 30f + BubbleGap;
             for (int i = 0; i < older.Count; i++)
             {
                 var old = older[i];
@@ -283,7 +299,7 @@ public partial class SocialLayer : Node
         }
         float hold = Mathf.Clamp(3f + m.Text.Length * 0.06f, 3f, 9f);
         var tween = bubble.CreateTween();
-        tween.TweenProperty(bubble, "modulate:a", 1f, 0.35f).SetTrans(Tween.TransitionType.Sine);
+        tween.TweenProperty(bubble, "modulate:a", voice == Social.Voice.Whisper ? 0.7f : 1f, 0.35f).SetTrans(Tween.TransitionType.Sine);
         tween.TweenInterval(hold);
         tween.Parallel().TweenProperty(bubble, "position:y", bubble.Position.Y + 0.25f, hold + 1.2f).SetTrans(Tween.TransitionType.Sine);
         tween.TweenProperty(bubble, "modulate:a", 0f, 1.2f).SetTrans(Tween.TransitionType.Sine);
@@ -371,6 +387,7 @@ public partial class SocialLayer : Node
         }
         landChip.Visible = true;
         var here = ClaimAt(myPos.X, myPos.Z);
+        ArriveAt(here);
         if (here == null)
         {
             float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
@@ -379,7 +396,8 @@ public partial class SocialLayer : Node
             return;
         }
         string whose = IsMine(here) ? "Your land" : HasRights(here) ? $"{here.OwnerName}'s land (you are welcome)" : $"{here.OwnerName}'s land";
-        landLabel.Text = $"{whose}   ·   {(here.AllowPvp ? "fighting allowed" : "peaceful")}";
+        string fighting = here.AllowPvp ? "fighting allowed" : "peaceful";
+        landLabel.Text = PlaceName(here.Id) is { } place ? $"{place}   ·   {whose}   ·   {fighting}" : $"{whose}   ·   {fighting}";
     }
 
     static Vector2 Flat(Claim c) => new(c.X, c.Z);

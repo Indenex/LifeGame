@@ -1,6 +1,6 @@
 # integration-1: Take over integration, CI and builds from Crafting
 Lane: Integration
-Owner: Integration session session_01Rf5965nk4Lvd3f2QDteZSq
+Owner: handing over (D-159) from Opus session session_01Rf5965nk4Lvd3f2QDteZSq to a fresh Sonnet Integration session
 Status: in_progress
 Branch: claude/integration-lane (harness assigned none; session made this one)
 PR: (once opened)
@@ -34,9 +34,35 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:48: prepared option 1 on `claude/integration-wipe-label` (not a PR yet): `world-wipe` label skips the upgrade check and prints a warning; `pull_request` also triggers on labeled/unlabeled.
 - 2026-10-16 18:42: #121 (integration-2, sneak flag) merged by the PM; Animation told #100 can follow after Justin sees the clips.
 - 2026-10-16 18:45: D-130: Justin chose the `world-wipe` label. PR from `claude/integration-wipe-label` carries it plus these ticket entries. Environment lane is session_012hVejTxLoxBpZyX3GQmNL9.
+- 2026-10-16 19:00: #148 (world-wipe label, D-130) merged; on its PR run the upgrade check ran and the wipe step was skipped. Reviewed Release's #161 (release.yml): blocker (wipe flag read only from the head commit's PR, missed superseded builds) fixed in 057b278; approved.
+- 2026-10-16 19:10: check-in vs main c70d2fb: #105 (StorageJar = StructureKind 6, implicit) makes #160, #165, #90 (CraftingTable) and #153 (Fence/Gate) conflict in Building.cs, Structures.cs, StructureModel.cs. Told lanes: append after StorageJar, keep Shapes/StageCosts lists in the same order, prove with tools/upgrade-check.sh. Order: #160, then #165 and #90; #153 either side. Clean: #163, #161, #151, #149, #122, #119, #112, #108, #100.
+- 2026-10-16 19:15: D-142: renders never block merges (#100 mergeable once green; Animation told). D-143: Justin pre-approved the one wipe for whenever env-2 is ready; told the 10 lanes with server tables (Crafting, Survival, Journal, Claims, Atmosphere, House building, Animals, Ceramics, Audio, Bugfix) to fold wipe-needing schema changes into that window via Environment, and told Environment its PR goes first.
+- 2026-10-16 19:20-19:58: env-2 (#175, world-wipe label, Environment session_012hVejTxLoxBpZyX3GQmNL9) reviewed: World.cs is a one-line hook `BaseHeight => Land.Height`; Land.cs pure; client height cache in Terrain.cs single-threaded. Fresh-world local checks: 553cda7 LoadTest 20x20, BuildTest, SpawnCheck, CraftCheck, SocialTest, ClayCheck pass; 0abbc0c (head) ClayCheck pass; CI green on 0abbc0c. Sent PM: label then merge.
+- 2026-10-16 19:45: PM thought #107 starved main builds; data showed running main builds always finish (639, 680 green), cancelled ones had zero jobs (replaced while queued). release.yml reached main 19:22; first release build-680-02153f2. Real red: main Build 653 (c09f9b8) CraftCheck "fire.hand_drill: There's no clear, level ground here for a fire" on the second fire, intermittent; Crafting's fix is PR #203.
+- 2026-10-16 19:55: reviewed Release's #201 (scheduled release fallback, `pick` job): approved. Added tools/integration/survey.sh (the conflict survey). Handoff to a Sonnet session (D-159).
+
+## Handoff (read this first, fresh session)
+
+How this lane works now:
+- The PM merges (this session's permission check blocks merge_pull_request; D-119 pending Justin's own setting). Integration's job: check PRs are green on their CURRENT head and merge cleanly, fix or route conflicts, review CI/workflow changes, send the PM green shas in merge order. Lanes send their own green shas to the PM too.
+- Lane session ids are in STATUS.md; message lanes directly (send_message).
+- Toolchain for local checks (cloud container has none): `curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir ~/.dotnet`; SpacetimeDB 2.12.0 from `https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.12.0/spacetime-x86_64-unknown-linux-gnu.tar.gz` into ~/stdb; `export PATH=$HOME/.dotnet:$HOME/stdb:$PATH`.
+- Merge recipe for a PR: (1) `tools/integration/survey.sh <all open PR branches>`; (2) CI green on the PR's current head (3 checks: Server module and load test, Client Linux, Client Windows); (3) for server/world changes, build locally (`cd server && spacetimedb-cli build`, `tools/gen-bindings.sh`, `cd client && dotnet build`) and run the tool checks against `spacetimedb-cli start` + `publish lifegame --server local --yes --delete-data` (LoadTest, BuildTest, SpawnCheck, CraftCheck, SocialTest after `set_claim_lifetime 30`/`set_newcomer_grace 0`, ClayCheck, which CI does not run); (4) send the PM the sha. Never push a ticket commit onto a PR after it went green (it moves the head; log first, then CI).
+- Conflicts on someone else's branch: merge main in (never rebase/force-push), resolve keeping both sides, build, push; or send the owning lane the exact resolution if the branch is mid-work.
+
+Merge queue and order (as of 19:58, main 0c80ece):
+- #175 env-2: WORLD WIPE, label `world-wipe` must stay on (D-130/D-143; the label makes release.yml mark the build so the launcher asks before --delete-data). All checks green; the PM merges it.
+- StructureKind chain (enum in server/spacetimedb/Building.cs uses implicit positions; parallel Shapes and StageCosts lists in shared/Structures.cs must keep the same order; never insert before an existing kind; prove with `tools/upgrade-check.sh origin/main`): #160 crafting-stations (CraftingTable) still conflicts with main, Crafting is resolving; then #165 (UX station panel, takes main's side after #160) and #90 (Animals spindle/drying rack, held for D-120; #149 held behind it).
+- #191 before #196 (Claims).
+- Anim-2's player-model swap PR: held until Justin picks the model style (crucial look choices wait for him). #205 (anim-2 remote work poses) is a separate PR.
+- Renders never block merges (D-142).
+- Other open PRs at handoff: #206, #205, #203, #202, #201 (approved by Integration), #197, #195, #194, #193 (draft), #192, #182, #173, #151.
+
+Open CI issues:
+- Intermittent CraftCheck "no clear, level ground here for a fire" on the second hand-drill fire (main Build 653). Fix: Crafting's PR #203 (crafting-18). Verify it picks ground the server accepts, does not skip the check.
 
 ## Open questions / blockers
-- (none; wipe path answered: D-130 label)
+- (none; House building declined explicit StructureKind values for now, order is the contract and the upgrade check catches a reorder)
 
 ## Next step
-After each merge to main, re-run the conflict survey (`git merge-tree` each open PR vs main and pairwise) and send the PM which PRs need main merged in; get #121 (integration-2) green and to the PM.
+Run `tools/integration/survey.sh` over every open PR branch, check #160's conflict resolution keeps CraftingTable after the existing kinds, and send the PM the green shas in the queue order above.
