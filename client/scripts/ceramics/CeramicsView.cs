@@ -24,7 +24,7 @@ public partial class CeramicsView : Node
     DbConnection? conn;
     uint myId;
     ulong confirmPiece;
-    double dryingOfferAt = double.MinValue;
+    ulong dryingOfferFrame = ulong.MaxValue - 8;
     double confirmUntil;
 
     public CeramicsView(Node parent3D, Func<float, float, float> heightAt, Node3D me, Action<string> note)
@@ -146,7 +146,6 @@ public partial class CeramicsView : Node
 
     public override void _Process(double delta)
     {
-        ShowTips(delta);
         // Only the nearest piece within reach shows its label, so a camp of pots stays readable.
         PotView? nearest = null;
         float nearestDist = World.Reach;
@@ -165,7 +164,7 @@ public partial class CeramicsView : Node
         bool kilnFirst = kiln.view != null && kiln.d < nearestDist;
         // The G drying line says what the label would, and sits where it would; so
         // while it shows, the floating labels step aside.
-        bool promptShowing = Time.GetTicksMsec() / 1000.0 - dryingOfferAt < 0.25;
+        bool promptShowing = Engine.GetProcessFrames() - dryingOfferFrame <= 2;
         foreach (var view in pieces.Values) view.ShowLabel = view == nearest && !kilnFirst && !promptShowing;
         foreach (var view in kilns.Values) view.ShowLabel = kilnFirst && view == kiln.view;
     }
@@ -178,9 +177,9 @@ public partial class CeramicsView : Node
         bool pots = Carrying(i => ClayRules.FormOfUnfired(i) != null);
         ulong id = kiln.id;
         if (pots && kiln.view.Load < ClayRules.KilnCapacity)
-            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+            return new UseOffer("Load the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: kiln.view.Position);
         if (kiln.view.Load > 0 && FuelSeconds() >= ClayRules.KilnFireSeconds)
-            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id));
+            return new UseOffer("Fire the kiln", kiln.d, () => conn.Reducers.UseKiln(id), Target: kiln.view.Position);
         return null;
     }
 
@@ -190,7 +189,7 @@ public partial class CeramicsView : Node
         var at = new Vector2(me3.X, me3.Z);
         if (BurningFireNear(at, World.Reach) is not { } fire) return null;
         float d = new Vector2(fire.X, fire.Z).DistanceTo(at);
-        return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id));
+        return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id), Target: new Vector3(fire.X, 0, fire.Z));
     }
 
     UseOffer? TendOffer(Vector3 me3)
@@ -210,49 +209,31 @@ public partial class CeramicsView : Node
         bool dry = !ClayRules.TooWetToFire(moisture);
         bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
         ulong id = piece.id;
+        var target = piece.view.Position;
         if (row?.MadeBy == MyId)
             Tip("ceramics.tend", "G by your drying clay shows how long it has left. Once it turns pale, G picks it up, or fires it beside a fire.");
         if (dry)
             return besideFire
-                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false))
-                : new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false));
+                ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false), Target: target)
+                : new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false), Target: target);
         // Still wet: say how long it has left. Beside a fire, pressing G twice fires it
         // anyway (it cracks); away from one, G says where it would dry faster.
         string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
-        dryingOfferAt = Time.GetTicksMsec() / 1000.0;
+        dryingOfferFrame = Engine.GetProcessFrames();
         if (besideFire)
-            return new UseOffer($"{wait} (G twice fires it wet)", piece.d, () => FireDamp(id, moisture));
+            return new UseOffer($"{wait} (G twice fires it wet)", piece.d, () => FireDamp(id, moisture), Target: target);
         bool warm = BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
         return new UseOffer(wait, piece.d, () => note(warm
             ? $"It is {ClayRules.Describe(moisture)}. It turns pale when it is dry enough."
-            : $"It is {ClayRules.Describe(moisture)}. Beside a burning fire it would dry twice as fast."));
+            : $"It is {ClayRules.Describe(moisture)}. Beside a burning fire it would dry twice as fast."), Target: target);
     }
 
-    // First-time tips, each shown once per install, one at a time a few seconds
-    // apart so they don't cover the note that prompted them.
-    // TODO: becomes Hints.Tip(id, text) once UX adds free-text hints.
-    const string TipsPath = "user://ceramics_tips.cfg";
-    const double TipGap = 4.5;
-    readonly ConfigFile tips = new();
-    readonly Queue<string> tipQueue = new();
-    bool tipsLoaded;
-    double tipWait = TipGap;
-
+    // First-time tips go to UX's hint corner, which shows each once per install.
+    // TendOffer runs every frame, so each id is handed over once per session.
+    readonly HashSet<string> tipsSent = new();
     void Tip(string id, string text)
     {
-        if (!tipsLoaded) { tips.Load(TipsPath); tipsLoaded = true; }
-        if ((bool)tips.GetValue("seen", id, false)) return;
-        tips.SetValue("seen", id, true);
-        tips.Save(TipsPath);
-        tipQueue.Enqueue(text);
-    }
-
-    void ShowTips(double delta)
-    {
-        if (tipQueue.Count == 0) { tipWait = TipGap; return; }
-        if ((tipWait -= delta) > 0) return;
-        note(tipQueue.Dequeue());
-        tipWait = TipGap;
+        if (tipsSent.Add(id)) Hints.Tip(id, text);
     }
 
     // Firing a damp pot cracks it: the first press warns, a second within a few seconds fires it.
