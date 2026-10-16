@@ -11,11 +11,13 @@ namespace LifeGame.Shared
     {
         // How worn the ground is by a deer trail, 0 untouched to 1 the middle of the
         // path. Trails follow the contours of a slow noise, so they wander, fork and
-        // loop like real game paths, about a meter and a half wide.
+        // loop like real game paths, one to two and a half meters wide.
         public static float Trail(int x, int z)
         {
             float meters = TrailDistance(x, z);
-            return 1f - SmoothStep(0.5f, 1.6f, meters);
+            // Narrower in some stretches, broader where the deer spread out.
+            float width = 0.6f + 0.9f * World.Noise(x - 4121, z + 2203, 45f, 92);
+            return 1f - SmoothStep(0.5f * width, 1.6f * width, meters);
         }
 
         static float TrailField(int x, int z) =>
@@ -29,7 +31,7 @@ namespace LifeGame.Shared
         static float TrailDistance(int x, int z)
         {
             float off = MathF.Abs(TrailField(x, z) - 0.5f);
-            if (off >= 1.6f * MaxTrailSlope) return off / MaxTrailSlope;
+            if (off >= 2.4f * MaxTrailSlope) return off / MaxTrailSlope;
             float gx = (TrailField(x + 1, z) - TrailField(x - 1, z)) * 0.5f;
             float gz = (TrailField(x, z + 1) - TrailField(x, z - 1)) * 0.5f;
             return off / MathF.Max(MathF.Sqrt(gx * gx + gz * gz), 0.002f);

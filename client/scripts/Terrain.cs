@@ -234,8 +234,8 @@ public partial class Terrain : Node3D
         color = color.Lerp(LeafLitter, Forest.Density(x, z) * 0.4f);
         color = color.Lerp(Look.HeathGround, Forest.Heath(x, z) * 0.45f);
         color = color.Lerp(Look.Moss, Forest.Wetland(x, z) * 0.4f);
-        // Deer trails wear the ground bare.
-        color = color.Lerp(Look.Earth, Landmarks.Trail(x, z) * 0.45f);
+        // Deer trails wear the ground bare, some stretches more than others.
+        color = color.Lerp(Look.Earth, Landmarks.Trail(x, z) * (0.25f + 0.35f * World.Noise(x + 733, z - 1291, 20f, 93)));
 
         float clay = Mathf.SmoothStep(0.64f, 0.85f, World.ClayScore(x, z));
         color = color.Lerp(Look.Clay, clay * 0.35f);
