@@ -21,6 +21,7 @@ Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed
 - 2026-10-16: items 1-4 done in cf5cc32; server, client build. Bindings: tools/gen-bindings.sh was refused by the sandbox (its rm -rf); ran its generate line directly on a fresh clone.
 - 2026-10-16: ClayCheck --jar added (implies --kiln); --ceramics-demo=jar row (wet, leather-hard, dry, kiln-fired jar, coil pot for scale). Running ClayCheck --jar on scratch db c6jar1.
 - 2026-10-16 17:11: PM: Justin approved ceramics-6 with these numbers (D-066). Asked the PM to confirm kiln-only vs the 60% pit crack first mentioned. Upgrade check vs origin/main passed locally (no wipe).
+- 2026-10-16 17:41: ClayCheck --jar on c6jar2 PASSED end to end (campfire refuses jar, kiln fires 3 whole, jar q60 set down, stores and gives back a stick, 6 stacks). Merged main bdeaf3b; server, client, ClayCheck build.
 - 2026-10-16 17:26: ClayCheck --jar on c6jar1 passed through jar-placed (campfire refused the jar, kiln fired 3 whole, jar q60 set down); failed at the store step only because ClayCheck didn't subscribe to basket_item. Fixed; rerunning on c6jar2.
 - 2026-10-16 17:25: D-076 kiln only confirmed. D-075 (start low): JarStacks 8 -> 6, options sent to the PM.
 
