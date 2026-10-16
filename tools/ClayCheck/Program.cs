@@ -590,6 +590,7 @@ int TileCheck()
     Craft("clay.temper_grit", 0, Item.TemperedClay);
 
     // Shaping a tile away from the bench is refused.
+    WalkTo(bench.X, bench.Z - 15f, 0.5f);
     lastError = null;
     conn.Reducers.StartCraft("clay.tile", 0.9f);
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 3, "a tile with no bench to be refused");
