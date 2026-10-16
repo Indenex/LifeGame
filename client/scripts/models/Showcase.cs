@@ -28,9 +28,10 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes")
+        if (view is "items" or "held" or "clothes" or "hearth")
         {
-            if (view == "items") ItemGrid(args.ContainsKey("old"));
+            if (view == "hearth") Hearth();
+            else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
             return;
@@ -141,6 +142,16 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // The cold hearth: the stone ring with ash and burnt stubs.
+    void Hearth()
+    {
+        AddChild(new MeshInstance3D { Mesh = HearthModel.Ring });
+        AddChild(new MeshInstance3D { Mesh = HearthModel.ColdAsh });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.3f, 1.7f), new Vector3(0, 0, 0), Vector3.Up);
     }
 
     // Leaf wrap, then wool tunic and foot wraps standing, walking, and from behind.
