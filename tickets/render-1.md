@@ -49,6 +49,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 19:20: ui-9 mock sent to the PM and UX/UI (bb7b06e): in the 'changed' shot Mara stays green although the amber line says both accepts cleared; no amounts in offer lists; no 'before Mara accepts' shot possible.
 - 2026-10-16 19:30: ui-10 sent to the PM and UX/UI (a489e01). crafting-11 cold hearth good; lit shot failed (flag needs a value: --screenshot-fire=lit), re-queued as crafting-11-lit. ui-9 moved to 88d7cf2 (mock re-shoot + live).
 - 2026-10-16 19:35: crafting-11 sent to the PM (cold + lit, 7bfdd25).
+- 2026-10-16 19:45: ui-9 mock re-shoot at 88d7cf2 sent to the PM (2ffc161): fixes confirmed. ui-10 re-shoot at 62d68db running.
 
 ## Open questions / blockers
 - (none)
