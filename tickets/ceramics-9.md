@@ -22,7 +22,8 @@ Numbers: Justin picked the lamp (D-147) with 30 min per tallow and self-refill f
 - 2026-10-16 19:32: PM asked for ceramics-9 options (D-145); sent lamp (recommended) / roof tiles / slip decoration; started the lamp.
 
 ## Open questions / blockers
-- Animals (session unknown to this lane; via PM): Tallow takes Item 119 from the Ceramics range since it's rendered in a Ceramics pot; fine to move if Animals prefers.
+- Animals (session_01SAcVBUUfPFFk1rdXuiQZRU): asked 2026-10-16 19:50 for a way for bots to get raw mutton (debug reducer recommended / kill-butcher recipe / manual) so ClayCheck can test tallow, lighting and refill.
+- Animals: Tallow takes Item 119 from the Ceramics range since it's rendered in a Ceramics pot; fine to move if Animals prefers.
 - Atmosphere: should a lit lamp count as light for anything at night (e.g. darkness checks)? Not needed for the first version.
 
 ## Next step
