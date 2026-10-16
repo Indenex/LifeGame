@@ -110,6 +110,13 @@ public partial class Avatar : Node3D
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
 
+    // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
+    public void Face(float x, float z)
+    {
+        float dx = x - Position.X, dz = z - Position.Z;
+        if (dx * dx + dz * dz > 1e-4f) Rotation = new Vector3(0, Mathf.Atan2(dx, dz), 0);
+    }
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.
