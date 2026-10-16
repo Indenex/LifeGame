@@ -9,6 +9,8 @@ public partial class UseKey : CanvasLayer
 {
     // Where the player stands; set by Main.
     public Func<Vector3> Player = () => Vector3.Zero;
+    // Which way the player faces (flat); set by Main so G picks what's in front.
+    public Func<Vector3> Facing = () => Vector3.Zero;
     // True while a panel, minigame or placement mode owns the keys.
     public Func<bool> Blocked = () => false;
 
@@ -50,7 +52,7 @@ public partial class UseKey : CanvasLayer
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        offer = Blocked() ? null : Use.Best(Player());
+        offer = Blocked() ? null : Use.Best(Player(), Facing());
         if (offer != null) verb.Text = offer.Prompt;
 
         // Fade rather than pop, so walking past things stays calm.

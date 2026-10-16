@@ -74,7 +74,13 @@ public partial class Main : Node3D
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
+        useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        JournalPanel? journalPanel = null;
+        ClaimPanel? claimPanel = null;
+        Panels.Open = () => PauseMenu.IsOpen
+            || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
+            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();
@@ -560,7 +566,7 @@ public partial class Main : Node3D
                 if (fuel == null) return null;
                 float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
                 return new UseOffer("Feed the fire", d,
-                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item));
+                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item), Target: new Vector3(fire.X, 0, fire.Z));
             },
         });
     }
