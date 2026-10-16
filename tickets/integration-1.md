@@ -19,9 +19,10 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 17:20: Claims (claims-7) asked about Main.cs hooks and a Use-on-player handler: OK'd the 3-line Main.cs edit in its own PR; `claims.trade` uses `Use.Register` with a Target at Priority 5 (world handlers are 10-26), no shared helper yet.
 - 2026-10-16 17:25: main moved to d0caf26 (#76, #77 merged). Latest finished main CI: run 370 on 4a2cd49, green (https://github.com/Indenex/LifeGame/actions/runs/38937047510). #70 now 95c123f, CI green (run 364).
 - 2026-10-16 17:25: survey vs main d0caf26: #43 and #61 conflict with main only in `STATUS.md` (lanes edited it on their branches). Cross-PR conflicts: #61 x #70 `shared/Items.cs` (adjacent ItemDef lines, keep both; no id clash: Log 15, SleepingMat 130); #70 x #92 `client/scripts/net/Subscriptions.cs`, `tools/CraftCheck/Program.cs`; #92 x #47 `client/scripts/crafting/FireView.cs` (both Crafting-lane). Others clean: #35, #47, #66, #71, #73, #75, #90.
+- 2026-10-16 17:35: opened PR #95 (this ticket and STATUS row). Merged main into #43 (8183eac) and #61 (ee769b3), taking main's STATUS.md; both build locally. Told Journal, House building and Crafting lanes; sent the PM the readiness list and a STATUS.md-on-branches question.
 
 ## Open questions / blockers
-- (none)
+- Sent to PM 17:35: lanes stop editing STATUS.md on their branches (recommended) / lanes resolve each time / PM resolves at merge. Default meanwhile: option 1.
 
 ## Next step
 After each merge to main, re-run the conflict survey (scratchpad script logic: `git merge-tree` each open PR vs main and pairwise) and merge main into whichever of #61 / #70 merges second, resolving `shared/Items.cs` by keeping both lines.
