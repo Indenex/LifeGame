@@ -20,7 +20,8 @@ Rain and wading make you wet; wetness builds and fades gradually. Being wet make
 - 2026-10-16: client `WetLook.cs`: per-player MaterialOverlay that darkens and adds a soft sheen, plus a faint drip particle when wetness > 0.15. Client builds.
 
 - 2026-10-16: merged main (b3c6414). Locally: LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck, SocialTest pass; `tools/upgrade-check.sh origin/main` passes (no wipe). Screenshots sent to PM: screenshots/13-survival-wet-dry-vs-soaked.png, 14-survival-wet-in-rain.png. Soaked skin reads about 19% darker with a soft sheen and a few drops.
-- 2026-10-16: PM: don't add to #48; keep a backup patch at /mnt/project-files/survival/survival-5.patch (git diff origin/main HEAD) and open its own PR after #48 merges. Others should look wet too (D-036): public `Drenched` table (PlayerId, Level 0-10, row only while wet, removed on disconnect), updated by SurvivalTick; client puts WetLook on remote avatars via `SurvivalClient.AvatarOf` (one-line hook in Main). Waking after death resets wetness. Tested with LoadTest bots in rain: Drenched rows appear.
+- 2026-10-16: PM: don't add to #48; keep a backup patch at /mnt/project-files/survival/survival-5.patch (git diff origin/main HEAD) and open its own PR after #48 merges. Others should look wet too (D-036): public `Drenched` table (PlayerId, Level 0-10, row only while wet, removed on disconnect), updated by SurvivalTick; client puts WetLook on remote avatars via `SurvivalClient.AvatarOf` (one-line hook in Main). Waking after death resets wetness. Tested with LoadTest bots in rain: Drenched rows appear.- 2026-10-16: PM perf asks (Bug fixes profiling): Carrying, PotOfWater, NearestRipeBush and UpdateLoad use plain loops instead of LINQ; NeedGauge queues a redraw only when its arc or color changes, or while it glows or breathes.
+
 ## Open questions / blockers
 - (none)
 
