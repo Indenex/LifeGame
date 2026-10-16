@@ -3,7 +3,7 @@ Lane: House building
 Owner: House building thread (Claude, session_01H6jwMs4KSGQbG6zYjkBKqZ)
 Status: in_progress
 Branch: claude/house-building-8ueqz2 (restarted from main 88994fa after #41 merged)
-PR: (after #41 merges)
+PR: #53
 
 ## Goal
 A bigger building that comes after the clay hut, now that bricks exist (D-033 deferred it). The mud-brick house is StructureKind 5, a 4.8 x 4.0 m rectangle with its door on +Z. Stages and costs (Justin confirmed them, D-057):
