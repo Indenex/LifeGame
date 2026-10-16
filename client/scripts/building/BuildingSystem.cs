@@ -254,7 +254,7 @@ public partial class BuildingSystem : Node
 
     // The finished structure sheltering this spot, if any. Matches the server's ShelterAt.
     public Structure? ShelterAt(Vector3 p) =>
-        rows.Values.FirstOrDefault(s => s.Complete && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, -0.2f));
+        rows.Values.FirstOrDefault(s => s.Complete && ShapeOf(s).RainCover > 0f && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, -0.2f));
 
     // Keeps a step from passing through a hut wall anywhere but the door.
     public Vector3 Collide(Vector3 from, Vector3 to)
@@ -262,6 +262,11 @@ public partial class BuildingSystem : Node
         foreach (var s in rows.Values)
         {
             var shape = ShapeOf(s);
+            if (shape.Fence)
+            {
+                if (s.Complete && !(shape.Gate && !DoorShut(s.Id))) to = FenceLine(s, from, to);
+                continue;
+            }
             if (shape.Solid && shape.Round && (s.Complete || s.Stage >= 1))
             {
                 float dx = to.X - s.X, dz = to.Z - s.Z, d = Mathf.Sqrt(dx * dx + dz * dz), keep = shape.Radius + 0.3f;
@@ -286,6 +291,17 @@ public partial class BuildingSystem : Node
             to = new Vector3(wx, to.Y, wz);
         }
         return to;
+    }
+
+    // A fence or shut gate: keeps you on the side of its line you came from.
+    static Vector3 FenceLine(Structure s, Vector3 from, Vector3 to)
+    {
+        const float half = 0.3f;
+        var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
+        if (Mathf.Abs(lx) > Structures.FenceHalfLength + half * 0.5f || Mathf.Abs(lz) >= half) return to;
+        var (_, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
+        var (x, z) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, fz >= 0f ? half : -half);
+        return new Vector3(x, to.Y, z);
     }
 
     // A brick house's four straight walls, open at the doorway unless the door is shut.
@@ -420,6 +436,8 @@ public partial class BuildingSystem : Node
             target = me.Position + offset.Normalized() * (Structures.PlaceRange - 0.3f);
         target.Y = terrain.HeightAt(target.X, target.Z);
 
+        if (Structures.IsFence(placeKind)) target = SnapFence(target);
+
         // The ghost glides after the cursor rather than jumping cell to cell.
         float ease = 1f - Mathf.Exp(-14f * dt);
         ghostPos = ghostPlaced ? ghostPos.Lerp(target, ease) : target;
@@ -431,6 +449,36 @@ public partial class BuildingSystem : Node
         placeProblem = PlaceProblem(ghostPos, ghostYawTarget);
         var tint = placeProblem == null ? new Color(0.85f, 1f, 0.8f, 0.38f) : new Color(1f, 0.6f, 0.5f, 0.3f);
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(tint, 1f - Mathf.Exp(-10f * dt));
+    }
+
+    // A fence laid near the free end of another fence or gate joins on to it, along
+    // the ghost's own heading (T turns it, so runs can bend at corners).
+    Vector3 SnapFence(Vector3 target)
+    {
+        const float reach = 0.9f;
+        Vector3? best = null;
+        float bestD = reach;
+        var axis = new Vector3(Mathf.Cos(ghostYawTarget), 0f, -Mathf.Sin(ghostYawTarget)) * Structures.FenceHalfLength;
+        foreach (var s in rows.Values)
+        {
+            if (!Structures.IsFence((int)s.Kind)) continue;
+            var (a, b) = Structures.FenceEnds(s.X, s.Z, s.Yaw);
+            foreach (var (ex, ez) in new[] { a, b })
+            {
+                var end = new Vector3(ex, target.Y, ez);
+                // The new fence's nearer end sits on this end, its middle toward the cursor.
+                var center = (target - end).Dot(axis) >= 0f ? end + axis : end - axis;
+                float d = new Vector2(center.X - target.X, center.Z - target.Z).Length();
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = center;
+                }
+            }
+        }
+        if (best is not { } snapped) return target;
+        snapped.Y = terrain.HeightAt(snapped.X, snapped.Z);
+        return snapped;
     }
 
     string? PlaceProblem(Vector3 at, float yaw)

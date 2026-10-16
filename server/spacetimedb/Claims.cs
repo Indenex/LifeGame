@@ -424,6 +424,7 @@ public static partial class Module
         }
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).ToList())
             ctx.Db.ClaimMember.Id.Delete(m.Id);
+        RemoveClaimName(ctx, claim.Id);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
