@@ -318,6 +318,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
+        woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);

@@ -185,6 +185,9 @@ public partial class CraftingUi : CanvasLayer
 
     // --- Starting a process ----------------------------------------------
 
+    // Starts a process from outside the panel, such as G next to a tree.
+    public void Start(ProcessDef def) => Begin(def);
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
