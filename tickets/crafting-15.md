@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_review
 Branch: crafting-stations
-PR: (none yet)
+PR: #160
 
 ## Goal
 D-098: only basic items and basic material processing stay in the personal C menu. Everything else is made at a station built inside a claim: a Crafting Table (general and misc), a Spindle (yarn and cloth, with Animals' Spin minigame), and a Leather drying rack (hides and leather). A station draws ingredients from the player's inventory and from storage near it. There are no held items; small hand crafts get a hand animation (Animation lane). A new player still reaches a first fired pot in 1 to 2 hours (M2).
@@ -59,6 +59,7 @@ Questions for Justin (recommended option first):
 
 ## Progress log
 - 2026-10-16 19:30: framework built. CraftCheck, BuildTest and the upgrade check (main's world carries over, no wipe) pass locally, and server and client build.
+- 2026-10-16 19:35: PR #160 opened at 859f25e. Render requested 859f25e (crafting table, built, inside a claim).
 - 2026-10-16 18:45: Ceramics asked for the coil pot to stay basic and the jar at the Table; adopted and sent to the PM.
 - 2026-10-16 18:35: proposal written and sent to the PM. Told Animals and Animation the planned shape (StationKind, ProcessDef.Station, Stations.NearestOf).
 
