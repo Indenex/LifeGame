@@ -541,3 +541,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-132 — 2026-10-16 — Raised hearth
 **Decision:** A raised hearth is built inside a finished hut or house (4 stone, then 3 daub). A fire lit on it burns 1.5x as long per stick, can't be put out by rain, and makes a hut fully warm, as a fire already does in a house. Smoke rises through the roof. Crafting adds one small hook to read the hearth.
 **Who:** Justin ("Better fire", as recommended)
+
+## D-133 — 2026-10-16 — Releases and launcher
+**Decision:** Justin's world runs on a local SpacetimeDB server on his own PC. Every green merge to main becomes a public GitHub Release (Linux and Windows clients plus the server module). The launcher has one button: it updates the client, publishes the new module over his local world without wiping (refusing world-wipe releases unless he confirms), starts the server if it's down, then offers Play. No cloud hosting, no cost, no setup.
+**Who:** Justin ("Public GitHub Releases" and "Launcher button on your PC", both as recommended)
