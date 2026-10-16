@@ -2,8 +2,10 @@ using LifeGame.Shared;
 using SpacetimeDB;
 
 // Clay oil lamps (ceramics-9): a fired lamp and a lump of tallow, lit from a burning
-// fire or another lamp, set down to glow for a while. Nothing is scheduled: a lamp is
-// lit while BurnsUntil is in the future, and the client draws its light from that.
+// fire or another lamp, set down to glow for a while. A lamp is lit while BurnsUntil
+// is in the future, and the client draws its light from that. Once a minute, a lamp
+// about to go out takes a tallow from baskets, jars or the claim stash nearby that its
+// owner may use, so a lamp in a stocked home never needs tending (D-147).
 public static partial class Module
 {
     [SpacetimeDB.Table(Accessor = "Lamp", Public = true)]
@@ -22,6 +24,15 @@ public static partial class Module
         public int ChunkX;
         public int ChunkZ;
         public Timestamp BurnsUntil;
+    }
+
+    [SpacetimeDB.Table(Accessor = "LampTimer", Scheduled = nameof(RefillLamps), ScheduledAt = nameof(ScheduledAt))]
+    public partial struct LampTimer
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong ScheduledId;
+        public ScheduleAt ScheduledAt;
     }
 
     // Sets a lamp down where you point, lit with one tallow.
@@ -54,6 +65,54 @@ public static partial class Module
             ChunkZ = World.ChunkOf(z),
             BurnsUntil = ctx.Timestamp + new TimeDuration((long)(ClayRules.LampSecondsPerTallow * 1_000_000)),
         });
+        if (ctx.Db.LampTimer.Count == 0)
+            ctx.Db.LampTimer.Insert(new LampTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromSeconds(ClayRules.LampRefillCheckSeconds)) });
+    }
+
+    // Lamps about to go out (or out) take one tallow from storage nearby, if there is any.
+    [SpacetimeDB.Reducer]
+    public static void RefillLamps(ReducerContext ctx, LampTimer timer)
+    {
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        long soon = (long)(ClayRules.LampRefillCheckSeconds * 1.5f * 1_000_000);
+        long per = (long)(ClayRules.LampSecondsPerTallow * 1_000_000);
+        int count = 0;
+        foreach (var lamp in ctx.Db.Lamp.Iter().ToList())
+        {
+            count++;
+            long left = Math.Max(0, lamp.BurnsUntil.MicrosecondsSinceUnixEpoch - now);
+            if (left > soon || !TakeStoredTallow(ctx, lamp)) continue;
+            ctx.Db.Lamp.Id.Update(lamp with { BurnsUntil = new Timestamp(now + left + per) });
+        }
+        if (count == 0)
+            foreach (var t in ctx.Db.LampTimer.Iter().ToList())
+                ctx.Db.LampTimer.ScheduledId.Delete(t.ScheduledId);
+    }
+
+    // One tallow from a basket or jar within reach of the lamp, or else the claim's
+    // stash, that the lamp's owner may use.
+    static bool TakeStoredTallow(ReducerContext ctx, Lamp lamp)
+    {
+        foreach (var s in StructuresNear(ctx, lamp.X, lamp.Z))
+        {
+            if (!s.Complete || !Structures.IsStore((int)s.Kind) || Dist(s.X, s.Z, lamp.X, lamp.Z) > StationInfo.StorageReach) continue;
+            if (ClaimAt(ctx, s.X, s.Z) is { } c && !HasClaimRights(ctx, c, lamp.Owner)) continue;
+            foreach (var row in ctx.Db.BasketItem.StructureId.Filter(s.Id))
+            {
+                if (row.Item != (ushort)Item.Tallow) continue;
+                if (row.Count <= 1) ctx.Db.BasketItem.Id.Delete(row.Id);
+                else ctx.Db.BasketItem.Id.Update(row with { Count = row.Count - 1 });
+                return true;
+            }
+        }
+        if (ClaimAt(ctx, lamp.X, lamp.Z) is { } claim && HasClaimRights(ctx, claim, lamp.Owner))
+            foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claim.Id, (ushort)Item.Tallow)))
+            {
+                if (row.Count <= 1) ctx.Db.ClaimStash.Id.Delete(row.Id);
+                else ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - 1 });
+                return true;
+            }
+        return false;
     }
 
     // G by a lamp: a lit one takes another tallow (anyone may feed it); an empty one

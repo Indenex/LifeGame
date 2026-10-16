@@ -223,9 +223,11 @@ namespace LifeGame.Shared
         // Tallow is skimmed off and the pot comes back empty; broth and stew stay in their pot.
         public static bool KeepsPot(Item dish) => dish == Item.Tallow;
 
-        // The clay oil lamp (ceramics-9, numbers proposed to the PM): each tallow burns
-        // this long, a lamp holds up to MaxLampTallow, and it lights this far round.
-        public const float LampSecondsPerTallow = 600f;
+        // The clay oil lamp (ceramics-9, Justin D-147): each tallow burns half an hour,
+        // a lamp holds up to MaxLampTallow, and it lights this far round. A lamp refills
+        // itself from tallow in storage nearby, so it never needs tending.
+        public const float LampSecondsPerTallow = 1800f;
+        public const float LampRefillCheckSeconds = 60f;
         public const int MaxLampTallow = 3;
         public const float LampLightRadius = 4f;
         // A lamp is lit from a burning fire or a lit lamp this close.
