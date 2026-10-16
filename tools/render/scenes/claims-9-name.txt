@@ -1,0 +1,37 @@
+# claims-9 (PR #174): name your camp. Camera = puppet (A), out in the wild at (45,0).
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 8 50
+give 3 4 50
+goto 45 0
+place 2 0 -1.5 0
+build
+build
+build
+build
+build
+build
+build
+build
+wait 3
+# 1. K at the marker, type the name, press Name (Enter)
+key k
+wait 3
+type Willow Hollow
+wait 2
+burst 2 1.5
+key Return
+wait 3
+burst 2 1.5
+key Escape
+# 3. the land chip while inside
+burst 1 1
+# 2. walk out past 20 m and back in: the title fades in as A enters
+stroll 26 0
+arrive
+wait 3
+stroll -12 0
+wait 1.5
+burst 6 1
+arrive

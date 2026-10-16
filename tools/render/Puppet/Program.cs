@@ -28,6 +28,7 @@
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
+//   type Willow Hollow    type text into the camera client's window
 //   face 0            turn to that heading in degrees (0 = +z); fires are lit 1.2 m ahead
 //   firepots          set every unfired pot I carry into the fire I lit
 //   click 660 850     move there and left-click
@@ -387,6 +388,10 @@ bool Step(string line)
         }
         case "mouse":
             Run("xdotool", $"search --name LifeGame windowfocus mousemove --window %1 {rest}");
+            Pump(0.3);
+            break;
+        case "type":
+            Run("xdotool", $"search --name LifeGame windowfocus type --delay 80 \"{rest}\"");
             Pump(0.3);
             break;
         case "keydown":
