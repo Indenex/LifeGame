@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -39,6 +39,7 @@ public partial class Showcase : Node3D
             else if (view == "deer") Deer();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
+            else if (view == "materials") Materials();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -364,6 +365,150 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.6f, 4.4f), new Vector3(0, 0.2f, -0.9f), Vector3.Up);
+    }
+
+    // Justin's art-direction test set (D-154): log cabin, pines, oaks, boulders, a
+    // sheep and the player, in today's materials or a painted-texture prototype
+    // (--look=current|A|B|C, see MaterialLook), at --time=day|golden|night (night
+    // has a campfire).
+    void Materials()
+    {
+        var variant = args.GetValueOrDefault("look", "A") switch
+        {
+            "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, _ => MaterialLook.Variant.A,
+        };
+        string time = args.GetValueOrDefault("time", "golden");
+        bool now = variant == MaterialLook.Variant.Current;
+
+        Material Pick(Material original, MaterialLook.Pattern? pattern = null, Color? color = null)
+        {
+            if (now)
+            {
+                if (color is not { } c || original is not ShaderMaterial sm) return original;
+                var tinted = (ShaderMaterial)sm.Duplicate();
+                tinted.SetShaderParameter("albedo", c);
+                return tinted;
+            }
+            var kind = MaterialLook.Classify(original, out var found);
+            return MaterialLook.For(pattern ?? kind, variant, color ?? found);
+        }
+        void Place(Mesh mesh, Material material, Vector3 at, float yaw = 0f, float scale = 1f)
+        {
+            AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = material, Position = at, Rotation = new Vector3(0, yaw, 0), Scale = Vector3.One * scale });
+        }
+
+        // The cabin, as House building draws it.
+        int cabin = 0;
+        for (int kind = 0; kind < LifeGame.Shared.Structures.Shapes.Length; kind++)
+            if (LifeGame.Shared.Structures.Shape(kind).Name == "Log cabin") cabin = kind;
+        var cabinRoot = new Node3D { Position = new Vector3(0, 0, -4.5f), Rotation = new Vector3(0, 0.3f, 0) };
+        AddChild(cabinRoot);
+        foreach (var piece in StructureModel.Pieces(cabin))
+            if (piece.Stage >= 0) cabinRoot.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = Pick(piece.Material) });
+
+        // Trees as Terrain builds them (its meshes are private; read for this view only).
+        var terrain = typeof(Terrain);
+        terrain.GetMethod("EnsureMeshes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, null);
+        var leafy = (Mesh)terrain.GetField("leafyMesh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+        var pine = (Mesh)terrain.GetField("pineMesh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+        var bark = Pick(Look.BarkSurface, MaterialLook.Pattern.Bark, Look.Bark);
+        foreach (var (x, z, s) in new[] { (-6.5f, -3.5f, 1.1f), (-8.5f, -0.5f, 0.9f), (-5f, -7.5f, 1.25f) })
+        {
+            Place(PropMeshes.Trunk, bark, new Vector3(x, 0, z), x, s);
+            Place(pine, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Pine), new Vector3(x, 0, z), x, s);
+        }
+        foreach (var (x, z, s) in new[] { (6.5f, -3f, 1.1f), (8.5f, 0.5f, 0.95f), (5.5f, -8f, 1.2f) })
+        {
+            Place(PropMeshes.Trunk, bark, new Vector3(x, 0, z), z, s);
+            Place(leafy, Pick(Look.Foliage, MaterialLook.Pattern.Leaves, Look.Leaf), new Vector3(x, 0, z), z, s);
+        }
+        var rock = Pick(Look.RockSurface, MaterialLook.Pattern.Stone, Look.Rock);
+        Place(PropMeshes.Rock(0), rock, new Vector3(-3f, 0, 1.2f), 0.4f, 1.1f);
+        Place(PropMeshes.Rock(0), rock, new Vector3(3.6f, 0, 1.6f), 2.1f, 0.8f);
+        Place(PropMeshes.Rock(2), rock, new Vector3(-1.4f, 0, -1.2f), 1.0f, 0.9f);
+
+        // A sheep and the player in front.
+        var woolColor = new Color(0.74f, 0.71f, 0.63f);
+        var woolNow = Look.Solid(woolColor);
+        woolNow.SetShaderParameter("detail_scale", 1.5f);
+        woolNow.SetShaderParameter("bump", 0.15f);
+        woolNow.SetShaderParameter("cavity", 0.08f);
+        var sheep = new MeshInstance3D { Mesh = SheepFigure.Build(SheepFigure.Variant, Look.Solid(Colors.White)).Mesh, Position = new Vector3(2.2f, 0, 1.2f), Rotation = new Vector3(0, -0.9f, 0) };
+        sheep.SetSurfaceOverrideMaterial(0, now ? woolNow : MaterialLook.For(MaterialLook.Pattern.Wool, variant, woolColor));
+        sheep.SetSurfaceOverrideMaterial(1, now ? Look.Solid(Colors.White) : MaterialLook.For(MaterialLook.Pattern.Skin, variant));
+        AddChild(sheep);
+        var player = PlayerModel.Build();
+        player.Position = new Vector3(-0.2f, 0, 2.2f);
+        player.Rotation = new Vector3(0, 0.3f, 0);
+        AddChild(player);
+        if (!now)
+            foreach (var child in player.GetChildren())
+                if (child is MeshInstance3D mi)
+                    mi.MaterialOverride = MaterialLook.For(mi.Name == PlayerModel.SlotNode(PlayerModel.Body) ? MaterialLook.Pattern.Leaves : MaterialLook.Pattern.Skin, variant);
+
+        // Ground: today's grass, or the painted plain pattern in grass colour.
+        foreach (var child in GetChildren())
+            if (child is MeshInstance3D { Mesh: PlaneMesh } ground && !now)
+                ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
+
+        // Light for the time of day.
+        foreach (var child in GetChildren())
+        {
+            if (child is DirectionalLight3D sun)
+            {
+                if (time == "golden")
+                {
+                    sun.LightColor = new Color(1.0f, 0.68f, 0.42f);
+                    sun.LightEnergy = 2.2f;
+                    sun.Rotation = new Vector3(Mathf.DegToRad(-11f), Mathf.DegToRad(-60f), 0);
+                }
+                else if (time == "night")
+                {
+                    sun.LightColor = new Color(0.45f, 0.55f, 0.85f);
+                    sun.LightEnergy = 0.35f;
+                    sun.Rotation = new Vector3(Mathf.DegToRad(-40f), Mathf.DegToRad(30f), 0);
+                }
+            }
+            if (child is WorldEnvironment world && time != "day")
+            {
+                var env = world.Environment;
+                var sky = (ProceduralSkyMaterial)env.Sky.SkyMaterial;
+                if (time == "golden")
+                {
+                    sky.SkyTopColor = new Color(0.32f, 0.42f, 0.62f);
+                    sky.SkyHorizonColor = new Color(0.98f, 0.66f, 0.42f);
+                    sky.GroundHorizonColor = new Color(0.9f, 0.62f, 0.42f);
+                    env.FogLightColor = new Color(0.95f, 0.7f, 0.5f);
+                    env.FogDensity = 0.012f;
+                }
+                else
+                {
+                    sky.SkyTopColor = new Color(0.02f, 0.03f, 0.07f);
+                    sky.SkyHorizonColor = new Color(0.07f, 0.09f, 0.15f);
+                    sky.GroundHorizonColor = new Color(0.05f, 0.06f, 0.08f);
+                    sky.GroundBottomColor = new Color(0.02f, 0.02f, 0.03f);
+                    env.AmbientLightEnergy = 0.3f;
+                    env.FogLightColor = new Color(0.08f, 0.1f, 0.16f);
+                    env.FogDensity = 0.02f;
+                }
+            }
+        }
+        if (time == "night")
+        {
+            // A campfire between the player and the cabin.
+            var fire = new Vector3(0.6f, 0, 0.4f);
+            AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = fire });
+            var flame = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(1f, 0.55f, 0.18f), EmissionEnabled = true, Emission = new Color(1f, 0.5f, 0.15f), EmissionEnergyMultiplier = 3f };
+            AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.16f, Height = 0.5f, RadialSegments = 8, Rings = 4 }, MaterialOverride = flame, Position = fire + new Vector3(0, 0.25f, 0) });
+            AddChild(new OmniLight3D { Position = fire + new Vector3(0, 0.7f, 0), LightColor = new Color(1f, 0.62f, 0.3f), LightEnergy = 4f, OmniRange = 10f, OmniAttenuation = 1.4f, ShadowEnabled = true });
+        }
+
+        var camera = new Camera3D { Fov = 42f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("close"))
+            camera.LookAtFromPosition(new Vector3(2.6f, 1.9f, 4.6f), new Vector3(-0.6f, 1.0f, -1.5f), Vector3.Up);
+        else
+            camera.LookAtFromPosition(new Vector3(1.5f, 3.2f, 8.5f), new Vector3(0, 1.3f, -2f), Vector3.Up);
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
