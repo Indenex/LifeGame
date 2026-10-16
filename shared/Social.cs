@@ -34,6 +34,41 @@ namespace LifeGame.Shared
         public const long DefaultClaimLifetimeSeconds = 3 * 24 * 60 * 60;
         public const float WeatheredFrom = 0.75f;
 
+        // --- Fighting (claims-3, D-053) ---
+        public const float MaxHealth = 100f;
+        // A strike lands on someone in front of you within this reach. The server
+        // allows a little slack for movement still in flight.
+        public const float StrikeReach = 1.6f;
+        public const float StrikeReachSlack = 0.6f;
+        public const long StrikeCooldownMicros = 800_000;
+        // Health comes back this fast once nobody has hit you for a while, if you are
+        // fed and watered (above WellFed).
+        public const float HealthRegenPerSecond = 0.5f;
+        public const long RegenDelayMicros = 10_000_000;
+        public const float WellFed = 0.2f;
+        // New players can't strike or be struck for this long after first waking.
+        public const long NewcomerGraceMicros = 10L * 60 * 1_000_000;
+
+        // A player who strikes someone down shows a red name for this long (D-053).
+        public const long KillerMarkMicros = 30L * 60 * 1_000_000;
+
+        // Damage by the best weapon carried: about 12 bare-handed hits to kill, about 6
+        // with a hand axe.
+        public static float StrikeDamage(bool spear, bool handAxe, bool flake) =>
+            spear ? 20f : handAxe ? 17f : flake ? 12f : 8.5f;
+
+        public static bool InSpawnClearing(float x, float z) =>
+            x * x + z * z < SpawnClearRadius * SpawnClearRadius;
+
+        // Health now, given the last recorded value and when it was last hit.
+        public static float HealthAt(float health, long asOfMicros, long lastHitMicros, long nowMicros, bool fed)
+        {
+            if (!fed || health >= MaxHealth) return Math.Min(health, MaxHealth);
+            long from = Math.Max(asOfMicros, lastHitMicros + RegenDelayMicros);
+            if (nowMicros <= from) return health;
+            return Math.Min(MaxHealth, health + (nowMicros - from) / 1_000_000f * HealthRegenPerSecond);
+        }
+
         public static bool InClaim(float claimX, float claimZ, float x, float z)
         {
             float dx = x - claimX, dz = z - claimZ;
