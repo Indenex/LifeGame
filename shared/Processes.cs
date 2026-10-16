@@ -24,6 +24,7 @@ namespace LifeGame.Shared
         Fire,  // a campfire on the ground in front of the crafter
         Placed, // something set down in front of the crafter; its lane's OnPlaced hook makes it
         Roast,  // set over the nearest burning fire; taken off later, cooked or burnt (see Roasting)
+        Chop,   // a log from the tree within reach of the crafter (see Trees and Woodcutting.cs)
     }
 
     public sealed class Ingredient
@@ -146,6 +147,12 @@ namespace LifeGame.Shared
                 Id = "fire.bow_drill", Name = "Bow-drill fire", Doing = "Nursing an ember into flame", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) }, NeedsTool = ItemTags.FireBow,
                 Seconds = 3, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.2f,
+            },
+            // An axe takes a log from a standing tree; enough logs fell it (Trees).
+            new ProcessDef
+            {
+                Id = "chop.log", Name = "Chop a log", Doing = "Chopping a log", Tier = 2,
+                NeedsTool = ItemTags.Chopping, Seconds = 15, Outcome = Outcome.Chop, Makes = Item.Log,
             },
 
             // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
