@@ -25,6 +25,7 @@ Justin sees a cabin of round logs with crossed corners, a log lintel over the do
 - 2026-10-16 20:05: `dotnet run -- log-cabin` passed locally in 437 s. Each bot made a stone axe and chopped 10 logs, both built the cabin, standing inside is sheltered, it survived a reconnect, and the door hung, opened, barred and unbarred.
 - 2026-10-16 20:05: HANDOFF to a Sonnet session (D-159). Not yet merged with the latest main; stacked on building-9 (#202).
 - 2026-10-16 21:25 (Sonnet session): #202 merged. Fast-forwarded the branch to main and merged the cabin branch. Conflicts resolved: Structures.cs (Station and Room flags both kept), StructureModel switch (Hearth, then IsRoom => LogCabin), BuildTest Craft (score parameter kept with crafting-16's 1.2x wait). LogCabin is the last kind (after Hearth). Walls: the cabin has Room = true, so bugfix-23's Collide already runs it through HouseWalls; no extra collision code. Local: server builds, bindings regen, `BuildTest log-cabin` passed (412 s), upgrade-check vs origin/main passed, LoadTest and SpawnCheck passed.
+- 2026-10-16: Render requested 8a30003 (Render session_015S96hNrEu92FrCoNZqZZjs).
 
 ## Open questions / blockers
 - (none)
