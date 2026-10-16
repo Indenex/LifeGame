@@ -15,8 +15,8 @@ public partial class FarLand : Node3D
 {
     // How far it reaches, from the Options page (Settings graphics/distant_land):
     // Far is the full view, Near a shorter, coarser one for slow PCs, Off none.
-    // Far is limited by the water plane (260 m across, centred on the player), so a
-    // far pond always has water in it.
+    // Far is limited by the water plane (500 m across, centred on the player, #293), so
+    // a far pond always has water in it, and by the camera's far plane (300 m).
     public enum Reach { Off, Near, Far }
     public static readonly string[] ReachNames = { "Off", "Near", "Far" };
 
@@ -26,7 +26,7 @@ public partial class FarLand : Node3D
         set => Settings.Set("graphics", "distant_land", (int)value);
     }
 
-    static (int Radius, int Step) Shape(Reach level) => level == Reach.Near ? (96, 8) : (128, 4);
+    static (int Radius, int Step) Shape(Reach level) => level == Reach.Near ? (96, 8) : (240, 4);
 
     MeshInstance3D? ground;
     MultiMeshInstance3D? broadleaf, conifer;
