@@ -19,11 +19,12 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 18:15: Render delivered b7fde7a clip to the PM: renders/audio/audio-1-b7fde7a-work-sounds.mp3 on claude/render-1-013qe8 (87 s, peak -9.7 dBFS; crafts -25 to -28 rms, knap -30.9). Knap's lower rms is intended: sparse clicks every 0.7-1.3 s; its loudest 50 ms (-28.8) matches the others.
 - 2026-10-16 19:05: #66 merged; merged main 4dc416c. Merged #97's branch (crafting-work-hooks 927e22a) and dropped the duplicate OnCraft declarations in WorkSounds.cs, so this builds in either merge order. Server, client, SoundPreview build; tools/upgrade-check.sh origin/main passes. Opened PR #120; waiting for CI.
 - 2026-10-16 19:20: PM relayed D-097: own work a LITTLE UNDER the music (option B); four sound sliders (master, music, effects/work, ambience) on an Options page in the Esc menu, all 50% for a new player; UX/UI builds the page; green sha goes to Integration (D-095). Done here: WorkGain 0.39 + 3.5 x ambience, max 0.7 (about -3 dB); SoundMix MasterLevel/MusicLevel/EffectsLevel/AmbienceLevel with SliderGain (2s)^2 (0.5 = designed mix), eased; ambience bus scaled after the ambience meter; SoundScape MasterVolume/MusicVolume/EffectsVolume/AmbienceVolume saved under [volume] (old [music] volume dropped so everyone starts at 0.5); SoundPreview --master/--music/--effects/--ambience. Measured: music over calm bed -31 rms, work rms -32 to -39, loudest 50 ms -29 to -32. AUDIO.md has the bus table.
+- 2026-10-16 19:40: Messages crossed: UX/UI switched to my original contract and built ui-12 PR #128 (claude/ux-ui-options-xlrh2s, f92bff3, merges after #120) on SoundScape MasterVolume/MusicVolume/EffectsVolume/AmbienceVolume with SoundScape saving them; Godot Master bus stays 0 dB; they migrate an old [sound] volume into MasterVolume once. Reverted 2b15259 so that contract is back.
 
 ## Open questions / blockers
 - Answered D-097: B, a little under the music.
-- UX/UI builds the Options page sliders against SoundScape's four properties; agreed with session_01V6qgbNbvTwniqW946KACLr.
+- UX/UI builds the Options page sliders against SoundScape's four properties: ui-12 PR #128, merges after #120.
 - (#66 merged; #97 folded in, either merge order works.)
 
 ## Next step
-Wait for CI run https://github.com/Indenex/LifeGame/actions/runs/38944796924 on PR #120 (head c6d0187); when green, send the head sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU) for merge.
+Wait for CI on PR #120 head 8c88baa; when green, send the sha to Integration (session_01Rf5965nk4Lvd3f2QDteZSq, D-095) and the PM. Then check UX/UI has the Options page sliders in hand.
