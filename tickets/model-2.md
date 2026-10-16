@@ -22,4 +22,4 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - Most stations are on other lanes' unmerged branches; hooks wait until those merge, so models land first as standalone meshes plus Showcase views.
 
 ## Next step
-Read the station survey, then build `StationModels.cs` (Crafting Table first), with a Showcase view.
+Wait for CI on #197 (head 00e4d24) and send the green sha to the PM; when #197 merges, merge main into claude/model-2-env and open its PR (env-4 props, CookingMeshes).
