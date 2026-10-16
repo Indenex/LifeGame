@@ -3,7 +3,7 @@ Lane: House building
 Owner: House building thread
 Status: in_review
 Branch: claude/house-building-8ueqz2
-PR: (not yet)
+PR: #61
 
 ## Goal
 A player can weave a sleeping mat (8 fiber, `weave.mat`), stand inside a finished hut or
