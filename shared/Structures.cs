@@ -27,6 +27,8 @@ namespace LifeGame.Shared
         // A straight run along the local X axis (FenceHalfLength each side) that people
         // and animals can't step across. A gate is a fence whose middle opens like a door.
         public bool Fence, Gate;
+        // A crafting station of this kind once finished (D-098); None for anything else.
+        public StationKind Station;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -122,6 +124,15 @@ namespace LifeGame.Shared
                 Fence = true, Gate = true,
                 Stages = new[] { "Posts", "Gate" },
             },
+            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
+            new StructureShape
+            {
+                Name = "Crafting table",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Table,
+                Stages = new[] { "Table" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -185,6 +196,11 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stick, 2u) },
                 new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
+            },
+            // Crafting table (D-112): Table
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
             },
         };
 
@@ -258,6 +274,8 @@ namespace LifeGame.Shared
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
+            // Each crafting station reports its own id, so the journal knows it is built.
+            _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
