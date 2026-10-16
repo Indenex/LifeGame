@@ -209,7 +209,9 @@ public partial class CeramicsView : Node
     {
         if (conn == null || !Carrying(i => ClayRules.FormOfUnfired(i) != null)) return null;
         var at = new Vector2(me3.X, me3.Z);
-        if (BurningFireNear(at, World.Reach) is not { } fire) return null;
+        // Only a fire that can take a pot: a full ring or too little fuel would just
+        // refuse, and this offer outranks Feed the fire (bugfix-18).
+        if (BurningFireNear(at, World.Reach) is not { } fire || !FireCanTakePot(fire)) return null;
         float d = new Vector2(fire.X, fire.Z).DistanceTo(at);
         return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id), Target: new Vector3(fire.X, 0, fire.Z));
     }
