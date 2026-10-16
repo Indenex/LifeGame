@@ -10,7 +10,7 @@ The first body clothing: a wool tunic sewn from wool cloth at a crafting table, 
 
 ## How it works
 - Item `WoolTunic` 200 (HasQuality). Wearable row in `shared/Clothing.cs` (Body, insulation 0.10). The worn_item table, Wear/TakeOff, the Survival hook and the death drop already shipped with #149.
-- Process `sew.wool_tunic`: 3 Wool cloth + 1 Wool yarn, a Cutting tool, at the crafting table (Station = Table), Base(2, 2) seconds. It trains Toolmaking (`sew`).
+- Process `sew.wool_tunic`: 3 Wool cloth + 1 Wool yarn, a Cutting tool, at the crafting table (Station = Table), Base(2, 2) seconds. It trains Weaver (the `sew` prefix, since skills-11).
 - Modeling already made the tunic's worn, ground and icon models (Garments.cs / ItemModels.cs, id 200).
 
 ## Progress log
