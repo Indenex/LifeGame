@@ -29,4 +29,4 @@ Rain and wading make you wet; wetness builds and fades gradually. Being wet make
 - (none)
 
 ## Next step
-Wait for CI on the merge-of-main head of #75, then send the green sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU).
+Wait for CI on the newest head of #75, then send the green sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU).
