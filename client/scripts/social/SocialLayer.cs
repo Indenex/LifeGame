@@ -154,6 +154,7 @@ public partial class SocialLayer : Node
         {
             landTimer = 0.25f;
             UpdateLandChip();
+            if (conn != null && myId != 0) RefreshTradeCue();
             if (panel.IsOpen && (panel.Claim is not { } open || Flat(open).DistanceTo(Flat(myPos)) > Social.MarkerReach + 1f))
                 panel.Close();
         }
