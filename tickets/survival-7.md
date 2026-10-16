@@ -6,13 +6,13 @@ Branch: claude/survival-running (main after #75, plus UX's #118 branch claude/ux
 PR: (none yet; open after #75 merges)
 
 ## Goal
-D-088: hold the run key to move faster, spending stamina that refills whenever you aren't running. Light (D-081): running dry just drops you to the normal 4.2 m/s walk, no damage. A small ring beside the needs rings shows only while stamina isn't full. UX/UI's #118 (D-091) binds the "run" action to Shift and moves sneak to Ctrl; Animation picks the run cycle from observed speed (full run from 5.5 m/s).
+D-088: hold the run key to move faster, spending stamina that refills whenever you aren't running. Light (D-081): running dry just drops you to the normal 4.2 m/s walk, no damage. A small bar under your character shows only while stamina isn't full (D-101). UX/UI's #118 (D-091) binds the "run" action to Shift and moves sneak to Ctrl; Animation picks the run cycle from observed speed (full run from 5.5 m/s).
 
 ## Numbers (defaults = recommended options sent to PM 2026-10-16, pending Justin)
-- Run 5.6 m/s (walk 4.2, server cap World.MaxSpeed 6 unchanged). Alt: 6.0, 5.0.
-- 10 s of running from full; refills in 8 s when not running; run dry and you walk until back to 20%. Alt: 20/10, 6/6.
-- Indicator: stride ring beside the needs rings, fades in while not full. Alt: bar under the character.
-- Running costs no food or water. Alt: hunger 1.5x while running.
+- Run 5.6 m/s (Justin, D-100; walk 4.2, server cap World.MaxSpeed 6 unchanged).
+- 10 s of running from full; refills in 8 s when not running; run dry and you walk until back to 20%. PLACEHOLDER: the PM sends final options from docs/PROGRESSION.md (D-101).
+- Indicator: small bar under the character, only while not full (Justin, D-101). client/scripts/survival/StaminaBar.cs.
+- Running costs no food or water (Justin, D-101).
 
 ## Design (technical, Survival's call)
 - `shared/Stamina.cs`: constants plus `Step` and `CanRun`. Client-side only; the server keeps its 6 m/s move check, so a hacked client could run forever (accepted for now).
@@ -24,8 +24,10 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 
 - 2026-10-16: #75 merged. Merged main and #118's branch; dropped the temporary V key and the unused Running flag (Animation reads speed instead); Controls.cs run Help line and the run hint per UX/UI. Must merge with or after #118.
 
+- 2026-10-16: D-100/D-101: replaced the stamina ring with StaminaBar (46x5 px, 16 px under the feet on screen, hidden while a panel is open); NeedsHud and NeedGauge back to main.
+
 ## Open questions / blockers
-- Justin's picks on the four options above (via PM).
+- Stamina duration/refill: final numbers from the PM's docs/PROGRESSION.md.
 - If Justin picks a run speed under 5.5 m/s, tell Animation (session_019roNRWQBPw4ozNLDhzseig) to move their run band.
 - Known gap: Walk() isn't called while a panel captures input, so stamina doesn't refill then. Minor.
 

@@ -14,6 +14,7 @@ namespace LifeGame;
 public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
+    readonly StaminaBar staminaBar = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -61,6 +62,7 @@ public partial class SurvivalClient : Node
     {
         Bind("eat", Key.X);
         AddChild(needsHud);
+        AddChild(staminaBar);
         RegisterUse();
     }
 
@@ -190,9 +192,17 @@ public partial class SurvivalClient : Node
         stamina = Stamina.Step(stamina, running, dt);
         if (stamina <= 0f) winded = true;
         else if (stamina >= Stamina.MinToRun) winded = false;
-        needsHud.SetStamina(stamina);
+        staminaBar.Set(stamina, FeetOnScreen());
         float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
         return speed * WalkFactor;
+    }
+
+    // Where the player's feet are on screen, or null when the camera can't see them.
+    Vector2? FeetOnScreen()
+    {
+        var camera = player.GetViewport()?.GetCamera3D();
+        if (camera == null || camera.IsPositionBehind(player.GlobalPosition)) return null;
+        return camera.UnprojectPosition(player.GlobalPosition);
     }
 
     // Other players look as wet as the server says (D-036), in tenths.

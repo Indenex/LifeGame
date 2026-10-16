@@ -5,7 +5,7 @@ namespace LifeGame;
 // One ring gauge: a dim track, an arc for the value, and a small icon.
 public partial class NeedGauge : Control
 {
-    public enum Glyph { Berry, Drop, Flame, Sack, Stride }
+    public enum Glyph { Berry, Drop, Flame, Sack }
 
     public bool Glow;
     // Breathe to catch the eye. Left unset, a gauge breathes when its value runs low.
@@ -87,11 +87,6 @@ public partial class NeedGauge : Control
                 DrawLine(center + new Vector2(-3, -6), center + new Vector2(3, -6), icon, 1.5f, true);
                 DrawLine(center + new Vector2(-2, -7.5f), center + new Vector2(-4, -10), c, 1.5f, true);
                 DrawLine(center + new Vector2(2, -7.5f), center + new Vector2(4, -10), c, 1.5f, true);
-                break;
-            case Glyph.Stride:
-                // Two forward chevrons, like quick steps.
-                DrawPolyline(new[] { center + new Vector2(-7, -6), center + new Vector2(-1, 0), center + new Vector2(-7, 6) }, c, 2.5f, true);
-                DrawPolyline(new[] { center + new Vector2(0, -6), center + new Vector2(6, 0), center + new Vector2(0, 6) }, c, 2.5f, true);
                 break;
         }
     }
