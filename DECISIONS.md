@@ -610,3 +610,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-149 — 2026-10-16 — Hearth fires feed themselves
 **Decision:** A fire on a built raised hearth (D-132) pulls sticks and logs from nearby chests and storage (baskets, jars, claim stash within reach) so it doesn't need tending. Open campfires still need feeding by hand.
 **Who:** Justin ("Hearths only", as recommended), applying D-148
+
+## D-150 — 2026-10-16 — First-time tips
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Who:** Justin ("All four", as recommended)
+
+## D-151 — 2026-10-16 — Log cabin
+**Decision:** The log cabin is a forest alternative to the brick house, with the same shelter, size and weathering. Costs: sill 4 stone + 4 logs; walls 16 logs; rafters 12 sticks + 2 cordage; roof 14 fiber.
+**Who:** Justin (as recommended)
+
+## D-152 — 2026-10-16 — Corners of the forest
+**Decision:** env-4 gives the region distinct moods: birch and alder wetland with sedge and cattails along streams, heath and meadow with heather, gorse and lone oaks on hilltops, mixed forest between. Visual only, no wipe.
+**Who:** Justin (as recommended)
+
+## D-153 — 2026-10-16 — Foot wraps train Leatherwork; the drop spindle stays Toolmaking
+**Decision:** Leather foot wraps train Leatherwork; making the drop spindle trains Toolmaking.
+**Who:** Justin (wraps: "Leatherwork", as recommended; spindle: Journal's default)
