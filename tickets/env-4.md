@@ -13,7 +13,8 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 - 2026-10-16 21:55: `shared/Forest.cs`: `Heath(x, z)` (height above about 0.65 to 0.95 with a 30 m noise ragging the edge; about 16% of the land) and `Wetland(x, z)` (height below about -0.15 to -0.75 with a 14 m noise; about 10%). Density x (1 - 0.85 heath), so the heath has only lone trees. `Terrain.cs`: birch and alder (slim trunks, pale bark, light leaves) on wet ground; broad old oaks for full trees on the heath; heather (flattened bushes) and gorse on the heath; sedge (short reeds) on wet ground; no ferns or wildflowers on the heath; grass short on the heath and thin on wet ground; ground tinted heath-brown and moss-green. No new MultiMeshes (reuses trunk, leafy, bush and reed meshes). Colours are hard-coded in `Undergrowth.cs` until Atmosphere adds them to Look. Client and server build.
 
 ## Open questions / blockers
-- Waiting on Justin's env-4 pick via the PM (default A).
+- Justin picked A (D-152).
+- Modeling (model-2, claude/model-2) has PropMeshes.Trunk/Rock/FallenLog/Stump; swap them in once on main. Asked them for birch trunk, heather, gorse, cattails, hilltop outcrop, riverbank stones.
 - Ask Atmosphere for Look colours: BirchBark, Heather, Gorse, Sedge, HeathGround, Moss.
 
 ## Next step
