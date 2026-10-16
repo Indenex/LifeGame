@@ -590,3 +590,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-144 — 2026-10-16 — First-evening tuning; visible breath in the cold
 **Decision:** Survival's next milestone is a first-evening tuning pass on the new land (berries near spawn, water reach, early warmth) so nobody dies before their first fire. Players also show a visible breath puff in cold air; there is no camera shake.
 **Who:** Justin ("1, but when cold I do like the idea of seeing your breath")
+
+## D-145 — 2026-10-16 — Workers never sit idle
+**Decision:** When a lane finishes its ticket and has no assigned next work, it immediately picks the next most useful item for its lane from the current milestones (`STATUS.md`, D-081) or the design docs, starts it, and tells the PM what it picked. Any design choice Justin would notice goes to the PM as options while the lane works on the recommended one. Waiting on CI or on a merge is not a reason to idle; start the next ticket.
+**Who:** Justin ("Workers should not sit idle. If we don't have more work for them, pull from the design doc and figure some out, or ask me")
