@@ -799,3 +799,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-196 — 2026-10-16 — Bow power: Archery skill, much harder at rank 0 (revises D-178)
 **Decision:** The bow numbers in D-178 are at level 1 too strong. A new Archery skill, on the shared curve (D-175, D-177), scales bow damage. At rank 0 with crude gear a red deer takes 6 to 7 hits. With maxed Archery, top gear and a crit, a one-shot becomes possible.
 **Who:** Justin ("Is this at level 1 Archery? I would say make it much harder. Like 6-7 shots, and when maxed out or with crits you could 1 shot at some point.")
+
+## D-197 — 2026-10-16 — Combat skills level slower; skill matters more than gear (extends D-175, D-196)
+**Decision:** Combat skills get a slower category pace in the one shared progression formula. Each effect's ceiling is a single raisable constant, so it is easy to raise and work in later. Gear quality spread stays narrow and skill spread stays wide: skill levels matter much more than the item base.
+**Who:** Justin ("Slower progression on combat-related skills I think, there needs to be a ceiling that we raise and work in easily. Skill levels should matter much more than the item base though.")
