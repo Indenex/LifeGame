@@ -237,7 +237,7 @@ public partial class ClaimPanel : CanvasLayer
         foreach (var s in stash)
         {
             var row = Row($"{Name(s.Item, s.Quality)}  {s.Count}");
-            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality)));
+            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality, 1)));
             content.AddChild(row);
         }
         // claims-11: the last few comings and goings, newest first.
@@ -258,7 +258,7 @@ public partial class ClaimPanel : CanvasLayer
             row.AddThemeConstantOverride("h_separation", 6);
             row.AddThemeConstantOverride("v_separation", 6);
             foreach (var item in carried)
-                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality)));
+                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
             content.AddChild(row);
         }
 

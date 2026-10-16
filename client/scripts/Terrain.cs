@@ -399,7 +399,12 @@ public partial class Terrain : Node3D
                     // heather and gorse on the heath; sedge on wet ground.
                     float plant = Hash01(x, z, 52);
                     float fernChance = (0.10f * Mathf.SmoothStep(0.2f, 0.6f, density) + 0.12f * edge) * (1f - heath);
-                    float heather = 0.30f * heath, gorse = 0.04f * heath, sedge = 0.35f * wet;
+                    // Heather grows in a few irregular patches with plenty of open grass
+                    // between them, never sprinkled evenly (Justin's playtest); gorse is
+                    // rarer still, in its own scattered clumps.
+                    float heatherPatch = Mathf.SmoothStep(0.62f, 0.74f, World.Noise(x + 2917, z - 1433, 11f, 95) * 0.65f + World.Noise(x - 811, z + 3701, 4.3f, 96) * 0.35f);
+                    float gorsePatch = Mathf.SmoothStep(0.66f, 0.78f, World.Noise(x - 5023, z + 617, 9f, 97));
+                    float heather = 0.26f * heath * heatherPatch, gorse = 0.03f * heath * gorsePatch, sedge = 0.35f * wet;
                     // Heather and gorse carry their own colours (Modeling); the tint only
                     // varies them a little.
                     if (plant < heather)
