@@ -316,3 +316,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-077 — 2026-10-16 — Trades may overload you
 **Decision:** A trade that takes a player over their carry limit is allowed; they walk slower, as with picking things up.
 **Who:** Justin ("Allow, walk slower", which the PM recommended)
+
+## D-078 — 2026-10-16 — Environment lane, paired with Atmosphere for cosy immersion
+**Decision:** A new Opus Environment lane builds the world itself: terrain shape and ground cover, trees, bushes, grass, rocks, water edges, paths and natural props, placed so the forest feels lived-in and cosy. It works hand in hand with Atmosphere (light, sky, weather, time of day, mood); the two lanes together own comfy immersion. Environment owns `client/scripts/environment/` and `client/scripts/Terrain.cs`; gameplay rules for trees and resources stay with their lanes (e.g. Crafting's `shared/Trees.cs`), and world-generation changes in `shared/World.cs` go through Integration as small hooks.
+**Who:** Justin
+
+## D-079 — 2026-10-16 — Dedicated Audio lane takes all audio
+**Decision:** A new Opus Audio lane owns all sound and music: `client/scripts/atmosphere/audio/` (SoundMix), `client/scripts/atmosphere/SoundScape.cs`, `tools/SoundPreview/`, music and any future `client/scripts/audio/`. Other lanes no longer make audio; they send the Audio lane a request (what event, where, how it should feel), as with render requests. Atmosphere hands its in-progress work sounds (atmosphere-12, branch `claude/atmosphere-12-work-sounds`, incl. D-072 other players at about 60% quieter) to Audio and keeps the visual side.
+**Who:** Justin ("a dedicated audio worker ... that takes anyone's audio work from them")
