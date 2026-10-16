@@ -276,7 +276,7 @@ public partial class CraftingUi : CanvasLayer
 
     // What is missing to run a process, and where to get it, or null when
     // everything is at hand. Shown under a greyed-out recipe and as a notice.
-    string? Missing(ProcessDef def)
+    internal string? Missing(ProcessDef def)
     {
         // Station crafts are made standing at the station (Stations.cs).
         Structure? station = null;
