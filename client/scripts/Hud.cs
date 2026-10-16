@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace LifeGame;
@@ -63,6 +64,10 @@ public partial class Hud : CanvasLayer
                     new InventoryEntry(LifeGame.Shared.Item.Flake, "Fine stone flake", 1),
                     new InventoryEntry(LifeGame.Shared.Item.Berries, "Berries", 5),
                 });
+                // --screenshot-many fills a long row, to check it fits between the corners.
+                if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-many") >= 0)
+                    SetItems(Enumerable.Range(1, 12).Select(i => (LifeGame.Shared.Item)i)
+                        .Select(i => new InventoryEntry(i, i.ToString(), 2)).ToList());
                 GetTree().CreateTimer(3.5).Timeout += () => Note("The fire takes the stick and brightens");
             };
     }
@@ -86,6 +91,8 @@ public partial class Hud : CanvasLayer
     {
         float dt = (float)delta;
         toastTime -= dt;
+        // A note sits clear of the inventory, even when the row wraps onto two lines.
+        toast.Position = new Vector2(toast.Position.X, toast.GetParentAreaSize().Y - 122 - Mathf.Max(0f, inventory.Top - 76f));
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
