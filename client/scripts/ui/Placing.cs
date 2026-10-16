@@ -6,11 +6,14 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// A crafted thing in the bag that can be set down in the world (crafting-20).
-public record Placeable(Item Item, byte Quality);
+// A crafted thing in the bag that can be set down in the world (crafting-21). Wear is
+// the bag row's durability, passed back to the server as is (0 for everything
+// placeable today).
+public record Placeable(Item Item, byte Quality, uint Wear = 0);
 
-// What placement talks to. Crafting owns the server side (the reducer, which items
-// are placeable, the rules); until its contract lands, MockPlaceLink stands in.
+// What placement talks to. Crafting owns the server side (crafting-21: the PlaceItem
+// reducer, ItemDef.Placeable, CraftingUi.Finished, shared Placement.Check); until it
+// lands, MockPlaceLink stands in.
 public interface IPlaceLink
 {
     // Placeable things in the bag, one entry per item and quality.
