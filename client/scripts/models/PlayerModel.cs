@@ -15,6 +15,17 @@ public static class PlayerModel
     // Clothing slots, as in shared/Clothing.cs and the worn_item table (D-074).
     public const byte Body = 0, Feet = 1;
 
+    // The mouth, in the HeadAttach frame, for the current style.
+    public static Vector3 MouthAt
+    {
+        get
+        {
+            var f = HumanFigure.Build(Style);
+            float chin = 1.75f - f.HeadHeight;
+            return new Vector3(0, chin + f.HeadHeight * 0.3f - f.Joints.At[HumanRig.Head].Y, f.HeadHeight * 0.42f);
+        }
+    }
+
     public static string SlotNode(byte slot) => $"Worn{slot}";
 
     public static Skeleton3D Build()
@@ -27,6 +38,9 @@ public static class PlayerModel
             hand.AddChild(new Node3D { Name = tool, Position = new Vector3(0, -drop, 0) });
             skeleton.AddChild(hand);
         }
+        // For things at the face, like breath in cold air (D-144): the head bone's
+        // own frame; the mouth is at MouthAt.
+        skeleton.AddChild(new BoneAttachment3D { Name = "HeadAttach", BoneName = HumanRig.Names[HumanRig.Head] });
         return skeleton;
     }
 

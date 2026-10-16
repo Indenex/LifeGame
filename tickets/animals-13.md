@@ -2,7 +2,7 @@
 Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
 Status: in_review
-Branch: claude/animals-seasons-5gkntn (stacked on Atmosphere's claude/atmosphere-16-seasons, PR #173)
+Branch: claude/animals-seasons-5gkntn (#173 merged; PR now targets main)
 PR: (none)
 
 ## Goal
@@ -21,8 +21,10 @@ Sheep live through the seasons Atmosphere adds (D-099; one in-game day per seaso
 
 - 2026-10-16 23:20: started (D-145: never idle). Written and builds. Local bot test (scratch SeasonCheck, TEMP TestSnow/TestYear/TestCull reducers, not committed), spawn flock watched 120 s each: no snow: mean distance from the flock's middle 1.53 m, grazing 69%, 17.7 m walked each; full snow: 1.01 m, 23%, 15.4 m. Winter: a flock culled 5 -> 3 grew no lambs in 6 s; set to spring: +1 lamb within 6 s, no second lamb 10 s later. Upgrade check against the seasons branch passed (against main it fails on the seasons branch alone: Survival's vitals columns; Atmosphere's to merge).
 
+- 2026-10-16 20:15 (UTC): #173 merged; merged main (54d2175), builds, upgrade check against main passed; PR #195 retargeted to main. Lane handed off to a new Sonnet session (D-159); see tickets/animals-14.md 'Lane handoff' on claude/animals-deer-5gkntn.
+
 ## Open questions / blockers
-- Waits for Atmosphere's #173 (seasons) to merge.
+- (none)
 
 ## Next step
-Open the PR against claude/atmosphere-16-seasons (retargets to main when #173 merges); send a render request (flock bunched in snow, a spring lamb); send the PM next-animal options.
+Wait for CI on #195 (head after 54d2175); green: send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the sha for merge.

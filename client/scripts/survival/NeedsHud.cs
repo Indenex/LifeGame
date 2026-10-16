@@ -158,11 +158,11 @@ public partial class NeedsHud : CanvasLayer
             vec2 uv = (SCREEN_UV - 0.5) * vec2(1.0, 0.75);
             float d = length(uv);
             float n = noise(SCREEN_UV * 9.0) * 0.6 + noise(SCREEN_UV * 31.0) * 0.4;
-            float reach = mix(0.75, 0.32, amount);
+            float reach = mix(0.85, 0.46, amount);
             float edge = smoothstep(reach, reach + 0.25, d + (n - 0.5) * 0.22);
             float sparkle = step(0.93, noise(SCREEN_UV * 140.0)) * edge * 0.35;
             vec3 ice = mix(vec3(0.70, 0.82, 0.92), vec3(0.95, 0.98, 1.0), n);
-            COLOR = vec4(ice + sparkle, edge * amount * 0.55);
+            COLOR = vec4(ice + sparkle, edge * amount * 0.36);
         }
         """;
 }
