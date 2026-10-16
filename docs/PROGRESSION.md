@@ -84,6 +84,18 @@ Use for: XP per rank or materials per upgrade, paired with a linear benefit. The
 
 Our skill gain is already front-loaded in time (`Skills.Gain` in `shared/Skills.cs`: 100 x (1 - p)^2 points per use, floor 5). 15% of the uses to Master reaches **rank ~55**. So an effect that is linear in rank (D-086) already gives about 55% of its gain in the first 15% of play time. Putting curve A on top of rank would give ~85% in that time and leave nothing to chase. Rule: **if the input is skill rank, keep the effect linear in rank.** Use curves A to D when the input is item quality, gear tier or a count.
 
+## 2b. One formula for every skill (skills-12)
+
+Justin: one formula handles all skill gains and what they help, so every skill has the same scaling feel. It lives in `shared/Progression.cs`.
+
+- **Gaining rank:** `Skills.Gain`, the same quadratic falloff for every skill.
+- **What a rank is worth:** `Progression.Effect(kind, rank)` = `lo + (hi - lo) * curve(rank / 100)`, with curve family B (`ln(1 + 12 p) / ln(13)`): the first 15% of ranks give 40% of the benefit.
+- **Adding an effect:** add an `EffectKind` and one row in `Progression.Effects` with its start and Master values. Never write a rank formula elsewhere.
+- **Own formulas:** none. `Skills.Gain` and `SkipsMinigame` are listed in `Progression.Exceptions` with the reason.
+- **Check:** `dotnet run --project tools/ProgressionCheck` prints every effect at ranks 0, 10, 15, 25, 50, 100 and fails if an end value moves or rank 15 is not ~40%.
+
+This stacks with the front-loaded gain (see "Do not front-load twice" above), so mid-game ranks give more than before. The rule in that section is superseded for rank-based effects by Justin's pick.
+
 ## 3. Rewards between the steps (variable ratio, light)
 
 Small random bonuses make repeated work pleasant: a second clay lump (already `SecondLumpChance`, up to 50% at Master), a rare pretty stone, a better-than-expected quality roll. Suggested base: a "nice surprise" about 1 in 15 to 1 in 30 actions, cosmetic or small. Never random losses, never anything bought, never a streak that resets.

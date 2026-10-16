@@ -29,6 +29,7 @@ public static class Recipes
         ["build.door"] = "Hang a door on a finished hut with {use}.",
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
+        [Skills.Sneak] = "Hold {sneak} and creep toward a wary animal. The closer you get before it bolts, the better you learn.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
         ["claim.mark"] = "{build_mode} to lay out a claim marker away from the clearing, then add sticks and fiber with {use}.",
         ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",

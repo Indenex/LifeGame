@@ -49,6 +49,8 @@ namespace LifeGame.Shared
         public const string Shear = "animal.shear";
         // Reported on every strike that lands, and when a carcass is butchered (Animals lane).
         public const string Kill = "animal.kill";
+        // Moving at sneak speed near a wary animal that has not bolted (Animals lane reports it).
+        public const string Sneak = "animal.sneak";
         public const string Butcher = "animal.butcher";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
@@ -69,6 +71,16 @@ namespace LifeGame.Shared
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
             new("husbandry", "Husbandry", true, "Keeping animals calm, shearing them cleanly and working their hides.", "animal", "hide"),
+            // Sneaking up on wary animals and striking before they bolt (skills-12).
+            new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", "stalk"),
+        };
+
+        // Processes that train a different skill from their prefix: hunting and sneaking
+        // belong to Stalking, not Husbandry.
+        static readonly Dictionary<string, string> SpecOverrides = new()
+        {
+            [Kill] = "stalking",
+            [Sneak] = "stalking",
         };
 
         // Names for processes that are not in Processes.List.
@@ -89,6 +101,7 @@ namespace LifeGame.Shared
             [Berries] = "Picking berries",
             [Shear] = "Shearing a sheep",
             [Kill] = "Hunting",
+            [Sneak] = "Sneaking up on an animal",
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
             [Run] = "Running",
@@ -111,6 +124,7 @@ namespace LifeGame.Shared
             foreach (var id in BuildStages) yield return id;
             yield return Shear;
             yield return Kill;
+            yield return Sneak;
             yield return Butcher;
             yield return DryHide;
             yield return Run;
@@ -131,6 +145,7 @@ namespace LifeGame.Shared
         // processes still go in the journal but train nothing.
         public static Specialization? SpecFor(string processId)
         {
+            if (SpecOverrides.TryGetValue(processId, out var specId)) return Spec(specId);
             int dot = processId.IndexOf('.');
             string prefix = dot < 0 ? processId : processId[..dot];
             foreach (var s in Specializations)
@@ -160,16 +175,16 @@ namespace LifeGame.Shared
         }
 
         // The best quality, 1 to 100, a player can produce: 35 at first, anything at Master.
-        public static byte QualityCap(int rank) => (byte)MathF.Round(35f + 65f * Math.Clamp(rank, 0, MaxRank) / MaxRank);
+        public static byte QualityCap(int rank) => (byte)MathF.Round(Progression.Effect(EffectKind.QualityCap, rank));
 
         // Multiplier on how long a process takes: a Master works in 40% of the time.
-        public static float DurationScale(int rank) => 1f - 0.6f * Math.Clamp(rank, 0, MaxRank) / MaxRank;
+        public static float DurationScale(int rank) => Progression.Effect(EffectKind.WorkTime, rank);
 
         // Minigames lose steps as you improve; at Master a craft is one action.
         public static int MinigameSteps(int baseSteps, int rank)
         {
             if (rank >= MaxRank) return 1;
-            return Math.Max(1, (int)MathF.Round(baseSteps * (1f - 0.75f * Math.Clamp(rank, 0, MaxRank) / MaxRank)));
+            return Math.Max(1, (int)MathF.Round(baseSteps * Progression.Effect(EffectKind.MinigameSteps, rank)));
         }
 
         // A Master doesn't play the minigame; the craft scores as a steady hand.
@@ -179,8 +194,8 @@ namespace LifeGame.Shared
         // Dug clay: a novice gets ordinary clay, a skilled digger picks out cleaner
         // lumps and sometimes two at once.
         // Steps of 5 keep a digger's clay in a few stacks instead of one per point.
-        public static byte DugClayQuality(int rank) => (byte)Math.Clamp(Items.RawQuality + rank * 35 / MaxRank / 5 * 5, 1, 100);
-        public static double SecondLumpChance(int rank) => rank / 200.0;
+        public static byte DugClayQuality(int rank) => (byte)Math.Clamp(Items.RawQuality + (int)Progression.Effect(EffectKind.DugClayBonus, rank) / 5 * 5, 1, 100);
+        public static double SecondLumpChance(int rank) => Progression.Effect(EffectKind.SecondLumpChance, rank);
 
         public static string Title(int rank) => rank switch
         {

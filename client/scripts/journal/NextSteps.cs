@@ -65,6 +65,7 @@ public static class NextSteps
         ["build.door"] = "A finished hut wants a door.",
         [Skills.Shear] = "A calm sheep with a full fleece will stand for a blade. Come up slowly.",
         [Skills.Kill] = "A spear or blade can bring a sheep down, but it will run.",
+        [Skills.Sneak] = "Wary animals bolt from a walker. Move slowly and stay low, and you can get closer.",
         [Skills.Butcher] = "A fallen sheep yields meat and a hide to a blade.",
         // Wool and clothing (Animals, animals-9); quiet until those processes land.
         ["carve.drop_spindle"] = "A stone whorl on a straight stick makes something that turns loose wool into thread.",
@@ -98,6 +99,7 @@ public static class NextSteps
         [Skills.Shear] = new[] { Cutting },
         [Skills.Kill] = new[] { Cutting.Append("lash.spear").ToArray() },
         [Skills.Butcher] = new[] { new[] { Skills.Kill } },
+        [Skills.Sneak] = new[] { new[] { Skills.Forage } },
         [Skills.DryHide] = new[] { new[] { "hide.stretch" } },
         [Claim] = new[] { new[] { Skills.Forage } },
         [Bench] = new[] { new[] { "chop.log" }, new[] { Claim } },
@@ -130,7 +132,7 @@ public static class NextSteps
     {
         [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
-        [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
+        [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
     // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone
