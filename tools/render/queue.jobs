@@ -1,5 +1,7 @@
 # One job per line: <name> <command...>. queue.sh rereads this file between jobs,
 # so jobs can be added or reordered while it runs. Live scenes go last.
+env-6-fade tools/render/render.sh env-6-fade b18eb8f "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-46,-46 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-46,-46 --camera-zoom=20 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-44,-46 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-44,-46 --camera-zoom=20 --screenshot-delay=90"
+env-6-fade-before tools/render/render.sh env-6-fade-before origin/main "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-46,-46 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-46,-46 --camera-zoom=20 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-44,-46 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-44,-46 --camera-zoom=20 --screenshot-delay=90"
 env-2 tools/render/scenes/env-2.sh
 model-172 tools/render/render.sh model-172 71f7c7c "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35" "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.4,0.6,35,0.35"
 model-172-items tools/render/scene.sh model-172-items 71f7c7c tools/render/scenes/model-172-items.txt
