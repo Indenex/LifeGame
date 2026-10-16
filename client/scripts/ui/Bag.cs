@@ -72,6 +72,9 @@ public partial class BagGrid : GridContainer
     public Func<Godot.Collections.Dictionary, bool> Accepts = _ => false;
     public Action<Godot.Collections.Dictionary> Receive = _ => { };
     public string Empty = "Your hands are empty";
+    // A click on a slot (with Shift held: all of it). Set by store panels, where a
+    // click moves things; when it's null, a double-click uses the thing instead.
+    public Action<BagStack, bool>? Clicked;
     public int Width = 6;
     public Action<Item> Use = _ => { };
     // A thing let go outside the panel (the panel says where it is).
@@ -193,7 +196,14 @@ public partial class BagSlotView : PanelContainer
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, DoubleClick: true, Pressed: true } && Grid.Kind == "bag")
+        if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left } b) return;
+        // A click acts on release, so pressing to start a drag doesn't move anything.
+        if (Grid.Clicked != null && !b.Pressed && GetGlobalRect().HasPoint(b.GlobalPosition))
+        {
+            Grid.Clicked(Stack, Input.IsKeyPressed(Key.Shift));
+            AcceptEvent();
+        }
+        else if (Grid.Clicked == null && b.DoubleClick && b.Pressed && Grid.Kind == "bag")
         {
             Grid.Use(Stack.Item);
             AcceptEvent();
