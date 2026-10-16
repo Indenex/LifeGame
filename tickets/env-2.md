@@ -1,9 +1,9 @@
 # env-2: Reshape the land (ponds, a stream, gentler hills)
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_progress
+Status: in_review
 Branch: claude/environment-env-2
-PR: (once opened)
+PR: #175
 
 ## Goal
 Justin chose to reshape the land after groves and glades (D-084). Done means: a few ponds within an easy walk of spawn, one meandering stream with reedy banks, and softer, rolling hills, all from the shared height function so server and clients agree. The spawn clearing stays dry and fairly flat; clay still favours low wet ground. It wipes the world (items, buildings, dug cells, claims all sit on the old ground), so it lands in ONE PR with an upgrade-check note, and nothing that wipes is run or merged until the PM confirms timing with Justin.
@@ -26,9 +26,10 @@ Justin chose to reshape the land after groves and glades (D-084). Done means: a 
 - 2026-10-16 20:10: Justin approved building env-2 now (D-129): ONE world wipe, landing once env-2 and the in-flight PRs are in. The PM brings Justin a wipe date and merges this PR at that time. Do NOT merge it and do NOT publish to Justin's world. Coordinate with Integration (`shared/World.cs`, upgrade check) and with Crafting, Ceramics and Animals (trees, clay, sheep). Before and after renders go through Render first.
 - 2026-10-16 20:30: `shared/Land.cs` (C# port of the preview, checked equal to `tools/env-preview/land.py` at sample points); `World.BaseHeight` now returns `Land.Height` (one-line hook in an Integration-owned file). Stats over 301x301 m: water 8.7% (old 1.3%), clay 38.6% (old 37.3%), trees 0.071 per cell, max neighbour step 0.38 m (old 0.21), no cell steeper than 0.5. One stream wanders north to south about 40 to 60 m west of spawn; about 6 ponds within 90 m; spawn is a dry rise within 18 m. 1M heights take 0.4 s. Pond banks are a wide dip (field 0.36 to 0.74 toward -0.6) before the pond proper, and the stream channel slopes over 1 to 6 m, which keeps slopes gentle. Pond noise is offset off the lattice, because the shared hash is weak on the axes and ponds lined up in rows.
 - 2026-10-16 20:45: on a fresh local world, LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck and SocialTest all pass. ClayCheck once failed with "pot set down out of the fire's reach", but that run reused a database with CraftCheck's old fire nearby. On a fresh world the fire lands at (2.1, 2.1), same as main, and firing succeeds. A full ClayCheck run (water now at (-35,-35)) is in progress.
+- 2026-10-16 20:55: Justin pre-approved the wipe (D-143); renders don't block (D-142). The PM adds the `world-wipe` label (D-130) and merges. Merged main (177 commits, clean), server and client build. Opened PR #175 at 608c712. Told PM and Integration (Integration runs the world tools and reviews the World.cs hook). Atmosphere seasons landed on claude/atmosphere-16-seasons keyed on w, with no TreeLeaves material.
 
 ## Open questions / blockers
 - Wipe timing: PM confirms with Justin before anything that wipes is run or merged.
 
 ## Next step
-Finish the ClayCheck run on a fresh local world, get Render's before and after shots, open the env-2 PR marked do-not-merge (wipe), and send its green sha to the PM, not to Integration.
+Wait for CI on PR #175 (upgrade check red until `world-wipe`), send the green sha to the PM; confirm the background ClayCheck passed.
