@@ -13,7 +13,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
-| Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
+| Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK. One wipe planned with env-2 (D-129); date to be confirmed with Justin. |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
 | Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-080 |
@@ -41,6 +41,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
 | Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
+| Release & Launcher (D-131) (session_015Je3JR5vZrzA7TwQYBSPgM) | release-1 automatic releases + one-button launcher; in progress | `claude/release-1` | `launcher/`, `tools/release/`, `.github/workflows/release.yml` (reviewed by Integration) |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 

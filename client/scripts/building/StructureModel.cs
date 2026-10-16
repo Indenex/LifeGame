@@ -39,12 +39,13 @@ public static partial class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        // Animals' stations by their shape's station kind, never by number (kinds are numbered by merge order).
+        // Stations by their shape's station kind, never by number (kinds are numbered by merge order).
         pieces = LifeGame.Shared.Structures.Shape(kind).Station switch
         {
+            LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(),
             LifeGame.Shared.StationKind.Spindle => StationModels.Spindle(),
             LifeGame.Shared.StationKind.DryingRack => StationModels.DryingRack(),
-            _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => CraftingTableModel.Pieces(), _ => LeanTo() },
+            _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), _ => LeanTo() },
         };
         Cache[kind] = pieces;
         return pieces;
