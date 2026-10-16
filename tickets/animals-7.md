@@ -1,8 +1,8 @@
 # animals-7: Fewer draw calls per sheep
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
-Branch: developed locally as animals-7-local on top of animals-6 (#69); goes to claude/animals-sheep-5gkntn once #69 merges
+Status: in_review
+Branch: claude/animals-sheep-5gkntn (restarted from main d2026a7 after #69 merged)
 PR: (after #69)
 
 ## Goal
@@ -21,10 +21,11 @@ Atmosphere counted about 5+ sheep mesh nodes per sheep at spawn. Cut sheep draw 
 ## Progress log
 - 2026-10-16 05:00: written, builds, measured. Daytime screenshot screenshots/animals-09-skinned-sheep.png looks the same as animals-07-day-after.png (before).
 
+- 2026-10-16 05:30: #69 merged; branch restarted from main d2026a7 with animals-7 merged in. Server + client build, upgrade check passed.
 - 2026-10-16 05:10: PM fold-in: playtest saw sheep crowd a kiln. AnimalFires.cs now also treats a firing kiln as a fire, measured from its wall (0.8 m out). Pit firings were already covered: they need a fueled Fire, which #69 avoids. Server builds; not live-tested (no kiln in the local world).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-When #69 merges, restart claude/animals-sheep-5gkntn from main, merge animals-7-local, build, push, open the PR.
+Wait for CI on the animals-7 PR, then send the PM the green sha. animals-8 (wool to cloth) and animals-9 (clothing) are local branches waiting behind it.
