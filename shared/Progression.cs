@@ -28,15 +28,28 @@ namespace LifeGame.Shared
         ArcheryDrawTime,  // seconds between shots (Archery)
     }
 
+    // How an effect's value moves between its start and Master values.
+    public enum EffectShape
+    {
+        // The one front-loaded curve (the default for everything).
+        Curve,
+        // A deliberate exception for combat damage multipliers (Animals, Justin): the
+        // multiplier's reciprocal is linear in rank, so the number of hits needed to kill
+        // falls evenly with rank (one fewer hit per equal step of ranks).
+        EvenInHits,
+    }
+
     public sealed class EffectDef
     {
         public readonly EffectKind Kind;
         public readonly string Name, Unit;
         // Value at rank 0 and at Master. Either can be the larger one.
         public readonly float Lo, Hi;
+        public readonly EffectShape Shape;
 
-        public EffectDef(EffectKind kind, string name, float lo, float hi, string unit)
+        public EffectDef(EffectKind kind, string name, float lo, float hi, string unit, EffectShape shape = EffectShape.Curve)
         {
+            Shape = shape;
             Kind = kind;
             Name = name;
             Lo = lo;
@@ -80,7 +93,7 @@ namespace LifeGame.Shared
             public const float SneakDistance = 3f;
             public const float SneakCritChance = 0.4f;
             public const float SneakCritBonus = 2f;
-            public const float ArcheryDamage = 2f;
+            public const float ArcheryDamage = 1.6f;
             public const float ArcheryHitChance = 1f;
             public const float ArcheryDrawTime = 0.8f;
         }
@@ -98,6 +111,11 @@ namespace LifeGame.Shared
         public static float Effect(EffectKind kind, int rank)
         {
             var e = Get(kind);
+            if (e.Shape == EffectShape.EvenInHits)
+            {
+                float x = Math.Clamp(rank, 0, Skills.MaxRank) / (float)Skills.MaxRank;
+                return 1f / (1f / e.Lo + (1f / e.Hi - 1f / e.Lo) * x);
+            }
             return Effect(rank, e.Lo, e.Hi);
         }
 
@@ -122,7 +140,7 @@ namespace LifeGame.Shared
             new(EffectKind.SneakCritChance, "Sneak crit chance", 0.03f, Ceiling.SneakCritChance, "chance"),
             new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.5f, Ceiling.SneakCritBonus, "x damage"),
             // Animals' proposal for Archery (values go to Justin through the PM).
-            new(EffectKind.ArcheryDamage, "Arrow damage", 0.44f, Ceiling.ArcheryDamage, "x"),
+            new(EffectKind.ArcheryDamage, "Arrow damage", 0.44f, Ceiling.ArcheryDamage, "x", EffectShape.EvenInHits),
             new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, Ceiling.ArcheryHitChance, "x"),
             new(EffectKind.ArcheryDrawTime, "Draw time", 2f, Ceiling.ArcheryDrawTime, "s"),
         };

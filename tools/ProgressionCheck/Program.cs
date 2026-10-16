@@ -12,7 +12,14 @@ foreach (var e in Progression.Effects)
     Console.WriteLine($"{e.Name,-22}" + string.Join("", vals.Select(v => $"{v,10:0.##}")) + $"  {e.Unit}");
     if (MathF.Abs(vals[0] - e.Lo) > 0.001f || MathF.Abs(vals[^1] - e.Hi) > 0.001f) { Console.WriteLine("  FAIL: ends"); failures++; }
     float share = (vals[2] - e.Lo) / (e.Hi - e.Lo);
-    if (share < 0.38f || share > 0.42f) { Console.WriteLine($"  FAIL: rank 15 gives {share:P0}, want ~40%"); failures++; }
+    if (e.Shape == EffectShape.EvenInHits)
+    {
+        // 1 / value is linear in rank: equal steps of rank give equal steps of 1 / value.
+        float a = 1f / Progression.Effect(e.Kind, 0), b = 1f / Progression.Effect(e.Kind, 20), c = 1f / Progression.Effect(e.Kind, 40);
+        if (MathF.Abs((a - b) - (b - c)) > 0.001f) { Console.WriteLine("  FAIL: not even in hits"); failures++; }
+        Console.WriteLine("  even-in-hits at 0/20/40/60/80/100: " + string.Join(" / ", new[] { 0, 20, 40, 60, 80, 100 }.Select(r => Progression.Effect(e.Kind, r).ToString("0.00"))));
+    }
+    else if (share < 0.38f || share > 0.42f) { Console.WriteLine($"  FAIL: rank 15 gives {share:P0}, want ~40%"); failures++; }
     for (int i = 1; i < vals.Length; i++)
         if ((vals[i] - vals[i - 1]) * (e.Hi - e.Lo) < 0) { Console.WriteLine("  FAIL: not monotonic"); failures++; }
 }

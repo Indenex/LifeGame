@@ -22,6 +22,8 @@ Justin: one formula handles all skill gains and effects, front-loaded (first ~15
 
 - 2026-10-16 21:30: Justin: combat skills slower, ceiling easy to raise, skill matters more than item base. Added Progression.CombatPaceFactor (0.5) via Skills.Gain(points, failed, specId) (server passes spec.Id), IsCombat (stalking, archery), and Progression.Ceiling named constants for every effect top value.
 
+- 2026-10-16 21:35: Animals/Justin: Archery damage uses a documented EvenInHits shape exception (hits to kill fall evenly with rank), 0.44 -> 1.6 (Ceiling.ArcheryDamage); hit chance and draw time stay on the curve.
+
 ## Queued for a follow-up PR (after #237 merges, so CI is not restarted)
 - Things to try lines from Crafting (D-105): lash.bow "A green stick bent and strung with cord will throw a light shaft a long way."; carve.arrows "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks."; tool repair (no process id; Repair table, StructureKind.RepairTable, G at the table) "A tool gone soft in the hand is made good again at a table with a length of cord." Add to client/scripts/journal/NextSteps.cs once the ids exist on main (#266); repair needs an id from Crafting first.
 
