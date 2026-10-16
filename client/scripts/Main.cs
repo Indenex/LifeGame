@@ -79,6 +79,7 @@ public partial class Main : Node3D
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
+        survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
