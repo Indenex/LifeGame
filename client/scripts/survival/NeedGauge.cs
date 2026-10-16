@@ -11,8 +11,8 @@ public partial class NeedGauge : Control
     // Breathe to catch the eye. Left unset, a gauge breathes when its value runs low.
     public bool? Alert;
     readonly Glyph glyph;
-    float value = 1f, shown = 1f, pulse;
-    Color color = Colors.White;
+    float value = 1f, shown = 1f, pulse, drawnShown = -1f;
+    Color color = Colors.White, drawnColor;
 
     public NeedGauge(Glyph glyph)
     {
@@ -32,7 +32,15 @@ public partial class NeedGauge : Control
         float dt = (float)delta;
         shown = Mathf.Lerp(shown, value, 1f - Mathf.Exp(-5f * dt));
         pulse += dt;
-        QueueRedraw();
+        // Redraw only when something on the ring moves: the arc, its color, or a
+        // glow or breath that animates.
+        bool animating = Glow || (Alert ?? value < 0.25f);
+        if (animating || Mathf.Abs(shown - drawnShown) > 0.001f || color != drawnColor)
+        {
+            drawnShown = shown;
+            drawnColor = color;
+            QueueRedraw();
+        }
     }
 
     public override void _Draw()

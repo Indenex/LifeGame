@@ -68,6 +68,17 @@ public partial class Hud : CanvasLayer
                 if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-many") >= 0)
                     SetItems(Enumerable.Range(1, 12).Select(i => (LifeGame.Shared.Item)i)
                         .Select(i => new InventoryEntry(i, i.ToString(), 2)).ToList());
+                // --screenshot-clay shows each stage of clay side by side, to check they tell apart.
+                if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-clay") >= 0)
+                    SetItems(new[]
+                    {
+                        new InventoryEntry(LifeGame.Shared.Item.Stick, "Sticks", 12),
+                        new InventoryEntry(LifeGame.Shared.Item.Clay, "Clay", 5),
+                        new InventoryEntry(LifeGame.Shared.Item.CleanClay, "Clean clay", 3),
+                        new InventoryEntry(LifeGame.Shared.Item.TemperedClay, "Tempered clay", 2),
+                        new InventoryEntry(LifeGame.Shared.Item.Daub, "Daub", 2),
+                        new InventoryEntry(LifeGame.Shared.Item.Grit, "Stone grit", 1),
+                    });
                 GetTree().CreateTimer(3.5).Timeout += () => Note("The fire takes the stick and brightens");
             };
     }
