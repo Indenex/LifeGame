@@ -5,6 +5,7 @@ model-172 tools/render/render.sh model-172 71f7c7c "--time-of-day=0.45 --rain=0 
 model-172-items tools/render/scene.sh model-172-items 71f7c7c tools/render/scenes/model-172-items.txt
 model-172-walk env RENDER_SIZE=1280x720 tools/render/scene.sh model-172-walk 71f7c7c tools/render/scenes/model-172-walk.txt
 atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
+model-2 env TICKET=model-2 "VIEWS=row,people,faces,sheep,walk,items,items --old,held,clothes,stations,props,hearth" tools/render/scenes/model-1-style.sh 427d0cb
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
 ceramics-8 env BENCH=1 TICKET=ceramics-8 tools/render/scenes/ceramics-7.sh a432ab6 0.45
 ceramics-8-panel tools/render/render.sh ceramics-8-panel a432ab6 "--time-of-day=0.45 --screenshot-craft=3"
@@ -44,7 +45,6 @@ claims-9 tools/render/scene.sh claims-9 baecf02 tools/render/scenes/claims-9-nam
 claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
 env-1 tools/render/scenes/env-1.sh 1ade969
 env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
-model-1-style tools/render/scenes/model-1-style.sh eb8b399
 atmosphere-13 tools/render/scenes/atmosphere-13.sh
 bugfix-17 tools/render/scene.sh bugfix-17 caaf9ae tools/render/scenes/bugfix-17-pot.txt
 bugfix-17-before tools/render/scene.sh bugfix-17-before 7e79d22 tools/render/scenes/bugfix-17-pot.txt
