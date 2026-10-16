@@ -19,7 +19,9 @@ public partial class BuildingSystem
     float weatherTimer;
 
     CanvasLayer? basketLayer;
-    VBoxContainer basketInside = null!, basketCarried = null!;
+    // The two sides as round-slot grids (ui/Bag.cs, ui-18): drag between them to move a
+    // whole stack; click moves one, Shift+click all.
+    BagGrid basketInside = null!, basketCarried = null!;
     Label basketTitle = null!, basketInsideTitle = null!;
     ulong? openBasket;
 
@@ -200,12 +202,34 @@ public partial class BuildingSystem
         box.AddChild(basketTitle);
         var columns = new HBoxContainer();
         columns.AddThemeConstantOverride("separation", 28);
-        basketInside = new VBoxContainer();
-        basketCarried = new VBoxContainer();
+        basketInside = new BagGrid
+        {
+            Kind = "basket", Width = 5, Empty = "Nothing",
+            // A jar holds fewer stacks than a basket (Structures.StoreStacksFor); the server enforces it.
+            Capacity = () => openBasket is { } id && rows.TryGetValue(id, out var r)
+                ? Structures.StoreStacksFor((int)r.Kind, conn()?.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality)
+                : 0,
+            Source = () => conn() is { } c && openBasket is { } id
+                ? c.Db.BasketItem.Iter().Where(b => b.StructureId == id).Select(b => new BagStack((Item)b.Item, b.Quality, b.Count, b.Id))
+                : Enumerable.Empty<BagStack>(),
+            Clicked = (s, all) => conn()?.Reducers.BasketTake(s.Id, all ? s.Count : 1),
+            Accepts = d => d["from"].AsString() == "bag",
+            Receive = d => { if (openBasket is { } id) conn()?.Reducers.BasketPut(id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+        };
+        basketCarried = new BagGrid
+        {
+            Kind = "bag", Width = 5, Empty = "Nothing",
+            Source = () => conn() is { } c
+                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                : Enumerable.Empty<BagStack>(),
+            Clicked = (s, all) => { if (openBasket is { } id) conn()?.Reducers.BasketPut(id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
+            Accepts = d => d["from"].AsString() == "basket",
+            Receive = d => conn()?.Reducers.BasketTake((ulong)d["id"].AsInt64(), (uint)d["count"].AsInt64()),
+        };
         columns.AddChild(Column("In the basket", basketInside, out basketInsideTitle));
         columns.AddChild(Column("You carry", basketCarried, out _));
         box.AddChild(columns);
-        var hint = Hud.Text($"Click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
+        var hint = Hud.Text($"Drag moves a whole stack, click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
         var panel = Hud.Panel(box, Vector2.Zero);
@@ -215,9 +239,9 @@ public partial class BuildingSystem
         basketLayer.AddChild(panel);
     }
 
-    static Control Column(string title, VBoxContainer list, out Label label)
+    static Control Column(string title, Control list, out Label label)
     {
-        var col = new VBoxContainer { CustomMinimumSize = new Vector2(230, 0) };
+        var col = new VBoxContainer { CustomMinimumSize = new Vector2(5 * BagGrid.Slot + 4 * 10, 0) };
         label = Hud.Text(title, 14);
         label.Modulate = new Color(1, 1, 1, 0.75f);
         col.AddChild(label);
@@ -228,10 +252,8 @@ public partial class BuildingSystem
     void RefreshBasket()
     {
         if (openBasket is not { } id || basketLayer == null || conn() is not { } c) return;
-        Fill(basketInside, c.Db.BasketItem.Iter().Where(b => b.StructureId == id)
-            .Select(b => (Counted((Item)b.Item, b.Quality, b.Count), (Action<bool>)(all => c.Reducers.BasketTake(b.Id, all ? b.Count : 1)))));
-        Fill(basketCarried, c.Db.MyInventory.Iter().Where(i => i.Count > 0)
-            .Select(i => (Counted((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
+        basketInside.Refresh();
+        basketCarried.Refresh();
         int stacks = c.Db.BasketItem.Iter().Count(b => b.StructureId == id);
         var shape = rows.TryGetValue(id, out var s) ? Structures.Shape((int)s.Kind) : Structures.Shape((int)StructureKind.Basket);
         byte quality = c.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality;
@@ -239,34 +261,6 @@ public partial class BuildingSystem
         basketTitle.Text = $"{shape.Name}    {stacks} of {room}";
         // "In the basket", "In the jar": whichever store this is.
         basketInsideTitle.Text = $"In the {shape.Name.Split(' ')[^1].ToLowerInvariant()}";
-    }
-
-    // "6 sticks", "1 good coil pot": the amount in front of the label.
-    static string Counted(Item item, byte quality, uint count)
-    {
-        string label = ItemLook.Label(item, quality, count);
-        return $"{count} {char.ToLowerInvariant(label[0])}{label[1..]}";
-    }
-
-    static void Fill(VBoxContainer list, IEnumerable<(string label, Action<bool> move)> entries)
-    {
-        foreach (var child in list.GetChildren()) child.QueueFree();
-        foreach (var child in list.GetChildren()) list.RemoveChild(child);
-        bool any = false;
-        foreach (var (label, move) in entries)
-        {
-            any = true;
-            var button = new Button { Text = label, Alignment = HorizontalAlignment.Left, Flat = true, FocusMode = Control.FocusModeEnum.None };
-            button.AddThemeFontSizeOverride("font_size", 15);
-            button.Pressed += () => move(Input.IsKeyPressed(Key.Shift));
-            list.AddChild(button);
-        }
-        if (!any)
-        {
-            var empty = Hud.Text("Nothing", 14);
-            empty.Modulate = new Color(1, 1, 1, 0.5f);
-            list.AddChild(empty);
-        }
     }
 
     // Closes the basket when you walk away or press Esc; G toggles it and doors.
