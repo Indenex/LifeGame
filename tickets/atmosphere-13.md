@@ -1,9 +1,9 @@
 # atmosphere-13: Light through the forest
 Lane: World atmosphere and sound (visual side; audio moved to the Audio lane, D-079)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-13-forest-light (stacked on claude/atmosphere-sound-hlqfke / #66)
-PR: #136 (draft until the shots are in)
+PR: #136 (merged, D-141: merge now, tune from shots in a follow-up)
 
 ## Goal
 Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings and evenings in the woods get visible sun shafts slanting between the trunks and dappled light on the ground, strongest at low sun on fair days, gone under overcast or rain. Built on the volumetric fog Main.cs already enables (Forward+): fog density and anisotropy rise at low sun in wooded places (Atmosphere.Woodedness), with the sun's volumetric energy following. Compatibility has no volumetric fog, so it gets a cheap fallback (a few soft additive light-shaft cards toward the sun near the player) or nothing, decided by cost. Paired with Environment (D-078), whose tree density shapes the shafts. Done means Render lane shots of the same woods spot at dawn, mid-morning, noon and evening, fair and overcast, plus a PR green after #66.
@@ -23,8 +23,10 @@ Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings a
 
 - 2026-10-16 19:07: #136 CI green on 5605b42 (https://github.com/Indenex/LifeGame/actions/runs/38948095007: server and load test, Linux and Windows clients). Still draft pending the Render lane's dc26f57 shots. (Logged from the atmosphere-16 branch so #136's head stays put.)
 
+- 2026-10-16 19:08: Justin: merge now, tune later (D-141); #136 merged. Shaft tuning from the Render lane's dc26f57 shots goes in a small follow-up.
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
 ## Next step
-Wait for #136 CI and the Render lane's dc26f57 shots; tune shaft numbers, then mark #136 ready and send the PM the green sha.
+When the Render lane's dc26f57 shots arrive: tune the shaft numbers in a small follow-up PR.
