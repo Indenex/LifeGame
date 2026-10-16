@@ -83,6 +83,7 @@ public static partial class Module
         {
             ctx.Db.Player.Identity.Update(player with { Online = false });
             SurvivalDisconnected(ctx, player);
+            StanceDisconnected(ctx, player);
         }
     }
 
