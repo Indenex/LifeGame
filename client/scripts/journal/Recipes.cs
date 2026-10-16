@@ -30,6 +30,7 @@ public static class Recipes
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
+        [Skills.DryHide] = "Leave a stretched hide on its rack until it dries, then take the leather with {use}.",
     };
 
     public static string? HowTo(string processId)
