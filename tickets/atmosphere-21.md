@@ -1,7 +1,7 @@
 # atmosphere-21: Storms and lightning
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-21-storms
 PR: #286
 
@@ -19,9 +19,10 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 - 2026-10-16 22:01: Justin picked (a), seasonal storms as built (via the PM): about 1 front in 45 in summer, 1 in 50 in spring and autumn, 1 in 150 in winter. The PM asked Audio for a close-strike crack and a rain-on-roof swell.
 - 2026-10-16 22:05: Environment asked Integration for camera Far 300 (env-9). Bolts moved to 130-230 m with the cloud base at 160 m, so the whole bolt stays inside 300 m.
 - 2026-10-16 22:12: converted weather to data per docs/CONTENT.md (Justin's content rule, via Integration). shared/Weathers.cs holds the `WeatherDef` registry (fair, overcast, drizzle, light rain, steady rain, thunderstorm), with ranges, duration and odds per season in percent. Fair, overcast and storm odds are unchanged; the three rain kinds take the share storms leave, split 38:34:21 as before. WorldClock.NextWeather picks from it, and the F6 preview derives from it. Updated the docs/CONTENT.md Weather row. Merged main.
+- 2026-10-16 22:37: CI run 38974244675 green on 9404fa1; PR #286 merged.
 
 ## Open questions / blockers
 - Audio: any new thunder variants (send them a request when the visuals land).
 
 ## Next step
-Wait for #286 CI and send the PM the green sha. Render request sent (session_015S96hNrEu92FrCoNZqZZjs). Audio asked via the PM about a close-strike crack.
+Done. Tune bolt brightness, sky darkness and strike light from the Render lane's storm clips (request with session_015S96hNrEu92FrCoNZqZZjs).

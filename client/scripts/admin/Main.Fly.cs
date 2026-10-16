@@ -18,6 +18,7 @@ public partial class Main
     public void SetFlying(bool on)
     {
         flying = on;
+        jump.Cancel();
         velocity = Vector3.Zero;
         if (!on) me.SetAirHeight(0f);
     }

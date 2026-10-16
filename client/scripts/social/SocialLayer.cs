@@ -375,6 +375,9 @@ public partial class SocialLayer : Node
     // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
     public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
 
+    // Whether a standing claim covers this point; claim fences stop non-members even mid-jump (bugfix-25).
+    public bool ClaimStandingAt(float x, float z) => ClaimAt(x, z) != null;
+
     // claims-12: the centre of a claim you belong to whose border is near this point (fences snap to it).
     public (float x, float z)? ClaimBorderNear(float x, float z)
     {

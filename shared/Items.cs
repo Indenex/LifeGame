@@ -52,6 +52,9 @@ namespace LifeGame.Shared
         ClayLamp = 118,
         // Rendered from mutton fat in a pot (ceramics-9); lamp fuel.
         Tallow = 119,
+        // Roof tiles (ceramics-10): shaped at the bench, kiln-fired only; House building roofs with them.
+        UnfiredRoofTile = 120,
+        RoofTile = 121,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -72,6 +75,11 @@ namespace LifeGame.Shared
         WoolCloth = 199,
         WoolTunic = 200,
         LeatherWraps = 201,
+        RawVenison = 202,
+        DeerHide = 203,
+        Antler = 204,
+        CookedVenison = 205,
+        BurntVenison = 206,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -141,6 +149,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
             new ItemDef { Id = Item.UnfiredLamp, Name = "Unfired lamp", Plural = "Unfired lamps", HasQuality = true },
             new ItemDef { Id = Item.ClayLamp, Name = "Clay lamp", Plural = "Clay lamps", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredRoofTile, Name = "Unfired roof tile", Plural = "Unfired roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.RoofTile, Name = "Roof tile", Plural = "Roof tiles", HasQuality = true },
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
@@ -162,7 +172,12 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
             new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
             new ItemDef { Id = Item.WoolTunic, Name = "Wool tunic", Plural = "Wool tunics", HasQuality = true },
-            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true },
+            new ItemDef { Id = Item.RawVenison, Name = "Raw venison", Plural = "Raw venison", HasQuality = true },
+            new ItemDef { Id = Item.DeerHide, Name = "Deer hide", Plural = "Deer hides", HasQuality = true },
+            new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true },
+            new ItemDef { Id = Item.CookedVenison, Name = "Roast venison", Plural = "Roast venison", HasQuality = true },
+            new ItemDef { Id = Item.BurntVenison, Name = "Burnt venison", Plural = "Burnt venison" });
 
         public static ItemDef Def(Item item) => All[item];
 

@@ -166,6 +166,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawVenison) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedVenison,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
@@ -236,6 +242,12 @@ namespace LifeGame.Shared
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
+            },
+            new ProcessDef
+            {
+                Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
             },
             new ProcessDef
             {
@@ -333,6 +345,13 @@ namespace LifeGame.Shared
                 Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
                 Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                // A pat of clay pressed over a curve into a roof tile; kiln-fired only (ceramics-10).
+                Id = "clay.tile", Name = "Press a roof tile", Doing = "Pressing a roof tile", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
