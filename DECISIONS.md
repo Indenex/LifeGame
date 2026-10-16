@@ -735,3 +735,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-180 — 2026-10-16 — Campfire light reaches further at night
 **Decision:** Campfire light reaches further at night: about 10 m by day and about 14 m at night.
 **Who:** Justin ("Further at night")
+
+## D-181 — 2026-10-16 — Valley mist
+**Decision:** atmosphere-17 adds valley mist: dawn and dusk mist settles in low ground, ponds and streams.
+**Who:** Justin ("Yes, valley mist")
+
+## D-182 — 2026-10-16 — Server is the authority: rule now, harden before players
+**Decision:** Justin will host the server himself; players never get a server. Every game rule, number, check and outcome is decided by a server reducer; the client only predicts and draws. New features must validate on the server (reach, cooldowns, ownership, line of sight, speed, collision via `shared/` code) and must not send clients values that should stay hidden. A hardening pass closes existing client-only gaps before outside players join.
+**Who:** Justin ("is that going to fuck up our design process... we would need many many things to be server sided for hacking purposes."), answered with "Rule now, harden before players"
+
+## D-183 — 2026-10-16 — Launcher: two builds
+**Decision:** Two launcher builds. Justin's host launcher installs, starts and updates the server. Players get a client-only launcher that updates the game and connects to his server.
+**Who:** Justin ("Two builds")
