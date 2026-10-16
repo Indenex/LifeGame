@@ -9,7 +9,7 @@ This wiki tells you where to look and what to aim for. It does not give full rec
 1. [How the game plays](spirit.md): the core loop and what to expect
 2. [Your first hour](getting-started.md): fire, food, water, shelter
 3. [Keys and controls](controls.md): default keys and how to change them
-4. [Needs](needs.md): hunger, thirst, cold, wetness and carrying
+4. [Needs](needs.md): hunger, thirst, cold and carrying
 5. [Crafting and skills](crafting-and-skills.md): tiers, minigames, skills and the journal
 6. [Clay and pottery](clay-and-pottery.md): the first major goal
 7. [Building and claims](building-and-claims.md): shelters, doors, storage, land and weathering
