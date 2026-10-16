@@ -21,8 +21,11 @@ public partial class Sheep : Node3D
     // surfaces (wool, and the skin, face and legs), so two draw calls.
     readonly Skeleton3D skeleton = new();
     const int BodyBone = 0, FleeceBone = 1, HeadBone = 2, FirstLegBone = 3;
-    static readonly Vector3 HeadAt = new(0, 0.8f, 0.4f);
-    static readonly Vector3[] Hips = { new(-0.15f, 0.46f, 0.26f), new(0.15f, 0.46f, 0.26f), new(-0.15f, 0.46f, -0.26f), new(0.15f, 0.46f, -0.26f) };
+    // Joints of the Modeling lane's sheep (shorter legs, D-073); OldMesh keeps its own.
+    static readonly Vector3 HeadAt = SheepFigure.HeadAt;
+    static readonly Vector3[] Hips = SheepFigure.Hips;
+    static readonly Vector3 OldHeadAt = new(0, 0.8f, 0.4f);
+    static readonly Vector3[] OldHips = { new(-0.15f, 0.46f, 0.26f), new(0.15f, 0.46f, 0.26f), new(-0.15f, 0.46f, -0.26f), new(0.15f, 0.46f, -0.26f) };
     readonly float seed;
 
     Vector2 from, to;
@@ -63,14 +66,15 @@ public partial class Sheep : Node3D
     static Material? plainMaterial;
     static readonly Color Skin = new(0.80f, 0.66f, 0.58f);
 
-    // Wool takes the painted shader's relief, so the crevices between curls shade
-    // in like the ground and rocks do.
+    // Wool takes only a touch of the painted shader's relief.
     static ShaderMaterial WoolLook(Color color)
     {
         var material = Look.Solid(color);
-        material.SetShaderParameter("detail_scale", 3.0f);
-        material.SetShaderParameter("bump", 1.2f);
-        material.SetShaderParameter("cavity", 0.3f);
+        // Soft and calm, not crisp: a fleece with deep relief stood out from
+        // everything around it (Justin, 2026-10-16).
+        material.SetShaderParameter("detail_scale", 1.5f);
+        material.SetShaderParameter("bump", 0.15f);
+        material.SetShaderParameter("cavity", 0.08f);
         return material;
     }
 
@@ -313,7 +317,7 @@ public partial class Sheep : Node3D
         plainMaterial = Look.Solid(Colors.White);
         // The Modeling lane's sheep in the chosen style (model-2): same bones and
         // surfaces as below, so everything else here works unchanged.
-        sheepMesh = SheepFigure.Build(PlayerModel.Style, plainMaterial).Mesh;
+        sheepMesh = SheepFigure.Build(SheepFigure.Variant, plainMaterial).Mesh;
     }
 
     // The sheep from before the Modeling lane's (model-2), kept for comparisons.
@@ -344,23 +348,23 @@ public partial class Sheep : Node3D
         }
         // A stubby tail.
         Ellipsoid(st, FleeceBone, Vector3.Zero, white, center + new Vector3(0, 0.04f, -0.48f), new Vector3(0.08f, 0.09f, 0.07f), 0.96f, 8, 5);
-        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(0, 0.11f, 0.06f), new Vector3(0.1f, 0.07f, 0.09f), 1f, 9, 5);
-        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(-0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.95f, 8, 5);
-        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.97f, 8, 5);
+        Ellipsoid(st, HeadBone, OldHeadAt, white, new Vector3(0, 0.11f, 0.06f), new Vector3(0.1f, 0.07f, 0.09f), 1f, 9, 5);
+        Ellipsoid(st, HeadBone, OldHeadAt, white, new Vector3(-0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.95f, 8, 5);
+        Ellipsoid(st, HeadBone, OldHeadAt, white, new Vector3(0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.97f, 8, 5);
         st.Commit(sheepMesh);
 
         // Surface 1: the pink body under the wool, the dark face and the legs.
         st = Begin();
         Ellipsoid(st, BodyBone, Vector3.Zero, Skin, center + new Vector3(0, -0.03f, 0), core * 0.78f, 1f, 12, 7);
         // Skull, muzzle and ears that stick out sideways.
-        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0, 0.02f, 0.13f), new Vector3(0.105f, 0.115f, 0.16f), 1f, 10, 6);
-        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0, -0.05f, 0.25f), new Vector3(0.075f, 0.075f, 0.085f), 0.9f, 9, 5);
-        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(-0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
-        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
+        Ellipsoid(st, HeadBone, OldHeadAt, Face, new Vector3(0, 0.02f, 0.13f), new Vector3(0.105f, 0.115f, 0.16f), 1f, 10, 6);
+        Ellipsoid(st, HeadBone, OldHeadAt, Face, new Vector3(0, -0.05f, 0.25f), new Vector3(0.075f, 0.075f, 0.085f), 0.9f, 9, 5);
+        Ellipsoid(st, HeadBone, OldHeadAt, Face, new Vector3(-0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
+        Ellipsoid(st, HeadBone, OldHeadAt, Face, new Vector3(0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
         for (int i = 0; i < 4; i++)
         {
-            Ellipsoid(st, FirstLegBone + i, Hips[i], Face, new Vector3(0, -0.22f, 0), new Vector3(0.045f, 0.24f, 0.045f), 1f, 7, 4);
-            Ellipsoid(st, FirstLegBone + i, Hips[i], Face, new Vector3(0, -0.43f, 0.01f), new Vector3(0.052f, 0.04f, 0.058f), 0.7f, 7, 3);
+            Ellipsoid(st, FirstLegBone + i, OldHips[i], Face, new Vector3(0, -0.22f, 0), new Vector3(0.045f, 0.24f, 0.045f), 1f, 7, 4);
+            Ellipsoid(st, FirstLegBone + i, OldHips[i], Face, new Vector3(0, -0.43f, 0.01f), new Vector3(0.052f, 0.04f, 0.058f), 0.7f, 7, 3);
         }
         st.Commit(sheepMesh);
         sheepMesh.SurfaceSetMaterial(1, plainMaterial);
