@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_review
 Branch: crafting-chop-wood
-PR: (not yet)
+PR: #70
 
 ## Goal
 The stone axe finally has a use. Standing next to a tree with an axe (anything tagged Chopping), G offers "Chop a log" (process `chop.log`, tier 2, 15 s). It gives a Log (item 15), which burns for 6 minutes on a fire, against 90 s for a stick. With `Trees.Felling` on, the third log fells the tree: it topples with the forest's existing fall animation, and it grows back 2 hours later. With it off, a tree gives one log of deadwood every 5 minutes and never falls. Felled trees sync to every player, and adding them needs no world wipe.
