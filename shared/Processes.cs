@@ -34,6 +34,43 @@ namespace LifeGame.Shared
         public Ingredient(Item item, uint count = 1) { Item = item; Count = count; }
     }
 
+    // Where a process is made (D-098, D-112): by hand anywhere, or at a finished
+    // station inside a claim you have rights to. A station is a structure whose
+    // shape names its kind (StructureShape.Station). Append new kinds at the end.
+    public enum StationKind
+    {
+        None,
+        Table,
+        PottersBench,
+        Spindle,
+        DryingRack,
+    }
+
+    public static class StationInfo
+    {
+        // A station draws ingredients from storage this close to it, after the bag (D-112).
+        public const float StorageReach = 4f;
+
+        public static string Name(StationKind kind) => kind switch
+        {
+            StationKind.Table => "crafting table",
+            StationKind.PottersBench => "potter's bench",
+            StationKind.Spindle => "spindle station",
+            StationKind.DryingRack => "leather drying rack",
+            _ => "",
+        };
+
+        // The skill-practice id a station's building reports (build.* trains Builder).
+        public static string BuildProcess(StationKind kind) => kind switch
+        {
+            StationKind.Table => "build.table",
+            StationKind.PottersBench => "build.bench",
+            StationKind.Spindle => "build.spindle",
+            StationKind.DryingRack => "build.rack",
+            _ => "build.frame",
+        };
+    }
+
     public sealed class ProcessDef
     {
         public string Id = "";
@@ -51,6 +88,8 @@ namespace LifeGame.Shared
         public uint MakesCount = 1;
         // Below this minigame score the attempt fails and the inputs are lost.
         public float FailBelow;
+        // The station it is made at; None is a hand craft from the C menu.
+        public StationKind Station;
     }
 
     public static class Processes
@@ -136,7 +175,7 @@ namespace LifeGame.Shared
             {
                 Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
-                Seconds = Base(2, 2.5f), Makes = Item.Basket,
+                Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table,
             },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
