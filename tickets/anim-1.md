@@ -17,9 +17,12 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 
 - 2026-10-16 18:10: 6c06fec: sneak crouch (knees bent with feet planted, chest forward, head up, hands ready), added over idle and walk. Local player: Shift. Other players: inferred when they keep moving at about sneak speed for 0.4 s (server has no sneak flag), so a remote sneaker stands up when they stop.
 
+- 2026-10-16 18:35: 6ed8294: work poses. `animation/WorkMotion.cs` maps process ids to motions (Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend): kneel on the right knee and loop an arm motion; blends in while a job runs and you stand still. `animation/AvatarWork.cs` sets your own avatar's motion from my_craft_job; one-line hook in Main.cs after `crafting.Attach(conn)` (told Integration). Other players' work poses wait for the public craft_work table (atmosphere-12, branch claude/atmosphere-12-work-sounds): when it merges, subscribe in AvatarWork to CraftWork insert/delete and set `other(id).Work`.
+- Render requested 6ed8294 (work poses).
+
 ## Open questions / blockers
 - Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
 - Sent PM 2026-10-16: (a) walk speed 4.2 m/s is jogging pace, animated as a brisk walk-jog (default) vs slow walk to ~3 m/s; (b) sync a sneak flag for other players (default: infer from speed).
 
 ## Next step
-Wait for Render clips; meanwhile build work poses (gather/pick up first) driven by the player's CraftJob/process id.
+Wait for Render clips and tune from them; then one-shot gestures (pick up, dig, eat, strike) and remote work poses once craft_work merges.
