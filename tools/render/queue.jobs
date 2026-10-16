@@ -29,6 +29,7 @@ building-8 tools/render/scene.sh building-8 969a7ae tools/render/scenes/building
 atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
 crafting-15 tools/render/scenes/crafting-15.sh 859f25e
 ui-13 tools/render/scenes/ui-13.sh 2cdbc1c
+animals-11 tools/render/scene.sh animals-11 de48c3f tools/render/scenes/animals-11-stations.txt
 claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
 env-1 tools/render/scenes/env-1.sh 1ade969
 env-1-after tools/render/scenes/env-1-after.sh 0eaba8b

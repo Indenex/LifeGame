@@ -1,0 +1,77 @@
+# animals-11 (de48c3f): the Spindle station and the Leather drying rack beside a crafting
+# table, inside a claim 45 m out from spawn. Camera = puppet, a wide render camera.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=6.5,3.2,35,0.3
+wait 35
+# marker 4 sticks + 2 fiber; table 4 sticks, 2 cordage, 1 log; spindle station drop
+# spindle, 4 sticks, 2 cordage, 1 stone; rack 6 sticks, 2 cordage; hides need a flake
+give 1 40 50
+give 3 10 50
+give 8 12 50
+give 15 2 50
+give 2 4 50
+give 197 1 60
+give 6 1 60
+give 194 3 60
+goto 45 0
+place 2 0 -2 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+place 6 2 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+stroll 0 3
+arrive
+place 7 2 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 3
+burst 2 2
+place 8 -2 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 3
+burst 2 2
+# hides: scrape at the rack, then stretch onto its bar
+stroll -1 0
+arrive
+craft hide.scrape
+craft hide.scrape
+craft hide.scrape
+craft hide.stretch
+craft hide.stretch
+craft hide.stretch
+wait 4
+burst 3 2

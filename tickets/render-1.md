@@ -65,6 +65,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 21:45: ceramics-7 first try failed (camera client and ClayCheck sharing one identity fight over position); now the camera joins only during the simmer. bugfix-18 rerun at 6e56862 running. New: crafting-15 crafting table 859f25e via CraftCheck (scenes/crafting-15.sh).
 - 2026-10-16 21:50: new: release-1 launcher shots 02ae54a (Release & Launcher, session_015Je3JR5vZrzA7TwQYBSPgM): handed to an Opus subagent (light 2D app, fake releases, runs beside the queue); output renders/release-1-02ae54a-*.png.
 - 2026-10-16 22:00: release-1 launcher shots sent (2ffaf48; wipe dialog focus on Wipe and update flagged). New: ui-13 station panel 2cdbc1c (scenes/ui-13.sh: CraftCheck table + camera given fiber by SQL; no basket).
+- 2026-10-16 22:05: new: animals-11 stations de48c3f (Animals): scene animals-11-stations.txt (claim at 45,0; table, spindle station, drying rack, 3 hides stretched; no spin minigame, no wet/dry pair).
 
 ## Open questions / blockers
 - (none)
