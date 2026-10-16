@@ -84,8 +84,6 @@ namespace LifeGame.Shared
         // StructureKind it is set down as (appended after BrickHouse).
         public const int JarClay = 4;
         public const int JarStructureKind = 6;
-        // StructureKind.PottersBench (ceramics-8), after Crafting's table (7).
-        public const int BenchStructureKind = 8;
         // Only a kiln heats a piece this big evenly enough.
         public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar;
 
@@ -196,6 +194,9 @@ namespace LifeGame.Shared
             "cook.stew" => Item.PotOfStew,
             _ => null,
         };
+
+        // A pot that holds a dish while it cooks and comes back after eating, at its own quality.
+        public static bool IsVessel(Item item) => item == Item.CoilPotOfWater;
 
         public static float SimmerSeconds(Item dish) => dish == Item.PotOfStew ? StewSeconds : BrothSeconds;
 

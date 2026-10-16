@@ -20,6 +20,7 @@ public static partial class Module
         [SpacetimeDB.Index.BTree]
         public uint PlayerId;
         public ushort Dish;      // Item: PotOfBroth or PotOfStew
+        // The pot's own quality: the dish carries it, so eating gives the pot back as it was.
         public byte Quality;
         public float X;
         public float Z;
@@ -43,7 +44,7 @@ public static partial class Module
         {
             foreach (var input in def.Consumes)
                 AddToInventory(ctx, job.Owner, input.Item, input.Count,
-                    input.Item == Item.CoilPotOfWater ? job.Quality : Items.RawQuality);
+                    ClayRules.IsVessel(input.Item) ? PotQuality(job) : Items.RawQuality);
             News(ctx, job.PlayerId, refusal + " The food goes back in your bag.");
             return;
         }
@@ -61,7 +62,7 @@ public static partial class Module
             Owner = job.Owner,
             PlayerId = job.PlayerId,
             Dish = (ushort)dish,
-            Quality = job.Quality,
+            Quality = PotQuality(job),
             X = x,
             Z = z,
             ChunkX = World.ChunkOf(x),
@@ -70,6 +71,9 @@ public static partial class Module
         });
         News(ctx, job.PlayerId, $"Your {ClayRules.DishName(dish)} is simmering. In about {ClayRules.SimmerSeconds(dish) / 60f:0.#} min, {{use}} by the pot takes it off.");
     }
+
+    // The coil pot's quality as it went in; older jobs without one fall back to the craft's.
+    static byte PotQuality(CraftJob job) => job.VesselQuality > 0 ? job.VesselQuality : job.Quality;
 
     // Takes your pot off once it has simmered long enough.
     [SpacetimeDB.Reducer]
