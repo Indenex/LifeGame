@@ -4,8 +4,9 @@
 //
 // Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [decay=0|1]
 // Run it on a fresh database: it lays out a claim marker at (35, 30).
-// With decay=1 it also waits for the claim to fall; run
-// `spacetime call <db> set_claim_lifetime 30` as the database owner first.
+// With decay=1 it also waits for the claim to fall.
+// It sets the newcomer grace to 0 (and with decay=1 the claim lifetime to 30 s) itself,
+// through spacetimedb-cli as the database owner, so a local run matches CI.
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -15,10 +16,35 @@ string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 bool decay = args.Length > 2 && args[2] == "1";
 
+// Admin settings the checks below rely on. Grace is fixed when a player joins, so
+// this runs before A and B connect.
+AsOwner("set_newcomer_grace", "0");
+if (decay) AsOwner("set_claim_lifetime", "30");
+
 var a = new Tester("A", uri, db);
 var b = new Tester("B", uri, db);
 var all = new[] { a, b };
 int failures = 0;
+
+// Calls an admin reducer as the CLI's identity, which published the database. Runs
+// from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
+void AsOwner(string reducer, string value)
+{
+    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer, value })
+    {
+        WorkingDirectory = Path.GetTempPath(),
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+    })!;
+    string output = run.StandardOutput.ReadToEnd() + run.StandardError.ReadToEnd();
+    run.WaitForExit();
+    if (run.ExitCode != 0)
+    {
+        Console.WriteLine($"FAIL  {reducer} {value} as the database owner: {output.Trim()}");
+        Environment.Exit(1);
+    }
+    Console.WriteLine($"Set {reducer} {value}");
+}
 
 void Pump(Func<bool> until, double seconds, string what)
 {
@@ -221,7 +247,7 @@ a.Conn.Reducers.Dismantle(hut!.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
-// --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
+// --- Fighting (claims-3). The grace was set to 0 at the top.
 float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
 // Not on claimed land with fighting off. Tend first: CI gives claims only 30 s.
 Walk(a, claim.X + 1.5f, claim.Z);
