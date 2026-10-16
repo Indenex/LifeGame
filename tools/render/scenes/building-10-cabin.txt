@@ -1,0 +1,54 @@
+# building-10 (PR #271): a finished log cabin (kind 11, door on +z, 4.8 x 4 m) with the
+# player in front, then a half-built one at the Log walls stage with logs beside it.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=9,3.2,25,0.8
+wait 35
+give 1 40 50
+give 2 8 50
+give 15 40 50
+give 8 4 50
+give 3 40 50
+stroll 0 3
+arrive
+place 11 0 -4.5 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 3
+burst 4 2
+key g
+wait 3
+burst 3 2
+# half-built: new cabin 12 m east, stone and 8 logs only: sill done, walls half up
+stroll 12 0
+arrive
+sql DELETE FROM inventory_item WHERE item = 15
+give 15 12 50
+place 11 0 -4.5 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+give 15 4 50
+drop 15
+drop 15
+drop 15
+wait 3
+burst 4 2

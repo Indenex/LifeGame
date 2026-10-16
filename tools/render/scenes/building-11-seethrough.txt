@@ -1,0 +1,70 @@
+# building-11 (PR #272): a shelter fades to a see-through ghost with a clear circle round
+# the player who walks in. Clay hut, mud-brick house, log cabin; doors face +z.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 120 50
+give 2 20 50
+give 15 40 50
+give 8 8 50
+give 3 80 50
+give 110 40 50
+give 109 40 50
+place 1 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 2
+stroll 0 -2.5
+arrive
+wait 2
+burst 4 1.5
+stroll 8 5.5
+arrive
+place 5 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 2
+stroll 0 -2.5
+arrive
+wait 2
+burst 4 1.5
+stroll 8 5.5
+arrive
+place 11 0 -3 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 2
+stroll 0 -2.5
+arrive
+wait 2
+burst 4 1.5
