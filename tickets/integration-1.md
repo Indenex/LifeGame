@@ -36,6 +36,7 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 18:45: D-130: Justin chose the `world-wipe` label. PR from `claude/integration-wipe-label` carries it plus these ticket entries. Environment lane is session_012hVejTxLoxBpZyX3GQmNL9.
 - 2026-10-16 19:00: #148 (world-wipe label, D-130) merged; on its PR run the upgrade check ran and the wipe step was skipped. Reviewed Release's #161 (release.yml): blocker (wipe flag read only from the head commit's PR, missed superseded builds) fixed in 057b278; approved.
 - 2026-10-16 19:10: check-in vs main c70d2fb: #105 (StorageJar = StructureKind 6, implicit) makes #160, #165, #90 (CraftingTable) and #153 (Fence/Gate) conflict in Building.cs, Structures.cs, StructureModel.cs. Told lanes: append after StorageJar, keep Shapes/StageCosts lists in the same order, prove with tools/upgrade-check.sh. Order: #160, then #165 and #90; #153 either side. Clean: #163, #161, #151, #149, #122, #119, #112, #108, #100.
+- 2026-10-16 19:15: D-142: renders never block merges (#100 mergeable once green; Animation told). D-143: Justin pre-approved the one wipe for whenever env-2 is ready; told the 10 lanes with server tables (Crafting, Survival, Journal, Claims, Atmosphere, House building, Animals, Ceramics, Audio, Bugfix) to fold wipe-needing schema changes into that window via Environment, and told Environment its PR goes first.
 
 ## Open questions / blockers
 - Suggested to House building: explicit StructureKind values so enum clashes show in review (their file; no decision needed).
