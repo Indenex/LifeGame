@@ -29,6 +29,7 @@ A Sheep Hide from butchering becomes Leather the way clay dries: scrape it with 
 - 2026-10-16 01:50: switched to the AnimalsOnPlaced hook; local stretch still places a rack.
 
 - 2026-10-16 03:45: #51 merged; branch restarted from main 896e9bd+ with animals-5 merged in; server + client build, upgrade check passed.
+- 2026-10-16 04:10: PM fold-in: fleece read near-white at dusk/night. Fleece albedo lowered (0.87→0.74 cream, 0.80→0.68 tan) and wool gets the painted shader's relief (detail 3, bump 1.2, cavity 0.3). Screenshots screenshots/animals-07-dusk-before/after.png, animals-07-day-after.png.
 
 ## Open questions / blockers
 - (none) PM answered: hide.* maps to Husbandry for now (Skills lane added it to skills-10); own PR after #51; used-up cordage is fine.
