@@ -132,7 +132,10 @@ public static partial class Module
 
         var form = (ClayForm)piece.Form;
         float moisture = MoistureNow(ctx, piece);
-        if (form != ClayForm.Brick && !ClayRules.KilnOnly(form) && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire)
+        // A dry pot the fire can't take (too little fuel, or a full ring) is picked up
+        // instead, so a pot shaped by a fire can still be carried away (bugfix-18).
+        if (form != ClayForm.Brick && !ClayRules.KilnOnly(form) && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire
+            && (ClayRules.TooWetToFire(moisture) || FireCanTakePot(ctx, fire)))
         {
             if (ClayRules.TooWetToFire(moisture) && !evenIfDamp)
                 throw new Exception($"The pot is still {ClayRules.Describe(moisture)}. Fired now, it will crack.");
@@ -331,6 +334,10 @@ public static partial class Module
         });
         ctx.Db.FiringTimer.Insert(new FiringTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), PieceId = piece.Id });
     }
+
+    static bool FireCanTakePot(ReducerContext ctx, Fire fire) => ClayRules.FireCanTakePot(
+        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f,
+        FreeFireSlot(ctx, fire) is null ? ClayRules.MaxPotsPerFire : 0);
 
     // A pit firing needs a fire with fuel for the whole firing.
     static void RequireFuelForFiring(ReducerContext ctx, Fire fire)

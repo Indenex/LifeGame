@@ -123,6 +123,11 @@ namespace LifeGame.Shared
             : seconds < 60f ? "under a minute left"
             : $"about {MathF.Round(seconds / 60f):0} min left";
 
+        // Whether a fire can take one more pot: fuel for a whole firing and a free place
+        // in its ring. When it can't, G by a dry pot picks it up instead (bugfix-18).
+        public static bool FireCanTakePot(float fuelSecondsLeft, int potsInFire) =>
+            fuelSecondsLeft >= PitFireSeconds && potsInFire < MaxPotsPerFire;
+
         // Fuel for a pit firing, in sticks, when a fire has this many seconds left.
         public static int SticksForFiring(float secondsLeft, float stickSeconds) =>
             (int)MathF.Ceiling(Math.Max(0f, PitFireSeconds - secondsLeft) / stickSeconds);
