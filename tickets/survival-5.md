@@ -16,10 +16,13 @@ Rain and wading make you wet; wetness builds and fades gradually. Being wet make
 
 ## Progress log
 - 2026-10-16: `Needs.WetnessRate` in shared/Needs.cs; Vitals gains `Wetness`, `WetnessRate` ([Default(0f)], additive). Chill now uses wetness instead of current rain. Server builds.
+- 2026-10-16: fixed wetness still changing while logged off (disconnect now pauses it).
 - 2026-10-16: client `WetLook.cs`: per-player MaterialOverlay that darkens and adds a soft sheen, plus a faint drip particle when wetness > 0.15. Client builds.
+
+- 2026-10-16: merged main (b3c6414). Locally: LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck, SocialTest pass; `tools/upgrade-check.sh origin/main` passes (no wipe). Screenshots sent to PM: screenshots/13-survival-wet-dry-vs-soaked.png, 14-survival-wet-in-rain.png. Soaked skin reads about 19% darker with a soft sheen and a few drops.
 
 ## Open questions / blockers
 - Only your own wetness is visible (Vitals is private), so other players don't look wet yet. Would need a public wetness field; asked PM.
 
 ## Next step
-Render the rain screenshot (local server, weather row set to rain 0.8), send it to the PM, run the CI suite locally.
+When PR #48 merges: restart claude/survival-needs-g7yrhi from main, cherry-pick the survival-5 commits from local branch survival-5-local (skip the main merge), push, open the PR. If the local branch is lost, the code is described above; re-implement from this ticket.
