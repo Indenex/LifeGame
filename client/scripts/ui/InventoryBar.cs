@@ -14,18 +14,25 @@ public record InventoryEntry(Item Item, string Label, uint Count);
 public partial class InventoryBar : Control
 {
     const float Slot = 54f, IdleAlpha = 0.45f, IdleAfter = 6f;
+    // Kept clear on each side: the needs rings bottom right, the hint line bottom left.
+    const float SideRoom = 430f, MinScale = 0.8f, Gap = 14f;
 
-    readonly HBoxContainer row = new() { MouseFilter = MouseFilterEnum.Ignore };
+    readonly HFlowContainer row = new() { MouseFilter = MouseFilterEnum.Ignore };
     readonly Label name = new() { HorizontalAlignment = HorizontalAlignment.Center };
     Dictionary<string, uint> last = new();
-    float sinceChange = IdleAfter, nameTime, nameX, alpha = 1f;
+    float sinceChange = IdleAfter, nameTime, alpha = 1f, cover;
+    int nameAt = -1;
+
+    // How far above the bottom edge the row reaches; notes sit above it.
+    public float Top => Size.Y - row.Position.Y;
 
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        row.AddThemeConstantOverride("separation", 14);
-        row.Alignment = BoxContainer.AlignmentMode.Center;
+        row.AddThemeConstantOverride("h_separation", (int)Gap);
+        row.AddThemeConstantOverride("v_separation", 10);
+        row.Alignment = FlowContainer.AlignmentMode.Center;
         AddChild(row);
         Hud.Style(name, 14, 0.85f);
         name.Modulate = new Color(1, 1, 1, 0);
@@ -51,7 +58,6 @@ public partial class InventoryBar : Control
             row.AddChild(SlotFor(item));
             index++;
         }
-        row.ResetSize();
 
         if (!changed) return;
         sinceChange = 0f;
@@ -59,7 +65,7 @@ public partial class InventoryBar : Control
         {
             name.Text = gained.Label;
             name.ResetSize();
-            nameX = gainedAt * (Slot + 14) + Slot / 2;
+            nameAt = gainedAt;
             nameTime = 2.6f;
         }
     }
@@ -69,16 +75,27 @@ public partial class InventoryBar : Control
         float dt = (float)delta;
         sinceChange += dt;
         alpha = Mathf.MoveToward(alpha, sinceChange < IdleAfter ? 1f : IdleAlpha, dt * (sinceChange < IdleAfter ? 4f : 0.6f));
-        row.Modulate = new Color(1, 1, 1, alpha);
+        // Steps aside while a panel covers the world.
+        cover = Mathf.MoveToward(cover, Panels.Open() ? 1f : 0f, dt * 6f);
+        row.Modulate = new Color(1, 1, 1, alpha * (1f - cover));
         nameTime -= dt;
-        name.Modulate = new Color(1, 1, 1, Mathf.Clamp(nameTime, 0f, 1f));
+        name.Modulate = new Color(1, 1, 1, Mathf.Clamp(nameTime, 0f, 1f) * (1f - cover));
         // Centred along the bottom edge as slots come and go; the name floats above.
-        var size = row.GetCombinedMinimumSize();
-        row.Size = size;
-        row.Position = new Vector2((Size.X - size.X) / 2, Size.Y - size.Y - 22);
+        // A long row first shrinks a little, then wraps onto a second row, so it
+        // never runs into the corners.
+        int count = row.GetChildCount();
+        float natural = Mathf.Max(count * Slot + (count - 1) * Gap, Slot);
+        float room = Mathf.Max(Size.X - 2 * SideRoom, 3 * Slot);
+        float scale = Mathf.Clamp(room / natural, MinScale, 1f);
+        float width = Mathf.Min(natural, room / scale);
+        row.Size = new Vector2(width, 0);
+        var size = new Vector2(width, row.GetCombinedMinimumSize().Y);
+        row.Scale = new Vector2(scale, scale);
+        row.Position = new Vector2((Size.X - width * scale) / 2, Size.Y - size.Y * scale - 22);
         var nameSize = name.GetCombinedMinimumSize();
         name.Size = nameSize;
-        name.Position = row.Position + new Vector2(nameX - nameSize.X / 2, -nameSize.Y - 6);
+        var over = nameAt >= 0 && nameAt < count ? row.GetChild<Control>(nameAt).Position : Vector2.Zero;
+        name.Position = row.Position + new Vector2((over.X + Slot / 2) * scale - nameSize.X / 2, over.Y * scale - nameSize.Y - 6);
     }
 
     static Control SlotFor(InventoryEntry entry)
