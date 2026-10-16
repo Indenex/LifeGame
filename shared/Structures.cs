@@ -13,8 +13,9 @@ namespace LifeGame.Shared
         public float HalfWidth, HalfDepth, Radius;
         // How far apart two structures' centers must be, as the sum of both clearances.
         public float Clearance;
-        // Shelter given to someone standing inside once it is finished, 0 to 1.
-        public float RainCover, Warmth;
+        // Shelter given to someone standing inside once it is finished, 0 to 1 (D-116).
+        // Warmth is the share of the cold it keeps off; ShutWarmth applies with the door shut.
+        public float RainCover, Warmth, ShutWarmth;
         // Round shapes only: players can't walk into the footprint once the first stage is done.
         public bool Solid;
         // Where a hung door goes: the doorway's center on the local +Z axis, 0 when it has none.
@@ -39,7 +40,7 @@ namespace LifeGame.Shared
                 Name = "Lean-to",
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
-                RainCover = 0.8f, Warmth = 0.3f,
+                RainCover = 0.6f, Warmth = 0.2f,
                 Stages = new[] { "Frame", "Lashing", "Ribs", "Thatch" },
             },
             new StructureShape
@@ -47,7 +48,7 @@ namespace LifeGame.Shared
                 Name = "Clay hut",
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
-                RainCover = 1f, Warmth = 0.75f,
+                RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
                 DoorwayZ = 1.7f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
@@ -84,7 +85,7 @@ namespace LifeGame.Shared
                 Name = "Mud-brick house",
                 HalfWidth = 2.4f, HalfDepth = 2.0f,
                 Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.85f,
+                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
@@ -184,9 +185,8 @@ namespace LifeGame.Shared
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",
             DaubProcess = "build.daub", RoofProcess = "build.roof", WeaveProcess = "build.weave", DoorProcess = "build.door";
 
-        // A hurdle door on a finished clay hut: what hanging it takes, and the warmth it keeps in when shut.
+        // A hurdle door on a finished clay hut: what hanging it takes (its warmth is the shape's ShutWarmth).
         public const int DoorSticks = 4, DoorFiber = 2;
-        public const float ClosedDoorWarmth = 0.9f;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
 

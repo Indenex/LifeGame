@@ -2,13 +2,13 @@
 Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
 Status: in_progress
-Branch: claude/house-building-8ueqz2 (pushed after #61 merges)
+Branch: claude/house-building-8ueqz2
 PR: (not yet)
 
 ## Goal
 Justin picked the fence first (D-087; then a raised hearth, then a log cabin). From the B build menu (Tab to cycle) a player lays out a 2 m stick fence or a gate. A fence goes up in two stages: posts, then lashed rails. A new length laid near a free end of another fence snaps on, end to end, along its own heading, so T turns corners. A finished gate hangs a woven hurdle, shut. G opens and shuts it for anyone, and Shift+G bars it for whoever laid it out or the claim's members, the same as a hut door. Players can't walk through a finished fence or a shut gate. Sheep stop at fences, shut gates, and hut and house walls; open doorways let them through. That last part needs one line from Animals, calling `StructureBlocksStep`.
 
-Default costs, starting low per D-075 (sent to the PM): fence posts 2 sticks, rails 2 sticks + 1 fiber; gate posts 2 sticks, hurdle 3 sticks + 2 fiber.
+Costs (D-117, Justin approved the cheap ones): fence posts 2 sticks, rails 2 sticks + 1 fiber; gate posts 2 sticks, hurdle 3 sticks + 2 fiber.
 
 ## Progress log
 - 2026-10-16 18:20: built locally on top of #61's green head fb3e604.
@@ -23,9 +23,12 @@ Default costs, starting low per D-075 (sent to the PM): fence posts 2 sticks, ra
 - 2026-10-16 18:25: Animals live-tested 70f5850 merged with #115. A 6 m fence pen around a flock, with a bot charging it for 90 s: the sheep's furthest point was 2.70 m from the centre (7.0 m without the pen). No server errors. Animals asked the PM to merge #115 first.
 - Ceramics noticed a basket or jar offered G only within 1.2 m, while the server accepts 2.2 m. The client now offers it out to WorkReach - 0.2 m.
 
+- 2026-10-16 18:40: #61 merged. D-116 and D-117 approved. On claude/house-building-8ueqz2: merged main, building-8 (from the -fence branch) and Animals' claude/animals-fence-5gkntn (#115, stacked, because the hook declaration is needed to compile).
+  - D-116 shelter numbers, carried in this PR: lean-to rain cover 0.6 / warmth 0.2; hut 0.9 / 0.4 (0.5 door shut); house 1.0 / 0.5 (0.55 door shut); a fire inside the house is still 1. ClosedDoorWarmth is replaced by a per-shape ShutWarmth.
+
 ## Open questions / blockers
 - Animals agreed and declared `StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref bool blocked)` in AnimalFires.cs (PR #115, claude/animals-fence-5gkntn 22c0a61). BuildingFence.cs implements it (8ebc64b). A partial implementation without its declaration won't compile, so this PR must merge after #115 (merge main once #115 is in). Animals will live-test sheep at a fence.
-- PM: fence and gate costs (defaults above), to confirm with Justin.
+- (none) Costs D-117 and shelter D-116 are decided. This PR includes #115's commits until #115 merges.
 
 ## Next step
 Once #61 and #115 are merged, on claude/house-building-8ueqz2 merge main and claude/house-building-8ueqz2-fence, push, run the full local checks and open the building-8 PR. Then send a render request for a fenced yard with a gate, open and shut.
