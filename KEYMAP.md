@@ -40,6 +40,19 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Basket panel | Click moves one item, Shift+click moves all, G or Esc close |
 
 
+## Chat commands
+
+Typed into chat (Enter). Admin commands show in F1 only for admins.
+
+| Command | Action | Who | Lane |
+|---|---|---|---|
+| /name Name | Change your name | everyone | Claims |
+| /day | Set the time to mid-morning; the light eases over a second or two | admin | Atmosphere |
+| /night | Set the time to night | admin | Atmosphere |
+| /time 0-1 | Set the time of day (0.25 sunrise, 0.5 noon, 0.75 sunset) | admin | Atmosphere |
+
+The publisher is always an admin. To make your in-game player an admin, run once from the machine that published: `spacetime call lifegame make_admin '"YourName"'`.
+
 ## Debug only (not in player builds)
 
 | Key | Action | Lane | Today |

@@ -5,9 +5,11 @@ namespace LifeGame;
 // One ring gauge: a dim track, an arc for the value, and a small icon.
 public partial class NeedGauge : Control
 {
-    public enum Glyph { Berry, Drop, Flame }
+    public enum Glyph { Berry, Drop, Flame, Sack }
 
     public bool Glow;
+    // Breathe to catch the eye. Left unset, a gauge breathes when its value runs low.
+    public bool? Alert;
     readonly Glyph glyph;
     float value = 1f, shown = 1f, pulse;
     Color color = Colors.White;
@@ -38,7 +40,7 @@ public partial class NeedGauge : Control
         var center = Size / 2f;
         const float radius = 19f;
         // Low needs breathe gently so they catch the eye without alarm.
-        float low = value < 0.25f ? 0.5f + 0.5f * Mathf.Sin(pulse * 4f) : 1f;
+        float low = (Alert ?? value < 0.25f) ? 0.5f + 0.5f * Mathf.Sin(pulse * 4f) : 1f;
         var c = new Color(color, 0.55f + 0.45f * low);
 
         if (Glow)
@@ -69,6 +71,14 @@ public partial class NeedGauge : Control
                     center + new Vector2(-6, -3), center + new Vector2(-4, 0), center + new Vector2(-3, -6),
                 }, c);
                 DrawCircle(center + new Vector2(0, 4), 3f, new Color(1f, 0.92f, 0.75f, 0.6f * low));
+                break;
+            case Glyph.Sack:
+                // A full sack tied at the neck.
+                DrawCircle(center + new Vector2(0, 3), 7f, c);
+                DrawColoredPolygon(new[] { center + new Vector2(-3.5f, -2), center + new Vector2(-2, -7), center + new Vector2(2, -7), center + new Vector2(3.5f, -2) }, c);
+                DrawLine(center + new Vector2(-3, -6), center + new Vector2(3, -6), icon, 1.5f, true);
+                DrawLine(center + new Vector2(-2, -7.5f), center + new Vector2(-4, -10), c, 1.5f, true);
+                DrawLine(center + new Vector2(2, -7.5f), center + new Vector2(4, -10), c, 1.5f, true);
                 break;
         }
     }

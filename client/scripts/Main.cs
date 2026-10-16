@@ -13,6 +13,13 @@ namespace LifeGame;
 // or the LIFEGAME_SERVER and LIFEGAME_DB environment variables.
 public partial class Main : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NWalkLeft = "walk_left";
+    static readonly StringName NWalkRight = "walk_right";
+    static readonly StringName NWalkBack = "walk_back";
+    static readonly StringName NWalkForward = "walk_forward";
+    static readonly StringName NSneak = "sneak";
+
     const float WalkSpeed = 4.2f;
     const float SendInterval = World.MoveTickMillis / 1000f;
 
@@ -30,7 +37,7 @@ public partial class Main : Node3D
     readonly Avatar me = new("You");
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
-    readonly Dictionary<ulong, Node3D> items = new();
+    readonly GroundItems items = new();
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -59,6 +66,7 @@ public partial class Main : Node3D
         view.AddChild(cameraRig);
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
+        view.AddChild(items);
         clay = new CeramicsView(view, terrain.HeightAt, me, hud.Note);
         AddChild(clay);
         AddChild(hud);
@@ -75,12 +83,15 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        social.HideChip = () => survival.Mourning;
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();
@@ -94,6 +105,7 @@ public partial class Main : Node3D
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
+        if (Arg("frame-stats") is { } stats) AddChild(new FrameStats(stats));
         Connect();
         ScheduleScreenshot();
     }
@@ -302,8 +314,8 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
-        herd.Bind(conn, terrain);
-        conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        herd.Bind(conn, terrain, () => me.Position);
+        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
@@ -317,6 +329,11 @@ public partial class Main : Node3D
         myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
+        ServerCheck.Warn = hud.Warn;
+        c.SubscriptionBuilder()
+            .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
+            .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
+            .Subscribe(new[] { "SELECT * FROM server_info" });
         SubscribeSelf();
         atmosphere.Connect(c);
     }
@@ -342,7 +359,7 @@ public partial class Main : Node3D
             })
             .OnError((_, e) =>
             {
-                hud.Note($"Subscription error: {e.Message}");
+                ServerCheck.Failed(e.Message, hud.Note);
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
@@ -366,8 +383,13 @@ public partial class Main : Node3D
                 old?.Unsubscribe();
                 if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
             })
-            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
-            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).ToArray());
+            .OnError((_, e) =>
+            {
+                ServerCheck.Failed(e.Message, hud.Note);
+                // Still wake up and walk: one failed subscription must not freeze the player.
+                if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
+            })
+            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -435,19 +457,13 @@ public partial class Main : Node3D
 
     void AddItem(WorldItem item)
     {
-        if (items.ContainsKey(item.Id)) return;
-        var node = new MeshInstance3D { Mesh = ItemLook.MeshFor((Item)item.Item) };
+        if (items.Has(item.Id)) return;
         float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
-        node.Position = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        node.Rotation = new Vector3(0, yaw, 0);
-        items[item.Id] = node;
-        view.AddChild(node);
+        var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
 
-    void RemoveItem(ulong id)
-    {
-        if (items.Remove(id, out var node)) node.QueueFree();
-    }
+    void RemoveItem(ulong id) => items.Remove(id);
 
     // --- Frame loop -------------------------------------------------------
 
@@ -502,8 +518,8 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
+        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed(NSneak) ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 

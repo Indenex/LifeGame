@@ -79,6 +79,13 @@ public partial class Hud : CanvasLayer
         statusTime = 6f;
     }
 
+    // A status line that stays until replaced, for something the player must act on.
+    public void Warn(string text)
+    {
+        status.Text = text;
+        statusTime = float.PositiveInfinity;
+    }
+
     public void Note(string text)
     {
         toast.Text = text;

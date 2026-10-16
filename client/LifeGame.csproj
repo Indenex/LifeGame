@@ -12,4 +12,6 @@
     <Compile Include="../shared/**/*.cs" LinkBase="Shared" />
   </ItemGroup>
 
+  <Import Project="../shared/BuildStamp.targets" />
+
 </Project>

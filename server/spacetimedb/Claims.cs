@@ -225,21 +225,20 @@ public static partial class Module
     }
 
     // Dismantling the marker ends the claim.
-    // Weathering (D-046): nothing inside a standing claim weathers. Building's
-    // Weathering.cs asks this. Declared here until Weathering.cs lands; when it does,
-    // keep exactly one declaration of the hook (drop one of the two lines).
-    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim);
-    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim)
-    {
-        if (ClaimAt(ctx, x, z) is not null) inClaim = true;
-    }
-
     // claims-2: the owner of a standing claim may take down anything built inside
     // it, members' buildings included (the land is theirs). Building's Dismantle
     // asks this when the caller isn't whoever laid the building out.
     static partial void CanClearStructure(ReducerContext ctx, Structure s, ref bool allowed)
     {
         if (ClaimAt(ctx, s.X, s.Z) is { } claim && claim.Owner == ctx.Sender) allowed = true;
+    }
+
+    // Weathering (D-046): nothing inside a standing claim weathers. Building's
+    // Weathering.cs asks this through InClaimHook.
+    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim);
+    static partial void InClaimHook(ReducerContext ctx, float x, float z, ref bool inClaim)
+    {
+        if (ClaimAt(ctx, x, z) is not null) inClaim = true;
     }
 
     static partial void OnStructureRemoved(ReducerContext ctx, Structure s)
@@ -278,9 +277,44 @@ public static partial class Module
     {
         var claim = RequireOwnStandingClaim(ctx);
         var who = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
+        AddMember(ctx, claim, who);
+    }
+
+    // claims-4: the owner adds someone by name from the claim panel, near or far,
+    // online or not. Names are not unique: if several people share one and exactly
+    // one of them is online, that one is meant; otherwise invite them in person.
+    [SpacetimeDB.Reducer]
+    public static void AddClaimMemberByName(ReducerContext ctx, string name)
+    {
+        var claim = RequireOwnStandingClaim(ctx);
+        name = (name ?? "").Trim();
+        if (name.Length == 0) throw new Exception("Type the name of whoever you want to add");
+        var matches = ctx.Db.Player.Iter()
+            .Where(p => string.Equals(p.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (matches.Count == 0) throw new Exception($"Nobody called {name} has been here");
+        if (matches.Count > 1)
+        {
+            var online = matches.Where(p => p.Online).ToList();
+            if (online.Count != 1)
+                throw new Exception($"More than one person goes by {name}. Invite them in person, near the marker");
+            matches = online;
+        }
+        AddMember(ctx, claim, matches[0]);
+    }
+
+    static void AddMember(ReducerContext ctx, Claim claim, Player who)
+    {
         if (who.Identity == ctx.Sender) throw new Exception("You already own this claim");
         if (HasClaimRights(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
         ctx.Db.ClaimMember.Insert(new ClaimMember { Id = 0, ClaimId = claim.Id, Member = who.Identity, PlayerId = who.PlayerId, Name = who.Name });
+
+        // A calm line by the marker, and where the new member stands if that's elsewhere.
+        string owner = ctx.Db.Player.Identity.Find(claim.Owner)?.Name ?? "the owner";
+        string line = $"{who.Name} now shares {owner}'s land";
+        SayNearby(ctx, claim.X, claim.Z, line);
+        if (who.Online && ctx.Db.PlayerPos.PlayerId.Find(who.PlayerId) is { } pos
+            && (pos.X - claim.X) * (pos.X - claim.X) + (pos.Z - claim.Z) * (pos.Z - claim.Z) > Social.ChatRange * Social.ChatRange)
+            SayNearby(ctx, pos.X, pos.Z, line);
     }
 
     [SpacetimeDB.Reducer]

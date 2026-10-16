@@ -52,6 +52,24 @@ public static partial class Module
         });
     }
 
+    // A line from the world rather than a person (SenderId 0), heard within chat range.
+    static void SayNearby(ReducerContext ctx, float x, float z, string text)
+    {
+        InitChat(ctx);
+        ctx.Db.ChatMessage.Insert(new ChatMessage
+        {
+            Id = 0,
+            SenderId = 0,
+            SenderName = "",
+            Text = text,
+            X = x,
+            Z = z,
+            ChunkX = World.ChunkOf(x),
+            ChunkZ = World.ChunkOf(z),
+            SentAt = ctx.Timestamp,
+        });
+    }
+
     [SpacetimeDB.Reducer]
     public static void SendChat(ReducerContext ctx, string text)
     {
