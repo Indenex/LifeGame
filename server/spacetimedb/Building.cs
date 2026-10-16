@@ -11,6 +11,7 @@ public enum StructureKind
     Kiln,
     Basket,
     BrickHouse,
+    StorageJar,
 }
 
 // One material a structure's current stage still needs.
@@ -128,6 +129,11 @@ public static partial class Module
             new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
             new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
             new[] { (Item.Fiber, 14u) },
+        },
+        // Storage jar (Ceramics): set down one kiln-fired jar
+        new[]
+        {
+            new[] { (Item.StorageJar, 1u) },
         },
     };
 

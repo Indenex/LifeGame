@@ -87,6 +87,18 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
+            // Fired clay doesn't rot, so it weathers only after two weeks untouched.
+            new StructureShape
+            {
+                Name = "Storage jar",
+                Round = true, Radius = 0.32f,
+                Clearance = 0.6f,
+                Solid = true,
+                StoreStacks = JarStacks,
+                WeatherAfter = 336,
+                Stages = new[] { "Set the jar" },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -109,6 +121,8 @@ namespace LifeGame.Shared
         public const float ClosedDoorWarmth = 0.9f;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
+        // Stacks a storage jar holds (ceramics-6).
+        public const int JarStacks = 8;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.

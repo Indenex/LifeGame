@@ -27,10 +27,19 @@ public static class PotMesh
         new(0.072f, 0.232f), new(0.080f, 0.248f), new(0.088f, 0.256f),
     };
 
+    // The storage jar (ceramics-6): a wide belly, a narrow neck and a flared rim.
+    static readonly Vector2[] JarProfile =
+    {
+        new(0.000f, 0.000f), new(0.070f, 0.000f), new(0.110f, 0.030f), new(0.145f, 0.090f),
+        new(0.160f, 0.160f), new(0.155f, 0.230f), new(0.135f, 0.290f), new(0.100f, 0.335f),
+        new(0.082f, 0.360f), new(0.085f, 0.385f), new(0.095f, 0.400f),
+    };
+
     public static float Height(ClayForm form) => form switch
     {
         ClayForm.PinchPot => 0.122f,
         ClayForm.CoilPot => 0.256f,
+        ClayForm.StorageJar => 0.400f,
         _ => 0.08f,
     };
 
@@ -47,7 +56,13 @@ public static class PotMesh
     {
         int variant = (int)(id % 4);
         if (Cache.TryGetValue((form, variant), out var mesh)) return mesh;
-        mesh = form == ClayForm.Brick ? Brick(variant) : Turn(form == ClayForm.CoilPot ? CoilProfile : PinchProfile, form == ClayForm.CoilPot, variant);
+        mesh = form switch
+        {
+            ClayForm.Brick => Brick(variant),
+            ClayForm.CoilPot => Turn(CoilProfile, true, variant),
+            ClayForm.StorageJar => Turn(JarProfile, true, variant),
+            _ => Turn(PinchProfile, false, variant),
+        };
         Cache[(form, variant)] = mesh;
         return mesh;
     }
