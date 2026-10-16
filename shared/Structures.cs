@@ -129,7 +129,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
-                Round = true, Radius = HearthRadius,
+                Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
                 Indoor = true,
                 Stages = new[] { "Stone ring", "Clay surround" },

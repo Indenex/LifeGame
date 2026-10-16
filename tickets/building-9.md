@@ -37,6 +37,7 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 - 2026-10-16 19:56: HANDOFF to a Sonnet session (D-159).
 
 - 2026-10-16 (Sonnet session): #194 is on main; merged main and added the FireTopUpHook partial to BuildingHearth.cs. Per Justin (D-160, claim gates members only), BuildingStorage.CanLock now returns HasClaimRights for a gate inside a claim, before the HungBy check; outside a claim, whoever hung the gate keeps the right. No dotnet in this container, so not built locally; CI is the check.
+- 2026-10-16: bugfix-23 (D-170, PR #228) asked for `Solid = true` on round shapes; set it on the raised hearth. Not built locally (no dotnet); CI checks. The log cabin is rectangular (Room), so building-10 must add its walls to BuildingSystem.Collide next to LeanToWalls once #228 is on main.
 
 ## Open questions / blockers
 - (none)
