@@ -1,8 +1,8 @@
 # atmosphere-6: Trees topple and rocks sink when ground is cleared
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_progress
-Branch: local atmosphere-6-wip (stacked on atmosphere-5-wip); will push to claude/atmosphere-sound-hlqfke after atmosphere-5 merges
+Status: in_review
+Branch: claude/atmosphere-sound-hlqfke
 PR: (after atmosphere-5)
 
 ## Goal
@@ -17,4 +17,4 @@ When a cell is cleared (a blueprint placed, ground dug), its trees and rocks no 
 - (none)
 
 ## Next step
-After atmosphere-5 merges: merge main into atmosphere-6-wip, build, push to the assigned branch, open the PR.
+Wait for CI on the atmosphere-6 PR, then send the green sha to the PM.
