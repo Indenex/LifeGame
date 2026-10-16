@@ -1,8 +1,8 @@
 # atmosphere-15: A cosy night
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: todo
-Branch: (set when started; stack on the previous atmosphere branch if it hasn't merged)
+Status: in_progress
+Branch: claude/atmosphere-15-cosy-night (stacked on claude/atmosphere-14-weather-ahead / #217)
 PR: (none yet)
 
 ## Goal
@@ -10,9 +10,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 ## Progress log
 - 2026-10-16: queued (D-085).
+- 2026-10-16 20:28: started, stacked on #217.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Start after atmosphere-13 is in review: create the branch, set Status in_progress, record it here.
+Read how FireView lights fires (OmniLight?) and Atmosphere's night mood; plan warmer firelight on nearby trunks and ground, capped to the nearest few fires.
