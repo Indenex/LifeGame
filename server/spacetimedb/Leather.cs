@@ -38,9 +38,10 @@ public static partial class Module
         public float DryRate;
     }
 
-    // Called by the crafting Placed outcome for hide.stretch.
-    static void PlaceHideRack(ReducerContext ctx, CraftJob job, ProcessDef def)
+    // The crafting Placed outcome (hide.stretch) sets a rack down.
+    static partial void AnimalsOnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
+        if (!def.Id.StartsWith("hide.")) return;
         if (ctx.Db.HideRack.MadeBy.Filter(job.PlayerId).Count() >= MaxRacksPerPlayer)
         {
             // No room: hand everything back rather than lose it.
