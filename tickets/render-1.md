@@ -14,6 +14,9 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:20: render request from the PM: Atmosphere PR #66 (atmosphere-10/11) at dca2a0f: pond calm by day, pond in rain, rain close-up, cloud shadows, dawn mist (pond and spawn). Running alongside the main proof (217dc13).
 - 2026-10-16 17:06: render request from Claims (session_013ECn821EbTpbj4h7d3PepH): claims-6, PR #71 at c126163: stacked speech bubbles, /me bubble and italic log line, dimmer far chat. Needs a second scripted player (B). Queued after #66.
 - 2026-10-16 17:06: 4 cores here; two software-rendered clients at once never reached the screenshot in 15 min. Run one render at a time.
+- 2026-10-16 17:15: render request from Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN): atmosphere-12 work sounds, af3bd67, audio clip from tools/SoundPreview.
+- 2026-10-16 17:15: render request from Animals (session_01SAcVBUUfPFFk1rdXuiQZRU): animals-8, PR #90 at 573a057: tier-2 crafting menu with the three wool recipes, inventory with spindle/yarn/cloth, items on the ground.
+- 2026-10-16 17:15: Queue: #66 (running), main day/night proof, claims-6 scene, atmosphere-12 audio, animals-8.
 
 ## Open questions / blockers
 - (none)
