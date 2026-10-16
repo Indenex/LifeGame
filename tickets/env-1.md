@@ -18,7 +18,7 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 
 ## Open questions / blockers
 - Sent to PM 2026-10-16 for Justin: scope of the pass. A (recommended, default) groves and glades, visual only; B dress today's layout only; C A plus reshaped land (more ponds, stream) needing a world wipe. Working on A.
-- Atmosphere working agreement: settled 2026-10-16 (see progress log). Asked them to add the four wildflower colours to Look.
+- Atmosphere working agreement: settled 2026-10-16. Flower colours added as Look.FlowerWhite/FlowerButtercup/FlowerViolet/FlowerPink on claude/atmosphere-13-forest-light (1e65d96); switch `Undergrowth.FlowerColors` to them once atmosphere-13 is on main. Combined shafts render at a glade edge (36,-36) once both branches are on main.
 
 ## Next step
 Wait for Render's 0eaba8b shots and Atmosphere's reply; meanwhile check per-chunk instance counts / draw calls against the CI load test and tune from the shots.
