@@ -17,7 +17,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
 | G | **Use** what you're facing: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker | all | G forage (Survival), G feed fire (Crafting), G drink (Survival, R gone), H add materials (Building), R read note (Journal) |
-| Shift+G | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3 |
+| Shift+G | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (also in the F1 list as "Shift G") |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |
