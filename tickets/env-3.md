@@ -1,7 +1,7 @@
 # env-3: Seasons hook and forest tuning
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_progress
+Status: in_review
 Branch: claude/environment-env-1 (restarted from main after #113 merged)
 PR: (once opened)
 
@@ -13,9 +13,10 @@ Follow-ups to env-1 (groves and glades, merged as #113):
 
 ## Progress log
 - 2026-10-16 19:35: season codes set in `Terrain.cs` (leafy canopies and saplings: w = 1; flowers: w = 2); `AddMulti` enables custom data when any w is set. No visible change until Atmosphere's shaders read w (painted and grass shaders ignore custom data while x is 0). Client builds.
+- 2026-10-16 21:25: merged main. `Undergrowth.FlowerColors` now uses Look.FlowerWhite/FlowerButtercup/FlowerViolet/FlowerPink (on main). Atmosphere's seasons (#173, claude/atmosphere-16-seasons) do snow, autumn colour, winter leaf-drop, straw grass and out-of-season flowers in the Look shaders, keyed on the w codes; there's no separate TreeLeaves material. So env-3's code is complete; tuning from Render shots waits for the Render queue (env-2 shots first). Opening the PR for the season codes and palette flowers.
 
 ## Open questions / blockers
-- Waiting on: Render shots for env-1; Atmosphere's `Look.TreeLeaves` and flower colours (atmosphere-13/16).
+- Render shots for env-1 still queued behind env-2 (Render lane). Tuning follows as a later ticket if the shots show problems.
 
 ## Next step
-When Render's env-1 shots arrive, tune from them, then open a PR from `claude/environment-env-1` with the season codes and any tuning.
+Wait for CI on the env-3 PR, then send the green sha to Integration (routine merge, D-095).
