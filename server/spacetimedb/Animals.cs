@@ -50,6 +50,8 @@ public static partial class Module
         public bool Curious;
         // How hard a strike lands on it, relative to a sheep.
         public float StrikeScale = 1f;
+        // Inside this, anyone moving at all unsettles it, however slowly; 0 for none.
+        public float Wary;
     }
 
     static readonly AnimalTraits SheepTraits = new()
@@ -65,6 +67,9 @@ public static partial class Module
     {
         Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
         HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false, StrikeScale = 1.6f,
+        // Sneaking gets you close but not into spear reach: a hunter waits, still, for
+        // deer to graze near (a still player never alarms them).
+        Wary = 10f,
     };
 
     static AnimalTraits Traits(AnimalSpecies species) => species == AnimalSpecies.Deer ? DeerTraits : SheepTraits;
@@ -381,6 +386,7 @@ public static partial class Module
             float threat = Math.Clamp((closing - t.CalmSpeed) / 2f, 0f, 1f) * near;
             // Brushing past at full walk startles; a sneaking player can move among them.
             if (d < 2f && w.Speed > t.CalmSpeed) threat = MathF.Max(threat, 0.6f);
+            if (d < t.Wary && w.Speed > 0.3f) threat = MathF.Max(threat, 0.6f * (1f - d / t.Wary) + 0.2f);
             if (threat > 0f)
             {
                 fear += threat;

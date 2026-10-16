@@ -77,7 +77,7 @@ public partial class Herd : Node3D
         bool gently = leaving.Remove(c.AnimalId, out var sheep) || animals.Remove(c.AnimalId, out sheep);
         if (!gently)
         {
-            sheep = new Sheep(c.AnimalId, terrain);
+            sheep = new Sheep(c.AnimalId, terrain, c.Species);
             AddChild(sheep);
         }
         sheep!.LieDown(c.X, c.Z, c.Heading, c.Fleece, c.Growth, gently);
@@ -168,7 +168,7 @@ public partial class Herd : Node3D
     {
         if (!animals.TryGetValue(a.Id, out var sheep))
         {
-            sheep = new Sheep(a.Id, terrain);
+            sheep = new Sheep(a.Id, terrain, a.Species);
             animals[a.Id] = sheep;
             AddChild(sheep);
             inserted = true;
