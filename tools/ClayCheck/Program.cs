@@ -802,12 +802,23 @@ void WalkTo(float tx, float tz, float near)
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d <= near) break;
         float step = Math.Min(d - near * 0.9f, 0.5f);
-        x += dx / d * step;
-        z += dz / d * step;
+        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
+        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        {
+            x += dx / d * step;
+            z += dz / d * step;
+        }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
     }
-    Pump(() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f, 3, "position to settle");
+    for (var settle = Stopwatch.StartNew(); ; )
+    {
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
+        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
+        conn.Reducers.Move(x, z, 0f);
+        Pump(() => false, 0.1f, null);
+    }
 }
 
 void Pump(Func<bool> until, float seconds, string? what)

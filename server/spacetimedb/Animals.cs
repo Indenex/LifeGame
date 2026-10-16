@@ -219,6 +219,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AnimalTick(ReducerContext ctx, AnimalTickTimer timer)
     {
+        RequireServer(ctx);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         var watchers = AnimalWatchPlayers(ctx, now);
         if (watchers.Count == 0) return;
