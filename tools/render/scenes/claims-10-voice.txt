@@ -1,0 +1,22 @@
+# claims-10 (bafe808): shout and whisper. Camera = A (held at 30,20), puppet = B.
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --debug-position=30,20
+name B
+find
+wait 35
+sql UPDATE player_pos SET x = 30.0, z = 20.0, chunk_x = 1, chunk_z = 1 WHERE player_id = {target}
+wait 1
+front 3
+wait 3
+# 1. a normal line, then a shout above it
+say hello
+wait 1.5
+say /s over here!
+burst 6 0.8
+# 2. a whisper
+wait 4
+say /w psst
+burst 6 0.8
+# 3. B walks ~40 m off and shouts: A's log line, dimmed
+away 40
+say /s can you hear me?
+burst 5 1
