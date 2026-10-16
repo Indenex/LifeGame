@@ -37,6 +37,8 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 
 - 2026-10-16: Justin picked (b): others see your jump. Design: a new `server/spacetimedb/Jump.cs` with a public table `PlayerJump { PlayerId (PK), Seq, At }` and a reducer `Jump()` the client calls on takeoff. The server refuses while sneaking (PlayerSneaking), under `Jump.CooldownSeconds`, and later when stamina or the arc don't fit (bugfix-24). The client plays your own jump at once (prediction); other players' clients react to OnInsert/OnUpdate on the row: Animation's `SetJump` on that avatar, `Sfx.Play(Cue.Jump)` positioned at it, and a vertical offset from `Jump.Height(now - At)`. The landing for a remote avatar is played when the arc ends (`Jump.AirTime`), strength 0 (a hop). Stamina stays client side for now (Survival's TrySpendStamina); the server check comes with bugfix-24.
 
+- 2026-10-16: more hooks. UX: `jump` action on Space in PR #264 (ui-17, claude/ux-ui-keys-xlrh2s, 8959e3f); read `Input.IsActionJustPressed("jump")`, never Key.Space (rebindable). When the jump lands, change its row in client/scripts/ui/Controls.cs from `null` to `"Jump"` (F1 help list) and optionally `Hints.Request("jump")`. Merge after #264. Animation: remote avatars are the same Avatar class (Remote = true), so `SetJump` works on them; but a remote node glides to its server Target each frame, so for remote jumps do NOT set Position.Y: call `avatar.SetAirHeight(metres)` (added in PR #262) and set it to 0 on landing. Own avatar: move Y directly.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
 - (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
