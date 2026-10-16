@@ -398,7 +398,7 @@ public static partial class Module
             * (v.ArrivalLeft > 0f ? Needs.ArrivalChill : 1f);
         return v with
         {
-            WetnessRate = Needs.WetnessRate(CurrentWeather(ctx).Rain, rainCover, wet, heat > 0),
+            WetnessRate = Needs.WetnessRate(Precipitation(ctx), rainCover, wet, heat > 0),
             FoodRate = -Needs.FoodDrain,
             WaterRate = -Needs.WaterDrain,
             WarmthRate = heat - cold,
@@ -407,6 +407,18 @@ public static partial class Module
             Wet = wet,
         };
     }
+
+    // What wets you from the sky, 0 to 1: rain, plus falling snow at half its
+    // rate (Justin, D-134). Shelter's rain cover blocks both alike.
+    static float Precipitation(ReducerContext ctx)
+    {
+        float snow = 0;
+        SnowfallAt(ctx, ref snow);
+        return Math.Clamp(CurrentWeather(ctx).Rain + Needs.SnowWetting * snow, 0f, 1f);
+    }
+
+    // Seasons: Atmosphere implements this with Module.Snowfall (0..1, falling now).
+    static partial void SnowfallAt(ReducerContext ctx, ref float snow);
 
     // Crafted fires: Crafting implements this with Module.WarmthAt, setting warmth
     // to 0..1 for the strongest burning fire near (x, z).

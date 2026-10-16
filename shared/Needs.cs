@@ -50,6 +50,8 @@ namespace LifeGame.Shared
         public const float WadeWetting = 1f / 10f;
         public const float Drying = 1f / 300f;
         public const float FireDrying = 2f;
+        // Falling snow wets you at half rain's rate (Justin, D-134).
+        public const float SnowWetting = 0.5f;
 
         // A new arrival (D-115): a new character's first half hour online, the cold
         // drains at half speed, so a winter start isn't a race. Not after a death.
