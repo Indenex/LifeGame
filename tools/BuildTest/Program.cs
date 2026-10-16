@@ -431,7 +431,7 @@ sealed class Bot
         var def = Processes.Find(processId)!;
         uint before = CountOf(def.Makes);
         Conn.Reducers.StartCraft(processId, 0.6f);
-        var until = DateTime.UtcNow.AddSeconds(def.Seconds + 5);
+        var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);
         bool seen = false;
         while (DateTime.UtcNow < until)
         {
