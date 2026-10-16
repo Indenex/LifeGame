@@ -165,6 +165,10 @@ public partial class Sheep : Node3D
     // Butchered: sink softly into the grass and go.
     public void FadeAway() => fading = 0f;
 
+    // A hit landed from `from` (a crit hits harder). Animation fills this in.
+    // anim: stub
+    public void Flinch(bool crit, Vector3 from) { }
+
 
     public void Apply(Animal a, bool snap)
     {

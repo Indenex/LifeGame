@@ -77,15 +77,15 @@ public static partial class Module
     // alarmed) has a chance, from Stalking skill, to land a large bonus on top of normal
     // damage, shown as a crit. Returns the extra damage, 0 when it doesn't trigger.
     // Stand-in until Journal's Progression.Effect(SneakCritChance / SneakCritBonus) lands
-    // (#237): Husbandry rank, a front-loaded curve, chance 5% to 60% and a bonus of
-    // 0.3x to 1.2x the normal damage, so a master's crit on a deer kills it outright and
+    // (#237): Husbandry rank, a front-loaded curve, chance 3% to 40% and a bonus of
+    // 0.5x to 2.0x the normal damage (Justin: "rarer, bigger"), so a master's crit on a deer kills it outright and
     // a novice's does not.
     static int SneakCrit(ReducerContext ctx, uint playerId, Animal animal, int damage)
     {
         if (animal.State == AnimalState.Run || ctx.Db.PlayerSneaking.PlayerId.Find(playerId) == null) return 0;
         float t = Math.Clamp(SkillRank(ctx, playerId, HuntProcess) / 100f, 0f, 1f);
         t = 1f - (1f - t) * (1f - t);
-        float chance = 0.05f + 0.55f * t, bonus = 0.3f + 0.9f * t;
+        float chance = 0.03f + 0.37f * t, bonus = 0.5f + 1.5f * t;
         return ctx.Rng.NextDouble() < chance ? (int)MathF.Round(damage * bonus) : 0;
     }
 
@@ -96,6 +96,9 @@ public static partial class Module
         public ulong AnimalId;
         public float X;
         public float Z;
+        // Where the hitter stood, so the client can flinch the animal away from it.
+        public float FromX;
+        public float FromZ;
         public bool Crit;
         public bool Killed;
     }
@@ -105,7 +108,7 @@ public static partial class Module
     static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
     {
         bool kills = damage >= mind.Health;
-        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, Crit = crit, Killed = kills });
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills });
         if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
