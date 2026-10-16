@@ -15,6 +15,9 @@ job() {
   "$@" 2>&1
   echo "$name" >> "$done_file"; echo "== done $name"
 }
+# model-1 player close-ups again: the rig focus sits ~0.65 m above the feet, so
+# height/look are given relative to that; yaw 0 sees the face.
+job model-1-player env RENDER_OUT=renders tools/render/render.sh model-1-player b3be674 "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,-35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35"
 job ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
 job crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
 job ui-10 env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 1931044 "--time-of-day=0.45 --screenshot-hud --screenshot-equip --render-slowstart=0.05,45 --screenshot-delay=4" "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
