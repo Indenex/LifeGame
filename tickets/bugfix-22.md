@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-22
-PR: (opening)
+PR: #181
 
 ## Goal
 The G prompt "Fill pots with water" shows only where pressing it works. It no longer answers "Stand at the water's edge to fill a pot" on a sloped bank.
