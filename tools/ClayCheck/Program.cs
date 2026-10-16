@@ -47,6 +47,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM clay_news",
                 "SELECT * FROM kiln",
                 "SELECT * FROM structure",
+                "SELECT * FROM basket_item",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
