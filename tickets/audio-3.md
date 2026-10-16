@@ -1,9 +1,9 @@
 # audio-3: Feedback sounds for things that just happened
 Lane: Audio
 Owner: Audio session (session_01LeXCWTFVBQcCNVEDdhPek3, Opus)
-Status: in_progress
+Status: in_review
 Branch: claude/audio-3-cues-main (cue commits cherry-picked onto main after #189 merged; the old stacked claude/audio-3-cues is superseded)
-PR: (after audio-2 lands)
+PR: #210
 
 ## Goal
 Small sounds that make the world answer the player (M1, and M2's "sees skill gains"): something going into your bag, eating, drinking, a fire catching, setting something down, a page turning for a new journal entry, and a gentle two-note chime when a skill goes up. Self-picked under D-145 while audio-2 waits on #173/#175. Done when each plays in the game from its lane's one-line hook, `Sfx.Play(Cue.X)`, and Justin has heard a clip.
@@ -20,4 +20,4 @@ Small sounds that make the world answer the player (M1, and M2's "sees skill gai
 - Journal: agreed (skills-11); tell the PM when audio-3 merges.
 
 ## Next step
-Watch the audio-3 PR to green and send the PM the sha; send Render a `cues:20` SoundPreview clip request, then send each lane its one-line hook: UX/UI `Sfx.Play(Cue.Pickup)` in ui/InventoryBar.cs SetItems where `gained` is found (skip the first call at login); Survival `Cue.Eat` after conn.Reducers.Eat in survival/SurvivalClient.cs and `Cue.Drink` in the survival.drink UseOffer; Journal the chime swap; Building `Cue.Place` after PlaceStructure in building/BuildingSystem.cs Place(); Crafting `Cue.FireLit` on Fire.OnInsert within ~6 m of the local player (crafting/FireView.cs).
+Watch PR #210 to green and send the PM the sha; send Render a `cues:20` SoundPreview clip request, then send each lane its one-line hook: UX/UI `Sfx.Play(Cue.Pickup)` in ui/InventoryBar.cs SetItems where `gained` is found (skip the first call at login); Survival `Cue.Eat` after conn.Reducers.Eat in survival/SurvivalClient.cs and `Cue.Drink` in the survival.drink UseOffer; Journal the chime swap; Building `Cue.Place` after PlaceStructure in building/BuildingSystem.cs Place(); Crafting `Cue.FireLit` on Fire.OnInsert within ~6 m of the local player (crafting/FireView.cs).
