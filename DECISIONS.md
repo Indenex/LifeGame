@@ -803,3 +803,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-197 — 2026-10-16 — Combat skills level slower; skill matters more than gear (extends D-175, D-196)
 **Decision:** Combat skills get a slower category pace in the one shared progression formula. Each effect's ceiling is a single raisable constant, so it is easy to raise and work in later. Gear quality spread stays narrow and skill spread stays wide: skill levels matter much more than the item base.
 **Who:** Justin ("Slower progression on combat-related skills I think, there needs to be a ceiling that we raise and work in easily. Skill levels should matter much more than the item base though.")
+
+## D-198 — 2026-10-16 — Combat pace: half speed (follows D-197)
+**Decision:** Combat skills (Stalking, Archery, future weapons) gain at 0.5x the base pace, set by `Progression.CombatPaceFactor`.
+**Who:** Justin ("Half speed")
