@@ -23,9 +23,10 @@ Preview of both sounds: /mnt/project-files/audio/journal-chime.wav (title chime,
 - 2026-10-15 23:44: PR #37 opened at cc4c7ed.
 - 2026-10-15 23:56: merged main (#36 journal layer, #10 building). Main's server build broke on Kiln.cs `CeramicsStructureRemoved` (#10 made it Building's partial); ported #40's one-word fix (`static partial void`) so this PR builds; it no-ops once #40 lands. Also added Building's ids from skills-7: `build.weave` ("Weaving a storage basket") and `build.door` ("Hanging a door"); no lock (a toggle, no skill).
 - 2026-10-16 00:00: merged main again after #40 (cb9d155); took main's Kiln.cs, so the port is gone. Server and client build.
+- 2026-10-16 00:09: CI green on 81bbbc7 (contains main cb9d155): https://github.com/Indenex/LifeGame/actions/runs/38826954975
 
 ## Open questions / blockers
 - Justin may prefer the old per-rank toasts; restoring them is one line in `Journal.SkillChanged`.
 
 ## Next step
-Wait for CI on #37, then send the green head sha to the PM.
+Wait for the PM to merge #37 (green at 81bbbc7); merge main again first if main moves.
