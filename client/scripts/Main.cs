@@ -38,6 +38,7 @@ public partial class Main : Node3D
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
+    readonly Woodcutting woodcutting = new();
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -75,17 +76,20 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
+        survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
+        building.MayBar = social.HasRightsAt;
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
@@ -325,6 +329,7 @@ public partial class Main : Node3D
         trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
         fires.Attach(conn);
+        woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
@@ -587,7 +592,7 @@ public partial class Main : Node3D
                     .FirstOrDefault();
                 if (fuel == null) return null;
                 float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
-                return new UseOffer("Feed the fire", d,
+                return new UseOffer($"Feed the fire ({FireView.TimeLeft(fire)})", d,
                     () => conn.Reducers.FeedFire(fire.Id, fuel.Item), Target: new Vector3(fire.X, 0, fire.Z));
             },
         });
