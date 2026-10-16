@@ -224,6 +224,8 @@ public partial class Atmosphere : Node3D
         sound.Wind = wind;
         sound.Wetness = wetness;
         sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
+        sound.TimeOfDay = timeOfDay;
+        sound.Foliage = Woodedness(focus);
         Lightning(dt);
         if (GetViewport()?.GetCamera3D() is { } ear) FireSound(focus, ear.GlobalBasis.X);
     }
@@ -428,10 +430,35 @@ public partial class Atmosphere : Node3D
         if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
 
         int cx = World.CellOf(pos.X), cz = World.CellOf(pos.Z);
-        var ground = pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
-            : World.IsClay(cx, cz) ? Ground.Earth
+        terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
+        var ground = Sheltered?.Invoke(pos) == true ? Ground.Floor
+            : pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
+            : World.IsClay(cx, cz) ? Ground.Clay
+            : terrain?.Cleared?.Invoke(cx, cz) == true ? Ground.Earth
             : Ground.Grass;
         sound.Step(ground, wetness);
+    }
+
+    Terrain? terrain;
+
+    // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
+    // density the terrain plants its trees by. Sampled every few metres out to
+    // about 12 m; the mixer eases between values, so walking into the trees fades
+    // the leaves in.
+    static float Woodedness(Vector3 at)
+    {
+        int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);
+        float sum = 0f;
+        int count = 0;
+        for (int dx = -12; dx <= 12; dx += 4)
+            for (int dz = -12; dz <= 12; dz += 4)
+            {
+                int x = cx + dx, z = cz + dz;
+                count++;
+                if (x * x + z * z < 12 * 12 || World.IsClay(x, z)) continue;
+                sum += World.Noise(x, z, 24f, 33);
+            }
+        return Mathf.SmoothStep(0.3f, 0.7f, sum / count);
     }
 
     // --- Helpers ----------------------------------------------------------------
