@@ -1,16 +1,16 @@
 # Your first hour
 
-You arrive in a forest with empty hands. A sensible order of business:
+You start in a forest with empty hands. A good order to work in:
 
-1. **Look at what is lying around.** Sticks, stones and plant fibre can be picked up. Pick up a few of everything and see what they let you make (open the crafting panel).
-2. **Make a fire.** Fire is your first real achievement. It gives warmth and light, and it opens up cooking. It does not burn forever, so keep some fuel handy and feed it.
-3. **Find food.** Berry bushes are a gentle start. Eat when you feel hungry; the game will let you know.
-4. **Find water.** Rivers and ponds are good for drinking. Later you will be able to carry water with you.
-5. **Think about shelter.** Night is cold and rain is colder. A simple lean-to is a fine early goal, and you can improve on it later.
-6. **Keep your journal open now and then.** It remembers what you have learned.
+1. **Gather.** Sticks, stones and plant fibre lie on the ground. Pick up some of each (Space), then open the crafting panel (C) to see what they make.
+2. **Make a fire.** A fire gives warmth and light and lets you cook. It burns down over time; feed it fuel to keep it going.
+3. **Find food.** Berry bushes are the easiest food early on. The game tells you when you are hungry.
+4. **Find water.** You can drink from rivers and ponds. Later you can carry water with you.
+5. **Plan a shelter.** Nights are cold and rain makes it worse. A lean-to is a reasonable first build; you can replace it with something better later.
+6. **Check your journal (J).** It lists what you have found and what you can make.
 
-## About the Use key
+## The Use key
 
-One key does most of the interacting with the world: it acts on whatever you are facing, and a small prompt below your character tells you what it will do. If there is no prompt, it will do nothing. See [Keys and controls](controls.md).
+Most actions in the world go through one key, Use (G by default). A prompt below your character shows what Use will do with the thing you are facing. No prompt means Use does nothing there. See [Keys and controls](controls.md).
 
 Next: [Needs](needs.md)

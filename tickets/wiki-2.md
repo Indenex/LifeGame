@@ -1,8 +1,8 @@
 # wiki-2: Rewrite the player wiki in a plain voice
 Lane: Wiki
 Owner: Wiki session (Opus, D-064)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Status: in_progress
+Branch: claude/wiki-2
 PR: (once opened)
 
 ## Goal
@@ -10,6 +10,7 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-064).
+- 2026-10-16: started on claude/wiki-2 (harness gave a detached HEAD, no branch name); facts checked against DECISIONS.md D-001..D-064 and KEYMAP.md.
 
 ## Open questions / blockers
 - (none)
