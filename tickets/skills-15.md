@@ -11,8 +11,10 @@ Keep the journal's "Things to try" hints (client/scripts/journal/NextSteps.cs, D
 ## Progress log
 - 2026-10-16 22:30: main has 59 ids, 57 reached. Missing hints: cook.broth and cook.stew (asked Crafting for lines). sew.wool_tunic already has a line ("Cloth cut and sewn to fit keeps the night's chill off a little."); Animals' wording was "Cloth and yarn from the wool of your sheep can be sewn into something you wear against the cold." (swap if wanted).
 
+- 2026-10-16 22:35: added cook.broth and cook.stew lines (broth says berries, not meat, since the recipe is water + 3 berries). Harness 59/59 both picks.
+
 ## Open questions / blockers
-- Crafting: lines for cook.broth and cook.stew; the bow and arrow recipes (lash.bow, carve.arrows) are not in shared/Processes.cs yet. When they land: "A green stick bent and strung with cord will throw a light shaft a long way." (lash.bow), "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks." (carve.arrows); then set the Skills.Shoot prerequisite in NextSteps.After to lash.bow instead of Skills.Kill.
+- The bow and arrow recipes (lash.bow, carve.arrows) are not in shared/Processes.cs yet. When they land: "A green stick bent and strung with cord will throw a light shaft a long way." (lash.bow), "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks." (carve.arrows); then set the Skills.Shoot prerequisite in NextSteps.After to lash.bow instead of Skills.Kill.
 - Tool repair needs no line (Crafting: it is a place you stand at).
 
 ## Next step

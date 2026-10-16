@@ -28,6 +28,8 @@ public static class NextSteps
         ["knap.flake"] = "Stone breaks sharp when it is struck with stone.",
         ["knap.hand_axe"] = "A stone shaped with patience makes a heavy tool for the hand.",
         ["cook.meat"] = "Raw meat is better over a fire.",
+        ["cook.broth"] = "Water and a handful of berries, kept hot in a pot, make something warm to sip on a cold evening.",
+        ["cook.stew"] = "A pot left to simmer with meat and more besides becomes a meal that stays with you.",
         ["carve.digging_stick"] = "A sharpened stick digs deeper than bare hands.",
         ["cord.twist"] = "Plant fiber, twisted tight, becomes cord.",
         ["lash.spear"] = "A sharp flake bound to a long stick reaches further.",
