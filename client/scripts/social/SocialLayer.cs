@@ -214,13 +214,14 @@ public partial class SocialLayer : Node
         string said = emote ? Social.EmoteBody(m.Text) : m.Text;
         float dim = mine ? 1f : Social.ChatDim(new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length());
         chat.Add(mine && !emote ? "You" : m.SenderName, said, mine, dim, emote);
-        if (age < 8_000_000) Bubble(m, said, emote);
+        // Only fresh words get a bubble, so joining doesn't replay the last few lines at once.
+        if (age < 3_000_000) Bubble(m, said, emote);
     }
 
     // The words float above the speaker for a few seconds, then drift up and fade.
     const int BubbleStack = 3;
     // In the bubble's own pixels (Label3D offset), not metres.
-    const float BubbleLineHeight = 38f, BubbleGap = 12f;
+    const float BubbleLineHeight = 44f, BubbleGap = 16f;
     static FontVariation? slanted;
     static FontVariation Slanted => slanted ??= new FontVariation { VariationTransform = new Transform2D(1f, 0f, 0.22f, 1f, 0f, 0f) };
 
