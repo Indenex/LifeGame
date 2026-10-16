@@ -86,10 +86,9 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         JournalPanel? journalPanel = null;
-        ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
-            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+            || social.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
@@ -97,7 +96,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);

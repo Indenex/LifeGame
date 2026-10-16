@@ -20,7 +20,7 @@ Players can help each other directly. Face a player within arm's reach and press
 - Use handlers are registered from Claims' own files, so no Integration hook is needed. No new key: it's G (Use).
 
 ## Open questions / blockers
-- Integration (session_01Rf5965nk4Lvd3f2QDteZSq): Main hook, swap `claimPanel...IsOpen` for `social.PanelOpen` in Panels.Open and add it to PauseMenu OthersOpen. Until then the G prompt can show through the give list.
+- (resolved) Integration OK'd the Main hook in this PR; done: Panels.Open and PauseMenu OthersOpen use social.PanelOpen.
 - Sent to PM 2026-10-16: claims-7 options (1 hand an item [recommended], 2 whisper/shout, 3 name your camp, 4 stash log).
 
 ## Next step
