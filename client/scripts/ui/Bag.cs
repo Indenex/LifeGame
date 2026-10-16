@@ -8,7 +8,8 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // One stack in the bag panel: what it is, how good, how many (ui-18).
-public record BagStack(Item Item, byte Quality, uint Count)
+// Id is the row in a store (a basket's item row), 0 for the bag.
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -63,6 +64,15 @@ public partial class BagGrid : GridContainer
 {
     public const float Slot = 50f;
     public IBagLink Link = new MockBagLink(false);
+    // What the grid shows: the bag by default, or a store (a basket, the claim stash).
+    public Func<IEnumerable<BagStack>>? Source;
+    // "bag" or a store's name; a drag carries it as "from".
+    public string Kind = "bag";
+    // Takes a stack dragged from another grid (a basket taking from the bag, the bag taking from a basket).
+    public Func<Godot.Collections.Dictionary, bool> Accepts = _ => false;
+    public Action<Godot.Collections.Dictionary> Receive = _ => { };
+    public string Empty = "Your hands are empty";
+    public int Width = 6;
     public Action<Item> Use = _ => { };
     // A thing let go outside the panel (the panel says where it is).
     public Func<Vector2, bool> OverPanel = _ => true;
@@ -76,7 +86,7 @@ public partial class BagGrid : GridContainer
 
     public override void _Ready()
     {
-        Columns = 6;
+        Columns = Width;
         AddThemeConstantOverride("h_separation", 10);
         AddThemeConstantOverride("v_separation", 10);
         MouseFilter = MouseFilterEnum.Pass;
@@ -93,7 +103,7 @@ public partial class BagGrid : GridContainer
 
     public void Refresh()
     {
-        var stacks = Link.Carried()
+        var stacks = (Source?.Invoke() ?? Link.Carried())
             .OrderBy(s => Group(s.Item)).ThenBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
         string now = string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}"));
         if (now == shown) return;
@@ -102,26 +112,34 @@ public partial class BagGrid : GridContainer
         foreach (var s in stacks) AddChild(new BagSlotView { Stack = s, Grid = this });
         if (stacks.Count == 0)
         {
-            var none = Hud.Text("Your hands are empty", 14);
+            var none = Hud.Text(Empty, 14);
             none.Modulate = new Color(1, 1, 1, 0.5f);
             AddChild(none);
         }
     }
 
     public override bool _CanDropData(Vector2 atPosition, Variant data) =>
-        data.Obj is Godot.Collections.Dictionary d && (d.ContainsKey("worn") || d.ContainsKey("hotbar"));
+        data.Obj is Godot.Collections.Dictionary d
+        && (Kind == "bag" && (d.ContainsKey("worn") || d.ContainsKey("hotbar"))
+            || d.TryGetValue("from", out var from) && from.AsString() != Kind && Accepts(d));
 
     public override void _DropData(Vector2 atPosition, Variant data)
     {
         if (data.Obj is not Godot.Collections.Dictionary d) return;
-        if (d.TryGetValue("worn", out var slot)) TakeOff((ClothingSlot)slot.AsInt32());
+        if (d.TryGetValue("from", out var from) && from.AsString() != Kind) Receive(d);
+        else if (d.TryGetValue("worn", out var slot)) TakeOff((ClothingSlot)slot.AsInt32());
         else if (d.TryGetValue("hotbar", out var i)) ClearHotbar(i.AsInt32());
     }
+
+    // Slots pass drops through to the grid.
+    internal bool CanTake(Variant data) => _CanDropData(Vector2.Zero, data);
+    internal void Take(Variant data) => _DropData(Vector2.Zero, data);
 
     public override void _Notification(int what)
     {
         if (what != NotificationDragEnd || Dragging is not { } d) return;
         Dragging = null;
+        if (Kind != "bag") return;
         // Let go over the world rather than over a panel: set it down or drop it.
         if (!GetViewport().GuiIsDragSuccessful() && !OverPanel(GetViewport().GetMousePosition()))
             PlaceOrDrop(d.item, d.quality);
@@ -175,12 +193,15 @@ public partial class BagSlotView : PanelContainer
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, DoubleClick: true, Pressed: true })
+        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, DoubleClick: true, Pressed: true } && Grid.Kind == "bag")
         {
             Grid.Use(Stack.Item);
             AcceptEvent();
         }
     }
+
+    public override bool _CanDropData(Vector2 atPosition, Variant data) => Grid.CanTake(data);
+    public override void _DropData(Vector2 atPosition, Variant data) => Grid.Take(data);
 
     public override Variant _GetDragData(Vector2 atPosition)
     {
@@ -197,6 +218,13 @@ public partial class BagSlotView : PanelContainer
         holder.AddChild(preview);
         SetDragPreview(holder);
         Grid.Dragging = (Stack.Item, Stack.Quality);
-        return new Godot.Collections.Dictionary { ["bag"] = (int)Stack.Item, ["quality"] = (int)Stack.Quality };
+        var data = new Godot.Collections.Dictionary
+        {
+            ["from"] = Grid.Kind, ["item"] = (int)Stack.Item, ["quality"] = (int)Stack.Quality,
+            ["count"] = (long)Stack.Count, ["id"] = (long)Stack.Id,
+        };
+        // Only the bag's own things go onto the hotbar or a worn slot.
+        if (Grid.Kind == "bag") data["bag"] = (int)Stack.Item;
+        return data;
     }
 }
