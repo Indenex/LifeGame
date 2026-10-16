@@ -166,6 +166,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawVenison) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedVenison,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
@@ -236,6 +242,12 @@ namespace LifeGame.Shared
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
+            },
+            new ProcessDef
+            {
+                Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
             },
             new ProcessDef
             {
