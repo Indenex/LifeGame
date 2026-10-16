@@ -107,7 +107,7 @@ namespace LifeGame.Shared
 
         // A cooked meal, which lets you run longer for a while (D-111). Berries and
         // burnt food don't count.
-        public static bool GoodMeal(Item item) => item is Item.CookedMutton;
+        public static bool GoodMeal(Item item) => item is Item.CookedMutton or Item.PotOfBroth or Item.PotOfStew;
 
         // Which of the foods you carry to eat at this hunger: the most filling one
         // that doesn't waste much, or else the smallest, so a roast isn't spent on a
