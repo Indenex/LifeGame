@@ -497,3 +497,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-125 — 2026-10-16 — Options page gets a soft panel
 **Decision:** The Options page sits on the same soft dark panel as the other menus.
 **Who:** Justin (as recommended)
+
+## D-126 — 2026-10-16 — Craft speed grows steadily with skill (amends D-113)
+**Decision:** The skill part of craft time is linear in rank (×1.00 at rank 0, 0.91 at 15, 0.70 at 50, 0.40 at Master), because skill ranks already come quickly early on. Examples at rank 0/15/50/100: basket 28/27/22/13 s, stone axe 17/16/13/8 s, coil pot 38/36/29/18 s, storage jar 56/54/44/26 s.
+**Who:** Justin ("Steadily", as recommended)
