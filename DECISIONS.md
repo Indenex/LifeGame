@@ -220,3 +220,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-053 — 2026-10-16 — Player fighting: as proposed, and killers are marked
 **Decision:** PvP follows Claims' proposal: left click strikes a player in reach (fists ~12 hits to kill, hand axe ~6); fighting is open in the wild, blocked inside claims unless the owner allows it and within 20 m of spawn; new players are protected for 10 minutes; dying to a player is like any death (drop what you carry, keep skills); one chat line says who struck whom. Added: a killer's name shows red to others for 30 minutes. Being hurt shows as a soft dark-red screen edge instead of a health ring (Claims' change, shown to Justin).
 **Who:** Justin ("Mark killers")
+
+## D-054 — 2026-10-16 — A new fire burns 15 minutes
+**Decision:** A newly lit fire burns for 15 minutes before it needs feeding (was 60 s; Crafting had proposed 180 s). Each stick fed still adds 90 s.
+**Who:** Justin ("15 minutes for the fire length")
