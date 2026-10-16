@@ -53,6 +53,12 @@ public static partial class Module
         public float ArrivalLeft;
         [Default(0f)]
         public float ArrivalRate;
+        // A new character's first hour online, thirst falls slower (survival-10):
+        // seconds left at AsOf, and its rate (-1 while online, else 0).
+        [Default(0f)]
+        public float ThirstEaseLeft;
+        [Default(0f)]
+        public float ThirstEaseRate;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -117,13 +123,14 @@ public static partial class Module
             LastDeath = "",
             DiedAt = ctx.Timestamp,
             ArrivalLeft = Needs.ArrivalSeconds,
+            ThirstEaseLeft = Needs.ThirstEaseSeconds,
         }, pos, online: true));
     }
 
     static void SurvivalDisconnected(ReducerContext ctx, Player player)
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
-            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 });
+            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0, ThirstEaseRate = 0 });
         ctx.Db.Drenched.PlayerId.Delete(player.PlayerId);
     }
 
@@ -253,7 +260,7 @@ public static partial class Module
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
                 || MathF.Abs(next.WetnessRate - v.WetnessRate) > 0.05f * MathF.Abs(v.WetnessRate) + 1e-7f
-                || next.ArrivalRate != v.ArrivalRate)
+                || next.ArrivalRate != v.ArrivalRate || next.ThirstEaseRate != v.ThirstEaseRate)
                 ctx.Db.Vitals.PlayerId.Update(next);
             ShowWetness(ctx, player.PlayerId, now.Wetness);
         }
@@ -326,6 +333,7 @@ public static partial class Module
             Wetness = 0,
             WellFedUntil = 0,
             ArrivalLeft = 0,
+            ThirstEaseLeft = 0,
             AsOf = ctx.Timestamp,
             Deaths = v.Deaths + 1,
             LastDeath = cause,
@@ -383,6 +391,7 @@ public static partial class Module
             Warmth = Needs.At(v.Warmth, v.WarmthRate, s),
             Wetness = Needs.At(v.Wetness, v.WetnessRate, s),
             ArrivalLeft = Math.Max(0f, v.ArrivalLeft + v.ArrivalRate * s),
+            ThirstEaseLeft = Math.Max(0f, v.ThirstEaseLeft + v.ThirstEaseRate * s),
             AsOf = ctx.Timestamp,
         };
     }
@@ -391,7 +400,7 @@ public static partial class Module
     static Vitals WithSurroundings(ReducerContext ctx, Vitals v, PlayerPos pos, bool online)
     {
         if (!online)
-            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0 };
+            return v with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0, ArrivalRate = 0, ThirstEaseRate = 0 };
         float heat = HeatAt(ctx, pos.X, pos.Z);
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
@@ -402,9 +411,10 @@ public static partial class Module
         {
             WetnessRate = Needs.WetnessRate(Precipitation(ctx), rainCover, wet, heat > 0),
             FoodRate = -Needs.FoodDrain,
-            WaterRate = -Needs.WaterDrain,
+            WaterRate = -Needs.WaterDrain * (v.ThirstEaseLeft > 0f ? Needs.ThirstEaseFactor : 1f),
             WarmthRate = heat - cold,
             ArrivalRate = v.ArrivalLeft > 0f ? -1f : 0f,
+            ThirstEaseRate = v.ThirstEaseLeft > 0f ? -1f : 0f,
             NearHeat = heat > 0,
             Wet = wet,
         };

@@ -1,9 +1,9 @@
 # survival-11: Breath in cold air
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_progress
+Status: done
 Branch: claude/survival-next
-PR: (none yet)
+PR: #185 (merged)
 
 ## Goal
 D-144: in cold air every player's breath shows as a soft white puff every few seconds (no camera shake). Denser and longer-lasting the colder it is; none above about 6 C. Remote players too.
@@ -22,4 +22,4 @@ D-144: in cold air every player's breath shows as a soft white puff every few se
 - (none)
 
 ## Next step
-Wait for CI on #185, send the green sha to the PM; Animation builds the puff once #173 and #185 are on main.
+None for Survival: merged as #185. Animation (session_019roNRWQBPw4ozNLDhzseig) draws the puffs once Atmosphere's #173 is also on main.

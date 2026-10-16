@@ -1,9 +1,9 @@
 # skills-10: Things to try (M2, the first evening)
 Lane: Journal and skills
 Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
-Status: in_review
+Status: done
 Branch: claude/journal-skills-10 (was stacked on #43, merged 18:26)
-PR: #112 (draft, stacked on #43)
+PR: #112 (merged 2026-10-16 19:49)
 
 ## Goal
 D-081 M2: a new player always has a next goal. Under the journal's discoveries, a short "Things to try" list shows up to three gentle hints for things the player hasn't discovered yet but could reach from what they already know (for example, after fire: "Wet clay hardens in a fire. Clay hides in low, damp ground."). Hints name the goal without spelling out the recipe (D-063, light on spoilers), lowest tier first, and update as you learn.
@@ -17,6 +17,8 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 
 ## Progress log
 - 2026-10-16 17:50: PM was offered 4 options (hints / visible gains / road-ahead checklist / hints then gains); started option 1 as the stated default. Branch made from #43's head plus main (merged cleanly).
+- 2026-10-16 19:49: merged by the PM.
+- 2026-10-16 19:48: CI green on 44d82e8 (https://github.com/Indenex/LifeGame/actions/runs/38955819968), mergeable; sha sent to the PM. (Logged on the skills-11 branch so #112's head stays the green sha.)
 - 2026-10-16 19:38: UX/UI review: Things to try moved above the discoveries list (always in view), 8 px of air before the list. Their first-evening fire tip (ui-14) stays; the two don't clash.
 - 2026-10-16 19:25: Claims (#174) reports `claim.mark` when a marker is finished: added to Skills.AllProcessIds (journal name "Planting a claim", trains no skill), Claims' hint line and a how-to line. Bench still waits for ceramics-8.
 - 2026-10-16 19:20: No CI had run since 6911bc0: #112 conflicted with main (GitHub 'dirty'). Merged main (c09f9b8), no manual conflicts. Main brought weave.mat (sleeping mat) and clay.storage_jar (kiln-only, D-076): hint lines added; the jar waits for coil pot and kiln. Harness: all 45 reachable; server type-checks. D-143 wipe window: nothing to fold in (no schema change).
@@ -32,4 +34,4 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 - Ceramics to report `build.bench` (bench finished; claim.mark done by Claims #174) via OnProcessPerformed; then add both to Skills.AllProcessIds. Asked via Crafting and the PM, 19:05.
 
 ## Next step
-Wait for CI on #112's head (runners backed up), then send the PM the green sha; the PM merges #112 (green on 131e27d) ; then start the next ticket the PM gives.
+None; done. Follow-up is skills-11.

@@ -17,7 +17,6 @@ public partial class Journal : CanvasLayer
     public readonly Node3D Notes = new() { Name = "JournalNotes" };
 
     readonly JournalPanel panel = new();
-    readonly Chime chime = new();
     readonly Dictionary<ulong, Node3D> noteNodes = new();
     readonly Dictionary<string, int> ranks = new();
     // What the journal already holds. my_journal has no primary key, so every
@@ -46,7 +45,6 @@ public partial class Journal : CanvasLayer
         current = this;
         Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
         AddChild(panel);
-        AddChild(chime);
         panel.WriteNote = id =>
         {
             if (conn == null) return;
@@ -165,7 +163,7 @@ public partial class Journal : CanvasLayer
     {
         if (!known.Add(e.ProcessId) || !caughtUp) return;
         panel.Fresh.Add(e.ProcessId);
-        chime.Discovery();
+        Sfx.Play(Cue.Learn);
         string name = Skills.ProcessName(e.ProcessId);
         say(e.LearnedBy switch
         {
@@ -213,7 +211,7 @@ public partial class Journal : CanvasLayer
         if (title == Skills.Title(before)) return;
         string name = (Skills.Spec(s.Spec)?.Name ?? s.Spec).ToLowerInvariant();
         say($"You have become {Article(title)} {title.ToLowerInvariant()} in {name}");
-        chime.Title();
+        Sfx.Play(Cue.SkillUp);
     }
 
     static string Article(string word) => "AEIOU".Contains(word[0]) ? "an" : "a";
