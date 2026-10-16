@@ -1,7 +1,7 @@
 # atmosphere-5: No pops when ground is cleared; canopy fade under Compatibility
 Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #49
 
@@ -16,4 +16,4 @@ From the Bug fixes playtest (via PM): placing a blueprint made the grass vanish 
 - Trees and rocks on a newly cleared cell still disappear at once.
 
 ## Next step
-Wait for CI on #49, then send the green sha to the PM.
+None; merged in #49.

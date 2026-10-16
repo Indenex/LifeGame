@@ -59,7 +59,7 @@ public sealed class SoundMix
 
     // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
     // gain from distance, startled when the flock bolts.
-    public void Bleat(float pan, float gain, bool startled) => sheep.Trigger(pan, gain, startled);
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
 
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
@@ -735,7 +735,7 @@ public sealed class SoundMix
 
         sealed class Voice
         {
-            public float Pitch, Length, Gain, Pan, Warble, Age, Phase;
+            public float Pitch, Length, Gain, Pan, Warble, Age, Phase, Formant;
             public BandPass Low, High;
         }
 
@@ -745,16 +745,18 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(float pan, float gain, bool startled)
+        // Lambs bleat higher, shorter and softer, through a smaller throat.
+        public void Trigger(float pan, float gain, bool startled, bool lamb = false)
         {
             if (voices.Count > 5 || gain < 0.01f) return;
             voices.Add(new Voice
             {
-                Pitch = startled ? Range(rng, 380f, 470f) : Range(rng, 230f, 330f),
-                Length = startled ? Range(rng, 0.3f, 0.45f) : Range(rng, 0.6f, 1.0f),
-                Gain = gain * (startled ? 0.11f : 0.075f),
+                Pitch = (startled ? Range(rng, 380f, 470f) : Range(rng, 230f, 330f)) * (lamb ? Range(rng, 1.55f, 1.8f) : 1f),
+                Length = (startled ? Range(rng, 0.3f, 0.45f) : Range(rng, 0.6f, 1.0f)) * (lamb ? 0.7f : 1f),
+                Gain = gain * (startled ? 0.11f : 0.075f) * (lamb ? 0.65f : 1f),
                 Pan = Math.Clamp(pan, -1f, 1f),
-                Warble = Range(rng, 6f, 8.5f),
+                Warble = Range(rng, 6f, 8.5f) * (lamb ? 1.25f : 1f),
+                Formant = lamb ? 1.35f : 1f,
             });
         }
 
@@ -775,7 +777,7 @@ public sealed class SoundMix
                     float saw = 2f * voice.Phase - 1f;
                     float tremolo = 0.6f + 0.4f * MathF.Sin(voice.Age * 2f * MathF.PI * voice.Warble);
                     float env = MathF.Min(1f, voice.Age / 0.05f) * MathF.Min(1f, (voice.Length - voice.Age) / 0.15f);
-                    float formants = voice.Low.Process(saw, 750f, 0.5f, rate) + 0.6f * voice.High.Process(saw, 1650f, 0.6f, rate);
+                    float formants = voice.Low.Process(saw, 750f * voice.Formant, 0.5f, rate) + 0.6f * voice.High.Process(saw, 1650f * voice.Formant, 0.6f, rate);
                     float s = formants * tremolo * env * voice.Gain;
                     l[i] += s * pl;
                     r[i] += s * pr;
