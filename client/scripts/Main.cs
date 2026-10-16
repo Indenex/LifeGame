@@ -125,10 +125,13 @@ public partial class Main : Node3D
         // --screenshot-craft=1 opens the crafting panel on that tier.
         if (Arg("screenshot-craft") is { } craftTier && int.TryParse(craftTier, out var t))
             GetTree().CreateTimer(Math.Max(1, delay - 3)).Timeout += () => crafting.Open(t);
-        // --screenshot-fire places a local campfire just in front of the player.
-        if (Arg("screenshot-fire") != null)
+        // --screenshot-fire places a local campfire just in front of the player; =cold a burned-out one.
+        if (Arg("screenshot-fire") is { } fireArg)
             GetTree().CreateTimer(Math.Max(1, delay - 4)).Timeout += () =>
-                fires.Preview(me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0));
+            {
+                var at = me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0);
+                if (fireArg == "cold") fires.PreviewCold(at); else fires.Preview(at);
+            };
         GetTree().CreateTimer(delay).Timeout += () =>
         {
             GetViewport().GetTexture().GetImage().SavePng(path);
