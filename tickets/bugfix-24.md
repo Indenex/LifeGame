@@ -1,9 +1,9 @@
 # bugfix-24: hardening audit (anti-cheat before outside players join)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: todo
+Status: in_progress
 Branch: claude/bugfix-24
-PR: (none; this is an audit, no code yet)
+PR: (open after #228 and #221 land, one PR for the two items)
 
 ## Goal
 Justin will host the server himself. Before outside players join, close every place the client decides something the server does not check (rule now, harden later). This ticket is the audit list only. Each fix gets scheduled by the PM and ticketed on its own. Prefer putting the rule in `shared/` and calling it from both the client and the server (`Move` and the reducers), so the two cannot drift.
@@ -38,10 +38,15 @@ Sizes: S = under half a day, M = about a day, L = several days.
 
 ## Progress log
 - 2026-10-16: audit written from the PM's request; no code.
+- 2026-10-16: PM asked for two items now (D-182 otherwise todo): audit item 1 (Move slack) and the admin reducers. Done on this branch:
+  - Move: `World.MoveAllowance` (shared/World.cs) plus a private `MoveBank` table; the slack is a one-off bank (1 s of walking + 1.5 m), spent per report, refilled at speed. Client run speed 5.6 < server 6, so normal play is unaffected.
+  - Found while checking admin reducers: all of them check the caller already (claims admin or WorldAdmin), but 13 of the 14 scheduled reducers (AnimalTick, ApplyMoves, SurvivalTick, FinishCraft, FinishKiln, FinishFiring, BurnOutFires, DryClay, RespawnItems, RegrowTrees, DecayClaims, WatchTrades, PruneChat) had no guard, so any client could call them, some with a made-up timer row. New `RequireServer(ctx)` (SenderAuth.IsInternal) now guards all 15 incl. WeatherTick and WeatherSweep.
+  - Checked: server module builds; local LoadTest 5 bots 5 s, 0 reducer errors, moves still round-trip. Not tried: a hostile client; add a speed-bot check to tools when item 1 is scheduled for real.
+  - Still todo: the dev flag (hardening on by default, flag for CI/test servers) is not needed for these two changes.
 
 ## Open questions / blockers
 - Items 7 and 2 touch other lanes' files; the PM should tell those lanes when they are scheduled.
 - Does Justin want a server setting to switch the hardening on, so local test servers and CI keep working? Recommended: on by default, off with a `--dev` flag.
 
 ## Next step
-The PM picks which items to schedule; take item 1 first (shared budget formula in shared/World.cs, used by Move).
+Wait for #228 and #221 to land, merge main, open the PR for the Move budget and RequireServer, send the PM the green sha. The remaining audit items stay todo until the PM schedules them.

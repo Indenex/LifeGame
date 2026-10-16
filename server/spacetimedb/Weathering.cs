@@ -79,8 +79,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WeatherSweep(ReducerContext ctx, WeatherSweepTimer timer)
     {
-        if (ctx.Sender != ctx.Identity)
-            throw new Exception("Only the server weathers things");
+        RequireServer(ctx);
         SweepWeathering(ctx, ctx.Timestamp);
     }
 

@@ -227,6 +227,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DryClay(ReducerContext ctx, ClayDryTimer timer)
     {
+        RequireServer(ctx);
         int drying = 0;
         foreach (var piece in ctx.Db.ClayPiece.Iter().ToList())
         {
@@ -258,6 +259,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void FinishFiring(ReducerContext ctx, FiringTimer timer)
     {
+        RequireServer(ctx);
         if (ctx.Db.ClayPiece.Id.Find(timer.PieceId) is not { } piece) return;
         ctx.Db.ClayPiece.Id.Delete(piece.Id);
         var form = (ClayForm)piece.Form;

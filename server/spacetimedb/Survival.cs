@@ -236,6 +236,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SurvivalTick(ReducerContext ctx, SurvivalTimer timer)
     {
+        RequireServer(ctx);
         foreach (var player in ctx.Db.Player.Iter().Where(p => p.Online).ToList())
         {
             if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is not { } v) continue;
