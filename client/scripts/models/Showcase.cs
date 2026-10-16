@@ -28,25 +28,37 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props")
         {
-            if (view == "items") ItemGrid(args.ContainsKey("old"));
+            if (view == "hearth") Hearth();
+            else if (view == "stations") Stations();
+            else if (view == "props") Props();
+            else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
             return;
         }
 
         var wool = Look.Solid(new Color(0.74f, 0.71f, 0.63f));
-        wool.SetShaderParameter("detail_scale", 3.0f);
-        wool.SetShaderParameter("bump", 1.2f);
-        wool.SetShaderParameter("cavity", 0.3f);
+        // As Sheep.WoolLook: only a touch of relief.
+        wool.SetShaderParameter("detail_scale", 1.5f);
+        wool.SetShaderParameter("bump", 0.15f);
+        wool.SetShaderParameter("cavity", 0.08f);
 
         // Today's figure first, for comparison, then each style.
         float gap = view == "faces" ? 0.75f : 2.2f;
         float x0 = -gap * 1.5f;
         var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0), Visible = view != "sheep" };
         AddChild(today);
-        Label("Today", new Vector3(x0, 0, 0));
+        if (view == "sheep")
+        {
+            // In the sheep view a style-A person stands in for scale.
+            var scale = PlayerModel.Build();
+            scale.Position = new Vector3(x0 + 0.6f, 0, -0.2f);
+            scale.Rotation = new Vector3(0, yaw, 0);
+            AddChild(scale);
+        }
+        else Label("Today", new Vector3(x0, 0, 0));
         for (int i = 0; i < HumanFigure.All.Length; i++)
         {
             var style = HumanFigure.All[i];
@@ -56,7 +68,9 @@ public partial class Showcase : Node3D
             person.Rotation = new Vector3(0, yaw, 0);
             AddChild(person);
             people.Add(person);
-            var sheep = SheepFigure.Create(style, wool);
+            // The sheep view compares the fleece variants; elsewhere the game's one.
+            var fleece = view == "sheep" ? (SheepFigure.Fleece)i : SheepFigure.Variant;
+            var sheep = SheepFigure.Create(fleece, wool);
             // Sheep stand beside their person in the row, and alone in the sheep view.
             sheep.Position = view == "sheep" ? new Vector3(x, 0, 0) : new Vector3(x + 0.75f, 0, -0.9f);
             sheep.Rotation = new Vector3(0, yaw + (view == "sheep" ? 1.45f : 0.9f), 0);
@@ -64,7 +78,9 @@ public partial class Showcase : Node3D
             person.Visible = view != "sheep";
             AddChild(sheep);
             int tris = HumanFigure.Build(style).Triangles;
-            Label(view == "faces" ? $"{style.Key}  {style.Name}" : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(style, wool).Triangles:N0}", new Vector3(x, 0, 0));
+            Label(view == "faces" ? $"{style.Key}  {style.Name}"
+                : view == "sheep" ? $"{style.Key}  {fleece}\n{SheepFigure.Build(fleece, wool).Triangles:N0} tris"
+                : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(fleece, wool).Triangles:N0}", new Vector3(x, view == "sheep" ? -1.1f : 0, 0));
         }
         if (view == "walk") Stride();
         // The faces view is close enough that the labels would cover the heads.
@@ -141,6 +157,68 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // World props for Environment (model-2), tinted the way Terrain tints them.
+    void Props()
+    {
+        ShaderMaterial Tinted(ShaderMaterial source, Color color)
+        {
+            var material = (ShaderMaterial)source.Duplicate();
+            material.SetShaderParameter("albedo", color);
+            return material;
+        }
+        var bark = Tinted(Look.BarkSurface, Look.Bark.Lightened(0.15f));
+        var stone = Tinted(Look.RockSurface, Look.Rock);
+        var props = new (Mesh, Material, Vector3)[]
+        {
+            (PropMeshes.Trunk, bark, new Vector3(-2.4f, 0, -0.6f)),
+            (PropMeshes.Rock, stone, new Vector3(-0.8f, 0, 0.2f)),
+            (PropMeshes.FallenLog, bark, new Vector3(1.2f, 0, -0.4f)),
+            (PropMeshes.Stump, bark, new Vector3(2.8f, 0, 0.6f)),
+        };
+        foreach (var (mesh, material, at) in props)
+            AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = material, Position = at, Rotation = new Vector3(0, 0.4f, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(0.2f, 0, 1.0f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
+    }
+
+    // Work stations side by side (model-2), with a player for scale.
+    void Stations()
+    {
+        var stations = new[]
+        {
+            ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()),
+            ("Distaff stand", StationMeshes.Distaff()), ("Drying rack", StationMeshes.DryingRack()),
+        };
+        for (int i = 0; i < stations.Length; i++)
+        {
+            var root = new Node3D { Position = new Vector3((i % 2 - 0.5f) * 2.6f, 0, (i / 2) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
+            AddChild(root);
+            foreach (var piece in stations[i].Item2)
+                if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            Label(stations[i].Item1, root.Position + new Vector3(0, -0.9f, 0));
+        }
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(-2.6f, 0, 0.6f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 3.2f, 5.2f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
+    }
+
+    // The cold hearth: the stone ring with ash and burnt stubs.
+    void Hearth()
+    {
+        AddChild(new MeshInstance3D { Mesh = HearthModel.Ring });
+        AddChild(new MeshInstance3D { Mesh = HearthModel.ColdAsh });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.3f, 1.7f), new Vector3(0, 0, 0), Vector3.Up);
     }
 
     // Leaf wrap, then wool tunic and foot wraps standing, walking, and from behind.
