@@ -1,7 +1,7 @@
 # survival-7: Running and stamina
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-running (main after #75, plus UX's #118 branch claude/ux-ui-run-xlrh2s merged in)
 PR: (none yet; open after #75 merges)
 
@@ -30,6 +30,8 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 
 - 2026-10-16: #119 green on 8a03451 (run https://github.com/Indenex/LifeGame/actions/runs/38947551748); sha sent to PM. Render requested 8a03451 (Render lane).
 
+- 2026-10-16: #119 merged at 1be3049 (CI https://github.com/Indenex/LifeGame/actions/runs/38949413392 green).
+
 ## Open questions / blockers
 - Which skill rank stamina grows with (no Survival skill exists): asked PM; options A) new basic skill Endurance trained by running [rec], B) highest basic rank, C) average of basics. Until then StaminaRank() = 0.
 - ceramics-7 also edits Survival.Eat (pot comes back); whichever merges second resolves a small conflict, and Ceramics adds PotOfBroth/PotOfStew to Needs.GoodMeal.
@@ -37,4 +39,4 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 - Known gap: Walk() isn't called while a panel captures input, so stamina doesn't refill then. Minor.
 
 ## Next step
-Wait for the PM to merge #119; then survival-8/9 PR from claude/survival-arrival.
+None: merged as #119 (1be3049). Follow-ups are survival-8/9.

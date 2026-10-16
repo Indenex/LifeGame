@@ -1,9 +1,9 @@
 # survival-8: New arrival warmth
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_progress
-Branch: claude/survival-arrival (stacked on claude/survival-running, #119)
-PR: (open after #119 merges)
+Status: in_review
+Branch: claude/survival-arrival (main after #119 merged)
+PR: (opening now, with survival-9)
 
 ## Goal
 D-115: a new character's first 30 minutes online, cold drains at half speed, so a winter start (seasons, D-099) isn't a race to a fire. Not after a death. Visible as a small marker: a sprout badge in a draining ring right after the warmth ring; when it ends, one note "You've found your feet. The cold bites harder now."
@@ -26,4 +26,4 @@ D-115: a new character's first 30 minutes online, cold drains at half speed, so 
 - (none)
 
 ## Next step
-After #119 merges: merge main into claude/survival-arrival, open the survival-8 PR, wait for CI, send green sha to the PM, and a render request (badge on a fresh character) to the Render lane.
+Wait for CI on the survival-8/9 PR; green: send the sha to the PM and Integration, and the PR number to Atmosphere (snow hook).
