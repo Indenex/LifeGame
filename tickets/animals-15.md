@@ -33,6 +33,8 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16 21:20: Justin: combat skills progress slower; the ceiling must be a single named constant per effect that we raise in later content; skill matters much more than gear. Redone: gear factor now (0.9 + 0.1 q) per item (crude to excellent only ~13% apart, in Bow.cs BowDamage); ArcheryDamage 0.44 at rank 0 to 2.0 at the ceiling (hi is one named constant in Journal's Progression), combat category pace ~0.5x on skill gain. Per-hit damage rank 0/25/50/100: crude 15/38/55/68, excellent 17/43/62/77.
 
+- 2026-10-16 21:30: Justin: Archery progression must be drawn out (7,6,5,4,3,2 hits at ranks 0,20,...,100, crude gear, no crit). Proposed to Journal (skills-12/#237): combat damage multipliers use a harmonic (even-in-hits) shape, m(r) = 1/(1/lo + (1/hi - 1/lo)*r/100), lo 0.44, Ceiling.ArcheryDamage 1.6. Crude per-hit 15/18/21/27/36/55 (hits 7/6/5/4/3/2). With a crit (x1.5-x3): one-shot needs about rank 80 plus a top-Stalking crit. Sent to PM. Bow.cs still has no Archery effect applied: after #237 merges, read ArcheryDamage/HitChance/DrawTime via Progression.Effect(kind, SkillRank(ctx, playerId, Skills.Shoot)).
+
 ## Open questions / blockers
 - Numbers decided: A.
 - Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
