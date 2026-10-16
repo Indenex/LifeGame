@@ -38,7 +38,6 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 
 ## Open questions / blockers
 - Crafting's #194 (FireTopUpHook): once merged, add `static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil) => HearthTopUp(ctx, fire, ref fuelUntil);` to BuildingHearth.cs.
-- Crafting's #122 declares and calls both hooks; tested. Building-9 waits for #122 and #153 to merge. Hooks: `BuiltHearthSpotHook` (FireSpot) and `FireFuelScaleHook` (LightFire, FeedFire, including the MaxSeconds cap). Asked 2026-10-16 18:50. This branch won't compile until those declarations are on main.
 
 ## Next step
-Wait for CI on the building-9 PR and send the PM the green sha. Wire up FireTopUpHook when #194 merges.
+Watch CI on #202 (subscribe to the PR). When green, send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the head sha. When Crafting's #194 (FireTopUpHook) is on main, add the one-line partial from Open questions to BuildingHearth.cs, in #202 if it's still open or as a small follow-up PR. Then building-10 (tickets/building-10.md on origin/claude/house-building-8ueqz2-cabin).
