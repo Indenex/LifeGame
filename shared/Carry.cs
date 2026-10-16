@@ -12,8 +12,8 @@ namespace LifeGame.Shared
         public const float BaseLimit = 20f;
         // A woven basket in your inventory adds this much. Only one basket counts.
         public const float BasketBonus = 15f;
-        // Crafting's woven basket. Swap for Item.WovenBasket once Crafting adds it.
-        public const Item Basket = (Item)13;
+        // Crafting's woven basket.
+        public const Item Basket = Item.Basket;
 
         // Over the limit you slow down, reaching this fraction of walking speed
         // at OverloadCap times the limit, and no slower beyond it.
