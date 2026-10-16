@@ -17,10 +17,11 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 
 ## Progress log
 - 2026-10-16 17:50: PM was offered 4 options (hints / visible gains / road-ahead checklist / hints then gains); started option 1 as the stated default. Branch made from #43's head plus main (merged cleanly).
+- 2026-10-16 18:05: NextSteps.cs + panel block + chop fixes written. Hints follow D-081's road (fire, food, shelter, fired pot): road steps past the furthest one reached first, skipped ones after, one slot kept for something off the road. Logic checked outside Godot with a .NET harness against shared/: every one of the 42 processes has a hint, and following the hints (first or third each time) reaches all 42. Godot client not built locally (no Godot/bindings here); CI builds it. `chop` mapped to Foraging (default).
 
 ## Open questions / blockers
 - Which option for skills-10 (sent to the PM 17:44): default option 1, "Things to try".
 - `chop.log` skill: default Foraging (felling and gathering wood); sent to the PM as a choice.
 
 ## Next step
-Write client/scripts/journal/NextSteps.cs and the panel block; push; ask Render for a journal shot.
+Wait for CI on claude/journal-skills-10 (push run); then open the PR (after #43 merges, or stacked) and send a render request for the journal's Things to try block.

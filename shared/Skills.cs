@@ -58,7 +58,7 @@ namespace LifeGame.Shared
 
         public static readonly Specialization[] Specializations =
         {
-            new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
+            new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving, sewing, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", "sew"),

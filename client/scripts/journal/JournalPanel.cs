@@ -22,6 +22,8 @@ public partial class JournalPanel : Control
     readonly VBoxContainer entryList = new();
     readonly Label capLabel = new();
     readonly Label undiscovered = new();
+    // Things to try next (NextSteps), under the discoveries.
+    readonly VBoxContainer tries = new();
     Tween? fade;
 
     static readonly Color Ink = new(Look.Cream, 0.95f);
@@ -81,6 +83,8 @@ public partial class JournalPanel : Control
         right.AddChild(scroll);
         Style(undiscovered, 14, Faint);
         right.AddChild(undiscovered);
+        tries.AddThemeConstantOverride("separation", 4);
+        right.AddChild(tries);
         columns.AddChild(right);
     }
 
@@ -126,6 +130,12 @@ public partial class JournalPanel : Control
         var known = entries.Select(e => e.ProcessId).ToHashSet();
         int left = Skills.AllProcessIds().Count(id => !known.Contains(id));
         undiscovered.Text = left > 0 ? $"{left} more {(left == 1 ? "thing" : "things")} to discover." : "You have found everything there is, for now.";
+        Clear(tries);
+        var hints = NextSteps.For(known);
+        tries.Visible = hints.Count > 0;
+        if (hints.Count > 0) tries.AddChild(Text("Things to try", 15, Accent));
+        foreach (var hint in hints) tries.AddChild(Wrapped(hint, 14, Recipe));
+
         int pupils = taught.Select(t => t.LearnerName).Distinct().Count();
         if (pupils > 0)
             undiscovered.Text += $"  You have taught {pupils} {(pupils == 1 ? "person" : "people")} {taught.Count} {(taught.Count == 1 ? "thing" : "things")}.";
