@@ -646,3 +646,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-158 — 2026-10-16 — Model style: Justin picks from renders
 **Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
 **Who:** Justin ("I've seen renders of these, go find them since they've already been made.")
+
+## D-159 — 2026-10-16 — Sonnet workers do the coding; Opus for player-visual work
+**Decision:** Coding can be done by Sonnet workers, and lanes start transitioning over to them. Anything related to modelling, texture work or player-visual things stays with Opus. This replaces D-058's "Opus for any session that writes code". Applied split. Sonnet: Integration, Release, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio (the Scribe is already Sonnet). Opus: Modeling, Animation, Environment, Atmosphere, UX/UI (player-visual), Wiki (writing voice, D-064), and the PM. Lanes hand off at a checkpoint (ticket current, `HANDOFF READY` to the PM), then the PM starts a fresh Sonnet session on the ticket. Sonnet lanes may still use an Opus helper for player-visual parts.
+**Who:** Justin ("Let's update that coding can be done by sonnet workers, and start transitioning them over to it. Anything that's related to modelling, texture work, or player-visual things can be opus.")
