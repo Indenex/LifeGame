@@ -108,8 +108,9 @@ public partial class BuildingSystem
 
     static bool Usable(Structure s, Vector3 p)
     {
+        // Just inside the server's reach, so a store opens wherever putting into it works.
         if (Structures.IsStore((int)s.Kind))
-            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
+            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, Structures.WorkReach - 0.2f);
         if (Structures.IsGate((int)s.Kind))
             return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.0f);
         if (!Structures.HasDoorway((int)s.Kind)) return false;

@@ -21,6 +21,7 @@ Default costs, starting low per D-075 (sent to the PM): fence posts 2 sticks, ra
 - 2026-10-16 18:25: StructureStepHook implemented. Tested on a scratch merge with #115: builds, BuildTest fence passes twice, no server errors with sheep ticking. Fixed a BuildTest flake: builders stood 1.9 m off a 0.3 m-thin fence, and a walk can stop 1 m short, which left them out of reach. They now stand 0.9 m off (70f5850). Backed up on claude/house-building-8ueqz2-fence.
 - Sent the PM the cost options and the D-075 shelter options (see building-7).
 - 2026-10-16 18:25: Animals live-tested 70f5850 merged with #115. A 6 m fence pen around a flock, with a bot charging it for 90 s: the sheep's furthest point was 2.70 m from the centre (7.0 m without the pen). No server errors. Animals asked the PM to merge #115 first.
+- Ceramics noticed a basket or jar offered G only within 1.2 m, while the server accepts 2.2 m. The client now offers it out to WorkReach - 0.2 m.
 
 ## Open questions / blockers
 - Animals agreed and declared `StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref bool blocked)` in AnimalFires.cs (PR #115, claude/animals-fence-5gkntn 22c0a61). BuildingFence.cs implements it (8ebc64b). A partial implementation without its declaration won't compile, so this PR must merge after #115 (merge main once #115 is in). Animals will live-test sheep at a fence.
