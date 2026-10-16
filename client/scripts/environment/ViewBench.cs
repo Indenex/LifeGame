@@ -40,7 +40,7 @@ public partial class Terrain
                         {
                             mesh = mm.Mesh;
                             n = mm.InstanceCount;
-                            grass = mmi.MaterialOverride == Look.Grass;
+                            grass = mmi.MaterialOverride == Look.Grass || mmi.MaterialOverride == Look.GrassTufts;
                             shadow = mmi.CastShadow != GeometryInstance3D.ShadowCastingSetting.Off;
                         }
                         else if (child is MeshInstance3D mi)

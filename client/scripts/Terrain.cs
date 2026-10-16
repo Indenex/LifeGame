@@ -480,7 +480,7 @@ public partial class Terrain : Node3D
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         foreach (var ((mesh, material), items) in landmarks.Batches)
             AddMulti(root, mesh, items, material, castShadow: material != Look.Grass);
-        if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
+        if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
         AddMulti(root, Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
         AddMulti(root, Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         AddMulti(root, Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
