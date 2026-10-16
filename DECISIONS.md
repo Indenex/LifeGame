@@ -232,3 +232,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-056 — 2026-10-16 — Cleared trees fall in a random direction
 **Decision:** When ground is cleared, trees topple and settle in a random direction (seeded per tree so all players see the same), rocks sink, grass thins. The PM had recommended away-from-camera.
 **Who:** Justin ("Random")
+
+## D-057 — 2026-10-16 — Mud-brick house costs
+**Decision:** The mud-brick house (building-4) costs footings 6 stone + 4 sticks, walls 16 bricks + 6 daub, rafters 12 sticks + 2 cordage, thatch 14 fiber. Full rain cover, warmth 0.85 (0.9 door shut), a fire inside makes it fully warm, weathers after 7 days untouched. The PM had recommended 10 bricks.
+**Who:** Justin ("16 bricks"); the other numbers are Building's defaults, shown to him
