@@ -229,13 +229,24 @@ public static partial class Module
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        foreach (var fire in ctx.Db.Fire.Iter().ToList())
+        foreach (var row in ctx.Db.Fire.Iter().ToList())
+        {
+            // A fire on a raised hearth feeds itself from storage nearby (D-149, Building).
+            var fire = row;
+            var until = fire.FuelUntil;
+            FireTopUpHook(ctx, fire, ref until);
+            if (until.MicrosecondsSinceUnixEpoch != fire.FuelUntil.MicrosecondsSinceUnixEpoch)
+            {
+                fire = fire with { FuelUntil = until };
+                ctx.Db.Fire.Id.Update(fire);
+            }
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
                 LeaveColdHearth(ctx, fire);
             }
+        }
         ClearOldHearths(ctx);
     }
 
