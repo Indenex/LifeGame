@@ -21,6 +21,8 @@ Justin picked forest light first (D-085), then atmosphere-14 and -15. Mornings a
 
 - 2026-10-16 18:32: #66 merged; merged main (incl. Environment's #113 Forest.Density in Woodedness), builds clean. Opened draft PR #136.
 
+- 2026-10-16 19:07: #136 CI green on 5605b42 (https://github.com/Indenex/LifeGame/actions/runs/38948095007: server and load test, Linux and Windows clients). Still draft pending the Render lane's dc26f57 shots. (Logged from the atmosphere-16 branch so #136's head stays put.)
+
 ## Open questions / blockers
 - Sent the PM options A/B/C (A recommended). Sent Environment a split proposal (they own world stuff and placement; I own time, weather and the global shader params).
 
