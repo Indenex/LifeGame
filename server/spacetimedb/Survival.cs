@@ -207,6 +207,7 @@ public static partial class Module
     // of the wilderness; what they know stays with them.
     static void Die(ReducerContext ctx, Player player, Vitals v, PlayerPos pos, string cause)
     {
+        BeforeDeathDrop(ctx, player);
         foreach (var stack in ctx.Db.InventoryItem.Owner.Filter(player.Identity).ToList())
         {
             for (uint i = 0; i < stack.Count; i++)
@@ -352,6 +353,9 @@ public static partial class Module
         float wet = 1f + Needs.RainChill * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
         return cold * wet;
     }
+
+    // Animals (Clothing.cs) puts worn clothes back in the inventory so they drop too.
+    static partial void BeforeDeathDrop(ReducerContext ctx, Player player);
 
     // Clothing: Animals implements this (Clothing.cs). Insulation 0 (naked) .. 1
     // scales down the cold drain like shelter does.
