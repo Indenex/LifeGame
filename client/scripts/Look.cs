@@ -48,6 +48,19 @@ public static class Look
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
         Add("player_position", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1000, 0));
         Add("view_camera_position", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.Zero);
+        Add("world_seconds", RenderingServer.GlobalShaderParameterType.Float, 1f);
+    }
+
+    // Seconds since the game started (from 1), shared with the shaders as
+    // world_seconds so changes to the world can ease in over time. The atmosphere
+    // advances it every frame.
+    public static float Clock { get; private set; } = 1f;
+    static readonly StringName WorldSeconds = "world_seconds"; // cached: a string would make a new StringName every frame
+
+    public static void Tick(float delta)
+    {
+        Clock += delta;
+        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet(WorldSeconds, Clock);
     }
 
     // Each surface family gets the same shader with its own detail: how fine the
@@ -196,6 +209,7 @@ public static class Look
         global uniform float wind_strength;
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
+        global uniform float world_seconds;
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
         float cloud_shadow(vec3 p) {
@@ -249,7 +263,7 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                return (1.0 - smoothstep(1.1 * size, 2.3 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                return (1.0 - smoothstep(0.9 * size, 1.9 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
             }
 
             varying vec3 tint;
@@ -273,6 +287,11 @@ public static class Look
                 world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
                 // Palette colors are authored in sRGB.
                 tint = pow(COLOR.rgb, vec3(2.2)) * albedo.rgb;
+                // Ground that was just cleared or grew back blends from its old color.
+                if (CUSTOM0.a > 0.0) {
+                    float k = smoothstep(0.0, 1.6, world_seconds - CUSTOM0.a);
+                    tint = mix(pow(CUSTOM0.rgb, vec3(2.2)) * albedo.rgb, tint, k);
+                }
             #ifdef GHOST
                 // The ghost draws only trees in the way; the rest collapse to nothing.
                 if (fade < 0.002) VERTEX = vec3(0.0);
@@ -353,6 +372,14 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                // Grass on a cell just cleared lies down and sinks away; grass on a
+                // cell uncleared rises back up.
+                if (INSTANCE_CUSTOM.x > 0.0) {
+                    float k = smoothstep(0.0, 1.6, world_seconds - INSTANCE_CUSTOM.x);
+                    float height = INSTANCE_CUSTOM.y > 0.0 ? 1.0 - k : k;
+                    VERTEX.y *= height;
+                    VERTEX.xz *= mix(0.7, 1.0, height);
+                }
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 world_pos = world;
                 tip = UV.y;

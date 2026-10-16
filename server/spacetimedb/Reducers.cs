@@ -107,7 +107,7 @@ public static partial class Module
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
         float dt = Math.Min(SecondsBetween(state.LastMoveAt, ctx.Timestamp), 1f);
-        float allowed = World.MaxSpeed * dt + World.MoveSlack;
+        float allowed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender) * dt + World.MoveSlack;
         float dx = x - fromX, dz = z - fromZ;
         float dist = MathF.Sqrt(dx * dx + dz * dz);
         if (dist > allowed)
