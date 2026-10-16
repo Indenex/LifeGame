@@ -11,6 +11,7 @@ Justin, 2026-10-16: "go look back at our original reference world/terrain/charac
 | `03-forest-paths-cliffs.webp` | Woodland from above: round trees, dirt paths, grassy ledges with bark-like cliff sides |
 | `04-lava-rocks.webp` | Dark rock field with glowing lava cracks |
 | `05-snowy-pines.webp` | Snowy pines, bare shrubs, stumps, falling snow, stone wall |
+| `06-ice-dungeon-interior.webp` | Indoor room: chunky blue-grey stone walls, an arched niche and doorway, wooden barrels, crates, a long table with chairs and stools, a cobbled floor dusted with snow, and an armoured figure |
 
 These are images of a 2D isometric asset pack, used for their style, not their camera. LifeGame stays 3D with its follow camera (D-002).
 
@@ -21,4 +22,5 @@ These are images of a 2D isometric asset pack, used for their style, not their c
 - **Soft dark edges.** Shapes have a darker rim or shade line at their edges, which keeps them readable without hard black outlines.
 - **Palette.** Warm yellow-greens for lit grass, deep olive and moss greens for trees, warm browns for bark and earth, cool grey-violet for stone, and blue-violet shadows. Snow is warm white with blue shade.
 - **Dense, lush ground cover.** The grass is thick and blade-shaped, with small flowers, mushrooms, stumps, twigs and rocks scattered through it.
+- **Props and buildings.** Wood is dark and weathered, with visible planks, bands and grain strokes. Stone is chunky blocks with soft painted highlights. Furniture is sturdy and simple (06). Characters are clean and readable with light outlines (06).
 - **Atmosphere does a lot of the work.** Soft haze, a slightly faded and warm grade, gentle bloom, depth-of-field blur at the edges, and glowing light where there is fire or lava.
