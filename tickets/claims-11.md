@@ -1,8 +1,8 @@
 # claims-11: Stash log
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_progress
-Branch: claude/claims-11-stash-log (stacked on claude/claims-10-voice, which is stacked on #174's branch)
+Status: in_review
+Branch: claude/claims-11-stash-log (stacked on claude/claims-10-voice; merge after claims-10)
 PR: (not yet)
 
 ## Goal
@@ -24,4 +24,4 @@ A group can trust its shared stash (PM, D-145).
 - (none)
 
 ## Next step
-When claims-10 merges, merge main in, open the claims-11 PR and send a render request (the claim panel's stash with recent lines).
+Wait for CI on the claims-11 PR and for claims-10 to merge; then send the PM the green head sha.
