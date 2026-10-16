@@ -1,7 +1,7 @@
 # atmosphere-11: Sky that moves
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #66 (with atmosphere-10)
 
@@ -15,8 +15,10 @@ From the PM, 2026-10-16: slow drifting clouds whose cover follows the weather, s
 
 - 2026-10-16 17:28: CI run https://github.com/Indenex/LifeGame/actions/runs/38937315648 green on 47a151d (main merged in). Audio files in this PR now belong to the Audio lane (D-079); I keep merging main but don't edit audio code.
 
+- 2026-10-16 18:30: #66 approved by Justin (D-083), CI green on 7bf58e8 (https://github.com/Indenex/LifeGame/actions/runs/38940107818), merged.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for Justin's decision on the water and sky look (PM relays); merge main into the branch when it moves.
+None; done. Follow-up work is atmosphere-13 (forest light).

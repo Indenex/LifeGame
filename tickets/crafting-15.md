@@ -51,7 +51,7 @@ Questions for Justin (recommended option first):
 
 ## Built (this PR)
 - shared/Processes.cs: `StationKind` {None, Table, PottersBench, Spindle, DryingRack}, `StationInfo` (StorageReach 4 m, names), `ProcessDef.Station`; weave.basket is made at a Table.
-- shared/Structures.cs: `StructureShape.Station`; the Crafting table shape (one stage "Table") and its cost. Building.cs: `StructureKind.CraftingTable` (6 on main; renumber if the storage jar lands first) and a `CheckStationSite` call in PlaceStructure.
+- shared/Structures.cs: `StructureShape.Station`; the Crafting table shape (one stage "Table") and its cost. Building.cs: `StructureKind.CraftingTable` (7, after the storage jar) and a `CheckStationSite` call in PlaceStructure.
 - server/spacetimedb/Stations.cs: the site check (inside a claim you have rights to), `StationNear` (within WorkReach of the edge, in a claim you have rights to), `CountFor`/`TakeFor` (bag, then baskets and jars within 4 m, then the claim stash), and `BesideStation` (where placed things go).
 - Crafting.cs StartCraft: station check before anything is used, and counts and takes through the station.
 - Client: `Stations.NearestOf/AtPlayer/StoredNear` (client/scripts/crafting/Stations.cs; Animation uses NearestOf), and the panel shows "at a crafting table" with a "build one inside your claim" hint. CraftingTableModel draws four lashed legs with a split log on top.

@@ -19,7 +19,7 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 - **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. The PM executes merges, and lanes send green shas to the PM (D-119). Integration prepares merge-readiness.
 - **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
 - **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
-- **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059).
+- **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059). Renders never block merges (D-142).
 - **Scribe** (Sonnet) records Justin's decisions in `DECISIONS.md` and STATUS changes for the PM (D-102).
 
 ## Ideas become choices (D-059)

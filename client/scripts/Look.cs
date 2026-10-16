@@ -20,6 +20,11 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Wildflowers in the grass (Environment's undergrowth).
+    public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
+    public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
+    public static readonly Color FlowerViolet = new(0.62f, 0.50f, 0.80f);
+    public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
@@ -45,6 +50,7 @@ public static class Look
         Add("wetness", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("wind_strength", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
         Add("wind_gust", RenderingServer.GlobalShaderParameterType.Float, 0.5f);
+        Add("wind_dir", RenderingServer.GlobalShaderParameterType.Vec2, Atmosphere.WindDirection);
         Add("rain_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("cloud_cover", RenderingServer.GlobalShaderParameterType.Float, 0.2f);
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
@@ -211,6 +217,8 @@ public static class Look
         global uniform float wind_strength;
         // The gust heard in the wind right now (0 to 1), so what moves matches the sound.
         global uniform float wind_gust;
+        // Which way the wind blows across the ground (unit x, z); clouds drift this way.
+        global uniform vec2 wind_dir;
         global uniform float rain_amount;
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
@@ -423,7 +431,7 @@ public static class Look
                 gust = smoothstep(0.2, 1.0, wave);
                 float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
                 float wind = (0.45 + wind_strength * 1.8) * (0.7 + 0.6 * wind_gust);
-                vec3 bend = vec3(0.6, 0.0, 0.8) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
+                vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
                 vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
                 VERTEX.xz += local.xz * tip * tip;
                 VERTEX.y -= gust * 0.06 * tip * tip;
