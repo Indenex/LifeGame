@@ -86,6 +86,7 @@ public partial class Atmosphere : Node3D
     // the clouds drift with it.
     public static readonly Vector2 WindDirection = new(0.6f, 0.8f);
     static readonly StringName NWindDir = "wind_dir";
+    static readonly StringName NFogTint = "fog_tint";
 
     // How wooded it is around the player, eased over a few seconds: where the sun
     // shafts between the trunks show.
@@ -264,6 +265,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NWindDir, WindDirection);
 
         ApplyLight();
+        RenderingServer.GlobalShaderParameterSet(NFogTint, env.FogLightColor);
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
         RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
