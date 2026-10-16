@@ -102,7 +102,7 @@ Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay qu
 Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
+FireCraft("fire.hand_drill", 1f);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
@@ -113,7 +113,7 @@ Gather(Item.Fiber, 2);
 Gather(Item.Stick, 3);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesNow = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 0.1f, null);
+FireCraft("fire.hand_drill", 0.1f);
 Pump(() => false, 1, null);
 if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
 if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
@@ -126,15 +126,25 @@ Craft("cord.twist", 0, Item.Cordage);
 Craft("lash.bow_drill", 0, Item.BowDrill);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesBeforeBow = conn.Db.Fire.Count;
-Craft("fire.bow_drill", 0.25f, null);
+FireCraft("fire.bow_drill", 0.25f);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
 foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
+// A freshly lit fire is already as high as it burns (D-090): feeding is refused and the stick is kept.
+var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+WalkTo(bowFire.X, bowFire.Z);
+RefusedFeed(bowFire, Item.Stick);
+
+// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
+// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
 WalkTo(fire.X, fire.Z);
-long fuelBefore = fire.FuelUntil.MicrosecondsSinceUnixEpoch;
+float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
+Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
+long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
 lastError = null;
 conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
@@ -152,13 +162,8 @@ if (Trees.Felling)
     Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
     Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
 }
-WalkTo(fire.X, fire.Z);
-fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
-lastError = null;
-conn.Reducers.FeedFire(fire.Id, (ushort)Item.Log);
-Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "a log to burn");
-if (lastError != null) Fail($"feeding the fire a log: {lastError}");
-Console.WriteLine("Fed the fire a log");
+WalkTo(bowFire.X, bowFire.Z);
+RefusedFeed(bowFire, Item.Log);
 
 // Crafting-15: stations (D-098, D-112). A basket is woven at a crafting table, which
 // stands inside a claim, and part of its fiber comes from the claim's stash.
@@ -236,6 +241,27 @@ Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
 
+// Lights a fire (or tries to). The server sets a fire only on clear, level ground
+// near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
+// when it finds none here, step a few metres along and try again.
+void FireCraft(string processId, float score)
+{
+    for (int attempt = 0; ; attempt++)
+    {
+        lastError = null;
+        conn.Reducers.StartCraft(processId, score);
+        Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
+        if (lastError == null) break;
+        if (!lastError.Contains("clear, level ground") || attempt >= 8)
+            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
+        float a = attempt * MathF.PI / 4f;
+        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
+        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+    }
+    var def = Processes.Find(processId)!;
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
+}
+
 // Lays out a structure on clear, level ground near the bot and builds it from the bag.
 Structure BuildHere(StructureKind kind)
 {
@@ -277,7 +303,7 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
-    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds + 5, $"{processId} to finish");
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
         Pump(() => CountOf(item) > before, 3, $"{processId} output");
@@ -297,6 +323,19 @@ void OffRocks(Fire f)
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
                 if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
             }
+}
+
+// Feeding a full fire is refused with D-090's message, and the fuel stays in the bag.
+void RefusedFeed(Fire target, Item fuel)
+{
+    var before = CountOf(fuel);
+    lastError = null;
+    conn.Reducers.FeedFire(target.Id, (ushort)fuel);
+    Pump(() => lastError != null, 5, $"a full fire to refuse {fuel}");
+    if (lastError != "The fire is burning as high as it will") Fail($"feeding a full fire {fuel}: {lastError}");
+    Pump(() => false, 0.5f, null);
+    if (CountOf(fuel) != before) Fail($"a full fire ate {fuel} ({before} -> {CountOf(fuel)})");
+    Console.WriteLine($"A full fire refused {fuel} and it was kept");
 }
 
 // The standing tree nearest the bot, by the same rules the server uses.

@@ -26,8 +26,14 @@ Per D-098, spinning and weaving happen at a Spindle station, and hide work (scra
 - 2026-10-16 22:25: Render requested de48c3f (stations, for Q10/Q11).
 - 2026-10-16 22:20: built on crafting-stations 6d6668f; server + client build. Local bot test (scratch StationCheck, TEMP give reducer, not committed): spin away from a station refused ("You need to be at a spindle in your claim"); claim, crafting table, drop spindle at the table, spindle station built (spindle consumed), 2 yarn spun and cloth woven there; drying rack built, 4 hides scraped, 3 laced on pegs 0.75 m apart along the bar, the 4th handed back; damp leather refused; dismantling the rack dropped the 3 hides as scraped hides. Upgrade check against main passed.
 
+- 2026-10-16 20:15 (UTC): Crafting updated #160 (d947764): StationInfo.Name(Spindle) is "spindle station"; stations report build.spindle / build.rack via Structures.StageProcess; main merged into #160 (StorageJar 6, CraftingTable 7); Ceramics' PottersBench is 8, so SpindleStation and DryingRack go after it, at the very end. Crafting-16 (D-113) sets hide.scrape 12 s and hide.stretch 6 s; it asked for spin/weave effort (answer: spin about 1, weave about 2). Modeling is making StationMeshes.Distaff() / DryingRack() (swap one line each in StructureModel's Station switch when they land). Lane handed off to a new Sonnet session (D-159).
+
+- 2026-10-16: #160 is on main (CraftingTable = 9). Merged origin/main into the branch; Spindle and DryingRack are at the end of StructureKind, Shapes and StageCosts, after Fence/Gate/CraftingTable. hide.scrape/stretch and spin/weave use Base(2, effort): scrape 1, stretch 0.5, spin 1, weave 2 (stretch now also takes 2 sticks, from main). Server builds locally, tools/upgrade-check.sh origin/main passed (exit 0).
+
 ## Open questions / blockers
 - Answered: D-137 (Q10 a), D-138 (Q11 a); D-139 the foot wraps ship already made at the rack (#149 stacked on this branch). House building OK'd the AnimalsStructureRemoved hook; kinds go at the end when merging main.
 
 ## Next step
 When #160 merges: merge main into this branch with SpindleStation and DryingRack moved to the very end of StructureKind, Shapes and StageCosts; rebuild, upgrade check, mark #90 ready.
+
+- 2026-10-16 21:10: #202 added Hearth to StructureKind; merged main again, Spindle and DryingRack re-appended after Hearth in the enum, Shapes and StageCosts. Server and client build, upgrade check passed.

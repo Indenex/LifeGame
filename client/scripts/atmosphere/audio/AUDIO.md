@@ -50,3 +50,26 @@ New sounds go on one of these buses; say which in your request if it isn't obvio
 Keep new sounds inside these: a one-off event lands about where work hits do; nothing but thunder should peak above -6 dBFS.
 
 SoundPreview takes the sliders too: `--master=0.7 --music=0.3 --effects=0.5 --ambience=0`.
+
+## Seasons (audio-2)
+
+`SoundMix.Year` (0 to 1, as `Seasons.YearFraction`) and `SoundMix.SnowCover` drive `SeasonSound.Of(year)`:
+
+| | Spring | Summer | Autumn | Winter |
+|---|---|---|---|---|
+| Birds | busiest, stronger dawn chorus | normal | fewer | a rare few |
+| Leaves | budding in | full | drier, crisper rattle | bare: thin twig whistle |
+| Insects | some crickets at night | day drone, a bee now and then, full crickets | crickets thinning | none (owls stay) |
+| Frogs | busiest | yes | fading | none |
+| Wind | | | | a little stronger and higher; grass hushed under snow |
+
+SoundPreview: `spring`, `summer`, `autumn`, `winter` (and `...night`). Other scenes stay at early summer.
+
+## How sounds are made here (for whoever holds the Audio lane next)
+
+- Everything is synthesized in `SoundMix.cs`, sample by sample, from noise (`Noise`), one-pole lowpasses (`Lowpass`) and state-variable band-passes (`BandPass.Process(x, cutoffHz, damping, rate)`: the third argument is damping = 1/Q; small values ring and add gain, values above about 2 go unstable). No sample files.
+- A new sound is a small voice class (see `Cues`, `StreamVoice`, `DayInsects`) rendered into the right buffer: `outL/outR` for the world (ambience bus, muffled under a roof), `workL/workR` for effects (footsteps use `stepL/stepR`), plus `sendL/sendR` for the forest reverb. One-shots come in through a `SoundScape` method that queues onto the synth thread; other lanes call `Sfx.Play(Cue.X)`.
+- Every new sound gets a SoundPreview scene, then is measured with `tools/SoundPreview/measure/` and placed inside the level table above before it goes to Render. Justin listens with the volume up; quiet is a bug.
+- Typical targets (sliders at 0.5, no music): calm bed about -40 dBFS rms; footsteps and one-shot cues reach about -33 to -26 at their loudest 50 ms; seasonal and water ambience beds -37 to -29 rms standing; storm peak about -5. Nothing but thunder above -6 dBFS peak.
+- Toolchain: .NET 8 SDK and SpacetimeDB CLI 2.12.0 (see `.github/workflows/build.yml`). Build `client/` after `tools/gen-bindings.sh`; run SoundPreview with `dotnet run -c Release -- out.wav scene:seconds ...` from `tools/SoundPreview/`.
+

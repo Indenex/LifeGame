@@ -1,0 +1,187 @@
+name: Release
+
+# Every green Build of main becomes a public GitHub Release (release-1, D-131; Justin chose
+# public releases): the Linux and Windows clients, the server module, the launcher and
+# release.json. The launcher on Justin's PC reads the newest release and updates the game
+# and his local world from it. Build's concurrency means a newer merge can replace a queued
+# Build, so releases follow the newest green build rather than every single merge.
+#
+# The schedule and the manual button are the safety net: they release the newest green Build
+# of main if it hasn't been released yet, so a busy merge day or a lost workflow_run event
+# never leaves Justin without a release for long.
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+# GitHub keeps only one pending run per concurrency group and cancels the older one, so a single
+# shared group let each merge replace the queued release run (and the manual button's run).
+# Per head commit instead: runs for different commits never replace each other, and a repeat for
+# the same commit waits (the pick job then skips it as already released). Cancelled and red
+# Builds exit in the pick job within seconds, so the parallel runs stay cheap. Schedule and
+# manual runs share one group of their own.
+concurrency:
+  group: release-${{ github.event.workflow_run.head_sha || 'manual' }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.6.2
+
+jobs:
+  # Picks the Build run to release: the one that just finished, or (schedule and manual runs)
+  # the newest green push Build of main. Only pushes to main; pull request runs never release.
+  # Skips a commit that already has a release.
+  pick:
+    name: Pick the build
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      R: ${{ github.repository }}
+      # Event fields come in through env, never spliced into the script.
+      EVENT: ${{ github.event_name }}
+      WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      WR_EVENT: ${{ github.event.workflow_run.event }}
+      WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      WR_ID: ${{ github.event.workflow_run.id }}
+      WR_NUMBER: ${{ github.event.workflow_run.run_number }}
+      WR_SHA: ${{ github.event.workflow_run.head_sha }}
+    outputs:
+      go: ${{ steps.pick.outputs.go }}
+      run_id: ${{ steps.pick.outputs.run_id }}
+      build: ${{ steps.pick.outputs.build }}
+      sha: ${{ steps.pick.outputs.sha }}
+    steps:
+      - id: pick
+        run: |
+          if [ "$EVENT" = workflow_run ]; then
+            if [ "$WR_CONCLUSION" != success ] || [ "$WR_EVENT" != push ] || [ "$WR_BRANCH" != main ]; then
+              echo "Not a green push Build of main; nothing to release."; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            run_id=$WR_ID; build=$WR_NUMBER; sha=$WR_SHA
+          else
+            read -r run_id build sha < <(gh api "repos/$R/actions/workflows/build.yml/runs?branch=main&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0] | "\(.id) \(.run_number) \(.head_sha)"')
+            if [ -z "${sha:-}" ]; then echo "No green Build of main yet."; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          fi
+          if gh api "repos/$R/releases?per_page=50" --jq '.[].tag_name' | grep -q -- "-${sha:0:7}$"; then
+            echo "${sha:0:7} is already released."; echo "go=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "Releasing Build $build ($sha), run $run_id"
+          { echo "go=true"; echo "run_id=$run_id"; echo "build=$build"; echo "sha=$sha"; } >> "$GITHUB_OUTPUT"
+
+  launcher:
+    name: Launcher (${{ matrix.preset }})
+    needs: pick
+    if: needs.pick.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - preset: Linux
+            out: LifeGameLauncher.x86_64
+          - preset: Windows
+            out: LifeGameLauncher.exe
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.pick.outputs.sha }}
+
+      # The .NET Godot editor needs the SDK to start, even for the GDScript-only launcher.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      # Same cache key as build.yml, so this reuses its Godot download.
+      - name: Cache Godot and export templates
+        id: godot-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-mono
+
+      - name: Install Godot and export templates
+        run: |
+          if [ "${{ steps.godot-cache.outputs.cache-hit }}" != "true" ]; then
+            base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+            curl -sSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
+            unzip -q godot.zip -d "$HOME/godot"
+            curl -sSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz"
+            unzip -q templates.tpz -d templates
+            mkdir -p "$HOME/.local/share/godot/export_templates"
+            mv templates/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono"
+          fi
+          echo "GODOT=$(ls $HOME/godot/*/Godot_v*_mono_linux.x86_64)" >> "$GITHUB_ENV"
+
+      # Godot exports even when the script has a parse error, so fail on one here.
+      # The launcher compares this stamp with release.json's and updates itself when they differ.
+      - name: Export launcher
+        working-directory: launcher
+        run: |
+          mkdir -p out
+          ../tools/release/launcher-version.sh > version.txt
+          "$GODOT" --headless --path . --import 2>&1 | tee import.log
+          "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "out/${{ matrix.out }}" 2>&1 | tee export.log
+          if grep -q "SCRIPT ERROR" import.log export.log; then echo "::error::launcher.gd has a script error"; exit 1; fi
+          test -e "out/${{ matrix.out }}"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: LifeGameLauncher-${{ matrix.preset }}
+          path: launcher/out/
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [pick, launcher]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ needs.pick.outputs.sha }}
+      BUILD: ${{ needs.pick.outputs.build }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.pick.outputs.sha }}
+
+      - name: Download the Build run's artifacts
+        uses: actions/download-artifact@v7
+        with:
+          run-id: ${{ needs.pick.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: artifacts
+
+      - name: Download the launcher
+        uses: actions/download-artifact@v7
+        with:
+          pattern: LifeGameLauncher-*
+          path: artifacts
+
+      # D-130: a world-wipe label on any PR merged since the previous release marks this one,
+      # because a newer merge can replace a queued Build and skip that PR's own release.
+      - name: List the PRs this release covers
+        run: tools/release/merged-prs.sh "${{ github.repository }}" "$SHA" | tee prs.json
+
+      - name: Pack assets
+        run: LAUNCHER_VERSION=$(tools/release/launcher-version.sh) tools/release/make-release.sh artifacts out "$BUILD" "$SHA" prs.json
+
+      # Tag build-<Build run number>-<short sha>: unique, and the launcher orders by the number.
+      - name: Create the release
+        run: |
+          tag="build-$BUILD-${SHA:0:7}"
+          title="Build $BUILD"
+          if [ "$(jq -r .world_wipe out/release.json)" = true ]; then title="$title (world wipe)"; fi
+          gh release create "$tag" out/*.zip out/StdbModule.wasm out/release.json \
+            --target "$SHA" --title "$title" --notes-file out/notes.md --latest

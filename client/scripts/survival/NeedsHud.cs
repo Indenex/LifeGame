@@ -19,6 +19,7 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
     readonly NeedGauge load = new(NeedGauge.Glyph.Sack) { Visible = false, Modulate = new Color(1, 1, 1, 0) };
+    readonly ArrivalBadge arrival = new() { Visible = false, Modulate = new Color(1, 1, 1, 0) };
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly Label deathTitle = new();
@@ -46,6 +47,8 @@ public partial class NeedsHud : CanvasLayer
         gauges.AddChild(food);
         gauges.AddChild(water);
         gauges.AddChild(warmth);
+        // A new character's half hour of gentler cold (D-115).
+        gauges.AddChild(arrival);
         // The load ring only fades in when you near your carrying limit.
         gauges.AddChild(load);
         gaugePanel = Hud.Panel(gauges, Vector2.Zero);
@@ -96,7 +99,10 @@ public partial class NeedsHud : CanvasLayer
         loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
 
-    // True while the death card covers the screen, so nothing offers itself over it.
+    // The new-arrival badge: the share of the half hour left, 0 hides it.
+    public void SetArrival(float fraction) => arrival.Set(fraction);
+
+        // True while the death card covers the screen, so nothing offers itself over it.
     public bool Mourning => fade.Color.A > 0.02f;
 
     public void ShowDeath(string cause)
@@ -152,11 +158,11 @@ public partial class NeedsHud : CanvasLayer
             vec2 uv = (SCREEN_UV - 0.5) * vec2(1.0, 0.75);
             float d = length(uv);
             float n = noise(SCREEN_UV * 9.0) * 0.6 + noise(SCREEN_UV * 31.0) * 0.4;
-            float reach = mix(0.75, 0.32, amount);
+            float reach = mix(0.85, 0.46, amount);
             float edge = smoothstep(reach, reach + 0.25, d + (n - 0.5) * 0.22);
             float sparkle = step(0.93, noise(SCREEN_UV * 140.0)) * edge * 0.35;
             vec3 ice = mix(vec3(0.70, 0.82, 0.92), vec3(0.95, 0.98, 1.0), n);
-            COLOR = vec4(ice + sparkle, edge * amount * 0.55);
+            COLOR = vec4(ice + sparkle, edge * amount * 0.36);
         }
         """;
 }

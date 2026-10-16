@@ -40,6 +40,13 @@ public partial class SurvivalClient : Node
     float walkedFor;
     // Seconds since you last ran; refill waits a moment (D-111).
     float rested = 999f;
+    // Whether Main's Walk() asked for a speed this frame; when it didn't (a panel has
+    // the input), _Process keeps the bar refilling so it isn't frozen behind panels.
+    bool walkedThisFrame;
+    // Seconds run since the last Endurance report.
+    float ranFor;
+    // Deaths when the new-arrival half hour was last seen running, null once it ends.
+    uint? arrivalDeaths;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -86,7 +93,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                ? new UseOffer("Drink", World.Reach, () => { conn.Reducers.Drink(); Sfx.Play(Cue.Drink); })
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
@@ -96,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => conn.Reducers.DrinkFrom((ushort)pot))
+                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -165,6 +172,7 @@ public partial class SurvivalClient : Node
             var (food, water, warmth) = Current();
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
             wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
+            UpdateArrival(v);
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");
@@ -179,6 +187,8 @@ public partial class SurvivalClient : Node
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
 
+        if (!walkedThisFrame) Rest((float)delta);
+        walkedThisFrame = false;
         UpdateLoad();
         UpdateOthersWet();
     }
@@ -187,8 +197,14 @@ public partial class SurvivalClient : Node
     // all slowed alike by an overload. Main's Walk() calls this once per frame.
     public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
     {
+        walkedThisFrame = true;
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
         rested = running ? 0f : rested + dt;
+        if (running && (ranFor += dt) >= Stamina.RunPerUse)
+        {
+            ranFor -= Stamina.RunPerUse;
+            conn?.Reducers.Ran();
+        }
         bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
         // "Hold Shift to run" shows once, the first time you walk on for a while.
         walkedFor = moving && !sneak ? walkedFor + dt : 0f;
@@ -201,8 +217,36 @@ public partial class SurvivalClient : Node
         return speed * WalkFactor;
     }
 
-    // The skill rank stamina grows with. 0 until the PM picks which skill (survival-7).
-    static int StaminaRank() => 0;
+    // Spends a fraction of the bar on a one-off effort such as a jump. False, and
+    // nothing spent, while winded or if the bar holds less than the cost.
+    public bool TrySpendStamina(float fraction)
+    {
+        if (winded || stamina < fraction) return false;
+        stamina -= fraction;
+        rested = 0f;
+        if (stamina <= 0f) winded = true;
+        staminaBar.Set(stamina, FeetOnScreen());
+        return true;
+    }
+
+    // Stamina keeps refilling while you stand still with a panel open.
+    void Rest(float dt)
+    {
+        rested += dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
+        stamina = Stamina.Step(stamina, false, rested, StaminaRank(), wellFed, dt);
+        if (stamina >= Stamina.MinToRun) winded = false;
+        staminaBar.Set(stamina, FeetOnScreen());
+    }
+
+    // Endurance (D-123): stamina grows with its rank, and running trains it.
+    int StaminaRank()
+    {
+        if (conn == null) return 0;
+        foreach (var skill in conn.Db.MySkills.Iter())
+            if (skill.Spec == Stamina.Skill) return Skills.Rank(skill.Points);
+        return 0;
+    }
 
     // Where the player's feet are on screen, or null when the camera can't see them.
     Vector2? FeetOnScreen()
@@ -212,7 +256,21 @@ public partial class SurvivalClient : Node
         return camera.UnprojectPosition(player.GlobalPosition);
     }
 
-    // Other players look as wet as the server says (D-036), in tenths.
+    // New arrival (D-115): show the badge while it lasts, and say once when it ends.
+    void UpdateArrival(Vitals v)
+    {
+        float left = Mathf.Max(0f, v.ArrivalLeft + v.ArrivalRate * SecondsSince(v.AsOf));
+        needsHud.SetArrival(left / Needs.ArrivalSeconds);
+        if (left > 0f) arrivalDeaths = v.Deaths;
+        else if (arrivalDeaths is { } deaths)
+        {
+            // Dying ends it too, but the death card says enough then.
+            if (v.Deaths == deaths) hud.Note("You've found your feet. The cold bites harder now.");
+            arrivalDeaths = null;
+        }
+    }
+
+        // Other players look as wet as the server says (D-036), in tenths.
     void UpdateOthersWet()
     {
         if (conn == null || vitals is not { } me) return;
@@ -248,7 +306,7 @@ public partial class SurvivalClient : Node
         if (e.IsActionPressed("eat"))
         {
             var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
-            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
+            if (Needs.BestFood(Current().food, carried) is { } food) { conn.Reducers.Eat((ushort)food); Sfx.Play(Cue.Eat); }
             else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }

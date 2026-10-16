@@ -15,7 +15,7 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
-- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
+- **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default. Never idle (D-145): when your ticket is done or waiting on CI or a merge, pick the next most useful item for your lane from the milestones (`STATUS.md`, D-081) or the design docs, start it, and tell the PM what you picked. Design choices Justin would notice go to the PM as options while you work on the recommended one.
 - **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. The PM executes merges, and lanes send green shas to the PM (D-119). Integration prepares merge-readiness.
 - **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
 - **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
@@ -26,17 +26,23 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 
 Whenever the PM or any worker has an idea (a feature, a look, a number, a different approach), it reaches Justin as a short question with 2 to 4 concrete options, the recommended one first and marked, each with a one-line trade-off, answerable in a word. Workers send ideas to the PM in that shape; the PM batches them and asks Justin. Until he answers, keep working on the recommended option.
 
-## Models (D-058)
+## Models (D-058, D-159)
 
-- **Opus** for any session or agent that writes or designs code: the PM, every lane session, and coding subagents.
-- **Sonnet** for small, basic tasks: searching, reading logs, summarizing, ticket and status bookkeeping, mechanical one-file edits, running checks.
-- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to Sonnet subagents (Agent tool `model: "sonnet"`), keeping design and non-trivial code with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
-- New sessions started for a lane (e.g. `create_session`) use Opus.
+- **Sonnet** workers do the coding for these lanes: Integration, Release & Launcher, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio, and the Scribe.
+- **Opus** for anything related to modelling, texture work or player-visual things: Modeling, Animation, Environment, Atmosphere, UX and UI, the Wiki (writing voice, D-064), and the PM. A Sonnet lane may use an Opus helper for player-visual parts.
+- Lanes move from Opus to Sonnet at a checkpoint: the ticket is current and the lane tells the PM `HANDOFF READY`, then the PM starts a fresh Sonnet session on the ticket.
+- A lane session acts as **coordinator** for its own work: it breaks a ticket into small, clearly specified tasks and hands the basic ones to subagents with the cheapest fitting model (Agent tool `model: "sonnet"`), keeping player-visual design with Opus (`model: "opus"`). The coordinator reviews each result before committing it.
+- New sessions started for a lane (e.g. `create_session`) use the model its lane has above.
 
 ## Design principles
 
 - **Start low, grow slowly (D-075).** Every number (gear bonuses, skill gains, yields, speeds, capacities) starts low and rises slowly; the curve is quicker through about the first 15% of progression, then flattens. The game is meant to take a long time. Propose numbers to the PM with where they sit on that curve.
+- **One progression formula (D-175).** All skill gains and rank effects use the one shared progression formula, front-loaded (the first ~15% of ranks give ~40% of the benefit). Lanes declare only start and end values; no skill gets its own formula unless absolutely necessary.
 - **Fun first, some realism (D-081).** Survival is light: needs nudge players along, never punish; no death spirals. Aesthetics and a world to get lost in come first; everything a player makes should look real on the ground, in hand and in the inventory.
+- **Crafted things are not chores (D-148).** Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Check new features against this.
+- **Server is the authority (D-182).** Every game rule, number, check and outcome is decided by a server reducer; the client only predicts and draws. New features must validate on the server (reach, cooldowns, ownership, line of sight, speed, collision via `shared/` code) and must not send clients values that should stay hidden. A hardening pass closes existing client-only gaps before outside players join.
+- **Repeated world features vary strongly per instance (D-166).** A landmark, camp, ruin or other feature that appears in the world several times should look quite different each time, so a player doesn't instantly recognise a pre-made piece of the world.
+- **Crucial look-and-feel choices wait for Justin's pick (D-154).** Player or creature model style, overall art style, UI look and world palette are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145). D-142 (merges don't wait on renders) does not cover these choices.
 - **Lanes never edit `STATUS.md` on their branches.** Send STATUS changes to the PM.
 
 ## The no-handoff rule

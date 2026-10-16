@@ -69,6 +69,8 @@ public static partial class Module
     // Hooks for the skills system. It implements these in its own file; until it
     // does, the compiler drops the calls and every cap stays at 100.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
+    // Lanes refuse a craft before its inputs are taken by setting refusal (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal);
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
@@ -116,6 +118,10 @@ public static partial class Module
         // A stone used as the hammer cannot also be the stone being knapped.
         if (def.NeedsTool.HasFlag(ItemTags.Hammer) && !HasSpareHammer(ctx, def))
             throw new Exception("You need a second stone to strike with");
+        // Another lane can refuse before anything is used up (Ceramics: too much clay out).
+        string? refusal = null;
+        CanStartCraft(ctx, player.PlayerId, def, ref refusal);
+        if (refusal != null) throw new Exception(refusal);
 
         float inputQuality = 0f;
         uint taken = 0;
@@ -146,7 +152,12 @@ public static partial class Module
         // Chopping takes a log from the tree within reach (Woodcutting.cs).
         if (def.Outcome == Outcome.Chop)
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
+        // A roast keeps its meat's quality until it comes off the fire.
+        byte quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap);
+        // Better work takes a little longer (D-113); fires and roasts keep their times.
         float seconds = def.Seconds;
+        if (def.Outcome is not (Outcome.Fire or Outcome.Roast))
+            seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
@@ -161,8 +172,7 @@ public static partial class Module
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
             FinishAt = finish,
-            // A roast keeps its meat's quality until it comes off the fire.
-            Quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap),
+            Quality = quality,
             Failed = failed,
             X = fx,
             Z = fz,
@@ -211,13 +221,19 @@ public static partial class Module
             throw new Exception("That will not burn");
         if (CountOf(ctx, (Item)item) < 1)
             throw new Exception("You are not carrying that");
-        Take(ctx, (Item)item, 1);
 
+        // Fuel that would burn past the cap is refused and kept (D-090, D-121). The cap
+        // grows with the feeder's Firecraft; a built hearth scales fuel and cap alike.
+        float scale = 1f;
+        FireFuelScaleHook(ctx, fire.X, fire.Z, ref scale);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        long until = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now)
-            + (long)(Items.Def((Item)item).FuelSeconds * 1_000_000);
-        until = Math.Min(until, now + (long)(Fires.MaxSeconds * 1_000_000));
-        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
+        long fuel = (long)(Items.Def((Item)item).FuelSeconds * scale * 1_000_000);
+        long cap = now + (long)(Fires.MaxSecondsFor(SkillRank(ctx, pos.PlayerId, "fire.hand_drill")) * scale * 1_000_000);
+        long from = Math.Max(fire.FuelUntil.MicrosecondsSinceUnixEpoch, now);
+        if (from + fuel > cap)
+            throw new Exception("The fire is burning as high as it will");
+        Take(ctx, (Item)item, 1);
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel) });
     }
 
     // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
@@ -225,13 +241,24 @@ public static partial class Module
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        foreach (var fire in ctx.Db.Fire.Iter().ToList())
+        foreach (var row in ctx.Db.Fire.Iter().ToList())
+        {
+            // A fire on a raised hearth feeds itself from storage nearby (D-149, Building).
+            var fire = row;
+            var until = fire.FuelUntil;
+            FireTopUpHook(ctx, fire, ref until);
+            if (until.MicrosecondsSinceUnixEpoch != fire.FuelUntil.MicrosecondsSinceUnixEpoch)
+            {
+                fire = fire with { FuelUntil = until };
+                ctx.Db.Fire.Id.Update(fire);
+            }
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch < now)
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
                 LeaveColdHearth(ctx, fire);
             }
+        }
         ClearOldHearths(ctx);
     }
 
@@ -257,6 +284,8 @@ public static partial class Module
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {
         RekindleAt(ctx, x, z);
+        float scale = 1f;
+        FireFuelScaleHook(ctx, x, z, ref scale);
         ctx.Db.Fire.Insert(new Fire
         {
             Id = 0,
@@ -266,7 +295,7 @@ public static partial class Module
             ChunkZ = World.ChunkOf(z),
             LitBy = playerId,
             LitAt = ctx.Timestamp,
-            FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * 1_000_000)),
+            FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * scale * 1_000_000)),
         });
         EnsureFireTimer(ctx);
     }

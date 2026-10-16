@@ -103,6 +103,10 @@ public partial class Main : Node3D
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
+        // The crit cue over an animal (HitPop.Show, called by Animals).
+        AddChild(new HitPop());
+        // First-evening tips for a brand-new player (ui-14, M2).
+        AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
@@ -271,10 +275,8 @@ public partial class Main : Node3D
         Bind("walk_back", Key.S, Key.Down);
         Bind("walk_left", Key.A, Key.Left);
         Bind("walk_right", Key.D, Key.Right);
-        Bind("turn_left", Key.Q);
-        Bind("turn_right", Key.E);
         Bind("dig", Key.F);
-        Bind("pick_up", Key.Space);
+        Bind("pick_up", Key.E);
         Bind("craft", Key.C);
         Bind("sneak", Key.Ctrl);
     }
@@ -323,6 +325,7 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
+        AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
@@ -483,8 +486,6 @@ public partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e.IsActionPressed("turn_left")) cameraRig.Turn(1);
-        if (e.IsActionPressed("turn_right")) cameraRig.Turn(-1);
         if (e is InputEventMouseButton { Pressed: true } mb)
         {
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
@@ -530,6 +531,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         var pos = building.Collide(me.Position, me.Position + velocity * dt);
+        pos = terrain.CollideVegetation(pos);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);

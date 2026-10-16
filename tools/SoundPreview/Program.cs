@@ -9,14 +9,20 @@
 // bolts halfway; about a third are lambs), dawn (the dawn chorus), midday,
 // evening (evening song thinning out), woods (a windy day among trees), meadow
 // (the same wind over open grass), hut (steady rain heard from inside, walking
-// on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
+// on the floor), earth, clay (walking on bare earth or wet clay), sand, shallows,
+// snow (walking on a stream bank, through shallow water, through snow), approach (walking
 // up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
-// (the same in steady rain), pondnight (at the edge at night, with frogs).
+// (the same in steady rain), pondnight (at the edge at night, with frogs),
+// stream (standing on a stream bank), streamwalk (walking up to one).
+// Seasons (audio-2): spring, summer, autumn, winter (snow on the ground), each a
+// breezy morning in light woods; add "night" for the same at night (summernight).
 // Work scenes stand still on a calm morning and work for all but the last second:
 // knap, drill, fibre, lash, pat (clay), rasp, carve; add "-fail" to end in a snap
 // (knap-fail). others: you knap while another player drills 8 m to your left
 // and a third carves 20 m to the right. still: the same calm morning with no work,
 // the bed the work scenes are measured against.
+// cues: each feedback sound (Cue: Pickup, Eat, Drink, SkillUp, Learn, FireLit,
+// Place) in turn, 2.5 s apart, standing on a calm morning.
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -55,9 +61,11 @@ foreach (var scene in scenes)
         "evening" => (0.6f, 0f, 0.2f, 0f, 0.73f),
         "woods" or "meadow" => (1f, 0f, 0.8f, 0f, 0.5f),
         "clay" => (0.9f, 0f, 0.3f, 0.8f, 0.4f),
-        "approach" or "pond" => (1f, 0f, 0.45f, 0f, 0.42f),
+        "approach" or "pond" or "stream" or "streamwalk" => (1f, 0f, 0.45f, 0f, 0.42f),
         "pondrain" => (0.75f, 0.6f, 0.55f, 1f, 0.45f),
         "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
+        "spring" or "summer" or "autumn" or "winter" => (1f, 0f, 0.45f, 0f, 0.36f),
+        "springnight" or "summernight" or "autumnnight" or "winternight" => (0f, 0f, 0.25f, 0.1f, 0.95f),
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
     string name = parts[0].Replace("-fail", "");
@@ -75,10 +83,20 @@ foreach (var scene in scenes)
         mix.OtherWorking(3, Work.Carve);
         mix.OtherPlace(3, 0.4f * 0.34f, 0.9f);
     }
+    // cues: each feedback sound in turn on a calm morning, one every 2.5 s.
+    var cueList = Enum.GetValues<Cue>();
+    if (name == "cues") (day, rain, wind, wet, time) = (0.9f, 0f, 0.15f, 0f, 0.33f);
     mix.Working(work);
     bool workEnded = false;
-    var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
+    var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, "sand" => Ground.Sand, "shallows" => Ground.Water, "snow" or "winter" => Ground.Snow, _ => Ground.Grass };
     mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
+    // Season scenes: a breezy morning (or night) in light woods at the middle of
+    // that season; winter has snow on the ground. Other scenes are early summer.
+    string seasonName = parts[0] == "deer" ? "deer" : parts[0] == "snow" ? "winter" : parts[0].Replace("night", "");
+    if (parts[0] == "deer") (day, time) = (0.35f, 0.78f);
+    mix.Year = seasonName switch { "deer" => 0.625f, "spring" => 0.125f, "summer" => 0.375f, "autumn" => 0.625f, "winter" => 0.875f, _ => 0.3f };
+    mix.SnowCover = seasonName == "winter" ? 0.8f : 0f;
+    if (seasonName is "spring" or "summer" or "autumn" or "winter") mix.Foliage = 0.7f;
     int total = (int)(seconds * rate), done = 0;
     double sum = 0, nextStep = 0;
     while (done < total)
@@ -98,9 +116,13 @@ foreach (var scene in scenes)
         // Ponds lie a little to the left; walking up to one, it grows from nothing.
         float water = parts[0] == "approach" ? (float)Math.Min(1.0, t / (seconds * 0.8)) : parts[0].StartsWith("pond") ? 1f : 0f;
         if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
+        // Streams lie a little to the right; streamwalk walks up to the bank.
+        float stream = parts[0] == "stream" ? 1f : parts[0] == "streamwalk" ? (float)Math.Min(1.0, t / (seconds * 0.8)) : 0f;
+        mix.Stream = stream * stream;
+        mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -109,6 +131,11 @@ foreach (var scene in scenes)
             mix.OtherWorkDone(2, Work.Drill, false);
             mix.OtherWorking(3, Work.None);
             workEnded = true;
+        }
+        if (name == "cues")
+        {
+            int idx = (int)(t / 2.5), prev = (int)((t - n / (double)rate) / 2.5);
+            if (t > 0 && idx != prev && idx - 1 < cueList.Length) mix.Play(cueList[idx - 1]);
         }
         if (walks && t >= nextStep)
         {
@@ -120,6 +147,32 @@ foreach (var scene in scenes)
             mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false, Random.Shared.NextDouble() < 0.35);
         if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
             for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true, b == 3);
+        // Jump scene: hop on grass, a big jump on grass, then a jump on sand.
+        if (parts[0] == "jump")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(Cue.Jump);
+            if (At(1.65)) mix.Land(Ground.Grass, 0.2f);
+            if (At(4)) mix.Play(Cue.Jump);
+            if (At(4.65)) mix.Land(Ground.Grass, 1f);
+            if (At(7)) mix.Play(Cue.Jump);
+            if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
+            if (At(10)) mix.Step(Ground.Grass, 0f);
+        }
+        // Deer scene (autumn dusk): bark close, bark far, roar far, roar near, then a herd bolting.
+        if (parts[0] == "deer")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1.5)) mix.DeerCry(SoundMix.DeerCall.Bark, -0.4f, 0.9f, 0f);
+            if (At(4)) mix.DeerCry(SoundMix.DeerCall.Bark, 0.7f, 0.4f, 0.5f);
+            if (At(6)) mix.DeerCry(SoundMix.DeerCall.Roar, -0.6f, 0.35f, 0.9f);
+            if (At(12)) mix.DeerCry(SoundMix.DeerCall.Roar, 0.3f, 0.8f, 0.3f);
+            if (a >= 18 && a < 22 && Math.Floor(a / 0.28) != Math.Floor(b / 0.28))
+                mix.DeerCry(SoundMix.DeerCall.Hoof, (float)(Random.Shared.NextDouble() * 1.4 - 0.7), (float)(0.5 + 0.4 * Random.Shared.NextDouble()), 0.1f);
+            if (At(18)) mix.DeerCry(SoundMix.DeerCall.Bark, 0f, 1f, 0f);
+        }
         // Storms: a strike every 10 seconds or so, some close, most far off.
         if (parts[0] is "storm" or "rain" && Random.Shared.NextDouble() < n / (double)rate * 0.1)
         {

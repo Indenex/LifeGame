@@ -43,8 +43,21 @@ public partial class Terrain : Node3D
 
     public float TileHeight(int x, int z)
     {
-        short depth = depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
-        return World.Height(x, z, depth);
+        long key = World.CellKey(x, z);
+        short depth = depths.TryGetValue(key, out var d) ? d : (short)0;
+        return BaseHeight(key, x, z) - depth * World.DigStep;
+    }
+
+    // The land's shape costs a dozen noise lookups a cell (shared/Land.cs) and a chunk
+    // asks for each cell many times, so heights are kept once worked out. The cache
+    // is dropped when it outgrows a few views' worth of ground.
+    readonly Dictionary<long, float> baseHeights = new();
+
+    float BaseHeight(long key, int x, int z)
+    {
+        if (baseHeights.TryGetValue(key, out var h)) return h;
+        if (baseHeights.Count > 60_000) baseHeights.Clear();
+        return baseHeights[key] = World.BaseHeight(x, z);
     }
 
     Vector3 NormalAt(int x, int z) =>
@@ -216,8 +229,11 @@ public partial class Terrain : Node3D
         var color = Look.GrassLow.Lerp(Look.GrassHigh, Mathf.Clamp(lush * 1.1f - 0.1f, 0f, 1f));
         color = color.Lerp(Look.LeafWarm, Mathf.Clamp(World.Noise(x, z, 40f, 32) - 0.62f, 0f, 1f) * 0.5f);
 
-        // Under the trees the grass gives way to leaf litter.
+        // Under the trees the grass gives way to leaf litter; on the hilltops to
+        // heath, by the water to moss.
         color = color.Lerp(LeafLitter, Forest.Density(x, z) * 0.4f);
+        color = color.Lerp(Look.HeathGround, Forest.Heath(x, z) * 0.45f);
+        color = color.Lerp(Look.Moss, Forest.Wetland(x, z) * 0.4f);
 
         float clay = Mathf.SmoothStep(0.64f, 0.85f, World.ClayScore(x, z));
         color = color.Lerp(Look.Clay, clay * 0.35f);
@@ -274,10 +290,11 @@ public partial class Terrain : Node3D
                 float top = TileHeight(x, z);
                 var (fx, fz) = Trees.Trunk(x, z);
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
-                // Reeds stand in the shallows and along the bank.
+                // Reeds stand in the shallows and along the bank, leaving the middle
+                // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    if (top > Look.WaterLevel - 0.35f && Hash01(x, z, 60) < 0.4f)
+                    if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
                     continue;
                 }
@@ -295,20 +312,39 @@ public partial class Terrain : Node3D
                 // are only scenery.
                 float density = Forest.Density(x, z);
                 float edge = Forest.Edge(density);
-                float tree = Trees.Forest(x, z);
-                float sapling = tree + 0.03f * edge;
+                // Heath on the hilltops, wetland by the water (env-4).
+                float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
+                float tree = Forest.TreeChance(density, heath); // the same as Trees.Forest(x, z)
+                float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
                 float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
                 if (!nearSpawn && roll < sapling)
                 {
                     // Saplings crowd the grove edges, a half to three quarters full size.
                     if (roll >= tree) at = at.ScaledLocal(Vector3.One * (0.45f + Hash01(x, z, 21) * 0.3f));
-                    trunks.Add((at, Look.Bark, custom));
-                    if (Hash01(x, z, 16) < 0.4f)
-                        pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
+                    if (wet > 0.4f && Hash01(x, z, 23) < 0.8f)
+                    {
+                        // Birch and alder by the water: slim, pale and light-leaved.
+                        var slim = at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f));
+                        trunks.Add((slim, Look.BirchBark.Darkened(Hash01(x, z, 24) * 0.15f), custom));
+                        leafy.Add((slim, Look.LeafLight.Lerp(Look.Leaf, Hash01(x, z, 18) * 0.3f), custom with { A = SeasonBroadleaf }));
+                    }
+                    else if (heath > 0.5f && roll < tree)
+                    {
+                        // The odd tree on the heath is a broad old oak.
+                        var broad = at.ScaledLocal(new Vector3(1.35f, 1.15f, 1.35f));
+                        trunks.Add((broad, Look.Bark.Darkened(0.05f), custom));
+                        leafy.Add((broad, Look.Leaf.Lerp(Look.LeafWarm, Hash01(x, z, 19) * 0.25f), custom with { A = SeasonBroadleaf }));
+                    }
                     else
-                        leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
-                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom));
+                    {
+                        trunks.Add((at, Look.Bark, custom));
+                        if (Hash01(x, z, 16) < 0.4f)
+                            pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
+                        else
+                            leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
+                                .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom with { A = SeasonBroadleaf }));
+                    }
                 }
                 else if (roll < rock)
                 {
@@ -326,35 +362,45 @@ public partial class Terrain : Node3D
 
                 if (!shore)
                 {
-                    // Ferns under the trees and bushes where a grove opens into a glade.
+                    // Ferns under the trees and bushes where a grove opens into a glade;
+                    // heather and gorse on the heath; sedge on wet ground.
                     float plant = Hash01(x, z, 52);
-                    float fernChance = 0.10f * Mathf.SmoothStep(0.2f, 0.6f, density) + 0.12f * edge;
-                    if (plant < fernChance)
+                    float fernChance = (0.10f * Mathf.SmoothStep(0.2f, 0.6f, density) + 0.12f * edge) * (1f - heath);
+                    float heather = 0.30f * heath, gorse = 0.04f * heath, sedge = 0.35f * wet;
+                    if (plant < heather)
+                        bushes.Add((Plant(fx, top, fz, yaw, 0.6f + Hash01(x, z, 55) * 0.4f).ScaledLocal(new Vector3(1.1f, 0.45f, 1.1f)),
+                            Look.Heather.Lightened((Hash01(x, z, 56) - 0.5f) * 0.15f), custom with { A = SeasonHeather }));
+                    else if (plant < heather + gorse)
+                        bushes.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.5f), Look.Gorse.Lerp(Look.FlowerButtercup, Hash01(x, z, 56) * 0.25f), custom));
+                    else if (plant < heather + gorse + sedge)
+                        reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Look.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
+                    else if (plant < heather + gorse + sedge + fernChance)
                         ferns.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
-                    else if (plant < fernChance + 0.035f * edge + 0.01f * density)
+                    else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
                 }
                 else if (Hash01(x, z, 60) < 0.25f)
                     reeds.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 61) * 0.4f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
 
                 // Wildflowers in patches across the open ground.
-                if (density < 0.2f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f)
+                if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f)
                 {
                     int kind = (int)(World.Noise(x, z, 18f, 64) * Undergrowth.FlowerColors.Length * 0.999f);
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
-                        Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom));
+                        Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
                 // so blades and ground read as one surface.
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
-                // Under the trees the grass thins and stays short.
-                if (grassy && Hash01(x, z, 40) < 0.93f - 0.5f * density)
+                // Under the trees the grass thins and stays short; it is short on the
+                // heath and gives way to moss on wet ground.
+                if (grassy && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet)
                 {
                     // Shear the patch onto the slope so every blade stays rooted.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
-                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density), 0), new Vector3(0, sz, 1));
+                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
                     tufts.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
@@ -374,10 +420,16 @@ public partial class Terrain : Node3D
     static Transform3D Plant(float x, float y, float z, float yaw, float scale) =>
         new(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), new Vector3(x, y, z));
 
+    // Season codes in each instance's custom data (w), for the seasons in Look's
+    // shaders (D-099): broadleaf canopies thin in winter and turn in autumn, flowers
+    // only show in spring and summer, heather blooms purple in late summer. 0 (pines,
+    // other bushes, rocks) never changes.
+    const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
+
     static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
         if (items.Count == 0) return;
-        bool custom = items.Exists(item => item.Item3.R > 0f);
+        bool custom = items.Exists(item => item.Item3.R > 0f || item.Item3.A > 0f);
         var mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
@@ -419,7 +471,7 @@ public partial class Terrain : Node3D
     // for nearly every chunk.
     public void ShowGhosts(Vector3 camera, Vector3 player)
     {
-        const float Margin = 6f; // the widest canopy plus the fade's reach
+        const float Margin = 8f; // the fade's reach round the widest canopy (2.7 x a 2.6 m wide oak)
         int n = World.ChunkSize;
         var a = new Vector2(camera.X, camera.Z);
         var b = new Vector2(player.X, player.Z);

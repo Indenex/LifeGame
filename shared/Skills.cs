@@ -52,20 +52,35 @@ namespace LifeGame.Shared
         public const string Butcher = "animal.butcher";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
+        // Running, reported by Survival's stamina every 20 s of actual running (D-123).
+        public const string Run = "move.run";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
         // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
         static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
 
         public static readonly Specialization[] Specializations =
         {
-            new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
+            new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving, sewing, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", "sew"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
-            new("husbandry", "Husbandry", true, "Keeping animals calm, shearing them cleanly and working their hides.", "animal", "hide"),
+            new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
+            // Specialties for the crafts that grew out of animals (D-065, D-071, skills-11).
+            new("leatherwork", "Leatherwork", false, "Scraping and drying hides into leather, and working it.", "hide"),
+            new("weaver", "Weaver", false, "Spinning wool into yarn, weaving cloth and sewing it to wear.", "sew"),
+        };
+
+        // Processes that train a different skill from their prefix: wool work shares
+        // "cord" and "weave" with Toolmaking, and leather sewing belongs to Leatherwork.
+        static readonly Dictionary<string, string> SpecOverrides = new()
+        {
+            ["cord.spin_wool"] = "weaver",
+            ["weave.wool_cloth"] = "weaver",
+            ["sew.leather_wraps"] = "leatherwork",
         };
 
         // Names for processes that are not in Processes.List.
@@ -88,6 +103,13 @@ namespace LifeGame.Shared
             [Kill] = "Hunting",
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
+            [Run] = "Running",
+            // D-127 first-evening steps: Claims reports the marker (#174); the bench comes with ceramics-8.
+            ["claim.mark"] = "Planting a claim",
+            ["build.bench"] = "Building a potter's bench",
+            ["build.table"] = "Building a crafting table",
+            ["build.spindle"] = "Building a spindle station",
+            ["build.rack"] = "Building a drying rack",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -106,7 +128,17 @@ namespace LifeGame.Shared
             yield return Kill;
             yield return Butcher;
             yield return DryHide;
+            yield return Run;
+            yield return "claim.mark";
+            // Building each kind of crafting station (D-098), as Structures reports it.
+            var stations = new HashSet<string>();
+            foreach (var shape in Structures.Shapes)
+                if (shape.Station != StationKind.None && stations.Add(StationInfo.BuildProcess(shape.Station)))
+                    yield return StationInfo.BuildProcess(shape.Station);
         }
+
+        // Some things can't be picked up by watching someone else do them.
+        public static bool Watchable(string processId) => !processId.StartsWith("move.");
 
         public static Specialization? Spec(string id)
         {
@@ -119,6 +151,7 @@ namespace LifeGame.Shared
         // processes still go in the journal but train nothing.
         public static Specialization? SpecFor(string processId)
         {
+            if (SpecOverrides.TryGetValue(processId, out var specId)) return Spec(specId);
             int dot = processId.IndexOf('.');
             string prefix = dot < 0 ? processId : processId[..dot];
             foreach (var s in Specializations)

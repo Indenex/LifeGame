@@ -12,7 +12,10 @@ public enum StructureKind
     Basket,
     BrickHouse,
     StorageJar,
+    Fence,
+    Gate,
     CraftingTable,
+    Hearth,
     // Animals stations (D-098, animals-11); numbered by merge order: always at the end.
     SpindleStation,
     DryingRack,
@@ -116,6 +119,8 @@ public static partial class Module
             if (Structures.TooClose(k, x, z, (int)other.Kind, other.X, other.Z))
                 throw new Exception("Too close to another building");
 
+        if (Structures.IsIndoor(k) && HomeAround(ctx, x, z, Structures.HearthWallGap) is null)
+            throw new Exception("A hearth goes inside a finished hut or house");
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
@@ -189,6 +194,7 @@ public static partial class Module
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
         ctx.Db.Structure.Id.Update(s);
         TouchStructure(ctx, s.Id);
+        if (s.Complete) FinishGate(ctx, s);
         if (s.Complete) OnStructureComplete(ctx, s);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -283,8 +289,9 @@ public static partial class Module
         {
             if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
             var shape = Structures.Shape((int)s.Kind);
-            float warmth = DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, Structures.ClosedDoorWarmth) : shape.Warmth;
+            float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (s.Kind == StructureKind.BrickHouse && FireInside(ctx, s)) warmth = 1f;
+            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }

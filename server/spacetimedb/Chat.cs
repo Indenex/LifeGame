@@ -84,6 +84,13 @@ public static partial class Module
             if (body.Length == 0) return;
             text = "/me " + body;
         }
+        // claims-10: "/W hi" is stored as "/w hi"; a bare "/w" or "/s" says nothing.
+        else if (Social.VoiceOf(text) is var voice && voice != Social.Voice.Say)
+        {
+            string body = Social.VoiceBody(text);
+            if (body.Length == 0) return;
+            text = (voice == Social.Voice.Whisper ? "/w " : "/s ") + body;
+        }
 
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);

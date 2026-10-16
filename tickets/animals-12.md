@@ -27,3 +27,5 @@ The first piece of clothing ships on its own: Leather foot wraps, made from leat
 
 ## Next step
 When #90 merges, merge main in, rebuild, and mark #149 ready; then tell UX (session_01V6qgbNbvTwniqW946KACLr) #151 can follow.
+
+- 2026-10-16 21:45: #90 merged. Merged main into this branch (one conflict in Survival.cs cold drain: kept the ClothingWarmthHook insulation and main's arrival chill). Server and client build, upgrade check against main passed (exit 0). Retargeted #149 to main and marked ready; green sha goes to the PM after CI.

@@ -39,6 +39,13 @@ public partial class SoundScape : Node
     public float FirePan { set => mix.FirePan = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
+    // Running water along a stream (audio-2a); ponds use Water.
+    public float Stream { set => mix.Stream = value; }
+    public float StreamPan { set => mix.StreamPan = value; }
+    // The time of year (0 to 1, Seasons.YearFraction) and the snow lying on the
+    // ground (0 to 1), for the seasonal ambience (audio-2).
+    public float Year { set => mix.Year = value; }
+    public float SnowCover { set => mix.SnowCover = value; }
     // How hard the wind is gusting in what is heard, 0 to 1.
     public float Gust => mix.Gust;
     // Music on or off, remembered between sessions.
@@ -69,6 +76,7 @@ public partial class SoundScape : Node
     public override void _Ready()
     {
         Load();
+        Sfx.Attach(this);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
         player.Play();
@@ -80,12 +88,16 @@ public partial class SoundScape : Node
 
     public override void _ExitTree()
     {
+        Sfx.Attach(null);
         running = false;
         synth?.Join(500);
     }
 
     // One-off sounds go through a queue so the synth thread adds them between blocks.
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
+    public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Land(ground, strength, gain, pan));
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(cue, gain, pan));
+    public void DeerCry(SoundMix.DeerCall call, float pan, float gain, float far) => events.Enqueue(m => m.DeerCry(call, pan, gain, far));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
     public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
     public void Working(Work kind) => events.Enqueue(m => m.Working(kind));
