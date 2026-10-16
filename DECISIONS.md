@@ -787,3 +787,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-193 — 2026-10-16 — Other players see your jump
 **Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
 **Who:** Justin ("Yes, pose and sound")
+
+## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
+**Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
+**Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
