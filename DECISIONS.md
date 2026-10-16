@@ -341,3 +341,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-082 — 2026-10-16 — Modeling order: player figure, then every item
 **Decision:** Modeling does the player figure first, then every item (early-game items first) as one model used on the ground, for the inventory icon and held in hand. Animation adds holding tools and items in hand.
 **Who:** Justin ("Player figure first"; the PM had recommended items first)
+
+## D-083 — 2026-10-16 — Ship the water and sky
+**Decision:** Atmosphere's water and sky (#66: shimmer, lapping, rain rings, frogs, wind sway, clouds and cloud shadows, dawn mist) ships as rendered.
+**Who:** Justin ("Ship it", which the PM recommended)
+
+## D-084 — 2026-10-16 — Groves and glades now, reshaped land after
+**Decision:** Environment builds groves and glades first (visual only, no wipe): clustered trees with open glades, undergrowth at grove edges, logs, mossy rocks, flowers, reeds and stones at the pond. After that it reshapes the land: more ponds, a stream, gentler hills. The reshape needs a world wipe; Justin chose it, and the PM confirms the timing with him before any wipe runs.
+**Who:** Justin ("1 and 3")
+
+## D-085 — 2026-10-16 — Forest light first, the other skies later
+**Decision:** Atmosphere does light through the forest next (sun shafts, dappled light at morning and evening), then weather you can see coming (rain curtains, darkening sky, rainbow), then the cosy night (firelight on trunks, starrier sky, softer moonlight).
+**Who:** Justin ("One, but I want all of these eventually")
+
+## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
+**Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
+**Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours
