@@ -6,13 +6,17 @@ model-172-items tools/render/scene.sh model-172-items 71f7c7c tools/render/scene
 model-172b tools/render/render.sh model-172-front 71f7c7c "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,180,0.35" "--time-of-day=0.45 --rain=0 --cloud=0.1 --render-cam=3.4,0.6,145,0.35"
 env-2b tools/render/render.sh env-2-after2 0abbc0c "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=0,0 --render-cam=0.5,60,0,0 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-36,-16 --render-cam=9,14,0,0 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-60,-36 --render-cam=9,14,0,0 --screenshot-delay=90"
 env-4 tools/render/render.sh env-4 36f6d1d "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-4,40 --screenshot-yaw=3 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-36,-14 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=-46,-46 --screenshot-delay=90" "--time-of-day=0.76 --rain=0 --cloud=0.2 --debug-position=-4,40 --screenshot-yaw=3 --screenshot-delay=90" "--time-of-day=0.76 --rain=0 --cloud=0.2 --debug-position=-36,-14 --screenshot-delay=90" "--time-of-day=0.76 --rain=0 --cloud=0.2 --debug-position=-46,-46 --screenshot-delay=90"
+survival-13-before tools/render/scene.sh survival-13-before 60af766 tools/render/scenes/survival-13-frost.txt
+survival-13-after tools/render/scene.sh survival-13-after d12bdf7 tools/render/scenes/survival-13-frost.txt
+model-2 env TICKET=model-2 "VIEWS=sheep,row,stations,props,hearth" tools/render/scenes/model-1-style.sh 00e4d24
+model-2-flock tools/render/render.sh model-2-flock 00e4d24 "--time-of-day=0.45 --rain=0 --cloud=0.2"
 env-2-pond tools/render/render.sh env-2-pond 0abbc0c "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=30,76 --screenshot-yaw=3 --screenshot-delay=90" "--time-of-day=0.5 --rain=0 --cloud=0.2 --debug-position=30,76 --render-cam=8,10,180,0 --screenshot-delay=90"
 model-172-walk env RENDER_SIZE=1280x720 tools/render/scene.sh model-172-walk 71f7c7c tools/render/scenes/model-172-walk.txt
 model-172-facefront tools/render/scene.sh model-172-face-front 71f7c7c tools/render/scenes/model-172-front.txt
 model-172-face34 tools/render/scene.sh model-172-face-34 71f7c7c tools/render/scenes/model-172-three-quarter.txt
 atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
-model-2 env TICKET=model-2 "VIEWS=sheep,row,stations,props,hearth" tools/render/scenes/model-1-style.sh 00e4d24
-model-2-flock tools/render/render.sh model-2-flock 00e4d24 "--time-of-day=0.45 --rain=0 --cloud=0.2"
+building-9 tools/render/scene.sh building-9 5793230 tools/render/scenes/building-9-hearth.txt
+atmosphere-14 tools/render/render.sh atmosphere-14 119a43d "--time-of-day=0.45 --cloud=0.2 --debug-position=0,0 --render-cam=4,1.2,0,3" "--time-of-day=0.45 --cloud=0.2 --front=1 --debug-position=0,0 --render-cam=4,1.2,0,3" "--time-of-day=0.7 --front=1 --debug-position=0,0 --render-cam=4,1.2,0,3" "--time-of-day=0.32 --cloud=0.3 --rainbow=1 --debug-position=0,0 --render-cam=4,1.2,90,3"
 animals-13 tools/render/scene.sh animals-13 04f4712 tools/render/scenes/animals-13-seasons.txt
 ceramics-9 tools/render/render.sh ceramics-9 cd30d6f "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.8 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp --building-showcase --building-door"
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
