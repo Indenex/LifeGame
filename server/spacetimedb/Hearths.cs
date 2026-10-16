@@ -77,15 +77,17 @@ public static partial class Module
             for (int j = cz - 2; j <= cz + 2; j++)
             {
                 if (DepthAt(ctx, i, j) != 0) continue;
-                // A building clears the ground under it (the client draws no boulder or tree there).
-                if (UnderStructure(ctx, i, j)) continue;
+                // Test the cheap shared lookups first; a building clears the ground under it
+                // (the client draws no boulder or tree there), checked only where one stands.
                 if (Rocks.LiesAt(i, j))
                 {
+                    if (UnderStructure(ctx, i, j)) continue;
                     var (rx, rz) = Rocks.Center(i, j);
                     if (Dist(rx, rz, x, z) < Rocks.Radius(i, j) + Fires.RingRadius) return false;
                 }
                 else if (Trees.GrowsAt(i, j))
                 {
+                    if (UnderStructure(ctx, i, j)) continue;
                     var (tx, tz) = Trees.Trunk(i, j);
                     if (Dist(tx, tz, x, z) < 0.4f + Fires.RingRadius) return false;
                 }
