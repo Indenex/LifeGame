@@ -12,6 +12,8 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 - 2026-10-16: queued (D-085).
 - 2026-10-16 20:28: started, stacked on #217.
 
+- 2026-10-16 20:35: firelight already exists (FireView's Campfire OmniLight, range 10, warmed in atmosphere-4; that file is Crafting's), and the night moods were approved in atmosphere-4, so this ticket is the sky. Sky shader: a faint mottled galaxy band across clear nights, denser stars inside it; stars twinkle at their own pace, tinted pale blue to warm white; a 22-degree halo round the moon behind thin cloud (cover 0.25 to 0.95). Possible follow-up for Crafting: fire light reaching a little further at night (offer as options).
+
 ## Open questions / blockers
 - (none)
 

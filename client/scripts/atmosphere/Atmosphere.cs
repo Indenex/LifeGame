@@ -659,6 +659,9 @@ public partial class Atmosphere : Node3D
                 float m = max(dot(d, moon_dir), 0.0);
                 col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
                 col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
+                // A pale ring around the moon when thin cloud veils it.
+                float veil = smoothstep(0.25, 0.5, cloud_cover) * (1.0 - smoothstep(0.75, 0.95, cloud_cover));
+                col += vec3(0.75, 0.8, 0.9) * exp(-pow((m - 0.927) / 0.008, 2.0)) * veil * night * 0.08 * step(0.0, moon_dir.y);
 
                 // How much of this direction belongs to the coming weather: the
                 // upwind side, low in the sky.
@@ -667,10 +670,23 @@ public partial class Atmosphere : Node3D
 
                 if (d.y > 0.0) {
                     if (stars > 0.0) {
+                        // A band of the galaxy arching across a clear night: faint,
+                        // mottled, and thick with extra stars.
+                        vec3 axis = normalize(vec3(0.35, 0.45, 0.82));
+                        float band = exp(-pow(dot(d, axis) / 0.2, 2.0));
+                        float dust = texture(clouds, d.xz / (d.y + 0.4) * 0.35 + vec2(0.13, 0.71)).r;
+                        float high = smoothstep(0.0, 0.3, d.y);
+                        col += vec3(0.50, 0.55, 0.72) * band * smoothstep(0.3, 0.8, dust) * 0.09 * stars * high;
+
                         vec3 p = d * 260.0;
                         float r = hash(floor(p));
-                        float star = step(0.985, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - 0.985) * 66.0;
-                        col += vec3(star) * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
+                        float threshold = 0.985 - 0.01 * band;
+                        float star = step(threshold, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - threshold) * 66.0;
+                        // Each star twinkles at its own pace and has its own tint,
+                        // from pale blue to warm white.
+                        float twinkle = 0.75 + 0.25 * sin(TIME * (1.5 + r * 3.0) + r * 90.0);
+                        vec3 tint = mix(vec3(0.80, 0.88, 1.0), vec3(1.0, 0.92, 0.80), fract(r * 37.0));
+                        col += tint * star * twinkle * stars * high * 1.4;
                     }
                     // The same cloud layer whose shadows drift over the ground.
                     vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
