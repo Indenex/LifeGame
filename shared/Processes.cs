@@ -178,6 +178,20 @@ namespace LifeGame.Shared
                 Seconds = 20, Makes = Item.WoolCloth,
             },
 
+            // Clothing (Animals lane): carried clothing is worn and slows the cold (see Clothing.cs).
+            new ProcessDef
+            {
+                Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 25, Makes = Item.WoolTunic,
+            },
+            new ProcessDef
+            {
+                Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 10, Makes = Item.LeatherWraps,
+            },
+
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
             new ProcessDef

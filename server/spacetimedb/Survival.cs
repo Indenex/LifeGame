@@ -318,7 +318,9 @@ public static partial class Module
         bool wet = StandsInWater(ctx, pos.X, pos.Z);
         float rainCover = 0, shelter = 0;
         ShelterAtHook(ctx, pos.X, pos.Z, ref rainCover, ref shelter);
-        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * Chill(ctx, pos.X, pos.Z, rainCover);
+        float insulation = 0;
+        ClothingWarmthHook(ctx, v.PlayerId, ref insulation);
+        float cold = Needs.ColdDrain * (wet ? Needs.WetChill : 1f) * (1f - Math.Clamp(shelter, 0f, 1f)) * (1f - Math.Clamp(insulation, 0f, 1f)) * Chill(ctx, pos.X, pos.Z, rainCover);
         return v with
         {
             FoodRate = -Needs.FoodDrain,
@@ -350,6 +352,10 @@ public static partial class Module
         float wet = 1f + Needs.RainChill * Math.Clamp(rain, 0f, 1f) * (1f - Math.Clamp(rainCover, 0f, 1f));
         return cold * wet;
     }
+
+    // Clothing: Animals implements this (Clothing.cs). Insulation 0 (naked) .. 1
+    // scales down the cold drain like shelter does.
+    static partial void ClothingWarmthHook(ReducerContext ctx, uint playerId, ref float insulation);
 
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for

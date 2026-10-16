@@ -55,6 +55,8 @@ namespace LifeGame.Shared
         DropSpindle = 197,
         Yarn = 198,
         WoolCloth = 199,
+        WoolTunic = 200,
+        LeatherWraps = 201,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -132,7 +134,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
             new ItemDef { Id = Item.DropSpindle, Name = "Drop spindle", Plural = "Drop spindles", Tags = ItemTags.Spindle, HasQuality = true },
             new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
-            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true });
+            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
+            new ItemDef { Id = Item.WoolTunic, Name = "Wool tunic", Plural = "Wool tunics", HasQuality = true },
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 
