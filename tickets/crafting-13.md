@@ -1,7 +1,7 @@
 # crafting-13: Crafting numbers against D-075 (start low, grow slowly)
 Lane: Crafting
 Owner: Crafting thread
-Status: blocked
+Status: in_progress
 Branch: crafting-numbers
 PR: (none yet)
 
@@ -24,9 +24,10 @@ D-075: every number starts low and grows slowly, with faster gains through about
 ## Progress log
 - 2026-10-16 17:45: listed Crafting's numbers and sent the proposal to the PM.
 - 2026-10-16 17:50: PM: drop Q1 (linear rank effects stay), keep Q4; Q2 and Q3 go to Justin.
+- 2026-10-16 18:20: D-089 (Q3): better tools work faster, 0% for the crudest to 15% for a perfect one, on the D-075 curve (`Processes.Growth`, `Processes.ToolSpeedup`, applied in StartCraft after the skill's DurationFor). For example, quality 15 is 5.6% faster, 50 is 9.6% and 100 is 15%. Tools without quality, like a stone used as a hammer, give nothing. Server and client build, and CraftCheck passes.
 
 ## Open questions / blockers
-- Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 (craft times) and Q3 (tool quality) are with Justin in the PM's next batch; until then the current numbers stay.
+- Q3 answered: D-089. Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 (craft times) is with Justin in the PM's next batch; until then the current numbers stay.
 
 ## Next step
-When the PM relays the answers, apply Q2 (Seconds in shared/Processes.cs) and Q3 (tool-quality speed in Crafting.cs StartCraft), then open a PR.
+When the PM relays the answers, wait for CI on the D-089 PR; apply Q2 (Seconds in shared/Processes.cs) when the PM relays Justin's answer.

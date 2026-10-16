@@ -237,6 +237,20 @@ namespace LifeGame.Shared
             return (byte)Math.Clamp(MathF.Round(q), 1f, cap);
         }
 
+        // How much faster a better tool works (D-089): nothing for the crudest tool,
+        // MaxToolSpeedup for a perfect one. It follows Growth (D-075).
+        public const float MaxToolSpeedup = 0.15f;
+        public static float ToolSpeedup(byte toolQuality) =>
+            MaxToolSpeedup * Growth((toolQuality - 1) / 99f);
+
+        // D-075's shape for anything that improves: 40% of the gain comes in the
+        // first 15% of the way (p from 0 to 1), then a slow, steady climb.
+        public static float Growth(float p)
+        {
+            p = Math.Clamp(p, 0f, 1f);
+            return p < 0.15f ? 0.4f * p / 0.15f : 0.4f + 0.6f * (p - 0.15f) / 0.85f;
+        }
+
         // Words for a quality number, so players never see raw digits.
         public static string Grade(byte quality) => quality switch
         {

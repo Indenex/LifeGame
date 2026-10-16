@@ -138,6 +138,10 @@ public static partial class Module
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
         float seconds = def.Seconds;
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
+        // A better tool works faster (D-089).
+        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
+            && Items.Def((Item)tool.Item).HasQuality)
+            seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
