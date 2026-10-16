@@ -1,8 +1,8 @@
 # atmosphere-9: Sound off the main thread, fewer draw calls
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_progress
-Branch: claude/atmosphere-sound-hlqfke (after atmosphere-7)
+Status: in_review
+Branch: claude/atmosphere-sound-hlqfke
 PR: (none yet)
 
 ## Goal
@@ -35,4 +35,4 @@ Results (2026-10-16, main e8d1e1a vs atmosphere-9-wip 391659b, Forward+, settled
 - (none)
 
 ## Next step
-Once #58 merges: merge main into atmosphere-9-wip, push to claude/atmosphere-sound-hlqfke, open the PR with the numbers above. The bigger Compatibility win (berry bush and item meshes as MultiMesh) belongs to the Survival and Crafting lanes; the PM decides.
+Watch the atmosphere-9 PR's CI and get it merged; then ask the PM for the next ticket.
