@@ -25,12 +25,42 @@ public static partial class Module
         bool blocked = false;
         StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref blocked);
         if (blocked) return true;
+        if (AnimalStepIntoObstacle(ctx, fromX, fromZ, toX, toZ)) return true;
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var (fx, fz, wall) in BurningFiresNear(ctx, toX, toZ, now))
         {
             float to = AnimalDist(toX, toZ, fx, fz);
             if (to < FireKeepAway + wall && to < AnimalDist(fromX, fromZ, fx, fz)) return true;
         }
+        return false;
+    }
+
+    // Tree trunks and boulders (bugfix-23): a step may not end inside one, counting the
+    // animal's body, unless it moves the animal out of it. Mirrors the player rules in
+    // Terrain.CollideVegetation; saplings are client-only and ignored.
+    const float AnimalBody = 0.3f, TrunkRadius = 0.35f;
+
+    static bool AnimalStepIntoObstacle(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ)
+    {
+        int cx = (int)MathF.Round(toX), cz = (int)MathF.Round(toZ);
+        for (int i = cx - 1; i <= cx + 1; i++)
+            for (int j = cz - 1; j <= cz + 1; j++)
+            {
+                float ox, oz, r;
+                if (Rocks.LiesAt(i, j) && TreeStands(ctx, i, j))
+                {
+                    (ox, oz) = Rocks.Center(i, j);
+                    r = Rocks.Radius(i, j) + AnimalBody;
+                }
+                else if (Trees.GrowsAt(i, j) && TreeStands(ctx, i, j))
+                {
+                    (ox, oz) = Trees.Trunk(i, j);
+                    r = TrunkRadius + AnimalBody;
+                }
+                else continue;
+                float to = AnimalDist(toX, toZ, ox, oz);
+                if (to < r && to < AnimalDist(fromX, fromZ, ox, oz)) return true;
+            }
         return false;
     }
 

@@ -70,6 +70,11 @@ namespace LifeGame.Shared
         // drains at half speed, so a winter start isn't a race. Not after a death.
         public const float ArrivalSeconds = 30 * 60;
         public const float ArrivalChill = 0.5f;
+        // First-evening ease (survival-10, Justin picked C): a new character's first
+        // hour online, thirst falls 20% slower, since water is a longer walk than
+        // bushes or a fire. Not after a death.
+        public const float ThirstEaseSeconds = 60 * 60;
+        public const float ThirstEaseFactor = 0.8f;
 
         // How fast wetness changes: rain under the sky (0 to 1, less any cover),
         // standing in water, and whether a fire is near.

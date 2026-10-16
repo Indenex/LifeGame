@@ -108,6 +108,7 @@ public partial class Atmosphere : Node3D
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
+        ReadyFronts();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -161,9 +162,10 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
-        // Sheep bleat; Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
-        conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
+        // Sheep bleat (only sheep: deer and other animals get their own voices);
+        // Herd subscribes to the animal rows near the player.
+        conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
+        conn.Db.Animal.OnUpdate += (_, _, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
         conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -194,6 +196,7 @@ public partial class Atmosphere : Node3D
         targetRain = w.Rain;
         targetWind = w.Wind;
         targetWetness = w.Wetness;
+        OnWeatherAhead(w);
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -378,6 +381,7 @@ public partial class Atmosphere : Node3D
         sky.SetShaderParameter(NCloudCover, cloud);
         sky.SetShaderParameter(NCloudOffset, cloudOffset);
         sky.SetShaderParameter(NStars, (1f - daylight) * (1f - overcast));
+        UpdateFronts((float)GetProcessDeltaTime(), sunHeight, overcast);
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
@@ -560,6 +564,13 @@ public partial class Atmosphere : Node3D
             uniform vec2 cloud_offset;
             uniform float stars = 0.0;
             uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
+            // Weather on its way (AtmosphereFronts): where it comes from, how cloudy
+            // and wet it will be, and how strongly it shows yet; and a rainbow.
+            uniform vec3 front_dir = vec3(-0.6, 0.0, -0.8);
+            uniform float front_cloud = 0.2;
+            uniform float front_rain = 0.0;
+            uniform float front_amount = 0.0;
+            uniform float rainbow = 0.0;
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -584,6 +595,11 @@ public partial class Atmosphere : Node3D
                 col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
                 col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
 
+                // How much of this direction belongs to the coming weather: the
+                // upwind side, low in the sky.
+                vec2 flat_dir = normalize(d.xz + vec2(0.0001));
+                float upwind = smoothstep(0.1, 0.85, dot(flat_dir, normalize(front_dir.xz))) * (1.0 - smoothstep(0.05, 0.55, d.y)) * front_amount;
+
                 if (d.y > 0.0) {
                     if (stars > 0.0) {
                         vec3 p = d * 260.0;
@@ -594,12 +610,30 @@ public partial class Atmosphere : Node3D
                     // The same cloud layer whose shadows drift over the ground.
                     vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
                     float n = texture(clouds, uv).r;
-                    float edge = 1.0 - cloud_cover;
+                    float cover = mix(cloud_cover, max(cloud_cover, front_cloud), upwind);
+                    float edge = 1.0 - cover;
                     float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
                     float lit = 0.25 + 0.75 * daylight;
                     vec3 cloud_col = mix(horizon_color * 1.1, vec3(0.92, 0.92, 0.95) * lit + sun_color * 0.15 * sun_vis, 0.5 + 0.5 * n);
-                    cloud_col *= 1.0 - 0.45 * cloud_cover * smoothstep(0.4, 0.8, n);
+                    cloud_col *= 1.0 - 0.45 * cover * smoothstep(0.4, 0.8, n);
+                    // Rain clouds on the way are darker underneath.
+                    cloud_col *= 1.0 - 0.5 * front_rain * upwind;
                     col = mix(col, cloud_col, c * 0.9);
+
+                    // Grey curtains of rain hanging from them down to the horizon.
+                    float around = atan(d.x, d.z);
+                    float streak = texture(clouds, vec2(around * 2.0 + cloud_offset.x * 0.002, d.y * 0.6 + TIME * 0.004)).r;
+                    float curtain = front_rain * upwind * (1.0 - smoothstep(0.0, 0.16, d.y)) * smoothstep(0.35, 0.75, streak);
+                    col = mix(col, horizon_color * mix(0.55, 0.8, daylight), curtain * 0.7);
+
+                    // A rainbow 42 degrees from the point opposite the sun, red outside.
+                    if (rainbow > 0.001) {
+                        float r = dot(d, -sun_dir);
+                        float t = (r - 0.743) / 0.022;
+                        float band = exp(-t * t);
+                        vec3 hue = clamp(vec3(1.0 - abs(t + 0.7) * 1.4, 1.0 - abs(t) * 1.4, 1.0 - abs(t - 0.7) * 1.4), 0.0, 1.0);
+                        col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
+                    }
                 }
                 COLOR = col;
             }
