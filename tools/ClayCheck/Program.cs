@@ -420,6 +420,7 @@ int LampCheck()
     Craft("clay.temper_grit", 0, Item.TemperedClay);
     if (tallowRun)
     {
+        Craft("clay.grit", 0, Item.Grit);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
     }
