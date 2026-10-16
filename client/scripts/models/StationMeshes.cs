@@ -259,6 +259,56 @@ public static class StationMeshes
             Lash(k.Plant, new Vector3(x, RackBarY + 0.01f, 0), Vector3.Right, 0.04f, 3f);
         }
         k.Wood.Paint(Split, 0.82f).Tube(new[] { new Vector3(-RackHalfWidth - 0.15f, RackBarY + 0.01f, 0), new Vector3(0, RackBarY + 0.025f, 0.005f), new Vector3(RackHalfWidth + 0.17f, RackBarY + 0.01f, 0) }, 0.032f, 6, 0.028f);
+        // Three peg loops where Animals hangs the hides, 0.75 m apart.
+        foreach (float x in new[] { -0.75f, 0f, 0.75f })
+            Lash(k.Plant, new Vector3(x, RackBarY + 0.015f, 0), Vector3.Right, 0.042f, 2f);
+        k.AddTo(list, 0);
+        return list;
+    }
+
+    // The repair table (Crafting, D-155): where worn tools are mended. Heavier
+    // than the crafting table, so the two read apart at a glance: a thick split
+    // log on two log rounds, a flat whetstone set into it with a hammerstone, a
+    // coil of cord, spare shafts leaning on one end and a worn axe waiting.
+    // Footprint 1.6 x 0.9 m, +Z where the worker stands.
+    public static List<StructureModel.Piece> RepairTable()
+    {
+        var list = new List<StructureModel.Piece>();
+        StructureModel.Site(list, Corners(0.8f, 0.45f));
+        var k = new Kit();
+        foreach (float x in new[] { -0.5f, 0.5f })
+        {
+            var at = new Vector3(x, 0, 0);
+            k.Wood.Paint(Bark, 0.85f).Loft(at, at + Vector3.Up * 0.55f, new MeshKit.Ring[] { new(0f, 0.2f, 0.19f), new(1f, 0.18f, 0.18f) }, 8, 0.02f);
+        }
+        // The top: one thick half-log, flat face up.
+        const float top = 0.66f;
+        k.Wood.Paint(Split, 0.92f).Loft(new Vector3(-0.78f, top - 0.06f, 0), new Vector3(0.78f, top - 0.06f, 0.01f), new MeshKit.Ring[]
+        {
+            new(0f, 0.11f, 0.3f), new(0.5f, 0.12f, 0.32f), new(1f, 0.11f, 0.29f),
+        }, 6, 0.04f, 0f);
+        foreach (float x in new[] { -0.78f, 0.78f })
+            k.Wood.Paint(EndGrain).Ellipsoid(new Vector3(x, top - 0.06f, 0), new Vector3(0.005f, 0.1f, 0.27f), 6, 2);
+        float surface = top - 0.06f + 0.12f * 0.87f;
+        // A flat grey whetstone set into the top, and a round hammerstone.
+        k.Stone.Paint(new Color(0.5f, 0.5f, 0.52f)).Ellipsoid(new Vector3(-0.2f, surface + 0.02f, -0.05f), new Vector3(0.22f, 0.03f, 0.12f), 8, 3, new Basis(Vector3.Up, 0.15f), 0.5f);
+        k.Stone.Paint(Look.Rock, 0.9f).Ellipsoid(new Vector3(0.22f, surface + 0.045f, -0.12f), new Vector3(0.06f, 0.05f, 0.055f), 7, 4);
+        // A coil of cord for rebinding.
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0.45f, surface + 0.01f, 0.05f), Vector3.Up, 0.06f, 30, 2.2f, 0.018f), 0.009f, 4);
+        // A worn stone axe waiting to be mended: chipped head, loosened binding.
+        var axe = new Vector3(0.05f, surface + 0.025f, 0.12f);
+        k.Wood.Paint(Bark).Tube(new[] { axe + new Vector3(-0.25f, 0, 0.02f), axe + new Vector3(0.2f, 0, -0.02f) }, 0.022f, 6);
+        k.Stone.Paint(new Color(0.42f, 0.4f, 0.38f)).Loft(axe + new Vector3(0.17f, 0, -0.08f), axe + new Vector3(0.17f, 0, 0.11f), new MeshKit.Ring[]
+        {
+            new(0f, 0.025f, 0.03f), new(0.6f, 0.022f, 0.045f), new(1f, 0.008f, 0.03f),
+        }, 5, 0.3f, 0f);
+        k.Plant.Paint(Cord, 0.8f).Tube(new[] { axe + new Vector3(0.12f, 0.02f, 0.0f), axe + new Vector3(0.05f, -0.005f, 0.08f), axe + new Vector3(-0.02f, -0.01f, 0.14f) }, 0.005f, 3);
+        // Spare shafts leaning against the far end.
+        for (int i = 0; i < 3; i++)
+        {
+            var foot = new Vector3(0.95f + i * 0.05f, 0, -0.15f + i * 0.12f);
+            k.Wood.Paint(EndGrain, 0.85f + i * 0.05f).Tube(new[] { foot, foot + new Vector3(-0.17f, 0.75f + i * 0.05f, 0.02f) }, 0.016f, 5);
+        }
         k.AddTo(list, 0);
         return list;
     }

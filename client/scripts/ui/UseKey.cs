@@ -4,7 +4,7 @@ using Godot;
 namespace LifeGame;
 
 // Runs the G key: asks the registry what G would do, shows it as a prompt
-// ("G  Pick berries") and does it on press, or every Repeat seconds while held.
+// ("E  Pick berries") and does it on press, or every Repeat seconds while held.
 public partial class UseKey : CanvasLayer
 {
     // Cached names: a string here would build a new StringName every frame.
@@ -32,7 +32,7 @@ public partial class UseKey : CanvasLayer
 
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 12);
-        row.AddChild(KeyCap("G", out keyLabel));
+        row.AddChild(KeyCap("E", out keyLabel));
         Hud.Soft(verb, 18, 1f);
         verb.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(verb);
@@ -61,7 +61,7 @@ public partial class UseKey : CanvasLayer
         {
             verb.Text = offer.Prompt;
             // The player's own Use key, if they moved it.
-            keyLabel.Text = Controls.KeyFor("use") ?? "G";
+            keyLabel.Text = Controls.KeyFor("use") ?? "E";
         }
 
         // Fade rather than pop, so walking past things stays calm.
@@ -82,9 +82,11 @@ public partial class UseKey : CanvasLayer
 
     public override void _UnhandledInput(InputEvent e)
     {
-        // Hold actions run from _Process; a tap only fires one-shot offers.
-        if (!e.IsActionPressed("use") || e.IsEcho() || offer is not { Repeat: <= 0f } tap) return;
-        tap.Use();
+        // Hold actions run from _Process; a tap only fires one-shot offers. Any offer
+        // keeps the key, so it never also picks up what lies at your feet (ui-17: with
+        // nothing to use, the same key falls through to Main's pick-up).
+        if (!e.IsActionPressed("use") || offer == null) return;
+        if (!e.IsEcho() && offer.Repeat <= 0f) offer.Use();
         GetViewport().SetInputAsHandled();
     }
 
