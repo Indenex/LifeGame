@@ -89,6 +89,10 @@ public partial class Showcase : Node3D
     void ItemGrid(bool old)
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
+        // Items other lanes are still adding (D-074, animals-8), shown by number.
+        var pending = new Dictionary<ushort, string> { [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
+        foreach (var id in pending.Keys)
+            if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         items.Sort();
         const int columns = 7;
         const float step = 0.62f;
@@ -104,7 +108,7 @@ public partial class Showcase : Node3D
             AddChild(new MeshInstance3D { Mesh = mesh, Position = at, Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
             AddChild(new Label3D
             {
-                Text = LifeGame.Shared.Items.All[item].Name + (fit < 0.99f ? $" (x{fit:0.0})" : ""),
+                Text = (LifeGame.Shared.Items.All.TryGetValue(item, out var def) ? def.Name : pending[(ushort)item]) + (fit < 0.99f ? $" (x{fit:0.0})" : ""),
                 FontSize = 22,
                 PixelSize = 0.0022f,
                 Modulate = Look.Cream,

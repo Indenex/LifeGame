@@ -178,6 +178,10 @@ public static class ItemModels
         // Clothing (D-074), by number until the items reach main.
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
+        // Wool (animals-8), by number until the items reach main.
+        (Item)197 => (DropSpindle, false),
+        (Item)198 => (Yarn, true),
+        (Item)199 => (WoolCloth, true),
         _ => (null, false),
     };
 
@@ -457,6 +461,47 @@ public static class ItemModels
                 new(0f, 0.036f, 0.036f), new(0.15f, 0.04f, 0.04f), new(0.85f, 0.04f, 0.04f), new(1f, 0.036f, 0.036f),
             }, 7, 0.1f);
             k.Plant.Paint(new Color(0.45f, 0.34f, 0.18f)).Tube(MeshKit.Circle(new Vector3(0, 0.04f, z), Vector3.Right, 0.043f, 16), 0.005f, 4, -1f, false);
+        }
+    }
+
+    // A drop spindle: a straight shaft, a flat stone whorl near the bottom, and
+    // yarn wound on above it.
+    static void DropSpindle(Kit k)
+    {
+        k.Wood.Paint(Whittled).Tube(new[] { new Vector3(0, 0.07f, 0), new Vector3(0, -0.2f, 0) }, 0.007f, 6, 0.006f);
+        k.Stone.Paint(Look.Rock.Lightened(0.1f)).Ellipsoid(new Vector3(0, -0.155f, 0), new Vector3(0.036f, 0.008f, 0.036f), 10, 3);
+        k.Plain.Paint(TunicWool).Ellipsoid(new Vector3(0, -0.09f, 0), new Vector3(0.022f, 0.055f, 0.022f), 8, 6);
+        // A thread trails up to a notch at the top.
+        k.Plain.Paint(TunicWool, 0.9f).Tube(new[] { new Vector3(0.01f, -0.04f, 0.012f), new Vector3(0.004f, 0.02f, 0.006f), new Vector3(0, 0.066f, 0.004f) }, 0.0025f, 3);
+    }
+
+    // A ball of cream yarn, wound round and round.
+    static void Yarn(Kit k)
+    {
+        const float r = 0.045f;
+        k.Plain.Paint(TunicWool, 0.94f).Ellipsoid(new Vector3(0, r, 0), Vector3.One * r, 10, 6);
+        for (int i = 0; i < 7; i++)
+        {
+            var axis = new Vector3(H(i, 1) - 0.5f, H(i, 2) - 0.5f, H(i, 3) - 0.5f).Normalized();
+            k.Plain.Paint(TunicWool, 0.95f + H(i, 4) * 0.08f).Tube(MeshKit.Circle(new Vector3(0, r, 0), axis, r + 0.002f, 24), 0.004f, 4, -1f, false);
+        }
+        var loose = new Vector3(r * 0.7f, r * 0.3f, r * 0.7f);
+        k.Plain.Paint(TunicWool).Tube(new[] { loose, loose + new Vector3(0.03f, -0.012f, 0.01f), loose + new Vector3(0.07f, -0.012f, -0.01f) }, 0.004f, 4);
+    }
+
+    // A folded square of coarse woven cloth, the weave showing on top.
+    static void WoolCloth(Kit k)
+    {
+        k.Plain.Paint(TunicWool, 0.95f).Loft(new Vector3(-0.13f, 0.018f, 0), new Vector3(0.13f, 0.018f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.022f, 0.13f), new(1f, 0.022f, 0.13f),
+        }, 4, 0.15f, Mathf.Pi / 4f);
+        const float top = 0.0345f, half = 0.088f;
+        for (int i = 0; i < 9; i++)
+        {
+            float t = -half + i * 2f * half / 8f;
+            k.Plain.Paint(TunicWool, 0.85f).Tube(new[] { new Vector3(-half, top, t), new Vector3(half, top, t) }, 0.0022f, 3, -1f, false);
+            k.Plain.Paint(TunicWool, 1.05f).Tube(new[] { new Vector3(t, top + 0.001f, -half), new Vector3(t, top + 0.001f, half) }, 0.0022f, 3, -1f, false);
         }
     }
 
