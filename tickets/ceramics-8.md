@@ -1,6 +1,6 @@
 # ceramics-8: Potter's bench
 Lane: Clay and ceramics
-Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
+Owner: Clay and ceramics lane (handed off 2026-10-16 ~20:00 from Opus session_01Diab34HTvew38VmUaqhj5Q to a fresh Sonnet session, D-159)
 Status: in_progress
 Branch: claude/clay-ceramics-8-kfr4kr (stacked on crafting-stations #160; contains ceramics-7). One PR for ceramics-7 + -8 after #160 merges (PM).
 PR: (none yet)
@@ -12,6 +12,14 @@ D-112 (Justin): shaping pots needs a Potter's bench inside a claim; clay prepara
 3. Wet pieces are set down beside the bench (Crafting sets job X/Z 0.9 m from the bench toward the player); Ceramics' OnPlaced keeps working.
 4. Client: a bench model (client/scripts/ceramics/BenchModel.cs + one StructureModel hook), ClayCheck runs claim, bench, pinch pot.
 First fired pot still reachable in about 1 to 2 hours of play.
+
+## Handoff (read first)
+- State: code complete and checked for ceramics-7 (cooking pot) + ceramics-8 (Potter's bench); NOT yet a PR. The PM decided one PR for both, opened only after Crafting's PR #160 (branch `crafting-stations`) merges to main. #105 (storage jar, ceramics-6) is merged.
+- Branch layout: `claude/clay-ceramics-8-kfr4kr` = crafting-stations + ceramics-7 + ceramics-8 (open the PR from here). `claude/clay-ceramics-7-kfr4kr` is an older subset; ignore it. `claude/clay-ceramics-9-kfr4kr` (lamp) is stacked on -8 (see tickets/ceramics-9.md).
+- StructureKind order everywhere (enum, Structures.Shapes, Structures.StageCosts): StorageJar 6, CraftingTable 7, PottersBench 8. House building's #153 (Fence, Gate) and anything else append after whatever is on main when they merge; never renumber a kind already on main.
+- Setup in a fresh container: install .NET 8, spacetimedb-cli 2.12 and Godot 4.6.2 mono as in .github/workflows/build.yml. The sandbox may refuse tools/gen-bindings.sh (its rm -rf); if client/module_bindings doesn't exist yet, run `cd server && spacetimedb-cli generate --lang csharp --out-dir ../client/module_bindings --module-path ./spacetimedb`. Local server: `spacetimedb-cli start --listen-addr 127.0.0.1:3000`, publish to a scratch db with `cd server && spacetimedb-cli publish <db> --server local --yes`.
+- Checks: `cd tools/ClayCheck && dotnet run -c Release -- http://127.0.0.1:3000 <db> [--pot | --kiln --jar | --lamp]` (each ~13 min; a fresh db each run). `tools/upgrade-check.sh origin/main` for the no-wipe check.
+- Awaited from other lanes: Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) #160 merge; crafting-16 (D-113 craft times) will lengthen clay times, so re-run ClayCheck after it lands. Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm) #197 bench model + CookingMeshes (see open questions). Render (session_013qe8zPzzBHx9rFPEYoKMr5) has requests at a432ab6 (bench + cooking pot) and cd30d6f (lamp demo). PM: session_01CvoSQGRe3vDvDXWQu2qruU.
 
 ## Progress log
 - 2026-10-16 19:35: ClayCheck adapted (claim, stone axe, log, bench before shaping; 5965db1). PASSED: --pot (c8bench1), default pit run (c8bench2), --kiln --jar (c8bench3); each also checks shaping is refused with no bench. Merged main aa3e443 (#105, #119) and crafting-stations 07fd6d0 (a432ab6): table and bench models by station flag; broth and stew are GoodMeals (D-111). Server, client, ClayCheck, CraftCheck build. Upgrade check vs origin/main (with #105) PASSED.
@@ -25,4 +33,4 @@ First fired pot still reachable in about 1 to 2 hours of play.
 - Bench cost decided: 1 log + 2 stones (D-127).
 
 ## Next step
-When Crafting's #160 merges: merge main into claude/clay-ceramics-8-kfr4kr, build, open one PR (ceramics-7 + ceramics-8), send the PM the green sha. Render request sent at a432ab6.
+When #160 is on main: `git merge origin/main` into claude/clay-ceramics-8-kfr4kr, build server/client/ClayCheck, run ClayCheck --pot on a fresh db and tools/upgrade-check.sh origin/main, push, open ONE PR (title \"ceramics-7 + ceramics-8: cooking pot and Potter's bench\"; body: what players get from both tickets, cross-lane hooks incl. CraftJob.VesselQuality (Crafting-approved, no wipe), checks), subscribe to it, and send the PM the green sha.
