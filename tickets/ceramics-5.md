@@ -18,6 +18,7 @@ The PM's playtest-3 findings (screenshots /mnt/project-files/screenshots/playtes
 - 2026-10-16 05:07: ClayCheck pit chain passed on scratch db c5check1; news reads "Your pinch pot is fired, and whole. {use} picks it up."
 - 2026-10-16 05:20: rim glow instead of ground disc; screenshots clay-11-fresh-clay-rim-glow.png, clay-12-g-picks-up-sherd.png.
 
+- 2026-10-16 05:48: ClayCheck pit (c5pit2) and --kiln (c5kiln2) passed on 6c93975; kiln burned 2 sticks, no fiber.
 - 2026-10-16 05:40: merged main f0a7065 (#68 Targets and twice-registered TendOffer kept, ceramics-3's drying line kept); prompts and tips use the live Use key (Controls.KeyFor). KEYMAP.md lists ceramics.pick_up at 10.
 
 ## Open questions / blockers
