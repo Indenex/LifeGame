@@ -1,8 +1,8 @@
 # anim-1: Player animation pass
 Lane: Animation
-Owner: Animation session (Opus)
-Status: todo
-Branch: (record the harness-assigned branch here)
+Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
+Status: in_progress
+Branch: claude/anim-1-player-animation
 PR: (once opened)
 
 ## Goal
@@ -10,9 +10,10 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 
 ## Progress log
 - 2026-10-16: ticket written by the PM (D-073).
+- 2026-10-16 17:30: started on claude/anim-1-player-animation. Sent Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm) the rig proposal: rigid segmented parts, no skinning; named pivots Avatar > Hips > Spine > Neck > Head, Shoulder/Elbow/Hand L/R (+ ToolR attach), Hip/Knee/Foot L/R; rest pose arms down, +Z forward; Animation writes only pivot rotations and Hips position. Modeling to supply `client/scripts/models/PlayerModel.cs`; until then Avatar.cs builds the same tree from capsules.
 
 ## Open questions / blockers
-- (none)
+- Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
 
 ## Next step
-Read `Avatar.cs` and how it is driven, agree the rig/part hierarchy with Modeling, then build idle and walk first.
+Build the named-pivot rig in Avatar.cs plus procedural idle and walk in `client/scripts/animation/`.
