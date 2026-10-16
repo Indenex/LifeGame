@@ -9,7 +9,9 @@
 // bolts halfway; about a third are lambs), dawn (the dawn chorus), midday,
 // evening (evening song thinning out), woods (a windy day among trees), meadow
 // (the same wind over open grass), hut (steady rain heard from inside, walking
-// on the floor), earth, clay (walking on bare earth or wet clay).
+// on the floor), earth, clay (walking on bare earth or wet clay), approach (walking
+// up to a pond's edge on a breezy day), pond (standing at the edge), pondrain
+// (the same in steady rain), pondnight (at the edge at night, with frogs).
 // Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
@@ -44,6 +46,9 @@ foreach (var scene in scenes)
         "evening" => (0.6f, 0f, 0.2f, 0f, 0.73f),
         "woods" or "meadow" => (1f, 0f, 0.8f, 0f, 0.5f),
         "clay" => (0.9f, 0f, 0.3f, 0.8f, 0.4f),
+        "approach" or "pond" => (1f, 0f, 0.45f, 0f, 0.42f),
+        "pondrain" => (0.75f, 0.6f, 0.55f, 1f, 0.45f),
+        "pondnight" => (0f, 0f, 0.2f, 0.1f, 0.93f),
         _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
     var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
@@ -64,7 +69,13 @@ foreach (var scene in scenes)
         mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
         mix.FirePan = -0.3f;
         double t = done / (double)rate;
-        if (t < seconds / 2 && t >= nextStep)
+        // Ponds lie a little to the left; walking up to one, it grows from nothing.
+        float water = parts[0] == "approach" ? (float)Math.Min(1.0, t / (seconds * 0.8)) : parts[0].StartsWith("pond") ? 1f : 0f;
+        if (Environment.GetEnvironmentVariable("NO_WATER") != null) water = 0f;
+        mix.Water = water * water;
+        mix.WaterPan = -0.4f;
+        bool walks = parts[0] == "approach" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && t < seconds / 2;
+        if (walks && t >= nextStep)
         {
             mix.Step(ground, ground == Ground.Floor ? 0f : mix.Wetness);
             nextStep = t + 0.36;

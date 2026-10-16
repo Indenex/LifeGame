@@ -791,7 +791,7 @@ public sealed class SoundMix
                 float wave = MathF.Pow(MathF.Sin(MathF.PI * Math.Min(1f, u * 1.4f)), 3f) + 0.25f;
                 float a = Math.Max(0f, 0.5f + 5f * swellL.Process(noise.Next(), swell));
                 float b = Math.Max(0f, 0.5f + 5f * swellR.Process(noise.Next(), swell));
-                float g = 0.11f * lv * stir * wave;
+                float g = 0.22f * lv * stir * wave;
                 float sl = lapL.Process(noise.Next(), 380f + 260f * wave, 0.7f, rate) * a * g;
                 float sr = lapR.Process(noise.Next(), 420f + 260f * wave, 0.7f, rate) * b * g;
                 l[i] += sl * Pan(p * 0.7f, true);
@@ -799,7 +799,7 @@ public sealed class SoundMix
 
                 // A gulp now and then as a wave runs under the bank: a bubble whose
                 // pitch rises as it closes.
-                if (rng.NextDouble() < (0.4f + 2.2f * stir) * wave * lv * dt)
+                if (rng.NextDouble() < (0.8f + 3f * stir) * wave * lv * dt)
                     bubbles.Add(new Bubble(Range(rng, 280f, 650f), Range(rng, 0.6f, 1.4f), Range(rng, 0.03f, 0.07f),
                         Range(rng, 0.02f, 0.05f) * lv, p * 0.7f + Range(rng, -0.25f, 0.25f), 0f, 0f));
                 // Rain on the water: bright plinks, pitch rising, many in a downpour.
