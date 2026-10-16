@@ -25,5 +25,12 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 
 - Ceramics (ceramics-6, D-066) adds StructureKind.StorageJar = 6 using the basket store; told them to put its cost row in Structures.StageCosts after #61. Building takes kinds 7 and up.
 
+- PM: D-075 (start low, grow slowly). After #61, review Building's numbers and send options. Draft (shelter Warmth = share of the cold drain removed; open sky drains full warmth in 16 min when mild, 8 on a cold night):
+  - Now: lean-to rain 0.8 / warmth 0.3; hut 1.0 / 0.75 (door shut 0.9); house 1.0 / 0.85 (door 0.9, fire inside 1.0).
+  - A (recommended): lean-to 0.6 / 0.2; hut 0.9 / 0.4 (door 0.5); house 1.0 / 0.5 (door 0.55); a fire inside still makes it fully warm. Hut on a cold night: 13 min instead of 32, so fires matter.
+  - B: trim only: lean-to 0.8 / 0.25; hut 1.0 / 0.6 (door 0.7); house 1.0 / 0.7 (door 0.75).
+  - C: keep (house numbers were Justin's D-057).
+- Environment lane (session_012hVejTxLoxBpZyX3GQmNL9) builds around buildings; Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm) may upgrade StructureModel meshes and will say first.
+
 ## Next step
 Wait for CI on #61's new head, then send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
