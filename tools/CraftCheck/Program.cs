@@ -104,7 +104,7 @@ Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay qu
 Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
+FireCraft("fire.hand_drill", 1f);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
@@ -115,7 +115,7 @@ Gather(Item.Fiber, 2);
 Gather(Item.Stick, 3);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesNow = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 0.1f, null);
+FireCraft("fire.hand_drill", 0.1f);
 Pump(() => false, 1, null);
 if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
 if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
@@ -128,16 +128,29 @@ Craft("cord.twist", 0, Item.Cordage);
 Craft("lash.bow_drill", 0, Item.BowDrill);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesBeforeBow = conn.Db.Fire.Count;
-Craft("fire.bow_drill", 0.25f, null);
+FireCraft("fire.bow_drill", 0.25f);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
 foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
-// A freshly lit fire is already as high as it burns (D-090): feeding is refused and the stick is kept.
+// A fire burns no higher than the cap (D-090): once it is full, feeding is refused and the stick is
+// kept. The cap grows with Firecraft (the shared progression curve), so a freshly lit fire may still
+// have room for a stick; top it up first instead of assuming rank 0.
 var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
 WalkTo(bowFire.X, bowFire.Z);
+for (int top = 0; top < 12; top++)
+{
+    long fuelNow = conn.Db.Fire.Id.Find(bowFire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+    lastError = null;
+    conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
+    Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
+    if (lastError == "The fire is burning as high as it will") break;
+    if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
+    Gather(Item.Stick, 1);
+    WalkTo(bowFire.X, bowFire.Z);
+}
 RefusedFeed(bowFire, Item.Stick);
 
 // The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
@@ -303,7 +316,31 @@ Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
 
+// Lights a fire (or tries to). The server sets a fire only on clear, level ground
+// near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
+// when it finds none here, step a few metres along and try again.
+void FireCraft(string processId, float score)
+{
+    for (int attempt = 0; ; attempt++)
+    {
+        lastError = null;
+        conn.Reducers.StartCraft(processId, score);
+        Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
+        if (lastError == null) break;
+        if (!lastError.Contains("clear, level ground") || attempt >= 8)
+            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
+        float a = attempt * MathF.PI / 4f;
+        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
+        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+    }
+    var def = Processes.Find(processId)!;
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
+}
+
 // Lays out a structure on clear, level ground near the bot and builds it from the bag.
+// Just past the server's keep-out for claims (Claims.CheckStructureSite).
+const float ClaimKeepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+
 Structure BuildHere(StructureKind kind)
 {
     float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
@@ -313,6 +350,8 @@ Structure BuildHere(StructureKind kind)
         {
             float a = k * MathF.Tau / 16, sx = x + MathF.Cos(a) * r, sz = z + MathF.Sin(a) * r;
             if (Structures.GroundProblem((int)kind, sx, sz, 0f, H) != null) continue;
+            // The server refuses claims in the spawn clearing; the search must not drift back into it.
+            if (kind == StructureKind.ClaimMarker && sx * sx + sz * sz < ClaimKeepOut * ClaimKeepOut) continue;
             if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
             if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
             site = (sx, sz);

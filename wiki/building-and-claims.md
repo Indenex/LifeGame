@@ -10,7 +10,7 @@ Inside a finished shelter you have a right to (you placed it, helped build it, o
 Some structures, such as the kiln, are also built from the build menu rather than crafted.
 
 ## Doors
-Doors can be hung, opened and shut with Use. Anyone can open an unbarred door. The player who hung a door, or any member of the claim it stands in, can bar it (Shift+G); a barred door opens only for them.
+Doors can be hung, opened and shut with Use. Anyone can open an unbarred door. The player who hung a door, or any member of the claim it stands in, can bar it (Shift+E); a barred door opens only for them.
 
 ## Storage
 Storage baskets hold items. A storage jar is a larger store made from clay; it is too big for an open fire and must be fired in a kiln. A better-made jar holds more. Outside a claim, anyone can take from a basket. Inside a claim, only members can.
@@ -22,6 +22,7 @@ Inside a claim:
 - Buildings and items do not weather away.
 - Players cannot fight unless the owner allows it.
 - Only members can take from storage.
+- You can build crafting stations.
 - The owner can invite members and take down any building; its materials drop on the spot.
 
 The claim border appears as a line on the ground when you get close to it. The marker must be tended (Use) now and then. A claim left untended for too long decays.
