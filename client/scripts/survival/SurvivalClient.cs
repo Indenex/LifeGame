@@ -217,6 +217,18 @@ public partial class SurvivalClient : Node
         return speed * WalkFactor;
     }
 
+    // Spends a fraction of the bar on a one-off effort such as a jump. False, and
+    // nothing spent, while winded or if the bar holds less than the cost.
+    public bool TrySpendStamina(float fraction)
+    {
+        if (winded || stamina < fraction) return false;
+        stamina -= fraction;
+        rested = 0f;
+        if (stamina <= 0f) winded = true;
+        staminaBar.Set(stamina, FeetOnScreen());
+        return true;
+    }
+
     // Stamina keeps refilling while you stand still with a panel open.
     void Rest(float dt)
     {
