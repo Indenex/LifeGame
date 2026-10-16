@@ -123,8 +123,8 @@ public static class StationMeshes
         return list;
     }
 
-    // The potter's bench: a flat wedging stone on two log rounds, a stool for the
-    // potter, clay and a coil being rolled, a smoothing pebble, a pinch pot drying,
+    // The potter's bench (Ceramics, ceramics-8): a flat wedging stone on two log
+    // rounds, a stool for the potter, clay and a coil being rolled, a smoothing pebble, a pinch pot drying,
     // and a fired bowl on the ground.
     public static List<StructureModel.Piece> PottersBench()
     {
@@ -144,7 +144,9 @@ public static class StationMeshes
         }
         Round(new Vector3(-0.34f, 0, -0.1f), 0.14f, 0.36f, 1);
         Round(new Vector3(0.34f, 0, -0.1f), 0.14f, 0.36f, 2);
-        Round(new Vector3(0, 0, 0.5f), 0.15f, 0.34f, 3);
+        // The stool sits off to the side: the server sets wet pieces out along
+        // the +Z edge, which stays clear.
+        Round(new Vector3(-0.56f, 0, 0.22f), 0.13f, 0.32f, 3);
 
         // The wedging stone: a broad flat slab.
         const float slabY = 0.4f;
@@ -172,7 +174,7 @@ public static class StationMeshes
         list.Add(new StructureModel.Piece
         {
             Stage = 0,
-            Mesh = PlacedPot(ClayForm.PinchPot, 8, new Vector3(0.62f, 0f, 0.3f), 1.6f),
+            Mesh = PlacedPot(ClayForm.PinchPot, 8, new Vector3(0.5f, 0f, -0.42f), 1.6f),
             Material = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 8),
             Anchor = Vector3.Zero,
         });

@@ -22,16 +22,17 @@ public static class PropMeshes
         return mesh;
     }
 
-    // A broadleaf trunk: flared roots gripping the ground, a slight lean and twist,
-    // and two broken-off branch stubs. Same height and base as Terrain's trunk.
+    // A broadleaf trunk: flared roots gripping the ground, a slight bend, and two
+    // broken-off branch stubs. Same base and top (0, 2.8, 0) as Terrain's trunk, so
+    // the canopies sit where they did.
     public static Mesh Trunk => trunk ??= BuildTrunk();
 
     static ArrayMesh BuildTrunk()
     {
         var k = Kit();
-        k.Paint(Colors.White).Loft(new Vector3(0, -0.15f, 0), new Vector3(0.04f, 2.8f, -0.03f), new MeshKit.Ring[]
+        k.Paint(Colors.White).Loft(new Vector3(0, -0.15f, 0), new Vector3(0, 2.8f, 0), new MeshKit.Ring[]
         {
-            new(0f, 0.3f, 0.28f), new(0.06f, 0.24f, 0.23f), new(0.2f, 0.19f, 0.18f, 0.01f), new(0.55f, 0.15f, 0.145f, -0.01f, 0.01f), new(1f, 0.1f, 0.1f),
+            new(0f, 0.3f, 0.28f), new(0.06f, 0.24f, 0.23f), new(0.2f, 0.19f, 0.18f, 0.01f), new(0.55f, 0.15f, 0.145f, -0.02f, 0.025f), new(1f, 0.1f, 0.1f),
         }, 7, 0.2f);
         for (int i = 0; i < 5; i++)
         {
