@@ -64,11 +64,14 @@ public partial class Atmosphere : Node3D
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
-    // then clear, drizzle, light rain, steady rain and a storm.
+    // then each kind in shared/Weathers.cs at the middle of its range, the ground
+    // as wet as that rain soon makes it.
     static readonly (float, float, float, float)[] PreviewWeathers =
-    {
-        default, (0.1f, 0f, 0.25f, 0f), (0.8f, 0.18f, 0.3f, 0.4f), (0.9f, 0.4f, 0.45f, 0.7f), (0.95f, 0.65f, 0.6f, 1f), (1f, 1f, 0.9f, 1f),
-    };
+        new[] { default((float, float, float, float)) }.Concat(Weathers.All.Select(k =>
+        {
+            float rain = (k.RainMin + k.RainMax) * 0.5f;
+            return ((k.CloudMin + k.CloudMax) * 0.5f, rain, (k.WindMin + k.WindMax) * 0.5f, Mathf.Min(1f, rain * 1.6f));
+        })).ToArray();
 
     // Lightning: a flash lights the sky and the land, and thunder follows.
     float flash, nextStrike = 20f;

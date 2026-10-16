@@ -167,51 +167,15 @@ public static partial class Module
         ctx.Db.Weather.Id.Update(w);
     }
 
-    // A front moves in: mostly fair weather, sometimes overcast, sometimes rain.
-    // Most rain is a drizzle or a light shower you can see through; steady rain is
-    // less common, and a heavy storm that closes the world in is rare.
+    // A front moves in, picked from the kinds in shared/Weathers.cs by this
+    // season's odds.
     static Weather NextWeather(ReducerContext ctx, Weather w)
     {
-        // Seasons tilt the odds: a dry summer, wet spring and autumn, grey winter.
-        // Thunderstorms are summer's: rare but most likely then, and almost never in
-        // winter (atmosphere-21). `storm` is the share of rainy fronts that build
-        // into one; about one front in 45 in summer, one in 50 in spring and
-        // autumn, one in 150 in winter.
-        (float fair, float overcast, double storm) = SeasonNow(ctx).Season switch
-        {
-            Season.Summer => (0.66f, 0.2f, 0.16),
-            Season.Winter => (0.45f, 0.33f, 0.03),
-            Season.Spring or Season.Autumn => (0.48f, 0.23f, 0.07),
-            _ => (0.55f, 0.23f, 0.07),
-        };
-        double roll = ctx.Rng.NextDouble();
-        int minutes;
-        if (roll < fair)
-        {
-            w.TargetCloud = Range(ctx, 0.05f, 0.35f);
-            w.TargetRain = 0f;
-            w.TargetWind = Range(ctx, 0.15f, 0.45f);
-            minutes = ctx.Rng.Next(12, 30);
-        }
-        else if (roll < fair + overcast)
-        {
-            w.TargetCloud = Range(ctx, 0.55f, 0.85f);
-            w.TargetRain = 0f;
-            w.TargetWind = Range(ctx, 0.35f, 0.65f);
-            minutes = ctx.Rng.Next(8, 20);
-        }
-        else
-        {
-            // Drizzle, light and steady rain share what storms leave, 38:34:21.
-            double kind = ctx.Rng.NextDouble() / (1.0 - storm) * 0.93;
-            (w.TargetRain, w.TargetCloud, w.TargetWind, minutes) = kind switch
-            {
-                < 0.38 => (Range(ctx, 0.12f, 0.25f), Range(ctx, 0.7f, 0.85f), Range(ctx, 0.2f, 0.45f), ctx.Rng.Next(8, 20)),   // drizzle
-                < 0.72 => (Range(ctx, 0.3f, 0.45f), Range(ctx, 0.8f, 0.95f), Range(ctx, 0.35f, 0.6f), ctx.Rng.Next(6, 16)),    // light rain
-                < 0.93 => (Range(ctx, 0.55f, 0.72f), Range(ctx, 0.9f, 1f), Range(ctx, 0.5f, 0.75f), ctx.Rng.Next(6, 14)),      // steady rain
-                _ => (Range(ctx, 0.88f, 1f), 1f, Range(ctx, 0.75f, 1f), ctx.Rng.Next(5, 10)),                                  // storm
-            };
-        }
+        var kind = Weathers.Pick(SeasonNow(ctx).Season, ctx.Rng.NextDouble());
+        w.TargetCloud = Range(ctx, kind.CloudMin, kind.CloudMax);
+        w.TargetRain = Range(ctx, kind.RainMin, kind.RainMax);
+        w.TargetWind = Range(ctx, kind.WindMin, kind.WindMax);
+        int minutes = ctx.Rng.Next(kind.MinutesMin, kind.MinutesMax);
         w.NextChangeAt = After(ctx, minutes * 60);
         return w;
     }
