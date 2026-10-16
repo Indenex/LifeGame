@@ -1,7 +1,7 @@
 # claims-9: Name your camp
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
 PR: (not yet)
 
@@ -26,4 +26,4 @@ An empty name clears it, and the name goes when the marker falls. Names are tidi
 - (resolved) D-140: Justin picked Name your camp, no wipe. It's done as a new table rather than a defaulted column; same effect, and existing tables don't change.
 
 ## Next step
-When the PM confirms option 1, open the PR and send a render request (the arrival title and the land chip at a named claim).
+Wait for CI on the claims-9 PR; when it's green, send the head sha to the PM.
