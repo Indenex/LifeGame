@@ -15,7 +15,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | Water and sky look, #66 atmosphere-10/11: Render lane rendering it, then Justin decides. Still to ask: carry-limit numbers (survival-3, shipped as default); burnt mutton 10% hunger (survival-4); toast only at new titles (skills-8). Answered 2026-10-16: D-060 felling, D-061 mat, D-062 wetness. PM decides: Shift+G bars doors (building-3, UX/UI confirms) |
+| Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-068 |
 | Next PM action | All lanes restarted 2026-10-16 17:04 (session ids in the lane table; reach them with send_message). Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
