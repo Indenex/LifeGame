@@ -27,6 +27,7 @@ public partial class JournalPanel : Control
     static readonly Color Ink = new(Look.Cream, 0.95f);
     static readonly Color Faint = new(Look.Cream, 0.55f);
     static readonly Color Accent = new(0.86f, 0.72f, 0.45f);
+    static readonly Color Recipe = new(Look.Cream, 0.78f);
 
     public override void _Ready()
     {
@@ -208,6 +209,7 @@ public partial class JournalPanel : Control
         };
         string times = e.TimesPerformed switch { 0 => "not tried yet", 1 => "done once", var n => $"done {n} times" };
         box.AddChild(Text($"{how}, {times}", 13, Faint));
+        if (Recipes.HowTo(e.ProcessId) is { } howTo) box.AddChild(Wrapped(howTo, 13, Recipe));
 
         if (spec != null)
         {

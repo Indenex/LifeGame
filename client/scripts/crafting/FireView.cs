@@ -15,6 +15,7 @@ public partial class FireView : Node3D
 
     readonly Dictionary<ulong, Campfire> fires = new();
     readonly Dictionary<ulong, RoastView> roasts = new();
+    readonly Dictionary<ulong, ColdHearthView> hearths = new();
     readonly Func<float, float, float> heightAt;
 
     public FireView(Func<float, float, float> heightAt) => this.heightAt = heightAt;
@@ -26,6 +27,20 @@ public partial class FireView : Node3D
         conn.Db.Fire.OnDelete += (_, f) =>
         {
             if (fires.Remove(f.Id, out var node)) node.QueueFree();
+        };
+        conn.Db.ColdHearth.OnInsert += (_, h) =>
+        {
+            if (hearths.ContainsKey(h.Id)) return;
+            var node = new ColdHearthView(h.Until.MicrosecondsSinceUnixEpoch - (long)(Fires.ColdSeconds * 1_000_000))
+            {
+                Position = new Vector3(h.X, heightAt(h.X, h.Z), h.Z),
+            };
+            hearths[h.Id] = node;
+            AddChild(node);
+        };
+        conn.Db.ColdHearth.OnDelete += (_, h) =>
+        {
+            if (hearths.Remove(h.Id, out var node)) node.QueueFree();
         };
         conn.Db.Roast.OnInsert += (_, r) =>
         {
@@ -56,6 +71,13 @@ public partial class FireView : Node3D
         }
         return best;
     }
+
+    // A local-only cold hearth, for checking the look in screenshots without a server.
+    public void PreviewCold(Vector3 at) =>
+        AddChild(new ColdHearthView(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - 20_000_000L)
+        {
+            Position = new Vector3(at.X, heightAt(at.X, at.Z), at.Z),
+        });
 
     // How long a fire burns before it needs more fuel, the way a player would say it:
     // "1 min left", "about 5 min left", "dying".
@@ -139,6 +161,87 @@ public partial class FireView : Node3D
         node.FuelUntilMicros = f.FuelUntil.MicrosecondsSinceUnixEpoch;
     }
 
+    // What a fire leaves when its fuel runs out: the same ring of stones around a
+    // bed of grey ash and two charred stubs, with a thin thread of smoke that
+    // fades over the first few minutes.
+    partial class ColdHearthView : Node3D
+    {
+        const float SmokeSeconds = 3 * 60;
+        static readonly Color AshColor = new(0.36f, 0.35f, 0.34f);
+        static readonly Color CharColor = new(0.10f, 0.09f, 0.08f);
+        readonly long outAtMicros;
+        CpuParticles3D? smoke;
+
+        public ColdHearthView(long outAtMicros) => this.outAtMicros = outAtMicros;
+
+        public override void _Ready()
+        {
+            Campfire.AddRing(this);
+            AddChild(new MeshInstance3D
+            {
+                Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.30f, BottomRadius = 0.36f, Height = 0.05f, RadialSegments = 9 }, AshColor),
+                Position = new Vector3(0, 0.01f, 0),
+            });
+            for (int i = 0; i < 2; i++)
+                AddChild(new MeshInstance3D
+                {
+                    Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.045f, Height = 0.32f, RadialSegments = 6 }, CharColor),
+                    Position = new Vector3(i == 0 ? -0.07f : 0.09f, 0.05f, i == 0 ? 0.04f : -0.05f),
+                    Rotation = new Vector3(Mathf.Pi / 2f, i * 2.1f + 0.4f, 0),
+                });
+            smoke = Smoke();
+            smoke.Position = new Vector3(0, 0.1f, 0);
+            AddChild(smoke);
+        }
+
+        public override void _Process(double delta)
+        {
+            if (smoke == null) return;
+            float since = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - outAtMicros) / 1_000_000f;
+            if (since >= SmokeSeconds)
+            {
+                smoke.QueueFree();
+                smoke = null;
+                return;
+            }
+            smoke.ScaleAmountMax = 1.4f * (1f - since / SmokeSeconds);
+        }
+
+        static CpuParticles3D Smoke()
+        {
+            var ramp = new Gradient();
+            ramp.SetColor(0, new Color(0.7f, 0.7f, 0.68f, 0.35f));
+            ramp.SetColor(1, new Color(0.7f, 0.7f, 0.68f, 0f));
+            return new CpuParticles3D
+            {
+                Amount = 8,
+                Lifetime = 4f,
+                Mesh = new QuadMesh
+                {
+                    Size = Vector2.One * 0.35f,
+                    Material = new StandardMaterial3D
+                    {
+                        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                        BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles,
+                        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                        VertexColorUseAsAlbedo = true,
+                        AlbedoTexture = Campfire.SoftDot,
+                    },
+                },
+                Direction = Vector3.Up,
+                Spread = 8f,
+                Gravity = new Vector3(0.05f, 0.08f, 0),
+                InitialVelocityMin = 0.25f,
+                InitialVelocityMax = 0.45f,
+                EmissionShape = CpuParticles3D.EmissionShapeEnum.Sphere,
+                EmissionSphereRadius = 0.08f,
+                ScaleAmountMin = 0.6f,
+                ScaleAmountMax = 1.4f,
+                ColorRamp = ramp,
+            };
+        }
+    }
+
     partial class Campfire : Node3D
     {
         public long FuelUntilMicros;
@@ -158,16 +261,7 @@ public partial class FireView : Node3D
         public override void _Ready()
         {
             // A ring of stones around crossed logs.
-            for (int i = 0; i < 8; i++)
-            {
-                float a = i * Mathf.Tau / 8f;
-                AddChild(new MeshInstance3D
-                {
-                    Mesh = Stone,
-                    Position = new Vector3(Mathf.Cos(a) * 0.45f, 0.04f, Mathf.Sin(a) * 0.45f),
-                    Rotation = new Vector3(0, a * 1.7f, 0),
-                });
-            }
+            AddRing(this);
             for (int i = 0; i < 3; i++)
                 AddChild(new MeshInstance3D
                 {
@@ -196,11 +290,25 @@ public partial class FireView : Node3D
             sparks.Emitting = left > 2;
         }
 
+        public static void AddRing(Node3D parent)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i * Mathf.Tau / 8f;
+                parent.AddChild(new MeshInstance3D
+                {
+                    Mesh = Stone,
+                    Position = new Vector3(Mathf.Cos(a) * 0.45f, 0.04f, Mathf.Sin(a) * 0.45f),
+                    Rotation = new Vector3(0, a * 1.7f, 0),
+                });
+            }
+        }
+
         static Mesh? stone, log;
         static Texture2D? softDot;
 
         // A round, soft-edged blob, so each flame particle reads as a lick of fire, not a square.
-        static Texture2D SoftDot => softDot ??= new GradientTexture2D
+        public static Texture2D SoftDot => softDot ??= new GradientTexture2D
         {
             Width = 64,
             Height = 64,

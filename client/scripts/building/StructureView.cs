@@ -101,6 +101,13 @@ public partial class StructureView : Node3D
         return appeared;
     }
 
+    // Hides the see-through plan of what isn't built yet (showcase shots only).
+    public void HideUnbuilt()
+    {
+        for (int i = 0; i < pieces.Count; i++)
+            if (!solid.Contains(i)) pieces[i].holder.Visible = false;
+    }
+
     // --- Door (clay huts and brick houses) -------------------------------
 
     // The doorway in the building's frame: the door hangs from jamb a and closes

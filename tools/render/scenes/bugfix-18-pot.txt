@@ -1,0 +1,32 @@
+# bugfix-18 (PR #108): a dry pot beside a fire. (a) fire full (4 pots firing): G reads
+# "Pick up the pot". (b) fire under 4 min of fuel: "Feed the fire", then after feeding
+# "Fire the pot". Camera = puppet. A fire starts with 15 min of fuel, so (b) waits.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 12 50
+give 5 1 50
+give 102 2 60
+give 111 4 100
+face 0
+craft fire.hand_drill
+wait 2
+firepots
+# a pinch pot lands 1 m from the fire, between it and me; dry it at once
+craft clay.pinch_pot
+sql UPDATE clay_piece SET moisture = 0.0
+wait 3
+face 0
+burst 3 1.5
+key g
+burst 3 1.5
+# (b) a second dry pot, then wait for the fire to drop under 4 min of fuel
+craft clay.pinch_pot
+sql UPDATE clay_piece SET moisture = 0.0
+wait 600
+face 0
+burst 3 1.5
+feed 1
+feed 1
+wait 2
+burst 3 1.5
