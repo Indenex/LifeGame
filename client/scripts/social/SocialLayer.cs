@@ -187,6 +187,7 @@ public partial class SocialLayer : Node
             hud.Note("Name changed");
             return;
         }
+        if (text.StartsWith('/') && TimeCommands.Try(conn, text, hud.Note)) return;
         conn.Reducers.SendChat(text);
     }
 
