@@ -74,7 +74,15 @@ public partial class Main : Node3D
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || PauseMenu.IsOpen;
+        useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
+        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        JournalPanel? journalPanel = null;
+        ClaimPanel? claimPanel = null;
+        Panels.Open = () => PauseMenu.IsOpen
+            || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
+            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();
@@ -296,7 +304,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
-        herd.Bind(conn, terrain);
+        herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
@@ -497,7 +505,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed);
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
@@ -560,7 +568,7 @@ public partial class Main : Node3D
                 if (fuel == null) return null;
                 float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
                 return new UseOffer("Feed the fire", d,
-                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item));
+                    () => conn.Reducers.FeedFire(fire.Id, fuel.Item), Target: new Vector3(fire.X, 0, fire.Z));
             },
         });
     }
