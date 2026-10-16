@@ -60,6 +60,7 @@ namespace LifeGame.Shared
                 Name = "Claim marker",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
+                Solid = true,
                 Stages = new[] { "Marker post" },
             },
             new StructureShape

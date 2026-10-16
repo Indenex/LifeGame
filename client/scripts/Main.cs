@@ -533,6 +533,7 @@ public partial class Main : Node3D
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         var pos = building.Collide(me.Position, me.Position + velocity * dt);
+        pos = terrain.CollideVegetation(pos);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);
