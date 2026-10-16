@@ -6,7 +6,11 @@
 // Scenes: day, drizzle, light, steady, storm (with thunder), roof (steady rain heard
 // from under a roof), rain (same as storm), fire (a campfire at night), firerain
 // (a campfire in light rain), dusk, night, sheep (a grazing flock that
-// bolts halfway). Each scene walks on grass for its first half.
+// bolts halfway; about a third are lambs), dawn (the dawn chorus), midday,
+// evening (evening song thinning out), woods (a windy day among trees), meadow
+// (the same wind over open grass), hut (steady rain heard from inside, walking
+// on the floor), earth, clay (walking on bare earth or wet clay).
+// Each scene walks for its first half, on grass unless the scene says otherwise.
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
@@ -25,18 +29,25 @@ foreach (var scene in scenes)
 {
     var parts = scene.Split(':');
     float seconds = parts.Length > 1 ? float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture) : 30f;
-    (float day, float rain, float wind, float wet) = parts[0] switch
+    (float day, float rain, float wind, float wet, float time) = parts[0] switch
     {
-        "drizzle" => (0.85f, 0.2f, 0.3f, 0.4f),
-        "light" => (0.8f, 0.4f, 0.45f, 0.7f),
-        "steady" or "roof" => (0.75f, 0.65f, 0.6f, 1f),
-        "rain" or "storm" => (0.6f, 1f, 0.9f, 1f),
-        "dusk" => (0.35f, 0f, 0.3f, 0.2f),
-        "fire" => (0f, 0f, 0.2f, 0.1f),
-        "firerain" => (0.1f, 0.4f, 0.4f, 0.7f),
-        "night" => (0f, 0f, 0.25f, 0.1f),
-        _ => (1f, 0f, 0.3f, 0f),
+        "drizzle" => (0.85f, 0.2f, 0.3f, 0.4f, 0.45f),
+        "light" => (0.8f, 0.4f, 0.45f, 0.7f, 0.45f),
+        "steady" or "roof" or "hut" => (0.75f, 0.65f, 0.6f, 1f, 0.45f),
+        "rain" or "storm" => (0.6f, 1f, 0.9f, 1f, 0.45f),
+        "dusk" => (0.35f, 0f, 0.3f, 0.2f, 0.76f),
+        "fire" => (0f, 0f, 0.2f, 0.1f, 0.9f),
+        "firerain" => (0.1f, 0.4f, 0.4f, 0.7f, 0.85f),
+        "night" => (0f, 0f, 0.25f, 0.1f, 0.95f),
+        "dawn" => (0.55f, 0f, 0.15f, 0.3f, 0.27f),
+        "midday" => (1f, 0f, 0.25f, 0f, 0.5f),
+        "evening" => (0.6f, 0f, 0.2f, 0f, 0.73f),
+        "woods" or "meadow" => (1f, 0f, 0.8f, 0f, 0.5f),
+        "clay" => (0.9f, 0f, 0.3f, 0.8f, 0.4f),
+        _ => (1f, 0f, 0.3f, 0f, 0.4f),
     };
+    var ground = parts[0] switch { "hut" => Ground.Floor, "clay" => Ground.Clay, "earth" => Ground.Earth, _ => Ground.Grass };
+    mix.Foliage = parts[0] == "woods" ? 1f : parts[0] == "meadow" ? 0f : 0.4f;
     int total = (int)(seconds * rate), done = 0;
     double sum = 0, nextStep = 0;
     while (done < total)
@@ -48,20 +59,21 @@ foreach (var scene in scenes)
         mix.Rain += (rain - mix.Rain) * k;
         mix.Wind += (wind - mix.Wind) * k;
         mix.Wetness += (wet - mix.Wetness) * k;
-        mix.Cover += ((parts[0] == "roof" ? 1f : 0f) - mix.Cover) * k;
+        mix.Cover = parts[0] is "roof" or "hut" ? 1f : 0f;
+        mix.TimeOfDay += (time - mix.TimeOfDay) * k;
         mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
         mix.FirePan = -0.3f;
         double t = done / (double)rate;
         if (t < seconds / 2 && t >= nextStep)
         {
-            mix.Step(Ground.Grass, mix.Wetness);
+            mix.Step(ground, ground == Ground.Floor ? 0f : mix.Wetness);
             nextStep = t + 0.36;
         }
         // Sheep scenes: a calm flock, then it bolts halfway through.
         if (parts[0] == "sheep" && Random.Shared.NextDouble() < n / (double)rate * 0.4)
-            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false);
+            mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), (float)(0.4 + 0.6 * Random.Shared.NextDouble()), false, Random.Shared.NextDouble() < 0.35);
         if (parts[0] == "sheep" && done < total / 2 && done + n >= total / 2)
-            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true);
+            for (int b = 0; b < 4; b++) mix.Bleat((float)(Random.Shared.NextDouble() * 2 - 1), 0.9f, true, b == 3);
         // Storms: a strike every 10 seconds or so, some close, most far off.
         if (parts[0] is "storm" or "rain" && Random.Shared.NextDouble() < n / (double)rate * 0.1)
         {

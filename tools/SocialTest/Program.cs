@@ -86,14 +86,35 @@ Walk(a, 2, 2);
 ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, 3, 2, 0), "clearing", "no claims in the waking clearing");
 
 // A lays out a marker like any structure and builds it; the claim starts when it stands.
+// Other checks share this database and may have built near here, so take the first
+// spot near (34, 30) clear of every building and every other claim.
+bool ClearSpot(float x, float z)
+{
+    float keepOut = Social.SpawnClearRadius + Social.ClaimRadius + 4f;
+    if (x * x + z * z < keepOut * keepOut) return false;
+    foreach (var s in a.Conn.Db.Structure.Iter())
+    {
+        float dx = s.X - x, dz = s.Z - z, min = s.Kind == StructureKind.ClaimMarker ? Social.ClaimRadius * 2f + 2f : 14f;
+        if (dx * dx + dz * dz < min * min) return false;
+    }
+    return true;
+}
 float cx = 34, cz = 30;
+for (int ring = 0; ring <= 20 && !ClearSpot(cx + 1, cz); ring++)
+    for (int step = 0; step < Math.Max(1, ring * 6); step++)
+    {
+        float angle = step * MathF.Tau / Math.Max(1, ring * 6), r = ring * 4f;
+        float x = 34 + r * MathF.Cos(angle), z = 30 + r * MathF.Sin(angle);
+        if (ClearSpot(x + 1, z)) { cx = x; cz = z; break; }
+    }
+Console.WriteLine($"claim marker spot {cx + 1:F1},{cz:F1}");
 Walk(a, cx, cz);
 Walk(b, cx + 4, cz);
 a.LastError = null;
 a.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 1, cz, 0);
-Pump(() => a.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClaimMarker) || a.LastError != null, 5, "marker laid out");
+Pump(() => a.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClaimMarker && s.Owner == a.Conn.Identity) || a.LastError != null, 5, "marker laid out");
 if (a.LastError != null) { Console.WriteLine($"FAIL  laying out the marker: {a.LastError}"); Environment.Exit(1); }
-var site = a.Conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClaimMarker);
+var site = a.Conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClaimMarker && s.Owner == a.Conn.Identity);
 Check(a.MyClaim() == null, "no claim until the marker is built");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 4, cz + 3, 0), "", "B cannot lay out a marker next to A's");
 for (int i = 0; i < 20 && a.MyClaim() == null; i++)
@@ -180,10 +201,56 @@ a.Conn.Reducers.Dismantle(hut!.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
+// --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
+float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
+// Not on claimed land with fighting off.
+a.Conn.Reducers.SetClaimPvp(claim.Id, false);
+Pump(() => a.MyClaim()?.AllowPvp == false, 5, "pvp off");
+Walk(a, claim.X + 4, claim.Z);
+Walk(b, claim.X + 5, claim.Z);
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "does not allow fighting", "no fighting on claimed land unless the owner allows it");
+// Open in the wild.
+float wx = claim.X + Social.ClaimRadius + 8, wz = claim.Z;
+Walk(a, wx, wz);
+Walk(b, wx + 4, wz);
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too far", "a strike out of reach misses");
+Walk(b, wx + 1, wz);
+float full = Hp(b, a.PlayerId);
+b.LastError = null;
+b.Conn.Reducers.StrikePlayer(a.PlayerId);
+Pump(() => Hp(b, a.PlayerId) < full || b.LastError != null, 5, "strike lands");
+Check(Hp(b, a.PlayerId) < full, $"a strike in the wild lands ({full:F1} -> {Hp(b, a.PlayerId):F1}, {b.LastError ?? "ok"})");
+ExpectError(b, () => b.Conn.Reducers.StrikePlayer(a.PlayerId), "Too soon", "strikes have a short cooldown");
+// Strike until A falls: A's things drop and A wakes elsewhere.
+uint carried = (uint)a.Conn.Db.MyInventory.Iter().Sum(i => i.Count);
+ulong chatBefore = b.Conn.Db.ChatMessage.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
+bool StruckDown() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Id > chatBefore && m.SenderId == 0 && m.Text.Contains("struck down"));
+for (int i = 0; i < 40 && !StruckDown(); i++)
+{
+    var until = DateTime.UtcNow.AddSeconds(0.85);
+    Pump(() => DateTime.UtcNow > until, 2, "cooldown");
+    b.LastError = null;
+    b.Conn.Reducers.StrikePlayer(a.PlayerId);
+    Pump(() => true, 1, "tick");
+}
+Pump(StruckDown, 5, "struck down");
+Check(true, "a player can be struck down in the wild, and nearby players hear of it");
+Check(b.Conn.Db.PlayerHealth.PlayerId.Find(b.PlayerId)?.MarkedUntil.MicrosecondsSinceUnixEpoch > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000,
+    "whoever struck them down is marked for a while");
+Pump(() => a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, 5, "drop on death");
+Check(carried == 0 || a.Conn.Db.MyInventory.Iter().Sum(i => i.Count) == 0, $"being struck down drops what you carry ({carried} things)");
+var woke = a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId)!;
+Check(MathF.Abs(woke.X - wx) + MathF.Abs(woke.Z - wz) > 5, "the fallen player wakes somewhere else");
+Check(Hp(b, a.PlayerId) >= Social.MaxHealth, "and wakes with full health");
+a.X = woke.X; a.Z = woke.Z;
+
 if (decay)
 {
-    var expires = a.MyClaim()!.ExpiresAt.MicrosecondsSinceUnixEpoch;
-    Console.WriteLine($"Waiting for the marker to fall ({(expires - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)...");
+    // CI gives the claim 30 s, which the fight above can already use up.
+    var expires = a.MyClaim()?.ExpiresAt.MicrosecondsSinceUnixEpoch;
+    Console.WriteLine(expires is { } e
+        ? $"Waiting for the marker to fall ({(e - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000}s left plus up to 20s for the decay tick)..."
+        : "The marker already fell");
     Pump(() => a.MyClaim() == null, 120, "decay");
     Check(true, "untended claim fell");
     Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == site.Id), 5, "marker gone");
@@ -248,7 +315,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

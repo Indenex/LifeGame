@@ -1,7 +1,7 @@
 # claims-2: Owner take-down, soft borders, weathering check
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
-Status: in_review
+Status: done (merged via PR #31)
 Branch: claude/claims-chat-pvp-vk2qak
 PR: https://github.com/Indenex/LifeGame/pull/31
 
@@ -10,6 +10,7 @@ D-044 and D-046/D-048 support. A claim owner can take down any building in their
 
 ## Progress log
 - 2026-10-15 23:15: restarted the branch from main after #8 merged (613215a). Owner take-down uses a `CanClearStructure(ctx, s, ref allowed)` partial in Building.cs Dismantle, implemented in Claims.cs. The border fade is `Social.BorderFadeDistance` = 6 m. `InClaimHook` is declared and implemented in Claims.cs. SocialTest has 25 checks and all pass locally on a fresh database.
+- 2026-10-15 23:28: Esc that closes the claim panel or chat box is marked handled, so it doesn't also open the UX menu. CI green on 10a64e3: https://github.com/Indenex/LifeGame/actions/runs/38823028060. Merged by the PM (#31).
 
 ## Decisions / defaults
 - D-044: as above. Members can't take down other people's buildings; only the builder or the claim owner can.
@@ -20,4 +21,4 @@ D-044 and D-046/D-048 support. A claim owner can take down any building in their
 - (none)
 
 ## Next step
-Wait for CI on the claims-2 PR; when it's green, send the head sha to the PM to merge.
+Switch the land chip to Hud.Soft once UX #33 is on main; take any new claims ticket from the PM.

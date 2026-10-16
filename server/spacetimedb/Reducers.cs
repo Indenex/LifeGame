@@ -27,12 +27,14 @@ public static partial class Module
         InitChat(ctx);
         InitClaims(ctx);
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientConnected)]
     public static void PlayerConnected(ReducerContext ctx)
     {
         EnsureWorldClock(ctx);
+        EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
@@ -40,6 +42,7 @@ public static partial class Module
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
+            EnsureHealth(ctx, existing.PlayerId);
             return;
         }
 
@@ -70,6 +73,7 @@ public static partial class Module
             LastActionAt = ctx.Timestamp,
         });
         SurvivalConnected(ctx, player);
+        EnsureHealth(ctx, player.PlayerId);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]

@@ -13,6 +13,13 @@ namespace LifeGame;
 // or the LIFEGAME_SERVER and LIFEGAME_DB environment variables.
 public partial class Main : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NWalkLeft = "walk_left";
+    static readonly StringName NWalkRight = "walk_right";
+    static readonly StringName NWalkBack = "walk_back";
+    static readonly StringName NWalkForward = "walk_forward";
+    static readonly StringName NSneak = "sneak";
+
     const float WalkSpeed = 4.2f;
     const float SendInterval = World.MoveTickMillis / 1000f;
 
@@ -96,6 +103,7 @@ public partial class Main : Node3D
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
+        if (Arg("frame-stats") is { } stats) AddChild(new FrameStats(stats));
         Connect();
         ScheduleScreenshot();
     }
@@ -305,7 +313,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
-        conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
+        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
         fires.Attach(conn);
@@ -319,6 +327,11 @@ public partial class Main : Node3D
         myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
+        ServerCheck.Warn = hud.Warn;
+        c.SubscriptionBuilder()
+            .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
+            .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
+            .Subscribe(new[] { "SELECT * FROM server_info" });
         SubscribeSelf();
         atmosphere.Connect(c);
     }
@@ -344,7 +357,7 @@ public partial class Main : Node3D
             })
             .OnError((_, e) =>
             {
-                hud.Note($"Subscription error: {e.Message}");
+                ServerCheck.Failed(e.Message, hud.Note);
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
@@ -368,7 +381,12 @@ public partial class Main : Node3D
                 old?.Unsubscribe();
                 if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
             })
-            .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
+            .OnError((_, e) =>
+            {
+                ServerCheck.Failed(e.Message, hud.Note);
+                // Still wake up and walk: one failed subscription must not freeze the player.
+                if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
+            })
             .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
@@ -504,8 +522,8 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
+        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed(NSneak) ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 

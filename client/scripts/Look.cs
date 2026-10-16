@@ -55,11 +55,12 @@ public static class Look
     // world_seconds so changes to the world can ease in over time. The atmosphere
     // advances it every frame.
     public static float Clock { get; private set; } = 1f;
+    static readonly StringName WorldSeconds = "world_seconds"; // cached: a string would make a new StringName every frame
 
     public static void Tick(float delta)
     {
         Clock += delta;
-        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet("world_seconds", Clock);
+        if (weatherGlobalsAdded) RenderingServer.GlobalShaderParameterSet(WorldSeconds, Clock);
     }
 
     // Each surface family gets the same shader with its own detail: how fine the
@@ -274,6 +275,31 @@ public static class Look
 
             void vertex() {
                 fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+                // A tree or rock on a cell that was just cleared goes away instead of
+                // vanishing: trees topple slowly and settle into the ground, rocks sink.
+                // On a cell that comes back they grow in. Custom data: x when it started,
+                // y +1 going or -1 coming, z 1 for rocks.
+                if (INSTANCE_CUSTOM.x > 0.0) {
+                    float age = world_seconds - INSTANCE_CUSTOM.x;
+                    if (INSTANCE_CUSTOM.y < 0.0) {
+                        VERTEX *= smoothstep(0.0, 1.6, age);
+                    } else if (INSTANCE_CUSTOM.z > 0.5) {
+                        float k = smoothstep(0.0, 1.6, age);
+                        VERTEX.y -= k * 1.4;
+                        VERTEX *= 1.0 - k * k;
+                    } else {
+                        float k = clamp(age / 2.4, 0.0, 1.0);
+                        // Falls slow then fast, in a direction seeded by where the tree
+                        // stands, so every player sees it fall the same way (D-056).
+                        float dir = fract(sin(dot(floor(MODEL_MATRIX[3].xz + 0.5), vec2(12.9898, 78.233))) * 43758.5453) * 6.2832;
+                        vec3 axis = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(sin(dir), 0.0, -cos(dir)));
+                        float angle = 1.45 * smoothstep(0.0, 0.7, k) * smoothstep(0.0, 0.7, k);
+                        float cs = cos(angle), sn = sin(angle);
+                        VERTEX = VERTEX * cs + cross(axis, VERTEX) * sn + axis * dot(axis, VERTEX) * (1.0 - cs);
+                        NORMAL = NORMAL * cs + cross(axis, NORMAL) * sn + axis * dot(axis, NORMAL) * (1.0 - cs);
+                        VERTEX *= 1.0 - smoothstep(0.6, 1.0, k);
+                    }
+                }
                 vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
                 if (sway > 0.0) {
                     float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);

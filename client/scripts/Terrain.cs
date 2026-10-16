@@ -12,6 +12,8 @@ namespace LifeGame;
 public partial class Terrain : Node3D
 {
     readonly Dictionary<(int, int), Node3D> chunks = new();
+    // Each chunk's node of see-through tree copies, looked up once when it is built.
+    readonly Dictionary<(int, int), Node3D> ghostHolders = new();
     readonly Dictionary<long, short> depths = new();
     readonly HashSet<(int, int)> dirty = new();
     (int, int) center = (int.MinValue, int.MinValue);
@@ -77,18 +79,22 @@ public partial class Terrain : Node3D
                 {
                     chunks[key].QueueFree();
                     chunks.Remove(key);
+                    ghostHolders.Remove(key);
                 }
             foreach (var key in keep)
                 if (!chunks.ContainsKey(key))
                     dirty.Add(key);
         }
 
-        // Build a few chunks per frame so walking never hitches. Nearest first.
+        // Build chunks nearest first, within a few milliseconds a frame so walking
+        // never hitches: one chunk takes tens of ms on a slow machine.
+        if (dirty.Count == 0) return;
         var order = new List<(int, int)>(dirty);
         order.Sort((a, b) => Dist(a).CompareTo(Dist(b)));
-        int budget = 3;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         foreach (var key in order)
         {
+            if (clock.Elapsed.TotalMilliseconds > 4) break;
             dirty.Remove(key);
             if (Math.Abs(key.Item1 - chunkX) > r || Math.Abs(key.Item2 - chunkZ) > r) continue;
             bool rebuilt = chunks.Remove(key, out var old);
@@ -97,7 +103,8 @@ public partial class Terrain : Node3D
             var node = BuildChunk(key.Item1, key.Item2);
             AddChild(node);
             chunks[key] = node;
-            if (--budget <= 0) break;
+            if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
+            else ghostHolders.Remove(key);
         }
 
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
@@ -136,33 +143,61 @@ public partial class Terrain : Node3D
     Mesh BuildGround(int cx, int cz)
     {
         int n = World.ChunkSize;
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        st.SetCustomFormat(0, SurfaceTool.CustomFormat.RgbaFloat);
 
-        void Corner(int x, int z)
+        // Each corner is shared by up to six triangles, so work out its height,
+        // normal and colors once, then lay the triangles out from the grid.
+        var heights = new float[n + 1, n + 1];
+        var normals = new Vector3[n + 1, n + 1];
+        var colors = new Color[n + 1, n + 1];
+        var changes = new Color[n + 1, n + 1];
+        for (int i = 0; i <= n; i++)
+            for (int j = 0; j <= n; j++)
+            {
+                int x = cx * n + i, z = cz * n + j;
+                float h = TileHeight(x, z);
+                heights[i, j] = h;
+                normals[i, j] = NormalAt(x, z);
+                colors[i, j] = TileColor(x, z, h);
+                // A cell whose clearing just changed carries its old color and when it
+                // changed, and the ground shader blends from one to the other.
+                changes[i, j] = ClearChange(x, z) is { } c
+                    ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
+                    : new Color(0, 0, 0, 0);
+            }
+
+        var vertices = new Vector3[n * n * 6];
+        var vertexNormals = new Vector3[vertices.Length];
+        var vertexColors = new Color[vertices.Length];
+        var custom = new float[vertices.Length * 4];
+        int k = 0;
+        void Corner(int i, int j)
         {
-            float h = TileHeight(x, z);
-            st.SetNormal(NormalAt(x, z));
-            st.SetColor(TileColor(x, z, h));
-            // A cell whose clearing just changed carries its old color and when it
-            // changed, and the ground shader blends from one to the other.
-            st.SetCustom(0, ClearChange(x, z) is { } c
-                ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
-                : new Color(0, 0, 0, 0));
-            st.AddVertex(new Vector3(x, h, z));
+            vertices[k] = new Vector3(cx * n + i, heights[i, j], cz * n + j);
+            vertexNormals[k] = normals[i, j];
+            vertexColors[k] = colors[i, j];
+            var c = changes[i, j];
+            custom[k * 4] = c.R; custom[k * 4 + 1] = c.G; custom[k * 4 + 2] = c.B; custom[k * 4 + 3] = c.A;
+            k++;
         }
 
         // One vertex per cell; neighboring chunks share their edge row.
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
-                int x = cx * n + i, z = cz * n + j;
-                Corner(x, z); Corner(x + 1, z); Corner(x + 1, z + 1);
-                Corner(x, z); Corner(x + 1, z + 1); Corner(x, z + 1);
+                Corner(i, j); Corner(i + 1, j); Corner(i + 1, j + 1);
+                Corner(i, j); Corner(i + 1, j + 1); Corner(i, j + 1);
             }
 
-        return st.Commit();
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = vertexNormals;
+        arrays[(int)Mesh.ArrayType.Color] = vertexColors;
+        arrays[(int)Mesh.ArrayType.Custom0] = custom;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays,
+            flags: (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
+        return mesh;
     }
 
     static void Quad(SurfaceTool st, Vector3 normal, Color color, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
@@ -197,21 +232,25 @@ public partial class Terrain : Node3D
     void AddVegetation(Node3D root, int cx, int cz)
     {
         EnsureMeshes();
-        var trunks = new List<(Transform3D, Color)>();
-        var leafy = new List<(Transform3D, Color)>();
-        var pines = new List<(Transform3D, Color)>();
-        var rocks = new List<(Transform3D, Color)>();
-        var tufts = new List<(Transform3D, Color)>();
-        var tuftChanges = new List<Color>();
+        // Each instance: transform, color, and custom data saying when it started to
+        // go away (or come back) on a cell that was just cleared.
+        var trunks = new List<(Transform3D, Color, Color)>();
+        var leafy = new List<(Transform3D, Color, Color)>();
+        var pines = new List<(Transform3D, Color, Color)>();
+        var rocks = new List<(Transform3D, Color, Color)>();
+        var tufts = new List<(Transform3D, Color, Color)>();
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
-                // A cell cleared a moment ago keeps its grass just long enough to flatten.
+                // A cell cleared a moment ago keeps its grass, trees and rocks just long
+                // enough for them to go: grass flattens, trees topple, rocks sink.
                 var change = ClearChange(x, z);
                 bool flattening = change is { Cleared: true };
+                // Custom data: when the change started, and +1 going away or -1 coming back.
+                var custom = change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0);
                 if (depths.ContainsKey(World.CellKey(x, z)) || (Cleared?.Invoke(x, z) == true && !flattening)) continue;
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
@@ -226,18 +265,18 @@ public partial class Terrain : Node3D
 
                 // A forest that thins out into a clearing where new players wake up.
                 float forest = World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
-                if (!nearSpawn && roll < forest && !flattening)
+                if (!nearSpawn && roll < forest)
                 {
-                    trunks.Add((at, Look.Bark));
+                    trunks.Add((at, Look.Bark, custom));
                     if (Hash01(x, z, 16) < 0.4f)
-                        pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f)));
+                        pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
                     else
                         leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
-                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f)));
+                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom));
                 }
-                else if (roll < forest + 0.006f && !flattening)
+                else if (roll < forest + 0.006f)
                 {
-                    rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f)));
+                    rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f }));
                     continue;
                 }
 
@@ -251,9 +290,7 @@ public partial class Terrain : Node3D
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, 0.75f + Hash01(x, z, 42) * 0.5f, 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts.Add((g, TileColor(x, z, top, cleared: false)));
-                    // Custom data: when the grass started to flatten (+1) or regrow (-1).
-                    tuftChanges.Add(change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0));
+                    tufts.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
             }
 
@@ -261,17 +298,18 @@ public partial class Terrain : Node3D
         AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         AddMulti(root, rockMesh!, rocks, Look.RockSurface);
-        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false, custom: tuftChanges);
+        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
     }
 
-    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color)> items, Material material, bool castShadow = true, List<Color>? custom = null)
+    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
         if (items.Count == 0) return;
+        bool custom = items.Exists(item => item.Item3.R > 0f);
         var mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
-            UseCustomData = custom != null,
+            UseCustomData = custom,
             Mesh = mesh,
             InstanceCount = items.Count,
         };
@@ -279,7 +317,7 @@ public partial class Terrain : Node3D
         {
             mm.SetInstanceTransform(i, items[i].Item1);
             mm.SetInstanceColor(i, items[i].Item2);
-            if (custom != null) mm.SetInstanceCustomData(i, custom[i]);
+            if (custom) mm.SetInstanceCustomData(i, items[i].Item3);
         }
         root.AddChild(new MultiMeshInstance3D
         {
@@ -288,8 +326,60 @@ public partial class Terrain : Node3D
             CastShadow = castShadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
         });
         // Trees in the way of the camera fade; their ghost draws them see-through.
+        // Ghosts sit under one node per chunk so ShowGhosts can switch them off
+        // wherever nothing can be in the way.
         if (Look.GhostOf(material) is { } ghost)
-            root.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        {
+            if (root.GetNodeOrNull<Node3D>(GhostsName) is not { } ghosts)
+            {
+                ghosts = new Node3D { Name = GhostsName, Visible = false };
+                root.AddChild(ghosts);
+            }
+            ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+    }
+
+    const string GhostsName = "Ghosts";
+
+    // Only chunks the line from the camera to the player passes near can have a tree
+    // in the way, so only their see-through copies are drawn. Saves three draw calls
+    // for nearly every chunk.
+    public void ShowGhosts(Vector3 camera, Vector3 player)
+    {
+        const float Margin = 6f; // the widest canopy plus the fade's reach
+        int n = World.ChunkSize;
+        var a = new Vector2(camera.X, camera.Z);
+        var b = new Vector2(player.X, player.Z);
+        foreach (var ((cx, cz), ghosts) in ghostHolders)
+        {
+            var min = new Vector2(cx * n - 0.5f - Margin, cz * n - 0.5f - Margin);
+            var max = new Vector2((cx + 1) * n - 0.5f + Margin, (cz + 1) * n - 0.5f + Margin);
+            bool show = SegmentHitsBox(a, b, min, max);
+            if (ghosts.Visible != show) ghosts.Visible = show;
+        }
+    }
+
+    // Liang-Barsky: does the segment from a to b touch the box?
+    static bool SegmentHitsBox(Vector2 a, Vector2 b, Vector2 min, Vector2 max)
+    {
+        float t0 = 0f, t1 = 1f;
+        var d = b - a;
+        for (int axis = 0; axis < 2; axis++)
+        {
+            float p = axis == 0 ? d.X : d.Y, start = axis == 0 ? a.X : a.Y;
+            float lo = axis == 0 ? min.X : min.Y, hi = axis == 0 ? max.X : max.Y;
+            if (Mathf.Abs(p) < 1e-6f)
+            {
+                if (start < lo || start > hi) return false;
+                continue;
+            }
+            float ta = (lo - start) / p, tb = (hi - start) / p;
+            if (ta > tb) (ta, tb) = (tb, ta);
+            t0 = Mathf.Max(t0, ta);
+            t1 = Mathf.Min(t1, tb);
+            if (t0 > t1) return false;
+        }
+        return true;
     }
 
     static void EnsureMeshes()
