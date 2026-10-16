@@ -192,6 +192,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void FinishCraft(ReducerContext ctx, CraftTimer timer)
     {
+        RequireServer(ctx);
         if (ctx.Db.CraftJob.Owner.Find(timer.Owner) is not { } job) return;
         ctx.Db.CraftJob.Owner.Delete(job.Owner);
         OnCraftEnded(ctx, job);
@@ -248,6 +249,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
+        RequireServer(ctx);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var row in ctx.Db.Fire.Iter().ToList())
         {

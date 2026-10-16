@@ -13,6 +13,8 @@ namespace LifeGame.Shared
         Brick,
         // A big coil-built jar; kiln-fired only, then set down as a store (ceramics-6).
         StorageJar,
+        // A small oil lamp: a shallow bowl with a pinched spout (ceramics-9).
+        Lamp,
     }
 
     // Where a piece of worked clay set down in the world is in its life. Once a
@@ -73,17 +75,13 @@ namespace LifeGame.Shared
         // crack and come out a little better than from a pit.
         // Building gives this process to everyone who helps finish a kiln stage.
         public const string KilnProcess = "clay.kiln";
-        // StructureKind.Kiln as a number, for shared code (the enum is the server's);
-        // appended after LeanTo, ClayHut and ClaimMarker (D-035).
-        public const int KilnStructureKind = 3;
         public const string KilnFireProcess = "clay.kiln_fire";
         public const int KilnCapacity = 6;
         public const int KilnQualityBonus = 10;
 
-        // The storage jar (ceramics-6): tempered clay it takes, and the
-        // StructureKind it is set down as (appended after BrickHouse).
+        // The storage jar (ceramics-6): tempered clay it takes. Shared code finds
+        // the jar and the kiln by their StructureShape flags (Kiln, Jar).
         public const int JarClay = 4;
-        public const int JarStructureKind = 6;
         // Only a kiln heats a piece this big evenly enough.
         public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar;
 
@@ -140,6 +138,7 @@ namespace LifeGame.Shared
             ClayForm.PinchPot => "pinch pot",
             ClayForm.CoilPot => "coil pot",
             ClayForm.StorageJar => "storage jar",
+            ClayForm.Lamp => "lamp",
             _ => "brick",
         };
 
@@ -150,6 +149,7 @@ namespace LifeGame.Shared
             "clay.coil_pot" => ClayForm.CoilPot,
             "clay.brick" => ClayForm.Brick,
             "clay.storage_jar" => ClayForm.StorageJar,
+            "clay.lamp" => ClayForm.Lamp,
             _ => null,
         };
 
@@ -158,6 +158,7 @@ namespace LifeGame.Shared
         {
             ClayForm.CoilPot => Item.UnfiredCoilPot,
             ClayForm.StorageJar => Item.UnfiredStorageJar,
+            ClayForm.Lamp => Item.UnfiredLamp,
             _ => Item.UnfiredPinchPot,
         };
 
@@ -166,6 +167,7 @@ namespace LifeGame.Shared
             Item.UnfiredPinchPot => ClayForm.PinchPot,
             Item.UnfiredCoilPot => ClayForm.CoilPot,
             Item.UnfiredStorageJar => ClayForm.StorageJar,
+            Item.UnfiredLamp => ClayForm.Lamp,
             _ => null,
         };
 
@@ -173,6 +175,7 @@ namespace LifeGame.Shared
         {
             ClayForm.CoilPot => Item.CoilPot,
             ClayForm.StorageJar => Item.StorageJar,
+            ClayForm.Lamp => Item.ClayLamp,
             _ => Item.PinchPot,
         };
 
@@ -197,6 +200,7 @@ namespace LifeGame.Shared
         {
             "cook.broth" => Item.PotOfBroth,
             "cook.stew" => Item.PotOfStew,
+            "cook.tallow" => Item.Tallow,
             _ => null,
         };
 
@@ -205,7 +209,26 @@ namespace LifeGame.Shared
 
         public static float SimmerSeconds(Item dish) => dish == Item.PotOfStew ? StewSeconds : BrothSeconds;
 
-        public static string DishName(Item dish) => dish == Item.PotOfStew ? "mutton stew" : "berry broth";
+        public static string DishName(Item dish) => dish switch
+        {
+            Item.PotOfStew => "mutton stew",
+            Item.Tallow => "tallow",
+            _ => "berry broth",
+        };
+
+        // Tallow is skimmed off and the pot comes back empty; broth and stew stay in their pot.
+        public static bool KeepsPot(Item dish) => dish == Item.Tallow;
+
+        // The clay oil lamp (ceramics-9, Justin D-147): each tallow burns half an hour,
+        // a lamp holds up to MaxLampTallow, and it lights this far round. A lamp refills
+        // itself from tallow in storage nearby, so it never needs tending.
+        public const float LampSecondsPerTallow = 1800f;
+        public const float LampRefillCheckSeconds = 60f;
+        public const int MaxLampTallow = 3;
+        public const float LampLightRadius = 4f;
+        // A lamp is lit from a burning fire or a lit lamp this close.
+        public const float LightFromReach = 8f;
+        public const int LampsPerPlayer = 6;
 
         static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }

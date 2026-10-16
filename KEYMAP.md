@@ -11,7 +11,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Key | Action | Lane | Today |
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
-| Hold right mouse + drag | Turn the view, eased (D-050). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17 |
+| Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
@@ -25,6 +25,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
+| I | What you wear: the equipment panel (body and feet slots; click a slot, then what to put on). I or Esc closes | UX/UI | new, ui-10 (D-074); I decided by Justin (D-094) |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
@@ -92,7 +93,7 @@ Use.Register(new UseHandler
 - Pass `Target` (where the thing is) so Use picks what the player faces: an offer with a Target within 60° of the player's facing beats one with no Target, which beats one with a Target off to the side; priority and distance decide within that. So a bush in front of you wins over a fire beside you, without a special priority.
 - Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while the Use key is held.
 - Use is ignored while the crafting minigame runs or a building is being placed.
-- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire or fire a dry pot beside one 22, Crafting feed fire 20, Animals shear 15, Ceramics pick up a dry pot or brick 12, Ceramics fill pots 11, Ceramics pick up a fired pot, sherd or dry brick on the ground 10, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
+- Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Ceramics feed, light or pick up a clay lamp 24, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire or fire a dry pot beside one 22, Crafting feed fire 20, Ceramics set down a clay lamp 19, Animals shear 15, Ceramics pick up a dry pot or brick 12, Ceramics fill pots 11, Ceramics pick up a fired pot, sherd or dry brick on the ground 10, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.
 - A hint that should appear at a moment rather than in the opening sequence (e.g. sneak, when a flock bolts near you) is an `OnRequest` row in `Controls.cs`; the lane calls `Hints.Request("sneak")` when the moment comes. It shows once, and never if the player already used the key. Ask the UX/UI lane for a new slot.
 - Players can change any key on the Controls page of the Esc menu (ui/ControlsPage.cs); the keys in this file are the defaults. So never write a key into on-screen text: hints use `{key}` in Controls.cs, and lanes call `Controls.KeyFor("journal")` for prompts like "J to close". Read keys through input actions (`IsActionPressed`), not raw keycodes, or the player's choice won't reach you.
 - A one-off tip that isn't about a key: `Hints.Tip("ceramics.dry_by_fire", "Clay dries twice as fast beside a burning fire")` at the moment it matters. It shows once per install, in the same corner. Keep it to one short sentence.

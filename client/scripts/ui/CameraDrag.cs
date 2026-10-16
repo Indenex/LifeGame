@@ -3,12 +3,15 @@ using Godot;
 
 namespace LifeGame;
 
-// Hold the right mouse button and drag sideways to turn the view freely (D-050).
+// Hold the right mouse button and drag sideways to turn the view freely (D-050); drag up or
+// down to tilt it a little.
 // The camera rig eases toward the new angle, so it never snaps; Q and E still turn
 // in steps.
 public partial class CameraDrag : Node
 {
     const float RadiansPerPixel = 0.006f;
+    // Tilt is gentler than turning, and the rig keeps it inside a narrow range.
+    const float TiltRadiansPerPixel = 0.003f;
 
     // Mouse sensitivity from the Controls page (1 = the default feel).
     public static float Sensitivity = 1f;
@@ -31,6 +34,8 @@ public partial class CameraDrag : Node
         else if (dragging && e is InputEventMouseMotion motion)
         {
             Rig.TurnBy(-motion.Relative.X * RadiansPerPixel * Sensitivity);
+            // Up and down tilts the view a little: drag up for more sky, down to look from higher.
+            Rig.TiltBy(motion.Relative.Y * TiltRadiansPerPixel * Sensitivity);
             GetViewport().SetInputAsHandled();
         }
     }
