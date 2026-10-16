@@ -177,8 +177,8 @@ public partial class Showcase : Node3D
         var props = new (Mesh, Material, Vector3)[]
         {
             (PropMeshes.Trunk, bark, new Vector3(-2.4f, 0, -0.6f)),
-            (PropMeshes.Rock, stone, new Vector3(-0.8f, 0, 0.2f)),
-            (PropMeshes.FallenLog, bark, new Vector3(1.2f, 0, -0.4f)),
+            (PropMeshes.Rock(0), stone, new Vector3(-0.8f, 0, 0.2f)),
+            (PropMeshes.FallenLog(0), bark, new Vector3(1.2f, 0, -0.4f)),
             (PropMeshes.Stump, bark, new Vector3(2.8f, 0, 0.6f)),
         };
         foreach (var (mesh, material, at) in props)
@@ -261,11 +261,15 @@ public partial class Showcase : Node3D
                 Place(PropMeshes.Heather(v), Look.Foliage, new Vector3(-3.0f + v * 0.8f, 0, -0.8f), Colors.White);
             for (int v = 0; v < PropMeshes.GorseVariants; v++)
                 Place(PropMeshes.Gorse(v), Look.Foliage, new Vector3(0.0f + v * 1.3f, 0, -1.0f), Colors.White);
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                Place(PropMeshes.Rock(v), Look.RockSurface, new Vector3(-6.0f + v * 1.5f, 0, 1.6f), Look.Rock);
+            for (int v = 0; v < PropMeshes.FallenLogVariants; v++)
+                Place(PropMeshes.FallenLog(v), Look.BarkSurface, new Vector3(1.0f + v * 4.0f, 0, 1.8f), Look.Bark.Lightened(0.15f));
             for (int v = 0; v < PropMeshes.RiverStoneVariants; v++)
                 Place(PropMeshes.RiverStone(v), Look.RockSurface, new Vector3(4.2f + v * 0.45f, 0, -0.6f), Look.Rock.Lightened(0.1f));
             var wide = new Camera3D { Fov = 45f, Current = true };
             AddChild(wide);
-            wide.LookAtFromPosition(new Vector3(0, 5.0f, 7.5f), new Vector3(0, 0.6f, -2.2f), Vector3.Up);
+            wide.LookAtFromPosition(new Vector3(0, 6.0f, 9.5f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
             return;
         }
         Place(PropMeshes.Birch(0), Look.BarkSurface, new Vector3(-2.6f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
