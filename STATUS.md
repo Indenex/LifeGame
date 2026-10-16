@@ -37,7 +37,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Claims, chat and PvP rules (session_01CAk6p7Z42GfVwi8QMfNMhZ) | claims-12 fences; #191 and #196 merged (Sonnet, D-159) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
 | World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); next visual ticket with Environment | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/` except audio |
 | House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) | #202, building-10 (Sonnet, D-159) | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
-| Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-sheep-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
+| Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-deer-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Sc3N1RCsurSszfX5YwGzMU) | ceramics-7+8, lamp ceramics-9 (Sonnet, D-159) | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01AeuMsF8LfzDsWW8jUh1Fkp) | #221, then bugfix-23 collision (Sonnet, D-159) | lane records | any file, minimal diffs, PM assigns |
