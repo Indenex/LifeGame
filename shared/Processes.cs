@@ -156,6 +156,28 @@ namespace LifeGame.Shared
                 Seconds = 6, Outcome = Outcome.Placed,
             },
 
+            // Wool (Animals lane): a stick and a stone whorl make a drop spindle; the
+            // spindle twists raw wool into yarn, and yarn is woven over a stick frame
+            // into cloth. Spinning and weaving train Toolmaking with cord and baskets.
+            new ProcessDef
+            {
+                Id = "carve.drop_spindle", Name = "Make a drop spindle", Doing = "Fitting a stone whorl onto a stick", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 6, Makes = Item.DropSpindle,
+            },
+            new ProcessDef
+            {
+                Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Wool, 2) }, NeedsTool = ItemTags.Spindle,
+                Seconds = 10, Makes = Item.Yarn,
+            },
+            new ProcessDef
+            {
+                Id = "weave.wool_cloth", Name = "Weave wool cloth", Doing = "Weaving yarn over a stick frame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Yarn, 4), new Ingredient(Item.Stick, 2) },
+                Seconds = 20, Makes = Item.WoolCloth,
+            },
+
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
             // shaped, dried in the open, then fired (see ClayRules and Ceramics.cs).
             new ProcessDef

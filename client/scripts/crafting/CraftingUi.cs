@@ -323,6 +323,7 @@ public partial class CraftingUi : CanvasLayer
             ItemTags.Digging => "a digging tool",
             ItemTags.FireBow => "a bow drill",
             ItemTags.Container => "a container",
+            ItemTags.Spindle => "a spindle",
             _ => t.ToString().ToLowerInvariant(),
         }));
 
