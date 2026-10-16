@@ -1,7 +1,7 @@
 # atmosphere-4: Firelight and early night
 Lane: World atmosphere and sound
 Owner: Atmosphere thread (session_01PQgMLoZLFAprUyZzmQuSUX)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-sound-hlqfke
 PR: #32
 
