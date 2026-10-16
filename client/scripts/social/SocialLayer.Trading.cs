@@ -13,7 +13,7 @@ public partial class SocialLayer
     public bool PanelOpen => panel.IsOpen;
 
     void AttachTrading() =>
-        Use.Register(new UseHandler { Id = "claims.trade", Priority = 4, Find = TradeOffer });
+        Use.Register(new UseHandler { Id = "claims.trade", Priority = 5, Find = TradeOffer });
 
     // The nearest other player within reach, when neither of you is already trading.
     UseOffer? TradeOffer(Vector3 at)
