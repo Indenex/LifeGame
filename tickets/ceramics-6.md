@@ -24,7 +24,7 @@ Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed
 
 ## Open questions / blockers
 - PM/Justin: the message Justin approved said "pit firing cracks it 60%"; built is "kiln only" (a campfire refuses it). Asked the PM 2026-10-16 to confirm with Justin; kiln-only stays meanwhile.
-- Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Messaged House building (session_01RrKHUxWRH973Ndnxsad9nv) 2026-10-16.
+- Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Messaged House building (session_01RrKHUxWRH973Ndnxsad9nv) 2026-10-16; they OK'd the hooks and take StructureKind 7+. When main has #61 (stage costs move to `Structures.StageCosts` in shared/Structures.cs), move the jar's row there on the main merge and drop it from Building.cs.
 
 ## Next step
 Check the ClayCheck --jar result on c6jar1 (local server on 127.0.0.1:3000; rerun `cd tools/ClayCheck && dotnet run -c Release -- http://127.0.0.1:3000 <scratch db> --jar` after publishing to a new scratch db if the session restarted), then send the Render lane a request and open the PR.
