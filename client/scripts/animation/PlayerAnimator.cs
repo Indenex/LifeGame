@@ -8,7 +8,11 @@ namespace LifeGame;
 public sealed class PlayerAnimator
 {
     readonly PlayerRig rig;
-    readonly Pose idle = new(), walk = new(), pose = new();
+    readonly Pose idle = new(), walk = new(), work = new(), pose = new();
+    // Set while a craft job runs; the figure kneels into it and back out.
+    public WorkMotion Work;
+    WorkMotion shownWork;
+    float workTime, workBlend;
     readonly float seed; // per-figure offset so a crowd never breathes or sways in step
     float time, phase;   // phase: walk cycle, a full turn is two steps
     float walkBlend, gait, turnLean, crouch;
@@ -38,6 +42,20 @@ public sealed class PlayerAnimator
         pose.Blend(idle, walk, walkBlend > 0.995f ? 1f : walkBlend < 0.005f ? 0f : walkBlend);
 
         if (crouch > 0.005f) Crouch(pose, crouch);
+
+        if (Work != WorkMotion.None && Work != shownWork)
+        {
+            shownWork = Work;
+            workTime = 0f;
+        }
+        workTime += dt;
+        workBlend = Mathf.Lerp(workBlend, Work != WorkMotion.None && walkBlend < 0.5f ? 1f : 0f, 1f - Mathf.Exp(-5f * dt));
+        if (workBlend > 0.005f)
+        {
+            WorkMotions.Pose(work, shownWork, workTime, rig.LegLength);
+            pose.Blend(pose, work, workBlend > 0.995f ? 1f : workBlend);
+        }
+        else shownWork = WorkMotion.None;
         // Lean into turns; the head stays level.
         pose[Joint.Hips].Z -= turnLean;
         pose[Joint.Neck].Z += turnLean * 0.7f;

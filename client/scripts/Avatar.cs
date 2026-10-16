@@ -101,6 +101,9 @@ public partial class Avatar : Node3D
     static void Mesh(Node3D parent, Mesh mesh, Material material, Vector3 at, Vector3 rotation = default) =>
         parent.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = material, Position = at, Rotation = rotation });
 
+    // What this player's hands are doing, from their running craft job (AvatarWork).
+    public WorkMotion Work { set => animator.Work = value; }
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.
