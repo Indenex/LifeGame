@@ -19,6 +19,7 @@ public partial class SurvivalClient : Node
     Node world = null!;
     Terrain terrain = null!;
     Node3D player = null!;
+    readonly WetLook wetLook = new();
     Hud hud = null!;
     DbConnection? conn;
     Vitals? vitals;
@@ -43,6 +44,8 @@ public partial class SurvivalClient : Node
         this.terrain = terrain;
         this.player = player;
         this.hud = hud;
+        wetLook.Dress(player);
+        AddChild(wetLook);
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -148,6 +151,7 @@ public partial class SurvivalClient : Node
         {
             var (food, water, warmth) = Current();
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
+            wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");
