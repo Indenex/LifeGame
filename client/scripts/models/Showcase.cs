@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -28,11 +29,14 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
             else if (view == "props") Props();
+            else if (view == "env") EnvProps();
+            else if (view == "cooking") Cooking();
+            else if (view == "deer") Deer();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -106,7 +110,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         items.Sort();
@@ -142,7 +146,10 @@ public partial class Showcase : Node3D
     // The player figure holding tools in its right hand, arm raised a little.
     void HeldTools()
     {
-        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.Basket };
+        // Stand-in ids for the bow and arrow until Crafting's reach main.
+        ItemModels.BowItem ??= (LifeGame.Shared.Item)16;
+        ItemModels.ArrowItem ??= (LifeGame.Shared.Item)17;
+        var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.Spear, ItemModels.BowItem.Value, ItemModels.ArrowItem.Value, LifeGame.Shared.Item.Basket };
         for (int i = 0; i < tools.Length; i++)
         {
             var figure = PlayerModel.Build();
@@ -154,6 +161,10 @@ public partial class Showcase : Node3D
             var hand = figure.FindChild("ToolR", true, false);
             hand.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(tools[i]) });
         }
+        // An arrow in flight, and the bow and arrow lying on the grass.
+        AddChild(new MeshInstance3D { Mesh = ItemModels.ArrowFlight, Position = new Vector3(0.6f, 1.6f, 0.8f), Rotation = new Vector3(0, -1.2f, 0) });
+        AddChild(new MeshInstance3D { Mesh = ItemModels.GroundMesh(ItemModels.BowItem.Value)!, Position = new Vector3(-0.6f, 0, 1.3f), Rotation = new Vector3(0, 0.3f, 0) });
+        AddChild(new MeshInstance3D { Mesh = ItemModels.GroundMesh(ItemModels.ArrowItem.Value)!, Position = new Vector3(0.6f, 0, 1.4f), Rotation = new Vector3(0, -0.4f, 0) });
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
@@ -173,8 +184,8 @@ public partial class Showcase : Node3D
         var props = new (Mesh, Material, Vector3)[]
         {
             (PropMeshes.Trunk, bark, new Vector3(-2.4f, 0, -0.6f)),
-            (PropMeshes.Rock, stone, new Vector3(-0.8f, 0, 0.2f)),
-            (PropMeshes.FallenLog, bark, new Vector3(1.2f, 0, -0.4f)),
+            (PropMeshes.Rock(0), stone, new Vector3(-0.8f, 0, 0.2f)),
+            (PropMeshes.FallenLog(0), bark, new Vector3(1.2f, 0, -0.4f)),
             (PropMeshes.Stump, bark, new Vector3(2.8f, 0, 0.6f)),
         };
         foreach (var (mesh, material, at) in props)
@@ -187,6 +198,105 @@ public partial class Showcase : Node3D
         camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
     }
 
+    // Red deer for Animals: a hind and a stag, with a person and a sheep for scale.
+    void Deer()
+    {
+        var coat = Look.Solid(new Color(0.55f, 0.30f, 0.18f));
+        var hind = DeerFigure.Create(false, coat);
+        hind.Position = new Vector3(-0.9f, 0, 0);
+        hind.Rotation = new Vector3(0, 1.3f, 0);
+        AddChild(hind);
+        var stag = DeerFigure.Create(true, coat);
+        stag.Position = new Vector3(1.0f, 0, -0.4f);
+        stag.Rotation = new Vector3(0, 1.0f, 0);
+        AddChild(stag);
+        var wool = Look.Solid(new Color(0.74f, 0.71f, 0.63f));
+        var sheep = SheepFigure.Create(SheepFigure.Variant, wool);
+        sheep.Position = new Vector3(-2.3f, 0, 0.6f);
+        sheep.Rotation = new Vector3(0, 1.3f, 0);
+        AddChild(sheep);
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(2.6f, 0, 0.5f);
+        figure.Rotation = new Vector3(0, -0.4f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
+    // floating in it, roughly as SimmerView draws it.
+    void Cooking()
+    {
+        AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = new Vector3(0, 0, -0.55f) });
+        var dishes = new[] { (CookingMeshes.Dish.Broth, new Color(0.35f, 0.08f, 0.10f)), (CookingMeshes.Dish.Stew, new Color(0.38f, 0.24f, 0.12f)), (CookingMeshes.Dish.Tallow, new Color(0.80f, 0.74f, 0.58f)) };
+        var line = PotMesh.WaterLine(ClayForm.CoilPot) * PotView.Size;
+        for (int i = 0; i < dishes.Length; i++)
+        {
+            var root = new Node3D { Position = new Vector3((i - 1) * 0.75f, -0.02f, 0) };
+            AddChild(root);
+            root.AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 0), Scale = Vector3.One * PotView.Size, MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 0) });
+            root.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Under });
+            var liquid = new StandardMaterial3D { AlbedoColor = dishes[i].Item2, Roughness = 0.2f };
+            root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.002f, RadialSegments = 20 }, MaterialOverride = liquid, Position = new Vector3(0, line.Y, 0) });
+            root.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Floaters(dishes[i].Item1, line.X), Position = new Vector3(0, line.Y + 0.002f, 0) });
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.9f, 1.9f), new Vector3(0, 0.15f, 0), Vector3.Up);
+    }
+
+    // Environment's env-4 props, drawn the way Terrain draws them: a MultiMesh
+    // instance with a color, under the world materials.
+    void EnvProps()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.5f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        if (args.ContainsKey("variants"))
+        {
+            // Every seeded variant of the landmark props, in rows.
+            for (int v = 0; v < PropMeshes.OutcropVariants; v++)
+                Place(PropMeshes.Outcrop(v), Look.RockSurface, new Vector3(-7.5f + v * 3.0f, 0, -4.5f), Look.Rock);
+            for (int v = 0; v < PropMeshes.BirchVariants; v++)
+                Place(PropMeshes.Birch(v), Look.BarkSurface, new Vector3(-6.5f + v * 0.8f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
+            for (int v = 0; v < PropMeshes.HeatherVariants; v++)
+                Place(PropMeshes.Heather(v), Look.Foliage, new Vector3(-3.0f + v * 0.8f, 0, -0.8f), Colors.White);
+            for (int v = 0; v < PropMeshes.GorseVariants; v++)
+                Place(PropMeshes.Gorse(v), Look.Foliage, new Vector3(0.0f + v * 1.3f, 0, -1.0f), Colors.White);
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                Place(PropMeshes.Rock(v), Look.RockSurface, new Vector3(-6.0f + v * 1.5f, 0, 1.6f), Look.Rock);
+            for (int v = 0; v < PropMeshes.FallenLogVariants; v++)
+                Place(PropMeshes.FallenLog(v), Look.BarkSurface, new Vector3(1.0f + v * 4.0f, 0, 1.8f), Look.Bark.Lightened(0.15f));
+            for (int v = 0; v < PropMeshes.RiverStoneVariants; v++)
+                Place(PropMeshes.RiverStone(v), Look.RockSurface, new Vector3(4.2f + v * 0.45f, 0, -0.6f), Look.Rock.Lightened(0.1f));
+            var wide = new Camera3D { Fov = 45f, Current = true };
+            AddChild(wide);
+            wide.LookAtFromPosition(new Vector3(0, 6.0f, 9.5f), new Vector3(0, 0.4f, -1.2f), Vector3.Up);
+            return;
+        }
+        Place(PropMeshes.Birch(0), Look.BarkSurface, new Vector3(-2.6f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
+        Place(PropMeshes.Outcrop(0), Look.RockSurface, new Vector3(1.6f, 0, -1.8f), Look.Rock);
+        Place(PropMeshes.Heather(0), Look.Foliage, new Vector3(-1.0f, 0, 0.4f), Colors.White);
+        Place(PropMeshes.Heather(1), Look.Foliage, new Vector3(-0.5f, 0, 0.9f), Colors.White, 0.8f);
+        Place(PropMeshes.Gorse(0), Look.Foliage, new Vector3(0.2f, 0, -0.2f), Colors.White);
+        Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.4f, 0, 0.8f), Look.GrassBlade);
+        Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.9f, 0, 0.5f), Look.GrassBlade, 0.85f);
+        for (int i = 0; i < 6; i++)
+            Place(PropMeshes.RiverStone(i), Look.RockSurface, new Vector3(0.9f + i * 0.35f, 0, 1.4f + (i % 2) * 0.25f), Look.Rock.Lightened(0.1f), 0.8f + (i % 3) * 0.2f);
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(-1.8f, 0, 0.6f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("close")) camera.LookAtFromPosition(new Vector3(-2.2f, 1.4f, 0.2f), new Vector3(-2.6f, 1.3f, -1.2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0, 2.6f, 6.4f), new Vector3(0, 0.7f, -0.3f), Vector3.Up);
+    }
+
     // Work stations side by side (model-2), with a player for scale.
     void Stations()
     {
@@ -194,10 +304,11 @@ public partial class Showcase : Node3D
         {
             ("Crafting table", StationMeshes.CraftingTable()), ("Potter's bench", StationMeshes.PottersBench()),
             ("Distaff stand", StationMeshes.Distaff()), ("Drying rack", StationMeshes.DryingRack()),
+            ("Repair table", StationMeshes.RepairTable()),
         };
         for (int i = 0; i < stations.Length; i++)
         {
-            var root = new Node3D { Position = new Vector3((i % 2 - 0.5f) * 2.6f, 0, (i / 2) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
+            var root = new Node3D { Position = new Vector3((i % 3 - 1f) * 2.6f, 0, (i / 3) * -2.4f), Rotation = new Vector3(0, 0.35f, 0) };
             AddChild(root);
             foreach (var piece in stations[i].Item2)
                 if (piece.Stage >= 0) root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });

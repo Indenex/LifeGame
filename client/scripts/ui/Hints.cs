@@ -33,12 +33,10 @@ public partial class Hints : CanvasLayer
         tips.Enqueue(new Controls.Binding($"tip.{id}", System.Array.Empty<Key>(), null, text, OnRequest: true));
     static readonly Queue<Controls.Binding> tips = new();
 
-    // Keys that teach the same thing as a row with a hint: S, A or D is walking, and
-    // E or a right-drag is turning the view.
+    // Keys that teach the same thing as a row with a hint: S, A or D is walking.
     static readonly Dictionary<string, string> Teaches = new()
     {
         ["walk_back"] = "walk_forward", ["walk_left"] = "walk_forward", ["walk_right"] = "walk_forward",
-        ["turn_right"] = "turn_left", ["camera_drag"] = "turn_left",
     };
     float wait = FirstDelay, shownFor, alpha;
 

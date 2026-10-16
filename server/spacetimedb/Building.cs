@@ -16,6 +16,9 @@ public enum StructureKind
     Gate,
     CraftingTable,
     Hearth,
+    // Animals stations (D-098, animals-11); numbered by merge order: always at the end.
+    SpindleStation,
+    DryingRack,
     LogCabin,
 }
 
@@ -256,11 +259,14 @@ public static partial class Module
         ctx.Db.Structure.Id.Delete(s.Id);
         OnStructureRemoved(ctx, s);
         CeramicsStructureRemoved(ctx, s);
+        AnimalsStructureRemoved(ctx, s);
     }
 
     // Ceramics implements this to hand back what was loaded in a kiln that is taken down.
     // Partial methods allow one implementation each, so every lane that needs it gets its own hook.
     static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s);
+    // Animals implements this to drop the hides hanging on a drying rack that is taken down.
+    static partial void AnimalsStructureRemoved(ReducerContext ctx, Structure s);
 
     // Claims implements this to refuse placing or taking down buildings inside a
     // claim the sender has no access to (throw to refuse). Adding materials is
