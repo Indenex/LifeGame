@@ -1,7 +1,7 @@
 # survival-7: Running and stamina
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_progress
+Status: in_review
 Branch: claude/survival-running (main after #75, plus UX's #118 branch claude/ux-ui-run-xlrh2s merged in)
 PR: (none yet; open after #75 merges)
 
@@ -28,6 +28,8 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 
 - 2026-10-16: D-111 built: shared/Stamina.cs curves, Needs.GoodMeal, Vitals.WellFedUntil ([Default(0L)], set in Eat), client refill delay and rank hook (StaminaRank() returns 0 until the skill is picked).
 
+- 2026-10-16: #119 green on 8a03451 (run https://github.com/Indenex/LifeGame/actions/runs/38947551748); sha sent to PM. Render requested 8a03451 (Render lane).
+
 ## Open questions / blockers
 - Which skill rank stamina grows with (no Survival skill exists): asked PM; options A) new basic skill Endurance trained by running [rec], B) highest basic rank, C) average of basics. Until then StaminaRank() = 0.
 - ceramics-7 also edits Survival.Eat (pot comes back); whichever merges second resolves a small conflict, and Ceramics adds PotOfBroth/PotOfStew to Needs.GoodMeal.
@@ -35,4 +37,4 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 - Known gap: Walk() isn't called while a panel captures input, so stamina doesn't refill then. Minor.
 
 ## Next step
-Wait for CI on the survival-7 PR; green: send the PM the sha (merges after #118) and a render request (stamina ring while holding Shift) to the Render lane.
+Wait for the PM to merge #119; then survival-8/9 PR from claude/survival-arrival.
