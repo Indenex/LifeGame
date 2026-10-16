@@ -16,6 +16,7 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 ## Progress log
 - 2026-10-16 18:06: PM assigned ceramics-7 cooking pot (option 1); agree hunger numbers with Survival (session_014pHdaxJ7uESzsvWekpjvsH), generous per D-081. Branch stacked on #105 (D-093 jar change e6b78a4).
 - 2026-10-16 18:25: server (ab62982): items 115 PotOfBroth / 116 PotOfStew, processes cook.broth / cook.stew (Outcome.Placed, 2 s), server/spacetimedb/CookingPot.cs SimmerPot table + TakeOffPot; Ceramics OnPlaced routes dishes; no fire or no room hands the food back. Survival hooks: Needs.Nourishment rows (broth 45/30, stew 65/30) and Eat gives the coil pot back at the dish's quality. Client (1444cf9): SimmerView (pot, broth surface, steam, countdown label), G "Take the pot off the fire" (ceramics.simmer, 25, KEYMAP.md updated), simmer_pot range subscription, item looks. ClayCheck --pot added; running on c7pot1.
+- 2026-10-16 18:33: ClayCheck --pot PASSED on c7pot2 (two coil pots fired, filled, 3 berries, broth simmering q36, early take-off refused, taken off at 60 s, eaten, coil pot back). Render requested.
 - 2026-10-16 18:21: Justin confirmed ceramics-7 (D-106). ClayCheck --pot run 1 voided by a pit crack; check now fires two coil pots (0e010ef), rerunning on c7pot2.
 - 2026-10-16 18:12: Survival's shape applied (0835adc) and approved by Survival.
 
