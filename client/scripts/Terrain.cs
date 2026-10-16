@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 
@@ -50,13 +51,15 @@ public partial class Terrain : Node3D
 
     // The land's shape costs a dozen noise lookups a cell (shared/Land.cs) and a chunk
     // asks for each cell many times, so heights are kept once worked out. The cache
-    // is dropped when it outgrows a few views' worth of ground.
+    // is dropped when it outgrows about two views' worth of ground at the current
+    // view distance (Very far draws about 113,000 cells).
     readonly Dictionary<long, float> baseHeights = new();
 
     float BaseHeight(long key, int x, int z)
     {
         if (baseHeights.TryGetValue(key, out var h)) return h;
-        if (baseHeights.Count > 60_000) baseHeights.Clear();
+        int side = (2 * Math.Max(focusRadius, 3) + 1) * World.ChunkSize + 2;
+        if (baseHeights.Count > Math.Max(60_000, 2 * side * side)) baseHeights.Clear();
         return baseHeights[key] = World.BaseHeight(x, z);
     }
 
@@ -75,13 +78,30 @@ public partial class Terrain : Node3D
         dirty.Add((cx, World.ChunkOfCell(z + 1)));
     }
 
+    // The land past the loaded chunks, drawn coarse so hills and woods read from afar.
+    int focusRadius = -1;
+    // Chunks built with grass tufts (those within ViewDistance.GrassChunks when built).
+    readonly HashSet<(int, int)> tufted = new();
+
+    // How many chunks out from the player's are drawn in full (ViewDistance).
+    public static int ViewRadius => ViewDistance.Radius;
+
     // Loads chunks within view of (chunkX, chunkZ) and frees the ones that fell out.
     public void Focus(int chunkX, int chunkZ)
     {
-        int r = World.ViewRadiusChunks;
-        if (center != (chunkX, chunkZ))
+        if (BenchWanted) { RunViewBench(chunkX, chunkZ); return; }
+
+        int r = ViewRadius;
+        if (r != focusRadius)
+        {
+            ViewDistance.TellFog(r);
+            // Dug cells, felled trees and buildings arrive out to the drawn edge (#339).
+            Subscriptions.FarRadius = r;
+        }
+        if (center != (chunkX, chunkZ) || r != focusRadius)
         {
             center = (chunkX, chunkZ);
+            focusRadius = r;
             var keep = new HashSet<(int, int)>();
             for (int cx = chunkX - r; cx <= chunkX + r; cx++)
                 for (int cz = chunkZ - r; cz <= chunkZ + r; cz++)
@@ -92,10 +112,11 @@ public partial class Terrain : Node3D
                 {
                     chunks[key].QueueFree();
                     chunks.Remove(key);
+                    tufted.Remove(key);
                     ghostHolders.Remove(key);
                 }
             foreach (var key in keep)
-                if (!chunks.ContainsKey(key))
+                if (!chunks.ContainsKey(key) || tufted.Contains(key) != WantsTufts(key))
                     dirty.Add(key);
         }
 
@@ -114,14 +135,29 @@ public partial class Terrain : Node3D
             if (rebuilt) old!.QueueFree();
             NoteClearing(key.Item1, key.Item2, rebuilt);
             var node = BuildChunk(key.Item1, key.Item2);
+            if (WantsTufts(key)) tufted.Add(key); else tufted.Remove(key);
             AddChild(node);
             chunks[key] = node;
             if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
             else ghostHolders.Remove(key);
         }
 
+        buildMs += clock.Elapsed.TotalMilliseconds;
+        if (dirty.Count == 0 && buildMs > 0)
+        {
+            GD.Print($"[view] radius {r}: {chunks.Count} chunks built in {buildMs:F0} ms");
+            buildMs = 0;
+        }
+
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
     }
+
+    double buildMs;
+
+    // Grass tufts only near the player: they fade out before ViewDistance.GrassChunks,
+    // so a chunk gaining or losing them on a rebuild never shows.
+    bool WantsTufts((int, int) key) =>
+        Math.Max(Math.Abs(key.Item1 - center.Item1), Math.Abs(key.Item2 - center.Item2)) <= ViewDistance.GrassChunks;
 
     // Notes which cells of a chunk just became cleared or uncleared, so the rebuild
     // can ease them over. A chunk loading for the first time just records them.
@@ -270,7 +306,8 @@ public partial class Terrain : Node3D
         var trunks = new List<(Transform3D, Color, Color)>();
         var leafy = new List<(Transform3D, Color, Color)>();
         var pines = new List<(Transform3D, Color, Color)>();
-        var tufts = new List<(Transform3D, Color, Color)>();
+        // Grass tufts only in the chunks near the player (WantsTufts).
+        var tufts = WantsTufts((cx, cz)) ? new List<(Transform3D, Color, Color)>() : null;
         var ferns = new List<(Transform3D, Color, Color)>();
         var reeds = new List<(Transform3D, Color, Color)>();
         var flowers = new List<(Transform3D, Color, Color)>();
@@ -436,14 +473,14 @@ public partial class Terrain : Node3D
                 bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
+                if (grassy && tufts != null && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
                 {
                     // Shear the patch onto the slope so every blade stays rooted.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts.Add((g, TileColor(x, z, top, cleared: false), custom));
+                    tufts!.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
             }
 
@@ -455,7 +492,7 @@ public partial class Terrain : Node3D
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         foreach (var ((mesh, material), items) in landmarks.Batches)
             AddMulti(root, mesh, items, material, castShadow: material != Look.Grass);
-        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
+        if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
         AddMulti(root, Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
         AddMulti(root, Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         AddMulti(root, Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
