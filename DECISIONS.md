@@ -594,3 +594,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-145 — 2026-10-16 — Workers never sit idle
 **Decision:** When a lane finishes its ticket and has no assigned next work, it immediately picks the next most useful item for its lane from the current milestones (`STATUS.md`, D-081) or the design docs, starts it, and tells the PM what it picked. Any design choice Justin would notice goes to the PM as options while the lane works on the recommended one. Waiting on CI or on a merge is not a reason to idle; start the next ticket.
 **Who:** Justin ("Workers should not sit idle. If we don't have more work for them, pull from the design doc and figure some out, or ask me")
+
+## D-146 — 2026-10-16 — Streams are wadeable
+**Decision:** Streams are shallow enough to walk across (bed at water level minus 0.25 m; you get wet quickly per D-062); ponds stay deep. Every part of the land must be reachable on foot from spawn and from respawn points.
+**Who:** Justin ("Wade across", as recommended), after Bug fixes found env-2's stream blocked all crossing
