@@ -16,8 +16,13 @@ Justin picked first-evening tuning on the new land (env-2, #175, lands with the 
 ## Progress log
 - 2026-10-16: assigned (PM, Justin picked option A). Installing local toolchain; first module build running.
 
+- 2026-10-16: local toolchain works (dotnet 8.0.426 at ~/.dotnet, SpacetimeDB 2.12.0 at ~/stdb; module builds, SpawnCheck passes). Wrote tools/FirstEvening (read-only; run against a local server). Baseline on current main land (before env-2), 120 bushes, 378 sticks, 190 fiber:
+  - First spawn (81 spots in the middle): nearest bush median 6 m / worst 11; water median 18 / worst 28; first fire (2 sticks + 2 fiber walk, shred, drill with fails) median 16 s / worst 18 s. Freeze time with the arrival buff: 32 min mild, 16 min freezing night. Fire uses at most 2% of it.
+  - Respawn at the rim (24 spots): bush median 5 / worst 11; water median 38 / worst 60; first fire median 17 s / worst 22 s; freeze 8 min on a freezing night, fire uses 5%.
+  - Reading: on this land distance is not the problem; the risk is a player who doesn't yet know the hand-drill recipe (Journal's discovery), not the walk. Re-run on env-2.
+
 ## Open questions / blockers
 - Waits on env-2 (#175) for the final land; tooling can be built against current main.
 
 ## Next step
-Finish the local module build, then write tools/FirstEvening.
+When env-2 (#175) merges: merge main, publish locally with --delete-data, run tools/FirstEvening, compare with the baseline above, then send the PM findings and any tuning options.
