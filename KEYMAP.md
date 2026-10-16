@@ -49,6 +49,9 @@ Typed into chat (Enter). Admin commands show in F1 only for admins.
 | Command | Action | Who | Lane |
 |---|---|---|---|
 | /name Name | Change your name | everyone | Claims |
+| /me waves | An action: "Mira waves" in italics | everyone | Claims |
+| /w words | Whisper: heard within 4 m, small faint bubble | everyone | Claims |
+| /s words | Shout: heard within 60 m, big bubble | everyone | Claims |
 | /day | Set the time to mid-morning; the light eases over a second or two | admin | Atmosphere |
 | /night | Set the time to night | admin | Atmosphere |
 | /time 0-1 | Set the time of day (0.25 sunrise, 0.5 noon, 0.75 sunset) | admin | Atmosphere |

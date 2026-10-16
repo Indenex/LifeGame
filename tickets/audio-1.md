@@ -1,7 +1,7 @@
 # audio-1: Take over audio; finish work sounds
 Lane: Audio
 Owner: Audio session (session_01LeXCWTFVBQcCNVEDdhPek3, Opus)
-Status: in_review
+Status: done
 Branch: claude/audio-1-work-sounds (continues claude/atmosphere-12-work-sounds 9965c81, merged with main 1ade969; stacked on #66)
 PR: #120
 
@@ -22,11 +22,14 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 19:35: Agreed with UX/UI (branch claude/ux-ui-options-xlrh2s, bca464e): their client/scripts/ui/SoundLevels.cs owns and saves the four levels and applies Master to Godot's Master bus; they write Music/Effects/Ambience into SoundScape.MusicVolume/EffectsVolume/AmbienceVolume. So SoundScape no longer saves levels and has no MasterVolume; both PRs build in either merge order. Asked them to use the same curve 4*s*s (linear_to_db) for the master bus.
 - 2026-10-16 19:40: Messages crossed: UX/UI switched to my original contract and built ui-12 PR #128 (claude/ux-ui-options-xlrh2s, f92bff3, merges after #120) on SoundScape MasterVolume/MusicVolume/EffectsVolume/AmbienceVolume with SoundScape saving them; Godot Master bus stays 0 dB; they migrate an old [sound] volume into MasterVolume once. Reverted 2b15259 so that contract is back.
 - 2026-10-16 19:45: FINAL with UX/UI (after crossed messages): UX/UI's SoundLevels owns and saves all four levels; Master on Godot's Master bus with 4*s*s (0.5 = 0 dB, capped at +6 dB); UX writes SoundScape.MusicVolume/EffectsVolume/AmbienceVolume at startup and on change. SoundScape has no MasterVolume and saves no levels. Re-applied 2b15259. ui-12 PR #128 merges after #120. Do not change this contract again.
+- 2026-10-16 19:45: CI run https://github.com/Indenex/LifeGame/actions/runs/38946677177 green on 60c33c8 (server+load test, Linux, Windows). PR #120 merged by the PM. Follow-up: once ui-12 #128 (Options page) merges, ask Render (session_013qe8zPzzBHx9rFPEYoKMr5) for an in-game clip of work sounds and the sliders, delivered to the PM for Justin.
+- 2026-10-16 20:20: #128 (ui-12 Options page) merged. Render requested at main c09f9b8: an in-game clip of crafting, another player's work, and the Ambience/Effects sliders moved (fallback: an Options screenshot plus a SoundPreview clip), for the PM and Justin. Not in D-143's wipe window: craft_work upgrades cleanly.
+- 2026-10-16 20:25: Render can't record game audio in its container (~0.5 fps software rendering; Movie Maker distorts job timing). Fallback delivered to the PM: renders/audio/audio-1-c09f9b8-work-sounds.mp3 on claude/render-1-013qe8 (SoundPreview at c09f9b8; still -40.7, crafts -26 to -31, others -27.9, midday -26.1 rms, peak -10.8) plus an Options page screenshot. Justin hears the real mix in his next playtest. In-game audio clips need a GPU machine (Justin, e.g. OBS).
 
 ## Open questions / blockers
 - Answered D-097: B, a little under the music.
-- UX/UI builds the Options page sliders against SoundScape's four properties: ui-12 PR #128, merges after #120.
+- (#128 merged: SoundLevels owns the sliders; Master on Godot's bus.)
 - (#66 merged; #97 folded in, either merge order works.)
 
 ## Next step
-Wait for CI on PR #120 head 8c88baa; when green, send the sha to Integration (session_01Rf5965nk4Lvd3f2QDteZSq, D-095) and the PM. Then check UX/UI has the Options page sliders in hand.
+None for audio-1. Take Justin's playtest feedback on levels as a new audio ticket via the PM.
