@@ -1,0 +1,12 @@
+# ui-9 live (ffdabf3): B's screen. Camera = B, puppet = A asks, adds sticks, accepts.
+client --time-of-day=0.45 --rain=0 --cloud=0.2
+name A
+find
+wait 30
+give 1 6 50
+give 160 6 50 camera
+near 2.2
+wait 3
+trade-ask
+burst 4 1.5
+live
