@@ -25,9 +25,11 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 ## Progress log
 - 2026-10-16: ticket written, numbers sent to the PM; Crafting asked for items and recipes.
 
+- 2026-10-16: `server/spacetimedb/Bow.cs` ShootAnimal reducer on option A, behind `BowShotHook` (Crafting implements: finds bow and arrow, takes the arrow, fills BowShot). Hunting.cs HurtAnimal split out of StrikeAnimal so spear and arrow share wound/kill. Not built locally; CI is the check. No client yet.
+
 ## Open questions / blockers
 - Justin picks the numbers (A/B/C above).
 - Crafting's item ids and power values.
 
 ## Next step
-Start the `ShootAnimal` reducer in Hunting.cs on option A while waiting for Justin; stub BowPower/ArrowPower until Crafting's items land.
+Client targeting cone + arrow animation in client/scripts/animals/; implement BowShotHook when Crafting's Bow/Arrow items land (or ask Crafting to).

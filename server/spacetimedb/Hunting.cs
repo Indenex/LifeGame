@@ -76,13 +76,20 @@ public static partial class Module
             && SkillRank(ctx, player.PlayerId, HuntProcess) >= SneakKillRank)
             damage = mind.Health;
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
+        HurtAnimal(ctx, animal, mind, damage, pos.X, pos.Z, StartleLeap, now);
+    }
+
+    // Damage lands: it dies if that is all the health it has, otherwise it is wounded
+    // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
+    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now)
+    {
         if (damage >= mind.Health)
         {
             KillAnimal(ctx, animal, mind, now);
             return;
         }
 
-        float dx = animal.X - pos.X, dz = animal.Z - pos.Z;
+        float dx = animal.X - fromX, dz = animal.Z - fromZ;
         float d = MathF.Max(0.01f, MathF.Sqrt(dx * dx + dz * dz));
         ctx.Db.AnimalMind.AnimalId.Update(mind with
         {
@@ -92,7 +99,7 @@ public static partial class Module
             FleeX = dx / d,
             FleeZ = dz / d,
         });
-        float lx = animal.X + dx / d * StartleLeap, lz = animal.Z + dz / d * StartleLeap;
+        float lx = animal.X + dx / d * leap, lz = animal.Z + dz / d * leap;
         if (!AnimalCanStand(lx, lz) || AnimalStepBlocked(ctx, animal.X, animal.Z, lx, lz)) (lx, lz) = (animal.X, animal.Z);
         ctx.Db.Animal.Id.Update(animal with
         {
