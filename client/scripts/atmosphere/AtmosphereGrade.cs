@@ -26,6 +26,7 @@ public partial class Atmosphere
     void ReadyGrade()
     {
         grade = Mathf.Clamp(ArgFloat("grade") ?? 0f, 0f, 1f);
+        GodRays = Mathf.Clamp(Settings.Get("graphics", "light_rays", 1), 0, 2);
         if (ArgFloat("godrays") is { } level) GodRays = Mathf.Clamp((int)level, 0, 2);
     }
 

@@ -16,6 +16,7 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - Sky shader `grade` uniform: clouds near a low sun get warm rims from the sun colour.
 - 2026-10-16 23:55: Justin picked all three (a, b, c), via the PM. Added (b) god rays to the prototype (client 0 errors). At a low clear sun: sun volumetric energy +1.8 x rays, volumetric fog density x(1 + 1.2 x rays), anisotropy up to 0.85, everywhere rather than only in woods. Quality level `Atmosphere.GodRays`: 0 off, 1 normal, 2 high (x1.25, fog length 112 m instead of 64). `--godrays=0|1|2` overrides it, and UX is asked for an Options line. Still behind --grade until Justin sees the renders.
 - Justin's original reference screenshots are not in this container or the repo. I asked the PM to have them re-shared (ideally into docs/reference/) and am tuning to D-002's wording meanwhile.
+- 2026-10-17 00:00: UX (session_01V6qgbNbvTwniqW946KACLr) asked me to carry the Options line. client/scripts/ui/OptionsPage.cs gets a Graphics heading and a "Light rays: Off / Normal / High" button that cycles Atmosphere.GodRays and saves it as graphics/light_rays. ReadyGrade loads it (default 1), and --godrays still overrides it. UX may restyle later.
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
