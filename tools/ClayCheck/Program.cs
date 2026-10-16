@@ -1,5 +1,8 @@
 // End-to-end clay check: one bot connects to a freshly published server, digs
-// clay, cleans and tempers it, lights a fire, shapes two pinch pots beside it,
+// clay, makes a stone axe, chops a log, claims land past the spawn clearing and
+// builds a potter's bench there (every mode does this; pots are shaped at the
+// bench, D-112). Then it cleans and tempers the clay, shapes two pinch pots at the
+// bench, lights a fire beside them,
 // fires one while still damp (it must crack), lets the other dry, fires it, picks
 // the fired pot up and fills it with water. Then it crushes the sherds into grog
 // and tempers more clay with it. Takes about ten real minutes, because drying and
@@ -150,6 +153,7 @@ Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate 
 if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
 
 // Firing a damp pot is refused without confirmation, then cracks.
+WalkTo(damp.X, damp.Z, 1.2f);
 lastError = null;
 conn.Reducers.TendClay(damp.Id, false);
 Pump(() => lastError != null, 3, "a warning about a damp pot");
@@ -177,6 +181,7 @@ Pump(() => news.Any(n => n.Contains("Crack")), 60, "the damp pot to crack");
 Log("Damp pot cracked into sherds, as it should");
 
 KeepFireGoing();
+WalkTo(good.X, good.Z, 1.2f);
 lastError = null;
 conn.Reducers.TendClay(good.Id, false);
 Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(good.Id)?.Stage == (byte)ClayStage.Firing, 3, "the dry pot to go in the fire");
@@ -560,6 +565,148 @@ void JarCheck(Structure kiln)
     if (lastError != null) Fail($"taking the stick out: {lastError}");
     Log($"Jar stores and gives back; at quality {jar.Quality} it holds {Structures.JarStacks(jar.Quality)} stacks");
     Log("STAGE jar-store");
+}
+
+// A stone axe, one log, a claim past the spawn clearing and a potter's bench in it.
+void SetUpBench()
+{
+    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("lash.stone_axe", 0, Item.StoneAxe);
+    var (treeX, treeZ) = NearestTree();
+    var trunk = Trees.Trunk(treeX, treeZ);
+    WalkTo(trunk.X, trunk.Z, 1.2f);
+    Craft("chop.log", 0, Item.Log);
+
+    // Claims stay out of the spawn clearing: walk out past it, away from the origin.
+    float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
+    float claimDist = keepOut + 5f;
+    float ang = clayX == 0 && clayZ == 0 ? 0f : MathF.Atan2(clayZ, clayX);
+    WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist, 1f);
+    marker = BuildHere(StructureKind.ClaimMarker, (sx, sz) => sx * sx + sz * sz > (keepOut + 1f) * (keepOut + 1f) && ClearGround(sx, sz, -1, 1, -1, 1));
+    Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
+    Log($"Claimed land at {marker.X:F1}, {marker.Z:F1}");
+
+    // With no bench, shaping is refused.
+    lastError = null;
+    conn.Reducers.StartCraft("clay.pinch_pot", 0.9f);
+    Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a pot away from a bench to be refused");
+    if (lastError?.Contains("potter's bench") != true) Fail($"a pot shaped away from a bench: {lastError ?? "it started"}");
+    Log($"No bench: {lastError}");
+
+    // The bench, on open level ground with room to the east for fires and a kiln, and
+    // well away from the marker.
+    bench = BuildHere(StructureKind.PottersBench, (sx, sz) =>
+        InMyClaim(sx, sz, 7f) && DistanceTo(sx, sz, marker.X, marker.Z) >= 10f && ClearGround(sx, sz, -3, 6, -2, 4));
+    Log($"Built a potter's bench at {bench.X:F1}, {bench.Z:F1}; {CountOf(Item.Stone)} stones left");
+    Log("STAGE bench");
+}
+
+// Stands where pots are shaped: just on the player's (south) side of the bench.
+void AtBench() => WalkTo(bench.X, bench.Z + 1.6f, 0.1f);
+
+// Lights a hand-drill fire at a spot, standing 1.2 m south of it and facing it.
+void LightFireNear(float tx, float tz)
+{
+    WalkTo(tx, tz + 1.2f, 0.1f);
+    Face(tx, tz);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesBefore = conn.Db.Fire.Count;
+    Craft("fire.hand_drill", 1f, null);
+    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire");
+    fire = conn.Db.Fire.Iter().Where(f => f.LitBy == myId).OrderBy(f => DistanceTo(f.X, f.Z, tx, tz)).First();
+    if (DistanceTo(fire.X, fire.Z, tx, tz) > 0.5f) Log($"Fire landed at {fire.X:F1}, {fire.Z:F1}, not {tx:F1}, {tz:F1}");
+}
+
+// Turns on the spot to face a point.
+void Face(float tx, float tz)
+{
+    conn.Reducers.Move(x, z, MathF.Atan2(tx - x, tz - z));
+    Pump(() => false, 0.4f, null);
+}
+
+bool InMyClaim(float px, float pz, float margin) => DistanceTo(px, pz, marker.X, marker.Z) <= Social.ClaimRadius - margin;
+
+// No tree, boulder or uneven ground anywhere in a box of cells round a spot.
+bool ClearGround(float px, float pz, int x0, int x1, int z0, int z1)
+{
+    int ci = World.CellOf(px), cj = World.CellOf(pz);
+    float lo = float.MaxValue, hi = float.MinValue;
+    for (int i = ci + x0; i <= ci + x1; i++)
+        for (int j = cj + z0; j <= cj + z1; j++)
+        {
+            if (Trees.GrowsAt(i, j) || Rocks.LiesAt(i, j)) return false;
+            float h = World.Height(i, j, DepthAt(i, j));
+            lo = Math.Min(lo, h);
+            hi = Math.Max(hi, h);
+        }
+    return lo > World.WaterLevel + 0.1f && hi - lo < 0.35f;
+}
+
+// The nearest spot to a point where a structure fits and `ok` holds.
+(float X, float Z)? FindSite(StructureKind kind, float ox, float oz, float yaw, Func<float, float, bool> ok)
+{
+    float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(i, j));
+    for (int r = 0; r < 30; r++)
+    {
+        int steps = r == 0 ? 1 : 8 + 4 * r;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps, sx = ox + MathF.Cos(a) * r, sz = oz + MathF.Sin(a) * r;
+            if (Structures.GroundProblem((int)kind, sx, sz, yaw, H) != null) continue;
+            if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
+            if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
+            if (!ok(sx, sz)) continue;
+            return (sx, sz);
+        }
+    }
+    return null;
+}
+
+(float X, float Z) FailAt(string message)
+{
+    Fail(message);
+    return default;
+}
+
+// Lays out a structure on clear, level ground near the bot and builds it from the bag.
+Structure BuildHere(StructureKind kind, Func<float, float, bool> ok)
+{
+    float fromX = x, fromZ = z;
+    var at = FindSite(kind, x, z, 0f, (sx, sz) => DistanceTo(sx, sz, fromX, fromZ) >= 3f && ok(sx, sz)) ?? FailAt($"no ground for a {kind}");
+    WalkTo(at.X, at.Z + 2f, 0.2f);
+    int before = conn.Db.Structure.Count;
+    lastError = null;
+    conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
+    if (lastError != null) Fail($"laying out a {kind}: {lastError}");
+    var s = conn.Db.Structure.Iter().Where(o => o.Owner == me).OrderByDescending(o => o.PlacedAt.MicrosecondsSinceUnixEpoch).First();
+    var sw = Stopwatch.StartNew();
+    while (conn.Db.Structure.Id.Find(s.Id) is { Complete: false })
+    {
+        if (sw.Elapsed.TotalSeconds > 60) Fail($"building the {kind}: {lastError}");
+        lastError = null;
+        conn.Reducers.Build(s.Id);
+        Pump(() => false, 0.35f, null);
+    }
+    return conn.Db.Structure.Id.Find(s.Id)!;
+}
+
+// The standing tree nearest the bot, by the same rules the server uses.
+(int X, int Z) NearestTree()
+{
+    int cx = (int)MathF.Round(x), cz = (int)MathF.Round(z);
+    for (int r = 0; r < 60; r++)
+        for (int i = cx - r; i <= cx + r; i++)
+            for (int j = cz - r; j <= cz + r; j++)
+            {
+                if (Math.Max(Math.Abs(i - cx), Math.Abs(j - cz)) != r || !Trees.GrowsAt(i, j)) continue;
+                long key = World.CellKey(i, j);
+                if (conn.Db.TerrainEdit.CellKey.Find(key) != null || conn.Db.ChoppedTree.CellKey.Find(key) != null) continue;
+                return (i, j);
+            }
+    Fail("no tree within 60 m");
+    return (0, 0);
 }
 
 void Feed(int sticks)
