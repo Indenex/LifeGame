@@ -3,7 +3,7 @@ Lane: World atmosphere and sound
 Owner: Atmosphere thread
 Status: in_review
 Branch: claude/atmosphere-sound-hlqfke
-PR: (after atmosphere-5)
+PR: #52
 
 ## Goal
 When a cell is cleared (a blueprint placed, ground dug), its trees and rocks no longer vanish at once (D-036, immersion). Trees lean over in a direction seeded per tree from its cell (D-056, the same for every player), slow then fast, and settle into the ground over 2.4 s; rocks sink over 1.6 s; anything on a cell that comes back grows in. Justin sees a tree fall instead of popping. Also (PM, from Animals): lambs (Animal.Growth < 100) bleat higher, shorter and softer.
