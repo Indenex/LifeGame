@@ -185,6 +185,7 @@ public static partial class Module
     // Online players near the worker who don't know the process yet pick it up by watching.
     static void TeachOnlookers(ReducerContext ctx, Player worker, string processId, float x, float z)
     {
+        if (!Skills.Watchable(processId)) return;
         int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
         for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++)
