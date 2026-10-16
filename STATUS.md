@@ -22,7 +22,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds | session_01Rf5965nk4Lvd3f2QDteZSq records its branch | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Integration (D-058) (session_01Rf5965nk4Lvd3f2QDteZSq) | integration-1 take over CI and builds; in progress | `claude/integration-lane` | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
 | Render (D-059) (session_013qe8zPzzBHx9rFPEYoKMr5) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
 | Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 model style and first upgrades | session records its branch | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
