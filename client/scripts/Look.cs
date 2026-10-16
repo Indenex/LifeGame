@@ -27,7 +27,7 @@ public static class Look
     public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
     // Heath on the hilltops and birch wetland by the water (Environment's env-4).
     public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
-    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Heather = new(0.42f, 0.38f, 0.33f);
     public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
     public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
     public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
@@ -456,11 +456,16 @@ public static class Look
                     turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
                     color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
                 }
-                // Heather takes a soft, dusky mauve through late summer, over its upper
-                // sprigs; muted and about as bright as the grass, so it blends in.
+                // Heather stays a quiet green-brown most of the year; only through late
+                // summer do its flower tips turn a soft, dusty mauve, no brighter than
+                // the grass (Justin: no saturated pink). The tips are found by their
+                // colour (purple-ish vertex paint), so the mesh's own purple is tamed too.
                 if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
                     float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
-                    color = mix(color, vec3(0.46, 0.38, 0.43) * (1.0 + paint * 2.0), bloom * 0.45 * smoothstep(0.3, 0.6, h));
+                    float tip = smoothstep(0.02, 0.12, min(color.r, color.b) - color.g);
+                    float bright = dot(color, vec3(0.3, 0.59, 0.11));
+                    vec3 muted = mix(vec3(0.40, 0.38, 0.25), vec3(0.47, 0.41, 0.44), bloom * 0.8);
+                    color = mix(color, muted * clamp(bright / 0.5, 0.7, 1.1), tip);
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);

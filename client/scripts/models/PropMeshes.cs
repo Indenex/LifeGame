@@ -234,10 +234,11 @@ public static class PropMeshes
     static ArrayMesh BuildHeather(int v)
     {
         var k = Kit();
-        // Dusky green-brown with faded brown flower heads, close to the grass in
-        // brightness so it blends; the late-summer bloom tint comes from the shader.
+        // Dusky green-brown with muted purple flower heads, close to the grass in
+        // brightness so it blends. The painted shader finds the heads by their
+        // purple and tones them green-brown, with a soft mauve only in late summer.
         var green = new Color(0.35f, 0.37f, 0.24f);
-        var purple = new Color(0.42f, 0.35f, 0.30f);
+        var purple = new Color(0.46f, 0.34f, 0.46f);
         int clumps = 12 + (int)(V(v, 1) * 9f);
         float spread = 0.2f + V(v, 2) * 0.12f, tall = 0.8f + V(v, 3) * 0.5f, flowering = 0.55f + V(v, 4) * 0.45f;
         // Some mounds are long rather than round.
