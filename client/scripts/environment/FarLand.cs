@@ -71,7 +71,7 @@ public partial class FarLand : Node3D
         {
             builtFor = (chunkX, chunkZ, level);
             var (radius, step) = Shape(level);
-            int r = World.ViewRadiusChunks, n = World.ChunkSize;
+            int r = Terrain.ViewRadius, n = World.ChunkSize;
             // The loaded chunks cover this square; the far ground leaves a hole there,
             // overlapping its edge by one step so no gap shows.
             var near = ((chunkX - r) * n + step, (chunkZ - r) * n + step, (chunkX + r + 1) * n - step, (chunkZ + r + 1) * n - step);

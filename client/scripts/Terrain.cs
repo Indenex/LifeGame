@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 
@@ -78,13 +79,25 @@ public partial class Terrain : Node3D
     // The land past the loaded chunks, drawn coarse so hills and woods read from afar.
     FarLand? farLand;
 
+    // How many chunks out from the player's are drawn in full (env-9 prototype:
+    // --view-radius=N on the command line; the server area stays World.ViewRadiusChunks).
+    public static readonly int ViewRadius = ReadViewRadius();
+
+    static int ReadViewRadius()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()))
+            if (arg.StartsWith("--view-radius=") && int.TryParse(arg["--view-radius=".Length..], out int r))
+                return Math.Clamp(r, 1, 16);
+        return World.ViewRadiusChunks;
+    }
+
     // Loads chunks within view of (chunkX, chunkZ) and frees the ones that fell out.
     public void Focus(int chunkX, int chunkZ)
     {
         if (farLand == null) AddChild(farLand = new FarLand());
         farLand.Update(chunkX, chunkZ);
 
-        int r = World.ViewRadiusChunks;
+        int r = ViewRadius;
         if (center != (chunkX, chunkZ))
         {
             center = (chunkX, chunkZ);
@@ -126,8 +139,17 @@ public partial class Terrain : Node3D
             else ghostHolders.Remove(key);
         }
 
+        buildMs += clock.Elapsed.TotalMilliseconds;
+        if (dirty.Count == 0 && buildMs > 0)
+        {
+            GD.Print($"[view] radius {r}: {chunks.Count} chunks built in {buildMs:F0} ms");
+            buildMs = 0;
+        }
+
         int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
     }
+
+    double buildMs;
 
     // Notes which cells of a chunk just became cleared or uncleared, so the rebuild
     // can ease them over. A chunk loading for the first time just records them.
