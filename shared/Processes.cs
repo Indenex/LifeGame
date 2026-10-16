@@ -45,6 +45,7 @@ namespace LifeGame.Shared
         PottersBench,
         Spindle,
         DryingRack,
+        Repair,
     }
 
     public static class StationInfo
@@ -58,6 +59,7 @@ namespace LifeGame.Shared
             StationKind.PottersBench => "potter's bench",
             StationKind.Spindle => "spindle station",
             StationKind.DryingRack => "leather drying rack",
+            StationKind.Repair => "repair table",
             _ => "",
         };
 
@@ -68,6 +70,7 @@ namespace LifeGame.Shared
             StationKind.PottersBench => "build.bench",
             StationKind.Spindle => "build.spindle",
             StationKind.DryingRack => "build.rack",
+            StationKind.Repair => "build.table",
             _ => "build.frame",
         };
     }

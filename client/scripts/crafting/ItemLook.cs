@@ -46,15 +46,21 @@ public static class ItemLook
         };
     }
 
-    // "Fine stone flake", or just "Stick" for raw materials.
-    public static string Label(Item item, byte quality, uint count)
+    // "Fine stone flake", or just "Stick" for raw materials. A tool that is wearing out
+    // says so: "Rough stone axe (worn)".
+    public static string Label(Item item, byte quality, uint count, string condition = "")
     {
         if (!Items.All.TryGetValue(item, out var def)) return $"Item {(ushort)item}";
         string name = def.Count(count);
         if (!def.HasQuality) return name;
         string grade = Processes.Grade(quality);
-        return char.ToUpperInvariant(grade[0]) + grade[1..] + " " + name.ToLowerInvariant();
+        string label = char.ToUpperInvariant(grade[0]) + grade[1..] + " " + name.ToLowerInvariant();
+        return condition == "" ? label : $"{label} ({condition})";
     }
+
+    // "worn", "nearly spent" or "spent" for a tool that is wearing out, else "" (D-155).
+    public static string Condition(ushort item, byte quality, uint wear) =>
+        Items.IsKnown(item) && Durability.Wears((Item)item) ? Durability.Condition(quality, wear) : "";
 
     // A long primitive laid on its side, like a stick dropped on the ground.
     static Mesh Lying(PrimitiveMesh source, Color color)
