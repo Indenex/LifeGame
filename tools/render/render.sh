@@ -10,6 +10,7 @@
 #   tools/render/render.sh render-1 origin/main \
 #     "--time-of-day=0.45" "--time-of-day=0.02"
 #
+# RENDER_SIZE=1280x720 changes the window size (default 1600x900).
 # Useful shot options: --time-of-day=0..1 (0 midnight, 0.5 noon), --rain=0..1,
 # --cloud=, --wind=, --wetness=, --debug-position=x,z, --screenshot-yaw=steps,
 # --screenshot-delay=seconds (default 30 here), --screenshot-fire,
@@ -27,6 +28,7 @@ ticket=$1; ref=$2; shift 2
 shots=("$@"); [ ${#shots[@]} -gt 0 ] || shots=("--time-of-day=0.45")
 
 source "$(dirname "$0")/lib.sh"
+size=${RENDER_SIZE:-1600x900}   # e.g. RENDER_SIZE=1280x720
 
 # 4. One client run per shot. Forward+ on llvmpipe: about a minute per shot; run one render at a time.
 n=0
@@ -41,7 +43,7 @@ for shot in "${shots[@]}"; do
   done
   case " $shot " in *" --screenshot-delay="*) ;; *) extra+=("--screenshot-delay=30") ;; esac
   echo "shot $n: $shot"
-  (cd "$tree/client" && timeout "${RENDER_SHOT_TIMEOUT:-2400}" xvfb-run -a -s "-screen 0 1600x900x24" "$godot" --path . --resolution 1600x900 -- \
+  (cd "$tree/client" && timeout "${RENDER_SHOT_TIMEOUT:-2400}" xvfb-run -a -s "-screen 0 ${size}x24" "$godot" --path . --resolution "$size" -- \
     "$server_opt" --db=lifegame --profile=render$n "--screenshot=$out" "${extra[@]}") >>"$log" 2>&1 || true
   if [ -s "$out" ]; then echo "  saved $out"; else echo "  no image (see $log)"; fi
 done

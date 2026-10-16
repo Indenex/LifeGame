@@ -23,6 +23,8 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:50: added tools/render/scene.sh + Puppet (scripted second player; can be the camera, give items via owner SQL, craft, drop, press keys, snap/clip on cue). Scenes: tools/render/scenes/claims-6-chat.txt, animals-8-wool.txt (untested).
 - 2026-10-16 17:18: render request from Crafting (session_01Y2sA7pDBFch57bWb1uKMTq): crafting-11, PR #92 at 11ca4f8: --screenshot-fire=cold vs --screenshot-fire by day, optional bow-drill fire beside a boulder. Queue: main, claims-6, animals-8, crafting-11.
 - 2026-10-16 17:58: render-1 proof done: main 217dc13 spawn by day and night (renders/render-1-217dc13-1/2.png, d4a7614) sent to the PM. Asked the PM: renders stay on this branch and only tools/render/ merges (recommended), or merge renders, or Drive.
+- 2026-10-16 17:20: render request from Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm): model-1 baseline, head of claude/model-1: player close-up idle and walking, sheep close-up, flock with player, clay hut late afternoon. Reply paths to Modeling too.
+- 2026-10-16 17:20: render request from UX/UI (session_01V6qgbNbvTwniqW946KACLr): ui-9 trade window, 119c068, 1280x720, --screenshot-hud with --screenshot-trade[=accepted|changed|asked], before/after Mara accepts.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
