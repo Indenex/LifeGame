@@ -81,6 +81,8 @@ public partial class Main : Node3D
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open();
+        herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
         var keyHelp = new KeyHelp();
@@ -302,7 +304,7 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnInsert += (_, _) => RefreshInventory();
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
-        herd.Bind(conn, terrain);
+        herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => hud.Note(e.Message);
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         crafting.Attach(conn);
