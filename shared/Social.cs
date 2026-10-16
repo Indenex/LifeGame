@@ -16,11 +16,29 @@ namespace LifeGame.Shared
             text.StartsWith("/me ", StringComparison.OrdinalIgnoreCase) || text.Equals("/me", StringComparison.OrdinalIgnoreCase);
         public static string EmoteBody(string text) => text.Length > 3 ? text[3..].Trim() : "";
 
-        // How bright a chat line is in the log: full within a third of chat range,
+        // claims-10: "/w hi" is a whisper, heard within WhisperRange; "/s hey!" is a
+        // shout, heard within ShoutRange. Stored with the prefix, like "/me".
+        public const float WhisperRange = 4f, ShoutRange = 60f;
+        public enum Voice { Say, Whisper, Shout }
+
+        public static Voice VoiceOf(string text) =>
+            HasPrefix(text, "/w") ? Voice.Whisper : HasPrefix(text, "/s") ? Voice.Shout : Voice.Say;
+
+        // The words without the "/w " or "/s " in front.
+        public static string VoiceBody(string text) =>
+            VoiceOf(text) == Voice.Say ? text : text.Length > 2 ? text[2..].Trim() : "";
+
+        public static float RangeOf(Voice voice) =>
+            voice == Voice.Whisper ? WhisperRange : voice == Voice.Shout ? ShoutRange : ChatRange;
+
+        static bool HasPrefix(string text, string prefix) =>
+            text.StartsWith(prefix + " ", StringComparison.OrdinalIgnoreCase) || text.Equals(prefix, StringComparison.OrdinalIgnoreCase);
+
+        // How bright a chat line is in the log: full within a third of its range,
         // easing to 55% at the edge.
-        public static float ChatDim(float distance)
+        public static float ChatDim(float distance, float range = ChatRange)
         {
-            float t = Math.Clamp((distance - ChatRange / 3f) / (ChatRange * 2f / 3f), 0f, 1f);
+            float t = Math.Clamp((distance - range / 3f) / (range * 2f / 3f), 0f, 1f);
             return 1f - 0.45f * t * t * (3f - 2f * t);
         }
         public const long ChatCooldownMicros = 400_000;
@@ -109,6 +127,53 @@ namespace LifeGame.Shared
         public const int TradeMaxStacks = 8;
         public const byte TradeAsked = 0, TradeOpen = 1;
         public const byte SideA = 0, SideB = 1;
+
+        // The process a finished claim marker reports (Journal's "Things to try").
+        public const string MarkProcess = "claim.mark";
+
+        // claims-12: claim fences. A fence laid within FenceSnapDistance of a claim's
+        // border snaps onto the circle, end to end. Its ends land on the circle, and it
+        // runs along the tangent. Returns the fence's middle and yaw (the yaw convention
+        // used by Structures.ToWorld).
+        public const float FenceSnapDistance = 2f;
+
+        public static (float x, float z, float yaw) SnapToClaimBorder(float claimX, float claimZ, float x, float z)
+        {
+            int segments = Math.Max(3, (int)MathF.Round(MathF.Tau * ClaimRadius / (2f * Structures.FenceHalfLength)));
+            float step = MathF.Tau / segments;
+            float a = MathF.Atan2(z - claimZ, x - claimX);
+            a = MathF.Round(a / step) * step;
+            // The chord between two points on the circle, half a step either side.
+            float mid = ClaimRadius * MathF.Cos(step / 2f);
+            float yaw = MathF.Atan2(-MathF.Cos(a), -MathF.Sin(a));
+            return (claimX + MathF.Cos(a) * mid, claimZ + MathF.Sin(a) * mid, yaw);
+        }
+
+        public static bool NearClaimBorder(float claimX, float claimZ, float x, float z)
+        {
+            float dx = x - claimX, dz = z - claimZ;
+            return MathF.Abs(MathF.Sqrt(dx * dx + dz * dz) - ClaimRadius) <= FenceSnapDistance;
+        }
+
+        // claims-11: the stash log keeps this many entries per claim; the same person
+        // putting in or taking the same thing within a minute folds into one entry.
+        public const int StashLogKeep = 20;
+        public const long StashLogFoldMicros = 60_000_000;
+
+        // "Tam took 2 sticks", "You left a stone".
+        public static string StashLine(string who, ItemDef def, int count) =>
+            $"{who} {(count > 0 ? "left" : "took")} {GiftPhrase(def, (uint)Math.Abs(count))}";
+
+        // claims-9: a claim's name, as the owner gave it: trimmed, single-spaced, at
+        // most ClaimNameMax characters. Empty means unnamed.
+        public const int ClaimNameMax = 28;
+
+        public static string CleanClaimName(string name)
+        {
+            var words = (name ?? "").Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            string clean = string.Join(" ", words);
+            return clean.Length > ClaimNameMax ? clean[..ClaimNameMax].TrimEnd() : clean;
+        }
 
         // "a stone flake", "an axe", "some clay", "3 sticks": how a gift reads in a line.
         public static string GiftPhrase(ItemDef def, uint count)

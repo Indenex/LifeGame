@@ -20,6 +20,18 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Wildflowers in the grass (Environment's undergrowth).
+    public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
+    public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
+    public static readonly Color FlowerViolet = new(0.62f, 0.50f, 0.80f);
+    public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
+    // Heath on the hilltops and birch wetland by the water (Environment's env-4).
+    public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
+    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
+    public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
+    public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
+    public static readonly Color Moss = new(0.20f, 0.31f, 0.12f);
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
@@ -45,12 +57,19 @@ public static class Look
         Add("wetness", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("wind_strength", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
         Add("wind_gust", RenderingServer.GlobalShaderParameterType.Float, 0.5f);
+        Add("wind_dir", RenderingServer.GlobalShaderParameterType.Vec2, Atmosphere.WindDirection);
         Add("rain_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("cloud_cover", RenderingServer.GlobalShaderParameterType.Float, 0.2f);
         Add("cloud_offset", RenderingServer.GlobalShaderParameterType.Vec2, Vector2.Zero);
         Add("player_position", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1000, 0));
         Add("view_camera_position", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.Zero);
         Add("world_seconds", RenderingServer.GlobalShaderParameterType.Float, 1f);
+        Add("season_warmth", RenderingServer.GlobalShaderParameterType.Float, 0.3f);
+        Add("season_autumn", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("snow_cover", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
+        Add("puddles", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -67,7 +86,13 @@ public static class Look
 
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
-    public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
+    public static ShaderMaterial Ground => ground ??= WithPuddles(Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f));
+
+    static ShaderMaterial WithPuddles(ShaderMaterial material)
+    {
+        material.SetShaderParameter("puddles_ok", 1f);
+        return material;
+    }
     public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
     public static ShaderMaterial Foliage => foliage ??= Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
@@ -103,6 +128,39 @@ public static class Look
             ghost.SetShaderParameter(name, source.GetShaderParameter(name));
         }
         return ghost;
+    }
+
+    // Whether something occupying the box hides the player from the camera: the line
+    // from the camera to the player's head (or chest, for low eaves) passes through
+    // it, or the player stands inside it. For anything the player can be under, such
+    // as roofs and walls, to fade the way trees do (Justin's playtest).
+    public static bool HidesPlayer(Aabb box, Vector3 camera, Vector3 player) =>
+        box.HasPoint(player + new Vector3(0, 0.9f, 0))
+        || SegmentHitsBox(camera, player + new Vector3(0, 1.6f, 0), box)
+        || SegmentHitsBox(camera, player + new Vector3(0, 0.9f, 0), box);
+
+    // Whether the segment from a to b touches the box (the slab test).
+    public static bool SegmentHitsBox(Vector3 a, Vector3 b, Aabb box)
+    {
+        float t0 = 0f, t1 = 1f;
+        var d = b - a;
+        var min = box.Position;
+        var max = box.End;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float start = a[axis], step = d[axis];
+            if (Mathf.Abs(step) < 1e-6f)
+            {
+                if (start < min[axis] || start > max[axis]) return false;
+                continue;
+            }
+            float ta = (min[axis] - start) / step, tb = (max[axis] - start) / step;
+            if (ta > tb) (ta, tb) = (tb, ta);
+            t0 = Mathf.Max(t0, ta);
+            t1 = Mathf.Min(t1, tb);
+            if (t0 > t1) return false;
+        }
+        return true;
     }
 
     // Kept for callers that only need a plain painted surface.
@@ -211,10 +269,31 @@ public static class Look
         global uniform float wind_strength;
         // The gust heard in the wind right now (0 to 1), so what moves matches the sound.
         global uniform float wind_gust;
+        // Which way the wind blows across the ground (unit x, z); clouds drift this way.
+        global uniform vec2 wind_dir;
         global uniform float rain_amount;
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
         global uniform float world_seconds;
+        // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
+        // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
+        // snow falling now, all 0 to 1.
+        global uniform float season_warmth;
+        global uniform float season_autumn;
+        global uniform float snow_cover;
+        global uniform float snowing;
+        // How far through the year it is: 0 spring, 0.25 summer, 0.5 autumn, 0.75 winter.
+        global uniform float season_year;
+        // How much standing water there is after rain, 0 dry to 1 puddled; it rises
+        // once the ground is soaked and lingers after the rain stops.
+        global uniform float puddles;
+        const vec3 SNOW = vec3(0.86, 0.89, 0.94);
+
+        // How bare broadleaf trees are: bare through winter, leafing out again early
+        // in spring.
+        float leaf_drop() {
+            return (1.0 - smoothstep(-0.85, -0.35, season_warmth)) * step(0.3, season_autumn);
+        }
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
         float cloud_shadow(vec3 p) {
@@ -250,19 +329,25 @@ public static class Look
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
             uniform bool see_through = false;
+            // 1 on the ground material only: where puddles may gather after rain.
+            uniform float puddles_ok = 0.0;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
-            // How far a tree has faded because it stands between the camera and the
-            // player: 0 solid, 1 fully in the way. Measured from the line of sight to
-            // the tree's own axis, so the whole tree eases in and out together as
-            // either moves. Only the main camera fades things, so shadows stay whole.
+            // How far a tree has faded because it hides the player: 0 solid, 1 fully in
+            // the way. The crown is taken as an upright capsule round the canopy, sized
+            // by the tree's own scale, and the tree fades when the line of sight from
+            // the camera to the player passes through it anywhere, including right at
+            // the player, so a crown overhead fades too (Justin's playtest). Trunk and
+            // canopy share a transform, so the whole tree eases in and out together.
+            // Only the main camera fades things, so shadows stay whole.
             float fade_amount(mat4 model, vec3 cam) {
                 if (distance(cam, view_camera_position) > 0.5) return 0.0;
-                float size = length(model[1].xyz);
+                float tall = length(model[1].xyz);
+                float wide = length(model[0].xyz);
                 vec3 base = model[3].xyz;
                 vec3 p1 = cam, d1 = player_position + vec3(0.0, 1.0, 0.0) - cam;
-                vec3 p2 = base + vec3(0.0, 0.5 * size, 0.0), d2 = vec3(0.0, 3.5 * size, 0.0);
+                vec3 p2 = base + vec3(0.0, 1.6 * tall, 0.0), d2 = vec3(0.0, 2.8 * tall, 0.0);
                 vec3 r = p1 - p2;
                 float a = dot(d1, d1), b = dot(d1, d2), c = dot(d1, r), e = dot(d2, d2), f = dot(d2, r);
                 float denom = a * e - b * b;
@@ -270,8 +355,9 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                // Wide enough that neighboring crowns overlapping the player fade too.
-                return (1.0 - smoothstep(1.2 * size, 2.6 * size, d)) * (1.0 - smoothstep(0.82, 0.97, s));
+                // A canopy reaches about 1.9 times the tree's width from its axis; fade
+                // fully inside that and ease out a little beyond.
+                return 1.0 - smoothstep(1.9 * wide, 2.7 * wide, d);
             }
 
             varying vec3 tint;
@@ -280,8 +366,14 @@ public static class Look
             varying vec3 world_normal;
             varying float shade;
             varying float wet;
+            // Environment's season code per instance (INSTANCE_CUSTOM.w): 1 broadleaf
+            // canopy, 2 flower, 3 heather, 0 no seasonal change.
+            varying float season_kind;
 
             void vertex() {
+                season_kind = INSTANCE_CUSTOM.w;
+                // Broadleaf canopies thin to nothing in winter and grow back in spring.
+                if (sway > 0.0 && season_kind > 0.5 && season_kind < 1.5) VERTEX *= 1.0 - 0.85 * leaf_drop();
                 fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
                 // A tree or rock on a cell that was just cleared goes away instead of
                 // vanishing: trees topple slowly and settle into the ground, rocks sink.
@@ -356,6 +448,34 @@ public static class Look
                 // Rain soaks upward-facing ground first; everything else darkens a little.
                 wet = wetness * mix(0.45, 1.0, smoothstep(0.4, 0.9, world_normal.y)) * mix(0.75, 1.0, h);
                 color *= mix(1.0, 0.8, wet);
+                // Broadleaf leaves turn gold, orange and red through autumn, each tree
+                // its own mix, then brown before they fall.
+                if (sway > 0.0 && season_kind > 0.5 && season_kind < 1.5 && season_autumn > 0.0) {
+                    float seed = fract(sin(dot(floor(world_pos.xz * 0.25), vec2(12.9898, 78.233))) * 43758.5453);
+                    vec3 turned = mix(vec3(0.62, 0.42, 0.08), vec3(0.58, 0.16, 0.06), seed);
+                    turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
+                    color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
+                }
+                // Heather flowers purple through late summer, in speckles over the bush.
+                if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
+                    float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
+                    color = mix(color, vec3(0.55, 0.22, 0.52) * (1.0 + paint * 2.0), bloom * 0.75 * smoothstep(0.3, 0.6, h));
+                }
+                // Snow settles on whatever faces up, filling the hollows first.
+                float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
+                color = mix(color, SNOW * (1.0 + paint), snow);
+                wet *= 1.0 - snow;
+                // Puddles gather on flat ground in the low spots of a slow pattern,
+                // spreading as the ground stays soaked and shrinking as it dries:
+                // dark, still and glossy.
+                float puddle = 0.0;
+                if (puddles_ok > 0.5 && puddles > 0.01) {
+                    float low = 1.0 - texture(detail, world_pos.xz * 0.035).r;
+                    float edge = 1.0 - 0.42 * puddles;
+                    puddle = smoothstep(edge, edge + 0.05, low) * smoothstep(0.93, 0.99, world_normal.y) * (1.0 - snow);
+                    color *= mix(1.0, 0.5, puddle);
+                    wet = max(wet, puddle);
+                }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
@@ -368,8 +488,10 @@ public static class Look
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
-                ROUGHNESS = mix(1.0, 0.75, wet);
-                SPECULAR = 0.08 * wet;
+                ROUGHNESS = mix(mix(1.0, 0.75, wet), 0.05, puddle);
+                SPECULAR = mix(0.08 * wet, 0.5, puddle);
+                // Still water lies flat, whatever the relief of the ground under it.
+                NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz, puddle));
             #ifdef GHOST
                 // Faintly see-through all over, and clear in a soft circle around the
                 // player, measured on screen.
@@ -407,6 +529,11 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                // Flowers (season code 2) bloom only in spring and summer; snow
+                // presses all grass down.
+                float flowering = INSTANCE_CUSTOM.w > 1.5 ? smoothstep(-0.25, 0.1, season_warmth) * (1.0 - smoothstep(0.1, 0.4, season_autumn)) : 1.0;
+                VERTEX *= flowering;
+                VERTEX.y *= 1.0 - 0.75 * snow_cover;
                 // Grass on a cell just cleared lies down and sinks away; grass on a
                 // cell uncleared rises back up.
                 if (INSTANCE_CUSTOM.x > 0.0) {
@@ -423,7 +550,7 @@ public static class Look
                 gust = smoothstep(0.2, 1.0, wave);
                 float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
                 float wind = (0.45 + wind_strength * 1.8) * (0.7 + 0.6 * wind_gust);
-                vec3 bend = vec3(0.6, 0.0, 0.8) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
+                vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
                 vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
                 VERTEX.xz += local.xz * tip * tip;
                 VERTEX.y -= gust * 0.06 * tip * tip;
@@ -437,6 +564,10 @@ public static class Look
                 vec3 color = mix(tint, warm, smoothstep(0.0, 1.0, tip));
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
                 color *= mix(1.0, 0.88, wetness);
+                // Grass fades to straw in the cold and wears snow on its tips.
+                vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
+                color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
+                color = mix(color, SNOW, snow_cover * (0.55 + 0.45 * tip));
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
                 // Both faces of a blade are lit like the ground beneath it.

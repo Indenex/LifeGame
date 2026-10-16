@@ -9,8 +9,9 @@ namespace LifeGame;
 
 // Using finished buildings, all through the shared Use key (G): at a hut's doorway
 // G hangs a door (4 sticks, 2 fiber) or opens and shuts it, and Shift+G bars or
-// unbars it (D-048); at a storage basket G opens it. Also shows weathering on
-// things left untouched outside a claim (D-046).
+// unbars it (D-048); a gate opens, shuts and bars the same way; at a storage
+// basket G opens it. Also shows weathering on things left untouched outside a
+// claim (D-046).
 public partial class BuildingSystem
 {
     readonly Dictionary<ulong, StructureDoor> doors = new();
@@ -19,7 +20,7 @@ public partial class BuildingSystem
 
     CanvasLayer? basketLayer;
     VBoxContainer basketInside = null!, basketCarried = null!;
-    Label basketTitle = null!;
+    Label basketTitle = null!, basketInsideTitle = null!;
     ulong? openBasket;
 
     // Server queries for what this file draws; Main adds them to its subscription.
@@ -28,6 +29,8 @@ public partial class BuildingSystem
         "SELECT * FROM structure_door",
         "SELECT * FROM structure_touch",
         "SELECT * FROM basket_item",
+        // A storage jar's size follows its quality (Ceramics, D-093).
+        "SELECT * FROM structure_progress",
         "SELECT * FROM sleeping_mat",
     };
 
@@ -107,8 +110,11 @@ public partial class BuildingSystem
 
     static bool Usable(Structure s, Vector3 p)
     {
+        // Just inside the server's reach, so a store opens wherever putting into it works.
         if (Structures.IsStore((int)s.Kind))
-            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
+            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, Structures.WorkReach - 0.2f);
+        if (Structures.IsGate((int)s.Kind))
+            return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.0f);
         if (!Structures.HasDoorway((int)s.Kind)) return false;
         // Within a step of the doorway, inside or out.
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, p.X, p.Z);
@@ -131,8 +137,9 @@ public partial class BuildingSystem
                 // The doorway, so the hut you face wins over a basket beside you.
                 var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ);
                 var doorway = new Vector3(dx, at.Y, dz);
+                bool gate = Structures.IsGate((int)s.Kind);
                 if (!doors.TryGetValue(s.Id, out var door))
-                    return Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
+                    return gate ? null : Carried(c, Item.Stick) >= Structures.DoorSticks && Carried(c, Item.Fiber) >= Structures.DoorFiber
                         ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
                 // Whoever hung it, or a member of the claim it stands in, may bar it, as the server's CanLock (bugfix-15).
@@ -144,7 +151,8 @@ public partial class BuildingSystem
                     else c.Reducers.ToggleDoor(s.Id);
                 };
                 if (door.Locked && !mine) return new UseOffer("Barred", d, act, Target: doorway);
-                string verb = door.Closed ? (door.Locked ? "Unbar and open" : "Open the door") : "Shut the door";
+                string what = gate ? "gate" : "door";
+                string verb = door.Closed ? (door.Locked ? "Unbar and open" : $"Open the {what}") : $"Shut the {what}";
                 if (mine) verb += door.Locked ? "    Shift unbar" : "    Shift bar";
                 return new UseOffer(verb, d, act, Target: doorway);
             },
@@ -194,10 +202,10 @@ public partial class BuildingSystem
         columns.AddThemeConstantOverride("separation", 28);
         basketInside = new VBoxContainer();
         basketCarried = new VBoxContainer();
-        columns.AddChild(Column("In the basket", basketInside));
-        columns.AddChild(Column("You carry", basketCarried));
+        columns.AddChild(Column("In the basket", basketInside, out basketInsideTitle));
+        columns.AddChild(Column("You carry", basketCarried, out _));
         box.AddChild(columns);
-        var hint = Hud.Text("Click moves one, Shift+click moves all    G or Esc closes", 13);
+        var hint = Hud.Text($"Click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
         var panel = Hud.Panel(box, Vector2.Zero);
@@ -207,10 +215,10 @@ public partial class BuildingSystem
         basketLayer.AddChild(panel);
     }
 
-    static Control Column(string title, VBoxContainer list)
+    static Control Column(string title, VBoxContainer list, out Label label)
     {
         var col = new VBoxContainer { CustomMinimumSize = new Vector2(230, 0) };
-        var label = Hud.Text(title, 14);
+        label = Hud.Text(title, 14);
         label.Modulate = new Color(1, 1, 1, 0.75f);
         col.AddChild(label);
         col.AddChild(list);
@@ -221,12 +229,23 @@ public partial class BuildingSystem
     {
         if (openBasket is not { } id || basketLayer == null || conn() is not { } c) return;
         Fill(basketInside, c.Db.BasketItem.Iter().Where(b => b.StructureId == id)
-            .Select(b => (ItemLook.Label((Item)b.Item, b.Quality, b.Count), (Action<bool>)(all => c.Reducers.BasketTake(b.Id, all ? b.Count : 1)))));
+            .Select(b => (Counted((Item)b.Item, b.Quality, b.Count), (Action<bool>)(all => c.Reducers.BasketTake(b.Id, all ? b.Count : 1)))));
         Fill(basketCarried, c.Db.MyInventory.Iter().Where(i => i.Count > 0)
-            .Select(i => (ItemLook.Label((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
+            .Select(i => (Counted((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
         int stacks = c.Db.BasketItem.Iter().Count(b => b.StructureId == id);
         var shape = rows.TryGetValue(id, out var s) ? Structures.Shape((int)s.Kind) : Structures.Shape((int)StructureKind.Basket);
-        basketTitle.Text = $"{shape.Name}    {stacks} of {shape.StoreStacks}";
+        byte quality = c.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality;
+        int room = s != null ? Structures.StoreStacksFor((int)s.Kind, quality) : shape.StoreStacks;
+        basketTitle.Text = $"{shape.Name}    {stacks} of {room}";
+        // "In the basket", "In the jar": whichever store this is.
+        basketInsideTitle.Text = $"In the {shape.Name.Split(' ')[^1].ToLowerInvariant()}";
+    }
+
+    // "6 sticks", "1 good coil pot": the amount in front of the label.
+    static string Counted(Item item, byte quality, uint count)
+    {
+        string label = ItemLook.Label(item, quality, count);
+        return $"{count} {char.ToLowerInvariant(label[0])}{label[1..]}";
     }
 
     static void Fill(VBoxContainer list, IEnumerable<(string label, Action<bool> move)> entries)

@@ -21,6 +21,10 @@ public static class ClayItemLook
             Item.CoilPotOfWater => Pot(ClayForm.CoilPot, ClayStage.Fired, true),
             Item.UnfiredPinchPot => Pot(ClayForm.PinchPot, ClayStage.Drying, false),
             Item.UnfiredCoilPot => Pot(ClayForm.CoilPot, ClayStage.Drying, false),
+            Item.StorageJar => Jar(ClayStage.Fired),
+            Item.PotOfBroth => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Broth)),
+            Item.PotOfStew => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Stew)),
+            Item.UnfiredStorageJar => Jar(ClayStage.Drying),
             Item.Brick => Baked(PotMesh.For(ClayForm.Brick, 1), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 1), PotView.Size),
             Item.Potsherd => Sherd(),
             // Each stage of clay has its own shape, so they tell apart at a glance in
@@ -38,7 +42,7 @@ public static class ClayItemLook
         return mesh;
     }
 
-    static Mesh Pot(ClayForm form, ClayStage stage, bool full)
+    static Mesh Pot(ClayForm form, ClayStage stage, bool full, Material? liquid = null)
     {
         var mesh = Baked(PotMesh.For(form, 2), ClayLook.For(stage, FireKind.Pit, 0f, 2), PotView.Size);
         if (full)
@@ -50,10 +54,14 @@ public static class ClayItemLook
             for (int i = 0; i < verts.Length; i++) verts[i] += new Vector3(0, line.Y, 0);
             arrays[(int)Mesh.ArrayType.Vertex] = verts;
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            mesh.SurfaceSetMaterial(1, ClayLook.Water);
+            mesh.SurfaceSetMaterial(1, liquid ?? ClayLook.Water);
         }
         return mesh;
     }
+
+    // A jar on the ground is kiln-fired, so it takes the kiln's darker red.
+    static Mesh Jar(ClayStage stage) =>
+        Baked(PotMesh.For(ClayForm.StorageJar, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
 
     // A copy of a mesh, scaled, with its material baked in, since ground items
     // are drawn without a material override.

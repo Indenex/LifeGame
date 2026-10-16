@@ -2,7 +2,8 @@ using Godot;
 
 namespace LifeGame;
 
-// A simple, soft-shaped person with swinging arms and legs. Remote avatars glide
+// A player: the Modeling lane's skinned figure (PlayerModel), posed every frame by
+// PlayerAnimator through its named bones. Remote avatars glide
 // toward the last position the server sent; the local one is moved by input.
 public partial class Avatar : Node3D
 {
@@ -10,31 +11,25 @@ public partial class Avatar : Node3D
     public float TargetHeading;
     public bool Remote;
 
-    readonly Node3D body = new();
-    readonly Node3D leftLeg, rightLeg, leftArm, rightArm;
+    readonly Node3D figure;
+    readonly PlayerAnimator animator;
     readonly Label3D nameplate;
-    float walkPhase, speed;
+    float speed, turnRate, lastHeading;
     Vector3 lastPosition;
 
-    static ShaderMaterial? skin, hair, leaves;
+    static readonly StringName SneakAction = "sneak";
 
     public Avatar(string name)
     {
-        skin ??= Look.Solid(Look.Skin);
-        hair ??= Look.Solid(Look.Hair);
-        leaves ??= Look.Solid(Look.Leaf);
-
-        body.AddChild(Part(new CapsuleMesh { Radius = 0.2f, Height = 0.72f, RadialSegments = 12, Rings = 4 }, skin, new Vector3(0, 1.02f, 0)));
-        body.AddChild(Part(new SphereMesh { Radius = 0.17f, Height = 0.34f, RadialSegments = 14, Rings = 7 }, skin, new Vector3(0, 1.52f, 0)));
-        body.AddChild(Part(new SphereMesh { Radius = 0.18f, Height = 0.22f, RadialSegments = 14, Rings = 5 }, hair, new Vector3(0, 1.6f, -0.02f)));
-        // Woken up with nothing but a wrap of leaves.
-        body.AddChild(Part(new CylinderMesh { TopRadius = 0.2f, BottomRadius = 0.24f, Height = 0.18f, RadialSegments = 9 }, leaves, new Vector3(0, 0.78f, 0)));
-
-        leftLeg = Limb(new Vector3(-0.1f, 0.74f, 0), 0.085f, 0.72f);
-        rightLeg = Limb(new Vector3(0.1f, 0.74f, 0), 0.085f, 0.72f);
-        leftArm = Limb(new Vector3(-0.27f, 1.3f, 0), 0.065f, 0.6f);
-        rightArm = Limb(new Vector3(0.27f, 1.3f, 0), 0.065f, 0.6f);
-        AddChild(body);
+        var body = PlayerModel.Build();
+        // Everyone wakes up in the leaf wrap until worn_item says otherwise (D-074).
+        PlayerModel.Wear(body, PlayerModel.Body, 0);
+        figure = body;
+        AddChild(figure);
+        animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        // Breath in the cold leaves the mouth, on the head bone's attachment.
+        if (figure.FindChild("HeadAttach", true, false) is Node3D head)
+            head.AddChild(new Breath { Position = PlayerModel.MouthAt });
 
         nameplate = new Label3D
         {
@@ -50,17 +45,30 @@ public partial class Avatar : Node3D
         AddChild(nameplate);
     }
 
-    static MeshInstance3D Part(Mesh mesh, Material material, Vector3 at) =>
-        new() { Mesh = mesh, MaterialOverride = material, Position = at };
+    // Set from player_sneaking for other players; tracks the key for your own.
+    public bool Sneaking;
+    // Your own avatar: fired when you start or stop sneaking, so the server can tell others.
+    public event System.Action<bool>? SneakChanged;
 
-    // A limb hangs from a pivot at the hip or shoulder so it can swing.
-    Node3D Limb(Vector3 pivot, float radius, float length)
+    // What this player's hands are doing, from their running craft job (AvatarWork).
+    public WorkMotion Work { set => animator.Work = value; }
+
+    // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
+    public void Face(float x, float z)
     {
-        var joint = new Node3D { Position = pivot };
-        joint.AddChild(Part(new CapsuleMesh { Radius = radius, Height = length, RadialSegments = 8, Rings = 2 }, skin!, new Vector3(0, -length / 2f + radius, 0)));
-        body.AddChild(joint);
-        return joint;
+        float dx = x - Position.X, dz = z - Position.Z;
+        if (dx * dx + dz * dz > 1e-4f) Rotation = new Vector3(0, Mathf.Atan2(dx, dz), 0);
     }
+
+    // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
+    // the last landing was (0 to 1, set on the frame you land). The avatar's height is
+    // moved by whoever moves it; this only poses the body.
+    public void SetJump(bool airborne, bool rising, float landing) => animator.Jump(airborne, rising, landing);
+
+    // Lifts the figure off the ground by this many metres without moving the avatar node.
+    // Use it for other players' jumps: their node glides toward the server position every
+    // frame, which would pull a raised Y straight back down.
+    public void SetAirHeight(float metres) => figure.Position = new Vector3(0, Mathf.Max(metres, 0f), 0);
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
@@ -80,18 +88,19 @@ public partial class Avatar : Node3D
         var flat = Position - lastPosition;
         flat.Y = 0;
         lastPosition = Position;
-        speed = Mathf.Lerp(speed, Mathf.Min(flat.Length() / Mathf.Max(dt, 1e-4f), 6f), 1f - Mathf.Exp(-8f * dt));
-        float stride = Mathf.Clamp(speed / 3.5f, 0f, 1f);
-        walkPhase += speed * dt * 2.4f;
+        float k = 1f - Mathf.Exp(-8f * dt);
+        speed = Mathf.Lerp(speed, Mathf.Min(flat.Length() / Mathf.Max(dt, 1e-4f), 9f), k);
+        turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
+        lastHeading = Rotation.Y;
 
-        float swing = Mathf.Sin(walkPhase) * 0.55f * stride;
-        leftLeg.Rotation = new Vector3(swing, 0, 0);
-        rightLeg.Rotation = new Vector3(-swing, 0, 0);
-        leftArm.Rotation = new Vector3(-swing * 0.8f, 0, 0.08f);
-        rightArm.Rotation = new Vector3(swing * 0.8f, 0, -0.08f);
-
-        // Breathe when idle, bob when walking.
-        float idle = Mathf.Sin(Time.GetTicksMsec() / 1000f * 1.6f + GetInstanceId() % 7) * 0.008f * (1f - stride);
-        body.Position = new Vector3(0, Mathf.Abs(Mathf.Cos(walkPhase)) * 0.04f * stride + idle, 0);
+        // Your own sneak is the key; other players' comes from the server (player_sneaking).
+        bool sneaking = Remote ? Sneaking : Input.IsActionPressed(SneakAction);
+        if (!Remote && sneaking != Sneaking)
+        {
+            Sneaking = sneaking;
+            SneakChanged?.Invoke(sneaking);
+        }
+        // Hidden avatars (offline players) cost nothing.
+        if (IsVisibleInTree()) animator.Update(dt, speed, turnRate, sneaking);
     }
 }

@@ -7,12 +7,12 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 | Key | Action |
 |---|---|
 | W A S D | Walk |
-| Q / E, or hold right mouse and drag | Turn the view |
+| Hold right mouse and drag | Turn the view |
+| Hold Shift | Run (uses stamina) |
 | Hold Ctrl | Sneak (walk slowly) |
-| Space | Pick up |
 | F | Dig |
-| G | **Use**: act on what you are facing (the prompt shows what it will do) |
-| Shift+G | Bar or unbar a door you are allowed to lock |
+| E | **Use**: act on what you are facing (the prompt shows what it will do). With nothing to use, pick up what lies at your feet |
+| Shift+E | Bar or unbar a door you are allowed to lock |
 | C | Crafting panel |
 | X | Eat the best food you carry |
 | B | Build menu |
@@ -22,7 +22,7 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 | Left click or Z | Strike |
 | Hold Ctrl when starting a craft in the crafting panel | Play the minigame even when your skill lets you skip it |
 | M | Music on or off |
-| Esc | Menu |
+| Esc | Menu (keys, sound and music volume on the Options page, quit) |
 
 Panels and minigames have their own keys, shown on screen while they are open.
 

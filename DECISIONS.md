@@ -570,3 +570,300 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-139 — 2026-10-16 — Foot wraps wait for the rack (amends D-128)
 **Decision:** The leather foot wraps (and with them the worn slots) ship once, already made at the Leather drying rack, not first as a hand craft.
 **Who:** Justin ("Hold for the rack"; the PM had recommended shipping now)
+
+## D-140 — 2026-10-16 — Name your camp
+**Decision:** A claim's owner can name the claim in the claim panel; walking in shows the name softly for a moment ("Mira's camp" by default), and the land chip uses it.
+**Who:** Justin ("Name your camp", as recommended)
+
+## D-141 — 2026-10-16 — Forest light ships before the screenshots
+**Decision:** atmosphere-13 (sun shafts and dappled light through the canopy, #136) merges without Justin having seen it; it gets tuned afterwards from the Render shots.
+**Who:** Justin ("Merge now, tune later"; the PM had recommended waiting for the pictures)
+
+## D-142 — 2026-10-16 — Renders never block merges
+**Decision:** A PR that is green and matches decisions merges without waiting for Render shots or for Justin to see them. Renders still get made and shown to Justin afterwards, and any changes he asks for come as follow-up PRs. Wipes still need his confirmation of the date (D-129).
+**Who:** Justin ("Don't hold up merges waiting on rendering, they can go in before I see them, but the work should continue and be logged correctly")
+
+## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
+**Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
+**Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
+
+## D-144 — 2026-10-16 — First-evening tuning; visible breath in the cold
+**Decision:** Survival's next milestone is a first-evening tuning pass on the new land (berries near spawn, water reach, early warmth) so nobody dies before their first fire. Players also show a visible breath puff in cold air; there is no camera shake.
+**Who:** Justin ("1, but when cold I do like the idea of seeing your breath")
+
+## D-145 — 2026-10-16 — Workers never sit idle
+**Decision:** When a lane finishes its ticket and has no assigned next work, it immediately picks the next most useful item for its lane from the current milestones (`STATUS.md`, D-081) or the design docs, starts it, and tells the PM what it picked. Any design choice Justin would notice goes to the PM as options while the lane works on the recommended one. Waiting on CI or on a merge is not a reason to idle; start the next ticket.
+**Who:** Justin ("Workers should not sit idle. If we don't have more work for them, pull from the design doc and figure some out, or ask me")
+
+## D-146 — 2026-10-16 — Streams are wadeable
+**Decision:** Streams are shallow enough to walk across (bed at water level minus 0.25 m; you get wet quickly per D-062); ponds stay deep. Every part of the land must be reachable on foot from spawn and from respawn points.
+**Who:** Justin ("Wade across", as recommended), after Bug fixes found env-2's stream blocked all crossing
+
+## D-147 — 2026-10-16 — Clay oil lamp
+**Decision:** ceramics-9 is a clay oil lamp, pinched at the Potter's bench and pit-fired, fuelled with tallow (1 tallow per 2 raw mutton, rendered at a fire), with a warm glow about 4 m across. Each tallow lasts 30 minutes (3x the proposed 10), and lamps refill automatically from tallow in nearby chests and storage.
+**Who:** Justin ("1, but lamp lights should auto-pull from chests if there's tallow in them, make them last 3* as long too")
+
+## D-148 — 2026-10-16 — Crafted things are not chores
+**Decision:** A design principle. Once something is crafted or built, it should not become one more thing to tend all the time. Upkeep is low: fuel-like needs pull automatically from nearby storage where sensible, and durations are generous. Lanes check new features against this.
+**Who:** Justin ("I don't want things to feel 'chorish'. Once something is crafted it shouldn't become just one more thing to take care of all the time.")
+
+## D-149 — 2026-10-16 — Hearth fires feed themselves
+**Decision:** A fire on a built raised hearth (D-132) pulls sticks and logs from nearby chests and storage (baskets, jars, claim stash within reach) so it doesn't need tending. Open campfires still need feeding by hand.
+**Who:** Justin ("Hearths only", as recommended), applying D-148
+
+## D-150 — 2026-10-16 — First-time tips
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with E (was G, changed by D-188). (3) Your claim keeps what you build; press B. (4) The crafting table: press E at it (was G, changed by D-188).
+**Who:** Justin ("All four", as recommended)
+
+## D-151 — 2026-10-16 — Log cabin
+**Decision:** The log cabin is a forest alternative to the brick house, with the same shelter, size and weathering. Costs: sill 4 stone + 4 logs; walls 16 logs; rafters 12 sticks + 2 cordage; roof 14 fiber.
+**Who:** Justin (as recommended)
+
+## D-152 — 2026-10-16 — Corners of the forest
+**Decision:** env-4 gives the region distinct moods: birch and alder wetland with sedge and cattails along streams, heath and meadow with heather, gorse and lone oaks on hilltops, mixed forest between. Visual only, no wipe.
+**Who:** Justin (as recommended)
+
+## D-153 — 2026-10-16 — Foot wraps train Leatherwork; the drop spindle stays Toolmaking
+**Decision:** Leather foot wraps train Leatherwork; making the drop spindle trains Toolmaking.
+**Who:** Justin (wraps: "Leatherwork", as recommended; spindle: Journal's default)
+
+## D-154 — 2026-10-16 — Crucial look-and-feel choices wait for Justin's pick
+**Decision:** Crucial look-and-feel choices (player/creature model style, overall art style, UI look, world palette) are not built past a rough prototype until Justin picks. The lane sends 2 to 4 written descriptions (plus renders if quick) to the PM, who brings them to Justin right away, not held for renders. The lane works on other things meanwhile (D-145 never idle). D-142 (merges don't wait on renders) does not cover these choices. Context: #172 merged style A as a default without Justin's pick; that pick is now being taken.
+**Who:** Justin ("For something as crucial as a player model style I want at least the proposed descriptions of things even if a render isn't available.")
+
+## D-155 — 2026-10-16 — Chore check: campfires need feeding, hand tools wear
+**Decision:** A follow-up to D-148. Open campfires keep needing feeding (sticks 90 s, logs 6 min). Building tools/stations and structures have no durability, but hand tools and worn equipment do have durability (new; Crafting will propose how it plays, with Animals for clothing).
+**Who:** Justin ("open fires need feeding, building tools don't have durability, but hand tools and equipment does.")
+
+## D-156 — 2026-10-16 — Next animal: red deer
+**Decision:** The next animal is the red deer (animals-14): shy woodland-edge herds that bolt at 30 m, hunted for venison, hide and antler.
+**Who:** Justin (picked "Red deer (Recommended)")
+
+## D-157 — 2026-10-16 — Claim fences
+**Decision:** claims-12: members fence the soft border of a claim with a members-only gate, built with House building's Fence/Gate (Building owns the structure and model, Claims owns the membership rule and placement). The lived-in marker was not chosen.
+**Who:** Justin (picked "Claim fences")
+
+## D-158 — 2026-10-16 — Model style: Justin picks from renders
+**Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
+**Who:** Justin ("I've seen renders of these, go find them since they've already been made.")
+**Pick (2026-10-16):** Style A, "Carved", for people. Sheep: "I like a carved, but I want the sheep to be shorter, legs are too long, and I dont like the fluff. It has too much depth/texture and stands out from everything. It should be softer, cartoonier, fluffier. More stylized with our aesthetic."
+
+## D-159 — 2026-10-16 — Sonnet workers do the coding; Opus for player-visual work
+**Decision:** Coding can be done by Sonnet workers, and lanes start transitioning over to them. Anything related to modelling, texture work or player-visual things stays with Opus. This replaces D-058's "Opus for any session that writes code". Applied split. Sonnet: Integration, Release, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio (the Scribe is already Sonnet). Opus: Modeling, Animation, Environment, Atmosphere, UX/UI (player-visual), Wiki (writing voice, D-064), and the PM. Lanes hand off at a checkpoint (ticket current, `HANDOFF READY` to the PM), then the PM starts a fresh Sonnet session on the ticket. Sonnet lanes may still use an Opus helper for player-visual parts.
+**Who:** Justin ("Let's update that coding can be done by sonnet workers, and start transitioning them over to it. Anything that's related to modelling, texture work, or player-visual things can be opus.")
+
+## D-160 — 2026-10-16 — Claim gates are members only
+**Decision:** Only the owner and members of a claim can open, bar or unbar a gate in it (claims-12).
+**Who:** Justin ("Members only")
+
+## D-161 — 2026-10-16 — Every pickup has a sound
+**Decision:** Every pickup plays a soft rustle and knock (audio-3).
+**Who:** Justin ("Yes, every pickup")
+
+## D-162 — 2026-10-16 — Claim fences snap to the border
+**Decision:** Claim fences snap onto the claim circle (claims-12; extends D-157).
+**Who:** Justin ("Snap to border")
+
+## D-163 — 2026-10-16 — Lapsed claim fences stay as ruins
+**Decision:** When a claim lapses, its fences stay as ruins: they become ordinary fences, gates open to anyone, and they weather per D-046.
+**Who:** Justin ("Stay as ruins")
+
+## D-164 — 2026-10-16 — Heather blooms purple in late summer
+**Decision:** Heather blooms purple in late summer (Atmosphere and Environment seasonal visuals).
+**Who:** Justin ("Yes, purple bloom")
+
+## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
+**Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
+**Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
+
+## D-166 — 2026-10-16 — env-5 landmarks and trails vary per instance
+**Decision:** env-5 builds landmarks and trails. A general design principle: repeated world features vary strongly per instance. If a landmark or feature appears in the world several times, each instance should look quite different (randomized a bit every time), so a player doesn't instantly recognise a pre-made, tiny-zone landmark.
+**Who:** Justin ("I don't want things like it to be repeated constantly. If they go into the world multiple times they should look quite different/randomized a bit every time, so a player doesn't instantly recognize that this is a pre-done rendered type of area/tiny zone landmark.")
+
+## D-167 — 2026-10-16 — Slower thirst at first (survival-10 spawn water)
+**Decision:** For survival-10 (spawn water), thirst falls 20% slower in the first hour.
+**Who:** Justin ("Slower thirst at first")
+
+## D-168 — 2026-10-16 — Playtest fixes: see yourself under trees, smaller frost
+**Decision:** Any time the player is rendered underneath something (trees, forest canopy, structures), the see-through effect should happen. Trees: #223 (Environment); structures pending with House building. The frost overlay is shrunk about 30 to 45% and made more transparent: #218 (Survival).
+**Who:** Justin ("it's very difficult to see yourself in forests/trees. Any time the player is rendered underneath something, the see-through effect should happen." And on frost: "the freezing effect is nice, but waaay too big. It needs more transparency and shrunk by like ~30-45%.")
+
+## D-169 — 2026-10-16 — Durability and repair (follow-up to D-155)
+**Decision:** Hand tools and worn equipment have durability (D-155). At zero durability, Justin chose option 2, "Stops until repaired: the tool stays in your bag but won't work until mended.", with repair mechanics added. Repairing should always be better than crafting brand new; the suggested balance is repair costing about 60% of the resources (or 40% needed with 60% already there), number not fixed. Wear should not be a chore to repair; the proposed 40 felt too little, to be judged once quality items are in. Repair happens at a dedicated repair table, and quality loss per repair scales down over time to a floor of 50%. Repair should stay easier than a brand-new item for a good while. Durability shows in words and as a worn look.
+**Who:** Justin ("2, but we need repair mechanics. System wise, repairing should always be better than crafting brand new. Not sure what a good number would be, 60% of the resources required? swapped around at 40% needed, 60% already there?" Wear: "It shouldn't be a total chore to have to repair. 40 seems like too little, but im not sure how hard having quality items is yet." Repair: "dedicated repair table, and quality loss scales down over time to 50%. It should balance out with the ease of crafting a new one. It should be easier to repair for a good bit vs. brand new." Shows: words and worn look.)
+
+## D-170 — 2026-10-16 — Trees, rocks and structures collide
+**Decision:** Trees collide at the trunk, rocks by their footprint, and every structure collides. Client side for now (no server physics yet).
+**Who:** Justin ("do we have physics work yet? I want trees and houses etc. to have collision.")
+
+## D-171 — 2026-10-16 — Red deer hunting: spear strike and bow
+**Decision:** One spear strike kills a red deer if your sneak skill is high enough. A bow and arrow is a new tool, with automatic targeting. It can take a few arrows, since damage depends on bow type and quality and arrow type and quality; Justin asked for a simple equation that won't overload the server. The worst, first bow takes 3 to 6 arrows and means chasing the creature down, so a lower sneak skill is enough.
+**Who:** Justin ("One spear strike kills if your sneak skill is high enough. However, a bow and arrow would be a fun new tool. I would want it to be automatic targeting or something. It can take a few times though as arrows would do damage based on a lot of factors; bow type/quality, arrow type/quality, etc. What's a simple equation that won't overload the server with that? Like, I'd want the worst/first bow to take 3-6 arrows and have to chase the creature down kinda thing, so you don't have to have as high of a sneak skill.")
+
+## D-172 — 2026-10-16 — Red deer sounds
+**Decision:** Deer sounds are a bark plus an autumn roar.
+**Who:** Justin (as relayed by the PM)
+
+## D-173 — 2026-10-16 — Antler is a plain material
+**Decision:** Antler is a plain material for other recipes, and it can also be built into a hammer or pickaxe.
+**Who:** Justin ("I like that it's just a plain material for other recipes, but building it into a hammer or pickaxe is cool.")
+
+## D-174 — 2026-10-16 — Durability numbers: Steady (follow-up to D-169)
+**Decision:** Tool durability is "Steady": a crude tool lasts about 150 uses, an excellent one about 400. Repair costs about 40% of a new item. Each repair loses 20% of the remaining gap to the 50% quality floor.
+**Who:** Justin ("Steady")
+
+## D-175 — 2026-10-16 — One shared formula for all skill gains and rank effects
+**Decision:** A single shared progression formula handles all skill gains and how much ranks help (D-075). Lanes declare only start and end values, and no skill gets its own formula unless absolutely necessary, so things always have the right scaling feel and sense of progression. The effect curve is front-loaded: the first ~15% of ranks give ~40% of the benefit. Owner: Journal & skills (skills-12).
+**Who:** Justin ("I think we also need a formula that handles all skill gains, how much they help certain things, etc. I don't want each skill to have its own formulas unless absolutely necessary, so that things always have the right scaling feel and sense of progression." Effect curve: "Front-loaded")
+
+## D-176 — 2026-10-16 — Stalking is a real skill
+**Decision:** The "sneak skill" in D-171 means a real skill. Journal & skills adds Stalking (skills-12). Until it exists, Animals uses Husbandry of at least 20 as a stand-in.
+**Who:** Justin (D-171: "One spear strike kills if your sneak skill is high enough."), read by the PM as a real sneak skill
+
+## D-177 — 2026-10-16 — Skill curve shape and Pace constant (extends D-175)
+**Decision:** The shared skill curve is logarithmic on rank with b=12: benefit at rank 10/25/50/100 is 31/54/76/100%. Today's fast gain stays for testing, but leveling must become much slower later, to OSRS or Retro Dofus level. A single Pace constant will later slow leveling many-fold.
+**Who:** Justin ("Keep things fast for now for testing, but things should be muuuuch slower later. Like, OSRS or Retro Dofus level slow leveling.")
+
+## D-178 — 2026-10-16 — Bow numbers: Standard
+**Decision:** The bow is "Standard": range 40 m, a ±25° auto-aim cone, hit chance 95% falling to 30% with distance, ×0.55 against a running target. A crude bow does about 21 damage per hit; a red deer has 100 HP, so a kill takes 3 to 6 hits (extends D-171).
+**Who:** Justin ("Standard")
+
+## D-179 — 2026-10-16 — Sneak attacks crit with Stalking (amends D-171 and D-176)
+**Decision:** Hunting hits do normal scaled damage. A sneak attack can trigger a Stalking crit: a large bonus damage, with the crit chance and the bonus on the shared progression curve (D-175, D-177), and a visible and audible crit cue. This replaces the one-strike-kill threshold in D-171 and the Husbandry of at least 20 stand-in in D-176.
+**Who:** Justin ("It should be normal damage value scaling plus a large damage bonus trigger chance (with some visual feedback like a 'crit' sorta thing) when Stalk adds its bonus damage.")
+
+## D-180 — 2026-10-16 — Campfire light reaches further at night
+**Decision:** Campfire light reaches further at night: about 10 m by day and about 14 m at night.
+**Who:** Justin ("Further at night")
+
+## D-181 — 2026-10-16 — Valley mist
+**Decision:** atmosphere-17 adds valley mist: dawn and dusk mist settles in low ground, ponds and streams.
+**Who:** Justin ("Yes, valley mist")
+
+## D-182 — 2026-10-16 — Server is the authority: rule now, harden before players
+**Decision:** Justin will host the server himself; players never get a server. Every game rule, number, check and outcome is decided by a server reducer; the client only predicts and draws. New features must validate on the server (reach, cooldowns, ownership, line of sight, speed, collision via `shared/` code) and must not send clients values that should stay hidden. A hardening pass closes existing client-only gaps before outside players join.
+**Who:** Justin ("is that going to fuck up our design process... we would need many many things to be server sided for hacking purposes."), answered with "Rule now, harden before players"
+
+## D-183 — 2026-10-16 — Launcher: two builds
+**Decision:** Two launcher builds. Justin's host launcher installs, starts and updates the server. Players get a client-only launcher that updates the game and connects to his server.
+**Who:** Justin ("Two builds")
+
+## D-184 — 2026-10-16 — Stalking crit values: rarer, bigger (extends D-179)
+**Decision:** Stalking crit chance runs from 3% to 40% and the bonus damage from +50% to +200%, both on the shared front-loaded curve (D-175, D-177).
+**Who:** Justin ("Rarer, bigger")
+
+## D-185 — 2026-10-16 — Crit cue look: "!" only
+**Decision:** A Stalking crit shows an amber "!" with a starburst over the animal, bigger on a kill. No numbers, and plain hits stay quiet (extends D-179).
+**Who:** Justin ("Crit '!' only")
+
+## D-186 — 2026-10-16 — Hardening behind a dev flag
+**Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
+**Who:** PM (technical decision)
+
+## D-187 — 2026-10-16 — Crafted items: bag first, real-world items can be placed
+**Decision:** Finished crafts go to the bag. Real-world items (bricks and the like) also get an optional "Place it now" prompt, and can be placed from the bag with a Place key and a ghost preview. Small items such as tinder go straight to the bag. Owner: Crafting (crafting-20), with UX.
+**Who:** Justin ("when items like bricks and things are crafted, they should either go into your inventory and then allow them to be placed, or allow you to simply choose where to put them when done crafting (real world items only, things like tinder etc. just auto inventory)"), who chose "Both"
+
+## D-188 — 2026-10-16 — E interacts and picks up
+**Decision:** E is the key that interacts with things and picks up items, not G or space. Owner: UX (ui-16, keys). Note: D-150's first-time tips name G for feeding a fire and for the crafting table, and need the new key.
+**Who:** Justin ("I want E to be the item that interacts with things and picks up items, not G/space.")
+
+## D-189 — 2026-10-16 — Turn view by mouse drag only
+**Decision:** The view turns by mouse drag only. Q/E turning is removed.
+**Who:** Justin ("Mouse drag only")
+
+## D-190 — 2026-10-16 — Jumping
+**Decision:** The player can jump, and jumping clears fences too, but not claim fences unless you are a member of that claim. Owners: Bug fixes (bugfix-25, jump and clearance), with Animation and Audio for the poses and sounds.
+**Who:** Justin ("Also I want to be able to jump." Fences: "Fences too, but not claim fences unless you're a member of it.")
+
+## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
+**Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
+**Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
+
+## D-192 — 2026-10-16 — Jump details (extends D-190)
+**Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
+**Who:** Justin (as relayed by the PM)
+
+## D-193 — 2026-10-16 — Other players see your jump
+**Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
+**Who:** Justin ("Yes, pose and sound")
+
+## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
+**Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
+**Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
+
+## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
+**Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
+**Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")
+
+## D-196 — 2026-10-16 — Bow power: Archery skill, much harder at rank 0 (revises D-178)
+**Decision:** The bow numbers in D-178 are at level 1 too strong. A new Archery skill, on the shared curve (D-175, D-177), scales bow damage. At rank 0 with crude gear a red deer takes 6 to 7 hits. With maxed Archery, top gear and a crit, a one-shot becomes possible.
+**Who:** Justin ("Is this at level 1 Archery? I would say make it much harder. Like 6-7 shots, and when maxed out or with crits you could 1 shot at some point.")
+
+## D-197 — 2026-10-16 — Combat skills level slower; skill matters more than gear (extends D-175, D-196)
+**Decision:** Combat skills get a slower category pace in the one shared progression formula. Each effect's ceiling is a single raisable constant, so it is easy to raise and work in later. Gear quality spread stays narrow and skill spread stays wide: skill levels matter much more than the item base.
+**Who:** Justin ("Slower progression on combat-related skills I think, there needs to be a ceiling that we raise and work in easily. Skill levels should matter much more than the item base though.")
+
+## D-198 — 2026-10-16 — Combat pace: half speed (follows D-197)
+**Decision:** Combat skills (Stalking, Archery, future weapons) gain at 0.5x the base pace, set by `Progression.CombatPaceFactor`.
+**Who:** Justin ("Half speed")
+
+## D-199 — 2026-10-16 — Archery spread drawn out; combat effects are hits-linear (extends D-196, D-197)
+**Decision:** The Archery spread from rank 25 to 100 is much more drawn out. Hits to kill a deer fall about one step per ~20 ranks, for example 7, 6, 5, 4, 3, 2, rather than dropping from 7 to 2 or 3 quickly. Combat effects use an even, hits-linear shape. This is a documented exception to the front-loaded curve of D-175 and D-177.
+**Who:** Justin ("the spread from 25-100 needs to be waaaay more drawn out. You should not go from 7 -> 3/2 so quickly. Maybe 7, 6, 5, 4, 3, 2, or something like that.")
+
+## D-200 — 2026-10-16 — Batch device numbers: Balanced (follows D-195)
+**Decision:** Batch crafting devices use the "Balanced" numbers: a batch cap of 10. Unattended runs give ×0.6 quality, 1.5× time and 25% of skill. Attended runs give up to ×1.1 quality, +20% quantity, 0.8× time and full skill.
+**Who:** Justin ("A: balanced")
+
+## D-201 — 2026-10-16 — See-through buildings work like Project Zomboid (extends D-168)
+**Decision:** Buildings go see-through the way Project Zomboid does it. Inside a building its roof is hidden entirely, and walls between the camera and you are cut or faded, so the room reads as a cutaway; far walls stay solid. Outside, behind a building, only the blocking walls fade around you; other buildings stay solid. Owner: House building (building-11).
+**Who:** Justin ("It should do it like Project Zomboid does it.")
+
+## D-202 — 2026-10-16 — Fires can be placed where the player wants (Choose the spot)
+**Decision:** The player can put a fire where they want nearby. A placement ghost shows the spot, using the same flow as item placing (crafting-21). Only spots inside a boulder or trunk are refused.
+**Who:** Justin ("You should be able to place fires where you want."), picking "Choose the spot".
+
+## D-203 — 2026-10-16 — Roof clears in a soft circle when you are behind a building (extends D-201)
+**Decision:** When the player is behind a building, seen from outside, its roof also clears in a soft circle around them, in addition to the walls fading. Owner: House building (building-11).
+**Who:** Justin, picking "Soft clear circle".
+
+## D-204 — 2026-10-16 — Kiln and rack output gets no place prompt; drag from the bag
+**Decision:** Output from a kiln or drying rack does not trigger a place prompt. The player drags the item out of the bag to place it.
+**Who:** Justin ("No, drag from bag")
+
+## D-205 — 2026-10-16 — Atmosphere next: storms and lightning, wet world, warm homes at night
+**Decision:** After "Give me more options", the next Atmosphere features are Storms and lightning, Wet world (puddles and a wet sheen that dries), and Warm homes at night (firelight from doorways, hearth smoke). Owner: Atmosphere, with Audio and House building.
+**Who:** Justin, choosing Storms and lightning, Wet world and Warm homes at night.
+
+## D-206 — 2026-10-16 — Scalable development: every content family is data on a shared base
+**Decision:** Every content family (animals, tools, crafting stations and so on) is data on a shared base: a Def plus a registry in `shared/`. New content is a Def entry plus assets, so a new animal means only modelling, animating, texturing and perhaps adjusting AI, not rebuilding code. Each family is converted gradually, the next time a lane adds to it. Integration writes `docs/CONTENT.md` and sends the Scribe the CLAUDE.md principle wording.
+**Who:** Justin ("Are we using software best practices as far as like scalable development goes? Like, for an animal do we have a base animal function to work from so things aren't being built from scratch every time? e.g. animal.Deer, animal.Sheep... That way we're only modeling/animating/texturing, and not fully rebuilding code, maybe adjusting AI". Then: "option 3, but yes ALL development should be this way, shouldn't it? e.g. tool.Axe, craftingTable.Pottery, etc.?")
+
+## D-207 — 2026-10-16 — Scribe self-merges doc-only PRs immediately
+**Decision:** The Scribe self-merges its doc-only PRs immediately, with no CI wait and no merge freeze. It only touches doc files (`DECISIONS.md`, `STATUS.md`, `CLAUDE.md`, `WORKER_LOOP.md`, `docs/*.md`). Direct pushes to `main` were blocked by the session safety classifier, so the PR route stays.
+**Who:** Justin ("Scribe should just be able to modify text files, it can skip all safety checks, it's not allowed to touch anything but it's docs files anyway.")
+
+## D-208 — 2026-10-16 — Environment env-9: See further
+**Decision:** Environment's next feature (env-9) is "See further": low-detail distant terrain and tree silhouettes beyond about 56 m. Not picked: gatherables by habitat, small life, wearing paths.
+**Who:** Justin, picking "See further".
+
+## D-209 — 2026-10-16 — Device quality applies only to minigame processes (refines D-200)
+**Decision:** A process with no minigame gets nothing special from a device: it is simply crafted for now and can be queued up as a plain batch. The unattended penalty and attended bonus of D-200 apply only to processes that have minigames.
+**Who:** Justin ("If they don't have minigames, nothing special happens, it can just be crafted for now, and queued up.")
+
+## D-210 — 2026-10-16 — Journal step cards do not show Speed %
+**Decision:** Journal step cards drop the Speed % line; no Speed % is shown.
+**Who:** Justin ("Drop the line")
+
+## D-211 — 2026-10-16 — Storms are seasonal
+**Decision:** Storm frequency follows the season. About 1 in 45 weather fronts becomes a thunderstorm in summer, 1 in 50 in spring and autumn, and 1 in 150 in winter.
+**Who:** Justin, picking "Seasonal".
+
+## D-212 — 2026-10-16 — Rain sounds like natural steady rain
+**Decision:** Rain must sound like natural, steady rain (hiss and patter), with no bouncy, pulsing or creature-like element. The bouncy part is taken out. Owner: Audio (#291).
+**Who:** Justin ("I don't like the weird bouncy animal sound of the rain in general, I just want it to sound like normal rain. can that part be taken out?")
+
+## D-213 — 2026-10-16 — Ceramics next: roof tiles; Justin wipes his world manually on build 980
+**Decision:** Ceramics' next feature is roof tiles ("Roof tiles"), not slip decoration. Separately, Justin is wiping his world manually on build 980, because the launcher's wipe confirm is broken; the Release lane is fixing it.
+**Who:** Justin, picking "Roof tiles".

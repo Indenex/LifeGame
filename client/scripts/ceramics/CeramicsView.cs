@@ -40,6 +40,7 @@ public partial class CeramicsView : Node
     {
         this.conn = conn;
         RegisterUse();
+        AttachSimmer(conn);
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
@@ -68,9 +69,12 @@ public partial class CeramicsView : Node
         {
             if (!j.Failed && ClayRules.FormFor(j.ProcessId) is { } form)
             {
-                note(form == ClayForm.Brick
-                    ? "The brick is drying. It turns pale when it is ready."
-                    : "Your pot is drying. It turns pale when it is ready to fire.");
+                note(form switch
+                {
+                    ClayForm.Brick => "The brick is drying. It turns pale when it is ready.",
+                    ClayForm.StorageJar => "Your storage jar is drying. It is too big for a campfire: once it is pale, fire it in a kiln.",
+                    _ => "Your pot is drying. It turns pale when it is ready to fire.",
+                });
                 Tip("ceramics.dry_by_fire", "Clay dries twice as fast beside a burning fire.");
             }
         };
@@ -140,6 +144,8 @@ public partial class CeramicsView : Node
     void RegisterUse()
     {
         Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
+        // Like taking meat off a fire: ahead of feeding it.
+        Use.Register(new UseHandler { Id = "ceramics.simmer", Priority = 25, Find = SimmerOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
         Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
@@ -207,9 +213,11 @@ public partial class CeramicsView : Node
 
     UseOffer? FirePotsOffer(Vector3 me3)
     {
-        if (conn == null || !Carrying(i => ClayRules.FormOfUnfired(i) != null)) return null;
+        if (conn == null || !Carrying(i => ClayRules.FormOfUnfired(i) is { } f && !ClayRules.KilnOnly(f))) return null;
         var at = new Vector2(me3.X, me3.Z);
-        if (BurningFireNear(at, World.Reach) is not { } fire) return null;
+        // Only a fire that can take a pot: a full ring or too little fuel would just
+        // refuse, and this offer outranks Feed the fire (bugfix-18).
+        if (BurningFireNear(at, World.Reach) is not { } fire || !FireCanTakePot(fire)) return null;
         float d = new Vector2(fire.X, fire.Z).DistanceTo(at);
         return new UseOffer("Set pots in the fire", d, () => conn.Reducers.FirePots(fire.Id), Target: new Vector3(fire.X, 0, fire.Z));
     }
@@ -229,10 +237,19 @@ public partial class CeramicsView : Node
         if (piece.view == null) return null;
         var row = conn.Db.ClayPiece.Id.Find(piece.id);
         bool isPot = row != null && row.Form != (byte)ClayForm.Brick;
+        // A storage jar is fired in a kiln, never where it stands.
+        bool jar = row != null && ClayRules.KilnOnly((ClayForm)row.Form);
         float moisture = piece.view.Moisture;
         bool dry = !ClayRules.TooWetToFire(moisture);
-        bool besideFire = isPot && BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) != null;
-        if (besideFire != firing || (!firing && info == dry)) return null;
+        // A dry pot counts as beside a fire only if that fire can take it, as the server
+        // decides; otherwise G picks it up. That pick-up outranks feeding the fire too
+        // (it goes with the firing offers), unless the fire only lacks fuel and you carry
+        // some: then Feed the fire wins, and Fire the pot follows (bugfix-18).
+        var fire = isPot && !jar ? BurningFireNear(new Vector2(piece.view.Position.X, piece.view.Position.Z), ClayRules.FireReach) : null;
+        bool canTake = fire != null && FireCanTakePot(fire);
+        bool besideFire = fire != null && (!dry || canTake);
+        bool pickUpFirst = fire != null && dry && !canTake && !(FuelShort(fire) && FuelSeconds() > 0);
+        if ((besideFire || pickUpFirst) != firing || (!firing && info == dry)) return null;
         ulong id = piece.id;
         var target = new Vector3(piece.view.Position.X, 0, piece.view.Position.Z);
         if (row?.MadeBy == MyId)
@@ -240,7 +257,7 @@ public partial class CeramicsView : Node
         if (dry)
             return besideFire
                 ? new UseOffer("Fire the pot", piece.d, () => conn.Reducers.TendClay(id, false), Target: target)
-                : new UseOffer(isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false), Target: target);
+                : new UseOffer(jar ? "Pick up the jar" : isPot ? "Pick up the pot" : "Pick up the brick", piece.d, () => conn.Reducers.TendClay(id, false), Target: target);
         // Still wet: say how long it has left. Beside a fire, pressing G twice fires it
         // anyway (it cracks); away from one, G says where it would dry faster.
         string wait = $"Drying, {ClayRules.DryWait(piece.view.SecondsUntilDry)}";
@@ -278,10 +295,16 @@ public partial class CeramicsView : Node
     UseOffer? FillOffer(Vector3 me3)
     {
         if (conn == null || !Carrying(i => ClayRules.FilledItem(i) != null)) return null;
-        // Water within reach: any ground point nearby below the water line.
-        for (float dx = -World.Reach; dx <= World.Reach; dx += 0.5f)
-            for (float dz = -World.Reach; dz <= World.Reach; dz += 0.5f)
-                if (dx * dx + dz * dz <= World.Reach * World.Reach && heightAt(me3.X + dx, me3.Z + dz) < World.WaterLevel)
+        // Water within reach, checked as the server's NearWater does: a grid point under
+        // the water line. A point between grid points can dip below it on a sloped bank
+        // where the server finds none (bugfix-22). Reach is trimmed a little, as for
+        // Drink, so a position the server has not caught up with yet still agrees.
+        float reach = World.Reach - 0.2f;
+        int r = (int)MathF.Ceiling(reach);
+        int cx = World.CellOf(me3.X), cz = World.CellOf(me3.Z);
+        for (int gx = cx - r; gx <= cx + r; gx++)
+            for (int gz = cz - r; gz <= cz + r; gz++)
+                if ((gx - me3.X) * (gx - me3.X) + (gz - me3.Z) * (gz - me3.Z) <= reach * reach && heightAt(gx, gz) < World.WaterLevel)
                     return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
         return null;
     }
@@ -307,7 +330,8 @@ public partial class CeramicsView : Node
     }
 
     static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
-        or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd;
+        or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar
+        or Item.PotOfBroth or Item.PotOfStew;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()
@@ -333,6 +357,19 @@ public partial class CeramicsView : Node
         foreach (var i in conn.Db.MyInventory.Iter())
             if (Items.IsKnown(i.Item) && match((Item)i.Item)) return true;
         return false;
+    }
+
+    static float FuelLeft(Fire fire) =>
+        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+
+    bool FuelShort(Fire fire) => FuelLeft(fire) < ClayRules.PitFireSeconds;
+
+    bool FireCanTakePot(Fire fire)
+    {
+        int potsIn = 0;
+        foreach (var p in conn!.Db.ClayPiece.Iter())
+            if (p.Stage == (byte)ClayStage.Firing && p.FireId == fire.Id) potsIn++;
+        return ClayRules.FireCanTakePot(FuelLeft(fire), potsIn);
     }
 
     // Any fire, lit or not yet cleared away; a plain loop, as this runs every frame.

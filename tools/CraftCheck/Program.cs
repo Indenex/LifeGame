@@ -39,6 +39,9 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM roast",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree",
+                "SELECT * FROM structure",
+                "SELECT * FROM claim",
+                "SELECT * FROM my_claim_stash",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -64,7 +67,7 @@ Craft("knap.hand_axe", 0.95f, Item.HandAxe);
 Craft("lash.spear", 0, Item.Spear);
 Craft("lash.stone_axe", 0, Item.StoneAxe);
 
-// Crafting-2 tools: a knife, a digging stick and a basket.
+// Crafting-2 tools: a knife and a digging stick (the basket is made at a table, below).
 Gather(Item.Stick, 5);
 Gather(Item.Stone, 3);
 Gather(Item.Fiber, 13);
@@ -72,7 +75,6 @@ Craft("knap.flake", 0.95f, Item.Flake);
 Craft("cord.twist", 0, Item.Cordage);
 Craft("haft.knife", 0, Item.StoneKnife);
 Craft("carve.digging_stick", 0, Item.DiggingStick);
-Craft("weave.basket", 0, Item.Basket);
 
 // A digging stick reaches one level below bare hands, where the clay is finer.
 var (clayX, clayZ) = Enumerable.Range(1, 40)
@@ -100,7 +102,7 @@ Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay qu
 Gather(Item.Stick, 2);
 WalkTo(fireX, fireZ);
 int firesBefore = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 1f, null);
+FireCraft("fire.hand_drill", 1f);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
@@ -111,7 +113,7 @@ Gather(Item.Fiber, 2);
 Gather(Item.Stick, 3);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesNow = conn.Db.Fire.Count;
-Craft("fire.hand_drill", 0.1f, null);
+FireCraft("fire.hand_drill", 0.1f);
 Pump(() => false, 1, null);
 if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
 if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
@@ -124,15 +126,38 @@ Craft("cord.twist", 0, Item.Cordage);
 Craft("lash.bow_drill", 0, Item.BowDrill);
 Craft("gather.tinder", 0, Item.Tinder);
 int firesBeforeBow = conn.Db.Fire.Count;
-Craft("fire.bow_drill", 0.25f, null);
+FireCraft("fire.bow_drill", 0.25f);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
 foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
+// A fire burns no higher than the cap (D-090): once it is full, feeding is refused and the stick is
+// kept. The cap grows with Firecraft (the shared progression curve), so a freshly lit fire may still
+// have room for a stick; top it up first instead of assuming rank 0.
+var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+WalkTo(bowFire.X, bowFire.Z);
+for (int top = 0; top < 12; top++)
+{
+    long fuelNow = conn.Db.Fire.Id.Find(bowFire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+    lastError = null;
+    conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
+    Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
+    if (lastError == "The fire is burning as high as it will") break;
+    if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
+    Gather(Item.Stick, 1);
+    WalkTo(bowFire.X, bowFire.Z);
+}
+RefusedFeed(bowFire, Item.Stick);
+
+// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
+// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
 WalkTo(fire.X, fire.Z);
-long fuelBefore = fire.FuelUntil.MicrosecondsSinceUnixEpoch;
+float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
+Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
+long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
 lastError = null;
 conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
@@ -150,13 +175,56 @@ if (Trees.Felling)
     Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
     Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
 }
-WalkTo(fire.X, fire.Z);
-fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+WalkTo(bowFire.X, bowFire.Z);
+RefusedFeed(bowFire, Item.Log);
+
+// Crafting-15: stations (D-098, D-112). A basket is woven at a crafting table, which
+// stands inside a claim, and part of its fiber comes from the claim's stash.
 lastError = null;
-conn.Reducers.FeedFire(fire.Id, (ushort)Item.Log);
-Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "a log to burn");
-if (lastError != null) Fail($"feeding the fire a log: {lastError}");
-Console.WriteLine("Fed the fire a log");
+conn.Reducers.StartCraft("weave.basket", 0);
+Pump(() => lastError != null, 5, "a basket away from a table to be refused");
+Console.WriteLine($"Basket with no table: {lastError}");
+lastError = null;
+conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
+Pump(() => lastError != null, 5, "a table outside a claim to be refused");
+if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
+Console.WriteLine($"Table outside a claim: {lastError}");
+Gather(Item.Fiber, 6);
+Craft("cord.twist", 0, Item.Cordage);
+Craft("cord.twist", 0, Item.Cordage);
+Gather(Item.Stick, 11);
+Gather(Item.Fiber, 12);
+if (CountOf(Item.Log) < 1) Fail("no log left for the table");
+
+// Claim land out past the spawn clearing, then build the table inside it.
+float claimDist = Social.SpawnClearRadius + Social.ClaimRadius + 5f;
+float ang = MathF.Atan2(z, x);
+WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist);
+var marker = BuildHere(StructureKind.ClaimMarker);
+Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
+var claim = conn.Db.Claim.Iter().First(c => c.StructureId == marker.Id);
+Console.WriteLine($"Claimed land at ({claim.X:F0}, {claim.Z:F0})");
+var table = BuildHere(StructureKind.CraftingTable);
+Console.WriteLine($"Built a crafting table at ({table.X:F1}, {table.Z:F1})");
+WalkTo(table.X, table.Z);
+
+// Stash all but 6 fiber; the basket needs 10, so 4 must come from the stash.
+WalkTo(marker.X, marker.Z);
+while (CountOf(Item.Fiber) > 6)
+{
+    var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
+    uint had = CountOf(Item.Fiber);
+    lastError = null;
+    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality);
+    Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
+    if (lastError != null) Fail($"stashing fiber: {lastError}");
+}
+uint StashFiber() => conn.Db.MyClaimStash.Iter().Where(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.Fiber).Aggregate(0u, (n, r) => n + r.Count);
+uint stashed = StashFiber();
+WalkTo(table.X, table.Z);
+Craft("weave.basket", 0, Item.Basket);
+Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
+Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
@@ -186,6 +254,65 @@ Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
 
+// Lights a fire (or tries to). The server sets a fire only on clear, level ground
+// near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
+// when it finds none here, step a few metres along and try again.
+void FireCraft(string processId, float score)
+{
+    for (int attempt = 0; ; attempt++)
+    {
+        lastError = null;
+        conn.Reducers.StartCraft(processId, score);
+        Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
+        if (lastError == null) break;
+        if (!lastError.Contains("clear, level ground") || attempt >= 8)
+            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
+        float a = attempt * MathF.PI / 4f;
+        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
+        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+    }
+    var def = Processes.Find(processId)!;
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
+}
+
+// Lays out a structure on clear, level ground near the bot and builds it from the bag.
+// Just past the server's keep-out for claims (Claims.CheckStructureSite).
+const float ClaimKeepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+
+Structure BuildHere(StructureKind kind)
+{
+    float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
+    (float X, float Z)? site = null;
+    for (int r = 3; r < 30 && site == null; r++)
+        for (int k = 0; k < 16 && site == null; k++)
+        {
+            float a = k * MathF.Tau / 16, sx = x + MathF.Cos(a) * r, sz = z + MathF.Sin(a) * r;
+            if (Structures.GroundProblem((int)kind, sx, sz, 0f, H) != null) continue;
+            // The server refuses claims in the spawn clearing; the search must not drift back into it.
+            if (kind == StructureKind.ClaimMarker && sx * sx + sz * sz < ClaimKeepOut * ClaimKeepOut) continue;
+            if (conn.Db.Structure.Iter().Any(o => Structures.TooClose((int)kind, sx, sz, (int)o.Kind, o.X, o.Z))) continue;
+            if (Trees.GrowsAt(World.CellOf(sx), World.CellOf(sz)) || Rocks.LiesAt(World.CellOf(sx), World.CellOf(sz))) continue;
+            site = (sx, sz);
+        }
+    if (site is not { } at) { Fail($"no ground for a {kind}"); return null!; }
+    WalkTo(at.X, at.Z + 2f);
+    int before = conn.Db.Structure.Count;
+    lastError = null;
+    conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
+    Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
+    if (lastError != null) Fail($"laying out a {kind}: {lastError}");
+    var s = conn.Db.Structure.Iter().Where(o => o.Owner == me).OrderByDescending(o => o.PlacedAt.MicrosecondsSinceUnixEpoch).First();
+    var sw = Stopwatch.StartNew();
+    while (conn.Db.Structure.Id.Find(s.Id) is { Complete: false })
+    {
+        if (sw.Elapsed.TotalSeconds > 60) Fail($"building the {kind}: {lastError}");
+        lastError = null;
+        conn.Reducers.Build(s.Id);
+        Pump(() => false, 0.35f, null);
+    }
+    return conn.Db.Structure.Id.Find(s.Id)!;
+}
+
 void Craft(string processId, float score, Item? expect)
 {
     uint before = expect is { } e ? CountOf(e) : 0;
@@ -194,7 +321,7 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
-    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds + 5, $"{processId} to finish");
+    Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
         Pump(() => CountOf(item) > before, 3, $"{processId} output");
@@ -208,12 +335,27 @@ void OffRocks(Fire f)
 {
     for (int i = World.CellOf(f.X) - 2; i <= World.CellOf(f.X) + 2; i++)
         for (int j = World.CellOf(f.Z) - 2; j <= World.CellOf(f.Z) + 2; j++)
-            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null)
+            // A building clears the ground under it, so a hut's hearth can stand where a boulder was.
+            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null
+                && !conn.Db.Structure.Iter().Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, i, j, 0.4f)))
             {
                 var (rx, rz) = Rocks.Center(i, j);
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
                 if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
             }
+}
+
+// Feeding a full fire is refused with D-090's message, and the fuel stays in the bag.
+void RefusedFeed(Fire target, Item fuel)
+{
+    var before = CountOf(fuel);
+    lastError = null;
+    conn.Reducers.FeedFire(target.Id, (ushort)fuel);
+    Pump(() => lastError != null, 5, $"a full fire to refuse {fuel}");
+    if (lastError != "The fire is burning as high as it will") Fail($"feeding a full fire {fuel}: {lastError}");
+    Pump(() => false, 0.5f, null);
+    if (CountOf(fuel) != before) Fail($"a full fire ate {fuel} ({before} -> {CountOf(fuel)})");
+    Console.WriteLine($"A full fire refused {fuel} and it was kept");
 }
 
 // The standing tree nearest the bot, by the same rules the server uses.

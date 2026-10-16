@@ -70,9 +70,24 @@ public static partial class Module
 
     const float DryCheckSeconds = 15f;
 
+    // Too much clay out already: refuse the shaping before any clay is used (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal)
+    {
+        if (refusal == null && ClayRules.FormFor(def.Id) is not null
+            && ctx.Db.ClayPiece.MadeBy.Filter(playerId).Count() >= ClayRules.MaxPiecesPerPlayer)
+            refusal = TooMuchClay;
+    }
+
+    const string TooMuchClay = "You have too much clay drying already. Pick some up or fire it first.";
+
     // Shaping a pot or molding a brick sets it down here to dry.
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def)
     {
+        if (ClayRules.DishFor(def.Id) is { } dish)
+        {
+            SetToSimmer(ctx, job, def, dish);
+            return;
+        }
         if (ClayRules.FormFor(def.Id) is not { } form) return;
         if (ctx.Db.ClayPiece.MadeBy.Filter(job.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
         {
@@ -127,7 +142,10 @@ public static partial class Module
 
         var form = (ClayForm)piece.Form;
         float moisture = MoistureNow(ctx, piece);
-        if (form != ClayForm.Brick && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire)
+        // A dry pot the fire can't take (too little fuel, or a full ring) is picked up
+        // instead, so a pot shaped by a fire can still be carried away (bugfix-18).
+        if (form != ClayForm.Brick && !ClayRules.KilnOnly(form) && NearestBurningFire(ctx, piece.X, piece.Z, ClayRules.FireReach) is { } fire
+            && (ClayRules.TooWetToFire(moisture) || FireCanTakePot(ctx, fire)))
         {
             if (ClayRules.TooWetToFire(moisture) && !evenIfDamp)
                 throw new Exception($"The pot is still {ClayRules.Describe(moisture)}. Fired now, it will crack.");
@@ -160,6 +178,10 @@ public static partial class Module
             .ToList();
         if (pots.Count == 0)
             throw new Exception("You have no dry pots to fire");
+        // A storage jar is too big for an open fire; it waits for a kiln.
+        pots = pots.Where(i => !ClayRules.KilnOnly(ClayRules.FormOfUnfired((Item)i.Item)!.Value)).ToList();
+        if (pots.Count == 0)
+            throw new Exception("A storage jar is too big for a campfire. Fire it in a kiln.");
         if (ctx.Db.ClayPiece.MadeBy.Filter(player.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
             throw new Exception("You have too much clay out already");
 
@@ -322,6 +344,10 @@ public static partial class Module
         });
         ctx.Db.FiringTimer.Insert(new FiringTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), PieceId = piece.Id });
     }
+
+    static bool FireCanTakePot(ReducerContext ctx, Fire fire) => ClayRules.FireCanTakePot(
+        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f,
+        FreeFireSlot(ctx, fire) is null ? ClayRules.MaxPotsPerFire : 0);
 
     // A pit firing needs a fire with fuel for the whole firing.
     static void RequireFuelForFiring(ReducerContext ctx, Fire fire)

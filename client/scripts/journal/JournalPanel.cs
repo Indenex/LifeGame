@@ -22,6 +22,8 @@ public partial class JournalPanel : Control
     readonly VBoxContainer entryList = new();
     readonly Label capLabel = new();
     readonly Label undiscovered = new();
+    // Things to try next (NextSteps), above the discoveries.
+    readonly VBoxContainer tries = new();
     Tween? fade;
 
     static readonly Color Ink = new(Look.Cream, 0.95f);
@@ -70,6 +72,9 @@ public partial class JournalPanel : Control
         var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         right.AddThemeConstantOverride("separation", 10);
         right.AddChild(Text("Discoveries", 18, Accent));
+        // Things to try sits above the list so it stays in view however long the list gets.
+        tries.AddThemeConstantOverride("separation", 4);
+        right.AddChild(tries);
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -121,11 +126,19 @@ public partial class JournalPanel : Control
         if (entries.Count == 0)
             entryList.AddChild(Wrapped("Nothing yet. Try things: dig, gather, work with what you find. Watching someone else work, or reading a note they left, teaches you too.", 15, Faint));
         foreach (var e in entries.OrderBy(e => e.LearnedAt.MicrosecondsSinceUnixEpoch))
-            entryList.AddChild(EntryRow(e, bySpec));
+            entryList.AddChild(EntryRow(e));
 
         var known = entries.Select(e => e.ProcessId).ToHashSet();
         int left = Skills.AllProcessIds().Count(id => !known.Contains(id));
         undiscovered.Text = left > 0 ? $"{left} more {(left == 1 ? "thing" : "things")} to discover." : "You have found everything there is, for now.";
+        Clear(tries);
+        var hints = NextSteps.For(known);
+        tries.Visible = hints.Count > 0;
+        if (hints.Count > 0) tries.AddChild(Text("Things to try", 15, Accent));
+        foreach (var hint in hints) tries.AddChild(Wrapped(hint, 14, Recipe));
+        // A little air between the hints and the discoveries below.
+        if (hints.Count > 0) tries.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+
         int pupils = taught.Select(t => t.LearnerName).Distinct().Count();
         if (pupils > 0)
             undiscovered.Text += $"  You have taught {pupils} {(pupils == 1 ? "person" : "people")} {taught.Count} {(taught.Count == 1 ? "thing" : "things")}.";
@@ -179,11 +192,8 @@ public partial class JournalPanel : Control
         return button;
     }
 
-    Control EntryRow(JournalEntry e, Dictionary<string, SkillLevel> bySpec)
+    Control EntryRow(JournalEntry e)
     {
-        var spec = Skills.SpecFor(e.ProcessId);
-        int rank = spec != null && bySpec.TryGetValue(spec.Id, out var level) ? Skills.Rank(level.Points) : 0;
-
         var card = new PanelContainer();
         card.AddThemeStyleboxOverride("panel", Box(new Color(1, 1, 1, 0.04f), 10, 12));
         var box = new VBoxContainer();
@@ -211,11 +221,6 @@ public partial class JournalPanel : Control
         box.AddChild(Text($"{how}, {times}", 13, Faint));
         if (Recipes.HowTo(e.ProcessId) is { } howTo) box.AddChild(Wrapped(howTo, 13, Recipe));
 
-        if (spec != null)
-        {
-            int speed = (int)MathF.Round(100f / Skills.DurationScale(rank));
-            box.AddChild(Text($"{spec.Name}    Speed {speed}%    Best quality {Processes.Grade(Skills.QualityCap(rank))}", 13, Faint));
-        }
         return card;
     }
 

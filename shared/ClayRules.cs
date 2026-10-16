@@ -11,6 +11,8 @@ namespace LifeGame.Shared
         PinchPot,
         CoilPot,
         Brick,
+        // A big coil-built jar; kiln-fired only, then set down as a store (ceramics-6).
+        StorageJar,
     }
 
     // Where a piece of worked clay set down in the world is in its life. Once a
@@ -78,6 +80,13 @@ namespace LifeGame.Shared
         public const int KilnCapacity = 6;
         public const int KilnQualityBonus = 10;
 
+        // The storage jar (ceramics-6): tempered clay it takes, and the
+        // StructureKind it is set down as (appended after BrickHouse).
+        public const int JarClay = 4;
+        public const int JarStructureKind = 6;
+        // Only a kiln heats a piece this big evenly enough.
+        public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar;
+
         // Clay grades by depth (D-041). Hand digging stops at World.MaxDigDepth; a
         // digging stick reaches one level further, into the deep clay: purer, with
         // fewer stones and roots, so it starts at "fine" quality. That quality
@@ -114,6 +123,11 @@ namespace LifeGame.Shared
             : seconds < 60f ? "under a minute left"
             : $"about {MathF.Round(seconds / 60f):0} min left";
 
+        // Whether a fire can take one more pot: fuel for a whole firing and a free place
+        // in its ring. When it can't, G by a dry pot picks it up instead (bugfix-18).
+        public static bool FireCanTakePot(float fuelSecondsLeft, int potsInFire) =>
+            fuelSecondsLeft >= PitFireSeconds && potsInFire < MaxPotsPerFire;
+
         // Fuel for a pit firing, in sticks, when a fire has this many seconds left.
         public static int SticksForFiring(float secondsLeft, float stickSeconds) =>
             (int)MathF.Ceiling(Math.Max(0f, PitFireSeconds - secondsLeft) / stickSeconds);
@@ -125,6 +139,7 @@ namespace LifeGame.Shared
         {
             ClayForm.PinchPot => "pinch pot",
             ClayForm.CoilPot => "coil pot",
+            ClayForm.StorageJar => "storage jar",
             _ => "brick",
         };
 
@@ -134,20 +149,32 @@ namespace LifeGame.Shared
             "clay.pinch_pot" => ClayForm.PinchPot,
             "clay.coil_pot" => ClayForm.CoilPot,
             "clay.brick" => ClayForm.Brick,
+            "clay.storage_jar" => ClayForm.StorageJar,
             _ => null,
         };
 
         // The item a dry, unfired piece becomes when picked up, and back.
-        public static Item UnfiredItem(ClayForm form) => form == ClayForm.CoilPot ? Item.UnfiredCoilPot : Item.UnfiredPinchPot;
+        public static Item UnfiredItem(ClayForm form) => form switch
+        {
+            ClayForm.CoilPot => Item.UnfiredCoilPot,
+            ClayForm.StorageJar => Item.UnfiredStorageJar,
+            _ => Item.UnfiredPinchPot,
+        };
 
         public static ClayForm? FormOfUnfired(Item item) => item switch
         {
             Item.UnfiredPinchPot => ClayForm.PinchPot,
             Item.UnfiredCoilPot => ClayForm.CoilPot,
+            Item.UnfiredStorageJar => ClayForm.StorageJar,
             _ => null,
         };
 
-        public static Item FiredItem(ClayForm form) => form == ClayForm.CoilPot ? Item.CoilPot : Item.PinchPot;
+        public static Item FiredItem(ClayForm form) => form switch
+        {
+            ClayForm.CoilPot => Item.CoilPot,
+            ClayForm.StorageJar => Item.StorageJar,
+            _ => Item.PinchPot,
+        };
 
         public static Item? FilledItem(Item empty) => empty switch
         {
@@ -155,6 +182,30 @@ namespace LifeGame.Shared
             Item.CoilPot => Item.CoilPotOfWater,
             _ => null,
         };
+
+        // Cooking in a pot (ceramics-7). A coil pot of water and food set by a burning
+        // fire simmers for this long, then waits, never burning (D-081). It keeps
+        // simmering if the fire dies: the pot holds the heat.
+        public const float BrothSeconds = 60f, StewSeconds = 90f;
+        // Pots simmering by one fire, and per player anywhere.
+        public const int PotsPerFire = 2, SimmersPerPlayer = 2;
+        // Simmering pots sit on a ring this far from the fire's center.
+        public const float SimmerRing = 0.55f;
+
+        // The dish a cooking process makes, or null for other processes.
+        public static Item? DishFor(string processId) => processId switch
+        {
+            "cook.broth" => Item.PotOfBroth,
+            "cook.stew" => Item.PotOfStew,
+            _ => null,
+        };
+
+        // A pot that holds a dish while it cooks and comes back after eating, at its own quality.
+        public static bool IsVessel(Item item) => item == Item.CoilPotOfWater;
+
+        public static float SimmerSeconds(Item dish) => dish == Item.PotOfStew ? StewSeconds : BrothSeconds;
+
+        public static string DishName(Item dish) => dish == Item.PotOfStew ? "mutton stew" : "berry broth";
 
         static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }

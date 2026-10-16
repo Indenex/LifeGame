@@ -27,8 +27,18 @@ public static partial class Module
 
     // Where a new fire goes: a cold hearth within reach is rekindled in place;
     // otherwise the nearest clear, level spot to the one a step in front.
+    // House building's raised hearth (D-132): a fire lit within reach goes on it, and
+    // fuel there burns longer (scale > 1). Building implements both.
+    static partial void BuiltHearthSpotHook(ReducerContext ctx, float x, float z, ref (float X, float Z)? spot);
+    static partial void FireFuelScaleHook(ReducerContext ctx, float x, float z, ref float scale);
+    // Before a fire is checked for burning out, a hearth fire may top up its fuel (D-149).
+    static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil);
+
     static (float X, float Z) FireSpot(ReducerContext ctx, PlayerPos pos)
     {
+        (float X, float Z)? built = null;
+        BuiltHearthSpotHook(ctx, pos.X, pos.Z, ref built);
+        if (built is { } b) return b;
         if (NearestColdHearth(ctx, pos.X, pos.Z, World.Reach) is { } hearth)
             return (hearth.X, hearth.Z);
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
@@ -67,6 +77,8 @@ public static partial class Module
             for (int j = cz - 2; j <= cz + 2; j++)
             {
                 if (DepthAt(ctx, i, j) != 0) continue;
+                // A building clears the ground under it (the client draws no boulder or tree there).
+                if (UnderStructure(ctx, i, j)) continue;
                 if (Rocks.LiesAt(i, j))
                 {
                     var (rx, rz) = Rocks.Center(i, j);
@@ -90,6 +102,10 @@ public static partial class Module
             }
         return true;
     }
+
+    // Whether a building's footprint covers this cell, as the client clears it (BuildingSystem.SetCleared).
+    static bool UnderStructure(ReducerContext ctx, int i, int j) =>
+        StructuresNear(ctx, i, j).Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, i, j, 0.4f));
 
     static ColdHearth? NearestColdHearth(ReducerContext ctx, float x, float z, float reach)
     {
@@ -134,10 +150,13 @@ public static partial class Module
             ctx.Db.ColdHearth.Id.Delete(hearth.Id);
     }
 
+    // A cold hearth in the open weathers away after Fires.ColdSeconds. Inside a
+    // standing claim it stays as long as the claim does (D-109).
     static void ClearOldHearths(ReducerContext ctx)
     {
         foreach (var hearth in ctx.Db.ColdHearth.Iter().ToList())
-            if (hearth.Until.MicrosecondsSinceUnixEpoch < ctx.Timestamp.MicrosecondsSinceUnixEpoch)
+            if (hearth.Until.MicrosecondsSinceUnixEpoch < ctx.Timestamp.MicrosecondsSinceUnixEpoch
+                && ClaimAt(ctx, hearth.X, hearth.Z) is null)
                 ctx.Db.ColdHearth.Id.Delete(hearth.Id);
     }
 

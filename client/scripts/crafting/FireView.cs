@@ -22,7 +22,16 @@ public partial class FireView : Node3D
 
     public void Attach(DbConnection conn)
     {
-        conn.Db.Fire.OnInsert += (_, f) => Upsert(f);
+        conn.Db.Fire.OnInsert += (_, f) =>
+        {
+            Upsert(f);
+            // A fire lit close by makes its sound; fires that were already burning when
+            // you arrived (login catch-up) stay quiet.
+            long ageMicros = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - f.LitAt.MicrosecondsSinceUnixEpoch;
+            if (ageMicros < 10_000_000 && Stations.PlayerAt(conn) is { } at
+                && new Vector2(f.X - at.X, f.Z - at.Z).Length() < 6f)
+                Sfx.Play(Cue.FireLit);
+        };
         conn.Db.Fire.OnUpdate += (_, _, f) => Upsert(f);
         conn.Db.Fire.OnDelete += (_, f) =>
         {
@@ -167,8 +176,6 @@ public partial class FireView : Node3D
     partial class ColdHearthView : Node3D
     {
         const float SmokeSeconds = 3 * 60;
-        static readonly Color AshColor = new(0.36f, 0.35f, 0.34f);
-        static readonly Color CharColor = new(0.10f, 0.09f, 0.08f);
         readonly long outAtMicros;
         CpuParticles3D? smoke;
 
@@ -177,18 +184,8 @@ public partial class FireView : Node3D
         public override void _Ready()
         {
             Campfire.AddRing(this);
-            AddChild(new MeshInstance3D
-            {
-                Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.30f, BottomRadius = 0.36f, Height = 0.05f, RadialSegments = 9 }, AshColor),
-                Position = new Vector3(0, 0.01f, 0),
-            });
-            for (int i = 0; i < 2; i++)
-                AddChild(new MeshInstance3D
-                {
-                    Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.045f, Height = 0.32f, RadialSegments = 6 }, CharColor),
-                    Position = new Vector3(i == 0 ? -0.07f : 0.09f, 0.05f, i == 0 ? 0.04f : -0.05f),
-                    Rotation = new Vector3(Mathf.Pi / 2f, i * 2.1f + 0.4f, 0),
-                });
+            // Grey ash, charcoal and burnt-out stubs (Modeling, model-2).
+            AddChild(new MeshInstance3D { Mesh = HearthModel.ColdAsh });
             smoke = Smoke();
             smoke.Position = new Vector3(0, 0.1f, 0);
             AddChild(smoke);
@@ -280,31 +277,23 @@ public partial class FireView : Node3D
         {
             time += (float)delta;
             long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-            float left = Math.Clamp((FuelUntilMicros - now) / 1_000_000f, 0f, Fires.MaxSeconds);
+            float left = Math.Clamp((FuelUntilMicros - now) / 1_000_000f, 0f, Fires.MasterMaxSeconds);
             // Full strength with a minute or more of fuel, fading to embers as it runs out.
             float strength = Math.Clamp(left / 60f, 0.15f, 1f);
             float flicker = Atmosphere.FireFlicker(time);
             light.LightEnergy = 2.6f * strength * flicker;
+            // Firelight carries further in the dark: about 10 m by day, 14 m at night (D-180).
+            light.OmniRange = 10f + 4f * Atmosphere.Night;
             flames.ScaleAmountMax = 1.6f * strength;
             flames.Emitting = left > 0;
             sparks.Emitting = left > 2;
         }
 
-        public static void AddRing(Node3D parent)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                float a = i * Mathf.Tau / 8f;
-                parent.AddChild(new MeshInstance3D
-                {
-                    Mesh = Stone,
-                    Position = new Vector3(Mathf.Cos(a) * 0.45f, 0.04f, Mathf.Sin(a) * 0.45f),
-                    Rotation = new Vector3(0, a * 1.7f, 0),
-                });
-            }
-        }
+        // The ring of fieldstones, one mesh (Modeling, model-2).
+        public static void AddRing(Node3D parent) =>
+            parent.AddChild(new MeshInstance3D { Mesh = HearthModel.Ring });
 
-        static Mesh? stone, log;
+        static Mesh? log;
         static Texture2D? softDot;
 
         // A round, soft-edged blob, so each flame particle reads as a lick of fire, not a square.
@@ -321,7 +310,6 @@ public partial class FireView : Node3D
                 Colors = new[] { new Color(1, 1, 1, 1), new Color(1, 1, 1, 0.45f), new Color(1, 1, 1, 0) },
             },
         };
-        static Mesh Stone => stone ??= Look.Faceted(new SphereMesh { Radius = 0.12f, Height = 0.14f, RadialSegments = 6, Rings = 3 }, Look.Rock);
         static Mesh Log => log ??= Look.Faceted(new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.06f, Height = 0.75f, RadialSegments = 6 }, Look.Bark);
 
         static CpuParticles3D Particles(int amount, float lifetime, Color color, float size, float speedMin, float speedMax)
