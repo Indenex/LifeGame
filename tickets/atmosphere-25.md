@@ -14,9 +14,12 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - At night: ambient toward deep blue (0.12, 0.18, 0.40) by 35%.
   - Always: saturation +0.08 and contrast 1.08 to 1.13.
   - Sky shader `grade` uniform: clouds near a low sun get warm rims from the sun colour.
+- 2026-10-16 23:55: Justin picked all three (a, b, c), via the PM. Added (b) god rays to the prototype (client 0 errors). At a low clear sun: sun volumetric energy +1.8 x rays, volumetric fog density x(1 + 1.2 x rays), anisotropy up to 0.85, everywhere rather than only in woods. Quality level `Atmosphere.GodRays`: 0 off, 1 normal, 2 high (x1.25, fog length 112 m instead of 64). `--godrays=0|1|2` overrides it, and UX is asked for an Options line. Still behind --grade until Justin sees the renders.
+- Justin's original reference screenshots are not in this container or the repo. I asked the PM to have them re-shared (ideally into docs/reference/) and am tuning to D-002's wording meanwhile.
 
 ## Open questions / blockers
-- Justin's pick among (a), (b) and (c) (via the PM).
+- Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
+- Justin's reference screenshots (re-share requested).
 
 ## Next step
 Wait for Justin's pick (via the PM) and the Render with/without pairs (requested from session_015S96hNrEu92FrCoNZqZZjs). Then make the picked option the default and open the PR.
