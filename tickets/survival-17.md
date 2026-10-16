@@ -10,6 +10,7 @@ docs/CONTENT.md rule (Justin, via Integration): content is data on shared bases.
 
 ## Progress log
 - 2026-10-16: done; server and client build, tools/upgrade-check.sh origin/main passes (no schema change).
+- 2026-10-16: CI server job failed on CraftCheck "building the CraftingTable: Out of reach" (run 38974318954): not this PR, fixed on main by bugfix-26 (#295). Merged main (also #319 for a client namespace break); builds clean.
 
 ## Open questions / blockers
 - Roast path (Cooking.cs, Roasting) still hard-wired to mutton; next conversion step is a cook result on FoodDef.
