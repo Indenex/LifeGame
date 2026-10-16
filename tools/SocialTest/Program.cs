@@ -153,6 +153,10 @@ Pump(() => a.MyClaim() != null, 5, "claim raised");
 var claim = a.MyClaim()!;
 Check(a.Count(Item.Stick) == 0 && a.Count(Item.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
 Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
+Check(Wait(() => a.Conn.Db.ClaimAge.ClaimId.Find(claim.Id) != null, 5), "the claim remembers when it was raised");
+long dayMicros = 86_400_000_000L, t1 = 1_000_000_000_000_000L;
+Check(Social.LivedIn(t1, t1 + dayMicros / 2) == 0 && Social.LivedIn(t1, t1 + dayMicros) == 1
+    && Social.LivedIn(t1, t1 + 3 * dayMicros) == 2 && Social.LivedIn(t1, t1 + 8 * dayMicros) == 3, "a marker looks more lived-in at 1, 3 and 7 days");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
 
 // Chat reaches the player standing nearby.
@@ -420,6 +424,7 @@ if (decay)
     Check(true, "the marker post went with it");
     Check(Wait(() => a.Conn.Db.ClaimName.ClaimId.Find(claim.Id) == null, 5), "its name went with it");
     Check(Wait(() => !a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.ClaimId == claim.Id), 5), "and its stash log");
+    Check(Wait(() => a.Conn.Db.ClaimAge.ClaimId.Find(claim.Id) == null, 5), "and its age");
     Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
@@ -481,7 +486,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM claim_age", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

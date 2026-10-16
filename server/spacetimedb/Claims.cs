@@ -220,7 +220,7 @@ public static partial class Module
         if (s.Kind != StructureKind.ClaimMarker) return;
         EnsureDecayTimer(ctx);
         var owner = ctx.Db.Player.Identity.Find(s.Owner);
-        ctx.Db.Claim.Insert(new Claim
+        var raised = ctx.Db.Claim.Insert(new Claim
         {
             Id = 0,
             StructureId = s.Id,
@@ -235,6 +235,7 @@ public static partial class Module
             ExpiresAt = After(ctx.Timestamp, ClaimLifetimeSeconds(ctx)),
             AllowPvp = false,
         });
+        NoteClaimRaised(ctx, raised.Id);
     }
 
     // Dismantling the marker ends the claim.
@@ -276,6 +277,7 @@ public static partial class Module
         // Keep the owner's name current if they renamed themselves.
         if (claim.Owner == ctx.Sender) updated = updated with { OwnerName = player.Name };
         ctx.Db.Claim.Id.Update(updated);
+        NoteClaimRaised(ctx, claim.Id);
     }
 
     [SpacetimeDB.Reducer]
@@ -428,6 +430,7 @@ public static partial class Module
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         RemoveClaimName(ctx, claim.Id);
         RemoveStashLog(ctx, claim.Id);
+        RemoveClaimAge(ctx, claim.Id);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)

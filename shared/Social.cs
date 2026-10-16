@@ -131,6 +131,19 @@ namespace LifeGame.Shared
         // The process a finished claim marker reports (Journal's "Things to try").
         public const string MarkProcess = "claim.mark";
 
+        // claims-12: how lived-in a marker looks, from how many days its claim has
+        // stood: 0 bare, 1 a cord wrap (1 day), 2 more stones (3 days), 3 carvings
+        // and a hanging charm (7 days). Slow on purpose (D-075).
+        public static readonly int[] LivedInDays = { 1, 3, 7 };
+
+        public static int LivedIn(long raisedAtMicros, long nowMicros)
+        {
+            double days = (nowMicros - raisedAtMicros) / 86_400_000_000.0;
+            int level = 0;
+            foreach (int d in LivedInDays) if (days >= d) level++;
+            return level;
+        }
+
         // claims-11: the stash log keeps this many entries per claim; the same person
         // putting in or taking the same thing within a minute folds into one entry.
         public const int StashLogKeep = 20;

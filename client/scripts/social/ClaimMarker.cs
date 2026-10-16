@@ -49,6 +49,7 @@ public partial class ClaimMarker : Node3D
     bool friendly;
     float wear, ringAlpha, lineAlpha, lineTarget, lineClock, phase;
     bool falling;
+    float ageClock;
     Vector3 lastRingBuiltFrom = new(float.NaN, 0, 0);
 
     public string OwnerName => claim.OwnerName;
@@ -153,6 +154,8 @@ public partial class ClaimMarker : Node3D
     public override void _Process(double delta)
     {
         if (claim == null || falling) return;
+        ageClock -= (float)delta;
+        if (ageClock <= 0f) { ageClock = 30f; UpdateLivedIn(); }
         long tended = claim.TendedAt.MicrosecondsSinceUnixEpoch;
         long life = (claim.ExpiresAt.MicrosecondsSinceUnixEpoch - tended) / 1_000_000;
         wear = Social.Wear(tended, life, SocialLayer.NowMicros);
