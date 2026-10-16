@@ -19,6 +19,8 @@ After anim-1 (#100): (1) the standing "working at a station" pose plays for stat
 - 2026-10-16 19:55: #187 merged (chop swing + breath scaffold). #185 merged (Needs.Breath on main); breath still waits on Atmosphere's #173 (AirCelsius). Branch claude/anim-2-remote-work from main: other players' work poses from the public craft_work table (insert/delete, and on avatar creation). Client builds.
 - 2026-10-16 20:18: #208 (PlayerModel, style A Carved) merged.
 
+- 2026-10-16 21:40: Atmosphere.AirCelsius/Snowfall (#173) and PlayerModel HeadAttach/MouthAt (#197) are on main. Branch claude/anim-2-breath: Breath.Coldness = Needs.Breath(Needs.AirCold(AirCelsius)) x (1 - 0.6 x Snowfall), refreshed at most once a second (finds the Atmosphere node once); the puff sits on HeadAttach at PlayerModel.MouthAt. Breath now shows below about 6 °C, fully at 0 °C. Client builds. Night fading not done (Atmosphere's call if it reads too bright).
+
 ## Open questions / blockers
 - Breath puff: single source now (Survival 19:36): read `Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius))` (0 at >=6 °C, 1 at 0 °C; shared/Needs.cs in #185 cefba1f; Atmosphere.AirCelsius in #173). Needs both on main. Atmosphere asks the puff fade in heavy snow / at night if too bright (`Atmosphere.Snowfall`); they'll review the look.
 - Sheep: Animals OK (a) 20:08: small PR on Sheep.cs _Process only, species-neutral (deer from #219 share skeleton and _Process; deer run 6.5 m/s, sheep 4.4, longer strides). Build after Modeling #197 (new sheep mesh, lower rest heights). Fix: feet skate at trot (stride from speed), turns snap via LerpAngle (add lean, head leads). Animals now a Sonnet session; follow-ups via tickets/animals-14.md and PM.
