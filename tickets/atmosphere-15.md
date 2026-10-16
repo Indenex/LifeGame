@@ -1,7 +1,7 @@
 # atmosphere-15: A cosy night
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-15-cosy-night
 PR: #245
 
@@ -20,8 +20,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 - 2026-10-16 20:35: Justin picked A, campfire light reaches about 14 m at night (10 m by day). Added Atmosphere.Night (0 day to 1 night, updated every frame); Crafting (session_01N9APthjRDfjknUvCweqzzN) adds `light.OmniRange = 10f + 4f * Atmosphere.Night;` in FireView's Campfire._Process after #245 merges.
 
+- 2026-10-16 21:38: #245 CI green on f771ef8 (https://github.com/Indenex/LifeGame/actions/runs/38963008470), merged by the PM. Crafting told to add the FireView line (light.OmniRange = 10f + 4f * Atmosphere.Night).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for #245 CI; send the green sha to the PM. If Justin picks fire reach A, add Atmosphere.Night and ask Crafting for the FireView line.
+None; done. Tune from the Render lane's shots in a small follow-up if they show a need.
