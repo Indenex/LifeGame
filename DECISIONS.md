@@ -783,3 +783,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-192 — 2026-10-16 — Jump details (extends D-190)
 **Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
 **Who:** Justin (as relayed by the PM)
+
+## D-193 — 2026-10-16 — Other players see your jump
+**Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
+**Who:** Justin ("Yes, pose and sound")
