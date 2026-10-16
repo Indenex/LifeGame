@@ -1,7 +1,7 @@
 # render-1: Set up the render pipeline
 Lane: Render
 Owner: Render lane session session_013qe8zPzzBHx9rFPEYoKMr5
-Status: in_review
+Status: done
 Branch: claude/render-1-013qe8 (no harness branch was assigned; named by the session)
 PR: #103 (tools/render only, branch claude/render-1-tools)
 
@@ -55,9 +55,10 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 20:10: anim-1 moved to 0b749e4 (all of requests 1+2; no run clip; Shift = sneak).
 - 2026-10-16 20:12: render request ui-12 Options page bca464e (UX/UI): --screenshot-menu and --screenshot-options, fresh settings.cfg, 1280x720. Queued.
 - 2026-10-16 20:30: ui-12 sent (f92bff3; b118ee0 is wiring-only), 968f6a7. Jar rerun 2: jar hidden behind the player, no prompt (puppet heading doesn't turn the client's own figure); jar3 queued with side camera and a W tap.
+- 2026-10-16 20:40: PR #103 merged (tools/render on main). render-1 done; the lane continues serving render requests from this branch (images in renders/, tools updates via small follow-up PRs).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Watch /tmp/claude-0/render/queue.log (or rerun `RENDER_WORK=... nohup tools/render/queue.sh &` in a new container); review each job's images and send them to the PM (+ requester where asked); drive the live scenes by appending steps to $RENDER_WORK/live.txt.
+render-1 is done. Lane work: keep running tools/render/queue.sh (jobs in tools/render/queue.jobs), review each job's images and send them to the PM; open a follow-up PR for tools/render changes made after #103 when they settle.
