@@ -14,6 +14,8 @@ public partial class CraftingUi : CanvasLayer
 {
     // True while a minigame wants the keyboard, so walking pauses.
     public bool CapturesInput => minigame != null;
+    // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
+    public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;
 
     DbConnection? conn;

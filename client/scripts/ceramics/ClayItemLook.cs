@@ -23,9 +23,13 @@ public static class ClayItemLook
             Item.UnfiredCoilPot => Pot(ClayForm.CoilPot, ClayStage.Drying, false),
             Item.Brick => Baked(PotMesh.For(ClayForm.Brick, 1), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 1), PotView.Size),
             Item.Potsherd => Sherd(),
-            Item.CleanClay => Lump(ClayLook.Wet.Lightened(0.08f), 0.11f),
-            Item.TemperedClay => Lump(ClayLook.Wet.Lightened(0.15f), 0.12f),
-            Item.Daub => Lump(new Color(0.42f, 0.34f, 0.22f), 0.12f),
+            // Each stage of clay has its own shape, so they tell apart at a glance in
+            // the inventory: a rough clod, a smooth wedged block, a block flecked with
+            // grit, and a flat pat of daub with straw in it.
+            Item.Clay => Clod(),
+            Item.CleanClay => Block(ClayLook.Wet.Lightened(0.1f), false),
+            Item.TemperedClay => Block(ClayLook.Wet.Lightened(0.16f), true),
+            Item.Daub => DaubPat(),
             Item.Grit => Pile(Look.Rock.Lightened(0.15f)),
             Item.Grog => Pile(ClayLook.PitFired.Darkened(0.1f)),
             _ => null,
@@ -92,8 +96,76 @@ public static class ClayItemLook
         return mesh;
     }
 
-    static Mesh Lump(Color color, float radius) =>
-        Look.Faceted(new SphereMesh { Radius = radius, Height = radius * 1.3f, RadialSegments = 8, Rings = 4 }, color);
+    // Dug clay: a lumpy clod with bits of stone still in it.
+    static Mesh Clod() => Parts(
+        (new SphereMesh { Radius = 0.12f, Height = 0.15f, RadialSegments = 5, Rings = 3 }, Look.Clay.Darkened(0.12f), Transform3D.Identity),
+        (new SphereMesh { Radius = 0.07f, Height = 0.09f, RadialSegments = 5, Rings = 2 }, Look.Clay.Darkened(0.05f), At(0.08f, 0.02f, 0.04f)),
+        (new SphereMesh { Radius = 0.025f, Height = 0.04f, RadialSegments = 4, Rings = 2 }, Look.Rock.Lightened(0.1f), At(-0.05f, 0.06f, 0.07f)),
+        (new SphereMesh { Radius = 0.02f, Height = 0.03f, RadialSegments = 4, Rings = 2 }, Look.Rock, At(0.03f, 0.045f, -0.07f)));
+
+    // Cleaned clay, wedged into a smooth block; tempered clay is the same block
+    // flecked with pale grit.
+    static Mesh Block(Color color, bool flecked)
+    {
+        var parts = new List<(PrimitiveMesh, Color, Transform3D)>
+        {
+            (new CapsuleMesh { Radius = 0.07f, Height = 0.24f, RadialSegments = 10, Rings = 3 }, color, new Transform3D(new Basis(Vector3.Forward, Mathf.Pi / 2), Vector3.Zero)),
+        };
+        if (flecked)
+        {
+            var fleck = Look.Rock.Lightened(0.45f);
+            var spots = new[] { new Vector3(-0.07f, 0.055f, 0.03f), new Vector3(-0.01f, 0.068f, -0.02f), new Vector3(0.05f, 0.058f, 0.035f), new Vector3(0.08f, 0.04f, -0.04f), new Vector3(-0.04f, 0.035f, 0.06f), new Vector3(0.02f, 0.03f, 0.065f), new Vector3(-0.09f, 0.03f, -0.045f) };
+            foreach (var spot in spots)
+                parts.Add((new SphereMesh { Radius = 0.013f, Height = 0.02f, RadialSegments = 4, Rings = 2 }, fleck, new Transform3D(Basis.Identity, spot)));
+        }
+        return Parts(parts.ToArray());
+    }
+
+    // Daub: a flat pat of clay and dung with straw poking out of it.
+    static Mesh DaubPat()
+    {
+        var straw = new Color(0.86f, 0.74f, 0.42f);
+        var parts = new List<(PrimitiveMesh, Color, Transform3D)>
+        {
+            (new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.14f, Height = 0.06f, RadialSegments = 9 }, new Color(0.40f, 0.33f, 0.22f), Transform3D.Identity),
+        };
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * 1.9f;
+            var basis = new Basis(Vector3.Up, a) * new Basis(Vector3.Right, Mathf.Pi / 2 - 0.12f);
+            var at = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a)) * (0.06f + 0.015f * (i % 3)) + new Vector3(0, 0.03f, 0);
+            parts.Add((new CylinderMesh { TopRadius = 0.008f, BottomRadius = 0.008f, Height = 0.17f, RadialSegments = 4 }, straw, new Transform3D(basis, at)));
+        }
+        return Parts(parts.ToArray());
+    }
+
+    static Transform3D At(float x, float y, float z) => new(Basis.Identity, new Vector3(x, y, z));
+
+    // Several faceted pieces in one mesh, each in its own flat color.
+    static Mesh Parts(params (PrimitiveMesh Mesh, Color Color, Transform3D At)[] parts)
+    {
+        var result = new ArrayMesh();
+        foreach (var (source, color, at) in parts)
+        {
+            var st = new SurfaceTool();
+            st.CreateFrom(source, 0);
+            st.Deindex();
+            st.GenerateNormals();
+            var arrays = st.CommitToArrays();
+            var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
+            var normals = (Vector3[])arrays[(int)Mesh.ArrayType.Normal];
+            for (int i = 0; i < verts.Length; i++)
+            {
+                verts[i] = at * verts[i];
+                normals[i] = (at.Basis * normals[i]).Normalized();
+            }
+            arrays[(int)Mesh.ArrayType.Vertex] = verts;
+            arrays[(int)Mesh.ArrayType.Normal] = normals;
+            result.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            result.SurfaceSetMaterial(result.GetSurfaceCount() - 1, Look.Solid(color));
+        }
+        return result;
+    }
 
     static Mesh Pile(Color color) =>
         Look.Faceted(new CylinderMesh { TopRadius = 0.02f, BottomRadius = 0.12f, Height = 0.06f, RadialSegments = 8 }, color);
