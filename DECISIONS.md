@@ -393,3 +393,63 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-095 — 2026-10-16 — Integration executes merges
 **Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
 **Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin
+
+## D-096 — 2026-10-16 — Justin sees every option set
+**Decision:** Every option set from the PM or any lane goes to Justin, small tuning included. The PM batches them.
+**Who:** Justin ("Everything"; the PM had recommended big calls only)
+
+## D-097 — 2026-10-16 — Crafting a little under the music; sound sliders in Options
+**Decision:** Your own crafting sounds sit a little under the music. The Esc menu gets an Options page with sound sliders (at least master, music, effects/work, ambience); every slider starts at 50% for a new player. Audio owns the mix and buses; UX/UI builds the page.
+**Who:** Justin ("2, but add a sound setting to Options ... Sliders should start at 50% on a new player login")
+
+## D-098 — 2026-10-16 — Hand crafting for basics, crafting stations for the rest
+**Decision:** Players hold nothing in their hands while working; small hand crafts play a simple hand-crafting animation. Only basic items and basic material processing can be made from your own crafting menu (C). Everything else needs its station: a **Crafting Table** for general and misc items, a **Spindle** for making yarn and cloth, a **Leather drying rack** for drying and working leather (more stations later as needed). Stations can only be built inside a claim. A station can use items from your inventory or from a chest/storage. Crafting proposes which recipes stay "basic" and which move to which station, for Justin to approve. Supersedes Animation's held-items work for now.
+**Who:** Justin (held items: "Nothing ... Other things require the crafting table associated with them ... These tables require a claim though ... They can pull from any item on your character, or your chest though.")
+
+## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
+**Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
+**Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
+
+## D-100 — 2026-10-16 — First clothes, worn weight, carry limit, run speed
+**Decision:** Wool tunic takes 10% off the cold drain and leather foot wraps 4% (14% together at best quality, scaling with quality). Worn clothes do not count toward the carry load. Carry limit: 20 bare, basket +10 (30). Running is 5.6 m/s (walking stays 4.2).
+**Who:** Justin (tunic and wraps "10% / 4%"; the PM had recommended 8%/3%. Worn weight "No", carry "20 / +10", run "5.6 m/s", which the PM recommended)
+
+## D-101 — 2026-10-16 — Stamina shown as a bar; running is free; food unchanged
+**Decision:** Stamina shows as a small bar under your character, only while not full. Running costs no food or water. Food values stay: berries 12% each, roast mutton 40%, burnt 10%. Stamina duration and refill are set from researched "carrot on a stick" progression curves (see `docs/PROGRESSION.md`, being written), which all lanes then use as the base for number suggestions.
+**Who:** Justin ("Small bar under your character"; the PM had recommended an arc by the rings. "No"; "Keep as is". Stamina: "Research common logarithms for fun/invested 'carrot on a stick' values and use them for suggestion bases.")
+
+## D-102 — 2026-10-16 — Scribe lane keeps the decision log
+**Decision:** A Sonnet Scribe lane (session_01He77u9z8pt5DtP7it3NMAQ) records Justin's decisions in `DECISIONS.md` and applies the `STATUS.md` changes the PM sends, merging its own docs-only PRs. The PM keeps asking Justin and relaying decisions to the lanes.
+**Who:** Justin ("pass decision logging work off to a dedicated sonnet worker, and keep my questions coming")
+
+## D-103 — 2026-10-16 — Campfire warms in 60 s
+**Decision:** A basic campfire takes about 60 s to warm you from frozen to full (was 30 s). Later hearths and stone-ringed fires can be faster.
+**Who:** Justin ("60 s"; the PM had recommended keeping 30 s)
+
+## D-104 — 2026-10-16 — Chopping trains Foraging
+**Decision:** Chopping logs (`chop.log`) trains Foraging.
+**Who:** Justin ("Foraging", which the PM recommended)
+
+## D-105 — 2026-10-16 — Things to try hints in the journal
+**Decision:** skills-10 adds 2 to 3 gentle "Things to try" hints in the journal pointing at the next undiscovered thing, without recipes (D-063), so a new player always has a next goal. Each lane supplies one hint line per new process.
+**Who:** Justin ("Things to try hints", which the PM recommended)
+
+## D-106 — 2026-10-16 — Ceramics makes a cooking pot next
+**Decision:** ceramics-7 is a cooking pot: a coil pot of water on a fire makes broth from berries or mutton. Hunger values are agreed with Survival and kept generous (D-081).
+**Who:** Justin ("Cooking pot", which the PM recommended)
+
+## D-107 — 2026-10-16 — Effect values stay hidden
+**Decision:** The game shows effects in words only ("Keeps a little of the cold off"), never numbers, in the equipment panel and elsewhere. The values live in shared code the client can read, so dataminers can find them; that is accepted, and hiding them from the UI is still the rule.
+**Who:** Justin ("I want values to remain hidden I think. If it's not reasonable against people datamining etc. then I suppose we could just show it."); the PM had recommended showing numbers
+
+## D-108 — 2026-10-16 — Interim training for hides and sewing
+**Decision:** Until Leatherwork and Weaver exist, hide work trains Husbandry and sewing trains Toolmaking.
+**Who:** Justin ("Hides: Husbandry, sewing: Toolmaking", which the PM recommended)
+
+## D-109 — 2026-10-16 — Cold hearths last 1 h outside claims
+**Decision:** A burned-out fire leaves a cold hearth that lasts 1 hour outside a claim; inside a claim it follows normal claim rules (it does not weather away).
+**Who:** Justin ("1 hour outside a claim, normal weathering inside a claim")
+
+## D-110 — 2026-10-16 — Chat bubbles stay about 3 s plus reading time
+**Decision:** Each speech bubble stays about 3 s plus time to read its length; up to 3 stacked.
+**Who:** Justin ("About 3 s plus reading time", which the PM recommended)
