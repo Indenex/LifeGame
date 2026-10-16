@@ -17,6 +17,7 @@ Also fixes two gaps found while doing this: `carve.*` (digging stick) and `haft.
 - 2026-10-16 00:15: PM approved (skills-9). Started.
 - 2026-10-16 00:30: Recipes.cs (how-to line per discovery card, keys from InputMap); carve/haft train Toolmaking; kiln names. Client and server build. CraftingUi.ToolName made internal (one-word hook). Screenshot rendering.
 - 2026-10-16 00:35: screenshot /mnt/project-files/screenshots/journal-recipes.png; PR #43 opened.
+- 2026-10-16 00:28: CI green on b1ef4d7 (https://github.com/Indenex/LifeGame/actions/runs/38828736929); merged main (#38, ef1c26b), builds locally; CI re-running on the merge.
 
 ## Open questions / blockers
 - (none)
