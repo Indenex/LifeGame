@@ -11,6 +11,7 @@ model-172-face34 tools/render/scene.sh model-172-face-34 71f7c7c tools/render/sc
 atmosphere-16 tools/render/scenes/atmosphere-16.sh c41b1e6
 model-2 env TICKET=model-2 "VIEWS=row,people,faces,sheep,walk,items,items --old,held,clothes,stations,props,hearth" tools/render/scenes/model-1-style.sh 427d0cb
 animals-13 tools/render/scene.sh animals-13 04f4712 tools/render/scenes/animals-13-seasons.txt
+ceramics-9 tools/render/render.sh ceramics-9 cd30d6f "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.8 --rain=0 --cloud=0.1 --ceramics-demo=lamp" "--time-of-day=0.02 --rain=0 --cloud=0.1 --ceramics-demo=lamp --building-showcase --building-door"
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
 ceramics-8 env BENCH=1 TICKET=ceramics-8 tools/render/scenes/ceramics-7.sh a432ab6 0.45
 ceramics-8-panel tools/render/render.sh ceramics-8-panel a432ab6 "--time-of-day=0.45 --screenshot-craft=3"
