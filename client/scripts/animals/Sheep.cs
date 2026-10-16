@@ -16,16 +16,19 @@ public partial class Sheep : Node3D
     const float HopSeconds = 0.35f;
 
     readonly Terrain terrain;
-    readonly Node3D body = new();
-    readonly Node3D head = new() { Position = new Vector3(0, 0.8f, 0.4f) };
-    readonly Node3D[] legs = new Node3D[4];
+    // One skinned mesh per sheep: the parts used to be separate nodes, eight draw
+    // calls a sheep. Now they are bones of one skeleton, and the mesh has two
+    // surfaces (wool, and the skin, face and legs), so two draw calls.
+    readonly Skeleton3D skeleton = new();
+    const int BodyBone = 0, FleeceBone = 1, HeadBone = 2, FirstLegBone = 3;
+    static readonly Vector3 HeadAt = new(0, 0.8f, 0.4f);
+    static readonly Vector3[] Hips = { new(-0.15f, 0.46f, 0.26f), new(0.15f, 0.46f, 0.26f), new(-0.15f, 0.46f, -0.26f), new(0.15f, 0.46f, -0.26f) };
     readonly float seed;
 
     Vector2 from, to;
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
-    readonly MeshInstance3D fleece;
     Color woolColor;
     float wool = 1f, woolTarget = 1f;
     // Grown size (varies per sheep), and how grown up this one is (lambs are small).
@@ -55,10 +58,10 @@ public partial class Sheep : Node3D
         new(0.34f, 0.27f, 0.22f),
     };
     static readonly Dictionary<int, Material> WoolMaterials = new();
-    static Mesh? woolMesh, skinMesh, headMesh, legMesh;
-    static Material? skinMaterial;
+    static ArrayMesh? sheepMesh;
+    // Skin, face and legs share one material; their colors ride in the vertices.
+    static Material? plainMaterial;
     static readonly Color Skin = new(0.80f, 0.66f, 0.58f);
-    static Material? faceMaterial;
 
     // Wool takes the painted shader's relief, so the crevices between curls shade
     // in like the ground and rocks do.
@@ -82,24 +85,25 @@ public partial class Sheep : Node3D
             WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
         woolColor = Fleeces[color];
 
-        // A shorn sheep is a slim pink body; the fleece shrinks into it when shorn
-        // and swells back out as the wool regrows.
-        body.AddChild(new MeshInstance3D { Mesh = skinMesh, MaterialOverride = skinMaterial });
-        fleece = new MeshInstance3D { Mesh = woolMesh, MaterialOverride = wool };
-        body.AddChild(fleece);
-        head.AddChild(new MeshInstance3D { Mesh = headMesh, MaterialOverride = faceMaterial });
-        // A tuft of wool on top of the head, in the same fleece as the body.
-        head.AddChild(new MeshInstance3D { Mesh = WoolCap, MaterialOverride = wool });
-        body.AddChild(head);
-
-        var hips = new[] { new Vector3(-0.15f, 0.46f, 0.26f), new Vector3(0.15f, 0.46f, 0.26f), new Vector3(-0.15f, 0.46f, -0.26f), new Vector3(0.15f, 0.46f, -0.26f) };
+        // A shorn sheep is a slim pink body; the fleece bone shrinks into it when
+        // shorn and swells back out as the wool regrows.
+        skeleton.AddBone("body");
+        skeleton.AddBone("fleece");
+        skeleton.SetBoneParent(FleeceBone, BodyBone);
+        skeleton.AddBone("head");
+        skeleton.SetBoneParent(HeadBone, BodyBone);
+        skeleton.SetBoneRest(HeadBone, new Transform3D(Basis.Identity, HeadAt));
         for (int i = 0; i < 4; i++)
         {
-            legs[i] = new Node3D { Position = hips[i] };
-            legs[i].AddChild(new MeshInstance3D { Mesh = legMesh, MaterialOverride = faceMaterial });
-            body.AddChild(legs[i]);
+            skeleton.AddBone($"leg{i}");
+            skeleton.SetBoneParent(FirstLegBone + i, BodyBone);
+            skeleton.SetBoneRest(FirstLegBone + i, new Transform3D(Basis.Identity, Hips[i]));
         }
-        AddChild(body);
+        skeleton.ResetBonePoses();
+        AddChild(skeleton);
+        var mesh = new MeshInstance3D { Mesh = sheepMesh, Skeleton = new NodePath("..") };
+        mesh.SetSurfaceOverrideMaterial(0, wool);
+        skeleton.AddChild(mesh);
 
         // Not every sheep is the same size.
         adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f;
@@ -187,10 +191,10 @@ public partial class Sheep : Node3D
         // Walking moves diagonal legs together; running bounds front pair, then back pair.
         float s = Mathf.Sin(gait) * 0.45f * walk;
         float front = Mathf.Sin(gait) * 0.7f, back = Mathf.Sin(gait + 2.2f) * 0.7f;
-        legs[0].Rotation = new Vector3(Mathf.Lerp(s, front, run), 0, 0);
-        legs[1].Rotation = new Vector3(Mathf.Lerp(-s, front, run), 0, 0);
-        legs[2].Rotation = new Vector3(Mathf.Lerp(-s, back, run), 0, 0);
-        legs[3].Rotation = new Vector3(Mathf.Lerp(s, back, run), 0, 0);
+        Leg(0, new Vector3(Mathf.Lerp(s, front, run), 0, 0));
+        Leg(1, new Vector3(Mathf.Lerp(-s, front, run), 0, 0));
+        Leg(2, new Vector3(Mathf.Lerp(-s, back, run), 0, 0));
+        Leg(3, new Vector3(Mathf.Lerp(s, back, run), 0, 0));
 
         // A lamb at rest gives a little skip every so often.
         if (growthTarget < 0.95f && state != AnimalState.Run && speed < 0.4f && (frolic -= dt) <= 0f)
@@ -204,9 +208,7 @@ public partial class Sheep : Node3D
         float hopLift = Mathf.Sin(Mathf.Pi * hop / HopSeconds) * 0.28f;
         float bounce = Mathf.Abs(Mathf.Sin(gait)) * (0.025f * walk * (1f - run) + 0.12f * run);
         float breathe = Mathf.Sin(time * 1.7f) * 0.006f * (1f - walk);
-        body.Position = new Vector3(0, hopLift + bounce, 0);
-        body.Scale = new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f);
-        body.Rotation = new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, 0);
+        Body(new Vector3(0, hopLift + bounce, 0), new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, 0), new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
 
         // Head down to nibble when grazing, up and looking about when idle or alarmed.
         float targetPitch, targetYaw = 0f;
@@ -228,11 +230,11 @@ public partial class Sheep : Node3D
             targetPitch = 0.15f;
         pitch = Mathf.Lerp(pitch, targetPitch, 1f - Mathf.Exp(-4f * dt));
         yaw = Mathf.Lerp(yaw, targetYaw, 1f - Mathf.Exp(-3f * dt));
-        head.Rotation = new Vector3(pitch, yaw, 0);
+        Head(new Vector3(pitch, yaw, 0));
 
         // Wool shrinks away quickly when shorn and creeps back as it regrows.
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
-        fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, wool);
+        Fleece(Mathf.Lerp(0.6f, 1f, wool));
         growth = Mathf.Lerp(growth, growthTarget, 1f - Mathf.Exp(-0.5f * dt));
         Scale = Vector3.One * adultSize * growth;
     }
@@ -248,15 +250,13 @@ public partial class Sheep : Node3D
         Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-4f * dt)), 0);
         // The body pivots at the hooves, so rolling over needs a lift to keep the
         // fleece resting on the grass rather than sinking into the ground.
-        body.Position = new Vector3(0, -0.12f * t * (1f - roll) + 0.24f * roll, 0);
-        body.Rotation = new Vector3(0, 0, roll * 1.35f);
-        body.Scale = Vector3.One;
+        Body(new Vector3(0, -0.12f * t * (1f - roll) + 0.24f * roll, 0), new Vector3(0, 0, roll * 1.35f), Vector3.One);
         // Legs tuck in, front ones back and hind ones forward, like a sheep asleep.
         for (int i = 0; i < 4; i++)
-            legs[i].Rotation = new Vector3((i < 2 ? -1.1f : 1.1f) * t, 0, -roll * 0.2f);
+            Leg(i, new Vector3((i < 2 ? -1.1f : 1.1f) * t, 0, -roll * 0.2f));
         pitch = Mathf.Lerp(pitch, 0.35f, 1f - Mathf.Exp(-3f * dt));
-        head.Rotation = new Vector3(pitch, 0, 0);
-        fleece.Scale = Vector3.One * Mathf.Lerp(0.6f, 1f, woolTarget);
+        Head(new Vector3(pitch, 0, 0));
+        Fleece(Mathf.Lerp(0.6f, 1f, woolTarget));
         Scale = Vector3.One * adultSize * growthTarget;
 
         if (fading < 0f) return;
@@ -266,6 +266,21 @@ public partial class Sheep : Node3D
         Position += Vector3.Down * f * 0.3f;
         if (f >= 1f) QueueFree();
     }
+
+    // Bone poses replace what used to be the part nodes' transforms. Euler angles
+    // are in Node3D's YXZ order, so the motion is exactly as before.
+    void Body(Vector3 position, Vector3 euler, Vector3 scale)
+    {
+        skeleton.SetBonePosePosition(BodyBone, position);
+        skeleton.SetBonePoseRotation(BodyBone, Quaternion.FromEuler(euler));
+        skeleton.SetBonePoseScale(BodyBone, scale);
+    }
+
+    void Head(Vector3 euler) => skeleton.SetBonePoseRotation(HeadBone, Quaternion.FromEuler(euler));
+
+    void Leg(int i, Vector3 euler) => skeleton.SetBonePoseRotation(FirstLegBone + i, Quaternion.FromEuler(euler));
+
+    void Fleece(float scale) => skeleton.SetBonePoseScale(FleeceBone, Vector3.One * scale);
 
     void Tufts()
     {
@@ -292,19 +307,19 @@ public partial class Sheep : Node3D
 
     // --- Meshes, built once and shared by every sheep ----------------------
 
-    static Mesh? woolCap;
-    static Mesh WoolCap => woolCap!;
-
     static void BuildMeshes()
     {
-        if (woolMesh != null) return;
-        faceMaterial = Look.Solid(Face);
+        if (sheepMesh != null) return;
+        plainMaterial = Look.Solid(Colors.White);
+        sheepMesh = new ArrayMesh();
 
-        // A fleece made of overlapping puffs around a round core.
+        // Surface 0, wool: a fleece made of overlapping puffs around a round core,
+        // and a tuft on top of the head. Its color comes from the sheep's material.
         var st = Begin();
         var core = new Vector3(0.30f, 0.27f, 0.45f);
         var center = new Vector3(0, 0.66f, 0);
-        Ellipsoid(st, center, core * 0.92f, 1f, 12, 7);
+        var white = Colors.White;
+        Ellipsoid(st, FleeceBone, Vector3.Zero, white, center, core * 0.92f, 1f, 12, 7);
         const int puffs = 26;
         for (int i = 0; i < puffs; i++)
         {
@@ -316,35 +331,30 @@ public partial class Sheep : Node3D
             var dir = new Vector3(Mathf.Cos(a) * r, y, Mathf.Sin(a) * r);
             float size = 0.11f + Terrain.Hash01(i, 1, 77) * 0.08f;
             float shade = 0.9f + Terrain.Hash01(i, 2, 77) * 0.1f;
-            Ellipsoid(st, center + dir * core * 0.82f, Vector3.One * size, shade, 9, 5);
+            Ellipsoid(st, FleeceBone, Vector3.Zero, white, center + dir * core * 0.82f, Vector3.One * size, shade, 9, 5);
         }
         // A stubby tail.
-        Ellipsoid(st, center + new Vector3(0, 0.04f, -0.48f), new Vector3(0.08f, 0.09f, 0.07f), 0.96f, 8, 5);
-        woolMesh = st.Commit();
+        Ellipsoid(st, FleeceBone, Vector3.Zero, white, center + new Vector3(0, 0.04f, -0.48f), new Vector3(0.08f, 0.09f, 0.07f), 0.96f, 8, 5);
+        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(0, 0.11f, 0.06f), new Vector3(0.1f, 0.07f, 0.09f), 1f, 9, 5);
+        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(-0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.95f, 8, 5);
+        Ellipsoid(st, HeadBone, HeadAt, white, new Vector3(0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.97f, 8, 5);
+        st.Commit(sheepMesh);
 
+        // Surface 1: the pink body under the wool, the dark face and the legs.
         st = Begin();
-        Ellipsoid(st, center + new Vector3(0, -0.03f, 0), core * 0.78f, 1f, 12, 7);
-        skinMesh = st.Commit();
-        skinMaterial = Look.Solid(Skin);
-
-        st = Begin();
+        Ellipsoid(st, BodyBone, Vector3.Zero, Skin, center + new Vector3(0, -0.03f, 0), core * 0.78f, 1f, 12, 7);
         // Skull, muzzle and ears that stick out sideways.
-        Ellipsoid(st, new Vector3(0, 0.02f, 0.13f), new Vector3(0.105f, 0.115f, 0.16f), 1f, 10, 6);
-        Ellipsoid(st, new Vector3(0, -0.05f, 0.25f), new Vector3(0.075f, 0.075f, 0.085f), 0.9f, 9, 5);
-        Ellipsoid(st, new Vector3(-0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
-        Ellipsoid(st, new Vector3(0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
-        headMesh = st.Commit();
-
-        st = Begin();
-        Ellipsoid(st, new Vector3(0, 0.11f, 0.06f), new Vector3(0.1f, 0.07f, 0.09f), 1f, 9, 5);
-        Ellipsoid(st, new Vector3(-0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.95f, 8, 5);
-        Ellipsoid(st, new Vector3(0.05f, 0.08f, -0.01f), new Vector3(0.08f, 0.08f, 0.08f), 0.97f, 8, 5);
-        woolCap = st.Commit();
-
-        st = Begin();
-        Ellipsoid(st, new Vector3(0, -0.22f, 0), new Vector3(0.045f, 0.24f, 0.045f), 1f, 7, 4);
-        Ellipsoid(st, new Vector3(0, -0.43f, 0.01f), new Vector3(0.052f, 0.04f, 0.058f), 0.7f, 7, 3);
-        legMesh = st.Commit();
+        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0, 0.02f, 0.13f), new Vector3(0.105f, 0.115f, 0.16f), 1f, 10, 6);
+        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0, -0.05f, 0.25f), new Vector3(0.075f, 0.075f, 0.085f), 0.9f, 9, 5);
+        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(-0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
+        Ellipsoid(st, HeadBone, HeadAt, Face, new Vector3(0.14f, 0.05f, 0.08f), new Vector3(0.085f, 0.028f, 0.042f), 1.1f, 8, 4);
+        for (int i = 0; i < 4; i++)
+        {
+            Ellipsoid(st, FirstLegBone + i, Hips[i], Face, new Vector3(0, -0.22f, 0), new Vector3(0.045f, 0.24f, 0.045f), 1f, 7, 4);
+            Ellipsoid(st, FirstLegBone + i, Hips[i], Face, new Vector3(0, -0.43f, 0.01f), new Vector3(0.052f, 0.04f, 0.058f), 0.7f, 7, 3);
+        }
+        st.Commit(sheepMesh);
+        sheepMesh.SurfaceSetMaterial(1, plainMaterial);
     }
 
     static SurfaceTool Begin()
@@ -354,18 +364,29 @@ public partial class Sheep : Node3D
         return st;
     }
 
-    static void Ellipsoid(SurfaceTool st, Vector3 center, Vector3 radii, float shade, int segments, int rings)
+    // An ellipsoid in a part's own space (center and radii), placed at that part's
+    // rest offset and bound wholly to its bone. The part color is multiplied into
+    // the vertex color, which the painted shader reads as sRGB.
+    static void Ellipsoid(SurfaceTool st, int bone, Vector3 offset, Color part, Vector3 center, Vector3 radii, float shade, int segments, int rings)
     {
         var arrays = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = segments, Rings = rings }.GetMeshArrays();
         var verts = (Vector3[])arrays[(int)Mesh.ArrayType.Vertex];
         var normals = (Vector3[])arrays[(int)Mesh.ArrayType.Normal];
         var indices = (int[])arrays[(int)Mesh.ArrayType.Index];
-        var color = new Color(shade, shade, shade);
+        // The shader raises vertex colors to 2.2; this undoes that for the part color
+        // so it matches what the part's own material (an sRGB albedo) used to give.
+        var lin = part.SrgbToLinear();
+        float g = 1f / 2.2f;
+        var color = new Color(Mathf.Pow(lin.R, g) * shade, Mathf.Pow(lin.G, g) * shade, Mathf.Pow(lin.B, g) * shade);
+        var bones = new[] { bone, 0, 0, 0 };
+        var weights = new[] { 1f, 0f, 0f, 0f };
         foreach (int i in indices)
         {
             st.SetColor(color);
+            st.SetBones(bones);
+            st.SetWeights(weights);
             st.SetNormal((normals[i] / radii).Normalized());
-            st.AddVertex(center + verts[i] * radii);
+            st.AddVertex(offset + center + verts[i] * radii);
         }
     }
 }
