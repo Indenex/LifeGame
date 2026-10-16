@@ -150,8 +150,13 @@ public partial class BuildingSystem
         });
     }
 
-    static uint Carried(DbConnection c, Item item) =>
-        (uint)c.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Sum(i => i.Count);
+    static uint Carried(DbConnection c, Item item)
+    {
+        uint n = 0;
+        foreach (var i in c.Db.MyInventory.Iter())
+            if (i.Item == (ushort)item) n += i.Count;
+        return n;
+    }
 
     // The door costs show beside the doorway when you can't hang one yet.
     string? UsePrompt()

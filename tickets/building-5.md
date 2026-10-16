@@ -1,7 +1,7 @@
 # building-5: Sleeping mat respawn point
 Lane: House building
 Owner: House building thread
-Status: in_progress
+Status: in_review
 Branch: claude/house-building-8ueqz2
 PR: (not yet)
 
@@ -18,9 +18,12 @@ Survival's wilderness edge. Justin sees a woven grass mat on the floor by the he
   RespawnPointHook), one-line hook call in `Survival.cs` (asked Survival to approve), client
   mat model and G handler, showcase `--building-mat`. Screenshot:
   /mnt/project-files/screenshots/building-09-sleeping-mat.png
+- 2026-10-16: BuildTest weaves, lays, rolls up and re-lays a mat in the clay hut; merged main
+  (bugfix-8 loops: mat Use finder and Carried are plain loops too). Locally green: BuildTest,
+  LoadTest 5x5, SpawnCheck, CraftCheck, SocialTest, upgrade-check over origin/main.
 
 ## Open questions / blockers
 - Survival to confirm the `RespawnPointHook` call in `Survival.cs`.
 
 ## Next step
-Add a mat check to tools/BuildTest (craft, lay in a finished hut, see the row, roll up), run the tests, open the PR.
+Wait for CI on the PR, then send the PM the green head sha.

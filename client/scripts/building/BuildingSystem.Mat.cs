@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
@@ -59,8 +58,14 @@ public partial class BuildingSystem
                         return new UseOffer("Roll up your mat", d, () => c.Reducers.RollUpMat(), Target: new Vector3(mine.X, at.Y, mine.Z));
                 }
                 if (Carried(c, Item.SleepingMat) == 0) return null;
-                var home = rows.Values.FirstOrDefault(s => s.Complete && Structures.HasDoorway((int)s.Kind)
-                    && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -0.4f));
+                // A plain loop: this runs every frame for the Use key (bugfix-8).
+                Structure? home = null;
+                foreach (var s in rows.Values)
+                    if (s.Complete && Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -0.4f))
+                    {
+                        home = s;
+                        break;
+                    }
                 if (home == null) return null;
                 return new UseOffer("Lay out your sleeping mat", 0f, () => c.Reducers.LayMat(home.Id));
             },
