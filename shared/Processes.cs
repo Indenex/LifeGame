@@ -91,6 +91,9 @@ namespace LifeGame.Shared
         public float FailBelow;
         // The station it is made at; None is a hand craft from the C menu.
         public StationKind Station;
+        // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
+        // guess from the id; set it on new processes.
+        public WorkMotion Motion;
     }
 
     public static class Processes
