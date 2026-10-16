@@ -15,8 +15,13 @@ Justin does zero work after downloading the launcher once (PM, D-145 never idle)
 ## Progress log
 - 2026-10-16 20:35: started. Read SpacetimeDB's official installers: Linux `curl -sSf https://install.spacetimedb.com | sh -s -- --yes` (installs to ~/.local/bin/spacetime); Windows `iwr https://windows.spacetimedb.com -useb | iex` (installs to %LOCALAPPDATA%\SpacetimeDB, adds it to PATH, shows its own installer window). Both install the latest SpacetimeDB, not 2.12.
 
+- 2026-10-16 20:45: version stamp: `tools/release/launcher-version.sh` (hash of tracked `launcher/` files) goes into `launcher/version.txt` at export and into release.json `launcher.version`; make-release.sh adds the launcher section. Icon (`launcher/icon.png`, `icon.ico`; two pines and a low sun), set as the project icon and the Windows exe icon.
+- 2026-10-16 20:55: launcher.gd: first-run shortcuts (Linux: lifegame.desktop in ~/.local/share/applications and the XDG desktop folder, chmod +x, gio trusted; Windows: LifeGame.lnk on the Desktop and in Start Menu Programs via PowerShell WScript.Shell); self-update (download, sha256 check, rename the running exe to .old, place the new one, restart with the same options plus --updated-from, which stops loops; the .old file is removed on the next start); `_ensure_server()` before publishing and before Play; when `spacetime` is missing the main button becomes "Install SpacetimeDB and play" and runs the official installer, then carries on.
+- 2026-10-16 21:00: tested on Linux: shortcuts written to a fake HOME (both .desktop files, executable); launcher v1 to v2 self-update against a fake release with launcher version v2: swapped, restarted itself (--headless carried over) and updated world and game to 481; SpacetimeDB installer from the launcher in an empty HOME installed 2.12.0 to ~/.local/bin and the launcher found it and carried on (the publish then failed only because that fresh test login doesn't own the test database, as expected). Windows paths (shortcut, exe swap) are untested here.
+- 2026-10-16 21:05: PM: releases kept being skipped because main Builds were cancelled by newer merges (only 639, 680 green since 19:00). release.yml now has a `pick` job plus `schedule` (every 30 min) and `workflow_dispatch`: they release the newest green push Build of main unless its commit already has a release. Tested the pick query read-only on the real repo (Build 680, 02153f2, not yet released).
+
 ## Open questions / blockers
 - (none yet)
 
 ## Next step
-Implement version stamping (tools/release/launcher-version.sh, release.yml, make-release.sh), then self-update, shortcut, server start before Play, install button in launcher.gd.
+Check Release run 38956847322 (first real release, Build 680); fix anything it shows; open the PR with release-2 + the release fallback and send the PM the green sha.

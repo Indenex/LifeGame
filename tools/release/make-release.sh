@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Packs one green main build into release assets (release-1, D-131).
 #
-# Usage: tools/release/make-release.sh <artifacts-dir> <out-dir> <build-number> <sha> [prs.json]
+# Usage: [LAUNCHER_VERSION=v] tools/release/make-release.sh <artifacts-dir> <out-dir> <build-number> <sha> [prs.json]
 # [prs.json] is tools/release/merged-prs.sh's output: the PRs this release covers. If any is
 # labelled world-wipe the release is marked as a wipe. Without it the release covers no PRs.
 # <artifacts-dir> holds the Build run's artifacts as actions/download-artifact lays them out:
@@ -26,6 +26,14 @@ for l in Linux Windows; do
 done
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
+# The launcher section, when this release carries the launcher (LAUNCHER_VERSION from
+# tools/release/launcher-version.sh; the launcher updates itself when it differs).
+launcher_json() {
+  [ -f "$out/LifeGameLauncher-Linux.zip" ] && [ -f "$out/LifeGameLauncher-Windows.zip" ] || return 0
+  printf ',\n  "launcher": {\n    "version": "%s",\n' "${LAUNCHER_VERSION:-unknown}"
+  printf '    "linux": { "file": "LifeGameLauncher-Linux.zip", "exe": "LifeGameLauncher.x86_64", "sha256": "%s" },\n' "$(sha256 "$out/LifeGameLauncher-Linux.zip")"
+  printf '    "windows": { "file": "LifeGameLauncher-Windows.zip", "exe": "LifeGameLauncher.exe", "sha256": "%s" }\n  }' "$(sha256 "$out/LifeGameLauncher-Windows.zip")"
+}
 cat > "$out/release.json" <<JSON
 {
   "build": $build,
@@ -36,7 +44,7 @@ cat > "$out/release.json" <<JSON
   "client": {
     "linux": { "file": "LifeGame-Linux.zip", "exe": "LifeGame.x86_64", "sha256": "$(sha256 "$out/LifeGame-Linux.zip")" },
     "windows": { "file": "LifeGame-Windows.zip", "exe": "LifeGame.exe", "sha256": "$(sha256 "$out/LifeGame-Windows.zip")" }
-  }
+  }$(launcher_json)
 }
 JSON
 
