@@ -28,6 +28,7 @@ public partial class SurvivalClient : Node
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
     public float WalkFactor { get; private set; } = 1f;
+    public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
     public static IEnumerable<string> Queries(string range) => new[]

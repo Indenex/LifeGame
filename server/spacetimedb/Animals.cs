@@ -223,6 +223,7 @@ public static partial class Module
         var watchers = AnimalWatchPlayers(ctx, now);
         if (watchers.Count == 0) return;
         ClearOldCarcasses(ctx, now);
+        DryHides(ctx, now);
 
         foreach (var flock in ctx.Db.Flock.Iter().ToList())
         {
