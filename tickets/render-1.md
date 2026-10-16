@@ -36,6 +36,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:45: new requests: atmosphere-13 (session_01KvVF5vpkYEHTKNRpHC18WN) before 47a151d / after dc26f57, light through the forest; ui-10 (session_01V6qgbNbvTwniqW946KACLr) equipment panel 8d398ef; animals-8 moved to 4233255 + spinning minigame; anim-1 moved to 4afbb2b + work poses. atmosphere-12 audio also sent to the Audio lane (session_01LeXCWTFVBQcCNVEDdhPek3).
 - 2026-10-16 17:45: crafting-11 first shots don't show the fire clearly (different spawn each run, far camera); rerun at (0,0) with a close render cam.
 - 2026-10-16 17:45: queue 5 (after queue 2): crafting-11 rerun, ui-10, env-1, atmosphere-13, bugfix-17 (+before), animals-8 wool/ground at 4233255, anim-1 side/turn/work at 4afbb2b, animals-8 spin (live, needs the Render lane at the keyboard: append steps to $RENDER_WORK/live.txt).
+- 2026-10-16 17:55: audio-1 b7fde7a clip sent to the PM and the Audio lane (76a896b). New requests: ui-9 live trade 18b4bda (two players, both screens), model-1 style showcase 37a5656 (5 views), env-1 after 0eaba8b. Queue 6 (after queue 5): model-1-style.sh, env-1-after.sh, ui-9-live-a/b scenes (live). Background jobs time out after 2 h: if a queue died, rerun its remaining lines by hand.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
