@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+    # labeled/unlabeled so adding or removing world-wipe re-runs the checks.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 # One run per branch or PR at a time. A new push to a PR cancels that PR's older run;
@@ -69,8 +71,14 @@ jobs:
           (cd tools/SpawnCheck && dotnet run -c Release)
 
       # Justin publishes each merge over his world without --delete-data (bugfix-3).
+      # The one planned wipe (D-129) carries the world-wipe label, which only the PM adds
+      # once Justin has confirmed the date. Every other PR must carry the world over.
+      - name: World wipe (labelled, upgrade check skipped)
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'world-wipe')
+        run: echo "::warning::This PR is labelled world-wipe. Publishing it needs --delete-data and wipes Justin's world (D-129)."
+
       - name: Upgrade check (this module over the base branch's world, no wipe)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'world-wipe')
         run: |
           # The merge commit's first parent is the base this PR was merged onto. The
           # base branch's tip can move while CI runs, so don't fetch it by name.
