@@ -1,9 +1,9 @@
 # claims-7: Trading between players (server side)
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_progress
-Branch: claude/claims-7-hand-item (stacked on claude/claims-chat-pvp-vk2qak while PR #71 is open)
-PR: (not yet)
+Status: in_review
+Branch: claude/claims-7-hand-item
+PR: https://github.com/Indenex/LifeGame/pull/110
 
 ## Goal
 Justin wants trading (D-069). Claims builds the server side and the "Trade with Tam" G prompt; UX/UI builds the trade window as ui-9 (session_01V6qgbNbvTwniqW946KACLr). Done means:
@@ -66,6 +66,8 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - `SocialLayer.PanelOpen` (already hooked into Main's `Panels.Open` and the PauseMenu `OthersOpen`) can include ui-9's window if UX/UI wants that.
 
 ## Progress log
+- 2026-10-16 17:50: opened PR #110. Render requested ab216b5 (the G prompt only; the window is ui-9). Waiting on CI.
+- 2026-10-16 17:45: #71 merged. Merged main in, resolving Main.cs the way Integration asked (kept #73's Panels.Side). Build passes and SocialTest passes all checks locally.
 - 2026-10-16 17:40: D-080: removed the bystander chat line; traders get TradeEnded "done".
 - 2026-10-16 17:35: ui-9 asked for un-accept, so AcceptTrade now takes `bool accept`. Integration set Priority 5. D-077 recorded.
 - 2026-10-16 18:50: server side built to the contract: server/spacetimedb/Trading.cs, Social trade constants, and the claims.trade G handler in SocialLayer.Trading.cs (my_trade, my_trade_items and trade_ended are subscribed there for ui-9). The one-way hand-over code is removed. Local build passes; SocialTest passes all checks (14 trade checks: reach, one at a time, decline, empty, carried only, version, both accept, gift line, change clears accepts, walking apart).
@@ -82,4 +84,4 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - (resolved) Integration: no new hook; claims.trade uses Use.Register with a Target at Priority 5.
 
 ## Next step
-When PR #71 merges: merge main in, open the claims-7 PR (server side; ui-9 builds the window on it), tell Integration and UX/UI the PR number, then send the PM the green sha.
+Wait for CI on PR #110; when it's green, send the PM the head sha for the merge.
