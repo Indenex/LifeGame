@@ -22,6 +22,7 @@ Make the forest region feel lived-in, varied and cosy (D-078), together with the
 ## Open questions / blockers
 - Answered (D-084, via PM 2026-10-16): Justin chose A then C. env-1 = groves and glades, visual only, no wipe (milestone M1, D-081). Reshaping the land (more ponds, a stream, gentler hills) follows as env-2 through Integration for `shared/World.cs`; it wipes the world, so nothing that wipes is run or merged until the PM confirms timing with Justin, and the wipe lands in one PR with an upgrade-check note.
 - Atmosphere working agreement: settled 2026-10-16. Flower colours added as Look.FlowerWhite/FlowerButtercup/FlowerViolet/FlowerPink on claude/atmosphere-13-forest-light (1e65d96); switch `Undergrowth.FlowerColors` to them once atmosphere-13 is on main. Combined shafts render at a glade edge (36,-36) once both branches are on main.
+- Seasons (D-099, Atmosphere leads, atmosphere-16): globals season_warmth, season_autumn, snow_cover, snowing. Snow and leaf colour go in Atmosphere's Look shaders. Proposed to Atmosphere: a broadleaf-only `Look.TreeLeaves` variant for autumn; winter leaf-drop and out-of-season flowers handled by their shaders keyed on INSTANCE_CUSTOM.z = 1, which I would set on flower and broadleaf instances. Awaiting reply; follow-up after env-1 merges.
 
 ## Next step
 Wait for head CI on PR #113 and the PM merge (2b24f4a was green); tune from Render shots when they arrive.
