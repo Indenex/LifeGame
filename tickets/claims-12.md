@@ -12,6 +12,7 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 - what happens to fences when a claim lapses.
 
 ## Progress log
+- 2026-10-16 19:59: Justin picked Q2a. Only the owner and members can open, bar or unbar a claim gate. Ask House building to make CanLock members-only for gates on claimed land (whoever hung the gate keeps that right only outside a claim). Q3 and Q4 are still open, so keep the defaults: snap, and fences stay as ordinary fences.
 - 2026-10-16 19:57: House building put both hook declarations in PR #202 (head 5793230, CI running): `GateOpenHook` in BuildingStorage.cs (called from ToggleDoor for gates) and `SnapFenceHook(Vector3 target, ref Vector3 snapped, ref float yaw, ref bool done)` in BuildingSystem.cs (called first in SnapFence). Their note: `yaw` is the ghost's heading. Check that it matches the Structures.ToWorld yaw that SnapToClaimBorder returns before wiring. Build against the hooks once #202 merges.
 - 2026-10-16 19:56: handoff.
   - Done so far on this branch:
@@ -35,7 +36,7 @@ Justin picked claim fences for M3 (PM, 2026-10-16). Members can ring their claim
 ## Open questions / blockers
 - To PM for Justin 2026-10-16 (building on the recommended default for each):
   - Q1 dropped (fences already stop people on the client).
-  - Q2 who opens a claim gate (a members only [recommended] / b anyone unless barred);
+  - Q2 answered: a, members only (open, bar and unbar).
   - Q3 border placement (a snap [recommended] / b free);
   - Q4 lapse (a fences stay and weather [recommended] / b fall with the marker).
 - From House building: the building-9 sha with the two hook declarations.
@@ -47,4 +48,4 @@ When House building's PR #202 (GateOpenHook and SnapFenceHook) merges:
 3. Add `client/scripts/social/BuildingSystem.ClaimFences.cs` (a `public partial class BuildingSystem` implementing SnapFenceHook). It should call Social.SnapToClaimBorder when the target is NearClaimBorder of a claim the player has rights in, then set done = true.
 4. Add SocialTest checks: an outsider can't open a claim gate; a member can.
 5. Build, test, push.
-Then ask House building to make barring a claim gate members-only in their CanLock, if Justin keeps Q2a.
+Then ask House building to make barring a claim gate members-only in their CanLock (Justin picked Q2a).
