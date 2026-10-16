@@ -34,6 +34,7 @@ Waiting on others:
 - Ceramics adds `CraftJob.VesselQuality` (approved; review it; it needs the upgrade check).
 - Modeling #197 swaps in HearthModel for FireView (approved), and will swap CraftingTableModel for StationMeshes.CraftingTable after #160.
 - Animals' red deer (#219, animals-14). Animals adds cook.venison themselves (items 205, 206; process copied from cook.meat). Antler (item 204) needs a use. Send the PM as options (D-059): (a, rec) an antler soft hammer that counts as a Hammer for knapping, with +10 on the knap.* quality cap; (b) a pressure flaker for a new fine-flake recipe; (c) a plain material for now. Animals has been told it goes to Justin.
+- Bow and arrow (animals-15): Animals says Crafting owns new item ids Item.Bow and Item.Arrow (Crafting range 1-99; take the next free numbers in shared/Items.cs). Modeling (session_01JKX3FNjkrEkAqoTaFJiXAm) has the models ready in PR #235 and needs the two numbers and the branch.
 Local setup that worked: dotnet 8 SDK (dotnet-install.sh into ~/.dotnet, with the wasi-experimental workload installed automatically by the first build), and spacetimedb-cli 2.12.0 from GitHub releases into ~/stdb. Then `spacetimedb-cli start`, tools/gen-bindings.sh, publish, and `dotnet run -c Release` in tools/CraftCheck (about 4 min) or tools/ClayCheck (about 10 min). Use a separate database name per check run.
 
 ## Progress log
