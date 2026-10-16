@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-21-storms
-PR: (none yet)
+PR: #286
 
 ## Goal
 Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 storms. Rare thunderstorms: a darker, heavier sky, harder rain, wind, and lightning flashes that light the land, with thunder rumbling after (Audio does the sounds; SoundMix already has thunder, Atmosphere already triggers it with a delay by distance). Builds on the existing Lightning(dt) and storm weather; makes storms rarer and more dramatic so shelter feels cosy. The server's weather mix may need a storm weighting (WorldClock.cs is Atmosphere's). Done: Render lane clip of a storm rolling in and a flash, and a PR green.
@@ -21,4 +21,4 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 - Audio: any new thunder variants (send them a request when the visuals land).
 
 ## Next step
-Open the PR, send the Render lane a request (storm at dusk, --rain=1 --wind=0.9 --cloud=1 --lightning=6), and ask Audio via the PM whether thunder needs anything new.
+Wait for #286 CI and send the PM the green sha. Render request sent (session_015S96hNrEu92FrCoNZqZZjs). Season odds offered to Justin via the PM. Audio asked via the PM about a close-strike crack.
