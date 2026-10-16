@@ -1,8 +1,8 @@
 # atmosphere-14: Weather you see coming
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: todo
-Branch: (set when started; stack on the previous atmosphere branch if it hasn't merged)
+Status: in_progress
+Branch: claude/atmosphere-14-weather-ahead
 PR: (none yet)
 
 ## Goal
@@ -10,9 +10,10 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 ## Progress log
 - 2026-10-16: queued (D-085).
+- 2026-10-16 20:00: started from main after #173 (seasons) merged.
 
 ## Open questions / blockers
 - Idea to offer the PM with this ticket (D-059 options): after Environment's env-2 reshape (#175: stream 45 m west of spawn, ponds, gentler hills, water still at -1 m), mist that lies in valleys and over ponds and the stream at dawn and dusk, using World.BaseHeight and the existing atmosphere-11 Mist (which already pools in hollows by depth). Options to send: A (rec) extend Mist to read terrain height so valleys and water fill first; B leave dawn mist as is.
 
 ## Next step
-Start after atmosphere-13 is in review: create the branch, set Status in_progress, record it here.
+Design the storm front: server Weather gives the next front (NextChangeAt, targets); show it on the sky's upwind side before it arrives (darker clouds and rain curtains toward the wind's source).
