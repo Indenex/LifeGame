@@ -1,4 +1,4 @@
-# claims-7: Hand an item to someone
+# claims-7: Trading between players (server side)
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
 Status: in_progress
@@ -6,22 +6,78 @@ Branch: claude/claims-7-hand-item (stacked on claude/claims-chat-pvp-vk2qak whil
 PR: (not yet)
 
 ## Goal
-Players can help each other directly. Face a player within arm's reach and press G ("Give to Tam"): a small list of what you carry opens; pick one (or the whole stack). Tam gets a soft note "Mira offers you a flint · G to take" and, facing Mira, G says "Take the flint from Mira". Nothing moves until Tam takes it; the offer lapses after a minute or if either walks away. When it's taken, one chat line nearby says "Mira hands Tam a flint".
+Justin wants trading (D-069). Claims builds the server side and the "Trade with Tam" G prompt; UX/UI builds the trade window as ui-9 (session_01V6qgbNbvTwniqW946KACLr). Done means:
+- Two players near each other can trade, and either side may be empty (a gift).
+- Each adds items from what they carry, then both press Accept. Any change to either offer clears both accepts.
+- The swap happens all at once, checked by the server.
+- The trade is cancelled if they move more than 4 m apart, if either presses Esc, or if either dies.
+- One chat line announces a finished trade.
+
+## Contract (for ui-9; names are final unless this section changes)
+
+Reach: `Social.TradeReach = 3f` to start a trade. `Social.TradeBreakDistance = 4f`: the server cancels once the players are farther apart than this. `Social.TradeAskMicros = 30 s` (an unanswered ask lapses). `Social.TradeMaxStacks = 8` per side.
+
+### Tables (server-only; clients read them through views)
+`Trade`: one row per trade. A player is in at most one, as A or B.
+| field | type | meaning |
+|---|---|---|
+| Id | ulong PK autoinc | |
+| A, B | Identity (indexed) | A asked, B was asked |
+| AId, BId | uint | player ids (for avatars and names) |
+| AName, BName | string | names when the trade began |
+| State | byte | `Social.TradeAsked` = 0 (waiting for B to answer), `Social.TradeOpen` = 1 (both adding items) |
+| AAccepted, BAccepted | bool | each side's Accept; cleared by any item change |
+| Version | uint | goes up on every item change; Accept must name the version it saw |
+| StartedAt | Timestamp | |
+
+`TradeItem`: what each side has put in.
+| field | type | meaning |
+|---|---|---|
+| Id | ulong PK autoinc | |
+| TradeId | ulong (indexed) | |
+| Side | byte | 0 = A's offer, 1 = B's offer |
+| Item | ushort | `LifeGame.Shared.Item` |
+| Quality | byte | |
+| Count | uint | at least 1 (count 0 deletes the row) |
+
+Items stay in the owner's inventory until the swap; they are not reserved.
+
+### Views and events (subscribe to all three)
+- `MyTrade` (`SELECT * FROM my_trade`): the trade you are in, as A or B (0 or 1 rows). Insert means a trade was asked or started; update means a state, accept or version change; delete means it ended (see `TradeEnded`).
+- `MyTradeItems` (`SELECT * FROM my_trade_items`): both sides' items for your trade.
+- `TradeEnded`: a public event table, `Event = true`. Fields: `TradeId`, `AId`, `BId`, and `Reason` (string): `"done"`, `"declined"`, `"cancelled"` (Esc, or the other player cancelled), `"apart"` (walked apart, died or went offline) or `"lapsed"` (ask unanswered). Clients show only those where they are A or B.
+
+### Reducers
+| reducer | who | does | errors (exception text) |
+|---|---|---|---|
+| `AskTrade(uint playerId)` | anyone | creates a Trade in state Asked, with you as A | "You can't trade with yourself", "They are not here" (offline or unknown), "Step closer to trade" (> TradeReach + 1 m slack), "You are already trading", "They are busy trading" |
+| `AnswerTrade(ulong tradeId, bool accept)` | B, while Asked | accept: state Open. decline: deletes it, TradeEnded "declined" | "That trade is gone" |
+| `SetTradeItem(ulong tradeId, ushort item, byte quality, uint count)` | A or B, while Open | sets your side's count for that stack (0 removes it); clears both accepts; Version++ | "That trade is gone", "You are not carrying that many", "That's as much as a trade can hold" (more than TradeMaxStacks) |
+| `AcceptTrade(ulong tradeId, uint version)` | A or B, while Open | sets your Accept if version matches. When both have accepted: the swap (below) | "That trade is gone", "The offer changed; look again" (version mismatch), "Nothing to trade" (both sides empty) |
+| `CancelTrade(ulong tradeId)` | A or B, any state | deletes it, TradeEnded "cancelled" | none (no-op if gone) |
+
+The swap: in one transaction, recheck reach and that each side still carries every listed stack. If anything is short, both accepts are cleared and the trade stays open with the error "<Name> no longer has <item>". Otherwise the items move, the trade and its items are deleted, TradeEnded "done" is sent, and one chat line goes to everyone nearby: "Mira and Tam trade" when both sides gave something, "Mira hands Tam a flint" when only one side did (a gift).
+
+A 1 s server watch runs while any trade exists. It cancels with "apart" when the players are more than TradeBreakDistance apart or either is offline; a death respawns the player far away, so it counts as "apart". It ends asks older than TradeAskMicros with "lapsed".
+
+### Client split
+- Claims (SocialLayer.Trading.cs): a G handler `claims.trade` on the nearest other player in reach, "Trade with Tam", which calls AskTrade. It uses `Use.Register` with a Target, the same way strikes find players.
+- ui-9 (UX/UI): the ask prompt for B (Accept or Decline, which call AnswerTrade); the trade window (both sides, add or remove from your inventory, Accept and accepted marks, which call SetTradeItem, AcceptTrade and CancelTrade); Esc calls CancelTrade; messages for TradeEnded reasons.
+- `SocialLayer.PanelOpen` (already hooked into Main's `Panels.Open` and the PauseMenu `OthersOpen`) can include ui-9's window if UX/UI wants that.
 
 ## Progress log
-- 2026-10-16 17:55: local build passes (server module, client C#), and SocialTest passes all checks against a local server (6 new gift checks). Asked Integration for the Main hook: count SocialLayer.PanelOpen (claim panel or give list) in Panels.Open and in PauseMenu's OthersOpen.
-- 2026-10-16 17:40: first full pass written, not yet built. Server: Giving.cs (GiftOffer table, MyGiftOffers view, OfferGift/AcceptGift/DeclineGift; lapsed offers pruned along with chat). Shared: Social.GiveReach, GiftKeepMicros, GiftPhrase. Client: GivePanel.cs, SocialLayer.Giving.cs (G handlers claims.give and claims.take). SocialTest: 6 new checks.
-- 2026-10-16 17:15: started. D-044 is fully built, so I sent the PM options for claims-7, with this one recommended; building it on that default.
+- 2026-10-16 18:20: PM repurposed claims-7 from the one-way hand-over to the server side of trading (D-069). Wrote the contract above first. The earlier hand-over code (Giving.cs, GivePanel, SocialLayer.Giving.cs) will be replaced.
+- 2026-10-16 17:55: (one-way hand-over) built, and SocialTest passed locally. Main hook made, with Integration's OK.
+- 2026-10-16 17:15: started.
 
 ## Decisions / defaults
-- The item moves only when the receiver takes it. The giver can cancel by walking away or offering again.
-- Give reach is 3 m (the server allows 4 m to cover lag). An offer lasts 60 s. A giver has one open offer at a time; a new offer replaces the old one.
-- No weight check: carrying more only slows you down (survival-3).
-- Use handlers are registered from Claims' own files, so no Integration hook is needed. No new key: it's G (Use).
+- PM defaults from D-069 are as in Goal.
+- Carry limit: survival-3's limit only slows you down; there is no hard cap. Default: a trade may overload you, as picking things up can (sent to the PM as a question).
+- Bystanders see that a trade happened, not what was traded (sent to the PM as a question).
 
 ## Open questions / blockers
-- (resolved) Integration OK'd the Main hook in this PR; done: Panels.Open and PauseMenu OthersOpen use social.PanelOpen.
-- Sent to PM 2026-10-16: claims-7 options (1 hand an item [recommended], 2 whisper/shout, 3 name your camp, 4 stash log).
+- To PM 2026-10-16: carry limit (allow overload [recommended] / refuse a trade that overloads), chat line detail (who traded only [recommended] / list the items), ask lapse 30 s.
+- To Integration 2026-10-16: does trading need a Use-on-player hook beyond `Use.Register` with a Target? (Claims' own handler works today.)
 
 ## Next step
-When PR #71 merges, merge main into this branch, open the claims-7 PR, and send a render request (sha) to the Render lane.
+Replace Giving.cs with Trading.cs implementing the contract, then add SocialTest trade checks and the claims.trade G handler; build, test locally, push.
