@@ -7,7 +7,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -28,10 +28,11 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held")
+        if (view is "items" or "held" or "clothes")
         {
             if (view == "items") ItemGrid(args.ContainsKey("old"));
-            else HeldTools();
+            else if (view == "held") HeldTools();
+            else Clothes();
             return;
         }
 
@@ -136,6 +137,31 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.4f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // Leaf wrap, then wool tunic and foot wraps standing, walking, and from behind.
+    void Clothes()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            var figure = PlayerModel.Build();
+            figure.Position = new Vector3((i - 1.5f) * 1.1f, 0, 0);
+            figure.Rotation = new Vector3(0, i == 2 ? 1.2f : i == 3 ? Mathf.Pi - 0.4f : -0.4f, 0);
+            AddChild(figure);
+            if (i > 0)
+            {
+                PlayerModel.Wear(figure, PlayerModel.Body, Garments.WoolTunic);
+                PlayerModel.Wear(figure, PlayerModel.Feet, Garments.FootWraps);
+            }
+            if (i == 2)
+            {
+                people.Add(figure);
+                Stride();
+            }
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.4f, 5.2f), new Vector3(0, 0.9f, 0), Vector3.Up);
     }
 
     // Everyone mid-stride: left leg forward, right arm forward.

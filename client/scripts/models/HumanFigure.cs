@@ -52,8 +52,13 @@ public static class HumanFigure
 
     public sealed class Built
     {
+        public Style Style = null!;
         public ArrayMesh Mesh = null!;
+        // The leaf wrap a fresh player wears; clothes on the body replace it.
+        public ArrayMesh LeafWrap = null!;
         public HumanRig.Joints Joints = null!;
+        // Body measurements clothes are cut to.
+        public float HeadHeight, HipY, WaistY, ShoulderY, NeckY, PelvisWidth;
         public int Triangles;
         // How far below the wrist joint the middle of the fist is.
         public float GripDrop;
@@ -207,8 +212,13 @@ public static class HumanFigure
             }
         }
 
+        var mesh = new ArrayMesh();
+        k.Commit(mesh, material);
+        int tris = k.Triangles;
+
         // A wrap of leaves: a band round the hips with leaves hanging from it, or
-        // (soft style) one smooth skirt.
+        // (soft style) one smooth skirt. Its own mesh, so clothes can replace it.
+        k = new MeshKit(s.Flat);
         k.Bone(HumanRig.Hips);
         float bandW = pelvisW + 0.012f, bandD = 0.122f * b;
         if (s.Skirt)
@@ -235,9 +245,13 @@ public static class HumanFigure
             }
         }
 
-        var mesh = new ArrayMesh();
-        k.Commit(mesh, material);
-        done = new Built { Mesh = mesh, Joints = j, Triangles = k.Triangles, GripDrop = hh * 0.6f * 0.45f };
+        var wrap = new ArrayMesh();
+        k.Commit(wrap, material);
+        done = new Built
+        {
+            Style = s, Mesh = mesh, LeafWrap = wrap, Joints = j, Triangles = tris + k.Triangles, GripDrop = hh * 0.6f * 0.45f,
+            HeadHeight = hh, HipY = hipY, WaistY = waistY, ShoulderY = shoulderY, NeckY = neckY, PelvisWidth = pelvisW,
+        };
         Cache[s.Key] = done;
         return done;
     }
@@ -249,6 +263,7 @@ public static class HumanFigure
         var built = Build(s);
         var skeleton = HumanRig.Skeleton(built.Joints);
         skeleton.AddChild(new MeshInstance3D { Mesh = built.Mesh, Skeleton = new NodePath("..") });
+        skeleton.AddChild(new MeshInstance3D { Name = PlayerModel.SlotNode(PlayerModel.Body), Mesh = built.LeafWrap, Skeleton = new NodePath("..") });
         return skeleton;
     }
 }

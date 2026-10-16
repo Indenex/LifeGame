@@ -147,7 +147,8 @@ public static class ItemModels
     static readonly Color Weave = new(0.72f, 0.58f, 0.32f);
     static readonly Color Fleece = new(0.86f, 0.83f, 0.74f);
     static readonly Color HideSkin = new(0.86f, 0.74f, 0.60f);
-    static readonly Color LeatherBrown = new(0.45f, 0.28f, 0.15f);
+    static readonly Color LeatherBrown = new(0.55f, 0.37f, 0.22f);
+    static readonly Color TunicWool = new(0.78f, 0.74f, 0.64f);
     static readonly Color Bone = new(0.92f, 0.88f, 0.80f);
 
     static (Action<Kit>? Build, bool Upright) Recipe(Item item) => item switch
@@ -174,6 +175,9 @@ public static class ItemModels
         Item.SheepHide => (k => RolledHide(k, true), true),
         Item.ScrapedHide => (k => RolledHide(k, false), true),
         Item.Leather => (Leather, true),
+        // Clothing (D-074), by number until the items reach main.
+        (Item)Garments.WoolTunic => (Tunic, true),
+        (Item)Garments.FootWraps => (FootWraps, true),
         _ => (null, false),
     };
 
@@ -425,6 +429,34 @@ public static class ItemModels
             {
                 new(0f, 0.016f, 0.16f), new(0.5f, 0.018f, 0.17f), new(1f, 0.016f, 0.16f),
             }, 4, 0.15f, Mathf.Pi / 4f);
+        }
+    }
+
+    // A wool tunic folded in a square, its cord belt coiled on top.
+    static void Tunic(Kit k)
+    {
+        k.Plain.Paint(TunicWool, 0.95f).Loft(new Vector3(-0.15f, 0.02f, 0), new Vector3(0.15f, 0.02f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.026f, 0.15f), new(0.5f, 0.03f, 0.16f), new(1f, 0.026f, 0.15f),
+        }, 4, 0.2f, Mathf.Pi / 4f);
+        k.Plain.Paint(TunicWool).Loft(new Vector3(-0.14f, 0.055f, 0.01f), new Vector3(0.14f, 0.055f, 0.01f), new MeshKit.Ring[]
+        {
+            new(0f, 0.022f, 0.13f), new(0.5f, 0.026f, 0.14f), new(1f, 0.022f, 0.13f),
+        }, 4, 0.2f, Mathf.Pi / 4f);
+        k.Plant.Paint(new Color(0.45f, 0.34f, 0.18f)).Tube(MeshKit.Circle(new Vector3(0.02f, 0.078f, 0.01f), Vector3.Up, 0.05f, 30, 1.8f, 0.006f), 0.006f, 4);
+    }
+
+    // A pair of leather foot wraps, each rolled and tied.
+    static void FootWraps(Kit k)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            float z = i == 0 ? -0.045f : 0.045f;
+            k.Plain.Paint(LeatherBrown, i == 0 ? 1f : 0.92f).Loft(new Vector3(-0.1f, 0.04f, z), new Vector3(0.1f, 0.04f, z), new MeshKit.Ring[]
+            {
+                new(0f, 0.036f, 0.036f), new(0.15f, 0.04f, 0.04f), new(0.85f, 0.04f, 0.04f), new(1f, 0.036f, 0.036f),
+            }, 7, 0.1f);
+            k.Plant.Paint(new Color(0.45f, 0.34f, 0.18f)).Tube(MeshKit.Circle(new Vector3(0, 0.04f, z), Vector3.Right, 0.043f, 16), 0.005f, 4, -1f, false);
         }
     }
 
