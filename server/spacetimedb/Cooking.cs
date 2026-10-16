@@ -94,7 +94,8 @@ public static partial class Module
         QualityCapFor(ctx, roast.PlayerId, "cook.meat", ref cap);
         byte quality = burnt ? Items.RawQuality : Processes.Quality(roast.Quality, Roasting.Score(seconds), cap);
         OnProcessPerformed(ctx, roast.PlayerId, "cook.meat", quality, burnt);
-        return burnt ? (Item.BurntMutton, Items.RawQuality) : (Item.CookedMutton, quality);
+        var def = Foods.FindRoast((Item)roast.Item) ?? throw new Exception("That doesn't roast");
+        return burnt ? (def.Burnt, Items.RawQuality) : (def.Cooked, quality);
     }
 
     // When a fire burns out, whatever was on it drops beside it as it is: raw if
