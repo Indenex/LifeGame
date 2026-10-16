@@ -100,7 +100,7 @@ public static partial class Module
     static void SurvivalDisconnected(ReducerContext ctx, Player player)
     {
         if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is { } v)
-            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0 });
+            ctx.Db.Vitals.PlayerId.Update(Snapshot(ctx, v) with { FoodRate = 0, WaterRate = 0, WarmthRate = 0, WetnessRate = 0 });
     }
 
     // --- Reducers ----------------------------------------------------------
