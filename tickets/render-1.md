@@ -1,7 +1,7 @@
 # render-1: Set up the render pipeline
 Lane: Render
 Owner: Render lane session session_013qe8zPzzBHx9rFPEYoKMr5
-Status: in_progress
+Status: in_review
 Branch: claude/render-1-013qe8 (no harness branch was assigned; named by the session)
 PR: #103 (tools/render only, branch claude/render-1-tools)
 
@@ -50,6 +50,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 19:30: ui-10 sent to the PM and UX/UI (a489e01). crafting-11 cold hearth good; lit shot failed (flag needs a value: --screenshot-fire=lit), re-queued as crafting-11-lit. ui-9 moved to 88d7cf2 (mock re-shoot + live).
 - 2026-10-16 19:35: crafting-11 sent to the PM (cold + lit, 7bfdd25).
 - 2026-10-16 19:45: ui-9 mock re-shoot at 88d7cf2 sent to the PM (2ffc161): fixes confirmed. ui-10 re-shoot at 62d68db running.
+- 2026-10-16 19:55: PR #103 green at 4326fdf (run https://github.com/Indenex/LifeGame/actions/runs/38942837902), merge asked of the PM. Lane keeps taking render requests via the queue.
 
 ## Open questions / blockers
 - (none)
