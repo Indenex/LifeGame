@@ -18,8 +18,8 @@ Repeat until the ticket's goal is met:
 3. At every checkpoint:
    - **[WRITE]** commit and push
    - **[WRITE]** add a progress-log line and update `Next step` in the ticket
-4. When something visible changes or a milestone lands, send the PM a short update (what changed, in plain words) with screenshot paths under /mnt/project-files/screenshots/. Justin reads one chat, the PM thread, and the PM posts it there (D-034). Keep your own thread's status checklist current; post replies there only when Justin writes to you there.
-5. A design question for Justin, or anything outside your lane: send it to the PM, **[WRITE]** add it under the ticket's `Open questions`, and keep working on a stated default. If it truly blocks you, set the ticket to `blocked` with exactly what you need.
+4. When something visible changes or a milestone lands, don't render it yourself: send a render request to the Render lane (D-059). The request names your ticket, branch and pushed commit sha, what to show and from where (place, time of day, what the player does), and a 2 to 3 line summary of what changed in plain words. **[WRITE]** add `Render requested <sha>` to the ticket's progress log. The Render lane captures images to /mnt/project-files/screenshots/ and sends them with your summary to the PM, who presents them to Justin. Justin reads one chat, the PM thread (D-034). Keep your own thread's status checklist current; post replies there only when Justin writes to you there.
+5. An idea, a design question for Justin, or anything outside your lane: send it to the PM as 2 to 4 concrete options, recommended first, each with a one-line trade-off (D-059), **[WRITE]** add it under the ticket's `Open questions`, and keep working on a stated default. If it truly blocks you, set the ticket to `blocked` with exactly what you need.
 6. When the PM relays a decision: **[WRITE]** note it in the ticket. The PM records it in `DECISIONS.md`.
 
 ## 2. Push and CI
@@ -35,8 +35,18 @@ Repeat until the ticket's goal is met:
 - [ ] Open questions are in the ticket and have been sent to the PM
 - [ ] Blocked? The ticket says `blocked` and names what's needed and from whom
 
+## Render lane loop
+
+1. Take render requests in the order they arrive. **[WRITE]** log each in your ticket (requester, sha).
+2. Check out the requester's sha, run `tools/gen-bindings.sh`, build, start a local server and client, and capture what the request asks for (Chromium/Playwright or Godot screenshots; headless where possible).
+3. Save images as /mnt/project-files/screenshots/<ticket>-<short sha>-<n>.png.
+4. Send the PM: requester's summary, the image paths, and anything that looked wrong. Never judge design; report what you saw.
+5. If the build or run fails, tell the requesting lane and the PM what failed; don't fix their code.
+
 ## PM loop
 
 - Session start: read `STATUS.md` and do `Next PM action`.
 - After assigning a lane, getting Justin's answer, or a merge: **[WRITE]** update `STATUS.md` and append to `DECISIONS.md`.
+- Render lane hands over images and a work summary: present them to Justin with the summary, plus any open choices for that work.
+- Ideas and design questions go to Justin as 2 to 4 options, recommended first (D-059).
 - Approve routine merges yourself once CI is green and they match `DECISIONS.md` (D-032). Bring Justin world wipes, design questions and anything irreversible or costly, batched and answerable in a word.

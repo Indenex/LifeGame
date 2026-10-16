@@ -14,6 +14,9 @@ public partial class PotView : Node3D
 
     readonly MeshInstance3D body = new();
     readonly MeshInstance3D water = new();
+    // A soft warm rim light on fresh clay, so small pieces are easy to find in the
+    // grass: faint while you are nearby, brighter on the piece G would tend.
+    static ShaderMaterial? glowFaint, glowNear;
     readonly Label3D label = new()
     {
         Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
@@ -47,6 +50,34 @@ public partial class PotView : Node3D
     public static double Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 
     public bool ShowLabel { set => label.Visible = value; }
+
+    // 0 hides the glow, 1 is the faint nearby glow, 2 marks the piece G would tend.
+    public int Highlight
+    {
+        set => body.MaterialOverlay = value <= 0 || stage == ClayStage.Firing ? null
+            : value > 1 ? (glowNear ??= Glow(0.4f)) : (glowFaint ??= Glow(0.18f));
+    }
+
+    static ShaderMaterial Glow(float strength)
+    {
+        var m = new ShaderMaterial
+        {
+            Shader = new Shader
+            {
+                Code = @"shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+uniform vec3 tint;
+uniform float strength;
+void fragment() {
+    float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+    ALBEDO = tint * rim * strength;
+}",
+            },
+        };
+        m.SetShaderParameter("tint", new Vector3(Look.Cream.R, Look.Cream.G, Look.Cream.B));
+        m.SetShaderParameter("strength", strength);
+        return m;
+    }
 
     public void Show(ulong potId, ClayForm potForm, ClayStage potStage, FireKind potFire, float potMoisture, double since, float dryRate, bool full = false)
     {
@@ -83,6 +114,7 @@ public partial class PotView : Node3D
     }
 
     public float Moisture => ClayRules.MoistureAt(moisture, rate, (float)(Now - moistureAt));
+    public float SecondsUntilDry => ClayRules.SecondsUntilDry(Moisture, rate);
 
     public ClayStage Stage => stage;
 

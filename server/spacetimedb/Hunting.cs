@@ -84,7 +84,7 @@ public static partial class Module
             FleeZ = dz / d,
         });
         float lx = animal.X + dx / d * StartleLeap, lz = animal.Z + dz / d * StartleLeap;
-        if (!AnimalCanStand(lx, lz)) (lx, lz) = (animal.X, animal.Z);
+        if (!AnimalCanStand(lx, lz) || AnimalStepBlocked(ctx, animal.X, animal.Z, lx, lz)) (lx, lz) = (animal.X, animal.Z);
         ctx.Db.Animal.Id.Update(animal with
         {
             State = AnimalState.Run,

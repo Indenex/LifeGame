@@ -1,9 +1,9 @@
 # ui-4: HUD fixes from the Bug fixes playtest
 Lane: UX and UI
 Owner: UX and UI thread (session_01NAW5B3eCSw3JtCiFrZeSNz)
-Status: in_progress
+Status: done
 Branch: claude/ux-ui-xlrh2s
-PR: (none yet)
+PR: #38 (merged 2026-10-16)
 
 ## Goal
 Four HUD problems the Bug fixes lane found in playtest (screenshots /mnt/project-files/screenshots/bugfix-05-*.png), fixed in one small PR:
@@ -25,8 +25,10 @@ Also carries the KEYMAP note for Survival's "drink from your pot" (priority 1) a
 
 - 2026-10-16 00:15: Hints.Tip(id, text) for one-off tips not tied to a key (Ceramics asked for it); hint label wraps at 380 px. The tend_clay V row in Controls goes once ceramics-3 (all clay on G) is on main.
 
+- 2026-10-16 00:23: CI run https://github.com/Indenex/LifeGame/actions/runs/38828191490 green at 702ee04; PM merged #38.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Open the PR from claude/ux-ui-xlrh2s, send the PM screenshots ui-07/ui-08 and the green sha.
+None for ui-4. Follow-ups (next ticket): F1 row for Shift+G when building-3 lands; drop the tend_clay V row when ceramics-3 lands; music slider in the Esc menu when Atmosphere's #32 (SoundScape.MusicVolume/MusicOn) lands.
