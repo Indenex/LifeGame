@@ -1,7 +1,7 @@
 # bugfix-11: Nothing shows over the death card
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #64
 
@@ -17,4 +17,4 @@ Screenshots: /mnt/project-files/screenshots/bugfix-11-before-prompt-over-death.p
 - (none)
 
 ## Next step
-Wait for CI on the PR and send the PM the green sha.
+None; merged.

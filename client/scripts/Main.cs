@@ -45,6 +45,7 @@ public partial class Main : Node3D
     DbConnection? conn;
     Identity? myIdentity;
     uint myId;
+    readonly TradeWindow trade = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -89,11 +90,14 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         building.MayBar = social.HasRightsAt;
+        // Trading face to face (ui-9, D-069).
+        trade.Note = hud.Note;
+        AddChild(trade);
         JournalPanel? journalPanel = null;
-        ClaimPanel? claimPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
-            || (claimPanel ??= social.GetChildren().OfType<ClaimPanel>().FirstOrDefault())?.IsOpen == true;
+            || social.PanelOpen
+            || trade.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
@@ -102,7 +106,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -125,10 +129,13 @@ public partial class Main : Node3D
         // --screenshot-craft=1 opens the crafting panel on that tier.
         if (Arg("screenshot-craft") is { } craftTier && int.TryParse(craftTier, out var t))
             GetTree().CreateTimer(Math.Max(1, delay - 3)).Timeout += () => crafting.Open(t);
-        // --screenshot-fire places a local campfire just in front of the player.
-        if (Arg("screenshot-fire") != null)
+        // --screenshot-fire places a local campfire just in front of the player; =cold a burned-out one.
+        if (Arg("screenshot-fire") is { } fireArg)
             GetTree().CreateTimer(Math.Max(1, delay - 4)).Timeout += () =>
-                fires.Preview(me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0));
+            {
+                var at = me.Position + new Vector3(Mathf.Sin(cameraRig.Rotation.Y), 0, Mathf.Cos(cameraRig.Rotation.Y)) * -1.6f + new Vector3(1.2f, 0, 0);
+                if (fireArg == "cold") fires.PreviewCold(at); else fires.Preview(at);
+            };
         GetTree().CreateTimer(delay).Timeout += () =>
         {
             GetViewport().GetTexture().GetImage().SavePng(path);
@@ -245,15 +252,7 @@ public partial class Main : Node3D
         water = new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = new Vector2(260, 260) },
-            MaterialOverride = new StandardMaterial3D
-            {
-                AlbedoColor = Look.Water,
-                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                Roughness = 0.08f,
-                MetallicSpecular = 0.6f,
-                ProximityFadeEnabled = true,
-                ProximityFadeDistance = 0.6f,
-            },
+            MaterialOverride = Look.WaterSurface,
             Position = new Vector3(0, Look.WaterLevel, 0),
         };
         view.AddChild(water);
@@ -277,7 +276,7 @@ public partial class Main : Node3D
         Bind("dig", Key.F);
         Bind("pick_up", Key.Space);
         Bind("craft", Key.C);
-        Bind("sneak", Key.Shift);
+        Bind("sneak", Key.Ctrl);
     }
 
     // --- Networking -------------------------------------------------------
@@ -322,6 +321,7 @@ public partial class Main : Node3D
         herd.Bind(conn, terrain, () => me.Position);
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        trade.Attach(new ServerTradeLink(conn, () => myId));
         crafting.Attach(conn);
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
@@ -525,7 +525,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed(NSneak) ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(Input.IsActionPressed(NSneak), input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 

@@ -33,6 +33,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM player_pos",
                 "SELECT * FROM world_item",
                 "SELECT * FROM fire",
+                "SELECT * FROM cold_hearth",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
                 "SELECT * FROM roast",
@@ -103,6 +104,7 @@ Craft("fire.hand_drill", 1f, null);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+OffRocks(fire);
 
 // A failed drill loses its inputs and lights nothing.
 Gather(Item.Fiber, 2);
@@ -126,6 +128,7 @@ Craft("fire.bow_drill", 0.25f, null);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
+foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
 WalkTo(fire.X, fire.Z);
@@ -198,6 +201,19 @@ void Craft(string processId, float score, Item? expect)
         var best = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)item).Max(r => r.Quality);
         Console.WriteLine($"{processId}: made {Items.Def(item).Name} (quality {best})");
     }
+}
+
+// A fire never sits on a boulder: its stone ring stays clear of every one nearby.
+void OffRocks(Fire f)
+{
+    for (int i = World.CellOf(f.X) - 2; i <= World.CellOf(f.X) + 2; i++)
+        for (int j = World.CellOf(f.Z) - 2; j <= World.CellOf(f.Z) + 2; j++)
+            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null)
+            {
+                var (rx, rz) = Rocks.Center(i, j);
+                float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
+                if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
+            }
 }
 
 // The standing tree nearest the bot, by the same rules the server uses.

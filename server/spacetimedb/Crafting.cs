@@ -78,6 +78,10 @@ public static partial class Module
     // (Ceramics.cs for clay.*, Leather.cs for hide.*).
     static partial void OnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
     static partial void AnimalsOnPlaced(ReducerContext ctx, CraftJob job, ProcessDef def);
+    // A craft job has started or ended (finished or failed), for sounds other players
+    // hear (D-072). Atmosphere implements them in WorkSounds.cs.
+    static partial void OnCraftStarted(ReducerContext ctx, CraftJob job);
+    static partial void OnCraftEnded(ReducerContext ctx, CraftJob job);
 
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
@@ -97,6 +101,8 @@ public static partial class Module
 
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
             throw new Exception("You need the right tool");
+        // Find the fire's spot before anything is used up, in case there is none.
+        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
@@ -119,8 +125,10 @@ public static partial class Module
         QualityCapFor(ctx, player.PlayerId, def.Id, ref cap);
         bool failed = score < def.FailBelow;
 
-        // A fire is lit, or a placed thing set down, a step in front of the crafter.
+        // A placed thing is set down a step in front of the crafter; a fire goes on
+        // clear ground near there, or into a cold hearth within reach (Hearths.cs).
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
+        if (fireSpot is { } spot) (fx, fz) = spot;
         // Roasting goes over a fire already burning within reach.
         if (def.Outcome == Outcome.Roast)
         {
@@ -134,9 +142,13 @@ public static partial class Module
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
         float seconds = def.Seconds;
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
+        // A better tool works faster (D-089).
+        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
+            && Items.Def((Item)tool.Item).HasQuality)
+            seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
-        ctx.Db.CraftJob.Insert(new CraftJob
+        var started = ctx.Db.CraftJob.Insert(new CraftJob
         {
             Owner = ctx.Sender,
             PlayerId = player.PlayerId,
@@ -150,6 +162,7 @@ public static partial class Module
             Z = fz,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+        OnCraftStarted(ctx, started);
     }
 
     [SpacetimeDB.Reducer]
@@ -157,6 +170,7 @@ public static partial class Module
     {
         if (ctx.Db.CraftJob.Owner.Find(timer.Owner) is not { } job) return;
         ctx.Db.CraftJob.Owner.Delete(job.Owner);
+        OnCraftEnded(ctx, job);
         var def = Processes.Find(job.ProcessId);
         if (def is null) return;
 
@@ -200,7 +214,7 @@ public static partial class Module
         ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(until) });
     }
 
-    // Clears away fires that have burned out.
+    // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
     [SpacetimeDB.Reducer]
     public static void BurnOutFires(ReducerContext ctx, FireTimer timer)
     {
@@ -210,7 +224,9 @@ public static partial class Module
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
+                LeaveColdHearth(ctx, fire);
             }
+        ClearOldHearths(ctx);
     }
 
     // How warm a spot is from nearby burning fires, 0 (none) to 1 (right beside
@@ -234,6 +250,7 @@ public static partial class Module
 
     static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
     {
+        RekindleAt(ctx, x, z);
         ctx.Db.Fire.Insert(new Fire
         {
             Id = 0,

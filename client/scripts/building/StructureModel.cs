@@ -39,7 +39,7 @@ public static partial class StructureModel
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), _ => LeanTo() };
+        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }
@@ -336,7 +336,9 @@ public static partial class StructureModel
             var top = normal.Lerp(Vector3.Up, 0.3f).Normalized();
             // Outer face, inner face, and the visible lower edge.
             Quad(st, b0 + lift, t0 + lift, t1 + lift, b1 + lift, top, shade);
+            // The underside is wound both ways, so it shows from under the roof whichever way the slope faces.
             Quad(st, b1, t1, t0, b0, -normal, shade.Darkened(0.25f));
+            Quad(st, b0, t0, t1, b1, -normal, shade.Darkened(0.25f));
             Quad(st, b0, b0 + lift, b1 + lift, b1, -up.Normalized(), shade.Darkened(0.1f));
         }
         return st.Commit();

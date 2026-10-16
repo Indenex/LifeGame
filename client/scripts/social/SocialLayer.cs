@@ -63,6 +63,7 @@ public partial class SocialLayer : Node
         conn.Db.MyInventory.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyInventory.OnDelete += (_, _) => panel.MarkDirty();
         AttachFighting();
+        AttachTrading();
 
         // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
         Use.Register(new UseHandler
@@ -124,7 +125,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
 
         // Chat carries a little further than a chunk, so listen two chunks out.
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
@@ -153,6 +154,7 @@ public partial class SocialLayer : Node
         {
             landTimer = 0.25f;
             UpdateLandChip();
+            if (conn != null && myId != 0) RefreshTradeCue();
             if (panel.IsOpen && (panel.Claim is not { } open || Flat(open).DistanceTo(Flat(myPos)) > Social.MarkerReach + 1f))
                 panel.Close();
         }

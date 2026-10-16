@@ -16,10 +16,11 @@ Design scope: https://claude.ai/code/artifact/8064d6ad-709a-42b9-8136-ad85e16111
 - **Justin** owns the game. He wants to be very involved in design: frequent progress updates with screenshots, and design questions (how something looks, feels or plays, rules and numbers players notice) brought to him rather than decided silently.
 - **PM** (Project Manager) assigns lanes and tickets, keeps `STATUS.md` accurate, answers technical questions itself, takes design questions, merges, spending and anything irreversible to Justin, and records his answers in `DECISIONS.md`.
 - **Feature lanes** (designers/workers) each own one feature lane (see `STATUS.md`) and build game features, one ticket at a time on their own branch. Questions go to the PM; meanwhile keep working on a stated default.
-- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration.
+- **Integration lane** is a dedicated worker that owns integration, CI and builds: the shared files, `.github/workflows/`, build and bindings tooling, the Use dispatcher, and merge-readiness of PRs (resolving cross-lane conflicts, keeping `main` building). Feature lanes do not edit CI; they ask Integration. The PM executes merges, and lanes send green shas to the PM (D-119). Integration prepares merge-readiness.
 - **Audio lane** owns all sound and music (D-079). Other lanes send it audio requests and never make sounds themselves.
 - **Environment** and **Atmosphere** lanes together own cosy immersion: Environment builds the world (terrain, plants, rocks, water edges), Atmosphere sets light, sky, weather and mood (D-078).
-- **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059).
+- **Render lane** is a dedicated worker that makes everything Justin looks at: screenshots, short clips, mockups. Other lanes never render their own work; they send a render request (see `WORKER_LOOP.md`) and the Render lane sends the images plus the requester's work summary to the PM, who presents them to Justin (D-059). Renders never block merges (D-142).
+- **Scribe** (Sonnet) records Justin's decisions in `DECISIONS.md` and STATUS changes for the PM (D-102).
 
 ## Ideas become choices (D-059)
 
@@ -55,13 +56,14 @@ Each lane works in its own files so lanes don't collide:
 - Client code under `client/scripts/<feature>/`.
 - Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Integration lane owns these, CI and builds.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
+- When you add a process id, send the Journal and skills lane one 'Things to try' line for it (D-105): one sentence naming the goal without the recipe, e.g. 'A dry pot set in a fire comes out hard. A wet one cracks.'
 - `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.
 
 ## Git
 
 - Cloud sessions push to the branch the harness assigns (usually `claude/...`). Record the real branch name in your ticket and `STATUS.md` row.
 - Commit messages lead with the ticket id: `crafting-1: add hand-drill fire`.
-- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. The PM approves routine merges once CI is green and the PR matches decisions already in `DECISIONS.md` (D-032); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
+- Never force-push a shared branch, never commit to `main` directly. Each milestone merges through a PR. Routine merges (CI green, PR matches decisions already in `DECISIONS.md`, D-032) are executed by the PM, and lanes send green shas to the PM (D-119); Justin approves anything that wipes his world, makes an undecided design change he will notice, or costs money.
 - Commit before any checkout, rebase or merge. Never stash and walk away.
 
 ## CI

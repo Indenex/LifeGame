@@ -153,7 +153,12 @@ void fragment() {
         {
             string state = ClayRules.Describe(now);
             label.Text = now <= ClayRules.SafeToFire
-                ? (form == ClayForm.Brick ? "Dry brick" : "Bone dry, ready to fire")
+                ? form switch
+                {
+                    ClayForm.Brick => "Dry brick",
+                    ClayForm.StorageJar => "Bone dry, ready for a kiln",
+                    _ => "Bone dry, ready to fire",
+                }
                 : $"{char.ToUpperInvariant(state[0])}{state[1..]}, drying";
         }
     }

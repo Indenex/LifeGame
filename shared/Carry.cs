@@ -1,6 +1,5 @@
 // How much a player can carry (Justin chose a carrying limit, D-042). Shared by
 // the server module and the Godot client; keep it free of engine types.
-// Numbers here are proposals until Justin signs off on them.
 using System;
 using System.Collections.Generic;
 
@@ -8,10 +7,11 @@ namespace LifeGame.Shared
 {
     public static class Carry
     {
-        // What you can carry with bare hands, in load units (roughly kilograms).
+        // What you can carry with bare hands, in load units (roughly kilograms), and
+        // what a woven basket in your inventory adds (Justin, D-100): only one basket
+        // counts, leaving room for later carriers to climb slowly (D-075).
         public const float BaseLimit = 20f;
-        // A woven basket in your inventory adds this much. Only one basket counts.
-        public const float BasketBonus = 15f;
+        public const float BasketBonus = 10f;
         // Crafting's woven basket.
         public const Item Basket = Item.Basket;
 
@@ -47,6 +47,8 @@ namespace LifeGame.Shared
             [Item.Daub] = 2f,
             [Item.UnfiredPinchPot] = 1f,
             [Item.UnfiredCoilPot] = 2f,
+            [Item.UnfiredStorageJar] = 8f,
+            [Item.StorageJar] = 8f,
             [Item.Berries] = 0.1f,
             [Basket] = 0.5f,
         };

@@ -4,7 +4,15 @@ on:
   push:
     branches: [main]
   pull_request:
+    # labeled/unlabeled so adding or removing world-wipe re-runs the checks.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
+
+# One run per branch or PR at a time. A new push to a PR cancels that PR's older run;
+# on main the running build finishes and a newer merge replaces any build still queued.
+concurrency:
+  group: build-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GODOT_VERSION: 4.6.2
@@ -13,16 +21,16 @@ env:
 jobs:
   server:
     name: Server module and load test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
@@ -30,7 +38,7 @@ jobs:
 
       - name: Cache SpacetimeDB
         id: stdb-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/stdb
           key: stdb-${{ env.SPACETIME_VERSION }}
@@ -63,8 +71,14 @@ jobs:
           (cd tools/SpawnCheck && dotnet run -c Release)
 
       # Justin publishes each merge over his world without --delete-data (bugfix-3).
+      # The one planned wipe (D-129) carries the world-wipe label, which only the PM adds
+      # once Justin has confirmed the date. Every other PR must carry the world over.
+      - name: World wipe (labelled, upgrade check skipped)
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'world-wipe')
+        run: echo "::warning::This PR is labelled world-wipe. Publishing it needs --delete-data and wipes Justin's world (D-129)."
+
       - name: Upgrade check (this module over the base branch's world, no wipe)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'world-wipe')
         run: |
           # The merge commit's first parent is the base this PR was merged onto. The
           # base branch's tip can move while CI runs, so don't fetch it by name.
@@ -82,7 +96,7 @@ jobs:
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-Server
           path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
@@ -90,7 +104,7 @@ jobs:
 
   client:
     name: Client (${{ matrix.preset }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -100,14 +114,14 @@ jobs:
           - preset: Windows
             out: builds/windows/LifeGame.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
@@ -115,7 +129,7 @@ jobs:
 
       - name: Cache SpacetimeDB
         id: stdb-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/stdb
           key: stdb-${{ env.SPACETIME_VERSION }}
@@ -134,7 +148,7 @@ jobs:
 
       - name: Cache Godot and export templates
         id: godot-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/godot
@@ -162,7 +176,7 @@ jobs:
           "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "../${{ matrix.out }}"
           test -e "../${{ matrix.out }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-${{ matrix.preset }}
           path: builds/

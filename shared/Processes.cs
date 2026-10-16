@@ -128,6 +128,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = 15, Makes = Item.Basket,
             },
+            // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
+            new ProcessDef
+            {
+                Id = "weave.mat", Name = "Weave a sleeping mat", Doing = "Weaving a sleeping mat", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Fiber, 8) },
+                Seconds = 12, Makes = Item.SleepingMat,
+            },
             new ProcessDef
             {
                 Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
@@ -210,6 +217,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // Too big for a campfire: it is fired in a kiln (ceramics-6).
+                Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
+                Seconds = 16, Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
                 Id = "clay.brick", Name = "Mold a brick", Doing = "Molding a brick", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CleanClay, 2), new Ingredient(Item.Fiber) },
                 Seconds = 5, Outcome = Outcome.Placed,
@@ -236,6 +250,13 @@ namespace LifeGame.Shared
             float q = inputQuality * 0.5f + Math.Clamp(score, 0f, 1f) * 100f * 0.5f;
             return (byte)Math.Clamp(MathF.Round(q), 1f, cap);
         }
+
+        // How much faster a better tool works (D-089): a power curve over the tool's
+        // quality (docs/PROGRESSION.md), about 7% at quality 35 and MaxToolSpeedup at 100.
+        public const float MaxToolSpeedup = 0.15f;
+        public const float ToolSpeedupPower = 0.73f;
+        public static float ToolSpeedup(byte toolQuality) =>
+            MaxToolSpeedup * MathF.Pow(Math.Clamp(toolQuality, (byte)0, (byte)100) / 100f, ToolSpeedupPower);
 
         // Words for a quality number, so players never see raw digits.
         public static string Grade(byte quality) => quality switch
@@ -265,6 +286,13 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
+        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // a fire beside it rekindles it in place.
+        public const float ColdSeconds = 60 * 60;
+        // The stone ring's reach from the fire's middle, in meters, and how far apart
+        // two fires (or a fire and a cold hearth) must be.
+        public const float RingRadius = 0.6f;
+        public const float Spacing = 1.5f;
 
         // 0 to 1: how warm a spot is from one burning fire.
         public static float WarmthFrom(float fireX, float fireZ, float x, float z)

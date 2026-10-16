@@ -1,7 +1,6 @@
 // Shapes and rules for buildings, shared by the server module and the client so
-// placement checks and "am I inside?" agree on both sides. Material costs live
-// on the server (Building.cs) because they name item kinds; the client reads
-// them from each structure's row. Keep this file free of engine and SpacetimeDB types.
+// placement checks, "am I inside?" and what each stage costs agree on both sides.
+// Keep this file free of engine and SpacetimeDB types.
 using System;
 
 namespace LifeGame.Shared
@@ -87,6 +86,71 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
+            // Fired clay doesn't rot, so it weathers only after two weeks untouched.
+            new StructureShape
+            {
+                Name = "Storage jar",
+                Round = true, Radius = 0.32f,
+                Clearance = 0.6f,
+                Solid = true,
+                // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
+                StoreStacks = JarStacksMax,
+                WeatherAfter = 336,
+                Stages = new[] { "Set the jar" },
+            },
+        };
+
+        // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
+        // for thatch; the hut's walls are daub (clean clay mixed with fiber, from Ceramics).
+        // The server builds each stage's needs from this; the client shows it before you lay out.
+        public static readonly (Item Item, uint Count)[][][] StageCosts =
+        {
+            // Lean-to: Frame, Lashing, Ribs, Thatch
+            new[]
+            {
+                new[] { (Item.Stick, 4u) },
+                new[] { (Item.Fiber, 3u) },
+                new[] { (Item.Stick, 6u) },
+                new[] { (Item.Fiber, 8u) },
+            },
+            // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
+                new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
+                new[] { (Item.Daub, 12u) },
+                new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
+            },
+            // Claim marker: one stage, costs set by Claims in shared/Social.cs
+            new[]
+            {
+                new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+            },
+            // Updraft kiln (Ceramics): Base, Dome
+            new[]
+            {
+                new[] { (Item.Brick, 4u) },
+                new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
+            },
+            // Storage basket: Weave
+            new[]
+            {
+                new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+            },
+            // Brick house: Footings, Brick walls, Rafters, Thatch
+            new[]
+            {
+                new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                new[] { (Item.Fiber, 14u) },
+            },
+            // Storage jar (Ceramics): set down one kiln-fired jar
+            new[]
+            {
+                new[] { (Item.StorageJar, 1u) },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -109,6 +173,21 @@ namespace LifeGame.Shared
         public const float ClosedDoorWarmth = 0.9f;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
+        // Stacks a storage jar holds (ceramics-6, D-093): 4 for a poor jar up to 8 for
+        // a fine one. The first 15% of quality gives 40% of the gain, so an early,
+        // better-made jar is quickly worth it; then it climbs slowly (D-075).
+        public const int JarStacksMin = 4, JarStacksMax = 8;
+
+        public static int JarStacks(byte quality)
+        {
+            float t = Math.Clamp(quality / 100f, 0f, 1f);
+            float curve = t < 0.15f ? t / 0.15f * 0.4f : 0.4f + (t - 0.15f) / 0.85f * 0.6f;
+            return JarStacksMin + (int)MathF.Round((JarStacksMax - JarStacksMin) * curve);
+        }
+
+        // Stacks a finished store of this kind and quality holds.
+        public static int StoreStacksFor(int kind, byte quality) =>
+            kind == ClayRules.JarStructureKind ? JarStacks(quality) : Shape(kind).StoreStacks;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.

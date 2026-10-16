@@ -20,6 +20,8 @@ public partial class Atmosphere : Node3D
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
     static readonly StringName NWindStrength = "wind_strength";
+    static readonly StringName NWindGust = "wind_gust";
+    static readonly StringName NRainAmount = "rain_amount";
     static readonly StringName NCloudCover = "cloud_cover";
     static readonly StringName NCloudOffset = "cloud_offset";
     static readonly StringName NPlayerPosition = "player_position";
@@ -40,6 +42,7 @@ public partial class Atmosphere : Node3D
     readonly ShaderMaterial sky = new() { Shader = SkyShader };
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
+    readonly Mist mist = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -75,6 +78,14 @@ public partial class Atmosphere : Node3D
 
     readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
     Vector2 cloudOffset;
+    // Which way the wind blows (x, z), shared with shaders as wind_dir. Fixed for now;
+    // the clouds drift with it.
+    public static readonly Vector2 WindDirection = new(0.6f, 0.8f);
+    static readonly StringName NWindDir = "wind_dir";
+
+    // How wooded it is around the player, eased over a few seconds: where the sun
+    // shafts between the trunks show.
+    float woods;
 
     Vector2? debugPosition;
     float stepPhase;
@@ -95,6 +106,7 @@ public partial class Atmosphere : Node3D
 
         AddChild(rain);
         AddChild(fireflies);
+        AddChild(mist);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
 
@@ -159,8 +171,9 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
+        WorkSounds.Connect(conn, sound);
     }
 
     void OnClock(WorldClock c)
@@ -226,11 +239,15 @@ public partial class Atmosphere : Node3D
         wetness = Mathf.Lerp(wetness, wet, snap ? 1f : 1f - Mathf.Exp(-dt / 10f));
 
         // Clouds drift with the wind, the same way the grass leans.
-        cloudOffset -= new Vector2(0.6f, 0.8f) * (1.5f + wind * 5f) * dt;
+        cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
+        // Grass and trees push harder exactly when the wind is heard to gust.
+        RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);
+        RenderingServer.GlobalShaderParameterSet(NRainAmount, rainAmount);
         RenderingServer.GlobalShaderParameterSet(NCloudCover, cloud);
         RenderingServer.GlobalShaderParameterSet(NCloudOffset, cloudOffset);
+        RenderingServer.GlobalShaderParameterSet(NWindDir, WindDirection);
 
         ApplyLight();
 
@@ -245,6 +262,8 @@ public partial class Atmosphere : Node3D
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
+        // Dawn mist glows with the same light as the fog: warm at sunrise.
+        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
@@ -252,9 +271,16 @@ public partial class Atmosphere : Node3D
         sound.Wetness = wetness;
         sound.Cover = Sheltered?.Invoke(focus) == true ? 1f : 0f;
         sound.TimeOfDay = timeOfDay;
-        sound.Foliage = Woodedness(focus);
+        float wooded = Woodedness(focus);
+        woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        sound.Foliage = wooded;
         Lightning(dt);
-        if (GetViewport()?.GetCamera3D() is { } ear) FireSound(focus, ear.GlobalBasis.X);
+        if (GetViewport()?.GetCamera3D() is { } ear)
+        {
+            FireSound(focus, ear.GlobalBasis.X);
+            WaterSound(dt, focus, ear.GlobalBasis.X);
+            WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
+        }
     }
 
     // --- Sun, sky and fog -----------------------------------------------------
@@ -329,6 +355,14 @@ public partial class Atmosphere : Node3D
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
 
+        // Sun shafts in the woods: at a low sun on a fair day the air between the
+        // trunks thickens a little and scatters forward, so the light slants through
+        // the canopy in beams. Gone at midday, under cloud and in rain.
+        float lowSun = Mathf.SmoothStep(0.02f, 0.12f, sunHeight) * (1f - Mathf.SmoothStep(0.3f, 0.55f, sunHeight));
+        float fair = (1f - overcast) * (1f - overcast) * (1f - Mathf.Clamp(rainAmount * 2f, 0f, 1f));
+        float shafts = woods * lowSun * fair;
+        sun.LightVolumetricFogEnergy += 1.4f * shafts;
+
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
         float dim = 1f - 0.35f * storm;
@@ -347,7 +381,8 @@ public partial class Atmosphere : Node3D
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
         env.VolumetricFogAlbedo = Grey(mood.Mist, grey, 1f) * (1f - 0.25f * storm);
-        env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm);
+        env.VolumetricFogDensity = mood.MistDensity * (1f + 2.2f * storm + 1.6f * shafts);
+        env.VolumetricFogAnisotropy = 0.6f + 0.25f * shafts;
         env.AmbientLightColor = mood.Ambient;
         env.AmbientLightEnergy = mood.AmbientEnergy * (1f + 0.35f * overcast);
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
@@ -469,9 +504,46 @@ public partial class Atmosphere : Node3D
     Terrain? terrain;
 
     // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
-    // density the terrain plants its trees by. Sampled every few metres out to
+    // density the terrain plants its trees by (Forest.Density, env-1). Sampled every few metres out to
     // about 12 m; the mixer eases between values, so walking into the trees fades
     // the leaves in.
+    // Where the nearest open water is, looked over a few times a second: the closer
+    // and the more of it, the louder it laps; the sound comes from its side.
+    float waterLook;
+
+    void WaterSound(float dt, Vector3 focus, Vector3 right)
+    {
+        waterLook -= dt;
+        if (waterLook > 0f || terrain == null) return;
+        waterLook = 0.25f;
+        const int Reach = 20, Step = 2;
+        int cx = World.CellOf(focus.X), cz = World.CellOf(focus.Z);
+        float nearest = float.MaxValue;
+        Vector2 toward = Vector2.Zero;
+        int wet = 0, near = 0;
+        for (int dx = -Reach; dx <= Reach; dx += Step)
+            for (int dz = -Reach; dz <= Reach; dz += Step)
+            {
+                float d2 = dx * dx + dz * dz;
+                if (d2 > Reach * Reach) continue;
+                if (d2 <= 10 * 10) near++;
+                if (terrain.TileHeight(cx + dx, cz + dz) >= Look.WaterLevel - 0.05f) continue;
+                float d = Mathf.Sqrt(d2);
+                nearest = Mathf.Min(nearest, d);
+                if (d2 <= 10 * 10) wet++;
+                toward += new Vector2(dx, dz) / (1f + d2 * 0.05f);
+            }
+        if (nearest == float.MaxValue)
+        {
+            sound.Water = 0f;
+            return;
+        }
+        // A puddle-sized dip laps quietly; the shore of a wide pond laps fully.
+        float amount = Mathf.Clamp(wet / (float)near * 3f, 0.35f, 1f);
+        sound.Water = (1f - Mathf.SmoothStep(1.5f, Reach, nearest)) * amount;
+        sound.WaterPan = toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(new Vector2(right.X, right.Z)), -1f, 1f) : 0f;
+    }
+
     static float Woodedness(Vector3 at)
     {
         int cx = World.CellOf(at.X), cz = World.CellOf(at.Z);
@@ -482,10 +554,9 @@ public partial class Atmosphere : Node3D
             {
                 int x = cx + dx, z = cz + dz;
                 count++;
-                if (x * x + z * z < 12 * 12 || World.IsClay(x, z)) continue;
-                sum += World.Noise(x, z, 24f, 33);
+                sum += Forest.Density(x, z);
             }
-        return Mathf.SmoothStep(0.3f, 0.7f, sum / count);
+        return Mathf.SmoothStep(0.1f, 0.6f, sum / count);
     }
 
     // --- Helpers ----------------------------------------------------------------
@@ -582,7 +653,7 @@ public partial class Atmosphere : Node3D
                         col += vec3(star) * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
                     }
                     // The same cloud layer whose shadows drift over the ground.
-                    vec2 uv = (d.xz / (d.y + 0.03) * 300.0 + cloud_offset) * 0.004;
+                    vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
                     float n = texture(clouds, uv).r;
                     float edge = 1.0 - cloud_cover;
                     float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
