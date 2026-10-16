@@ -41,14 +41,13 @@ public partial class SoundScape : Node
     public float WaterPan { set => mix.WaterPan = value; }
     // How hard the wind is gusting in what is heard, 0 to 1.
     public float Gust => mix.Gust;
-    // Music on or off, remembered between sessions.
+    // Sound settings, remembered between sessions: music on or off, and the four
+    // sliders (D-097), each 0 to 1 with 0.5 (the designed mix) for a new player.
     public bool MusicOn { get => mix.MusicOn; set { mix.MusicOn = value; Save(); } }
-    // The Options page sliders (D-097), each 0 to 1, 0.5 the designed mix. UX/UI's
-    // SoundLevels owns and saves them and writes them here; the master slider
-    // works on Godot's Master bus, so it is not here.
-    public float MusicVolume { get => mix.MusicLevel; set => mix.MusicLevel = Mathf.Clamp(value, 0f, 1f); }
-    public float EffectsVolume { get => mix.EffectsLevel; set => mix.EffectsLevel = Mathf.Clamp(value, 0f, 1f); }
-    public float AmbienceVolume { get => mix.AmbienceLevel; set => mix.AmbienceLevel = Mathf.Clamp(value, 0f, 1f); }
+    public float MasterVolume { get => mix.MasterLevel; set { mix.MasterLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float MusicVolume { get => mix.MusicLevel; set { mix.MusicLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float EffectsVolume { get => mix.EffectsLevel; set { mix.EffectsLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
+    public float AmbienceVolume { get => mix.AmbienceLevel; set { mix.AmbienceLevel = Mathf.Clamp(value, 0f, 1f); Save(); } }
 
     const string SettingsPath = "user://sound.cfg";
 
@@ -57,12 +56,24 @@ public partial class SoundScape : Node
         var config = new ConfigFile();
         if (config.Load(SettingsPath) != Error.Ok) return;
         mix.MusicOn = (bool)config.GetValue("music", "on", true);
+        // The old [music] volume (full by default) is not carried over: everyone
+        // starts the new sliders at the middle (D-097).
+        mix.MasterLevel = Level(config, "master");
+        mix.MusicLevel = Level(config, "music");
+        mix.EffectsLevel = Level(config, "effects");
+        mix.AmbienceLevel = Level(config, "ambience");
     }
+
+    static float Level(ConfigFile config, string key) => Mathf.Clamp((float)config.GetValue("volume", key, 0.5f), 0f, 1f);
 
     void Save()
     {
         var config = new ConfigFile();
         config.SetValue("music", "on", mix.MusicOn);
+        config.SetValue("volume", "master", mix.MasterLevel);
+        config.SetValue("volume", "music", mix.MusicLevel);
+        config.SetValue("volume", "effects", mix.EffectsLevel);
+        config.SetValue("volume", "ambience", mix.AmbienceLevel);
         config.Save(SettingsPath);
     }
 

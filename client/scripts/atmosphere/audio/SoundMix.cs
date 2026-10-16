@@ -33,11 +33,10 @@ public sealed class SoundMix
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
     public bool MusicOn = true;
-    // The sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
+    // The four sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
     // player starts, is the mix as designed; see SliderGain. Effects are your
     // footsteps and everyone's work; ambience is weather, wildlife, sheep, fire and
-    // water. In the game the master slider works on Godot's Master bus instead, so
-    // MasterLevel stays 0.5 there; SoundPreview uses it.
+    // water.
     public float MasterLevel = 0.5f, MusicLevel = 0.5f, EffectsLevel = 0.5f, AmbienceLevel = 0.5f;
     // Master level. Raised from 1.3 (audio-1): Justin heard the mix as quiet.
     public float Volume = 1.7f;

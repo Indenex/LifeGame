@@ -23,11 +23,11 @@ Audio synthesizes it in `SoundMix.cs` (no sample files), adds a SoundPreview sce
 
 ## Sliders and buses (D-097)
 
-Four sliders on the Options page (Esc menu), each 0 to 1. UX/UI's `client/scripts/ui/SoundLevels.cs` owns and saves them (0.5 for a new player, the mix as designed) and writes them into `SoundScape`. A slider maps to gain with `SoundMix.SliderGain`: (2 x level)^2, so 0 is silent, 0.5 is 1, and 1 is 4 (+12 dB).
+Four sliders on the Options page (Esc menu), each 0 to 1 and saved in `user://sound.cfg` under `[volume]`. Every new player starts at 0.5, which is the mix as designed. A slider maps to gain with `SoundMix.SliderGain`: (2 x level)^2, so 0 is silent, 0.5 is 1, and 1 is 4 (+12 dB).
 
-| Slider | Where it lands | What it scales |
+| Slider | `SoundScape` property | What it scales |
 |---|---|---|
-| Master | Godot's Master bus (UX/UI), same curve | everything |
+| Master | `MasterVolume` | everything, before the soft clip |
 | Music | `MusicVolume` | the score (the Music on/off toggle stays) |
 | Effects | `EffectsVolume` | your footsteps, your work, other players' work |
 | Ambience | `AmbienceVolume` | wind, leaves, rain, thunder, birds, night insects, sheep, fire, water, frogs |
