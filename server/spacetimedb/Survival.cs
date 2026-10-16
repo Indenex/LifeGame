@@ -8,7 +8,6 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    const float BushReach = 2.5f;
     // Warmth per second from standing right by a fire at full strength.
     const float FireHeat = 1f / 30f;
 
@@ -165,7 +164,7 @@ public static partial class Module
         var bush = ctx.Db.ForageBush.Id.Find(bushId) ?? throw new Exception("That bush is gone");
         var pos = RequirePos(ctx, player);
         float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
-        if (dx * dx + dz * dz > BushReach * BushReach)
+        if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
             throw new Exception("Out of reach");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
             throw new Exception("No ripe berries yet");
@@ -276,6 +275,23 @@ public static partial class Module
     }
 
     // --- Needs math --------------------------------------------------------
+
+    // --- For other lanes ----------------------------------------------------
+
+    // Kills a player the same way hunger or cold does: everything carried drops and
+    // they wake at the wilderness edge. Claims calls this with "slain" for PvP.
+    static void KillPlayer(ReducerContext ctx, Player player, string cause)
+    {
+        if (ctx.Db.Vitals.PlayerId.Find(player.PlayerId) is not { } v) return;
+        if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) return;
+        Die(ctx, player, Snapshot(ctx, v), pos, cause);
+    }
+
+    // A player's needs as of now (each 0 to 1), or null if they have no vitals yet.
+    static (float food, float water, float warmth)? NeedsNow(ReducerContext ctx, uint playerId) =>
+        ctx.Db.Vitals.PlayerId.Find(playerId) is { } v && Snapshot(ctx, v) is var now
+            ? (now.Food, now.Water, now.Warmth)
+            : null;
 
     static Vitals RequireVitals(ReducerContext ctx, Player player) =>
         Snapshot(ctx, ctx.Db.Vitals.PlayerId.Find(player.PlayerId) ?? throw new Exception("No vitals"));
@@ -443,4 +459,12 @@ public static partial class Module
 
     static Timestamp Later(ReducerContext ctx, long micros) =>
         ctx.Timestamp + new TimeDuration(micros);
+
+    // Carrying limit (D-042): an overloaded player walks slower. Move scales its
+    // speed check by this, matching the client's slowdown.
+    static float CarryWalkFactor(ReducerContext ctx, Identity owner)
+    {
+        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Select(i => ((Item)i.Item, i.Count)));
+        return Carry.WalkFactor(load, limit);
+    }
 }
