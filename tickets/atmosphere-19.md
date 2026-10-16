@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-19-warm-homes
-PR: (none yet)
+PR: #281
 
 ## Goal
 Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 storms. At night, camps look lived-in from afar: warm firelight glows from hut doorways and gaps in walls, and smoke rises from hearths and chimneys and drifts with the wind. Lights and smoke follow a hearth or fire inside or by a structure; strength follows Atmosphere.Night and the fire's fuel. Coordinate with House building (which owns huts, doors and structure pieces) on where doorways, gaps and hearths are; the glow and smoke are Atmosphere's. Done: Render lane shots of a hut with a fire at dusk and night from 10 m and 40 m, and a PR green.
@@ -17,4 +17,4 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 - Answered from public data: doorway from StructureShape.DoorwayZ, door state from structure_door. Asked House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) for a smoke-outlet height on StructureShape (D-206) and checking the glow with see-through buildings (#272).
 
 ## Next step
-Open the atmosphere-19 PR; switch the 2.9 m roof default to House building's shape field once it exists.
+Wait for #281 CI and send the PM the green sha; then start atmosphere-20 (wet world). Switch the 2.9 m roof default when House building adds the shape field.
