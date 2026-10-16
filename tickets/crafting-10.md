@@ -3,7 +3,7 @@ Lane: Crafting
 Owner: Crafting thread
 Status: in_review
 Branch: crafting-panel-stays
-PR: (see below)
+PR: #72
 
 ## Goal
 Playtest finding: the panel closed after every craft, so cleaning 6 clay meant pressing C then 1, six times. Now the panel stays open, and pressing the same number repeats the recipe once your hands are free. It steps aside only while a minigame is played and comes back after it. C and Esc close it as before.
