@@ -1,9 +1,9 @@
 # ui-9: Trade window
 Lane: UX and UI
 Owner: UX and UI thread (session session_01V6qgbNbvTwniqW946KACLr)
-Status: in_progress
+Status: in_review
 Branch: claude/ux-ui-trade-xlrh2s (stacked on claude/ux-ui-xlrh2s while #73 waits)
-PR: (none yet)
+PR: #111 (merge after #110)
 
 ## Goal
 Two players can trade carried items face to face (D-069). Use (G) on another player asks to trade; they see a request prompt and accept or decline. The window shows both offers side by side; you add items from what you carry. Each side has an Accept button; any change to either offer clears both accepts, and that is clearly visible. A warning shows if the trade would put you over your carry limit. Esc, walking away or death cancels. The client lives in `client/scripts/ui/`; the server side is claims-7 (Claims lane, session_013ECn821EbTpbj4h7d3PepH), which sends the table and reducer contract. Until it lands, the window runs on mock data.
@@ -19,10 +19,11 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 - 2026-10-16 18:45: Render requested 18b4bda: a live two-client trade run.
 - 2026-10-16 18:55: Claims added un-accept (claims-7 396125c: `AcceptTrade(tradeId, version, bool accept)`). Merged it in and regenerated the bindings. The Accept button takes an accept back again ("Accepted, waiting for X (click to take it back)"). Claims confirmed the server never refuses a trade for overload (D-077), so the warning stays a warning. Build 0 errors.
 - 2026-10-16 19:00: Merged the claims-7 head (89840b5, D-080: a finished trade posts no chat line). The window's "You trade with X" note on TradeEnded "done" is now the only confirmation, and both traders get it. Build 0 errors.
+- 2026-10-16 19:35: #73 is merged and Claims opened #110 (head f85c3b9). Merged main and #110 in; the only conflicts were two Main.cs hook lines, and I kept both sides. Build 0 errors. Pushed 1a47033 and opened PR #111 against main, marked to merge after #110.
 
 ## Open questions / blockers
-- PR order: this branch holds ui-8 (#73) and claims-7 (Claims opens its PR after #71). Open the ui-9 PR once both merge, then merge main in.
+- PR order: #111 contains #110; merge #110 first.
 - Not tested with two live clients yet. Render, or a two-client run, should check ask, accept, the swap and the end lines.
 
 ## Next step
-When #73 and the claims-7 PR have merged, merge main into this branch, build, and open the ui-9 PR; meanwhile ask Render for a two-client trade run at the pushed sha.
+Wait for CI on PR #111 at 1a47033, then send the PM the green sha (merge after #110).
