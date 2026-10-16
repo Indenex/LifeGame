@@ -1,7 +1,7 @@
 # wiki-2: Rewrite the player wiki in a plain voice
 Lane: Wiki
 Owner: Wiki session (Opus, D-064)
-Status: in_review
+Status: done
 Branch: claude/wiki-2
 PR: #87
 
@@ -13,9 +13,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16: started on claude/wiki-2 (harness gave a detached HEAD, no branch name); facts checked against DECISIONS.md D-001..D-064 and KEYMAP.md.
 - 2026-10-16: full rewrite of all 11 pages pushed (f44a82a, 4961468 + follow-up). Added missing facts: Shift+G bar, Z strike, Ctrl master-play, learning by watching/notes, basket and claim-owner rules, tree felling.
 - 2026-10-16: opened PR #87; sent the PM the link, three sample sentences and a terseness question.
+- 2026-10-16 17:00: #87 merged; Justin chose "As is" for the tone; PM republished the web page. Done.
 
 ## Open questions / blockers
-- Sent to the PM for Justin: how terse should it be? (a) as is (recommended), (b) terser, mostly bullets and tables, (c) one scene-setting line per page. Working on (a).
+- (none) Justin chose "As is" (a).
 
 ## Next step
-Wait for the PM/Justin's tone verdict on the PR; apply any requested wording changes on claude/wiki-2.
+None for wiki-2. Ongoing: when a merged decision or PR changes what players experience, update `wiki/` on a fresh branch from main and send the PM the PR link.
