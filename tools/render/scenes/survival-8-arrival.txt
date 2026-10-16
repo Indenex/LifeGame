@@ -1,0 +1,11 @@
+# survival-8 (#167, on main): a fresh character's sprout badge beside the warmth ring,
+# a few minutes later partly drained, then the end note after arrival_left is set low.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+burst 2 2
+wait 240
+burst 2 2
+sql UPDATE vitals SET arrival_left = 5.0
+wait 7
+burst 5 1.5
