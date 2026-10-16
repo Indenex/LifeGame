@@ -102,7 +102,8 @@ public sealed class SoundMix
         if (!others.TryGetValue(player, out var voice))
         {
             if (kind == Work.None) return;
-            others[player] = voice = new WorkVoice(Rate, noise, new Random(unchecked((int)player * 7919 + 13)));
+            // Silent until OtherPlace says where they are.
+            others[player] = voice = new WorkVoice(Rate, noise, new Random(unchecked((int)player * 7919 + 13))) { Gain = 0f };
         }
         voice.Set(kind);
     }

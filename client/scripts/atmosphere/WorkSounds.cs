@@ -21,7 +21,12 @@ static class WorkSounds
     static DbConnection? conn;
     static string? minigame, job;
     static Work playing;
-    static readonly HashSet<uint> working = new();
+    // Who is working, and since when (seconds of play), so a row that somehow
+    // outlives its job can never loop a sound forever.
+    static readonly Dictionary<uint, double> working = new();
+    const double LongestJob = 120;
+    static double now;
+    static readonly List<uint> expired = new();
     static float placeIn;
 
     public static void Connect(DbConnection c, SoundScape scape)
@@ -42,7 +47,7 @@ static class WorkSounds
         c.Db.CraftWork.OnInsert += (_, w) =>
         {
             if (IsMe(w.PlayerId)) return;
-            working.Add(w.PlayerId);
+            working[w.PlayerId] = now;
             sound?.OtherWorking(w.PlayerId, SoundMix.WorkFor(w.ProcessId));
         };
         c.Db.CraftWork.OnDelete += (_, w) =>
@@ -62,11 +67,18 @@ static class WorkSounds
     // Each frame from Atmosphere: where the others at work are, from the listener.
     public static void Place(float dt, Vector3 listener, Vector3 right)
     {
+        now += dt;
         placeIn -= dt;
         if (placeIn > 0f || working.Count == 0 || conn == null || sound == null) return;
         placeIn = 0.1f;
-        foreach (var id in working)
+        foreach (var (id, since) in working)
         {
+            if (now - since > LongestJob)
+            {
+                expired.Add(id);
+                sound.OtherWorking(id, Work.None);
+                continue;
+            }
             if (conn.Db.PlayerPos.PlayerId.Find(id) is not { } p)
             {
                 sound.OtherPlace(id, 0f, 0f);
@@ -78,6 +90,8 @@ static class WorkSounds
             float pan = d > 0.5f ? Mathf.Clamp(toward.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized()), -1f, 1f) * Mathf.Min(1f, d / 4f) : 0f;
             sound.OtherPlace(id, gain, pan);
         }
+        foreach (var id in expired) working.Remove(id);
+        expired.Clear();
     }
 
     static bool IsMe(uint playerId) =>

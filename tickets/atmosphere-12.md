@@ -15,8 +15,10 @@ Justin chose option C with a tweak (D-072): your own work and other players' wor
 
 - 2026-10-16 17:20: PM relayed D-072 (option C, others 60% quieter). A read-only view can't scan CraftJob (no Iter on read-only tables), so: public table CraftWork {PlayerId PK, ProcessId, Failed} in server/spacetimedb/WorkSounds.cs (my file), filled by partial hooks OnCraftStarted/OnCraftEnded, declared and implemented there. Crafting.cs must call them (asked Crafting session_01Y2sA7pDBFch57bWb1uKMTq; told Integration). Client: Atmosphere subscribes "SELECT * FROM craft_work"; WorkSounds plays each other player as its own WorkVoice at gain 0.4 x (1 - smoothstep(3, 30, distance)), panned by direction, re-placed every 0.1 s from PlayerPos. Pushed 3d06b46. tools/upgrade-check.sh origin/main passes locally (new table only). SoundPreview scene "others".
 
+- 2026-10-16 17:30: Crafting took the declarations: crafting-12 (branch crafting-work-hooks, e0ee6b2) declares and calls OnCraftStarted/OnCraftEnded in Crafting.cs (the only CraftJob insert/delete paths; FinishCraft also runs for a player who disconnected mid-job). My WorkSounds.cs keeps the same two declarations until crafting-12 merges. Integration OK'd the table; per its note on stale rows, the client also drops another player's sound after 120 s whatever the table says. New voices for others start silent until placed.
+
 ## Open questions / blockers
-- Waiting on Crafting: two call lines in Crafting.cs (OnCraftStarted(ctx, started) after StartCraft's insert; OnCraftEnded(ctx, job) after FinishCraft's delete), after this PR merges. Until then other players' work is silent; your own works fully.
+- Before merging after crafting-12: delete the two `static partial void OnCraft...;` declaration lines in server/spacetimedb/WorkSounds.cs, or the build fails on a duplicate. If atmosphere-12 merges first, Crafting removes theirs instead.
 
 ## Next step
 When #66 merges: merge main, open the atmosphere-12 PR, send the PM the green sha; then tell Crafting to add the two hook calls.
