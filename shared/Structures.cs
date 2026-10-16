@@ -20,6 +20,9 @@ namespace LifeGame.Shared
         public bool Solid;
         // Where a hung door goes: the doorway's center on the local +Z axis, 0 when it has none.
         public float DoorwayZ;
+        // Where smoke from a fire inside leaves the building: metres above the ground at the
+        // centre, 0 for none (Atmosphere draws the plume; atmosphere-19, D-206).
+        public float SmokeY;
         // Hours untouched before it starts to weather (D-046); 0 uses WeatherAfterHours.
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
@@ -57,6 +60,7 @@ namespace LifeGame.Shared
                 Clearance = 2.2f,
                 RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
                 DoorwayZ = 1.7f,
+                SmokeY = 2.9f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
             // A land claim's marker post (Claims.cs makes the claim when it is finished).
@@ -97,6 +101,7 @@ namespace LifeGame.Shared
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
                 Room = true,
+                SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
             // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
@@ -179,6 +184,7 @@ namespace LifeGame.Shared
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
                 Room = true,
+                SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
         };
