@@ -494,7 +494,7 @@ public partial class Terrain : Node3D
     // for nearly every chunk.
     public void ShowGhosts(Vector3 camera, Vector3 player)
     {
-        const float Margin = 8f; // the fade's reach round the widest canopy (2.7 x a 2.6 m wide oak)
+        const float Margin = 12f; // the fade's reach round the widest canopy: a giant tree's lobes (env-5) reach about 11 m
         int n = World.ChunkSize;
         var a = new Vector2(camera.X, camera.Z);
         var b = new Vector2(player.X, player.Z);
