@@ -43,16 +43,25 @@ public partial class Showcase : Node3D
         }
 
         var wool = Look.Solid(new Color(0.74f, 0.71f, 0.63f));
-        wool.SetShaderParameter("detail_scale", 3.0f);
-        wool.SetShaderParameter("bump", 1.2f);
-        wool.SetShaderParameter("cavity", 0.3f);
+        // As Sheep.WoolLook: only a touch of relief.
+        wool.SetShaderParameter("detail_scale", 1.5f);
+        wool.SetShaderParameter("bump", 0.15f);
+        wool.SetShaderParameter("cavity", 0.08f);
 
         // Today's figure first, for comparison, then each style.
         float gap = view == "faces" ? 0.75f : 2.2f;
         float x0 = -gap * 1.5f;
         var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0), Visible = view != "sheep" };
         AddChild(today);
-        Label("Today", new Vector3(x0, 0, 0));
+        if (view == "sheep")
+        {
+            // In the sheep view a style-A person stands in for scale.
+            var scale = PlayerModel.Build();
+            scale.Position = new Vector3(x0 + 0.6f, 0, -0.2f);
+            scale.Rotation = new Vector3(0, yaw, 0);
+            AddChild(scale);
+        }
+        else Label("Today", new Vector3(x0, 0, 0));
         for (int i = 0; i < HumanFigure.All.Length; i++)
         {
             var style = HumanFigure.All[i];
@@ -62,7 +71,9 @@ public partial class Showcase : Node3D
             person.Rotation = new Vector3(0, yaw, 0);
             AddChild(person);
             people.Add(person);
-            var sheep = SheepFigure.Create(style, wool);
+            // The sheep view compares the fleece variants; elsewhere the game's one.
+            var fleece = view == "sheep" ? (SheepFigure.Fleece)i : SheepFigure.Variant;
+            var sheep = SheepFigure.Create(fleece, wool);
             // Sheep stand beside their person in the row, and alone in the sheep view.
             sheep.Position = view == "sheep" ? new Vector3(x, 0, 0) : new Vector3(x + 0.75f, 0, -0.9f);
             sheep.Rotation = new Vector3(0, yaw + (view == "sheep" ? 1.45f : 0.9f), 0);
@@ -70,7 +81,9 @@ public partial class Showcase : Node3D
             person.Visible = view != "sheep";
             AddChild(sheep);
             int tris = HumanFigure.Build(style).Triangles;
-            Label(view == "faces" ? $"{style.Key}  {style.Name}" : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(style, wool).Triangles:N0}", new Vector3(x, 0, 0));
+            Label(view == "faces" ? $"{style.Key}  {style.Name}"
+                : view == "sheep" ? $"{style.Key}  {fleece}\n{SheepFigure.Build(fleece, wool).Triangles:N0} tris"
+                : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(fleece, wool).Triangles:N0}", new Vector3(x, view == "sheep" ? -1.1f : 0, 0));
         }
         if (view == "walk") Stride();
         // The faces view is close enough that the labels would cover the heads.
