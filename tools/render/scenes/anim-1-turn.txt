@@ -1,4 +1,5 @@
-# anim-1: idle and walking a circle (W + E turns the camera, so the walk curves),
+# anim-1: idle and walking a circle (W held, E pressed each second: the camera turns
+# 45 degrees and the walk curves after it),
 # 3/4 front view.
 client-as-puppet
 client-movie 24
@@ -9,9 +10,19 @@ frames +144
 mark idle34-end
 mark circle-start
 keydown w
-keydown e
-frames +120
-keyup e
+frames +24
+key e
+frames +24
+key e
+frames +24
+key e
+frames +24
+key e
+frames +24
+key e
+frames +24
+key e
+frames +12
 keyup w
 frames +12
 mark circle-end

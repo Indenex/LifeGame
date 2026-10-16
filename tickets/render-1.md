@@ -27,6 +27,8 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 17:20: render request from UX/UI (session_01V6qgbNbvTwniqW946KACLr): ui-9 trade window, 119c068, 1280x720, --screenshot-hud with --screenshot-trade[=accepted|changed|asked], before/after Mara accepts.
 - 2026-10-16 17:23: ui-9 moved to e4319e5 (accepted = Mara green only; changed = Mara's accept cleared + amber line).
 - 2026-10-16 17:25: claims-6 first try: client lags 2-4 s behind the puppet, so beats were missed; added `burst` snaps, rerun queued. Added render_cam.gd (--render-cam, --render-cam-target=sheep) for model-1 close-ups.
+- 2026-10-16 17:30: render request from Animation (session_019roNRWQBPw4ozNLDhzseig): anim-1 at 8e7cbd5: clips of idle, walk (side), start/stop, circle (3/4), sneak. Added movie scenes (Godot --write-movie at fixed 24 fps of game time, so clips are smooth despite ~0.5 fps rendering); scenes anim-1-side.txt and anim-1-turn.txt.
+- 2026-10-16 17:30: puppet `key` hung: bare Xvfb has no WM and the window class isn't Godot; now focuses the window by name.
 
 ## Open questions / blockers
 - PM: where renders should live long term (asked 17:58; default: renders/ on this branch, tools/render/ via PR).
