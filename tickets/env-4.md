@@ -15,7 +15,7 @@ Give the forest region distinct moods you can navigate by (D-081, a world to get
 ## Open questions / blockers
 - Justin picked A (D-152).
 - Modeling (model-2, claude/model-2) has PropMeshes.Trunk/Rock/FallenLog/Stump; swap them in once on main. Asked them for birch trunk, heather, gorse, cattails, hilltop outcrop, riverbank stones.
-- Ask Atmosphere for Look colours: BirchBark, Heather, Gorse, Sedge, HeathGround, Moss.
+- Look.BirchBark/Heather/Gorse/Sedge/HeathGround/Moss are on Atmosphere's #173 with the same values; switch `Undergrowth.cs` to them once #173 merges. If Justin wants heather to bloom in late summer (Atmosphere asks the PM), give heather bushes w = 3.
 
 ## Next step
 Run CraftCheck on a fresh local world (trees near spawn change on the heath), then request renders of a heath hilltop and a wetland bank from Render, and open the PR once #175 has merged.
