@@ -13,6 +13,13 @@ namespace LifeGame;
 // or the LIFEGAME_SERVER and LIFEGAME_DB environment variables.
 public partial class Main : Node3D
 {
+    // Cached names: a string here would build a new StringName every frame.
+    static readonly StringName NWalkLeft = "walk_left";
+    static readonly StringName NWalkRight = "walk_right";
+    static readonly StringName NWalkBack = "walk_back";
+    static readonly StringName NWalkForward = "walk_forward";
+    static readonly StringName NSneak = "sneak";
+
     const float WalkSpeed = 4.2f;
     const float SendInterval = World.MoveTickMillis / 1000f;
 
@@ -96,6 +103,7 @@ public partial class Main : Node3D
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
+        if (Arg("frame-stats") is { } stats) AddChild(new FrameStats(stats));
         Connect();
         ScheduleScreenshot();
     }
@@ -369,7 +377,7 @@ public partial class Main : Node3D
                 if (!spawned && MyPos() is { } p) Spawn(new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z));
             })
             .OnError((_, e) => hud.Note($"Subscription error: {e.Message}"))
-            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).ToArray());
+            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -504,8 +512,8 @@ public partial class Main : Node3D
 
     void Walk(float dt)
     {
-        var input = social.Typing ? Vector2.Zero : Input.GetVector("walk_left", "walk_right", "walk_back", "walk_forward");
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed("sneak") ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
+        var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * (Input.IsActionPressed(NSneak) ? World.SneakSpeed : WalkSpeed) * survival.WalkFactor;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
