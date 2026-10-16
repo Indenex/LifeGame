@@ -22,6 +22,8 @@ namespace LifeGame.Shared
         public float DoorwayZ;
         // Hours untouched before it starts to weather (D-046); 0 uses WeatherAfterHours.
         public double WeatherAfter;
+        // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
+        public int StoreStacks;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -70,6 +72,7 @@ namespace LifeGame.Shared
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
                 Solid = true,
+                StoreStacks = BasketStacks,
                 Stages = new[] { "Weave" },
             },
             // A mud-brick house: a bigger room with a hearth. A fire lit inside warms
@@ -113,6 +116,7 @@ namespace LifeGame.Shared
 
         // Whether a finished building of this kind takes a door, and where its doorway is.
         public static bool HasDoorway(int kind) => Shape(kind).DoorwayZ > 0;
+        public static bool IsStore(int kind) => Shape(kind).StoreStacks > 0;
 
         public static double WeatherAfterFor(int kind) =>
             Shape(kind).WeatherAfter > 0 ? Shape(kind).WeatherAfter : WeatherAfterHours;

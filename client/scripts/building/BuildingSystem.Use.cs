@@ -105,7 +105,7 @@ public partial class BuildingSystem
 
     static bool Usable(Structure s, Vector3 p)
     {
-        if (s.Kind == StructureKind.Basket)
+        if (Structures.IsStore((int)s.Kind))
             return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.2f);
         if (!Structures.HasDoorway((int)s.Kind)) return false;
         // Within a step of the doorway, inside or out.
@@ -124,8 +124,8 @@ public partial class BuildingSystem
             {
                 if (UsableNear() is not { } s) return null;
                 float d = new Vector2(s.X - at.X, s.Z - at.Z).Length();
-                if (s.Kind == StructureKind.Basket)
-                    return openBasket == s.Id ? null : new UseOffer("Open the basket", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
+                if (Structures.IsStore((int)s.Kind))
+                    return openBasket == s.Id ? null : new UseOffer($"Open the {Structures.Shape((int)s.Kind).Name.Split(' ')[^1].ToLowerInvariant()}", d, () => OpenBasket(s.Id), Target: new Vector3(s.X, at.Y, s.Z));
                 // The doorway, so the hut you face wins over a basket beside you.
                 var (dx, dz) = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, Structures.Shape((int)s.Kind).DoorwayZ);
                 var doorway = new Vector3(dx, at.Y, dz);
@@ -217,7 +217,8 @@ public partial class BuildingSystem
         Fill(basketCarried, c.Db.MyInventory.Iter().Where(i => i.Count > 0)
             .Select(i => (ItemLook.Label((Item)i.Item, i.Quality, i.Count), (Action<bool>)(all => c.Reducers.BasketPut(id, i.Item, i.Quality, all ? i.Count : 1)))));
         int stacks = c.Db.BasketItem.Iter().Count(b => b.StructureId == id);
-        basketTitle.Text = $"Storage basket    {stacks} of {Structures.BasketStacks}";
+        var shape = rows.TryGetValue(id, out var s) ? Structures.Shape((int)s.Kind) : Structures.Shape((int)StructureKind.Basket);
+        basketTitle.Text = $"{shape.Name}    {stacks} of {shape.StoreStacks}";
     }
 
     static void Fill(VBoxContainer list, IEnumerable<(string label, Action<bool> move)> entries)

@@ -27,6 +27,7 @@ What's done means:
   - Screenshots: /mnt/project-files/screenshots/building-08-brick-house.png and building-08b-brick-house-wide.png (`--building-showcase --building-house`).
 - 2026-10-16 01:00: BuildTest `brick-house` mode added. It runs alone, outside "both", because bricks take minutes to dry. Running it locally.
 - 2026-10-16 01:15: local `dotnet run -- brick-house` passed in 814 s. The bricks took about 9 minutes to dry in the open. The house was built by two players, it shelters you, it survives a reconnect, and the door and bar work.
+- 2026-10-16 01:20: stores are now per kind (StructureShape.StoreStacks, Structures.IsStore), so Ceramics' storage jar can reuse the basket's store by appending a kind with StoreStacks set. BuildTest basket passes.
 
 ## Open questions / blockers
 - (none; Justin kept 16 bricks and the other default costs, D-057)

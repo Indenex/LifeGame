@@ -95,8 +95,8 @@ public static partial class Module
     public static void BasketPut(ReducerContext ctx, ulong structureId, ushort item, byte quality, uint count)
     {
         var (s, _) = RequireFinishedInReach(ctx, structureId);
-        if (s.Kind != StructureKind.Basket)
-            throw new Exception("That isn't a basket");
+        if (!Structures.IsStore((int)s.Kind))
+            throw new Exception("You can't store things in that");
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         count = Math.Min(count, stack.Count);
         if (count == 0) return;
@@ -105,8 +105,8 @@ public static partial class Module
         var same = inside.Where(b => b.Item == item && b.Quality == quality).Select(b => (BasketItem?)b).FirstOrDefault();
         if (same is { } match)
             ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + count });
-        else if (inside.Count >= Structures.BasketStacks)
-            throw new Exception("The basket is full");
+        else if (inside.Count >= Structures.Shape((int)s.Kind).StoreStacks)
+            throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
         else
             ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = count });
         RemoveFromStack(ctx, stack, count);
