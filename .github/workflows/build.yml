@@ -19,16 +19,16 @@ env:
 jobs:
   server:
     name: Server module and load test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache SpacetimeDB
         id: stdb-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/stdb
           key: stdb-${{ env.SPACETIME_VERSION }}
@@ -88,7 +88,7 @@ jobs:
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-Server
           path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
@@ -96,7 +96,7 @@ jobs:
 
   client:
     name: Client (${{ matrix.preset }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -106,14 +106,14 @@ jobs:
           - preset: Windows
             out: builds/windows/LifeGame.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.csproj') }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Cache SpacetimeDB
         id: stdb-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/stdb
           key: stdb-${{ env.SPACETIME_VERSION }}
@@ -140,7 +140,7 @@ jobs:
 
       - name: Cache Godot and export templates
         id: godot-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/godot
@@ -168,7 +168,7 @@ jobs:
           "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "../${{ matrix.out }}"
           test -e "../${{ matrix.out }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: LifeGame-${{ matrix.preset }}
           path: builds/
