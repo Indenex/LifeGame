@@ -28,6 +28,8 @@ public static class Subscriptions
         $"SELECT * FROM hide_rack WHERE {range}",
         $"SELECT * FROM terrain_edit WHERE {range}",
         $"SELECT * FROM fire WHERE {range}",
+        $"SELECT * FROM cold_hearth WHERE {range}",
+        $"SELECT * FROM chopped_tree WHERE {range}",
         $"SELECT * FROM roast WHERE {range}",
         $"SELECT * FROM clay_piece WHERE {range}",
         $"SELECT * FROM kiln WHERE {range}",

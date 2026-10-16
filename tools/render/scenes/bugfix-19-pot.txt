@@ -1,0 +1,19 @@
+# bugfix-19 (PR #109): a wet pot by the water while thirsty: G reads "Drink" and the
+# pot's floating label shows; a wet pot away from water: G reads "Drying, about N min
+# left" and the label hides. Pond near spawn: water from about x -22 to -34.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 102 2 60
+goto -20.5 -2
+face 0
+sql UPDATE vitals SET water = 0.6
+craft clay.pinch_pot
+wait 3
+burst 4 1.5
+# away from the water
+goto -10 -2
+face 0
+craft clay.pinch_pot
+wait 3
+burst 4 1.5

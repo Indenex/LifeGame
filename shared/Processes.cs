@@ -25,6 +25,7 @@ namespace LifeGame.Shared
         Fire,  // a campfire on the ground in front of the crafter
         Placed, // something set down in front of the crafter; its lane's OnPlaced hook makes it
         Roast,  // set over the nearest burning fire; taken off later, cooked or burnt (see Roasting)
+        Chop,   // a log from the tree within reach of the crafter (see Trees and Woodcutting.cs)
     }
 
     public sealed class Ingredient
@@ -128,6 +129,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = 15, Makes = Item.Basket,
             },
+            // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
+            new ProcessDef
+            {
+                Id = "weave.mat", Name = "Weave a sleeping mat", Doing = "Weaving a sleeping mat", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Fiber, 8) },
+                Seconds = 12, Makes = Item.SleepingMat,
+            },
             new ProcessDef
             {
                 Id = "lash.bow_drill", Name = "String a bow drill", Doing = "Stringing a bow drill", Tier = 2,
@@ -140,6 +148,12 @@ namespace LifeGame.Shared
                 Id = "fire.bow_drill", Name = "Bow-drill fire", Doing = "Nursing an ember into flame", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) }, NeedsTool = ItemTags.FireBow,
                 Seconds = 3, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.2f,
+            },
+            // An axe takes a log from a standing tree; enough logs fell it (Trees).
+            new ProcessDef
+            {
+                Id = "chop.log", Name = "Chop a log", Doing = "Chopping a log", Tier = 2,
+                NeedsTool = ItemTags.Chopping, Seconds = 15, Outcome = Outcome.Chop, Makes = Item.Log,
             },
 
             // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
@@ -281,6 +295,13 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
+        // A burned-out fire leaves a cold hearth of stones and ash this long. Lighting
+        // a fire beside it rekindles it in place.
+        public const float ColdSeconds = 60 * 60;
+        // The stone ring's reach from the fire's middle, in meters, and how far apart
+        // two fires (or a fire and a cold hearth) must be.
+        public const float RingRadius = 0.6f;
+        public const float Spacing = 1.5f;
 
         // 0 to 1: how warm a spot is from one burning fire.
         public static float WarmthFrom(float fireX, float fireZ, float x, float z)

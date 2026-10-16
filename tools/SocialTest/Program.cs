@@ -161,6 +161,21 @@ Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "hello neighbour"), 5
 var heard = b.Conn.Db.ChatMessage.Iter().First(m => m.Text == "hello neighbour");
 Check(new Vector(heard.X - b.X, heard.Z - b.Z).Length <= Social.ChatRange, "B hears A's chat within range");
 
+// claims-6: "/me" actions are stored the same way whatever the case, and an empty one says nothing.
+var afterHello = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterHello, 2, "chat cooldown");
+a.Conn.Reducers.SendChat("/ME waves");
+Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/me waves"), 5, "emote");
+Check(Social.IsEmote("/me waves") && Social.EmoteBody("/me waves") == "waves", "an action reads as \"waves\"");
+var afterWave = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterWave, 2, "chat cooldown");
+int chatCount = b.Conn.Db.ChatMessage.Iter().Count();
+a.LastError = null;
+a.Conn.Reducers.SendChat("/me");
+Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != null, 1.5);
+Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
+
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
 a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
@@ -214,6 +229,77 @@ Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B'
 b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
 Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+
+// claims-7: trading (D-069). B gives A the stone through a trade, then A trades it back.
+Check(Social.GiftPhrase(Items.Def(Item.Stone), 1) == "a stone" && Social.GiftPhrase(Items.Def(Item.Clay), 1) == "some clay"
+    && Social.GiftPhrase(Items.Def(Item.Stick), 3) == "3 sticks", "a gift reads well (a stone, some clay, 3 sticks)");
+Trade? TradeFor(Tester t) => t.Conn.Db.MyTrade.Iter().FirstOrDefault();
+Walk(a, b.X + 6, b.Z);
+ExpectError(b, () => b.Conn.Reducers.AskTrade(a.PlayerId), "Step closer", "you can't trade across a distance");
+Walk(a, b.X + 1.5f, b.Z);
+b.LastError = null;
+b.Conn.Reducers.AskTrade(a.PlayerId);
+Pump(() => TradeFor(a) != null || b.LastError != null, 5, "ask");
+Check(TradeFor(a)?.State == Social.TradeAsked, $"A is asked to trade ({b.LastError ?? "ok"})");
+ExpectError(b, () => b.Conn.Reducers.AskTrade(a.PlayerId), "already trading", "one trade at a time");
+a.Conn.Reducers.AnswerTrade(TradeFor(a)!.Id, false);
+Pump(() => TradeFor(b) == null, 5, "decline");
+Check(Wait(() => b.LastTradeEnd == "declined", 2), $"declining ends it ({b.LastTradeEnd ?? "-"})");
+
+b.Conn.Reducers.AskTrade(a.PlayerId);
+Pump(() => TradeFor(a) != null, 5, "ask again");
+ulong tradeId = TradeFor(a)!.Id;
+a.Conn.Reducers.AnswerTrade(tradeId, true);
+Pump(() => TradeFor(b)?.State == Social.TradeOpen, 5, "trade open");
+ExpectError(a, () => a.Conn.Reducers.AcceptTrade(tradeId, 0, true), "Nothing to trade", "an empty trade can't be accepted");
+ExpectError(b, () => b.Conn.Reducers.SetTradeItem(tradeId, (ushort)Item.Stone, stone.Quality, 2), "not carrying that many", "you can only offer what you carry");
+b.LastError = null;
+b.Conn.Reducers.SetTradeItem(tradeId, (ushort)Item.Stone, stone.Quality, 1);
+Pump(() => a.Conn.Db.MyTradeItems.Iter().Any() && TradeFor(a)!.Version == 1, 5, "offer shows");
+ExpectError(a, () => a.Conn.Reducers.AcceptTrade(tradeId, 0, true), "changed", "accepting an offer that changed is refused");
+uint aStones = a.Count(Item.Stone);
+a.Conn.Reducers.AcceptTrade(tradeId, 1, true);
+Pump(() => TradeFor(b)?.BAccepted == true, 5, "A accepts");
+a.Conn.Reducers.AcceptTrade(tradeId, 1, false);
+Pump(() => TradeFor(b)?.BAccepted == false, 5, "A takes it back");
+Check(TradeFor(b)?.Version == 1, "taking back an Accept leaves the offer as it was");
+a.Conn.Reducers.AcceptTrade(tradeId, 1, true);
+Pump(() => TradeFor(b)?.BAccepted == true, 5, "A accepts again");
+Check(b.Count(Item.Stone) == 1, "nothing moves until both accept");
+b.LastError = null;
+b.LastTradeEnd = null;
+b.Conn.Reducers.AcceptTrade(tradeId, 1, true);
+Pump(() => a.Count(Item.Stone) > aStones || b.LastError != null, 5, "swap");
+Check(a.Count(Item.Stone) == aStones + 1 && b.Count(Item.Stone) == 0 && TradeFor(a) == null, $"both accepting swaps the items ({b.LastError ?? "ok"})");
+Check(Wait(() => b.LastTradeEnd == "done", 2) && !Wait(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.SenderId == 0 && (m.Text.Contains(" trade") || m.Text.Contains(" hands "))), 1),
+    "both traders hear it is done, and bystanders hear nothing (D-080)");
+
+a.Conn.Reducers.AskTrade(b.PlayerId);
+Pump(() => TradeFor(b) != null, 5, "ask back");
+tradeId = TradeFor(b)!.Id;
+b.Conn.Reducers.AnswerTrade(tradeId, true);
+Pump(() => TradeFor(a)?.State == Social.TradeOpen, 5, "open back");
+a.Conn.Reducers.SetTradeItem(tradeId, (ushort)Item.Stone, stone.Quality, 1);
+Pump(() => TradeFor(b)?.Version == 1, 5, "offer back");
+b.Conn.Reducers.AcceptTrade(tradeId, 1, true);
+Pump(() => TradeFor(a)?.BAccepted == true, 5, "B accepts");
+a.Conn.Reducers.SetTradeItem(tradeId, (ushort)Item.Stone, stone.Quality, 0);
+a.Conn.Reducers.SetTradeItem(tradeId, (ushort)Item.Stone, stone.Quality, 1);
+Pump(() => TradeFor(b)?.Version == 3, 5, "offer changed");
+Check(TradeFor(b) is { AAccepted: false, BAccepted: false }, "changing an offer clears both accepts");
+a.LastError = b.LastError = null;
+a.Conn.Reducers.AcceptTrade(tradeId, 3, true);
+b.Conn.Reducers.AcceptTrade(tradeId, 3, true);
+Pump(() => b.Count(Item.Stone) == 1 || a.LastError != null || b.LastError != null, 5, "trade back");
+Check(b.Count(Item.Stone) == 1, $"the stone goes back ({a.LastError ?? b.LastError ?? "ok"})");
+
+b.Conn.Reducers.AskTrade(a.PlayerId);
+Pump(() => TradeFor(a) != null, 5, "ask to walk away");
+a.Conn.Reducers.AnswerTrade(TradeFor(a)!.Id, true);
+Pump(() => TradeFor(b)?.State == Social.TradeOpen, 5, "open to walk away");
+a.LastTradeEnd = null;
+Walk(a, b.X + Social.TradeBreakDistance + 2, b.Z);
+Check(Wait(() => a.LastTradeEnd == "apart" && TradeFor(a) == null, 5), $"walking apart ends a trade ({a.LastTradeEnd ?? "-"})");
 b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
@@ -337,6 +423,7 @@ sealed class Tester
     public readonly DbConnection Conn;
     public bool Ready;
     public string? LastError;
+    public string? LastTradeEnd;
     public uint PlayerId;
     public float X, Z;
     Identity? me;
@@ -365,12 +452,13 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health",
+                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM chat_message", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
             .Build();
         Conn.OnUnhandledReducerError += (_, e) => LastError = e.Message;
+        Conn.Db.TradeEnded.OnInsert += (_, e) => LastTradeEnd = e.Reason;
     }
 
     public void Tick() => Conn.FrameTick();

@@ -10,6 +10,19 @@ namespace LifeGame.Shared
         // Chat is heard by anyone within this many meters of the speaker.
         public const float ChatRange = 24f;
         public const int ChatMaxLength = 200;
+
+        // claims-6: "/me waves" is an action, shown as "Mira waves".
+        public static bool IsEmote(string text) =>
+            text.StartsWith("/me ", StringComparison.OrdinalIgnoreCase) || text.Equals("/me", StringComparison.OrdinalIgnoreCase);
+        public static string EmoteBody(string text) => text.Length > 3 ? text[3..].Trim() : "";
+
+        // How bright a chat line is in the log: full within a third of chat range,
+        // easing to 55% at the edge.
+        public static float ChatDim(float distance)
+        {
+            float t = Math.Clamp((distance - ChatRange / 3f) / (ChatRange * 2f / 3f), 0f, 1f);
+            return 1f - 0.45f * t * t * (3f - 2f * t);
+        }
         public const long ChatCooldownMicros = 400_000;
         // Messages are kept briefly so people who walk up can catch the last few lines.
         public const long ChatKeepMicros = 120_000_000;
@@ -85,6 +98,25 @@ namespace LifeGame.Shared
             if (lifetimeSeconds <= 0) return 1f;
             float age = (nowMicros - tendedAtMicros) / 1_000_000f / lifetimeSeconds;
             return Math.Clamp(age, 0f, 1f);
+        }
+
+        // claims-7: trading (D-069). Start within TradeReach (the server allows
+        // TradeReachSlack more for lag); farther apart than TradeBreakDistance ends it.
+        public const float TradeReach = 3f;
+        public const float TradeReachSlack = 1f;
+        public const float TradeBreakDistance = 4f;
+        public const long TradeAskMicros = 30_000_000;
+        public const int TradeMaxStacks = 8;
+        public const byte TradeAsked = 0, TradeOpen = 1;
+        public const byte SideA = 0, SideB = 1;
+
+        // "a stone flake", "an axe", "some clay", "3 sticks": how a gift reads in a line.
+        public static string GiftPhrase(ItemDef def, uint count)
+        {
+            if (count > 1) return $"{count} {def.Plural.ToLowerInvariant()}";
+            string name = def.Name.ToLowerInvariant();
+            if (def.Plural == def.Name) return $"some {name}";
+            return ("aeiou".IndexOf(name[0]) >= 0 ? "an " : "a ") + name;
         }
 
         // "Tended 2 days ago · stands 1 more day": what a marker and the claim panel say.
