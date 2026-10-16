@@ -515,8 +515,9 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         Lowpass hissLowL, hissLowR, hissTopL, hissTopR, washL, washR, roarL, roarR, muffleL, muffleR;
+        Lowpass roofHiL, roofHiR, roofLoL, roofLoR;
         readonly List<Drop> drops = new();
-        float level, cover;
+        float level, cover, roofClock;
 
         record struct Drop(float Freq, float Decay, float Amp, float Pan, float Age, float Phase, float Bend);
 
@@ -531,6 +532,7 @@ public sealed class SoundMix
         {
             float low = Lowpass.Coef(1400f, rate), top = Lowpass.Coef(7000f, rate), wash = Lowpass.Coef(350f, rate);
             float roarCoef = Lowpass.Coef(160f, rate), muffle = Lowpass.Coef(900f, rate);
+            float roofHi = Lowpass.Coef(750f, rate), roofLo = Lowpass.Coef(150f, rate);
             float levelCoef = Lowpass.Coef(0.3f, rate), coverCoef = Lowpass.Coef(0.8f, rate);
             float dt = 1f / rate;
             for (int i = 0; i < n; i++)
@@ -549,6 +551,16 @@ public sealed class SoundMix
                 // Under cover the open rain is heard through the walls: duller and quieter.
                 l[i] += openL * (1f - cover) + muffleL.Process(openL, muffle) * cover * 0.5f;
                 r[i] += openR * (1f - cover) + muffleR.Process(openR, muffle) * cover * 0.5f;
+
+                // Heavy rain on a roof swells into a drumming that rises and falls with
+                // the gusts (a band of noise around 150 to 750 Hz).
+                roofClock += dt;
+                float heavy = Smooth(0.45f, 1f, level) * cover;
+                float swell = 0.7f + 0.3f * MathF.Sin(roofClock * 2f * MathF.PI * 0.17f) * MathF.Sin(roofClock * 2f * MathF.PI * 0.063f + 1f);
+                float bodyL = roofHiL.Process(nl, roofHi) - roofLoL.Process(nl, roofLo);
+                float bodyR = roofHiR.Process(nr, roofHi) - roofLoR.Process(nr, roofLo);
+                l[i] += bodyL * heavy * swell * 0.22f;
+                r[i] += bodyR * heavy * swell * 0.22f;
 
                 // Patter: single drops on leaves, sparse in a drizzle, a crowd in a storm
                 // where the hiss carries them.
@@ -600,7 +612,7 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         readonly List<Roll> rolls = new();
-        Lowpass lowL, lowR, crackL, crackR;
+        Lowpass lowL, lowR, crackL, crackR, snapLow, tearLow;
 
         record struct Roll(float Delay, float Gain, float Near, float Age, float Length, float Pan, float Seed);
 
@@ -619,6 +631,7 @@ public sealed class SoundMix
             if (rolls.Count == 0) return;
             float dt = 1f / rate;
             float lowCoef = Lowpass.Coef(110f, rate), crackCoef = Lowpass.Coef(2500f, rate);
+            float snapCoef = Lowpass.Coef(2500f, rate), tearCoef = Lowpass.Coef(1800f, rate);
             for (int d = rolls.Count - 1; d >= 0; d--)
             {
                 var roll = rolls[d];
@@ -638,8 +651,21 @@ public sealed class SoundMix
                     float crack = roll.Near * MathF.Exp(-t / 0.18f) * 0.6f;
                     float cl = crackL.Process(noise.Next(), crackCoef) * crack, cr = crackR.Process(noise.Next(), crackCoef) * crack;
                     float g = roll.Gain * swell * wobble * 0.35f;
-                    l[i] += (rumbleL * g + cl * roll.Gain) * pl;
-                    r[i] += (rumbleR * g + cr * roll.Gain) * pr;
+                    // A close strike (near over 0.5) cracks: a bright snap in the first few
+                    // hundredths of a second, then a ripping tear that dies in half a second.
+                    float sharp = Smooth(0.5f, 0.9f, roll.Near);
+                    float snap = 0f, tear = 0f;
+                    if (sharp > 0f && t < 0.7f)
+                    {
+                        float bright = noise.Next();
+                        bright -= snapLow.Process(bright, snapCoef);
+                        snap = bright * MathF.Min(1f, t / 0.0015f) * MathF.Exp(-t / 0.025f) * 0.9f;
+                        float flutter = 0.5f + 0.5f * MathF.Sin(t * 2f * MathF.PI * (38f + 20f * u) + roll.Seed);
+                        tear = tearLow.Process(noise.Next(), tearCoef) * 2.2f * flutter * MathF.Exp(-t / 0.22f);
+                    }
+                    float sharpGain = roll.Gain * sharp * 0.32f;
+                    l[i] += (rumbleL * g + cl * roll.Gain + (snap + tear) * sharpGain) * pl;
+                    r[i] += (rumbleR * g + cr * roll.Gain + (snap + tear) * sharpGain) * pr;
                 }
                 if (roll.Age - roll.Delay >= roll.Length) rolls.RemoveAt(d);
                 else rolls[d] = roll;
