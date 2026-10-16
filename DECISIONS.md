@@ -469,3 +469,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-114 — 2026-10-16 — Seasons: pace, first content, order
 **Decision:** The test cycle is one in-game day (90 min) per season, so a year is 6 real hours. Seasons come right after atmosphere-13 (forest light) and before atmosphere-14 and 15. Cold and snow land first: seasonal temperature (about +8 °C in summer, −12 °C in winter, through AirTemperature and under the 2x chill cap), snowfall below about 0.5 °C, snow cover that builds and melts, and winter light. Admin commands `/season` and `/season-speed`.
 **Who:** Justin ("1 day per season", "Cold and snow", "Seasons next", all the PM's recommendation)
+
+## D-115 — 2026-10-16 — Visible new-arrival warmth
+**Decision:** New characters get a visible "new arrival" warmth buff: for their first 30 minutes cold drains at half speed, and a small visible marker shows it. It does not apply after a death.
+**Who:** Justin ("Give them a new arrival warmth buff they can see"; the PM had recommended an invisible version)
+
+## D-116 — 2026-10-16 — Shelter warmth re-cut (amends D-057)
+**Decision:** Warmth (the share of cold blocked) is: lean-to 0.2 with rain cover 0.6; hut 0.4 (0.5 with the door shut) with rain cover 0.9; house 0.5 (0.55 with the door shut) with rain cover 1.0. A fire inside the house still makes it fully warm.
+**Who:** Justin (as the PM recommended)
+
+## D-117 — 2026-10-16 — Fence and gate costs
+**Decision:** Fence posts cost 2 sticks, rails 2 sticks + 1 fiber; gate posts 2 sticks, hurdle 3 sticks + 2 fiber. A 10 m pen comes to about 23 sticks + 6 fiber. A shut gate gives no warmth.
+**Who:** Justin ("Cheap", as recommended)
+
+## D-118 — 2026-10-16 — Cooking pot meals
+**Decision:** Berry broth (coil pot of water + 3 berries) gives 45% hunger + 30% thirst and takes 60 s; mutton stew (water + 1 raw mutton + 2 berries) gives 65% + 30% and takes 90 s. Eating returns the pot; the pot never burns and keeps simmering if the fire dies; at most 2 pots per fire and 2 per player.
+**Who:** Justin ("As proposed", as recommended)
