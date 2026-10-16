@@ -1,17 +1,33 @@
+using System;
+using System.Collections.Concurrent;
+using System.Threading;
 using Godot;
 
 namespace LifeGame;
 
-// Streams the synthesized soundscape to the speakers.
+// Streams the synthesized soundscape to the speakers. The synthesis runs on its own
+// thread a little ahead of playback, so it costs the frame nothing and keeps going
+// through a hitch; the main thread only hands finished samples to Godot.
 public partial class SoundScape : Node
 {
     readonly SoundMix mix = new((int)AudioServer.GetMixRate(), (int)(Time.GetTicksUsec() % 100000));
     readonly AudioStreamPlayer player = new();
     AudioStreamGeneratorPlayback? playback;
-    const int Chunk = 256;
-    readonly float[] left = new float[Chunk], right = new float[Chunk];
-    readonly Vector2[] frames = new Vector2[Chunk];
 
+    // Rendered stereo frames waiting for the speakers. One writer (the synth
+    // thread), one reader (the main thread).
+    // About 46 ms ahead plus Godot's 0.2 s buffer: about the latency the game had
+    // before, and a hitch shorter than that buffer is never heard.
+    const int RingFrames = 2048, Block = 256;
+    readonly Vector2[] ring = new Vector2[RingFrames];
+    long written, read;
+    readonly ConcurrentQueue<Action<SoundMix>> events = new();
+    Thread? synth;
+    volatile bool running;
+    readonly Vector2[] chunk = new Vector2[Block];
+
+    // Levels are plain floats the synth thread reads each block; a stale read just
+    // eases in one block later.
     public float Daylight { set => mix.Daylight = value; }
     public float Rain { set => mix.Rain = value; }
     public float Wind { set => mix.Wind = value; }
@@ -47,29 +63,57 @@ public partial class SoundScape : Node
     public override void _Ready()
     {
         Load();
-        player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.25f };
+        player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
         player.Play();
         playback = player.GetStreamPlayback() as AudioStreamGeneratorPlayback;
+        running = true;
+        synth = new Thread(Synthesize) { IsBackground = true, Name = "SoundScape", Priority = ThreadPriority.AboveNormal };
+        synth.Start();
     }
 
-    public void Step(Ground ground, float wetness) => mix.Step(ground, wetness);
-    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => mix.Bleat(pan, gain, startled, lamb);
-    public void Thunder(float delay, float gain, float near) => mix.Thunder(delay, gain, near);
+    public override void _ExitTree()
+    {
+        running = false;
+        synth?.Join(500);
+    }
+
+    // One-off sounds go through a queue so the synth thread adds them between blocks.
+    public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
+    public void Thunder(float delay, float gain, float near) => events.Enqueue(m => m.Thunder(delay, gain, near));
+
+    void Synthesize()
+    {
+        var left = new float[Block];
+        var right = new float[Block];
+        while (running)
+        {
+            long ahead = Interlocked.Read(ref written) - Interlocked.Read(ref read);
+            if (ahead > RingFrames - Block)
+            {
+                Thread.Sleep(4);
+                continue;
+            }
+            while (events.TryDequeue(out var e)) e(mix);
+            mix.Render(left, right, Block);
+            long w = written;
+            for (int i = 0; i < Block; i++) ring[(w + i) % RingFrames] = new Vector2(left[i], right[i]);
+            Interlocked.Add(ref written, Block);
+        }
+    }
 
     public override void _Process(double delta)
     {
         if (playback == null) return;
-        // Push whole chunks through one reused array, so the mixer makes no garbage.
-        // A remainder shorter than a chunk (under 6 ms) waits for the next frame;
-        // the 0.25 s buffer stays nearly full either way.
-        int available = playback.GetFramesAvailable();
-        while (available >= Chunk)
+        // Whole blocks only, so the same array is reused every time.
+        long ready = Interlocked.Read(ref written) - read;
+        while (ready >= Block && playback.GetFramesAvailable() >= Block)
         {
-            mix.Render(left, right, Chunk);
-            for (int i = 0; i < Chunk; i++) frames[i] = new Vector2(left[i], right[i]);
-            playback.PushBuffer(frames);
-            available -= Chunk;
+            for (int i = 0; i < Block; i++) chunk[i] = ring[(read + i) % RingFrames];
+            playback.PushBuffer(chunk);
+            Interlocked.Add(ref read, Block);
+            ready -= Block;
         }
     }
 }
