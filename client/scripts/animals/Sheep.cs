@@ -68,9 +68,6 @@ public partial class Sheep : Node3D
     static ArrayMesh? sheepMesh;
     // Red deer: coats from red-brown to grey-brown; the rump, belly and throat are pale.
     static readonly Color[] Coats = { new(0.47f, 0.30f, 0.19f), new(0.50f, 0.33f, 0.21f), new(0.42f, 0.32f, 0.24f) };
-    static readonly Color DeerPale = new(0.78f, 0.68f, 0.54f);
-    static readonly Color Hoof = new(0.15f, 0.12f, 0.10f);
-    static readonly Color AntlerColor = new(0.66f, 0.58f, 0.46f);
     static readonly Dictionary<int, Material> CoatMaterials = new();
     static ArrayMesh? deerMesh, stagMesh;
     // Skin, face and legs share one material; their colors ride in the vertices.
@@ -404,61 +401,14 @@ public partial class Sheep : Node3D
         return sheepMesh;
     }
 
-    // A red deer's mesh, with the sheep's bones: surface 0 is the coat (its color from
-    // the deer's material, like the sheep's wool), surface 1 the pale patches, dark
-    // muzzle, hooves and, on a stag, antlers. The fleece bone carries the coat, so the
-    // shared animation's breathing and lying down work unchanged.
+    // The carved red deer (Modeling, DeerFigure): same bones as the sheep, so the shared
+    // animation works unchanged. Surface 0 is the coat, colored by the deer's material.
     static void BuildDeerMeshes()
     {
         if (deerMesh != null) return;
-        deerMesh = BuildDeer(false);
-        stagMesh = BuildDeer(true);
-    }
-
-    static ArrayMesh BuildDeer(bool antlers)
-    {
-        var mesh = new ArrayMesh();
-        var white = Colors.White;
-        var center = new Vector3(0, 1.0f, 0);
-        var st = Begin();
-        // A long, slim barrel of a body, a deep chest, and a neck rising to the head.
-        Ellipsoid(st, FleeceBone, Vector3.Zero, white, center, new Vector3(0.21f, 0.24f, 0.55f), 1f, 12, 7);
-        Ellipsoid(st, FleeceBone, Vector3.Zero, white, center + new Vector3(0, -0.02f, 0.3f), new Vector3(0.2f, 0.27f, 0.24f), 0.97f, 10, 6);
-        for (int k = 0; k < 3; k++)
-            Ellipsoid(st, FleeceBone, Vector3.Zero, white, center + new Vector3(0, 0.12f + k * 0.08f, 0.5f + k * 0.04f), new Vector3(0.085f, 0.13f, 0.1f), 0.98f, 8, 5);
-        // Head: a tapering skull and muzzle, and big ears set back.
-        Ellipsoid(st, HeadBone, DeerHeadAt, white, new Vector3(0, 0.02f, 0.08f), new Vector3(0.085f, 0.095f, 0.15f), 1f, 10, 6);
-        Ellipsoid(st, HeadBone, DeerHeadAt, white, new Vector3(0, -0.04f, 0.22f), new Vector3(0.055f, 0.06f, 0.1f), 0.95f, 9, 5);
-        foreach (float x in new[] { -1f, 1f })
-            Ellipsoid(st, HeadBone, DeerHeadAt, white, new Vector3(x * 0.1f, 0.11f, -0.01f), new Vector3(0.03f, 0.08f, 0.02f), 1f, 7, 4);
-        // Legs: long and thin, a little thicker above the knee.
-        for (int i = 0; i < 4; i++)
-        {
-            Ellipsoid(st, FirstLegBone + i, DeerHips[i], white, new Vector3(0, -0.2f, 0), new Vector3(0.05f, 0.22f, 0.06f), 0.95f, 7, 4);
-            Ellipsoid(st, FirstLegBone + i, DeerHips[i], white, new Vector3(0, -0.55f, 0), new Vector3(0.028f, 0.25f, 0.03f), 0.9f, 6, 4);
-        }
-        st.Commit(mesh);
-
-        st = Begin();
-        // Pale rump patch and short tail, pale belly and throat, dark nose, hooves.
-        Ellipsoid(st, FleeceBone, Vector3.Zero, DeerPale, center + new Vector3(0, 0.02f, -0.5f), new Vector3(0.17f, 0.18f, 0.08f), 1f, 9, 5);
-        Ellipsoid(st, FleeceBone, Vector3.Zero, DeerPale, center + new Vector3(0, -0.15f, 0), new Vector3(0.16f, 0.1f, 0.42f), 1f, 10, 5);
-        Ellipsoid(st, FleeceBone, Vector3.Zero, DeerPale, center + new Vector3(0, 0.1f, 0.58f), new Vector3(0.06f, 0.1f, 0.06f), 1f, 8, 4);
-        Ellipsoid(st, HeadBone, DeerHeadAt, Hoof, new Vector3(0, -0.05f, 0.31f), new Vector3(0.03f, 0.025f, 0.025f), 1f, 7, 4);
-        for (int i = 0; i < 4; i++)
-            Ellipsoid(st, FirstLegBone + i, DeerHips[i], Hoof, new Vector3(0, -0.79f, 0.01f), new Vector3(0.032f, 0.03f, 0.04f), 1f, 6, 3);
-        if (antlers)
-            foreach (float x in new[] { -1f, 1f })
-            {
-                // A main beam sweeping up and back, with three tines forward.
-                for (int k = 0; k < 5; k++)
-                    Ellipsoid(st, HeadBone, DeerHeadAt, AntlerColor, new Vector3(x * (0.06f + k * 0.035f), 0.14f + k * 0.07f, -0.02f - k * 0.03f), new Vector3(0.018f, 0.045f, 0.018f), 1f, 6, 3);
-                for (int k = 0; k < 3; k++)
-                    Ellipsoid(st, HeadBone, DeerHeadAt, AntlerColor, new Vector3(x * (0.09f + k * 0.04f), 0.2f + k * 0.08f, 0.04f - k * 0.02f), new Vector3(0.014f, 0.014f, 0.05f), 1f, 5, 3);
-            }
-        st.Commit(mesh);
-        mesh.SurfaceSetMaterial(1, plainMaterial);
-        return mesh;
+        plainMaterial ??= Look.Solid(Colors.White);
+        deerMesh = DeerFigure.Build(false, plainMaterial);
+        stagMesh = DeerFigure.Build(true, plainMaterial);
     }
 
     static SurfaceTool Begin()

@@ -1,6 +1,7 @@
 # Tips
 
 - Carry spare fuel. A fire goes out if you stop feeding it.
+- Watch the sky. Clouds build and darken before rain arrives.
 - Get to shelter before night or rain, and before a winter night above all.
 - Streams are shallow enough to wade across. Ponds are deeper; walk around them.
 - Lost? Head downhill to find a stream.

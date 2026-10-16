@@ -791,3 +791,39 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
 **Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
 **Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
+
+## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
+**Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
+**Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")
+
+## D-196 — 2026-10-16 — Bow power: Archery skill, much harder at rank 0 (revises D-178)
+**Decision:** The bow numbers in D-178 are at level 1 too strong. A new Archery skill, on the shared curve (D-175, D-177), scales bow damage. At rank 0 with crude gear a red deer takes 6 to 7 hits. With maxed Archery, top gear and a crit, a one-shot becomes possible.
+**Who:** Justin ("Is this at level 1 Archery? I would say make it much harder. Like 6-7 shots, and when maxed out or with crits you could 1 shot at some point.")
+
+## D-197 — 2026-10-16 — Combat skills level slower; skill matters more than gear (extends D-175, D-196)
+**Decision:** Combat skills get a slower category pace in the one shared progression formula. Each effect's ceiling is a single raisable constant, so it is easy to raise and work in later. Gear quality spread stays narrow and skill spread stays wide: skill levels matter much more than the item base.
+**Who:** Justin ("Slower progression on combat-related skills I think, there needs to be a ceiling that we raise and work in easily. Skill levels should matter much more than the item base though.")
+
+## D-198 — 2026-10-16 — Combat pace: half speed (follows D-197)
+**Decision:** Combat skills (Stalking, Archery, future weapons) gain at 0.5x the base pace, set by `Progression.CombatPaceFactor`.
+**Who:** Justin ("Half speed")
+
+## D-199 — 2026-10-16 — Archery spread drawn out; combat effects are hits-linear (extends D-196, D-197)
+**Decision:** The Archery spread from rank 25 to 100 is much more drawn out. Hits to kill a deer fall about one step per ~20 ranks, for example 7, 6, 5, 4, 3, 2, rather than dropping from 7 to 2 or 3 quickly. Combat effects use an even, hits-linear shape. This is a documented exception to the front-loaded curve of D-175 and D-177.
+**Who:** Justin ("the spread from 25-100 needs to be waaaay more drawn out. You should not go from 7 -> 3/2 so quickly. Maybe 7, 6, 5, 4, 3, 2, or something like that.")
+
+## D-200 — 2026-10-16 — Batch device numbers: Balanced (follows D-195)
+**Decision:** Batch crafting devices use the "Balanced" numbers: a batch cap of 10. Unattended runs give ×0.6 quality, 1.5× time and 25% of skill. Attended runs give up to ×1.1 quality, +20% quantity, 0.8× time and full skill.
+**Who:** Justin ("A: balanced")
+
+## D-201 — 2026-10-16 — See-through buildings work like Project Zomboid (extends D-168)
+**Decision:** Buildings go see-through the way Project Zomboid does it. Inside a building its roof is hidden entirely, and walls between the camera and you are cut or faded, so the room reads as a cutaway; far walls stay solid. Outside, behind a building, only the blocking walls fade around you; other buildings stay solid. Owner: House building (building-11).
+**Who:** Justin ("It should do it like Project Zomboid does it.")
+
+## D-202 — 2026-10-16 — Fires can be placed where the player wants (Choose the spot)
+**Decision:** The player can put a fire where they want nearby. A placement ghost shows the spot, using the same flow as item placing (crafting-21). Only spots inside a boulder or trunk are refused.
+**Who:** Justin ("You should be able to place fires where you want."), picking "Choose the spot".
+
+## D-203 — 2026-10-16 — Roof clears in a soft circle when you are behind a building (extends D-201)
+**Decision:** When the player is behind a building, seen from outside, its roof also clears in a soft circle around them, in addition to the walls fading. Owner: House building (building-11).
+**Who:** Justin, picking "Soft clear circle".
