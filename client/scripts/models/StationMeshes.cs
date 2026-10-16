@@ -259,6 +259,9 @@ public static class StationMeshes
             Lash(k.Plant, new Vector3(x, RackBarY + 0.01f, 0), Vector3.Right, 0.04f, 3f);
         }
         k.Wood.Paint(Split, 0.82f).Tube(new[] { new Vector3(-RackHalfWidth - 0.15f, RackBarY + 0.01f, 0), new Vector3(0, RackBarY + 0.025f, 0.005f), new Vector3(RackHalfWidth + 0.17f, RackBarY + 0.01f, 0) }, 0.032f, 6, 0.028f);
+        // Three peg loops where Animals hangs the hides, 0.75 m apart.
+        foreach (float x in new[] { -0.75f, 0f, 0.75f })
+            Lash(k.Plant, new Vector3(x, RackBarY + 0.015f, 0), Vector3.Right, 0.042f, 2f);
         k.AddTo(list, 0);
         return list;
     }
