@@ -2,7 +2,7 @@ extends Control
 # LifeGame launcher (release-1, D-131). One button: bring the game and the world up to the
 # newest green build of main, then play.
 #
-# Each build is a GitHub Release "build-<N>" with LifeGame-Linux.zip, LifeGame-Windows.zip,
+# Each build is a GitHub Release "build-<N>-<short sha>" with LifeGame-Linux.zip, LifeGame-Windows.zip,
 # StdbModule.wasm and release.json (see .github/workflows/release.yml). The launcher keeps
 # the game in a "LifeGame" folder next to itself and remembers which build the game and
 # the world are on in LifeGame/state.json.
@@ -300,16 +300,18 @@ func _refresh() -> void:
 	releases.clear()
 	if list is Array:
 		for r in list:
+			# Tags are build-<number>-<short sha>; the number orders them.
 			var tag: String = r.get("tag_name", "")
+			var num := tag.substr(6).get_slice("-", 0)
 			if r.get("draft", false) or r.get("prerelease", false) or not tag.begins_with("build-") \
-					or not tag.substr(6).is_valid_int():
+					or not num.is_valid_int():
 				continue
 			var assets := {}
 			for a in r.get("assets", []):
 				assets[a["name"]] = a["browser_download_url"]
 			var body = r.get("body", "")
 			releases.append({
-				"build": tag.substr(6).to_int(), "tag": tag, "title": r.get("name", tag),
+				"build": num.to_int(), "tag": tag, "title": r.get("name", tag),
 				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets})
 		releases.sort_custom(func(a, b): return a.build > b.build)
 	latest = releases[0] if not releases.is_empty() else {}

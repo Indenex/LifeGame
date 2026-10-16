@@ -33,7 +33,11 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
   - release 475 carrying an older, incompatible module: publish refused, "This build can't update your world without wiping it. Nothing changed", game not swapped, 77 kept. Exit 1.
 - 2026-10-16 19:25: writing `.github/workflows/release.yml` was held: it would publish builds publicly from a public repo, so it waits on the PM/Justin (Q1). Draft design below.
 
+- 2026-10-16 19:40: PM relayed Justin: Q1 public GitHub Releases (a), Q2 launcher button (a), Q3 unsure. Wrote `.github/workflows/release.yml` (separate file, so it stays clear of Integration's #148 edits to build.yml). Tags are `build-<N>-<short sha>` per Integration; launcher and fake API parse the number. Re-tested: fresh install to 474 kept the world, a wipe build 476 ahead stopped with exit 2, world value kept.
+- 2026-10-16 19:40: Q3 check (does a `lifegame` database exist on Maincloud under his login?) not done: probing Maincloud and the CLI login from this sandbox was refused by the session's permission checks, and the launcher can't verify it without touching his login. Told the PM.
+
 ## Open questions / blockers
+- ANSWERED (Justin): Q1 a, Q2 a. Q3 unsure; see log.
 - Q1 (to PM, for Justin, sent 19:05): public GitHub Releases (recommended; no login needed) vs private repo vs Actions artifacts (both need a GitHub token on his PC). Default: build everything, enable nothing until answered.
 - Q2 (to PM, for Justin): fully automatic server updates. a) launcher does it on his PC (recommended; free, no setup); b) move the world to Maincloud and CI publishes (needs his SpacetimeDB token as a repo secret, possible cost, effectively a wipe, best with D-129); c) self-hosted runner (setup, unsafe on a public repo). Default a.
 - Q3 (to PM): ask Justin whether he ever published without `--server local` (would have made an unused Maincloud database).
@@ -42,7 +46,7 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 - New file `.github/workflows/release.yml`, `on: workflow_run` of Build, `branches: [main]`, only when `conclusion == success` and `event == push`; `concurrency: release`, never cancelled.
 - Job `launcher` (matrix Linux/Windows): checkout `head_sha`, setup-dotnet 8 (the mono editor needs it), the same Godot cache key as build.yml, export `launcher/`, fail on any `SCRIPT ERROR` in the export log, upload `LifeGameLauncher-<preset>`.
 - Job `release` (`contents: write`): download the Build run's artifacts (`actions/download-artifact` with `run-id` + token) and the launcher artifacts; read the merged PR for `head_sha` (`gh api repos/.../commits/<sha>/pulls`) and its `world-wipe` label; `tools/release/make-release.sh`; `gh release create build-<Build run_number> --target <sha> --latest` with the zips, `StdbModule.wasm`, `release.json`, notes.
-- Version = Build's run number (`build-472`); the launcher compares numbers.
+- Tag = `build-<Build run number>-<short sha>` (Integration's suggestion, never collides); the launcher compares numbers.
 
 ## Next step
-Wait for the PM's answer to Q1; then write `release.yml` per the design above and send it to Integration. Meanwhile send the Render lane a launcher render request.
+Wait for CI on the PR; when green send the head sha to the PM (merge) and Integration (review). After the first merge, check the first real release appears and the launcher reads it.
