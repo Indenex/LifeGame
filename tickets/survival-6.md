@@ -31,10 +31,12 @@ Milestone context (PM): M2 "the first evening", a new player reaches a fired pot
 
 - 2026-10-16: D-100: carry 20 bare, basket +10 (pick 1A). D-101: food unchanged (pick 2A). Carry.BasketBonus 15 -> 10 in #124. Fire warmth (pick 3) still with Justin; keep 30 s.
 
+- 2026-10-16: D-103: a basic campfire warms you from frozen to full in 60 s (pick 3, option A after all). FireHeat 1/30 -> 1/60 in #124. All four survival-6 picks are now decided.
+
 ## Open questions / blockers
 - Seasons (Atmosphere, session_01KvVF5vpkYEHTKNRpHC18WN): seasonal offset goes into AirTemperature (about +8 C summer, -12 C winter); no Survival change needed thanks to the 2x cap. Snow doesn't wet players for now; if Justin agrees (Atmosphere asks), falling snow wets at half rain's rate via SeasonState.Snow.
 - Sent to PM: winter starts for new players. A) 30 min of half-speed cold for new characters [rec], B) a lit campfire at the spawn edge in winter, C) nothing. Nothing ships until Justin picks.
-- Fire warmth (pick 3) still with Justin; 1, 2 and 4 decided (D-100, D-101, D-099). Survival-3's carry-limit question is folded into item 1.
+- None of the four picks remain (D-099, D-100, D-101, D-103). Survival-3's carry-limit question is folded into item 1.
 
 ## Next step
-Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM. Then apply Justin's fire pick when the PM relays it.
+Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM.

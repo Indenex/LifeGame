@@ -8,8 +8,10 @@ using SpacetimeDB;
 public static partial class Module
 {
     const int SurvivalTickMillis = 2000;
-    // Warmth per second from standing right by a fire at full strength.
-    const float FireHeat = 1f / 30f;
+    // Warmth per second from standing right by a fire at full strength: a basic
+    // campfire warms you from frozen to full in about a minute (Justin, D-103).
+    // Later hearths can be faster.
+    const float FireHeat = 1f / 60f;
 
     [SpacetimeDB.Table(Accessor = "Vitals")]
     public partial struct Vitals
