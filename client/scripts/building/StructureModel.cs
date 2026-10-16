@@ -42,7 +42,7 @@ public static partial class StructureModel
         pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(),
             _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)),
             _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(),
-            _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.PottersBench => BenchModel.Pieces(), _ => LeanTo() };
+            _ when LifeGame.Shared.Structures.Shape(kind).Station == LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }
