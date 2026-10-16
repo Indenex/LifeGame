@@ -63,6 +63,7 @@ public partial class SocialLayer : Node
         conn.Db.MyInventory.OnUpdate += (_, _, _) => panel.MarkDirty();
         conn.Db.MyInventory.OnDelete += (_, _) => panel.MarkDirty();
         AttachFighting();
+        AttachTrading();
 
         // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
         Use.Register(new UseHandler
@@ -124,7 +125,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
 
         // Chat carries a little further than a chunk, so listen two chunks out.
         var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
@@ -209,16 +210,39 @@ public partial class SocialLayer : Node
             chat.Add("", m.Text, false);
             return;
         }
-        chat.Add(m.SenderId == myId ? "You" : m.SenderName, m.Text, m.SenderId == myId);
-        if (age < 8_000_000) Bubble(m);
+        bool mine = m.SenderId == myId;
+        bool emote = Social.IsEmote(m.Text);
+        string said = emote ? Social.EmoteBody(m.Text) : m.Text;
+        float dim = mine ? 1f : Social.ChatDim(new Vector2(m.X - myPos.X, m.Z - myPos.Z).Length());
+        chat.Add(mine && !emote ? "You" : m.SenderName, said, mine, dim, emote);
+        // Only fresh words get a bubble, so joining doesn't replay the last few lines at once.
+        if (age < 3_000_000) Bubble(m, said, emote);
     }
 
     // The words float above the speaker for a few seconds, then drift up and fade.
-    void Bubble(ChatMessage m)
+    const int BubbleStack = 3;
+    // In the bubble's own pixels (Label3D offset), not metres.
+    const float BubbleLineHeight = 44f, BubbleGap = 16f;
+    static FontVariation? slanted;
+    static FontVariation Slanted => slanted ??= new FontVariation { VariationTransform = new Transform2D(1f, 0f, 0.22f, 1f, 0f, 0f) };
+
+    static void FadeOut(Label3D bubble)
     {
+        bubble.RemoveMeta("bubble");
+        var fade = bubble.CreateTween();
+        fade.TweenProperty(bubble, "transparency", 1f, 0.8f).SetTrans(Tween.TransitionType.Sine);
+        fade.TweenCallback(Callable.From(bubble.QueueFree));
+    }
+
+    // claims-6: a soft line above the speaker's head. If they say more, older lines
+    // drift up and dim (up to three), and an action ("/me waves") is slanted.
+    void Bubble(ChatMessage m, string said, bool emote)
+    {
+        string text = Wrap(said, 34);
+        int lineCount = text.Split('\n').Length;
         var bubble = new Label3D
         {
-            Text = Wrap(m.Text, 34),
+            Text = text,
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             FontSize = 30,
             PixelSize = 0.0075f,
@@ -228,11 +252,25 @@ public partial class SocialLayer : Node
             NoDepthTest = true,
             VerticalAlignment = VerticalAlignment.Bottom,
         };
+        if (emote) bubble.Font = Slanted;
         if (avatarOf(m.SenderId) is { } avatar)
         {
-            // Only the newest line stays above a head.
-            foreach (var child in avatar.GetChildren())
-                if (child is Label3D old && old.HasMeta("bubble")) old.QueueFree();
+            // Older lines drift up by the new one's height and dim; the oldest beyond three go.
+            var older = avatar.GetChildren().OfType<Label3D>().Where(l => l.HasMeta("bubble") && !l.IsQueuedForDeletion()).ToList();
+            float rise = lineCount * BubbleLineHeight + BubbleGap;
+            for (int i = 0; i < older.Count; i++)
+            {
+                var old = older[i];
+                // Every older line rises (the one leaving too, so nothing overlaps while it fades).
+                // Lift from where it is headed, not where it is, in case it is still rising.
+                float to = (old.HasMeta("lift_to") ? (float)old.GetMeta("lift_to") : old.Offset.Y) + rise;
+                old.SetMeta("lift_to", to);
+                var lift = old.CreateTween().SetParallel();
+                lift.TweenProperty(old, "offset:y", to, 0.6f)
+                    .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+                if (older.Count - i >= BubbleStack) FadeOut(old);
+                else lift.TweenProperty(old, "transparency", 0.45f, 0.6f).SetTrans(Tween.TransitionType.Sine);
+            }
             bubble.SetMeta("bubble", true);
             bubble.Position = new Vector3(0, 2.35f, 0);
             avatar.AddChild(bubble);
@@ -316,6 +354,9 @@ public partial class SocialLayer : Node
     }
 
     bool IsMine(Claim c) => conn?.Db.Player.Identity.Find(c.Owner) is { } p ? p.PlayerId == myId : c.OwnerPlayerId == myId;
+
+    // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
+    public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
 
     bool HasRights(Claim c) =>
         IsMine(c) || (conn?.Db.ClaimMember.Iter().Any(m => m.ClaimId == c.Id && m.PlayerId == myId) ?? false);

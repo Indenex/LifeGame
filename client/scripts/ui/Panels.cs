@@ -9,4 +9,9 @@ namespace LifeGame;
 public static class Panels
 {
     public static Func<bool> Open = () => false;
+
+    // Whether a side panel (crafting) is up. The world still shows beside it, and the
+    // inventory row stays since you make things from it, but the G prompt steps aside
+    // so it never sits half under the panel.
+    public static Func<bool> Side = () => false;
 }

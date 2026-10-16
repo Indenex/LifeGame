@@ -502,7 +502,7 @@ public partial class Atmosphere : Node3D
     Terrain? terrain;
 
     // How wooded it is around a point, 0 open to 1 deep woods, from the same forest
-    // density the terrain plants its trees by. Sampled every few metres out to
+    // density the terrain plants its trees by (Forest.Density, env-1). Sampled every few metres out to
     // about 12 m; the mixer eases between values, so walking into the trees fades
     // the leaves in.
     // Where the nearest open water is, looked over a few times a second: the closer
@@ -552,10 +552,9 @@ public partial class Atmosphere : Node3D
             {
                 int x = cx + dx, z = cz + dz;
                 count++;
-                if (x * x + z * z < 12 * 12 || World.IsClay(x, z)) continue;
-                sum += World.Noise(x, z, 24f, 33);
+                sum += Forest.Density(x, z);
             }
-        return Mathf.SmoothStep(0.3f, 0.7f, sum / count);
+        return Mathf.SmoothStep(0.1f, 0.6f, sum / count);
     }
 
     // --- Helpers ----------------------------------------------------------------

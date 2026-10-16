@@ -33,10 +33,12 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM player_pos",
                 "SELECT * FROM world_item",
                 "SELECT * FROM fire",
+                "SELECT * FROM cold_hearth",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
                 "SELECT * FROM roast",
                 "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -102,6 +104,7 @@ Craft("fire.hand_drill", 1f, null);
 Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
 var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
 Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+OffRocks(fire);
 
 // A failed drill loses its inputs and lights nothing.
 Gather(Item.Fiber, 2);
@@ -125,6 +128,7 @@ Craft("fire.bow_drill", 0.25f, null);
 Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
 if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
 Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
+foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
 Gather(Item.Stick, 1);
 
 WalkTo(fire.X, fire.Z);
@@ -134,6 +138,25 @@ conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
 Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
 if (lastError != null) Fail($"feeding the fire: {lastError}");
 Console.WriteLine("Fed the fire a stick");
+
+// Chopping: the stone axe takes logs from the nearest standing tree until it falls.
+var (treeX, treeZ) = NearestTree();
+var trunk = Trees.Trunk(treeX, treeZ);
+WalkTo(trunk.X, trunk.Z);
+int chops = Trees.Felling ? Trees.LogsPerTree : 1;
+for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
+if (Trees.Felling)
+{
+    Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
+    Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
+}
+WalkTo(fire.X, fire.Z);
+fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+lastError = null;
+conn.Reducers.FeedFire(fire.Id, (ushort)Item.Log);
+Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "a log to burn");
+if (lastError != null) Fail($"feeding the fire a log: {lastError}");
+Console.WriteLine("Fed the fire a log");
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
@@ -178,6 +201,36 @@ void Craft(string processId, float score, Item? expect)
         var best = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)item).Max(r => r.Quality);
         Console.WriteLine($"{processId}: made {Items.Def(item).Name} (quality {best})");
     }
+}
+
+// A fire never sits on a boulder: its stone ring stays clear of every one nearby.
+void OffRocks(Fire f)
+{
+    for (int i = World.CellOf(f.X) - 2; i <= World.CellOf(f.X) + 2; i++)
+        for (int j = World.CellOf(f.Z) - 2; j <= World.CellOf(f.Z) + 2; j++)
+            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null)
+            {
+                var (rx, rz) = Rocks.Center(i, j);
+                float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
+                if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
+            }
+}
+
+// The standing tree nearest the bot, by the same rules the server uses.
+(int X, int Z) NearestTree()
+{
+    int cx = (int)MathF.Round(x), cz = (int)MathF.Round(z);
+    for (int r = 0; r < 60; r++)
+        for (int i = cx - r; i <= cx + r; i++)
+            for (int j = cz - r; j <= cz + r; j++)
+            {
+                if (Math.Max(Math.Abs(i - cx), Math.Abs(j - cz)) != r || !Trees.GrowsAt(i, j)) continue;
+                long key = World.CellKey(i, j);
+                if (conn.Db.TerrainEdit.CellKey.Find(key) != null || conn.Db.ChoppedTree.CellKey.Find(key) != null) continue;
+                return (i, j);
+            }
+    Fail("no tree within 60 m");
+    return (0, 0);
 }
 
 uint CountOf(Item item) =>
