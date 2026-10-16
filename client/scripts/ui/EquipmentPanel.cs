@@ -209,7 +209,8 @@ public partial class EquipmentPanel : CanvasLayer
         slotTitle.Text = selected.ToString();
         wearing.Text = worn != null ? $"Wearing {Label(worn)}" : "Nothing on";
         wearing.Modulate = new Color(1, 1, 1, worn != null ? 1f : 0.55f);
-        effect.Text = worn != null ? $"{worn.Effect} ({worn.Amount})" : "";
+        // Words only; effect values stay hidden (D-107).
+        effect.Text = worn?.Effect ?? "";
         takeOff.Visible = worn != null;
 
         foreach (var child in choices.GetChildren()) { choices.RemoveChild(child); child.QueueFree(); }
@@ -222,7 +223,7 @@ public partial class EquipmentPanel : CanvasLayer
                 Flat = true,
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
-                TooltipText = $"{piece.Effect} ({piece.Amount})",
+                TooltipText = piece.Effect,
             };
             button.AddThemeFontSizeOverride("font_size", 15);
             button.AddThemeConstantOverride("icon_max_width", 30);

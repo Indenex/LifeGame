@@ -9,9 +9,8 @@ namespace LifeGame;
 // from shared/Clothing.cs (Animals lane), so the panel and the server agree.
 public record WornPiece(Item Item, byte Quality, ClothingSlot Slot)
 {
+    // A plain line ("Keeps a little of the cold off"); numbers stay hidden (D-107).
     public string Effect => Clothing.Find((ushort)Item)?.Effect ?? "";
-    // "6% less cold" at this piece's quality.
-    public string Amount => Clothing.Percent((ushort)Item, Quality);
 }
 
 // What the equipment panel (D-074) talks to: animals-9 on the server through
