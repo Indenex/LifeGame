@@ -197,21 +197,25 @@ public partial class Terrain : Node3D
     void AddVegetation(Node3D root, int cx, int cz)
     {
         EnsureMeshes();
-        var trunks = new List<(Transform3D, Color)>();
-        var leafy = new List<(Transform3D, Color)>();
-        var pines = new List<(Transform3D, Color)>();
-        var rocks = new List<(Transform3D, Color)>();
-        var tufts = new List<(Transform3D, Color)>();
-        var tuftChanges = new List<Color>();
+        // Each instance: transform, color, and custom data saying when it started to
+        // go away (or come back) on a cell that was just cleared.
+        var trunks = new List<(Transform3D, Color, Color)>();
+        var leafy = new List<(Transform3D, Color, Color)>();
+        var pines = new List<(Transform3D, Color, Color)>();
+        var rocks = new List<(Transform3D, Color, Color)>();
+        var tufts = new List<(Transform3D, Color, Color)>();
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
-                // A cell cleared a moment ago keeps its grass just long enough to flatten.
+                // A cell cleared a moment ago keeps its grass, trees and rocks just long
+                // enough for them to go: grass flattens, trees topple, rocks sink.
                 var change = ClearChange(x, z);
                 bool flattening = change is { Cleared: true };
+                // Custom data: when the change started, and +1 going away or -1 coming back.
+                var custom = change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0);
                 if (depths.ContainsKey(World.CellKey(x, z)) || (Cleared?.Invoke(x, z) == true && !flattening)) continue;
                 float top = TileHeight(x, z);
                 if (top < Look.WaterLevel + 0.1f) continue;
@@ -226,18 +230,18 @@ public partial class Terrain : Node3D
 
                 // A forest that thins out into a clearing where new players wake up.
                 float forest = World.IsClay(x, z) ? 0.02f : 0.03f + 0.10f * World.Noise(x, z, 24f, 33);
-                if (!nearSpawn && roll < forest && !flattening)
+                if (!nearSpawn && roll < forest)
                 {
-                    trunks.Add((at, Look.Bark));
+                    trunks.Add((at, Look.Bark, custom));
                     if (Hash01(x, z, 16) < 0.4f)
-                        pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f)));
+                        pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
                     else
                         leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
-                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f)));
+                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom));
                 }
-                else if (roll < forest + 0.006f && !flattening)
+                else if (roll < forest + 0.006f)
                 {
-                    rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f)));
+                    rocks.Add((at.ScaledLocal(Vector3.One * 0.55f), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f }));
                     continue;
                 }
 
@@ -251,9 +255,7 @@ public partial class Terrain : Node3D
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, 0.75f + Hash01(x, z, 42) * 0.5f, 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts.Add((g, TileColor(x, z, top, cleared: false)));
-                    // Custom data: when the grass started to flatten (+1) or regrow (-1).
-                    tuftChanges.Add(change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0));
+                    tufts.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
             }
 
@@ -261,17 +263,18 @@ public partial class Terrain : Node3D
         AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
         AddMulti(root, rockMesh!, rocks, Look.RockSurface);
-        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false, custom: tuftChanges);
+        AddMulti(root, tuftMesh!, tufts, Look.Grass, castShadow: false);
     }
 
-    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color)> items, Material material, bool castShadow = true, List<Color>? custom = null)
+    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
         if (items.Count == 0) return;
+        bool custom = items.Exists(item => item.Item3.R > 0f);
         var mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
-            UseCustomData = custom != null,
+            UseCustomData = custom,
             Mesh = mesh,
             InstanceCount = items.Count,
         };
@@ -279,7 +282,7 @@ public partial class Terrain : Node3D
         {
             mm.SetInstanceTransform(i, items[i].Item1);
             mm.SetInstanceColor(i, items[i].Item2);
-            if (custom != null) mm.SetInstanceCustomData(i, custom[i]);
+            if (custom) mm.SetInstanceCustomData(i, items[i].Item3);
         }
         root.AddChild(new MultiMeshInstance3D
         {
