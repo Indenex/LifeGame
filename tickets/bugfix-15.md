@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (opening)
+PR: #77
 
 ## Goal
 A member of a claim standing at a barred door in that claim sees "Unbar and open    Shift unbar", and at an unbarred one "Open the door    Shift bar", as whoever hung the door does. The server already lets claim members bar and unbar (BuildingStorage.cs CanLock), so only the prompt was wrong. Outsiders still see "Barred".
