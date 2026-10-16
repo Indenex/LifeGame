@@ -28,4 +28,4 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - (none) Justin chose "As is" (a).
 
 ## Next step
-Open the PR for this branch and send the PM the link and green sha; then, when the PM reports a merge from the pending list (#175 new land, equipment panel on I, Firecraft fire length D-090, fence building), add its wiki lines on claude/wiki-2 restarted from main, no numbers.
+Wait for the PM to report a merge. Then move the matching draft from wiki/drafts/ on claude/wiki-drafts (crafting stations, new land #175, seasons, camp names), or write fresh lines (equipment panel on I, Firecraft fire length D-090, fence building), into the live pages on claude/wiki-2 restarted from main. Check against the code, no numbers, then open a PR and send the PM the link and green sha.
