@@ -40,6 +40,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 21:55: #90, #235 (Modeling's carved deer) and #266 (bow ids) are on main. Merged main into this branch (Items.cs: kept main's wool items 197-199 and my venison 202-206), swapped the stand-in for DeerFigure.Build in Sheep.cs (BuildDeer and its colors deleted). Server and client build, upgrade check against main passed. The Crafting check failed once on d81271f ("building the ClaimMarker: Out of reach"), also red on main (fffdc70); commented on #219, job re-run once, Integration told.
 
+- 2026-10-16 21:47: PM relays Justin's new rule (Integration writes docs/CONTENT.md): animals become data-driven. One AnimalDef registry in shared/ (traits, drops, butcher yields, sounds, model id, animation set, behaviour flags like shearable, huntable, flocking, wary) plus a generic client animal view (rename or split Sheep.cs). Done when the next animal is added: after #219 lands and before any new species, convert the deer's "if Deer" branches into Def data. Does not block #219.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
