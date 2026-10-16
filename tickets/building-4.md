@@ -2,7 +2,7 @@
 Lane: House building
 Owner: House building thread (Claude, session_01H6jwMs4KSGQbG6zYjkBKqZ)
 Status: in_progress
-Branch: local `building-4-local` on top of claude/house-building-8ueqz2 (PR #41). It gets pushed to claude/house-building-8ueqz2, restarted from main, once #41 merges. Until then the work is saved as /mnt/project-files/patches/building-4.patch (apply on #41's branch).
+Branch: claude/house-building-8ueqz2 (restarted from main 88994fa after #41 merged)
 PR: (after #41 merges)
 
 ## Goal
@@ -33,4 +33,4 @@ What's done means:
 - (none; Justin kept 16 bricks and the other default costs, D-057)
 
 ## Next step
-Once #41 merges (it is in the PM's queue behind #45 and #32), restart claude/house-building-8ueqz2 from main, apply the patch, and open the PR.
+Wait for CI on the building-4 PR, fix anything red, then send the PM the green sha.
