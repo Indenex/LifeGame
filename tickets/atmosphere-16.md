@@ -1,9 +1,9 @@
 # atmosphere-16: Seasons
 Lane: World atmosphere (visual); leads seasons (D-099)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-16-seasons (stacked on claude/atmosphere-13-forest-light / #136)
-PR: (none yet)
+PR: #173
 
 ## Goal
 D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temperature and weather, winter brings snow, and plants and animals change by season. A fast cycle first for testing; later a real-time multiplier, maybe tied to the real-world calendar. Partners: Environment (session_012hVejTxLoxBpZyX3GQmNL9) does snow cover and foliage; Animals (session_01SAcVBUUfPFFk1rdXuiQZRU) does seasonal fauna; Survival (session_014pHdaxJ7uESzsvWekpjvsH) does cold, capped at 2x combined chill. Start after atmosphere-13.
@@ -37,4 +37,4 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 - (answered) D-134: falling snow wets you at half rain's rate; Survival wires it from Module.Snowfall (told them). Justin is fine with the -16 C winter. / blockers
 
 ## Next step
-Wait for the Render lane's shots of c41b1e6 (and any shader errors); open the PR after #136 merges.
+Wait for #173 CI; send the green sha to the PM and Integration (D-095). When Survival's PR with the SnowfallAt declaration merges, add the one-line body in WorldClock.cs.
