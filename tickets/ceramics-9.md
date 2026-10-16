@@ -21,8 +21,10 @@ Numbers: Justin picked the lamp (D-147) with 30 min per tallow and self-refill f
 - 2026-10-16 19:50: server b88e065 (items 117-119, ClayForm.Lamp, clay.lamp at the bench, cook.tallow via SimmerPot giving the pot back empty, Lamps.cs SetLamp/TendLamp); client 6cb60fd (LampView flame + flickering OmniLight3D 4 m, G set down 19 / feed-light-pick up 24, KEYMAP updated, looks); ClayCheck --lamp (tallow part needs CLAYCHECK_TALLOW=1 and mutton from Animals). Running on c9lamp1.
 - 2026-10-16 19:32: PM asked for ceramics-9 options (D-145); sent lamp (recommended) / roof tiles / slip decoration; started the lamp.
 
+- 2026-10-16 21:45: ClayCheck --lamp with CLAYCHECK_TALLOW=1 PASSED on c9lamp8 (bench, 2 lamps + coil pot fired, refused without tallow, bot hunts a sheep with a spear (Animals' route 1), butchers, renders tallow in the pot, sets down and lights the lamp). Refill/G-feed not yet covered by the bot. Animals will add DebugGiveMeat later; the hunt is the fallback. Branch will need main merged again (#256 now kind 13) before the lamp PR.
+
 ## Open questions / blockers
-- Animals (session_01SAcVBUUfPFFk1rdXuiQZRU): asked 2026-10-16 19:50 for a way for bots to get raw mutton (debug reducer recommended / kill-butcher recipe / manual) so ClayCheck can test tallow, lighting and refill.
+- Animals answered 2026-10-16 20:08: use spear x2 + ButcherCarcass today (done in ClayCheck); DebugGiveMeat later.
 - Animals: Tallow takes Item 119 from the Ceramics range since it's rendered in a Ceramics pot; fine to move if Animals prefers.
 - Atmosphere: should a lit lamp count as light for anything at night (e.g. darkness checks)? Not needed for the first version.
 
