@@ -96,6 +96,7 @@ public partial class Terrain : Node3D
     {
         if (farLand == null) AddChild(farLand = new FarLand());
         farLand.Update(chunkX, chunkZ);
+        if (BenchWanted) { RunViewBench(chunkX, chunkZ); return; }
 
         int r = ViewRadius;
         if (center != (chunkX, chunkZ))
