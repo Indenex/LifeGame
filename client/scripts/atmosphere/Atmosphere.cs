@@ -113,6 +113,7 @@ public partial class Atmosphere : Node3D
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
         ReadyFronts();
+        ReadyHomes();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -167,6 +168,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
@@ -279,6 +281,7 @@ public partial class Atmosphere : Node3D
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
+        UpdateHomes(dt, focus, Night, env.FogLightColor);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
