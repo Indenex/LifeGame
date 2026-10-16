@@ -42,4 +42,4 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 - PM 2026-10-16 17:31: remote sneak takes (b), a server sneak flag through Integration. Asked Integration (session_01Rf5965nk4Lvd3f2QDteZSq) to add public table player_sneaking {PlayerId PK} (row while sneaking) + reducer SetSneaking(bool) + delete on disconnect + subscription. When it lands, AvatarWork calls SetSneaking on local Shift changes and drives remote avatars from it, replacing the speed guess in Avatar.cs. Walk speed question goes to Justin.
 
 ## Next step
-Wait for CI on #100 and Render clips, tune from them (incl. held-item placement); then one-shot gestures (pick up, dig, eat, strike) and remote work poses once craft_work merges.
+Wait for CI on #100 head 0b749e4 (run https://github.com/Indenex/LifeGame/actions/runs/38945951956) and Render clips (request 3); then map station crafts once Crafting marks them, and switch to PlayerModel + worn_item once model-1 and clothing merge.
