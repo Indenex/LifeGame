@@ -533,3 +533,40 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-130 — 2026-10-16 — Wipe PRs pass by label
 **Decision:** A `world-wipe` PR label makes CI skip the no-wipe upgrade check and print a loud "this PR wipes the world" notice instead. Only the PM adds it, and only after Justin confirms the wipe date; every other PR stays protected.
 **Who:** Justin ("A 'world-wipe' label", as recommended)
+
+## D-131 — 2026-10-16 — Release & Launcher lane
+**Decision:** A new Opus Release & Launcher lane builds one-button updating. Every green merge to main becomes a versioned GitHub Release (clients and server module). A launcher for Linux and Windows downloads the latest client and has a server button that publishes the module over the existing world without wiping (refusing world-wipe releases unless Justin confirms). Fully automatic server updates from CI are proposed as options if they need setup or cost. Justin wants zero setup work.
+**Who:** Justin ("New Release & Launcher worker"; "I want to be able to open the game, hit button, and it update the game/server")
+
+## D-132 — 2026-10-16 — Raised hearth
+**Decision:** A raised hearth is built inside a finished hut or house (4 stone, then 3 daub). A fire lit on it burns 1.5x as long per stick, can't be put out by rain, and makes a hut fully warm, as a fire already does in a house. Smoke rises through the roof. Crafting adds one small hook to read the hearth.
+**Who:** Justin ("Better fire", as recommended)
+
+## D-133 — 2026-10-16 — Releases and launcher
+**Decision:** Justin's world runs on a local SpacetimeDB server on his own PC. Every green merge to main becomes a public GitHub Release (Linux and Windows clients plus the server module). The launcher has one button: it updates the client, publishes the new module over his local world without wiping (refusing world-wipe releases unless he confirms), starts the server if it's down, then offers Play. No cloud hosting, no cost, no setup.
+**Who:** Justin ("Public GitHub Releases" and "Launcher button on your PC", both as recommended)
+
+## D-134 — 2026-10-16 — Snow wets you at half rain's rate (amends D-114)
+**Decision:** Falling snow makes you wet at half the rate of rain. Seasons run about +8 °C in summer and −16 °C in winter (winter days near freezing, nights about −8 °C), with Survival's chill still capped.
+**Who:** Justin ("Half as fast as rain", as recommended)
+
+## D-135 — 2026-10-16 — Sheep through the seasons
+**Decision:** Flocks huddle tighter and graze less in snow, and lambs are born only in spring (up to 2 per flock each spring) instead of all year.
+**Who:** Justin ("Behaviour + spring lambing", as recommended)
+
+## D-136 — 2026-10-16 — Milder winter days
+**Decision:** Winter days only cool you; the harsh cold comes at night. Atmosphere and Survival tune the winter day temperature or cold drain so winter days aren't near-freezing all day.
+**Who:** Justin ("Milder winter days"; the PM had recommended keeping it for now)
+**Final values (2026-10-16):** Mid-winter is about 12.6 °C at clear noon (chill about 1.16x), 10 °C overcast, 6 °C in rain and wind, and about −8.6 °C at night (at the 2x cap). Snow falls mostly at night and lasts into the afternoon.
+
+## D-137 — 2026-10-16 — Spindle station
+**Decision:** One wool station, a distaff stand with a log stool, built from your drop spindle + 4 sticks + 2 cordage + 1 stone. Both spinning (D-070 minigame) and weaving happen there.
+**Who:** Justin ("One wool station", as recommended)
+
+## D-138 — 2026-10-16 — Leather drying rack
+**Decision:** A frame of two forked posts and a crossbar holding up to 3 hides; you scrape and stretch at it. It costs 6 sticks + 2 cordage, and existing racks keep drying where they stand.
+**Who:** Justin ("Frame holding 3 hides", as recommended)
+
+## D-139 — 2026-10-16 — Foot wraps wait for the rack (amends D-128)
+**Decision:** The leather foot wraps (and with them the worn slots) ship once, already made at the Leather drying rack, not first as a hand craft.
+**Who:** Justin ("Hold for the rack"; the PM had recommended shipping now)
