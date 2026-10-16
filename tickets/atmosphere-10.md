@@ -1,7 +1,7 @@
 # atmosphere-10: Water and wind feel alive
 Lane: World atmosphere and sound
 Owner: Atmosphere thread
-Status: in_review
+Status: done
 Branch: claude/atmosphere-sound-hlqfke (local atmosphere-10-wip)
 PR: #66 (with atmosphere-11)
 
@@ -15,8 +15,10 @@ From the PM, 2026-10-16 (D-036 immersion): wherever there is water (ponds below 
 - 2026-10-16 04:40: merged main (crafting #62). Compatibility draw calls measured online (local server, db perf, --render-stats=1; the flag needs =1): 2,198 draw calls, 2,379 objects. Visible mesh nodes: BerryBush 92 bushes / 2,967 pieces, Terrain 302 (all trees, grass, rocks), Herd 160, GroundItems 47. Bushes are >= ~85% of draw calls; sent the PM a MultiMesh plan for BerryBush (Survival's file).
 - 2026-10-16 05:30: PM added: player hidden under dense canopy (playtest2-hidden-under-canopy.png). Tree fade now reaches 1.2-2.6 tree sizes from the camera-player line (was 0.9-1.9; max reach 4.9 m, inside Terrain.ShowGhosts' 6 m margin) and the window around the player is fully clear (alpha 1 - fade*(0.35+0.65*window), window 0.09-0.3 on screen). Shots: screenshots/atmosphere-20-canopy-{before,after,after-turned}.png at --debug-position=-44,-46 (densest woods near spawn).
 
+- 2026-10-16 18:30: #66 approved by Justin (D-083), CI green on 7bf58e8 (https://github.com/Indenex/LifeGame/actions/runs/38940107818), merged.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for the PR's CI and Justin's view of the pond screenshots via the PM; adjust the water look if he asks.
+None; done. Follow-up work is atmosphere-13 (forest light).

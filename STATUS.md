@@ -13,7 +13,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 
 | Item | State |
 |---|---|
-| Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
+| Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK. One wipe planned with env-2 (D-129); date to be confirmed with Justin. |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
 | Waiting on Justin | Water and sky look, #66: Render lane rendering it, then Justin decides. Carry-limit numbers (survival-3) stay as shipped unless he says otherwise. Answered 2026-10-16: D-060 to D-062, D-065 to D-080 |
@@ -28,7 +28,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Wiki (D-063, D-064: Opus) (session_01N5zRQUdvDgJjhehqzyPAjB) | wiki-2 done (#87); keep `wiki/` current | `claude/wiki-2` | `wiki/`. Web page (private, Justin shares it): https://claude.ai/artifact/4sKf1fGqBZEQeErZCkibaB; the PM republishes it after each wiki merge with `tools/wiki-page/` |
 | Modeling (D-073) (session_01JKX3FNjkrEkAqoTaFJiXAm) | model-1 player figure, items, clothes | `claude/model-1-style` | `client/assets/models/`, `client/scripts/models/`; may touch other lanes' mesh files in small PRs |
 | Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-1 player animation pass; PR #100 (draft until Justin sees clips) | `claude/anim-1-player-animation` | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
-| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-1 cosy forest pass with Atmosphere | `claude/environment-env-1` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
+| Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-3 in progress; env-2 planned (no wipe until Justin confirms timing) | `claude/environment-env-1` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
 | Audio (D-079) (session_01LeXCWTFVBQcCNVEDdhPek3) | audio-1 take over audio; finish work sounds (atmosphere-12, D-072) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
 | Crafting (session_01Y2sA7pDBFch57bWb1uKMTq) | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_014pHdaxJ7uESzsvWekpjvsH) | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
@@ -41,6 +41,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | UX and UI (session_01V6qgbNbvTwniqW946KACLr) | #73 ui-8; ui-9 trade window (D-069) | `claude/ux-ui-xlrh2s` | `client/scripts/ui/`, input map, `KEYMAP.md`, Use key registry, `Hud.cs` layout |
 | Bug fixes (session_01HddD17VpF2CmiCxHoPH84Y) | #25 upgrade check; bugfix-5 fresh-world playtest | lane records | any file, minimal diffs, PM assigns |
 | Scribe (D-102, Sonnet) (session_01He77u9z8pt5DtP7it3NMAQ) | records decisions for the PM | your branch | `DECISIONS.md`, `STATUS.md` (PM's instructions only) |
+| Release & Launcher (D-131) (session_015Je3JR5vZrzA7TwQYBSPgM) | release-1 automatic releases + one-button launcher; in progress | `claude/release-1` | `launcher/`, `tools/release/`, `.github/workflows/release.yml` (reviewed by Integration) |
 
 Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 

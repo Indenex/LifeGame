@@ -1,7 +1,7 @@
 # ceramics-5: Clay-path playtest fixes
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session_017sscCMDfHcyeZNqGW22GBE)
-Status: in_progress
+Status: done
 Branch: claude/clay-ceramics-kfr4kr
 PR: #44 (the PM asked to ship it together with ceramics-3)
 
@@ -21,8 +21,10 @@ The PM's playtest-3 findings (screenshots /mnt/project-files/screenshots/playtes
 - 2026-10-16 05:48: ClayCheck pit (c5pit2) and --kiln (c5kiln2) passed on 6c93975; kiln burned 2 sticks, no fiber.
 - 2026-10-16 05:40: merged main f0a7065 (#68 Targets and twice-registered TendOffer kept, ceramics-3's drying line kept); prompts and tips use the live Use key (Controls.KeyFor). KEYMAP.md lists ceramics.pick_up at 10.
 
+- 2026-10-16: merged into main via #44 (ca1ce9f); ticket closed.
+
 ## Open questions / blockers
 - Bug fixes #68 (bugfix-13) and UX #73 change CeramicsView.cs and ClayItemLook.cs; merge main after they land and keep their Targets and the twice-registered TendOffer (ceramics.fire_pot 22, ceramics.tend 12).
 
 ## Next step
-Run ClayCheck pit and --kiln on scratch dbs, push, send the PM the green sha.
+None; done. Lane continues in the next ceramics ticket.
