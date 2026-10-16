@@ -1,6 +1,6 @@
 # skills-11: Leatherwork and Weaver specialties
 Lane: Journal and skills
-Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
+Owner: Journal and skills lane (handed off 2026-10-16 19:56 by session_013QuyGdXAWemhkois2ictmc to a fresh Sonnet session, D-159)
 Status: in_progress
 Branch: claude/journal-skills-11 (stacked on #112 and on Crafting's #160)
 PR: #193 (draft)
@@ -21,9 +21,17 @@ Husbandry keeps shearing, hunting and butchering; Toolmaking keeps cordage, bask
 - 2026-10-16 19:37: D-153 (Justin): foot wraps train Leatherwork, drop spindle stays Toolmaking, as built.
 - 2026-10-16 19:50: Crafting's #160 (d947764) reports build.table / build.bench / build.spindle / build.rack via StationInfo.BuildProcess. Merged #160 into this branch. Skills.AllProcessIds yields one build id per station kind that exists; journal names; how-to lines ("C beside a crafting table to make it"); Things to try lines for the table, spindle station and drying rack; any recipe with a Station waits for that station to be built. Harness: 47 reachable, crafting table always before the basket; server type-checks.
 - 2026-10-16 19:50: #112 merged. Merging main here conflicts in #160's own files (Structures.cs, Building.cs, StructureModel.cs), which are for Crafting to resolve on #160; this branch stays stacked on #160 until it merges.
+- 2026-10-16 19:56: handoff (D-159). State: #193 is a draft against main and includes #160's commits; #112 (skills-10) is merged. Local checks: .NET harness (see Testing below) and a server type-check, both green on 9dd7b26/fd50e70.
+
+## Testing without Godot
+- Install .NET 8 to /tmp: `curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir /tmp/dotnet`.
+- Server type-check: `cd server/spacetimedb && /tmp/dotnet/dotnet build -p:RuntimeIdentifier= -p:OutputType=Library -p:SelfContained=false`.
+- Hint harness: a console project compiling `shared/*.cs` + `client/scripts/journal/NextSteps.cs`, with a stub `namespace LifeGame { public static class Recipes { internal static string Keys(string t) => t; } }`; loop `NextSteps.Next(known)` taking the first (and the third) id until empty and check every `Skills.AllProcessIds()` id gets reached and has a line in NextSteps.Lines.
 
 ## Open questions / blockers
-- (none)
+- #160 (Crafting, session_01Y2sA7pDBFch57bWb1uKMTq) conflicts with main in shared/Structures.cs, server/spacetimedb/Building.cs, client/scripts/building/StructureModel.cs; Crafting was told 19:50. Don't resolve those here; wait for #160 to merge.
+- Audio (session_01LeXCWTFVBQcCNVEDdhPek3, audio-3, branch claude/audio-3-cues): when it merges, in client/scripts/journal/Journal.cs replace `chime.Title()` with `Sfx.Play(Cue.SkillUp)` and `chime.Discovery()` with `Sfx.Play(Cue.Learn)`, then delete client/scripts/journal/Chime.cs (and its .uid). Audio will say when it has merged.
+- Ceramics-8 adds the potter's bench shape; Things to try already handles `build.bench` once it exists.
 
 ## Next step
-When #160 merges (or Crafting updates it with main), merge main here, re-run the harness, push, and mark #193 ready.
+When #160 merges: `git merge origin/main` into claude/journal-skills-11, run the harness and server type-check, push, wait for CI on #193, mark it ready and send the green sha to the PM.
