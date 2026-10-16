@@ -31,6 +31,12 @@ public partial class SurvivalClient : Node
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
     public float WalkFactor { get; private set; } = 1f;
+    // Running (D-088): hold the run key to go faster while stamina lasts.
+    static readonly StringName NRun = "run";
+    float stamina = 1f;
+    bool winded;
+    // True while you are actually running this frame (for Animation's run cycle).
+    public bool Running { get; private set; }
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -54,6 +60,8 @@ public partial class SurvivalClient : Node
     public override void _Ready()
     {
         Bind("eat", Key.X);
+        // Hold V to run until UX/UI moves sneak off Shift and gives run Shift (D-088, KEYMAP.md).
+        Bind("run", Key.V);
         AddChild(needsHud);
         RegisterUse();
     }
@@ -171,6 +179,20 @@ public partial class SurvivalClient : Node
 
         UpdateLoad();
         UpdateOthersWet();
+    }
+
+    // How fast to move this frame: sneaking, walking, or running while stamina lasts,
+    // all slowed alike by an overload. Main's Walk() calls this once per frame.
+    public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
+    {
+        bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
+        Running = running;
+        stamina = Stamina.Step(stamina, running, dt);
+        if (stamina <= 0f) winded = true;
+        else if (stamina >= Stamina.MinToRun) winded = false;
+        needsHud.SetStamina(stamina);
+        float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
+        return speed * WalkFactor;
     }
 
     // Other players look as wet as the server says (D-036), in tenths.

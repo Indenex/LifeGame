@@ -3,7 +3,7 @@ using Godot;
 namespace LifeGame;
 
 // Soft ring gauges in the bottom-right corner (food, water, warmth, and load
-// when it matters), frost creeping in from the screen
+// and stamina when they matter), frost creeping in from the screen
 // edges as you get cold, and a quiet fade to black when you die.
 public partial class NeedsHud : CanvasLayer
 {
@@ -19,6 +19,7 @@ public partial class NeedsHud : CanvasLayer
     readonly NeedGauge water = new(NeedGauge.Glyph.Drop);
     readonly NeedGauge warmth = new(NeedGauge.Glyph.Flame);
     readonly NeedGauge load = new(NeedGauge.Glyph.Sack) { Visible = false, Modulate = new Color(1, 1, 1, 0) };
+    readonly NeedGauge stamina = new(NeedGauge.Glyph.Stride) { Visible = false, Modulate = new Color(1, 1, 1, 0), Alert = false };
     readonly ColorRect frost = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly ColorRect fade = new() { Color = new Color(0.02f, 0.02f, 0.03f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
     readonly Label deathTitle = new();
@@ -43,6 +44,8 @@ public partial class NeedsHud : CanvasLayer
 
         var gauges = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         gauges.AddThemeConstantOverride("separation", 12);
+        // The stamina ring only shows while you are short of breath (D-088).
+        gauges.AddChild(stamina);
         gauges.AddChild(food);
         gauges.AddChild(water);
         gauges.AddChild(warmth);
@@ -96,6 +99,16 @@ public partial class NeedsHud : CanvasLayer
         loadAlpha = fraction >= 0.8f ? 1f : 0f;
     }
 
+    static readonly Color StaminaColor = new(0.78f, 0.86f, 0.62f);
+    float staminaAlpha;
+
+    // A stride ring, shown only while stamina is below full.
+    public void SetStamina(float value)
+    {
+        stamina.Set(value, StaminaColor);
+        staminaAlpha = value < 0.995f ? 1f : 0f;
+    }
+
     // True while the death card covers the screen, so nothing offers itself over it.
     public bool Mourning => fade.Color.A > 0.02f;
 
@@ -130,6 +143,10 @@ public partial class NeedsHud : CanvasLayer
         float a = Mathf.MoveToward(load.Modulate.A, loadAlpha, (float)delta * 2f);
         load.Modulate = new Color(1, 1, 1, a);
         load.Visible = a > 0.01f;
+        // Fade in quickly when you start running, out gently once you've caught your breath.
+        float sa = Mathf.MoveToward(stamina.Modulate.A, staminaAlpha, (float)delta * (staminaAlpha > 0f ? 4f : 1.5f));
+        stamina.Modulate = new Color(1, 1, 1, sa);
+        stamina.Visible = sa > 0.01f;
 
         var material = (ShaderMaterial)frost.Material;
         float current = (float)material.GetShaderParameter(NAmount);
