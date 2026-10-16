@@ -185,10 +185,11 @@ conn.Reducers.StartCraft("weave.basket", 0);
 Pump(() => lastError != null, 5, "a basket away from a table to be refused");
 Console.WriteLine($"Basket with no table: {lastError}");
 lastError = null;
-conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
-Pump(() => lastError != null, 5, "a table outside a claim to be refused");
-if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
-Console.WriteLine($"Table outside a claim: {lastError}");
+// Only basic survival buildings stand outside a claim (building-13): a station that isn't the table is refused.
+conn.Reducers.PlaceStructure(StructureKind.SpindleStation, x + 2f, z, 0f);
+Pump(() => lastError != null, 5, "a spindle station outside a claim to be refused");
+if (lastError?.Contains("inside your claim") != true) Fail($"a spindle station outside a claim: {lastError}");
+Console.WriteLine($"Spindle station outside a claim: {lastError}");
 Gather(Item.Fiber, 6);
 Craft("cord.twist", 0, Item.Cordage);
 Craft("cord.twist", 0, Item.Cordage);

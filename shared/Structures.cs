@@ -8,6 +8,9 @@ namespace LifeGame.Shared
     public sealed class StructureShape
     {
         public string Name = "";
+        // May stand outside a claim (building-13, Justin): basic survival only. Everything else has
+        // to be built inside a claim the builder belongs to. Outside a claim, everything weathers fast.
+        public bool Wild;
         // Footprint in the structure's own frame: +Z is the open front or door.
         public bool Round;
         public float HalfWidth, HalfDepth, Radius;
@@ -48,6 +51,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Lean-to",
+                Wild = true,
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
                 RainCover = 0.6f, Warmth = 0.2f,
@@ -56,6 +60,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Clay hut",
+                Wild = true,
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
                 RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
@@ -67,6 +72,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Claim marker",
+                Wild = true,
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
                 Solid = true,
@@ -84,6 +90,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage basket",
+                Wild = true,
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
                 Solid = true,
@@ -99,7 +106,6 @@ namespace LifeGame.Shared
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
-                WeatherAfter = 168,
                 Room = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
@@ -109,12 +115,12 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Wild = true,
                 Round = true, Radius = 0.32f,
                 Clearance = 0.6f,
                 Solid = true,
                 // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
                 StoreStacks = JarStacksMax,
-                WeatherAfter = 336,
                 Stages = new[] { "Set the jar" },
             },
             // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
@@ -140,6 +146,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Crafting table",
+                Wild = true,
                 HalfWidth = 0.8f, HalfDepth = 0.45f,
                 Clearance = 1.0f,
                 Station = StationKind.Table,
@@ -150,6 +157,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
+                Wild = true,
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
                 Indoor = true,
@@ -192,7 +200,6 @@ namespace LifeGame.Shared
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
-                WeatherAfter = 168,
                 Room = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
@@ -334,7 +341,11 @@ namespace LifeGame.Shared
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
-        public const double WeatherAfterHours = 72, WeatherForHours = 24;
+        // Justin's building-13 numbers: 48 h untouched, then it falls apart quickly.
+        public const double WeatherAfterHours = 48, WeatherForHours = 6;
+
+        // Whether this kind may be built outside a claim.
+        public static bool IsWild(int kind) => Shape(kind).Wild;
 
         public static bool IsRoom(int kind) => Shape(kind).Room;
 
