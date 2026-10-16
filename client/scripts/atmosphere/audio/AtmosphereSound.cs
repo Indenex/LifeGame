@@ -118,7 +118,7 @@ public partial class Atmosphere
     void HearAnimal(Animal a)
     {
         bool running = a.State == AnimalState.Run;
-        if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
+        if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
         else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
     }
 

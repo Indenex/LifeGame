@@ -44,6 +44,7 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
+    readonly FallingLeaves leaves = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -115,6 +116,7 @@ public partial class Atmosphere : Node3D
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
+        AddChild(leaves);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
@@ -292,7 +294,10 @@ public partial class Atmosphere : Node3D
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
         // Dawn mist glows with the same light as the fog: warm at sunrise.
-        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
+        float sunLow = Mathf.SmoothStep(-0.02f, 0.08f, WorldTime.SunHeight(timeOfDay)) * (1f - Mathf.SmoothStep(0.25f, 0.5f, WorldTime.SunHeight(timeOfDay)));
+        var towardSun = WorldTime.SunHeight(timeOfDay) > -0.06f ? sun.GlobalBasis.Z : -sun.GlobalBasis.Z;
+        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f),
+            towardSun, sun.LightColor * sunLow * (1f - Mathf.Clamp(cloud * 1.2f - 0.2f, 0f, 1f)), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
@@ -304,6 +309,7 @@ public partial class Atmosphere : Node3D
         sound.TimeOfDay = timeOfDay;
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        leaves.Follow(focus, Year, wind, woods, WindDirection);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
