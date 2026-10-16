@@ -7,15 +7,20 @@ extends Node
 # degrees around from the game camera's usual spot behind (0 = same side as the
 # game camera, 180 = the far side), looking at `look_height` metres above the
 # player's feet (default 1). Without the flag it does nothing.
+# --render-cam-target=sheep frames the sheep nearest the player instead (yaw then
+# counts from the game camera's direction too).
 
 var cfg: PackedFloat32Array
 var rig: Node3D
 var cam: Camera3D
+var target_kind := ""
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args() + OS.get_cmdline_args():
 		if a.begins_with("--render-cam="):
 			cfg = PackedFloat32Array(Array(a.substr(13).split(",")).map(func(s): return float(s)))
+		if a.begins_with("--render-cam-target="):
+			target_kind = a.substr(20)
 	if cfg.size() < 3:
 		set_process(false)
 		return
@@ -39,6 +44,14 @@ func _process(_delta: float) -> void:
 			return
 	cam.make_current()
 	var feet := rig.global_position - Vector3(0, 1.2, 0)
+	if target_kind == "sheep":
+		var best: Node3D = null
+		for n in get_tree().root.find_children("*", "Node3D", true, false):
+			if n.get_script() != null and str(n.get_script().resource_path).ends_with("/Sheep.cs") and n.is_visible_in_tree():
+				if best == null or n.global_position.distance_to(feet) < best.global_position.distance_to(feet):
+					best = n
+		if best != null:
+			feet = best.global_position
 	var yaw := rig.global_rotation.y + deg_to_rad(cfg[2])
 	cam.global_position = feet + Vector3(sin(yaw), 0, cos(yaw)) * cfg[0] + Vector3.UP * cfg[1]
 	cam.look_at(feet + Vector3.UP * cfg[3])

@@ -9,6 +9,8 @@
 //   near 3            walk to 3 m from the camera player
 //   away 20           walk straight away from the camera player until 20 m off
 //   goto x z          walk to a point
+//   stroll dx dz      start walking dx, dz metres from here and go on to the next
+//                     step at once (to snap mid-stride); "arrive" waits for it
 //   say hello there   send a chat line ("/me waves" works too)
 //   snap              save the screen to <snap prefix>-<n>.png (n counts from 1)
 //   clip 6            record 6 s of the screen to <snap prefix>-<n>.mp4
@@ -55,12 +57,26 @@ var conn = DbConnection.Builder()
 conn.OnUnhandledReducerError += (_, e) => { lastError = e.Message; Console.WriteLine($"puppet: server said {e.Message}"); };
 
 var clock = Stopwatch.StartNew();
+(float X, float Z)? stroll = null;
+double lastStep = 0;
 void Pump(double seconds, Func<bool>? until = null)
 {
     var end = clock.Elapsed.TotalSeconds + seconds;
     while (clock.Elapsed.TotalSeconds < end && !(until?.Invoke() ?? false))
     {
         conn.FrameTick();
+        if (stroll is { } to && clock.Elapsed.TotalSeconds - lastStep >= 0.1)
+        {
+            lastStep = clock.Elapsed.TotalSeconds;
+            float dx = to.X - x, dz = to.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            if (d < 0.05f) stroll = null;
+            else
+            {
+                float step = MathF.Min(d, 4f * 0.1f);
+                x += dx / d * step; z += dz / d * step;
+                conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
+            }
+        }
         Thread.Sleep(5);
     }
 }
@@ -139,6 +155,15 @@ foreach (var line in steps)
             WalkTo(xz[0], xz[1]);
             break;
         }
+        case "stroll":
+        {
+            var d = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            stroll = (x + d[0], z + d[1]);
+            break;
+        }
+        case "arrive":
+            Pump(60, () => stroll == null);
+            break;
         case "say":
             conn.Reducers.SendChat(rest);
             Pump(0.1);
