@@ -33,6 +33,7 @@ Real models, in the model-1 style (A Carved by default) and built with `client/s
 - 2026-10-16 21:56: #277 (worn tools, claude/model-2-worn) green on 3eefa06, run https://github.com/Indenex/LifeGame/actions/runs/38970804021; sha sent to the PM.
 - 2026-10-16 21:57: #277 merged. Merged main into claude/model-2-devices; opening the devices PR.
 - 2026-10-16 22:10: Crafting's devices (PR #285, crafting-23) are SettlingTub (round r 0.55, Station ClayTub), CrushingBlock (0.9 x 0.9, CrushBlock), TemperingTrough (1.7 x 0.8, TemperTrough). Meshes reworked to match, made of what they cost: `StationMeshes.SettlingTub(fill, working)` (hollowed log round, withy sieve hung from a lashed stick tripod; working: rings on the slip), `CrushingBlock(fill, working)` (dished stone on a log round, pounding stone; working: stone upright, dust), `TemperingTrough(fill, working)` (long hollowed log on lashed crossed stick legs, clay and temper; working: paddle stood in the clay, more knuckle ridges). In PR #287.
+- 2026-10-16 22:08: docs/CONTENT.md (Justin's content-as-data rule): models are assets looked up by a `Model` id on each Def. Modeling keeps builders public in client/scripts/models and adds a `Models.Structure(id)` / `Models.Item(id)` lookup by dotted id once a family's Def carries `Model` (told Integration; the converting lane sends the ids).
 
 ## Open questions / blockers
 - Justin's sheep fleece pick (Cloud / Bean / Carved), via the PM; Cloud until then.
