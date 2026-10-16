@@ -1,5 +1,6 @@
 using System.Linq;
 using Godot;
+using SpacetimeDB.Types;
 using LifeGame.Shared;
 
 namespace LifeGame;
@@ -111,5 +112,23 @@ public partial class Atmosphere
 
         public float Pan(Vector2 right) =>
             toward.LengthSquared() > 0.01f ? Mathf.Clamp(toward.Normalized().Dot(right), -1f, 1f) : 0f;
+    }
+
+    // Sheep bleat and deer call; each species goes to its own voices (audio-4).
+    void HearAnimal(Animal a)
+    {
+        bool running = a.State == AnimalState.Run;
+        if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
+        else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
+    }
+
+    // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,
+    // 0.25 summer, 0.5 autumn, 0.75 winter; sunset is at 0.75 of the day).
+    float StagRoarTime()
+    {
+        float autumn = Mathf.SmoothStep(0.5f, 0.53f, Year) * (1f - Mathf.SmoothStep(0.72f, 0.75f, Year));
+        float t = timeOfDay < 0f ? 0.5f : timeOfDay;
+        float dusk = Mathf.SmoothStep(0.66f, 0.74f, t) * (1f - Mathf.SmoothStep(0.82f, 0.9f, t));
+        return autumn * dusk;
     }
 }
