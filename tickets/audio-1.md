@@ -24,4 +24,4 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - (#66 merged; #97 folded in, either merge order works.)
 
 ## Next step
-Wait for CI on PR #120; when green, send the head sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU) for merge.
+Wait for CI run https://github.com/Indenex/LifeGame/actions/runs/38944796924 on PR #120 (head c6d0187); when green, send the head sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU) for merge.
