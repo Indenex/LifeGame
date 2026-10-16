@@ -3,7 +3,7 @@ Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
 Status: in_review
 Branch: claude/animals-sheep-5gkntn (restarted from main d2026a7 after #69 merged)
-PR: (after #69)
+PR: #76
 
 ## Goal
 Atmosphere counted about 5+ sheep mesh nodes per sheep at spawn. Cut sheep draw calls with no visible change to looks or animation.
