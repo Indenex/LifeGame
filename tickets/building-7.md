@@ -23,5 +23,7 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 
 - Asked the PM for the next ticket (building-4 already merged as #53): fence and gate (recommended), raised hearth, or log cabin. Default: fence as building-8 after #61 is green.
 
+- Ceramics (ceramics-6, D-066) adds StructureKind.StorageJar = 6 using the basket store; told them to put its cost row in Structures.StageCosts after #61. Building takes kinds 7 and up.
+
 ## Next step
 Wait for CI on #61's new head, then send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
