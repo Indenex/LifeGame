@@ -727,3 +727,35 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-178 — 2026-10-16 — Bow numbers: Standard
 **Decision:** The bow is "Standard": range 40 m, a ±25° auto-aim cone, hit chance 95% falling to 30% with distance, ×0.55 against a running target. A crude bow does about 21 damage per hit; a red deer has 100 HP, so a kill takes 3 to 6 hits (extends D-171).
 **Who:** Justin ("Standard")
+
+## D-179 — 2026-10-16 — Sneak attacks crit with Stalking (amends D-171 and D-176)
+**Decision:** Hunting hits do normal scaled damage. A sneak attack can trigger a Stalking crit: a large bonus damage, with the crit chance and the bonus on the shared progression curve (D-175, D-177), and a visible and audible crit cue. This replaces the one-strike-kill threshold in D-171 and the Husbandry of at least 20 stand-in in D-176.
+**Who:** Justin ("It should be normal damage value scaling plus a large damage bonus trigger chance (with some visual feedback like a 'crit' sorta thing) when Stalk adds its bonus damage.")
+
+## D-180 — 2026-10-16 — Campfire light reaches further at night
+**Decision:** Campfire light reaches further at night: about 10 m by day and about 14 m at night.
+**Who:** Justin ("Further at night")
+
+## D-181 — 2026-10-16 — Valley mist
+**Decision:** atmosphere-17 adds valley mist: dawn and dusk mist settles in low ground, ponds and streams.
+**Who:** Justin ("Yes, valley mist")
+
+## D-182 — 2026-10-16 — Server is the authority: rule now, harden before players
+**Decision:** Justin will host the server himself; players never get a server. Every game rule, number, check and outcome is decided by a server reducer; the client only predicts and draws. New features must validate on the server (reach, cooldowns, ownership, line of sight, speed, collision via `shared/` code) and must not send clients values that should stay hidden. A hardening pass closes existing client-only gaps before outside players join.
+**Who:** Justin ("is that going to fuck up our design process... we would need many many things to be server sided for hacking purposes."), answered with "Rule now, harden before players"
+
+## D-183 — 2026-10-16 — Launcher: two builds
+**Decision:** Two launcher builds. Justin's host launcher installs, starts and updates the server. Players get a client-only launcher that updates the game and connects to his server.
+**Who:** Justin ("Two builds")
+
+## D-184 — 2026-10-16 — Stalking crit values: rarer, bigger (extends D-179)
+**Decision:** Stalking crit chance runs from 3% to 40% and the bonus damage from +50% to +200%, both on the shared front-loaded curve (D-175, D-177).
+**Who:** Justin ("Rarer, bigger")
+
+## D-185 — 2026-10-16 — Crit cue look: "!" only
+**Decision:** A Stalking crit shows an amber "!" with a starburst over the animal, bigger on a kill. No numbers, and plain hits stay quiet (extends D-179).
+**Who:** Justin ("Crit '!' only")
+
+## D-186 — 2026-10-16 — Hardening behind a dev flag
+**Decision:** Server hardening (D-182) gets a dev flag, on by default and off only for CI and local tests. Admin-caller checks and the Move slack fix are done now; the rest of bugfix-24 lands before players join.
+**Who:** PM (technical decision)
