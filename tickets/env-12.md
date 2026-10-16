@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment lane (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_progress
 Branch: claude/environment-chunk-thread (stacked on claude/environment-view, PR #337)
-PR: (not yet)
+PR: #344 (base claude/environment-view until #337 merges)
 
 ## Goal
 With view distance up to Very far (radius 10, 441 chunks; env-9), chunk building costs about 9 ms of CPU per chunk on the main thread, paced at 4 ms a frame. Crossing a chunk boundary on Far queues about 17 to 31 chunk builds, so the new edge fills in over a second or more, and initial loading takes several seconds. Move the expensive part (all the noise, placement and instance math) to background tasks, so the main thread only snapshots the server data a chunk needs and turns finished instance lists into MultiMeshes with one buffer assignment each. Done means: same chunks bit for bit (same instances, same order), building runs on worker threads, walking never hitches, and the full radius fills in far faster. It also opens the way to Very far at radius 12 (with batching distant chunks, a later ticket). Justin sees the same world, filling in faster and smoother.
@@ -23,4 +23,4 @@ With view distance up to Very far (radius 10, 441 chunks; env-9), chunk building
 - (none)
 
 ## Next step
-Open the PR (stacked on #337; base claude/environment-view until #337 merges, then main). Later: batch distant chunks for Very far at radius 12.
+Wait for CI on #344; when #337 merges, retarget #344 to main and send the PM the green sha. Later: batch distant chunks for Very far at radius 12.
