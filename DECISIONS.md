@@ -409,3 +409,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
 **Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
 **Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
+
+## D-100 — 2026-10-16 — First clothes, worn weight, carry limit, run speed
+**Decision:** Wool tunic takes 10% off the cold drain and leather foot wraps 4% (14% together at best quality, scaling with quality). Worn clothes do not count toward the carry load. Carry limit: 20 bare, basket +10 (30). Running is 5.6 m/s (walking stays 4.2).
+**Who:** Justin (tunic and wraps "10% / 4%"; the PM had recommended 8%/3%. Worn weight "No", carry "20 / +10", run "5.6 m/s", which the PM recommended)
+
+## D-101 — 2026-10-16 — Stamina shown as a bar; running is free; food unchanged
+**Decision:** Stamina shows as a small bar under your character, only while not full. Running costs no food or water. Food values stay: berries 12% each, roast mutton 40%, burnt 10%. Stamina duration and refill are set from researched "carrot on a stick" progression curves (see `docs/PROGRESSION.md`, being written), which all lanes then use as the base for number suggestions.
+**Who:** Justin ("Small bar under your character"; the PM had recommended an arc by the rings. "No"; "Keep as is". Stamina: "Research common logarithms for fun/invested 'carrot on a stick' values and use them for suggestion bases.")
