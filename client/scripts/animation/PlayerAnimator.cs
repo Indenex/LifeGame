@@ -15,7 +15,7 @@ public sealed class PlayerAnimator
     float workTime, workBlend;
     readonly float seed; // per-figure offset so a crowd never breathes or sways in step
     float time, phase;   // phase: walk cycle, a full turn is two steps
-    float walkBlend, gait, turnLean, crouch;
+    float walkBlend, gait, run, turnLean, crouch;
 
     public PlayerAnimator(PlayerRig rig, ulong seed)
     {
@@ -31,6 +31,8 @@ public sealed class PlayerAnimator
         walkBlend = Mathf.Lerp(walkBlend, Smooth(0.15f, 1.1f, speed), k);
         // 0 is a stroll (sneaking, heavy loads), 1 the brisk pace of a normal walk.
         gait = Mathf.Lerp(gait, Smooth(1.8f, 4.0f, speed), k);
+        // Above the brisk walk-jog (4.2 m/s) a held run takes over (D-088).
+        run = Mathf.Lerp(run, Smooth(4.6f, 6.2f, speed), k);
         // Longer steps at speed keep the feet from skating.
         float stepLength = 0.6f + 0.2f * speed;
         phase = Mathf.PosMod(phase + speed * dt / stepLength * Mathf.Pi, Mathf.Tau);
@@ -101,17 +103,20 @@ public sealed class PlayerAnimator
     void Walk(Pose p)
     {
         p.Clear();
-        float g = gait;
+        float g = gait, r = run;
         float s = Mathf.Sin(phase), c = Mathf.Cos(phase); // s > 0: left leg forward
 
-        float hipAmp = Mathf.Lerp(0.32f, 0.52f, g);
-        float stance = Mathf.Lerp(0.05f, 0.14f, g); // knees never lock straight
-        float kneeAmp = Mathf.Lerp(0.6f, 1.15f, g);
+        float hipAmp = Mathf.Lerp(Mathf.Lerp(0.32f, 0.52f, g), 0.72f, r);
+        float stance = Mathf.Lerp(Mathf.Lerp(0.05f, 0.14f, g), 0.3f, r); // knees never lock straight
+        float kneeAmp = Mathf.Lerp(Mathf.Lerp(0.6f, 1.15f, g), 1.75f, r);
 
-        // Hips drop as the legs open and sway over the standing foot.
+        // Walking, the hips drop as the legs open and sway over the standing foot.
+        // Running, they sink as the foot takes the weight and rise into the flight.
+        float walkY = -rig.LegLength * (1f - Mathf.Cos(hipAmp * s)) * 0.85f - 0.035f * g;
+        float runY = -0.09f + 0.07f * Mathf.Abs(s);
         p.HipsOffset = new Vector3(
-            -Mathf.Lerp(0.03f, 0.018f, g) * c,
-            -rig.LegLength * (1f - Mathf.Cos(hipAmp * s)) * 0.85f - 0.035f * g,
+            -Mathf.Lerp(0.03f, 0.018f, g) * c * (1f - 0.5f * r),
+            Mathf.Lerp(walkY, runY, r),
             0);
         p[Joint.Hips] = new Vector3(0.03f * g, -Mathf.Lerp(0.1f, 0.16f, g) * s, -0.045f * c);
         Legs(p);
@@ -120,12 +125,12 @@ public sealed class PlayerAnimator
         Leg(p, Joint.HipR, Joint.KneeR, Joint.FootR, phase + Mathf.Pi, hipAmp, kneeAmp, stance);
 
         // Chest leans in with pace and twists against the hips; the head stays on target.
-        p[Joint.Spine] = new Vector3(Mathf.Lerp(0.04f, 0.14f, g), -1.6f * p[Joint.Hips].Y, -0.7f * p[Joint.Hips].Z);
+        p[Joint.Spine] = new Vector3(Mathf.Lerp(Mathf.Lerp(0.04f, 0.14f, g), 0.26f, r), -1.6f * p[Joint.Hips].Y, -0.7f * p[Joint.Hips].Z);
         p[Joint.Neck] = -0.75f * (p[Joint.Spine] + p[Joint.Hips]);
 
         // Arms swing against the legs and bend more at the front of the swing.
-        float armAmp = Mathf.Lerp(0.3f, 0.55f, g);
-        float elbow = Mathf.Lerp(0.22f, 1.2f, g);
+        float armAmp = Mathf.Lerp(Mathf.Lerp(0.3f, 0.55f, g), 0.8f, r);
+        float elbow = Mathf.Lerp(Mathf.Lerp(0.22f, 1.2f, g), 1.5f, r);
         p[Joint.ShoulderL] = new Vector3(armAmp * s, 0, 0.1f);
         p[Joint.ShoulderR] = new Vector3(-armAmp * s, 0, -0.1f);
         p[Joint.ElbowL].X = -elbow - 0.35f * Mathf.Max(-s, 0f);

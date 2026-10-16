@@ -141,7 +141,7 @@ public partial class Avatar : Node3D
         flat.Y = 0;
         lastPosition = Position;
         float k = 1f - Mathf.Exp(-8f * dt);
-        speed = Mathf.Lerp(speed, Mathf.Min(flat.Length() / Mathf.Max(dt, 1e-4f), 6f), k);
+        speed = Mathf.Lerp(speed, Mathf.Min(flat.Length() / Mathf.Max(dt, 1e-4f), 9f), k);
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
