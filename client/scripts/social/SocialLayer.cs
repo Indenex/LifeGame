@@ -30,8 +30,7 @@ public partial class SocialLayer : Node
     readonly Dictionary<ulong, ClaimMarker> markers = new();
     readonly HashSet<ulong> heard = new();
 
-    SubscriptionHandle? claimSub, chatSub;
-    (int, int) chatChunk = (int.MinValue, int.MinValue);
+    SubscriptionHandle? claimSub;
     Vector3 myPos;
     uint myId;
     float landTimer;
@@ -51,7 +50,7 @@ public partial class SocialLayer : Node
         panel.Conn = connection;
         panel.MyId = () => myId;
 
-        conn.Db.ChatMessage.OnInsert += (_, m) => OnChat(m);
+        conn.Db.MyChat.OnInsert += (_, m) => OnChat(m);
         conn.Db.Claim.OnInsert += (_, c) => OnClaim(c);
         conn.Db.Claim.OnUpdate += (_, _, c) => OnClaim(c);
         conn.Db.Claim.OnDelete += (_, c) => OnClaimGone(c);
@@ -133,19 +132,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended" });
-
-        var chunk = (World.ChunkOf(myPos.X), World.ChunkOf(myPos.Z));
-        if (chunk != chatChunk)
-        {
-            chatChunk = chunk;
-            // Four chunks out (64 m) so a shout carries its full 60 m (claims-10).
-            int r = 4;
-            var old = chatSub;
-            chatSub = conn.SubscriptionBuilder()
-                .OnApplied(_ => old?.Unsubscribe())
-                .Subscribe(new[] { $"SELECT * FROM chat_message WHERE chunk_x >= {chunk.Item1 - r} AND chunk_x <= {chunk.Item1 + r} AND chunk_z >= {chunk.Item2 - r} AND chunk_z <= {chunk.Item2 + r}" });
-        }
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat" });
     }
 
     public Func<bool> HideChip = () => false;
@@ -206,7 +193,7 @@ public partial class SocialLayer : Node
         conn.Reducers.SendChat(text);
     }
 
-    void OnChat(ChatMessage m)
+    void OnChat(ChatHeard m)
     {
         if (!heard.Add(m.Id)) return;
         long age = NowMicros - m.SentAt.MicrosecondsSinceUnixEpoch;
@@ -252,7 +239,7 @@ public partial class SocialLayer : Node
 
     // claims-6: a soft line above the speaker's head. If they say more, older lines
     // drift up and dim (up to three), and an action ("/me waves") is slanted.
-    void Bubble(ChatMessage m, string said, bool emote, Social.Voice voice = Social.Voice.Say)
+    void Bubble(ChatHeard m, string said, bool emote, Social.Voice voice = Social.Voice.Say)
     {
         string text = Wrap(said, 34);
         int lineCount = text.Split('\n').Length;
