@@ -1,5 +1,5 @@
-# building-11 (PR #272): a shelter fades to a see-through ghost with a clear circle round
-# the player who walks in. Clay hut, mud-brick house, log cabin; doors face +z.
+# building-11 (PR #272, Project Zomboid style): inside each shelter (roof gone, near walls faded),
+# then standing behind it (only the walls in the way fade, roof stays). Doors face +z.
 client-as-puppet
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
 wait 35
@@ -27,8 +27,18 @@ wait 2
 stroll 0 -2.5
 arrive
 wait 2
-burst 4 1.5
-stroll 8 5.5
+burst 3 1.5
+stroll 0 2.5
+arrive
+stroll -4.5 0
+arrive
+stroll 2.1 -5.4
+arrive
+wait 2
+burst 3 1.5
+stroll 6.9 0
+arrive
+stroll 3.5 8.4
 arrive
 place 5 0 -3 0
 build
@@ -47,8 +57,18 @@ wait 2
 stroll 0 -2.5
 arrive
 wait 2
-burst 4 1.5
-stroll 8 5.5
+burst 3 1.5
+stroll 0 2.5
+arrive
+stroll -4.5 0
+arrive
+stroll 1.3 -6
+arrive
+wait 2
+burst 3 1.5
+stroll 7.7 0
+arrive
+stroll 3.5 9
 arrive
 place 11 0 -3 0
 build
@@ -67,4 +87,14 @@ wait 2
 stroll 0 -2.5
 arrive
 wait 2
-burst 4 1.5
+burst 3 1.5
+stroll 0 2.5
+arrive
+stroll -4.5 0
+arrive
+stroll 1.3 -6
+arrive
+wait 2
+burst 3 1.5
+stroll 7.7 0
+arrive
