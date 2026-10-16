@@ -15,6 +15,10 @@ public static class AvatarWork
         {
             Start(me, j.ProcessId);
             if (WorkMotions.For(j.ProcessId) == WorkMotion.Chop) FaceTree(me);
+            // Station crafts turn you to the station you work at (D-098).
+            else if (Processes.Find(j.ProcessId) is { Station: not StationKind.None } def
+                && Stations.NearestOf(conn, def.Station, me.Position) is { } st)
+                me.Face(st.X, st.Z);
         };
         conn.Db.MyCraftJob.OnDelete += (_, _) => Start(me, null);
         conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId); };
