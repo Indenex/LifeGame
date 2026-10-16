@@ -23,6 +23,7 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 ## Open questions / blockers
 - Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
 - Sent PM 2026-10-16: (a) walk speed 4.2 m/s is jogging pace, animated as a brisk walk-jog (default) vs slow walk to ~3 m/s; (b) sync a sneak flag for other players (default: infer from speed).
+- PM 2026-10-16 17:31: remote sneak takes (b), a server sneak flag through Integration. Asked Integration (session_01Rf5965nk4Lvd3f2QDteZSq) to add public table player_sneaking {PlayerId PK} (row while sneaking) + reducer SetSneaking(bool) + delete on disconnect + subscription. When it lands, AvatarWork calls SetSneaking on local Shift changes and drives remote avatars from it, replacing the speed guess in Avatar.cs. Walk speed question goes to Justin.
 
 ## Next step
 Wait for CI on #100 and Render clips, tune from them; then one-shot gestures (pick up, dig, eat, strike) and remote work poses once craft_work merges.
