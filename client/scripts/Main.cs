@@ -103,6 +103,8 @@ public partial class Main : Node3D
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
+        // The crit cue over an animal (HitPop.Show, called by Animals).
+        AddChild(new HitPop());
         // First-evening tips for a brand-new player (ui-14, M2).
         AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
