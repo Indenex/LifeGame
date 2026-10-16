@@ -18,6 +18,9 @@
 //   clip 6            record 6 s of the screen to <snap prefix>-<n>.mp4
 //   give 193 8 60     the database owner puts 8 of item 193 at quality 60 in my hands
 //   craft cord.spin_wool   start a recipe (as the server's own default score) and wait for it
+//   craftloop knap.flake +72   (movie scenes) start the same job again and again
+//                     until the camera client has written 72 more frames: the
+//                     server works in real time while the movie crawls
 //   drop 199          drop one of an item at my feet
 //   key c             press a key in the camera client's window (xdotool)
 //   keydown w / keyup w   hold and release a key
@@ -222,6 +225,22 @@ bool Step(string line)
             Pump(3, () => conn.Db.MyCraftJob.Iter().Any() || lastError != null);
             Pump(120, () => !conn.Db.MyCraftJob.Iter().Any() || lastError != null);
             Pump(0.5);
+            break;
+        }
+        case "craftloop":
+        {
+            var c = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            int target = Frames() + int.Parse(c[1].TrimStart('+'));
+            int jobs = 0;
+            lastError = null;
+            while (Frames() < target && lastError == null)
+            {
+                conn.Reducers.StartCraft(c[0], 0.8f);
+                Pump(3, () => conn.Db.MyCraftJob.Iter().Any() || lastError != null);
+                Pump(120, () => !conn.Db.MyCraftJob.Iter().Any() || lastError != null);
+                jobs++;
+            }
+            Console.WriteLine($"puppet: {c[0]} ran {jobs} times");
             break;
         }
         case "drop":
