@@ -23,9 +23,10 @@ Per D-058 the Integration lane, not Crafting, owns integration, CI and builds. D
 - 2026-10-16 17:25: PM (D-073): `client/scripts/Avatar.cs` moves to the Animation lane (session_019roNRWQBPw4ozNLDhzseig); the Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm) may add `client/assets/models/` glTF and will need import settings and CI help from this lane.
 - 2026-10-16 17:25: Atmosphere (atmosphere-12, D-072) adds a public `craft_work` table in WorkSounds.cs. Advised: Crafting declares and calls partial `OnCraftStarted`/`OnCraftEnded` in Crafting.cs now, so there's no merge-order dependency; clear rows on disconnect and abandoned jobs. PR #95 CI run 38939185639 queued.
 - 2026-10-16 17:26: Crafting merges main into whichever of #70/#92/#47/#97 goes second; Integration keeps #61 x #70. Merge order sent to the PM: #97 (crafting-12 hook declarations) before atmosphere-12 (two defining declarations of one partial method = CS0756); Atmosphere drops its temporary declarations in its merge-main commit.
+- 2026-10-16 17:30: Animation (anim-1, `claude/anim-1-player-animation`) adds one Main.cs line after `crafting.Attach(conn);`; OK'd, merges clean with every open branch. Main.cs survey: claims-7 (`claude/claims-7-hand-item`, no PR yet) x #73 conflict on the `Panels.Open`/`claimPanel` block; resolution = claims-7's lines plus #73's `Panels.Side = () => crafting.PanelOpen;` and `|| Panels.Side()` in `useKey.Blocked`. Integration fixes whichever merges second.
 
 ## Open questions / blockers
 - Sent to PM 17:35: lanes stop editing STATUS.md on their branches (recommended) / lanes resolve each time / PM resolves at merge. Default meanwhile: option 1.
 
 ## Next step
-After each merge to main, re-run the conflict survey (scratchpad script logic: `git merge-tree` each open PR vs main and pairwise) and merge main into whichever of #61 / #70 merges second, resolving `shared/Items.cs` by keeping both lines.
+After each merge to main, re-run the conflict survey (scratchpad script logic: `git merge-tree` each open PR vs main and pairwise) and merge main into whichever of #61 / #70 merges second (keep both `shared/Items.cs` lines) and whichever of #73 / claims-7 merges second (Main.cs, see 17:30 entry).
