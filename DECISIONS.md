@@ -357,3 +357,55 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-086 — 2026-10-16 — Skill pace stays about 6 hours to master, for now
 **Decision:** Mastering one skill stays at roughly 6 to 7 hours of focused play for pre-alpha; it will be made much longer later. The effects per rank stay linear for now.
 **Who:** Justin ("6 hours for now, it will be way longer later"); the PM had recommended ~20 hours
+
+## D-087 — 2026-10-16 — Building order: fence, hearth, cabin
+**Decision:** House building does a stick fence and gate next (building-8), then a raised hearth, then a log cabin from felled trees.
+**Who:** Justin ("All of these, but the first one first")
+
+## D-088 — 2026-10-16 — Brisk walk, run on Shift, with stamina
+**Decision:** Normal movement stays at 4.2 m/s, animated as a brisk walk-jog. Holding Shift runs faster and spends stamina; stamina refills when not running. Stamina is a light need (D-081): it shows only while it is not full, and running out just drops you back to walking. Survival builds stamina; UX/UI moves sneak off Shift (key to be confirmed with Justin); Animation adds the run. Numbers start low per D-075.
+**Who:** Justin ("Keep the brisk jog, and add a run tied to shift. It should have a stamina system though.")
+
+## D-089 — 2026-10-16 — Better tools work up to about 15-20% faster
+**Decision:** Tool quality speeds work, from 0% for a crude tool to about 15-20% for an excellent one (PM default 15% at the top, open to 20% later), on the D-075 curve.
+**Who:** Justin ("Yes, but not 25% ... Maybe 15-20%?")
+
+## D-090 — 2026-10-16 — Full fires refuse fuel; fire length grows with skill (amends D-054)
+**Decision:** Feeding a fire at its cap is refused ("The fire is burning as high as it will") and the stick is kept. A newly lit fire burns 20 minutes (was 15, D-054). The most a fire can hold grows with Firecraft from 20 minutes up to 40 minutes (+100%) at Master.
+**Who:** Justin ("Refuse. Fires should start at 20 minutes and last longer maybe up to 100% more scaled with skill.")
+
+## D-091 — 2026-10-16 — Sneak moves to held Ctrl
+**Decision:** Sneak is held Ctrl (Shift is now run, D-088). Holding Ctrl while starting a craft still plays the minigame at Master (D-047); the two happen at different moments.
+**Who:** Justin ("Hold Ctrl", which the PM recommended)
+
+## D-092 — 2026-10-16 — Craft times scale with the item and the skill
+**Decision:** Base craft times scale: cheap, simple items are quick; higher-tier items and higher-quality results take incrementally longer. Rising skill shortens craft times, noticeably as you first learn a skill (fast early, per D-075). Crafting proposes the formula and a table of examples to the PM before shipping.
+**Who:** Justin ("easier/cheaper items should be faster, and take incrementally longer ... on higher quality items ... Increases in skill level should also lower craft times")
+
+## D-093 — 2026-10-16 — Storage jar holds 4 to 8 stacks by quality
+**Decision:** A storage jar holds 4 stacks at low quality, rising to 8 at high quality, faster through the first part of the quality range (D-075).
+**Who:** Justin ("4 rising to 8 with quality"; the PM had recommended a flat 6)
+
+## D-094 — 2026-10-16 — I opens the equipment panel
+**Decision:** The equipment panel (D-074) opens with I.
+**Who:** Justin ("I", which the PM recommended)
+
+## D-095 — 2026-10-16 — Integration executes merges
+**Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
+**Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin
+
+## D-096 — 2026-10-16 — Justin sees every option set
+**Decision:** Every option set from the PM or any lane goes to Justin, small tuning included. The PM batches them.
+**Who:** Justin ("Everything"; the PM had recommended big calls only)
+
+## D-097 — 2026-10-16 — Crafting a little under the music; sound sliders in Options
+**Decision:** Your own crafting sounds sit a little under the music. The Esc menu gets an Options page with sound sliders (at least master, music, effects/work, ambience); every slider starts at 50% for a new player. Audio owns the mix and buses; UX/UI builds the page.
+**Who:** Justin ("2, but add a sound setting to Options ... Sliders should start at 50% on a new player login")
+
+## D-098 — 2026-10-16 — Hand crafting for basics, crafting stations for the rest
+**Decision:** Players hold nothing in their hands while working; small hand crafts play a simple hand-crafting animation. Only basic items and basic material processing can be made from your own crafting menu (C). Everything else needs its station: a **Crafting Table** for general and misc items, a **Spindle** for making yarn and cloth, a **Leather drying rack** for drying and working leather (more stations later as needed). Stations can only be built inside a claim. A station can use items from your inventory or from a chest/storage. Crafting proposes which recipes stay "basic" and which move to which station, for Justin to approve. Supersedes Animation's held-items work for now.
+**Who:** Justin (held items: "Nothing ... Other things require the crafting table associated with them ... These tables require a claim though ... They can pull from any item on your character, or your chest though.")
+
+## D-099 — 2026-10-16 — Chill capped at 2x; seasons with snow
+**Decision:** Combined chill (cold air times wetness) is capped at 2x, so the worst case from warm to dead is about 8 minutes. Freezing weather is tied to a new seasons system: seasons change temperature and weather, bring snow in winter, and change plants and animals. Start with a fast season cycle for testing; later a real-time multiplier, possibly tied to the real-world calendar. Atmosphere leads (WorldClock), with Environment (snow, foliage), Animals (fauna by season) and Survival (cold).
+**Who:** Justin ("1, but tie freezing into a seasons system with snow, and changing fauna ... Start with a fast cycle for now")
