@@ -44,6 +44,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 18:45: new requests: ceramics-6 storage jar e9544db (session_01Diab34HTvew38VmUaqhj5Q; demo row queued, in-game jar being worked out), bugfix-18 e80c6cf (session_01HddD17VpF2CmiCxHoPH84Y; pot pickup by a full/low fire, setup being researched), model-1 style moved to fd5c17a with items / items --old / held views (+ optional in-game dropped items and inventory icons).
 - 2026-10-16 18:47: render request bugfix-19 1877b88 (PR #109, session_01HddD17VpF2CmiCxHoPH84Y): wet pinch pot by the water while thirsty: G prompt reads Drink (not Drying); away from water it reads Drying and the floating label hides.
 - 2026-10-16 19:00: model-1 baseline sent to Modeling and the PM (8f3e255). Puppet gained sql/feed/place/build/store; bugfix-18, bugfix-19 and ceramics-6 jar scenes are in queue.jobs.
+- 2026-10-16 19:05: new: claims-7 f85c3b9 (session_013ECn821EbTpbj4h7d3PepH) Trade-with prompt in the wild (scene claims-7-ask.txt; --debug-position is client-only, so the scene moves A on the server by SQL); model-1 style now eb8b399 (+ clothes view).
 
 ## Open questions / blockers
 - (none)

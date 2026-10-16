@@ -37,7 +37,7 @@
 //   trade-add 8 5     put 5 of item 8 into my side of the trade
 //   trade-accept      accept the trade as it stands
 //   trade-cancel      call it off
-//   sql UPDATE clay_piece SET moisture = 0.0   any SQL as the database owner ({me} = my identity hex)
+//   sql UPDATE clay_piece SET moisture = 0.0   any SQL as the database owner ({me} = my identity hex, {target} = the camera player's id)
 //   feed 1            feed one of item 1 into the fire I lit
 //   place 6 0 2.5 0   lay out structure kind 6 at dx, dz from me, facing yaw (degrees)
 //   build             add materials to my newest structure (once per call)
@@ -331,7 +331,7 @@ bool Step(string line)
         }
 #endif
         case "sql":
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me)}\"");
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"");
             Pump(0.5);
             break;
         case "feed":
