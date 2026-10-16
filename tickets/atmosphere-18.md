@@ -1,7 +1,7 @@
 # atmosphere-18: The forest still looks right on low-end PCs
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: blocked
 Branch: claude/atmosphere-18-low-end
 PR: (none yet)
 
@@ -12,7 +12,7 @@ Picked under D-145 after atmosphere-13 to 17; sent to the PM as option A of thre
 - 2026-10-16 21:45: started from main. New AtmosphereLowEnd.cs: Atmosphere.LowEnd (RenderingServer.GetCurrentRenderingMethod() == "gl_compatibility"); LowEndFog adds mood.MistDensity * 0.6 * (1 + storm) to FogDensity and sets height fog (FogHeight = water + 1.2, FogHeightDensity = 0.12 x dawn mist); five billboard light cards (unshaded, additive, radial gradient, 2.2 to 3.4 m wide, 16 m tall) 6 to 20 m toward the sun, swaying apart slowly, alpha 0.09 x the same shafts value Forward+ uses. Hooked into ApplyLight after the fog. Client builds.
 
 ## Open questions / blockers
-- Justin's pick among A/B/C (via the PM); working on A meanwhile.
+- Parked: Justin asked for more options and picked others (warm homes, wet world, storms; atmosphere-19 to 21). The code is complete on this branch (01fce32, builds) and never opened as a PR; revive only if Justin asks for low-end support.
 
 ## Next step
-Push; render request on Compatibility vs Forward+; PR once Justin picks A (or the PM says go).
+None while parked. If revived: merge main, get Render shots on gl_compatibility, open the PR.
