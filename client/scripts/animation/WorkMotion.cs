@@ -5,7 +5,7 @@ namespace LifeGame;
 // What the hands are doing while a craft job runs. Small crafts kneel on the right knee
 // with the left foot planted and loop their own arm motion; Station stands working at a
 // waist-high station (crafting table, spindle, drying rack: D-098). Hands hold nothing.
-public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend, Station }
+public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend, Station, Chop }
 
 public static class WorkMotions
 {
@@ -24,7 +24,8 @@ public static class WorkMotions
             "cord" or "weave" or "spin" => WorkMotion.Twist,
             "clay" => WorkMotion.Knead,
             "lash" or "haft" => WorkMotion.Wrap,
-            "carve" or "chop" => WorkMotion.Carve,
+            "carve" => WorkMotion.Carve,
+            "chop" or "fell" => WorkMotion.Chop,
             "cook" => WorkMotion.Tend,
             _ => WorkMotion.Gather,
         };
@@ -37,6 +38,11 @@ public static class WorkMotions
         if (work == WorkMotion.Station)
         {
             Station(p, t);
+            return;
+        }
+        if (work == WorkMotion.Chop)
+        {
+            Chop(p, t);
             return;
         }
         // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
@@ -171,6 +177,30 @@ public static class WorkMotions
         p[Joint.Neck].X = 0.2f;
         Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
         Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
+    }
+
+    // Felling with an axe: feet planted wide, wind the chest and both arms back over the
+    // right shoulder, then whip the swing across into the trunk at waist height.
+    static void Chop(Pose p, float t)
+    {
+        float u = Mathf.PosMod(t * 0.85f, 1f);
+        // 0 = struck, 1 = fully wound up.
+        float wind = u < 0.62f ? Mathf.SmoothStep(0f, 1f, u / 0.62f)
+            : u < 0.78f ? 1f - Mathf.SmoothStep(0f, 1f, (u - 0.62f) / 0.16f) * 1.05f
+            : -0.05f * (1f - (u - 0.78f) / 0.22f);
+        p.HipsOffset = new Vector3(0.02f * wind, -0.05f, 0);
+        p[Joint.Hips].Y = -0.25f * wind;
+        p[Joint.HipL] = new Vector3(-0.15f, 0.25f * wind, 0.12f);
+        p[Joint.HipR] = new Vector3(0.1f, 0.25f * wind, -0.12f);
+        p[Joint.KneeL].X = 0.3f;
+        p[Joint.KneeR].X = 0.22f;
+        p[Joint.FootL].X = -0.12f;
+        p[Joint.FootR].X = -0.1f;
+        p[Joint.Spine] = new Vector3(0.22f + 0.08f * (1f - wind), -0.6f * wind + 0.15f, 0.08f * wind);
+        p[Joint.Neck] = new Vector3(0.1f, 0.5f * wind - 0.1f, 0);
+        // Both hands on the haft: the right arm leads the lift, the left reaches across.
+        Arm(p, false, -1.05f - 0.75f * wind, 0.1f - 0.25f * wind, -0.25f - 0.55f * wind);
+        Arm(p, true, -1.15f - 0.55f * wind, -0.45f, -0.2f - 0.6f * wind);
     }
 
     // Shoulder swing (negative is forward), shoulder sideways (inward is negative on the

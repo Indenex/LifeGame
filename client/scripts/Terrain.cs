@@ -43,8 +43,21 @@ public partial class Terrain : Node3D
 
     public float TileHeight(int x, int z)
     {
-        short depth = depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
-        return World.Height(x, z, depth);
+        long key = World.CellKey(x, z);
+        short depth = depths.TryGetValue(key, out var d) ? d : (short)0;
+        return BaseHeight(key, x, z) - depth * World.DigStep;
+    }
+
+    // The land's shape costs a dozen noise lookups a cell (shared/Land.cs) and a chunk
+    // asks for each cell many times, so heights are kept once worked out. The cache
+    // is dropped when it outgrows a few views' worth of ground.
+    readonly Dictionary<long, float> baseHeights = new();
+
+    float BaseHeight(long key, int x, int z)
+    {
+        if (baseHeights.TryGetValue(key, out var h)) return h;
+        if (baseHeights.Count > 60_000) baseHeights.Clear();
+        return baseHeights[key] = World.BaseHeight(x, z);
     }
 
     Vector3 NormalAt(int x, int z) =>
@@ -274,10 +287,11 @@ public partial class Terrain : Node3D
                 float top = TileHeight(x, z);
                 var (fx, fz) = Trees.Trunk(x, z);
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
-                // Reeds stand in the shallows and along the bank.
+                // Reeds stand in the shallows and along the bank, leaving the middle
+                // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    if (top > Look.WaterLevel - 0.35f && Hash01(x, z, 60) < 0.4f)
+                    if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
                     continue;
                 }
@@ -295,7 +309,7 @@ public partial class Terrain : Node3D
                 // are only scenery.
                 float density = Forest.Density(x, z);
                 float edge = Forest.Edge(density);
-                float tree = Trees.Forest(x, z);
+                float tree = Forest.TreeChance(density); // the same as Trees.Forest(x, z)
                 float sapling = tree + 0.03f * edge;
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
                 float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
@@ -308,7 +322,7 @@ public partial class Terrain : Node3D
                         pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
                     else
                         leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
-                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom));
+                            .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom with { A = SeasonBroadleaf }));
                 }
                 else if (roll < rock)
                 {
@@ -342,7 +356,7 @@ public partial class Terrain : Node3D
                 {
                     int kind = (int)(World.Noise(x, z, 18f, 64) * Undergrowth.FlowerColors.Length * 0.999f);
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
-                        Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom));
+                        Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
@@ -374,10 +388,15 @@ public partial class Terrain : Node3D
     static Transform3D Plant(float x, float y, float z, float yaw, float scale) =>
         new(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), new Vector3(x, y, z));
 
+    // Season codes in each instance's custom data (w), for the seasons in Look's
+    // shaders (D-099): broadleaf canopies thin in winter and turn in autumn, flowers
+    // only show in spring and summer. 0 (pines, bushes, rocks) never changes.
+    const float SeasonBroadleaf = 1f, SeasonFlower = 2f;
+
     static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
         if (items.Count == 0) return;
-        bool custom = items.Exists(item => item.Item3.R > 0f);
+        bool custom = items.Exists(item => item.Item3.R > 0f || item.Item3.A > 0f);
         var mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,

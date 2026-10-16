@@ -1,4 +1,5 @@
 using System;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -10,7 +11,11 @@ public static class AvatarWork
 {
     public static void Attach(DbConnection conn, Avatar me, Func<uint, Avatar?> other)
     {
-        conn.Db.MyCraftJob.OnInsert += (_, j) => Start(me, j.ProcessId);
+        conn.Db.MyCraftJob.OnInsert += (_, j) =>
+        {
+            Start(me, j.ProcessId);
+            if (WorkMotions.For(j.ProcessId) == WorkMotion.Chop) FaceTree(me);
+        };
         conn.Db.MyCraftJob.OnDelete += (_, _) => Start(me, null);
 
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);
@@ -22,6 +27,23 @@ public static class AvatarWork
         {
             if (other(p.PlayerId) is { } a) a.Sneaking = conn.Db.PlayerSneaking.PlayerId.Find(p.PlayerId) is not null;
         };
+    }
+
+    // Felling: face the nearest standing trunk within reach (shared/Trees.cs cells).
+    static void FaceTree(Avatar avatar)
+    {
+        var at = avatar.Position;
+        int cx = (int)Godot.Mathf.Floor(at.X), cz = (int)Godot.Mathf.Floor(at.Z);
+        float best = 3f * 3f, bx = 0, bz = 0;
+        for (int x = cx - 3; x <= cx + 3; x++)
+            for (int z = cz - 3; z <= cz + 3; z++)
+            {
+                if (!Trees.GrowsAt(x, z)) continue;
+                var (tx, tz) = Trees.Trunk(x, z);
+                float d = (tx - at.X) * (tx - at.X) + (tz - at.Z) * (tz - at.Z);
+                if (d < best) (best, bx, bz) = (d, tx, tz);
+            }
+        if (best < 3f * 3f) avatar.Face(bx, bz);
     }
 
     static void Start(Avatar avatar, string? processId)
