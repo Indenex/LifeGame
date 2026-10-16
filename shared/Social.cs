@@ -110,6 +110,9 @@ namespace LifeGame.Shared
         public const byte TradeAsked = 0, TradeOpen = 1;
         public const byte SideA = 0, SideB = 1;
 
+        // The process a finished claim marker reports (Journal's "Things to try").
+        public const string MarkProcess = "claim.mark";
+
         // claims-9: a claim's name, as the owner gave it: trimmed, single-spaced, at
         // most ClaimNameMax characters. Empty means unnamed.
         public const int ClaimNameMax = 28;
