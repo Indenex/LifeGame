@@ -63,6 +63,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 21:25: new: ui-10 at 78b834b (feet slot), building-8 fences 969a7ae (House building, session_01RrKHUxWRH973Ndnxsad9nv; scene building-8-fence.txt, no sheep in the pen); anim-1 at 27ac03c (sneak = Ctrl).
 - 2026-10-16 21:30: new: atmosphere-16 seasons c41b1e6 (Atmosphere): 8 stills + snowfall clip + shader error check (scenes/atmosphere-16.sh).
 - 2026-10-16 21:45: ceramics-7 first try failed (camera client and ClayCheck sharing one identity fight over position); now the camera joins only during the simmer. bugfix-18 rerun at 6e56862 running. New: crafting-15 crafting table 859f25e via CraftCheck (scenes/crafting-15.sh).
+- 2026-10-16 21:50: new: release-1 launcher shots 02ae54a (Release & Launcher, session_015Je3JR5vZrzA7TwQYBSPgM): handed to an Opus subagent (light 2D app, fake releases, runs beside the queue); output renders/release-1-02ae54a-*.png.
 
 ## Open questions / blockers
 - (none)
