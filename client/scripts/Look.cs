@@ -23,7 +23,7 @@ public static class Look
     public static readonly Color Skin = new(0.88f, 0.68f, 0.52f);
     public static readonly Color Hair = new(0.30f, 0.20f, 0.14f);
     public static readonly Color Cream = new(0.97f, 0.94f, 0.87f);
-    public static readonly Color Water = new(0.16f, 0.30f, 0.34f, 0.9f);
+    public static readonly Color Water = new(0.14f, 0.34f, 0.40f, 0.9f);
 
     public const float WaterLevel = -1.0f;
 
@@ -466,6 +466,8 @@ public static class Look
         render_mode blend_mix, depth_draw_opaque, cull_back, specular_schlick_ggx;
 
         uniform vec4 water_color : source_color;
+        uniform vec4 shallow_color : source_color = vec4(0.30, 0.55, 0.55, 1.0);
+        uniform vec4 sky_tint : source_color = vec4(0.62, 0.72, 0.78, 1.0);
         uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
         varying vec3 world_pos;
 
@@ -481,8 +483,9 @@ public static class Look
 
         // Rain rings: each cell of a grid gets drops at its own moments, and each drop
         // sends out one ring that widens and fades.
-        vec2 rings(vec2 p, float t, float density) {
+        vec3 rings(vec2 p, float t, float density) {
             vec2 slope = vec2(0.0);
+            float crest = 0.0;
             for (int layer = 0; layer < 2; layer++) {
                 vec2 q = p * 1.3 + float(layer) * 0.37;
                 vec2 cell = floor(q);
@@ -502,9 +505,10 @@ public static class Look
                     float band = r - radius;
                     float wave = sin(band * 40.0) * exp(-band * band * 260.0) * (1.0 - age) * (1.0 - age);
                     slope += (r > 0.001 ? d / r : vec2(0.0)) * wave;
+                    crest += max(wave, 0.0);
                 }
             }
-            return slope;
+            return vec3(slope, crest);
         }
 
         void vertex() {
@@ -519,7 +523,12 @@ public static class Look
             float h0 = ripples(p, t, stir);
             vec2 slope = vec2(ripples(p + vec2(e, 0.0), t, stir) - h0, ripples(p + vec2(0.0, e), t, stir) - h0) / e;
             float rain = smoothstep(0.02, 0.6, rain_amount);
-            if (rain > 0.0) slope += rings(p, t, mix(0.15, 0.9, rain)) * 0.12 * rain;
+            float crest = 0.0;
+            if (rain > 0.0) {
+                vec3 ring = rings(p, t, mix(0.15, 0.9, rain));
+                slope += ring.xy * 0.12 * rain;
+                crest = min(ring.z, 1.0) * rain;
+            }
             vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
             NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 
@@ -529,10 +538,18 @@ public static class Look
             behind.xyz /= behind.w;
             float through = clamp(VERTEX.z - behind.z, 0.0, 10.0);
             vec3 color = pow(water_color.rgb, vec3(2.2));
-            ALBEDO = color * mix(1.15, 0.8, smoothstep(0.0, 2.0, through));
-            ALPHA = water_color.a * smoothstep(0.0, 0.6, through);
+            // Looking across the water it takes on the pale sky; looking down into it,
+            // its own deep color. Soft, never a mirror.
+            float across = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+            vec3 sky = pow(sky_tint.rgb, vec3(2.2));
+            vec3 shallow = pow(shallow_color.rgb, vec3(2.2));
+            // Ring crests and the steeper ripples catch a little of the sky.
+            float glint = clamp(crest * 0.45 + length(slope) * 0.6, 0.0, 0.5);
+            ALBEDO = mix(mix(shallow, color, smoothstep(0.0, 1.2, through)), sky, across * 0.35 + glint);
+            // Even ankle-deep water reads as water; only a thin rim at the bank softens.
+            ALPHA = water_color.a * mix(0.85, 1.0, smoothstep(0.05, 0.8, through)) * smoothstep(0.0, 0.04, through);
             ROUGHNESS = mix(0.32, 0.45, rain);
-            SPECULAR = 0.3;
+            SPECULAR = 0.12;
             METALLIC = 0.0;
         }
         """;
