@@ -1,9 +1,9 @@
 # skills-12: One progression formula, and Stalking
 Lane: Journal and skills
 Owner: Journal and skills lane (Sonnet)
-Status: in_progress
+Status: in_review
 Branch: claude/journal-skills-12 (from main 4915aee; independent of #193)
-PR: (not yet)
+PR: #237
 
 ## Goal
 Justin: one formula handles all skill gains and effects, front-loaded (first ~15% of ranks give ~40% of the benefit, D-075). `shared/Progression.cs` holds the curve and a typed effect table; every bespoke rank formula uses it. Add a Stalking skill (trained by `animal.sneak` and `animal.kill`) with Sneak distance and one-strike kill effects.
@@ -23,6 +23,8 @@ Justin: one formula handles all skill gains and effects, front-loaded (first ~15
 - 2026-10-16 21:30: Justin: combat skills slower, ceiling easy to raise, skill matters more than item base. Added Progression.CombatPaceFactor (0.5) via Skills.Gain(points, failed, specId) (server passes spec.Id), IsCombat (stalking, archery), and Progression.Ceiling named constants for every effect top value.
 
 - 2026-10-16 21:35: Animals/Justin: Archery damage uses a documented EvenInHits shape exception (hits to kill fall evenly with rank), 0.44 -> 1.6 (Ceiling.ArcheryDamage); hit chance and draw time stay on the curve.
+
+- 2026-10-16 21:54: CI green on 5691bf93 (run 38970754500: Client Linux, Client Windows, Server module and load test). Sent to the PM; merges frozen.
 
 ## Queued for a follow-up PR (after #237 merges, so CI is not restarted)
 - Things to try lines from Crafting (D-105): lash.bow "A green stick bent and strung with cord will throw a light shaft a long way."; carve.arrows "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks."; tool repair is a place you stand at (found by building the table), not a step to discover: Crafting says skip that line. Add the bow and arrow lines to client/scripts/journal/NextSteps.cs once the ids exist on main (#266).
