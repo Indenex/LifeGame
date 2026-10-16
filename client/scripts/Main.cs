@@ -38,6 +38,7 @@ public partial class Main : Node3D
     readonly Herd herd = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
+    readonly Woodcutting woodcutting = new();
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -75,11 +76,13 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
         survival.Setup(view, terrain, me, hud);
+        survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
@@ -327,6 +330,7 @@ public partial class Main : Node3D
         equipment.Attach(new ServerEquipLink(conn));
         crafting.Attach(conn);
         fires.Attach(conn);
+        woodcutting.Attach(conn, terrain, crafting);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);
@@ -589,7 +593,7 @@ public partial class Main : Node3D
                     .FirstOrDefault();
                 if (fuel == null) return null;
                 float d = new Vector2(fire.X - at.X, fire.Z - at.Z).Length();
-                return new UseOffer("Feed the fire", d,
+                return new UseOffer($"Feed the fire ({FireView.TimeLeft(fire)})", d,
                     () => conn.Reducers.FeedFire(fire.Id, fuel.Item), Target: new Vector3(fire.X, 0, fire.Z));
             },
         });
