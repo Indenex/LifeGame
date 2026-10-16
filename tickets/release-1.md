@@ -24,9 +24,25 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 
 ## Progress log
 - 2026-10-16 19:00: started on `claude/release-1` from main 45f8913. Findings above.
+- 2026-10-16 19:05: sent the PM the findings, the STATUS row, and Q1 to Q3 below.
+- 2026-10-16 19:20: launcher (`launcher/`, GDScript, Godot 4.6 mono editor + export templates, same as CI) exports for Linux and Windows. `tools/release/make-release.sh` packs a Build run's artifacts into release assets + `release.json` + notes with the `<!-- world-wipe -->` marker; `tools/release/fake-api.py` serves them like the GitHub releases API.
+- 2026-10-16 19:25: end-to-end tests on a local SpacetimeDB 2.12 with main's real artifacts (Build run 472, a5f0428), launcher run with `--auto --no-play --quit`:
+  - server down, fresh home: launcher started `spacetime start`, published 472 (`--delete-data=never`), installed the game (exec bit set), state 472/472. Exit 0.
+  - set `claim_config.lifetime_seconds` to 77, released 474 (no wipe): world updated in place, 77 kept. Exit 0.
+  - wipe release 473 below the world's build 474: ignored, as it should be. World on 472 with wipe 473 ahead: stopped before downloading ("This update wipes the world"), nothing changed. Exit 2.
+  - release 475 carrying an older, incompatible module: publish refused, "This build can't update your world without wiping it. Nothing changed", game not swapped, 77 kept. Exit 1.
+- 2026-10-16 19:25: writing `.github/workflows/release.yml` was held: it would publish builds publicly from a public repo, so it waits on the PM/Justin (Q1). Draft design below.
 
 ## Open questions / blockers
-- (to PM) Fully automatic server updates: options being drafted.
+- Q1 (to PM, for Justin, sent 19:05): public GitHub Releases (recommended; no login needed) vs private repo vs Actions artifacts (both need a GitHub token on his PC). Default: build everything, enable nothing until answered.
+- Q2 (to PM, for Justin): fully automatic server updates. a) launcher does it on his PC (recommended; free, no setup); b) move the world to Maincloud and CI publishes (needs his SpacetimeDB token as a repo secret, possible cost, effectively a wipe, best with D-129); c) self-hosted runner (setup, unsafe on a public repo). Default a.
+- Q3 (to PM): ask Justin whether he ever published without `--server local` (would have made an unused Maincloud database).
+
+## Release workflow design (waiting on Q1; Integration reviews)
+- New file `.github/workflows/release.yml`, `on: workflow_run` of Build, `branches: [main]`, only when `conclusion == success` and `event == push`; `concurrency: release`, never cancelled.
+- Job `launcher` (matrix Linux/Windows): checkout `head_sha`, setup-dotnet 8 (the mono editor needs it), the same Godot cache key as build.yml, export `launcher/`, fail on any `SCRIPT ERROR` in the export log, upload `LifeGameLauncher-<preset>`.
+- Job `release` (`contents: write`): download the Build run's artifacts (`actions/download-artifact` with `run-id` + token) and the launcher artifacts; read the merged PR for `head_sha` (`gh api repos/.../commits/<sha>/pulls`) and its `world-wipe` label; `tools/release/make-release.sh`; `gh release create build-<Build run_number> --target <sha> --latest` with the zips, `StdbModule.wasm`, `release.json`, notes.
+- Version = Build's run number (`build-472`); the launcher compares numbers.
 
 ## Next step
-Write `.github/workflows/release.yml` (workflow_run after Build on main) and send it to Integration for review.
+Wait for the PM's answer to Q1; then write `release.yml` per the design above and send it to Integration. Meanwhile send the Render lane a launcher render request.
