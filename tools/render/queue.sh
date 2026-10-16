@@ -17,7 +17,7 @@ job() {
 }
 job ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
 job crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
-job ui-10 env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 8d398ef "--time-of-day=0.45 --screenshot-equip --render-slowstart=0.05,45 --screenshot-delay=3" "--time-of-day=0.45 --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=3"
+job ui-10 env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 1931044 "--time-of-day=0.45 --screenshot-hud --screenshot-equip --render-slowstart=0.05,45 --screenshot-delay=4" "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
 job env-1 tools/render/scenes/env-1.sh 1ade969
 job env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
 job model-1-style tools/render/scenes/model-1-style.sh 37a5656
