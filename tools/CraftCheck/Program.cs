@@ -344,6 +344,19 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     Console.WriteLine("The mended axe chops again");
 }
 
+// Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
+// sticks and cordage, three arrows from sticks and fiber, both with a cutting tool.
+{
+    Gather(Item.Stick, 5);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    Craft("lash.bow", 0, Item.Bow);
+    uint arrowsBefore = CountOf(Item.Arrow);
+    Craft("carve.arrows", 0, Item.Arrow);
+    if (CountOf(Item.Arrow) != arrowsBefore + 3) Fail($"one arrow craft made {CountOf(Item.Arrow) - arrowsBefore} arrows, not 3");
+    Console.WriteLine("Made a bow and three arrows");
+}
+
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
 if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
