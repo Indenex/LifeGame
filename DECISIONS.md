@@ -586,3 +586,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
 **Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
 **Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
+
+## D-144 — 2026-10-16 — First-evening tuning; visible breath in the cold
+**Decision:** Survival's next milestone is a first-evening tuning pass on the new land (berries near spawn, water reach, early warmth) so nobody dies before their first fire. Players also show a visible breath puff in cold air; there is no camera shake.
+**Who:** Justin ("1, but when cold I do like the idea of seeing your breath")
