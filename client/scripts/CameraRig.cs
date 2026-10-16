@@ -24,7 +24,14 @@ public partial class CameraRig : Node3D
 
     float yawTarget = Mathf.DegToRad(45f), yaw = Mathf.DegToRad(45f);
     float distanceTarget = 16f, distance = 16f;
-    const float Pitch = -34f;
+    // Pitch in degrees (negative looks down). Today's angle is the default; right-drag up/down
+    // tilts it a little lower toward the horizon (more sky, more distance) or a little steeper.
+    public const float DefaultPitch = -34f;
+    public const float MinPitch = -50f, MaxPitch = -16f;
+    float pitchTarget = DefaultPitch, pitch = DefaultPitch;
+    // Terrain height, so a low camera never dips into a hill (set by Main).
+    public System.Func<float, float, float>? GroundAt;
+    const float GroundMargin = 0.9f;
     // How quickly the view catches up when it turns (Controls page; 7 is the default).
     public static float TurnEase = 7f;
 
@@ -43,6 +50,9 @@ public partial class CameraRig : Node3D
     // Free turning, for dragging with the right mouse button (ui/CameraDrag.cs).
     public void TurnBy(float radians) => yawTarget += radians;
 
+    // Tilt with the right mouse button dragged up or down (ui/CameraDrag.cs); radians, positive looks lower.
+    public void TiltBy(float radians) => pitchTarget = Mathf.Clamp(pitchTarget - Mathf.RadToDeg(radians), MinPitch, MaxPitch);
+
     public void Zoom(float amount) => distanceTarget = Mathf.Clamp(distanceTarget + amount, 6f, 40f);
 
     public override void _Process(double delta)
@@ -52,7 +62,17 @@ public partial class CameraRig : Node3D
         yaw = Mathf.Lerp(yaw, yawTarget, 1f - Mathf.Exp(-TurnEase * dt));
         distance = Mathf.Lerp(distance, distanceTarget, 1f - Mathf.Exp(-6f * dt));
 
-        Rotation = new Vector3(Mathf.DegToRad(Pitch), yaw, 0);
+        pitch = Mathf.Lerp(pitch, pitchTarget, 1f - Mathf.Exp(-TurnEase * dt));
+        // Lift the view (steeper) just enough that the camera stays above the ground behind the player.
+        float shown = pitch;
+        if (GroundAt != null)
+            for (int i = 0; i < 10; i++)
+            {
+                var from = Position + new Basis(Vector3.Up, yaw) * new Basis(Vector3.Right, Mathf.DegToRad(shown)) * new Vector3(0, 0, distance);
+                if (from.Y >= GroundAt(from.X, from.Z) + GroundMargin || shown <= MinPitch) break;
+                shown = Mathf.Max(MinPitch, shown - 3f);
+            }
+        Rotation = new Vector3(Mathf.DegToRad(shown), yaw, 0);
         Camera.Position = new Vector3(0, 0, distance);
     }
 }

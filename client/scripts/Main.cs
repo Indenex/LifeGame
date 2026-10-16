@@ -68,6 +68,7 @@ public partial class Main : Node3D
         view.AddChild(me);
         view.AddChild(herd);
         view.AddChild(cameraRig);
+        cameraRig.GroundAt = terrain.HeightAt;
         fires = new FireView(terrain.HeightAt);
         view.AddChild(fires);
         view.AddChild(items);

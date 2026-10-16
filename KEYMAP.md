@@ -11,7 +11,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Key | Action | Lane | Today |
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
-| Hold right mouse + drag | Turn the view, eased (D-050). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17 |
+| Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
@@ -26,7 +26,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
 | I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
-| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, take a tool in hand, or set a made thing down. Rebindable | UX/UI | new, ui-19 |
+| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, or set a made thing down (tools work by themselves). Rebindable | UX/UI | new, ui-19 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
