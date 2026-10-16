@@ -28,6 +28,7 @@ string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
 bool jarRun = args.Contains("--jar");
 bool potRun = args.Contains("--pot");
 bool lampRun = args.Contains("--lamp");
+bool tileRun = args.Contains("--tile");
 bool tallowRun = Environment.GetEnvironmentVariable("CLAYCHECK_TALLOW") == "1";
 bool kilnRun = jarRun || args.Contains("--kiln");
 
@@ -131,6 +132,7 @@ SetUpBench();
 if (kilnRun) return KilnCheck();
 if (potRun) return PotCheck();
 if (lampRun) return LampCheck();
+if (tileRun) return TileCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -576,6 +578,59 @@ void HuntMutton()
     if (lastError != null) Fail($"butchering: {lastError}");
     Gather(Item.RawMutton, 2);
     Log("STAGE mutton-hunted");
+}
+
+// Roof tiles (ceramics-10): pressed at the bench, dried by a fire; a campfire refuses
+// to fire them (kiln only, like the jar). Kiln firing is the same path as the jar's,
+// which --kiln --jar covers.
+int TileCheck()
+{
+    while (CountOf(Item.CleanClay) < 2) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    // Shaping a tile away from the bench is refused.
+    lastError = null;
+    conn.Reducers.StartCraft("clay.tile", 0.9f);
+    Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 3, "a tile with no bench to be refused");
+    if (lastError == null) Fail("a tile was shaped away from the bench");
+    Log($"No bench: {lastError}");
+
+    AtBench();
+    Craft("clay.tile", 0.9f, null);
+    Craft("clay.tile", 0.9f, null);
+    var tiles = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile).ToList();
+    if (tiles.Count != 2) Fail($"expected 2 tiles drying, have {tiles.Count}");
+    Log("STAGE tiles-drying");
+    LightFireNear(tiles.Average(p => p.X) + 1.3f, tiles.Average(p => p.Z));
+    KeepFireGoing();
+    var watch = Stopwatch.StartNew();
+    while (tiles.Any(t => MoistureOf(t.Id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("tiles never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    foreach (var t in tiles)
+    {
+        var piece = conn.Db.ClayPiece.Id.Find(t.Id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(t.Id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(t.Id) == null, 3, "picking up a dry tile");
+        if (lastError != null) Fail($"picking up a tile: {lastError}");
+    }
+    if (CountOf(Item.UnfiredRoofTile) != 2) Fail($"expected 2 unfired tiles, have {CountOf(Item.UnfiredRoofTile)}");
+    KeepFireGoing();
+    WalkTo(fire.X, fire.Z, 1.2f);
+    lastError = null;
+    conn.Reducers.FirePots(fire.Id);
+    Pump(() => lastError != null, 3, "the campfire to refuse the tiles");
+    if (lastError == null || !lastError.Contains("kiln")) Fail($"campfire took the tiles: {lastError}");
+    Log($"Campfire: {lastError}");
+    Log("Tile check passed: tiles pressed at the bench, dried, and refused by a campfire (they need a kiln)");
+    conn.Disconnect();
+    return 0;
 }
 
 int PotCheck()
