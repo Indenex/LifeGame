@@ -5,8 +5,9 @@ using Godot;
 
 namespace LifeGame;
 
-// Esc in the world opens a small, quiet menu over a darkened world: Resume, Controls
-// (every key, which you can change, and the camera), volume, music and Quit. The world keeps running behind it (it's multiplayer);
+// Esc in the world opens a small, quiet menu over a darkened world: Resume, Options
+// (sound levels, D-097), Controls (every key, which you can change, and the camera)
+// and Quit. The world keeps running behind it (it's multiplayer);
 // walking and the Use key wait while it's open.
 public partial class PauseMenu : CanvasLayer
 {
@@ -22,14 +23,15 @@ public partial class PauseMenu : CanvasLayer
     readonly List<Control> rows = new();
     Control root = null!, column = null!;
     readonly ControlsPage page = new();
-    Button music = null!;
+    readonly OptionsPage options = new();
     float alpha;
     int focus;
 
     public override void _Ready()
     {
         Layer = 4;
-        SetVolume(Settings.Get("sound", "volume", 0.8f));
+        SoundLevels.ApplyMaster();
+        SoundLevels.Changed += () => SoundLevels.ApplyTo(Sound());
 
         root = new Control { MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
         root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -59,32 +61,22 @@ public partial class PauseMenu : CanvasLayer
         root.AddChild(column);
 
         column.AddChild(Entry("Resume", Close));
+        column.AddChild(Entry("Options", ShowOptions));
         column.AddChild(Entry("Controls", ShowControls));
-        column.AddChild(SliderRow("Volume", Settings.Get("sound", "volume", 0.8f), v =>
-        {
-            SetVolume((float)v);
-            Settings.Set("sound", "volume", v);
-        }));
-        // Music volume and on or off live in Atmosphere's SoundScape, which saves them.
-        column.AddChild(SliderRow("Music", Sound()?.MusicVolume ?? 1f, v =>
-        {
-            if (Sound() is { } sound) sound.MusicVolume = (float)v;
-        }, () => Sound()?.MusicVolume));
-        music = Entry("Music on", () =>
-        {
-            if (Sound() is { } sound) sound.MusicOn = !sound.MusicOn;
-            else Input.ParseInputEvent(new InputEventAction { Action = "toggle_music", Pressed = true });
-        });
-        column.AddChild(music);
         column.AddChild(Entry("Quit", () => GetTree().Quit()));
 
         page.Back = HideControls;
         root.AddChild(page);
+        options.Back = HideControls;
+        options.Sound = () => Sound();
+        root.AddChild(options);
         // Saved keys and camera settings, once every lane has bound its own keys.
         Callable.From(ControlsPage.ApplySaved).CallDeferred();
 
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-menu") >= 0)
             GetTree().CreateTimer(1).Timeout += Open;
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-options") >= 0)
+            GetTree().CreateTimer(1).Timeout += () => { Open(); ShowOptions(); };
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-controls") >= 0)
             GetTree().CreateTimer(1).Timeout += () => { Open(); ShowControls(); };
     }
@@ -101,7 +93,7 @@ public partial class PauseMenu : CanvasLayer
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (!IsOpen || page.Visible) return;
+        if (!IsOpen || page.Visible || options.Visible) return;
         // W/S or arrows move, A/D or arrows change the volume, Enter or Space picks.
         switch (key.PhysicalKeycode)
         {
@@ -116,10 +108,10 @@ public partial class PauseMenu : CanvasLayer
 
     public override void _Process(double delta)
     {
+        ApplySoundLevels();
         alpha = Mathf.MoveToward(alpha, IsOpen ? 1f : 0f, (float)delta * 6f);
         root.Modulate = new Color(1, 1, 1, alpha);
         root.Visible = alpha > 0f;
-        if (IsOpen) music.Text = Sound()?.MusicOn == false ? "Music off" : "Music on";
         for (int i = 0; i < rows.Count; i++)
             rows[i].Modulate = new Color(1, 1, 1, IsOpen && i == focus ? 1f : 0.62f);
     }
@@ -144,10 +136,28 @@ public partial class PauseMenu : CanvasLayer
         page.Open();
     }
 
+    void ShowOptions()
+    {
+        column.Visible = false;
+        options.Open();
+    }
+
+    // Back from either page to the menu.
     void HideControls()
     {
         page.Close();
+        options.Close();
         column.Visible = true;
+    }
+
+    // The soundscape may appear after the menu; it gets the saved levels as soon as it does.
+    SoundScape? leveled;
+
+    void ApplySoundLevels()
+    {
+        if (Sound() is not { } sound || sound == leveled) return;
+        leveled = sound;
+        SoundLevels.ApplyTo(sound);
     }
 
     new void Hide() => IsOpen = false;
@@ -209,6 +219,4 @@ public partial class PauseMenu : CanvasLayer
         return row;
     }
 
-    static void SetVolume(float linear) =>
-        AudioServer.SetBusVolumeDb(0, linear <= 0.001f ? -80f : Mathf.LinearToDb(linear));
 }

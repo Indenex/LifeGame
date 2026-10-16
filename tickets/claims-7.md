@@ -1,7 +1,7 @@
 # claims-7: Trading between players (server side)
 Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session session_013ECn821EbTpbj4h7d3PepH)
-Status: in_review
+Status: done (merged via PR #110)
 Branch: claude/claims-7-hand-item
 PR: https://github.com/Indenex/LifeGame/pull/110
 
@@ -66,6 +66,7 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - `SocialLayer.PanelOpen` (already hooked into Main's `Panels.Open` and the PauseMenu `OthersOpen`) can include ui-9's window if UX/UI wants that.
 
 ## Progress log
+- 2026-10-16 18:27: PR #110 merged. CI was green on f85c3b9 (run https://github.com/Indenex/LifeGame/actions/runs/38942433215). ui-9 (UX/UI) builds the trade window on this.
 - 2026-10-16 17:50: opened PR #110. Render requested ab216b5 (the G prompt only; the window is ui-9). Waiting on CI.
 - 2026-10-16 17:45: #71 merged. Merged main in, resolving Main.cs the way Integration asked (kept #73's Panels.Side). Build passes and SocialTest passes all checks locally.
 - 2026-10-16 17:40: D-080: removed the bystander chat line; traders get TradeEnded "done".
@@ -84,4 +85,4 @@ A 1 s server watch runs while any trade exists. It cancels with "apart" when the
 - (resolved) Integration: no new hook; claims.trade uses Use.Register with a Target at Priority 5.
 
 ## Next step
-Wait for CI on PR #110; when it's green, send the PM the head sha for the merge.
+None for claims-7. Take the next claims ticket from the PM.
