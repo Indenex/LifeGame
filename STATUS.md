@@ -35,7 +35,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Survival needs (session_01RedPo6NfcLBPNHQNVhC4qf) | survival-12 PR #206, then survival-10 (Sonnet, D-159) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013iTXrpndd1fMtDLqqBPgJ5) | skills-11; PR #193 (Sonnet, D-159) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules (session_01CAk6p7Z42GfVwi8QMfNMhZ) | claims-12 fences; #191 and #196 merged (Sonnet, D-159) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
-| World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | #66 water/sky (Justin, via Render); next visual ticket with Environment | `claude/atmosphere-sound-hlqfke` | `Look.cs`, `WorldClock.cs`, `client/scripts/atmosphere/` except audio |
+| World atmosphere (visuals; audio moved to Audio, D-079) (session_01KvVF5vpkYEHTKNRpHC18WN) | atmosphere-21 storms #286 and atmosphere-22 far-land fog #289 in CI; atmosphere-19 follow-up waits on House building #271/#272 | `claude/atmosphere-21-storms`, `claude/atmosphere-farland-fog` | `Look.cs`, `WorldClock.cs`, `shared/Weathers.cs`, `client/scripts/atmosphere/` except audio |
 | House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) | #202, building-10 (Sonnet, D-159) | `claude/house-building-8ueqz2` | `Building.cs`, `Weathering.cs`, `client/scripts/building/` |
 | Animals (session_015wozcQSFB48cUjQ9p676zf) | animals-14 red deer #219; #195, #90, #149 (Sonnet, D-159) | `claude/animals-deer-5gkntn` | `Animals.cs`, `client/scripts/animals/` |
 | Clay and ceramics (session_01Sc3N1RCsurSszfX5YwGzMU) | ceramics-7+8, lamp ceramics-9 (Sonnet, D-159) | `claude/clay-ceramics-kfr4kr` | `Ceramics.cs`, `client/scripts/ceramics/` |
@@ -54,7 +54,7 @@ Status values: `todo` · `in_progress` · `blocked` · `in_review` · `done`
 - Item id ranges per lane: Crafting 1-99, Ceramics 100-129, House building 130-159, Survival 160-189, Animals 190-219, Claims 220-239, Journal and skills 240-259.
 - `Crafting.cs`: `Outcome.Placed` with `OnPlaced(ctx, job, def)` sets an object down at a position; minigames Shape and Coil.
 - Fire warmth for Survival: Crafting implements `FireWarmthAt(ctx, x, z, ref warmth)` (0 to 1), declared in `Survival.cs`, by calling `WarmthAt`. Shelter: House building's `Module.ShelterAt(ctx, x, z)` / `ShelterFor(ctx, playerId)` return Shelter(RainCover, Warmth, StructureId); it implements Survival's `ShelterAtHook(ctx, x, z, ref rainCover, ref warmth)`.
-- Keys: every key goes in `KEYMAP.md` (UX/UI owns it, D-033). World actions register Use handlers; never bind G.
+- Keys: every key goes in `KEYMAP.md` (UX/UI owns it, D-033). World actions register Use handlers; never bind E (the Use key, D-188).
 - Client subscriptions: `client/scripts/net/Subscriptions.cs` (#18); add new chunk queries there.
 - Placement: `PlaceStructure(kind, x, z, yaw)` and `shared/Structures.cs`; the claim marker is a new `StructureKind` with one stage.
 - Weather (`WorldClock.cs`, PR #9): `TimeOfDay`, `CurrentWeather` (Cloud, Rain, Wind, Wetness 0 to 1), `DryingRate`, `AirTemperature` in °C. `RainAt` one-liner goes in whichever of #9 or ceramics merges second.

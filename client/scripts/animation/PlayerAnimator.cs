@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -16,6 +17,17 @@ public sealed class PlayerAnimator
     readonly float seed; // per-figure offset so a crowd never breathes or sways in step
     float time, phase;   // phase: walk cycle, a full turn is two steps
     float walkBlend, gait, run, turnLean, crouch;
+    // Jumping (bugfix-25 drives it through Avatar.SetJump): how airborne, how much
+    // still rising, and the knee-bend kick left over from the last landing.
+    bool airborne, rising;
+    float air, rise, landKick;
+
+    public void Jump(bool airborne, bool rising, float landing)
+    {
+        this.airborne = airborne;
+        this.rising = rising;
+        if (landing > landKick) landKick = Mathf.Clamp(landing, 0f, 1f);
+    }
 
     public PlayerAnimator(PlayerRig rig, ulong seed)
     {
@@ -58,6 +70,12 @@ public sealed class PlayerAnimator
             pose.Blend(pose, work, workBlend > 0.995f ? 1f : workBlend);
         }
         else shownWork = WorkMotion.None;
+        air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
+        rise = Mathf.Lerp(rise, rising ? 1f : 0f, 1f - Mathf.Exp(-10f * dt));
+        landKick *= Mathf.Exp(-7f * dt);
+        if (air > 0.005f) Air(pose, air, rise);
+        if (landKick > 0.01f) Crouch(pose, landKick * 0.7f);
+
         // Lean into turns; the head stays level.
         pose[Joint.Hips].Z -= turnLean;
         pose[Joint.Neck].Z += turnLean * 0.7f;
@@ -137,6 +155,28 @@ public sealed class PlayerAnimator
         p[Joint.ElbowR].X = -elbow - 0.35f * Mathf.Max(s, 0f);
         p[Joint.HandL] = new Vector3(-0.1f, 0, 0.06f);
         p[Joint.HandR] = new Vector3(-0.1f, 0, -0.06f);
+    }
+
+    // In the air: legs stop striding, tuck up on the way up and reach for the ground on
+    // the way down; arms lift on take-off and spread for balance as the body falls.
+    static readonly Joint[] LegJoints = { Joint.HipL, Joint.HipR, Joint.KneeL, Joint.KneeR, Joint.FootL, Joint.FootR };
+
+    static void Air(Pose p, float a, float up)
+    {
+        float down = 1f - up;
+        foreach (var j in LegJoints)
+            p[j] *= 1f - 0.7f * a;
+        p[Joint.HipL].X -= (0.75f * up + 0.3f * down) * a;
+        p[Joint.HipR].X -= (0.55f * up + 0.1f * down) * a;
+        p[Joint.KneeL].X += (1.25f * up + 0.35f * down) * a;
+        p[Joint.KneeR].X += (1.05f * up + 0.25f * down) * a;
+        p[Joint.FootL].X -= 0.3f * up * a;
+        p[Joint.FootR].X -= 0.3f * up * a;
+        p[Joint.ShoulderL] += new Vector3(-0.9f * up - 0.25f * down, 0, 0.55f * down) * a;
+        p[Joint.ShoulderR] += new Vector3(-0.9f * up - 0.25f * down, 0, -0.55f * down) * a;
+        p[Joint.ElbowL].X -= 0.35f * a;
+        p[Joint.ElbowR].X -= 0.35f * a;
+        p[Joint.Spine].X += (0.1f * up - 0.05f * down) * a;
     }
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,

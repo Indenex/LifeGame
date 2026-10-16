@@ -26,6 +26,9 @@ namespace LifeGame.Shared
         Basket = 13,
         BowDrill = 14,
         Log = 15,
+        // Bow and arrow (animals-15): ids reserved here so Modeling and Animals can build on them.
+        Bow = 16,
+        Arrow = 17,
 
         // Clay and ceramics (tier 3) use 100 to 129.
         CleanClay = 100,
@@ -43,6 +46,8 @@ namespace LifeGame.Shared
         UnfiredCoilPot = 112,
         UnfiredStorageJar = 113,
         StorageJar = 114,
+        PotOfBroth = 115,
+        PotOfStew = 116,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -58,6 +63,11 @@ namespace LifeGame.Shared
         SheepHide = 194,
         ScrapedHide = 195,
         Leather = 196,
+        DropSpindle = 197,
+        Yarn = 198,
+        WoolCloth = 199,
+        WoolTunic = 200,
+        LeatherWraps = 201,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -89,6 +99,7 @@ namespace LifeGame.Shared
         Digging = 64,   // breaks ground faster than hands
         Container = 128, // carries loose things
         FireBow = 256,   // spins a fire drill with a bowstring
+        Spindle = 512,   // twists loose fibre into yarn
     }
 
     public static class Items
@@ -122,11 +133,15 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredStorageJar, Name = "Unfired storage jar", Plural = "Unfired storage jars", HasQuality = true },
             new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true },
+            new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true },
+            new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true },
             new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
+            new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true },
+            new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries" },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
@@ -135,7 +150,12 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Wool, Name = "Raw wool", Plural = "Raw wool", HasQuality = true },
             new ItemDef { Id = Item.SheepHide, Name = "Sheep hide", Plural = "Sheep hides", HasQuality = true },
             new ItemDef { Id = Item.ScrapedHide, Name = "Scraped hide", Plural = "Scraped hides", HasQuality = true },
-            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true });
+            new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
+            new ItemDef { Id = Item.DropSpindle, Name = "Drop spindle", Plural = "Drop spindles", Tags = ItemTags.Spindle, HasQuality = true },
+            new ItemDef { Id = Item.Yarn, Name = "Wool yarn", Plural = "Wool yarn", HasQuality = true },
+            new ItemDef { Id = Item.WoolCloth, Name = "Wool cloth", Plural = "Wool cloth", HasQuality = true },
+            new ItemDef { Id = Item.WoolTunic, Name = "Wool tunic", Plural = "Wool tunics", HasQuality = true },
+            new ItemDef { Id = Item.LeatherWraps, Name = "Leather foot wraps", Plural = "Leather foot wraps", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 

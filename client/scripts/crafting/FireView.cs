@@ -22,7 +22,16 @@ public partial class FireView : Node3D
 
     public void Attach(DbConnection conn)
     {
-        conn.Db.Fire.OnInsert += (_, f) => Upsert(f);
+        conn.Db.Fire.OnInsert += (_, f) =>
+        {
+            Upsert(f);
+            // A fire lit close by makes its sound; fires that were already burning when
+            // you arrived (login catch-up) stay quiet.
+            long ageMicros = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 - f.LitAt.MicrosecondsSinceUnixEpoch;
+            if (ageMicros < 10_000_000 && Stations.PlayerAt(conn) is { } at
+                && new Vector2(f.X - at.X, f.Z - at.Z).Length() < 6f)
+                Sfx.Play(Cue.FireLit);
+        };
         conn.Db.Fire.OnUpdate += (_, _, f) => Upsert(f);
         conn.Db.Fire.OnDelete += (_, f) =>
         {
@@ -273,6 +282,8 @@ public partial class FireView : Node3D
             float strength = Math.Clamp(left / 60f, 0.15f, 1f);
             float flicker = Atmosphere.FireFlicker(time);
             light.LightEnergy = 2.6f * strength * flicker;
+            // Firelight carries further in the dark: about 10 m by day, 14 m at night (D-180).
+            light.OmniRange = 10f + 4f * Atmosphere.Night;
             flames.ScaleAmountMax = 1.6f * strength;
             flames.Emitting = left > 0;
             sparks.Emitting = left > 2;

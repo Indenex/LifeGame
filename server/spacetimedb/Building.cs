@@ -15,6 +15,12 @@ public enum StructureKind
     Fence,
     Gate,
     CraftingTable,
+    Hearth,
+    // Animals stations (D-098, animals-11); numbered by merge order: always at the end.
+    SpindleStation,
+    DryingRack,
+    PottersBench,
+    LogCabin,
 }
 
 // One material a structure's current stage still needs.
@@ -115,6 +121,8 @@ public static partial class Module
             if (Structures.TooClose(k, x, z, (int)other.Kind, other.X, other.Z))
                 throw new Exception("Too close to another building");
 
+        if (Structures.IsIndoor(k) && HomeAround(ctx, x, z, Structures.HearthWallGap) is null)
+            throw new Exception("A hearth goes inside a finished hut or house");
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
@@ -252,11 +260,14 @@ public static partial class Module
         ctx.Db.Structure.Id.Delete(s.Id);
         OnStructureRemoved(ctx, s);
         CeramicsStructureRemoved(ctx, s);
+        AnimalsStructureRemoved(ctx, s);
     }
 
     // Ceramics implements this to hand back what was loaded in a kiln that is taken down.
     // Partial methods allow one implementation each, so every lane that needs it gets its own hook.
     static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s);
+    // Animals implements this to drop the hides hanging on a drying rack that is taken down.
+    static partial void AnimalsStructureRemoved(ReducerContext ctx, Structure s);
 
     // Claims implements this to refuse placing or taking down buildings inside a
     // claim the sender has no access to (throw to refuse). Adding materials is
@@ -281,7 +292,8 @@ public static partial class Module
             if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
-            if (s.Kind == StructureKind.BrickHouse && FireInside(ctx, s)) warmth = 1f;
+            if (shape.Room && FireInside(ctx, s)) warmth = 1f;
+            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }

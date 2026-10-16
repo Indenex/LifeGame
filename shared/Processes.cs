@@ -15,6 +15,7 @@ namespace LifeGame.Shared
         Strike, // knap: strike when the mark is in the sweet spot
         Shape,  // pinch a pot: hold to thin the wall, release in the sweet spot
         Coil,   // build a coil pot: lay each coil as the turning pot comes round
+        Spin,   // spin yarn: flick the drop spindle as it slows, before it stops (Animals, D-070)
     }
 
     // What a finished process makes.
@@ -90,6 +91,9 @@ namespace LifeGame.Shared
         public float FailBelow;
         // The station it is made at; None is a hand craft from the C menu.
         public StationKind Station;
+        // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
+        // guess from the id; set it on new processes.
+        public WorkMotion Motion;
     }
 
     public static class Processes
@@ -138,6 +142,20 @@ namespace LifeGame.Shared
                 Id = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.RawMutton) },
                 Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
+            },
+            // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
+            // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
+            new ProcessDef
+            {
+                Id = "cook.broth", Name = "Simmer berry broth", Doing = "Setting a pot of broth by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.Berries, 3) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfBroth,
+            },
+            new ProcessDef
+            {
+                Id = "cook.stew", Name = "Simmer mutton stew", Doing = "Setting a pot of stew by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton), new Ingredient(Item.Berries, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfStew,
             },
             new ProcessDef
             {
@@ -204,19 +222,58 @@ namespace LifeGame.Shared
                 NeedsTool = ItemTags.Chopping, Seconds = Base(2, 1.25f), Outcome = Outcome.Chop, Makes = Item.Log,
             },
 
-            // Hides (Animals lane): a sheep hide is scraped clean, then stretched on a
-            // little stick rack to dry into leather (see Leather.cs).
+            // Hides (Animals lane): at a leather drying rack (D-098), a sheep hide is
+            // scraped clean, then laced onto the rack's bar to dry into leather (Leather.cs).
             new ProcessDef
             {
                 Id = "hide.scrape", Name = "Scrape a hide", Doing = "Scraping the hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide) }, NeedsTool = ItemTags.Cutting,
-                Seconds = Base(2, 1f), Makes = Item.ScrapedHide,
+                Seconds = Base(2, 1f), Makes = Item.ScrapedHide, Station = StationKind.DryingRack,
             },
             new ProcessDef
             {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
-                Seconds = Base(2, 0.5f), Outcome = Outcome.Placed,
+                Seconds = Base(2, 0.5f), Outcome = Outcome.Placed, Station = StationKind.DryingRack,
+            },
+
+            // Wool (Animals lane): a stick and a stone whorl make a drop spindle at the
+            // crafting table; built into a spindle station (D-098) it spins raw wool into
+            // yarn, and yarn is woven on the station's stick frame into cloth. Spinning
+            // and weaving train Toolmaking until a Weaver specialty exists (D-071).
+            new ProcessDef
+            {
+                Id = "carve.drop_spindle", Name = "Make a drop spindle", Doing = "Fitting a stone whorl onto a stick", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 0.5f), Makes = Item.DropSpindle, Station = StationKind.Table,
+            },
+            new ProcessDef
+            {
+                Id = "cord.spin_wool", Name = "Spin wool yarn", Doing = "Spinning wool into yarn", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Wool, 2) },
+                Seconds = Base(2, 1f), Minigame = Minigame.Spin, Makes = Item.Yarn, FailBelow = 0.1f, Station = StationKind.Spindle,
+            },
+            new ProcessDef
+            {
+                Id = "weave.wool_cloth", Name = "Weave wool cloth", Doing = "Weaving yarn over a stick frame", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Yarn, 4), new Ingredient(Item.Stick, 2) },
+                Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle,
+            },
+
+            // Clothing (Animals lane): worn in the equipment panel, slows the cold (see
+            // Clothing.cs). Foot wraps are cut and laced at the leather drying rack (D-139);
+            // the tunic is sewn from wool cloth at the crafting table.
+            new ProcessDef
+            {
+                Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 2f), Makes = Item.WoolTunic, Station = StationKind.Table,
+            },
+            new ProcessDef
+            {
+                Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Leather), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 10, Makes = Item.LeatherWraps, Station = StationKind.DryingRack,
             },
 
             // Tier 3: clay. Dug clay is cleaned, tempered so it survives the fire,
@@ -256,20 +313,20 @@ namespace LifeGame.Shared
             {
                 Id = "clay.pinch_pot", Name = "Pinch a pot", Doing = "Pinching a pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
-                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },
-                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
@@ -336,7 +393,7 @@ namespace LifeGame.Shared
         public const float MaxSeconds = 20 * 60;
         public const float MasterMaxSeconds = 40 * 60;
         public static float MaxSecondsFor(int firecraftRank) =>
-            MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
+            Progression.Effect(EffectKind.FireSeconds, firecraftRank);
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
         // A burned-out fire leaves a cold hearth of stones and ash this long outside a

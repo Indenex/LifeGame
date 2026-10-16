@@ -69,6 +69,7 @@ public static class Look
         Add("snow_cover", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
+        Add("puddles", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -85,7 +86,13 @@ public static class Look
 
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
-    public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
+    public static ShaderMaterial Ground => ground ??= WithPuddles(Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f));
+
+    static ShaderMaterial WithPuddles(ShaderMaterial material)
+    {
+        material.SetShaderParameter("puddles_ok", 1f);
+        return material;
+    }
     public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
     public static ShaderMaterial Foliage => foliage ??= Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
@@ -121,6 +128,39 @@ public static class Look
             ghost.SetShaderParameter(name, source.GetShaderParameter(name));
         }
         return ghost;
+    }
+
+    // Whether something occupying the box hides the player from the camera: the line
+    // from the camera to the player's head (or chest, for low eaves) passes through
+    // it, or the player stands inside it. For anything the player can be under, such
+    // as roofs and walls, to fade the way trees do (Justin's playtest).
+    public static bool HidesPlayer(Aabb box, Vector3 camera, Vector3 player) =>
+        box.HasPoint(player + new Vector3(0, 0.9f, 0))
+        || SegmentHitsBox(camera, player + new Vector3(0, 1.6f, 0), box)
+        || SegmentHitsBox(camera, player + new Vector3(0, 0.9f, 0), box);
+
+    // Whether the segment from a to b touches the box (the slab test).
+    public static bool SegmentHitsBox(Vector3 a, Vector3 b, Aabb box)
+    {
+        float t0 = 0f, t1 = 1f;
+        var d = b - a;
+        var min = box.Position;
+        var max = box.End;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float start = a[axis], step = d[axis];
+            if (Mathf.Abs(step) < 1e-6f)
+            {
+                if (start < min[axis] || start > max[axis]) return false;
+                continue;
+            }
+            float ta = (min[axis] - start) / step, tb = (max[axis] - start) / step;
+            if (ta > tb) (ta, tb) = (tb, ta);
+            t0 = Mathf.Max(t0, ta);
+            t1 = Mathf.Min(t1, tb);
+            if (t0 > t1) return false;
+        }
+        return true;
     }
 
     // Kept for callers that only need a plain painted surface.
@@ -244,6 +284,9 @@ public static class Look
         global uniform float snowing;
         // How far through the year it is: 0 spring, 0.25 summer, 0.5 autumn, 0.75 winter.
         global uniform float season_year;
+        // How much standing water there is after rain, 0 dry to 1 puddled; it rises
+        // once the ground is soaked and lingers after the rain stops.
+        global uniform float puddles;
         const vec3 SNOW = vec3(0.86, 0.89, 0.94);
 
         // How bare broadleaf trees are: bare through winter, leafing out again early
@@ -286,6 +329,8 @@ public static class Look
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
             uniform bool see_through = false;
+            // 1 on the ground material only: where puddles may gather after rain.
+            uniform float puddles_ok = 0.0;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -420,6 +465,17 @@ public static class Look
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
                 color = mix(color, SNOW * (1.0 + paint), snow);
                 wet *= 1.0 - snow;
+                // Puddles gather on flat ground in the low spots of a slow pattern,
+                // spreading as the ground stays soaked and shrinking as it dries:
+                // dark, still and glossy.
+                float puddle = 0.0;
+                if (puddles_ok > 0.5 && puddles > 0.01) {
+                    float low = 1.0 - texture(detail, world_pos.xz * 0.035).r;
+                    float edge = 1.0 - 0.42 * puddles;
+                    puddle = smoothstep(edge, edge + 0.05, low) * smoothstep(0.93, 0.99, world_normal.y) * (1.0 - snow);
+                    color *= mix(1.0, 0.5, puddle);
+                    wet = max(wet, puddle);
+                }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
@@ -432,8 +488,10 @@ public static class Look
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
-                ROUGHNESS = mix(1.0, 0.75, wet);
-                SPECULAR = 0.08 * wet;
+                ROUGHNESS = mix(mix(1.0, 0.75, wet), 0.05, puddle);
+                SPECULAR = mix(0.08 * wet, 0.5, puddle);
+                // Still water lies flat, whatever the relief of the ground under it.
+                NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz, puddle));
             #ifdef GHOST
                 // Faintly see-through all over, and clear in a soft circle around the
                 // player, measured on screen.

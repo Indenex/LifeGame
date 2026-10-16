@@ -612,7 +612,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("Hearths only", as recommended), applying D-148
 
 ## D-150 — 2026-10-16 — First-time tips
-**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with G. (3) Your claim keeps what you build; press B. (4) The crafting table: press G at it.
+**Decision:** Four one-time tips in the hint corner. (1) How to make a fire: two sticks and tinder, made with C (also shown at dusk if you have no fire). (2) Feed the fire with E (was G, changed by D-188). (3) Your claim keeps what you build; press B. (4) The crafting table: press E at it (was G, changed by D-188).
 **Who:** Justin ("All four", as recommended)
 
 ## D-151 — 2026-10-16 — Log cabin
@@ -763,3 +763,147 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-187 — 2026-10-16 — Crafted items: bag first, real-world items can be placed
 **Decision:** Finished crafts go to the bag. Real-world items (bricks and the like) also get an optional "Place it now" prompt, and can be placed from the bag with a Place key and a ghost preview. Small items such as tinder go straight to the bag. Owner: Crafting (crafting-20), with UX.
 **Who:** Justin ("when items like bricks and things are crafted, they should either go into your inventory and then allow them to be placed, or allow you to simply choose where to put them when done crafting (real world items only, things like tinder etc. just auto inventory)"), who chose "Both"
+
+## D-188 — 2026-10-16 — E interacts and picks up
+**Decision:** E is the key that interacts with things and picks up items, not G or space. Owner: UX (ui-16, keys). Note: D-150's first-time tips name G for feeding a fire and for the crafting table, and need the new key.
+**Who:** Justin ("I want E to be the item that interacts with things and picks up items, not G/space.")
+
+## D-189 — 2026-10-16 — Turn view by mouse drag only
+**Decision:** The view turns by mouse drag only. Q/E turning is removed.
+**Who:** Justin ("Mouse drag only")
+
+## D-190 — 2026-10-16 — Jumping
+**Decision:** The player can jump, and jumping clears fences too, but not claim fences unless you are a member of that claim. Owners: Bug fixes (bugfix-25, jump and clearance), with Animation and Audio for the poses and sounds.
+**Who:** Justin ("Also I want to be able to jump." Fences: "Fences too, but not claim fences unless you're a member of it.")
+
+## D-191 — 2026-10-16 — Placing from the bag: drag and drop (refines D-187)
+**Decision:** Real-world items are placed by dragging them out of the inventory, and the ghost placement locks onto the cursor to put the item where you want. There is no Place key. The ghost looks the same as when building (pale green, amber where invalid). The after-craft "Place it now" prompt uses E.
+**Who:** Justin ("you should just be able to drag and drop it out of your inventory, and the ghost placement can lock onto your cursor to put it where you want." Ghost look: "Same as building")
+
+## D-192 — 2026-10-16 — Jump details (extends D-190)
+**Decision:** The jump apex is 1.1 m and costs 8% of the stamina bar per jump. There is no air control, and no jumping while sneaking.
+**Who:** Justin (as relayed by the PM)
+
+## D-193 — 2026-10-16 — Other players see your jump
+**Decision:** Other players see your jump. A `player_jump` event fires on takeoff, and remote players play the pose and sound without true height. The server checks the jump later (D-182).
+**Who:** Justin ("Yes, pose and sound")
+
+## D-194 — 2026-10-16 — Batch crafting at the Crafting Table first, devices later
+**Decision:** Repetitive processing such as cleaning clay, crushing stone and tempering gets a way to load up a batch, so you don't have to do one at a time; it is to speed crafting up. The Crafting Table does this first, and dedicated devices come later. Doing it manually stays possible. Whether the player has to stay with it: Justin had no preference, and the PM's default is that the batch runs on its own (D-148). Owner: Crafting (crafting-21).
+**Who:** Justin ("something like cleaning clay, crushing stone, tempering, etc. should have a crafting device you can load up so you don't have to do 1 at a time. Essentially, it's to speed crafting up. This could just be the general crafting table I suppose, but you should be able to do it manually as well."), who chose "Table first, devices later"
+
+## D-195 — 2026-10-16 — Batch crafting revised: dedicated devices (supersedes D-194)
+**Decision:** Batch crafting gets dedicated devices, one per process, instead of the Crafting Table first. A device runs on its own, but an unattended run takes a large quality penalty. If the player stays and plays the minigame there are quality and quantity bonuses, so playing the games has value. Crafting by hand stays. Owner: Crafting (crafting-22).
+**Who:** Justin ("I want dedicated devices: hmmm it should run on its own, but yeah there should be some kind of large negative quality modifier. If you stay and do the minigame maybe there can be quantity and quality bonuses, etc. so there's some value to playing the games.")
+
+## D-196 — 2026-10-16 — Bow power: Archery skill, much harder at rank 0 (revises D-178)
+**Decision:** The bow numbers in D-178 are at level 1 too strong. A new Archery skill, on the shared curve (D-175, D-177), scales bow damage. At rank 0 with crude gear a red deer takes 6 to 7 hits. With maxed Archery, top gear and a crit, a one-shot becomes possible.
+**Who:** Justin ("Is this at level 1 Archery? I would say make it much harder. Like 6-7 shots, and when maxed out or with crits you could 1 shot at some point.")
+
+## D-197 — 2026-10-16 — Combat skills level slower; skill matters more than gear (extends D-175, D-196)
+**Decision:** Combat skills get a slower category pace in the one shared progression formula. Each effect's ceiling is a single raisable constant, so it is easy to raise and work in later. Gear quality spread stays narrow and skill spread stays wide: skill levels matter much more than the item base.
+**Who:** Justin ("Slower progression on combat-related skills I think, there needs to be a ceiling that we raise and work in easily. Skill levels should matter much more than the item base though.")
+
+## D-198 — 2026-10-16 — Combat pace: half speed (follows D-197)
+**Decision:** Combat skills (Stalking, Archery, future weapons) gain at 0.5x the base pace, set by `Progression.CombatPaceFactor`.
+**Who:** Justin ("Half speed")
+
+## D-199 — 2026-10-16 — Archery spread drawn out; combat effects are hits-linear (extends D-196, D-197)
+**Decision:** The Archery spread from rank 25 to 100 is much more drawn out. Hits to kill a deer fall about one step per ~20 ranks, for example 7, 6, 5, 4, 3, 2, rather than dropping from 7 to 2 or 3 quickly. Combat effects use an even, hits-linear shape. This is a documented exception to the front-loaded curve of D-175 and D-177.
+**Who:** Justin ("the spread from 25-100 needs to be waaaay more drawn out. You should not go from 7 -> 3/2 so quickly. Maybe 7, 6, 5, 4, 3, 2, or something like that.")
+
+## D-200 — 2026-10-16 — Batch device numbers: Balanced (follows D-195)
+**Decision:** Batch crafting devices use the "Balanced" numbers: a batch cap of 10. Unattended runs give ×0.6 quality, 1.5× time and 25% of skill. Attended runs give up to ×1.1 quality, +20% quantity, 0.8× time and full skill.
+**Who:** Justin ("A: balanced")
+
+## D-201 — 2026-10-16 — See-through buildings work like Project Zomboid (extends D-168)
+**Decision:** Buildings go see-through the way Project Zomboid does it. Inside a building its roof is hidden entirely, and walls between the camera and you are cut or faded, so the room reads as a cutaway; far walls stay solid. Outside, behind a building, only the blocking walls fade around you; other buildings stay solid. Owner: House building (building-11).
+**Who:** Justin ("It should do it like Project Zomboid does it.")
+
+## D-202 — 2026-10-16 — Fires can be placed where the player wants (Choose the spot)
+**Decision:** The player can put a fire where they want nearby. A placement ghost shows the spot, using the same flow as item placing (crafting-21). Only spots inside a boulder or trunk are refused.
+**Who:** Justin ("You should be able to place fires where you want."), picking "Choose the spot".
+
+## D-203 — 2026-10-16 — Roof clears in a soft circle when you are behind a building (extends D-201)
+**Decision:** When the player is behind a building, seen from outside, its roof also clears in a soft circle around them, in addition to the walls fading. Owner: House building (building-11).
+**Who:** Justin, picking "Soft clear circle".
+
+## D-204 — 2026-10-16 — Kiln and rack output gets no place prompt; drag from the bag
+**Decision:** Output from a kiln or drying rack does not trigger a place prompt. The player drags the item out of the bag to place it.
+**Who:** Justin ("No, drag from bag")
+
+## D-205 — 2026-10-16 — Atmosphere next: storms and lightning, wet world, warm homes at night
+**Decision:** After "Give me more options", the next Atmosphere features are Storms and lightning, Wet world (puddles and a wet sheen that dries), and Warm homes at night (firelight from doorways, hearth smoke). Owner: Atmosphere, with Audio and House building.
+**Who:** Justin, choosing Storms and lightning, Wet world and Warm homes at night.
+
+## D-206 — 2026-10-16 — Scalable development: every content family is data on a shared base
+**Decision:** Every content family (animals, tools, crafting stations and so on) is data on a shared base: a Def plus a registry in `shared/`. New content is a Def entry plus assets, so a new animal means only modelling, animating, texturing and perhaps adjusting AI, not rebuilding code. Each family is converted gradually, the next time a lane adds to it. Integration writes `docs/CONTENT.md` and sends the Scribe the CLAUDE.md principle wording.
+**Who:** Justin ("Are we using software best practices as far as like scalable development goes? Like, for an animal do we have a base animal function to work from so things aren't being built from scratch every time? e.g. animal.Deer, animal.Sheep... That way we're only modeling/animating/texturing, and not fully rebuilding code, maybe adjusting AI". Then: "option 3, but yes ALL development should be this way, shouldn't it? e.g. tool.Axe, craftingTable.Pottery, etc.?")
+
+## D-207 — 2026-10-16 — Scribe self-merges doc-only PRs immediately
+**Decision:** The Scribe self-merges its doc-only PRs immediately, with no CI wait and no merge freeze. It only touches doc files (`DECISIONS.md`, `STATUS.md`, `CLAUDE.md`, `WORKER_LOOP.md`, `docs/*.md`). Direct pushes to `main` were blocked by the session safety classifier, so the PR route stays.
+**Who:** Justin ("Scribe should just be able to modify text files, it can skip all safety checks, it's not allowed to touch anything but it's docs files anyway.")
+
+## D-208 — 2026-10-16 — Environment env-9: See further
+**Decision:** Environment's next feature (env-9) is "See further": low-detail distant terrain and tree silhouettes beyond about 56 m. Not picked: gatherables by habitat, small life, wearing paths.
+**Who:** Justin, picking "See further".
+
+## D-209 — 2026-10-16 — Device quality applies only to minigame processes (refines D-200)
+**Decision:** A process with no minigame gets nothing special from a device: it is simply crafted for now and can be queued up as a plain batch. The unattended penalty and attended bonus of D-200 apply only to processes that have minigames.
+**Who:** Justin ("If they don't have minigames, nothing special happens, it can just be crafted for now, and queued up.")
+
+## D-210 — 2026-10-16 — Journal step cards do not show Speed %
+**Decision:** Journal step cards drop the Speed % line; no Speed % is shown.
+**Who:** Justin ("Drop the line")
+
+## D-211 — 2026-10-16 — Storms are seasonal
+**Decision:** Storm frequency follows the season. About 1 in 45 weather fronts becomes a thunderstorm in summer, 1 in 50 in spring and autumn, and 1 in 150 in winter.
+**Who:** Justin, picking "Seasonal".
+
+## D-212 — 2026-10-16 — Rain sounds like natural steady rain
+**Decision:** Rain must sound like natural, steady rain (hiss and patter), with no bouncy, pulsing or creature-like element. The bouncy part is taken out. Owner: Audio (#291).
+**Who:** Justin ("I don't like the weird bouncy animal sound of the rain in general, I just want it to sound like normal rain. can that part be taken out?")
+
+## D-213 — 2026-10-16 — Ceramics next: roof tiles; Justin wipes his world manually on build 980
+**Decision:** Ceramics' next feature is roof tiles ("Roof tiles"), not slip decoration. Separately, Justin is wiping his world manually on build 980, because the launcher's wipe confirm is broken; the Release lane is fixing it.
+**Who:** Justin, picking "Roof tiles".
+
+## D-214 — 2026-10-16 — UX next: finish inventory and drag and drop, then a 10-slot hotbar with keybinds
+**Decision:** The UI/UX worker finishes the inventory and drag and drop next, then adds a hotbar along the bottom of the screen. The hotbar fills up to 10 slots, each with an assigned keybind, and hitting the keybind uses the item in that slot. Owner: UX (ui-18 inventory, ui-19 hotbar).
+**Who:** Justin ("I want the UI/UX worker to finish inventory, drag and drop stuff, etc. next, and assign keybinds to slots on the bottom of the screen. These slots should fill up to 10 slots, and have the item be usable by hitting the assigned keybind.")
+
+## D-215 — 2026-10-16 — Chat leak fix uses per-recipient private delivery
+**Decision:** The chat leak is fixed with private per-player delivery: each message is delivered only to its recipients. Owner: Claims (claims-13).
+**Who:** Justin, picking "Private per-player delivery".
+
+## D-216 — 2026-10-16 — Heather is sparse, patchy and muted (revises D-164's purple bloom)
+**Decision:** The hilltop heath's heather must be sparse, in irregular patches, and muted in colour: a soft desaturated mauve, only in bloom, close to the grass in brightness. This revises the purple bloom of D-164. Hotfix owner: Environment, with Atmosphere.
+**Who:** Justin ("I HATE this, the color, the quantity, it's crazy.")
+
+## D-217 — 2026-10-16 — Hotbar: the row becomes the hotbar (extends D-214)
+**Decision:** The bottom row becomes the hotbar: a round row of 10 slots with key numbers. The bag moves to the I panel. Owner: UX (ui-19).
+**Who:** Justin, picking "Row becomes hotbar".
+
+## D-218 — 2026-10-16 — Hotbar fills automatically with new items
+**Decision:** New items auto-fill into the hotbar slots.
+**Who:** Justin, picking "Auto-fill new items".
+
+## D-219 — 2026-10-16 — Tools live in a tools section on the player doll, outside inventory space and weight
+**Decision:** Tools only need to be in the player's inventory to be usable. A tools section is created on the player doll. Tools do not take up inventory space and add no weight.
+**Who:** Justin ("as long as they're in your inventory it's fine, and honestly, create a tools section on the player doll. Tools shouldn't take up inventory space or add weight.")
+
+## D-220 — 2026-10-16 — Bag order: a sort button and manual arrangement
+**Decision:** The bag offers both a sort button and manual arrangement.
+**Who:** Justin, picking "Both, a sort button, and manual arrangement".
+
+## D-221 — 2026-10-16 — Camera angle can be tilted a little with the existing right-click controls
+**Decision:** The player can change the camera angle a bit, a little up and a little down, using the right-click mouse controls that already exist, so they can see the new sky changes and so on coming up. Owner: Integration.
+**Who:** Justin ("I want to be able to change the angle of the camera a bit, so I can see the new sky changes etc. coming up. a little up, a little down, just controlled by the right click mouse controls we already have")
+
+## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
+**Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
+**Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
+
+## D-223 — 2026-10-16 — Doll tools section has 6 slots; hotbar key moves a tool to the belt (refines D-219)
+**Decision:** The tools section on the player doll has 6 slots (knife, axe, digging stick, spear, bow drill, spindle), and the count can rise later (D-075). Tools in it take no bag space and add no weight but still work. A tool's hotbar key moves it onto the belt, and tools don't auto-fill the hotbar. Bag order has both a Sort button and manual arrangement, as already recorded in D-220.
+**Who:** Justin (relayed by the PM; no direct quote).

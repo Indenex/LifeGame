@@ -27,16 +27,21 @@ public partial class Atmosphere
         stepPhase += distance * 2.4f;
         if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
 
+        sound.Step(GroundAt(pos), wetness);
+    }
+
+    // What is underfoot at a position: used by footsteps and by landings (Sfx.Land).
+    public Ground GroundAt(Vector3 pos)
+    {
         int cx = World.CellOf(pos.X), cz = World.CellOf(pos.Z);
         terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
-        var ground = Sheltered?.Invoke(pos) == true ? Ground.Floor
+        return Sheltered?.Invoke(pos) == true ? Ground.Floor
             : pos.Y < Look.WaterLevel + 0.05f ? Ground.Water
             : SnowCover > 0.3f ? Ground.Snow
             : NearWater(cx, cz) ? Ground.Sand
             : World.IsClay(cx, cz) ? Ground.Clay
             : terrain?.Cleared?.Invoke(cx, cz) == true ? Ground.Earth
             : Ground.Grass;
-        sound.Step(ground, wetness);
     }
 
     // Sand lies at the banks: any cell within about 3 m is below the water line.
