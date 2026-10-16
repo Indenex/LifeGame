@@ -16,6 +16,8 @@ Queued by Justin (D-085): forest light (atmosphere-13) first, then weather you s
 
 - 2026-10-16 20:08: Justin approved heather blooming purple through late summer (PM). Added here: global season_year, and in Look's painted shader heather (INSTANCE_CUSTOM.w == 3 on Foliage) speckles purple between year 0.3 and 0.56, peaking around 0.38 to 0.48. Environment sets w=3 on heather bushes.
 
+- 2026-10-16 20:10: only AnimalSpecies.Sheep rows feed SheepVoices (Animals' red deer, #219, would otherwise bleat); deer calls idea routed to Audio via the PM.
+
 ## Open questions / blockers
 - Idea to offer the PM with this ticket (D-059 options): after Environment's env-2 reshape (#175: stream 45 m west of spawn, ponds, gentler hills, water still at -1 m), mist that lies in valleys and over ponds and the stream at dawn and dusk, using World.BaseHeight and the existing atmosphere-11 Mist (which already pools in hollows by depth). Options to send: A (rec) extend Mist to read terrain height so valleys and water fill first; B leave dawn mist as is.
 
