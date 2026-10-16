@@ -20,6 +20,9 @@ namespace LifeGame.Shared
         public bool Solid;
         // Where a hung door goes: the doorway's center on the local +Z axis, 0 when it has none.
         public float DoorwayZ;
+        // Where smoke from a fire inside leaves the building: metres above the ground at the
+        // centre, 0 for none (Atmosphere draws the plume; atmosphere-19, D-206).
+        public float SmokeY;
         // Hours untouched before it starts to weather (D-046); 0 uses WeatherAfterHours.
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
@@ -57,6 +60,7 @@ namespace LifeGame.Shared
                 Clearance = 2.2f,
                 RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
                 DoorwayZ = 1.7f,
+                SmokeY = 2.9f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
             // A land claim's marker post (Claims.cs makes the claim when it is finished).
@@ -97,6 +101,7 @@ namespace LifeGame.Shared
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
                 Room = true,
+                SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
             // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
@@ -150,6 +155,24 @@ namespace LifeGame.Shared
                 Indoor = true,
                 Stages = new[] { "Stone ring", "Clay surround" },
             },
+            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
+            new StructureShape
+            {
+                Name = "Spindle station",
+                HalfWidth = 0.6f, HalfDepth = 0.4f,
+                Clearance = 1.0f,
+                Station = StationKind.Spindle,
+                Stages = new[] { "Distaff stand" },
+            },
+            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
+            new StructureShape
+            {
+                Name = "Leather drying rack",
+                HalfWidth = 1.2f, HalfDepth = 0.35f,
+                Clearance = 1.0f,
+                Station = StationKind.DryingRack,
+                Stages = new[] { "Posts and bar" },
+            },
             // A log cabin (building-10, D-151): the forest's way to the same home as the
             // mud-brick house, with the same room, shelter and weathering, built of logs.
             new StructureShape
@@ -161,6 +184,7 @@ namespace LifeGame.Shared
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
                 Room = true,
+                SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
         };
@@ -237,6 +261,16 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Stone, 4u) },
                 new[] { (Item.Daub, 3u) },
+            },
+            // Spindle station: your drop spindle becomes part of it (D-137)
+            new[]
+            {
+                new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
+            },
+            // Leather drying rack
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
             },
             // Log cabin: Sill, Log walls, Rafters, Thatch (D-151)
             new[]
