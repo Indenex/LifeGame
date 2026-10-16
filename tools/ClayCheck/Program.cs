@@ -534,7 +534,7 @@ void HuntMutton()
 {
     if (CountOf(Item.Spear) == 0)
     {
-        if (CountOf(Item.Stone) < 1) Gather(Item.Stone, 1);
+        if (CountOf(Item.Stone) < 2) Gather(Item.Stone, 2); // one to strike with, one to knap
         if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 1);
         if (CountOf(Item.Fiber) < 3 && CountOf(Item.Cordage) < 1) Gather(Item.Fiber, 3);
         Craft("knap.flake", 0.95f, Item.Flake);
