@@ -18,7 +18,7 @@ Justin chose option C with a tweak (D-072): your own work and other players' wor
 - 2026-10-16 17:30: Crafting took the declarations: crafting-12 (branch crafting-work-hooks, e0ee6b2) declares and calls OnCraftStarted/OnCraftEnded in Crafting.cs (the only CraftJob insert/delete paths; FinishCraft also runs for a player who disconnected mid-job). My WorkSounds.cs keeps the same two declarations until crafting-12 merges. Integration OK'd the table; per its note on stale rows, the client also drops another player's sound after 120 s whatever the table says. New voices for others start silent until placed.
 
 ## Open questions / blockers
-- Before merging after crafting-12: delete the two `static partial void OnCraft...;` declaration lines in server/spacetimedb/WorkSounds.cs, or the build fails on a duplicate. If atmosphere-12 merges first, Crafting removes theirs instead.
+- crafting-12 is PR #97 and merges first (Integration). When merging main after #97 into this branch, in that same merge commit delete the two `static partial void OnCraft...;` declaration lines in server/spacetimedb/WorkSounds.cs, before pushing; otherwise CS0756 duplicate declaration.
 
 ## Next step
 When #66 merges: merge main, open the atmosphere-12 PR, send the PM the green sha; then tell Crafting to add the two hook calls.
