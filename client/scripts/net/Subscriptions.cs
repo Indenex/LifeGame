@@ -56,6 +56,7 @@ public static class Subscriptions
         "SELECT * FROM my_worn",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
+        "SELECT * FROM player_look",
         "SELECT * FROM player_jump",
         "SELECT * FROM worn_item",
         $"SELECT * FROM structure WHERE {farRange}",

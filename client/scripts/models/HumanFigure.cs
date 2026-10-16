@@ -60,12 +60,12 @@ public static class HumanFigure
         // A stable look for a player from their player id, the same on every client.
         public static Appearance For(uint playerId)
         {
-            uint h = playerId * 2654435761u;
-            h ^= h >> 15;
-            h *= 2246822519u;
-            h ^= h >> 13;
-            return new((int)(h % (uint)Skins.Length), (int)(h / 7 % (uint)Hairs.Length), (int)(h / 41 % Cuts), h / 211 % 3 == 0);
+            var d = LifeGame.Shared.Looks.Default(playerId);
+            return From(d.Skin, d.Hair, d.Cut, d.Beard);
         }
+
+        // The look a player chose, as stored on the server.
+        public static Appearance From(byte skin, byte hair, byte cut, byte beard) => new(skin, hair, cut, beard != 0);
 
         public override string ToString() => $"{Skin}{Hair}{Cut}{(Beard ? 1 : 0)}";
     }
@@ -80,7 +80,7 @@ public static class HumanFigure
         new(0.30f, 0.20f, 0.14f), new(0.15f, 0.12f, 0.10f), new(0.46f, 0.25f, 0.15f), new(0.62f, 0.49f, 0.31f), new(0.55f, 0.53f, 0.49f),
     };
     // Locks round the crown, cropped short, long to the shoulders, tied back in a knot.
-    public const int Cuts = 4;
+    public static readonly int Cuts = LifeGame.Shared.Looks.CutNames.Length;
 
     public sealed class Built
     {

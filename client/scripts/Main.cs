@@ -324,6 +324,8 @@ public partial class Main : Node3D
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
+        conn.Db.PlayerLook.OnInsert += (_, l) => OnPlayerLook(l);
+        conn.Db.PlayerLook.OnUpdate += (_, _, l) => OnPlayerLook(l);
         // Only online players are subscribed, so a delete means they logged off.
         conn.Db.Player.OnDelete += (_, p) =>
         {
@@ -431,13 +433,23 @@ public partial class Main : Node3D
         if (p.Identity == myIdentity)
         {
             myId = p.PlayerId;
-            me.SetLook(p.PlayerId);
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else me.SetLook(p.PlayerId);
         }
         if (others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar.SetPlayerName(p.Name);
             avatar.Visible = p.Online;
         }
+    }
+
+    // A player's chosen look (model-3): applied to their avatar over the id default.
+    void OnPlayerLook(PlayerLook l)
+    {
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
+        else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
 
     void OnPlayerPos(PlayerPos p, bool inserted)
@@ -456,7 +468,9 @@ public partial class Main : Node3D
         if (!others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
-            avatar.SetLook(p.PlayerId);
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
         }
