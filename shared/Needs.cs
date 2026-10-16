@@ -35,6 +35,10 @@ namespace LifeGame.Shared
         // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
         public const float PinchPotWater = 0.5f;
         public const float CoilPotWater = 1f;
+        // Cooked in a pot (ceramics-7, numbers proposed to Survival): better than
+        // the same food eaten raw or roasted, and it quenches some thirst too.
+        public const float BrothFood = 0.45f, BrothWater = 0.3f;
+        public const float StewFood = 0.65f, StewWater = 0.3f;
 
         // Weather (Justin, 2026-10-15): the cold drain doubles from a mild 15 °C
         // down to 0 °C, and rain adds half again unless you are under cover.
@@ -81,6 +85,8 @@ namespace LifeGame.Shared
             Item.Berries => (BerryFood, BerryWater),
             Item.CookedMutton => (RoastMuttonFood, 0f),
             Item.BurntMutton => (BurntMuttonFood, 0f),
+            Item.PotOfBroth => (BrothFood, BrothWater),
+            Item.PotOfStew => (StewFood, StewWater),
             _ => (0f, 0f),
         };
 

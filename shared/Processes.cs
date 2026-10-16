@@ -90,6 +90,20 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.RawMutton) },
                 Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedMutton,
             },
+            // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
+            // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
+            new ProcessDef
+            {
+                Id = "cook.broth", Name = "Simmer berry broth", Doing = "Setting a pot of broth by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.Berries, 3) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfBroth,
+            },
+            new ProcessDef
+            {
+                Id = "cook.stew", Name = "Simmer mutton stew", Doing = "Setting a pot of stew by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton), new Ingredient(Item.Berries, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfStew,
+            },
             new ProcessDef
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,

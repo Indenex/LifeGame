@@ -132,7 +132,10 @@ public static partial class Module
         if (v.Food >= 1f)
             throw new Exception("You are full");
 
-        Take(ctx, (Item)item, 1);
+        // A dish cooked in a pot gives the pot back at its quality (Ceramics, ceramics-7).
+        float eatenQuality = Take(ctx, (Item)item, 1);
+        if (ClayRules.EmptyAfterEating((Item)item) is { } empty)
+            AddToInventory(ctx, ctx.Sender, empty, 1, (byte)Math.Round(eatenQuality));
         ctx.Db.Vitals.PlayerId.Update(v with
         {
             Food = Math.Min(1f, v.Food + food),
