@@ -80,7 +80,7 @@ namespace LifeGame.Shared
             public const float SneakDistance = 3f;
             public const float SneakCritChance = 0.4f;
             public const float SneakCritBonus = 2f;
-            public const float ArcheryDamage = 2.4f;
+            public const float ArcheryDamage = 2f;
             public const float ArcheryHitChance = 1f;
             public const float ArcheryDrawTime = 0.8f;
         }
@@ -122,7 +122,7 @@ namespace LifeGame.Shared
             new(EffectKind.SneakCritChance, "Sneak crit chance", 0.03f, Ceiling.SneakCritChance, "chance"),
             new(EffectKind.SneakCritBonus, "Sneak crit bonus", 0.5f, Ceiling.SneakCritBonus, "x damage"),
             // Animals' proposal for Archery (values go to Justin through the PM).
-            new(EffectKind.ArcheryDamage, "Arrow damage", 0.6f, Ceiling.ArcheryDamage, "x"),
+            new(EffectKind.ArcheryDamage, "Arrow damage", 0.44f, Ceiling.ArcheryDamage, "x"),
             new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, Ceiling.ArcheryHitChance, "x"),
             new(EffectKind.ArcheryDrawTime, "Draw time", 2f, Ceiling.ArcheryDrawTime, "s"),
         };
