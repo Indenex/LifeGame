@@ -646,7 +646,32 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-158 — 2026-10-16 — Model style: Justin picks from renders
 **Decision:** Justin will pick the model style (A, B or C) from renders. #172's style A is a placeholder default until then. Animation's player-model swap PR waits for the pick (see D-154).
 **Who:** Justin ("I've seen renders of these, go find them since they've already been made.")
+**Pick (2026-10-16):** Style A, "Carved", for people. Sheep: "I like a carved, but I want the sheep to be shorter, legs are too long, and I dont like the fluff. It has too much depth/texture and stands out from everything. It should be softer, cartoonier, fluffier. More stylized with our aesthetic."
 
 ## D-159 — 2026-10-16 — Sonnet workers do the coding; Opus for player-visual work
 **Decision:** Coding can be done by Sonnet workers, and lanes start transitioning over to them. Anything related to modelling, texture work or player-visual things stays with Opus. This replaces D-058's "Opus for any session that writes code". Applied split. Sonnet: Integration, Release, Render, Crafting, Survival, Journal & skills, Claims, House building, Animals, Ceramics, Bug fixes, Audio (the Scribe is already Sonnet). Opus: Modeling, Animation, Environment, Atmosphere, UX/UI (player-visual), Wiki (writing voice, D-064), and the PM. Lanes hand off at a checkpoint (ticket current, `HANDOFF READY` to the PM), then the PM starts a fresh Sonnet session on the ticket. Sonnet lanes may still use an Opus helper for player-visual parts.
 **Who:** Justin ("Let's update that coding can be done by sonnet workers, and start transitioning them over to it. Anything that's related to modelling, texture work, or player-visual things can be opus.")
+
+## D-160 — 2026-10-16 — Claim gates are members only
+**Decision:** Only the owner and members of a claim can open, bar or unbar a gate in it (claims-12).
+**Who:** Justin ("Members only")
+
+## D-161 — 2026-10-16 — Every pickup has a sound
+**Decision:** Every pickup plays a soft rustle and knock (audio-3).
+**Who:** Justin ("Yes, every pickup")
+
+## D-162 — 2026-10-16 — Claim fences snap to the border
+**Decision:** Claim fences snap onto the claim circle (claims-12; extends D-157).
+**Who:** Justin ("Snap to border")
+
+## D-163 — 2026-10-16 — Lapsed claim fences stay as ruins
+**Decision:** When a claim lapses, its fences stay as ruins: they become ordinary fences, gates open to anyone, and they weather per D-046.
+**Who:** Justin ("Stay as ruins")
+
+## D-164 — 2026-10-16 — Heather blooms purple in late summer
+**Decision:** Heather blooms purple in late summer (Atmosphere and Environment seasonal visuals).
+**Who:** Justin ("Yes, purple bloom")
+
+## D-165 — 2026-10-16 — Sheep shape: A Cloud for now
+**Decision:** The PM went with Modeling's recommended sheep shape, A Cloud: soft merged lumps, legs about 30% shorter, no wool relief (follows D-158's sheep feedback). Justin may switch after the renders.
+**Who:** Justin ("No preference"); the PM picked Modeling's recommendation, A Cloud
