@@ -46,6 +46,10 @@ public partial class BuildingSystem : Node
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        // Drawn over trees and trunks, so the outline never hides behind one (the trees
+        // inside it are cleared once it is laid out anyway).
+        NoDepthTest = true,
+        RenderPriority = 1,
         AlbedoColor = new Color(0.85f, 1f, 0.8f, 0.35f),
     };
 
@@ -130,6 +134,21 @@ public partial class BuildingSystem : Node
             views[id + 1].HideUnbuilt();
             var (mx, mz) = Structures.ToWorld(at.X, at.Z, yaw + 0.5f, 1.2f, -0.3f);
             ShowMat(1, mx, mz, yaw + 0.5f);
+            return;
+        }
+        // --building-placing: laying out a lean-to, to check the ghost and its cost hint.
+        if (OS.GetCmdlineUserArgs().Contains("--building-placing"))
+        {
+            placing = true;
+            ghostYawTarget = ghostYaw = yaw;
+            MakeGhost();
+            return;
+        }
+        // --building-leanto: finished lean-tos seen from the ridge side and from behind.
+        if (OS.GetCmdlineUserArgs().Contains("--building-leanto"))
+        {
+            Put(StructureKind.LeanTo, 6f, -2.4f, 4, 1f, 0f);
+            Put(StructureKind.LeanTo, 6f, 2.4f, 4, 1f, Mathf.Pi);
             return;
         }
         // --building-house: a finished brick house and one going up, without the rest.
@@ -479,6 +498,10 @@ public partial class BuildingSystem : Node
             string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
+            // Out of what it still needs: say what to fetch, since G has nothing to add.
+            var missing = site.Needs.Where(n => n.Have < n.Need).ToList();
+            if (conn() is { } c && missing.Count > 0 && missing.All(n => Carried(c, (Item)n.Item) == 0))
+                text += "\nNeeds " + string.Join(" and ", missing.Select(n => $"{n.Need - n.Have} more {ItemName(n.Item, n.Need - n.Have)}"));
         }
         else if (UsePrompt() is { } use)
             text = use;
@@ -491,8 +514,10 @@ public partial class BuildingSystem : Node
 
     // --- Helpers ----------------------------------------------------------
 
-    // The server owns the costs; the prompt only lists the stage names here.
-    static string StageList(int kind) => string.Join(", then ", Structures.Shape(kind).Stages).ToLowerInvariant();
+    // What each stage takes, in order: "4 sticks, then 3 plant fiber, then ...".
+    static string StageList(int kind) =>
+        string.Join(", then ", Structures.StageCosts[kind].Select(stage =>
+            string.Join(" and ", stage.Select(c => $"{c.Count} {ItemName((ushort)c.Item, c.Count)}"))));
 
     static string ItemName(ushort item, uint count) =>
         Items.IsKnown(item) ? Items.Def((Item)item).Count(count).ToLowerInvariant() : "something";
