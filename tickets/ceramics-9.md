@@ -23,6 +23,8 @@ Numbers: Justin picked the lamp (D-147) with 30 min per tallow and self-refill f
 
 - 2026-10-16 21:45: ClayCheck --lamp with CLAYCHECK_TALLOW=1 PASSED on c9lamp8 (bench, 2 lamps + coil pot fired, refused without tallow, bot hunts a sheep with a spear (Animals' route 1), butchers, renders tallow in the pot, sets down and lights the lamp). Refill/G-feed not yet covered by the bot. Animals will add DebugGiveMeat later; the hunt is the fallback. Branch will need main merged again (#256 now kind 13) before the lamp PR.
 
+- 2026-10-16 22:25: #256 merged. Merged main (docs/CONTENT.md rule). PM chose option 3: kiln and storage jar are now found by StructureShape.Kiln / .Jar flags and ClayRules.KilnStructureKind / JarStructureKind are removed (full DeviceDef conversion gets its own ticket with Integration). ClayCheck --lamp (CLAYCHECK_TALLOW=1, hunts its own mutton) PASSED on c9lamp10; --kiln --jar PASSED on c9kj1 after the flag change; upgrade-check vs origin/main PASSED. Modeling's #287 adds the CookingMeshes hook in SimmerView; once it merges add the Tallow dish case there. Opening the lamp PR.
+
 ## Open questions / blockers
 - Animals answered 2026-10-16 20:08: use spear x2 + ButcherCarcass today (done in ClayCheck); DebugGiveMeat later.
 - Animals: Tallow takes Item 119 from the Ceramics range since it's rendered in a Ceramics pot; fine to move if Animals prefers.
