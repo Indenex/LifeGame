@@ -23,11 +23,12 @@ Per D-079 the Audio lane owns all sound and music. Done means: (1) the Atmospher
 - 2026-10-16 19:40: Messages crossed: UX/UI switched to my original contract and built ui-12 PR #128 (claude/ux-ui-options-xlrh2s, f92bff3, merges after #120) on SoundScape MasterVolume/MusicVolume/EffectsVolume/AmbienceVolume with SoundScape saving them; Godot Master bus stays 0 dB; they migrate an old [sound] volume into MasterVolume once. Reverted 2b15259 so that contract is back.
 - 2026-10-16 19:45: FINAL with UX/UI (after crossed messages): UX/UI's SoundLevels owns and saves all four levels; Master on Godot's Master bus with 4*s*s (0.5 = 0 dB, capped at +6 dB); UX writes SoundScape.MusicVolume/EffectsVolume/AmbienceVolume at startup and on change. SoundScape has no MasterVolume and saves no levels. Re-applied 2b15259. ui-12 PR #128 merges after #120. Do not change this contract again.
 - 2026-10-16 19:45: CI run https://github.com/Indenex/LifeGame/actions/runs/38946677177 green on 60c33c8 (server+load test, Linux, Windows). PR #120 merged by the PM. Follow-up: once ui-12 #128 (Options page) merges, ask Render (session_013qe8zPzzBHx9rFPEYoKMr5) for an in-game clip of work sounds and the sliders, delivered to the PM for Justin.
+- 2026-10-16 20:20: #128 (ui-12 Options page) merged. Render requested at main c09f9b8: an in-game clip of crafting, another player's work, and the Ambience/Effects sliders moved (fallback: an Options screenshot plus a SoundPreview clip), for the PM and Justin. Not in D-143's wipe window: craft_work upgrades cleanly.
 
 ## Open questions / blockers
 - Answered D-097: B, a little under the music.
-- UX/UI builds the Options page sliders against SoundScape's four properties: ui-12 PR #128, merges after #120.
+- (#128 merged: SoundLevels owns the sliders; Master on Godot's bus.)
 - (#66 merged; #97 folded in, either merge order works.)
 
 ## Next step
-When #128 merges, send Render an in-game clip request (crafting at a camp in the morning, another player working nearby, sliders moved on the Options page), delivered to the PM.
+Wait for Render's in-game clip (requested at c09f9b8) to reach the PM; take any changes Justin asks for as a new audio ticket.
