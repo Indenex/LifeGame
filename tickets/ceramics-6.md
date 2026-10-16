@@ -21,6 +21,7 @@ Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed
 - 2026-10-16: items 1-4 done in cf5cc32; server, client build. Bindings: tools/gen-bindings.sh was refused by the sandbox (its rm -rf); ran its generate line directly on a fresh clone.
 - 2026-10-16: ClayCheck --jar added (implies --kiln); --ceramics-demo=jar row (wet, leather-hard, dry, kiln-fired jar, coil pot for scale). Running ClayCheck --jar on scratch db c6jar1.
 - 2026-10-16 17:11: PM: Justin approved ceramics-6 with these numbers (D-066). Asked the PM to confirm kiln-only vs the 60% pit crack first mentioned. Upgrade check vs origin/main passed locally (no wipe).
+- 2026-10-16 17:57: CI run https://github.com/Indenex/LifeGame/actions/runs/38941856742 GREEN on f9c7f56 (server + load test, Linux and Windows clients). Green sha sent to the PM.
 - 2026-10-16 17:45: PR #105 opened; Render requested e9544db (demo=jar row, placed jar opened). Waiting on CI.
 - 2026-10-16 17:41: ClayCheck --jar on c6jar2 PASSED end to end (campfire refuses jar, kiln fires 3 whole, jar q60 set down, stores and gives back a stick, 6 stacks). Merged main bdeaf3b; server, client, ClayCheck build.
 - 2026-10-16 17:26: ClayCheck --jar on c6jar1 passed through jar-placed (campfire refused the jar, kiln fired 3 whole, jar q60 set down); failed at the store step only because ClayCheck didn't subscribe to basket_item. Fixed; rerunning on c6jar2.
@@ -32,4 +33,4 @@ Numbers: Justin approved the storage jar with the lane's numbers (D-066, relayed
 - Building lane: new StructureKind.StorageJar appended in shared/Structures.cs and a cost row in Building.cs StageCosts (small hooks, same as the kiln). Messaged House building (session_01RrKHUxWRH973Ndnxsad9nv) 2026-10-16; they OK'd the hooks and take StructureKind 7+. When main has #61 (stage costs move to `Structures.StageCosts` in shared/Structures.cs), move the jar's row there on the main merge and drop it from Building.cs.
 
 ## Next step
-Wait for CI on PR #105 (head e9544db); when green, send the PM the green sha. If main gets Building's #61, merge main and move the jar's StageCosts row into Structures.StageCosts.
+Wait for the PM to merge PR #105 (green on f9c7f56; later head commits are ticket-only). If main gets Building's #61 first, merge main and move the jar's StageCosts row into Structures.StageCosts. Then ask the PM for the next ceramics milestone.
