@@ -23,9 +23,10 @@ D-075: every number starts low and grows slowly, with faster gains through about
 
 ## Progress log
 - 2026-10-16 17:45: listed Crafting's numbers and sent the proposal to the PM.
+- 2026-10-16 17:50: PM: drop Q1 (linear rank effects stay), keep Q4; Q2 and Q3 go to Justin.
 
 ## Open questions / blockers
-- Waiting on Justin's picks for 1 to 4 (via the PM).
+- Q1 dropped and Q4 kept as is (PM, 2026-10-16 17:43: D-086 mastery stays about 6 h, D-081 fun first with some realism). Q2 (craft times) and Q3 (tool quality) are with Justin in the PM's next batch; until then the current numbers stay.
 
 ## Next step
-When the PM relays the answers, apply them here: shared/Processes.cs Seconds; add `Progress.Curve` in shared/Processes.cs; tool speed in Crafting.cs StartCraft. Then open a PR.
+When the PM relays the answers, apply Q2 (Seconds in shared/Processes.cs) and Q3 (tool-quality speed in Crafting.cs StartCraft), then open a PR.
