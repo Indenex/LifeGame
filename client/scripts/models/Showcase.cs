@@ -83,13 +83,13 @@ public partial class Showcase : Node3D
     {
         foreach (var p in people)
         {
-            Swing(p, HumanRig.ThighL, -0.45f);
-            Swing(p, HumanRig.ShinL, 0.15f);
-            Swing(p, HumanRig.ThighR, 0.35f);
-            Swing(p, HumanRig.ShinR, 0.5f);
-            Swing(p, HumanRig.UpperArmL, 0.35f);
-            Swing(p, HumanRig.UpperArmR, -0.4f);
-            Swing(p, HumanRig.ForearmR, -0.3f);
+            Swing(p, HumanRig.HipL, -0.45f);
+            Swing(p, HumanRig.KneeL, 0.15f);
+            Swing(p, HumanRig.HipR, 0.35f);
+            Swing(p, HumanRig.KneeR, 0.5f);
+            Swing(p, HumanRig.ShoulderL, 0.35f);
+            Swing(p, HumanRig.ShoulderR, -0.4f);
+            Swing(p, HumanRig.ElbowR, -0.3f);
         }
     }
 

@@ -13,7 +13,10 @@ Every model in LifeGame is built in code today (SurfaceTool/ArrayMesh in `Avatar
 - 2026-10-16 17:25: started on `claude/model-1`; read Avatar.cs, Sheep.cs, Look.cs, StructureModel.cs. Render request for baseline (player, sheep, hut) sent to the Render lane.
 - 2026-10-16 18:05: style prototypes pushed (65b8100): `client/scripts/models/` MeshKit (lofts, ellipsoids, leaf blades; one skinned mesh per figure), HumanRig (15-bone player skeleton, shared with Animation), HumanFigure and SheepFigure in three styles (A Carved, B Soft, C Natural), and `Showcase.tscn`, a standalone scene with no server. Local check: dotnet build green; renders checked with Godot under xvfb + lavapipe (Vulkan). Render requested 65b8100 (style options).
 
+- 2026-10-16 18:25: rig contract with Animation (session_019roNRWQBPw4ozNLDhzseig, claude/anim-1-player-animation): their bone names and tree (Hips, Spine, Neck, Head, ShoulderL/ElbowL/HandL, ShoulderR/ElbowR/HandR, HipL/KneeL/FootL, HipR/KneeR/FootR; rest at joints, zero rotations, arms down). They proposed Node3D pivots; I proposed the same tree as Skeleton3D bones with rigid weights (1 draw call per player); waiting for their yes. HumanRig renamed to match; `PlayerModel.Build()` returns the Skeleton3D with a `ToolR` BoneAttachment3D on HandR (shaft along -Y, head toward +Z).
+
 ## Open questions / blockers
+- Animation lane: Skeleton3D bones (my proposal) or Node3D pivots (theirs); default Skeleton3D until they answer.
 - Sent to the PM for Justin: style A Carved (recommended) / B Soft / C Natural; pipeline: procedural C# (recommended) / Blender-made glTF.
 
 ## Style options (for Justin)

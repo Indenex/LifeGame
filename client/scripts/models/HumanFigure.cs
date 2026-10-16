@@ -78,15 +78,14 @@ public static class HumanFigure
         float thigh = (hipY - 0.02f - ankleY) * 0.5f;
         float wristY = hipY - 0.04f - (s.Heads - 5f) * 0.035f;
         float arm = shoulderY - wristY;
-        float chestY = MeshKit.Lerp(hipY, shoulderY, 0.55f);
-        var j = HumanRig.Place(hipY, chestY, neckY, s.ShoulderX, shoulderY, s.HipX, arm * 0.53f, arm * 0.47f, thigh, 0f, ankleY);
+        float waistY = MeshKit.Lerp(hipY, shoulderY, 0.35f);
+        var j = HumanRig.Place(hipY, waistY, neckY, chin + 0.03f, s.ShoulderX, shoulderY, s.HipX, arm * 0.53f, arm * 0.47f, thigh, 0f, ankleY);
 
         var k = new MeshKit(s.Flat);
         float b = s.Bulk;
         float pelvisW = s.HipX + 0.065f;
 
         // Torso in two parts, so the chest can bend over the hips.
-        float waistY = MeshKit.Lerp(hipY, shoulderY, 0.35f);
         k.Bone(HumanRig.Hips).Paint(Look.Skin);
         k.Loft(new Vector3(0, hipY - 0.1f, 0), new Vector3(0, waistY + 0.03f, 0), new MeshKit.Ring[]
         {
@@ -94,7 +93,7 @@ public static class HumanFigure
             new(0.3f, pelvisW, 0.112f * b),
             new(1f, s.ShoulderX * 0.7f, 0.1f * b, 0.004f),
         }, s.TorsoSides, 0.4f);
-        k.Bone(HumanRig.Chest).Paint(Look.Skin);
+        k.Bone(HumanRig.Spine).Paint(Look.Skin);
         k.Loft(new Vector3(0, waistY - 0.02f, 0), new Vector3(0, neckY + 0.01f, 0), new MeshKit.Ring[]
         {
             new(0f, s.ShoulderX * 0.7f, 0.1f * b, 0.004f),
@@ -105,12 +104,13 @@ public static class HumanFigure
         }, s.TorsoSides, 0.3f);
 
         // Neck and head.
-        k.Bone(HumanRig.Head).Paint(Look.Skin);
+        k.Bone(HumanRig.Neck).Paint(Look.Skin);
         k.Loft(new Vector3(0, neckY - 0.03f, -0.005f), new Vector3(0, chin + 0.04f, 0.0f), new MeshKit.Ring[]
         {
             new(0f, 0.05f * b, 0.05f * b),
             new(1f, 0.045f * b, 0.048f * b),
         }, s.LimbSides, 0.2f);
+        k.Bone(HumanRig.Head);
         if (s.Flat)
         {
             // Carved: a block of a head in a few clean planes, narrow at the chin,
@@ -155,7 +155,7 @@ public static class HumanFigure
         // Arms.
         for (int side = 0; side < 2; side++)
         {
-            int u = side == 0 ? HumanRig.UpperArmL : HumanRig.UpperArmR;
+            int u = side == 0 ? HumanRig.ShoulderL : HumanRig.ShoulderR;
             Vector3 sh = j.At[u], el = j.At[u + 1], wr = j.At[u + 2];
             k.Bone(u).Paint(Look.Skin);
             k.Ellipsoid(sh + new Vector3(-Mathf.Sign(sh.X) * 0.02f, -0.035f, 0), new Vector3(0.062f, 0.07f, 0.064f) * b, s.LimbSides, s.Flat ? 4 : 6);
@@ -185,7 +185,7 @@ public static class HumanFigure
         // Legs and feet.
         for (int side = 0; side < 2; side++)
         {
-            int t = side == 0 ? HumanRig.ThighL : HumanRig.ThighR;
+            int t = side == 0 ? HumanRig.HipL : HumanRig.HipR;
             Vector3 hip = j.At[t], knee = j.At[t + 1], ankle = j.At[t + 2];
             k.Bone(t).Paint(Look.Skin);
             k.Loft(hip + Vector3.Up * 0.05f, knee, new MeshKit.Ring[] { new(0f, 0.085f * b, 0.092f * b), new(0.5f, 0.075f * b, 0.08f * b, 0.005f), new(1f, 0.054f * b, 0.057f * b) }, s.LimbSides);
