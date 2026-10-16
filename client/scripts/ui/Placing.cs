@@ -59,7 +59,7 @@ public sealed class MockPlaceLink : IPlaceLink
 // right after a placeable craft, the Use prompt offers "Place the coil pot" for a few
 // seconds. The ghost is the item's own model, see-through and pale green like
 // Building's placement ghost, amber where it can't go, and follows the cursor on the
-// ground within reach. Release (or click) sets it down; T, Shift+T or the scroll wheel
+// ground within reach (World.Reach). Release (or click) sets it down; T, Shift+T or the scroll wheel
 // turn it; Esc, or dropping it back on the bag, puts it back. Main sets the references.
 public partial class Placing : Node
 {
@@ -71,7 +71,8 @@ public partial class Placing : Node
     public Action<string> Note = _ => { };
 
     static readonly StringName NUse = "use", NRotate = "build_rotate", NNext = "build_next";
-    const float Reach = 3f, OfferFor = 10f;
+    // A little inside the server's reach, so a ghost at the edge is never refused.
+    const float Reach = World.Reach - 0.15f, OfferFor = 10f;
     static readonly Color Fits = new(0.85f, 1f, 0.8f, 0.38f), Blocked = new(1f, 0.6f, 0.5f, 0.3f);
 
     public bool Active => thing != null;

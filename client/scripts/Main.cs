@@ -80,7 +80,7 @@ public partial class Main : Node3D
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
-        // Setting crafted things down from the bag (ui-16, crafting-20).
+        // Setting crafted things down from the bag (ui-16, crafting-21).
         placing.Terrain = terrain;
         placing.Me = me;
         placing.CameraRig = cameraRig;
@@ -334,6 +334,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
