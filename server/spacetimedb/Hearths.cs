@@ -31,6 +31,8 @@ public static partial class Module
     // fuel there burns longer (scale > 1). Building implements both.
     static partial void BuiltHearthSpotHook(ReducerContext ctx, float x, float z, ref (float X, float Z)? spot);
     static partial void FireFuelScaleHook(ReducerContext ctx, float x, float z, ref float scale);
+    // Before a fire is checked for burning out, a hearth fire may top up its fuel (D-149).
+    static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil);
 
     static (float X, float Z) FireSpot(ReducerContext ctx, PlayerPos pos)
     {

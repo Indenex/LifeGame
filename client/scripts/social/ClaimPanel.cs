@@ -12,6 +12,7 @@ namespace LifeGame;
 public partial class ClaimPanel : CanvasLayer
 {
     public DbConnection? Conn;
+    public Func<uint> MyId = () => 0;
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
     // True while the owner is typing a name, so Main stops walking.
@@ -239,6 +240,17 @@ public partial class ClaimPanel : CanvasLayer
             row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality)));
             content.AddChild(row);
         }
+        // claims-11: the last few comings and goings, newest first.
+        long now = SocialLayer.NowMicros;
+        var recent = Conn.Db.MyClaimStashLog.Iter().Where(e => e.ClaimId == claim.Id)
+            .OrderByDescending(e => e.At.MicrosecondsSinceUnixEpoch).Take(5).ToList();
+        foreach (var e in recent)
+        {
+            if (!Items.IsKnown(e.Item)) continue;
+            string who = e.PlayerId == MyId() ? "You" : e.PlayerName;
+            content.AddChild(Note($"{Social.StashLine(who, Items.Def((Item)e.Item), e.Count)}   ·   {Ago(now - e.At.MicrosecondsSinceUnixEpoch)}"));
+        }
+
         var carried = Conn.Db.MyInventory.Iter().OrderBy(i => i.Item).ThenByDescending(i => i.Quality).ToList();
         if (carried.Count > 0)
         {
@@ -273,6 +285,17 @@ public partial class ClaimPanel : CanvasLayer
         if (!Items.IsKnown(item)) return "Something";
         var def = Items.Def((Item)item);
         return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
+    }
+
+    // "just now", "4 min ago", "2 h ago", "3 days ago".
+    static string Ago(long micros)
+    {
+        long sec = micros / 1_000_000;
+        if (sec < 60) return "just now";
+        if (sec < 3600) return $"{sec / 60} min ago";
+        if (sec < 86400) return $"{sec / 3600} h ago";
+        long d = sec / 86400;
+        return d == 1 ? "a day ago" : $"{d} days ago";
     }
 
     // claims-5: "Tended 2 days ago · stands 1 more day".
