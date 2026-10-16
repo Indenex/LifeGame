@@ -1,7 +1,7 @@
 # survival-6: Survival numbers against D-075 (start low, grow slowly)
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-numbers (main after #75 merged)
 PR: (none yet)
 
@@ -39,4 +39,4 @@ Milestone context (PM): M2 "the first evening", a new player reaches a fired pot
 - None of the four picks remain (D-099, D-100, D-101, D-103). Survival-3's carry-limit question is folded into item 1.
 
 ## Next step
-Wait for CI on the survival-6 PR; green: send the sha to Integration (D-095) and the PM.
+None: merged as #124.
