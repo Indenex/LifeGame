@@ -91,6 +91,9 @@ public static partial class Module
         // When a lamb was born, or 0 for animals placed as adults.
         [Default(0L)]
         public long BornAt;
+        // A lamb's mother, whom it trails until it is grown; 0 for none.
+        [Default(0UL)]
+        public ulong MotherId;
     }
 
     [SpacetimeDB.Table(Accessor = "Flock")]
@@ -172,7 +175,7 @@ public static partial class Module
         }
     }
 
-    static void SpawnAnimal(ReducerContext ctx, Flock flock, float x, float z, bool leader, byte growth, long now)
+    static void SpawnAnimal(ReducerContext ctx, Flock flock, float x, float z, bool leader, byte growth, long now, ulong mother = 0)
     {
         var (ax, az) = AnimalNearestDry(x, z);
         var animal = ctx.Db.Animal.Insert(new Animal
@@ -198,6 +201,7 @@ public static partial class Module
             StateUntil = now + (long)(ctx.Rng.NextDouble() * 6_000_000),
             Health = 100,
             BornAt = growth < 100 ? now : 0,
+            MotherId = mother,
         });
     }
 
@@ -279,7 +283,8 @@ public static partial class Module
         // order sheep are processed in does not matter.
         var before = members.ToArray();
         var leader = before.FirstOrDefault(m => m.Mind.Leader);
-        if (!leader.Mind.Leader) leader = before[0];
+        if (!leader.Mind.Leader) leader = before.FirstOrDefault(m => m.Body.Growth >= 100);
+        if (!leader.Mind.Leader && leader.Body.Growth < 100) leader = before[0];
 
         for (int i = 0; i < before.Length; i++)
         {
@@ -289,7 +294,11 @@ public static partial class Module
             var was = body;
 
             AnimalSense(ref mind, body, before, watchers, out bool calmedByStillPlayer);
-            AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
+            var mother = AnimalFindMother(ref mind, body, before);
+            if (mother is { } ewe)
+                LambDecide(ctx, ref body, ref mind, ewe, now);
+            else
+                AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, now);
             AnimalMove(ref body, ref mind, before, i);
             RegrowFleece(ref body, mind, now);
             AnimalGrowAndHeal(ref body, ref mind, now);

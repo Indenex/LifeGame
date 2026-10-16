@@ -1,9 +1,9 @@
 # animals-2: Shearing, then meat and hide
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
+Status: done
 Branch: claude/animals-sheep-5gkntn
-PR: (opening, shearing part)
+PR: #23 (merged with animals-3)
 
 ## Goal
 Shearing: Use (G) on a calm sheep within reach while carrying a Cutting tool gives Raw wool (item 193) at the tool's quality, capped by skill. The sheep visibly turns thin and pink, and the fleece regrows over about 3 in-game days. Nervous sheep won't stand still, so you sneak up first (D-026).
@@ -22,4 +22,4 @@ Then (D-039): killing with a weapon or cutting tool turns into a short chase; bu
 - Skills: `animal.shear` maps to no skill yet, so wool quality is capped at the novice cap (35). Skills lane to map it (e.g. a husbandry skill).
 
 ## Next step
-PM merges #23 once CI is green; then killing/butchering per D-039 (animals-3).
+Done: merged in #23.
