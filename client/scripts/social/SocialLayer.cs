@@ -375,6 +375,17 @@ public partial class SocialLayer : Node
     // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
     public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
 
+    // claims-12: the centre of a claim you belong to whose border is near this point (fences snap to it).
+    public (float x, float z)? ClaimBorderNear(float x, float z)
+    {
+        if (conn == null) return null;
+        long now = NowMicros;
+        foreach (var c in conn.Db.Claim.Iter())
+            if (c.ExpiresAt.MicrosecondsSinceUnixEpoch > now && Social.NearClaimBorder(c.X, c.Z, x, z) && HasRights(c))
+                return (c.X, c.Z);
+        return null;
+    }
+
     bool HasRights(Claim c) =>
         IsMine(c) || (conn?.Db.ClaimMember.Iter().Any(m => m.ClaimId == c.Id && m.PlayerId == myId) ?? false);
 

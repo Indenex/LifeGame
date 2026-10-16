@@ -176,6 +176,19 @@ Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != nu
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
+// claims-12: a fence near the border snaps onto it, both ends on the circle.
+{
+    bool ok = true;
+    foreach (var (px, pz) in new[] { (19.4f, 0.6f), (-3f, 20.8f), (13f, -14.5f) })
+    {
+        var (fx, fz, yaw) = Social.SnapToClaimBorder(100f, 50f, 100f + px, 50f + pz);
+        var (e1, e2) = Structures.FenceEnds(fx, fz, yaw);
+        foreach (var (ex, ez) in new[] { e1, e2 })
+            ok &= MathF.Abs(MathF.Sqrt((ex - 100f) * (ex - 100f) + (ez - 50f) * (ez - 50f)) - Social.ClaimRadius) < 0.05f;
+    }
+    Check(ok && Social.NearClaimBorder(0, 0, 19f, 0) && !Social.NearClaimBorder(0, 0, 10f, 0), "a fence near the border snaps onto it");
+}
+
 // claims-10: whisper and shout.
 Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
     && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
