@@ -1,7 +1,7 @@
 # bugfix-18: a dry pot beside a fire can't be picked up
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-18
 PR: #108
 
@@ -19,9 +19,10 @@ Fix: shared/ClayRules.FireCanTakePot(fuelSecondsLeft, potsInFire). The server's 
 - 2026-10-16: Render lane on e80c6cf: with a full ring and sticks in hand the prompt read "Feed the fire", and G fed a stick (pick-up at 12 lost to feeding at 20). Fixed: the pick-up now goes with the firing offers at 22 unless the fire only needs fuel and you carry some. Client builds.
 - 2026-10-16: Render on 6f697c9: (a) works (full ring, sticks in hand: "Pick up the pot"; pot in bag, sticks unchanged). It also showed "Set pots in the fire" offered on a full ring. Fixed: FirePotsOffer only offers when FireCanTakePot holds (also for low fuel, so Feed the fire wins there too).
 - 2026-10-16: merged main (#105 storage jar: kiln-only forms are never fired by a campfire; kept in both TendClay and TendOffer). Server and client build.
+- 2026-10-16: CI run https://github.com/Indenex/LifeGame/actions/runs/38952504567 green on 98e4d40; merged as #108. Render confirmed the full-ring case and the Set pots fix on 6e56862; the low-fuel frames were still being re-rendered at merge.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on the PR, record the run link here, then send the PM the green sha.
+None; merged.
