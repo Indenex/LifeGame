@@ -30,6 +30,7 @@ public partial class BuildingSystem
         "SELECT * FROM basket_item",
         // A storage jar's size follows its quality (Ceramics, D-093).
         "SELECT * FROM structure_progress",
+        "SELECT * FROM sleeping_mat",
     };
 
     void BindUse(DbConnection c)
@@ -42,6 +43,7 @@ public partial class BuildingSystem
             if (views.TryGetValue(d.StructureId, out var v)) v.SetDoor(null, false, animate: false);
         };
         RegisterUse(c);
+        BindMats(c);
         c.Db.StructureTouch.OnInsert += (_, t) => Touched(t);
         c.Db.StructureTouch.OnUpdate += (_, _, t) => Touched(t);
         c.Db.StructureTouch.OnDelete += (_, t) => touched.Remove(t.StructureId);
@@ -151,8 +153,13 @@ public partial class BuildingSystem
         });
     }
 
-    static uint Carried(DbConnection c, Item item) =>
-        (uint)c.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Sum(i => i.Count);
+    static uint Carried(DbConnection c, Item item)
+    {
+        uint n = 0;
+        foreach (var i in c.Db.MyInventory.Iter())
+            if (i.Item == (ushort)item) n += i.Count;
+        return n;
+    }
 
     // The door costs show beside the doorway when you can't hang one yet.
     string? UsePrompt()
