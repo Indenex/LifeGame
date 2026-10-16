@@ -6,7 +6,7 @@ namespace LifeGame;
 // The Esc menu's Options page (D-097): one slider per kind of sound, with music on or
 // off under Music. The levels live in SoundLevels, which saves them and hands them on
 // (the Audio lane eases each change so dragging never clicks); new players start each
-// at half. Under Graphics, how far the distant land reaches (env-9). Esc or Back
+// at half. Under Graphics, how far the world is drawn (env-9). Esc or Back
 // returns to the menu.
 public partial class OptionsPage : Control
 {
@@ -82,13 +82,13 @@ public partial class OptionsPage : Control
             }
         }
 
-        // How far the land shows beyond the loaded chunks (env-9); slow PCs turn it down.
+        // How far the world is drawn (env-9); slow PCs turn it down.
         var graphics = new Label { Text = "Graphics", HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(graphics, 15, 0.6f);
         column.AddChild(graphics);
         distantLand = ControlsPage.TextButton(DistantLandText(), () =>
         {
-            FarLand.Level = (FarLand.Reach)(((int)FarLand.Level + 1) % FarLand.ReachNames.Length);
+            ViewDistance.Setting = (ViewDistance.Level)(((int)ViewDistance.Setting + 1) % ViewDistance.Names.Length);
             distantLand.Text = DistantLandText();
         });
         distantLand.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
@@ -99,7 +99,7 @@ public partial class OptionsPage : Control
         column.AddChild(back);
     }
 
-    static string DistantLandText() => $"Distant land: {FarLand.ReachNames[(int)FarLand.Level]}";
+    static string DistantLandText() => $"View distance: {ViewDistance.Names[(int)ViewDistance.Setting]}";
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 

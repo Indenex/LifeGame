@@ -8,15 +8,17 @@ namespace LifeGame;
 
 // env-9 measurement: --view-bench builds every chunk out to each radius in turn,
 // all at once, and prints what it costs: build time, instances, triangles and draw
-// calls (before culling; the camera sees roughly a third of them). Then quits.
+// calls (before culling; the camera sees roughly a third of them), with grass tufts
+// only where WantsTufts puts them. Then quits.
 public partial class Terrain
 {
-    static bool BenchWanted => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--view-bench");
+    static readonly bool BenchWanted = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--view-bench");
 
     readonly Dictionary<Mesh, long> benchTris = new();
 
     void RunViewBench(int chunkX, int chunkZ)
     {
+        center = (chunkX, chunkZ);
         foreach (int r in new[] { 3, 4, 5, 6, 8, 10, 12 })
         {
             long tris = 0, grassTris = 0, instances = 0, draws = 0, shadowDraws = 0;
