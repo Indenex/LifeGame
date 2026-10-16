@@ -69,6 +69,10 @@ public static class Look
         Add("snow_cover", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
+        // Distant land (Environment's FarLand sets the radius, 0 when off) melts into
+        // the fog colour (Atmosphere) over its outer quarter.
+        Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -268,6 +272,10 @@ public static class Look
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
         global uniform float world_seconds;
+        // How far the distant land reaches round the player (0 when off), and the
+        // colour of the fog it melts into at its rim.
+        global uniform float far_land_radius;
+        global uniform vec3 fog_tint;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -462,6 +470,14 @@ public static class Look
                 vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
                 // Relief height is in tenths of a meter at most, so bumps stay subtle.
                 NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);
+
+                // The rim of the distant land melts into the fog, so its edge never
+                // shows against the sky, even on a clear day.
+                if (far_land_radius > 0.0) {
+                    float rim = smoothstep(0.75 * far_land_radius, far_land_radius, length(world_pos.xz - player_position.xz));
+                    ALBEDO *= 1.0 - rim;
+                    EMISSION = fog_tint * rim;
+                }
 
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
