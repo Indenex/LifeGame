@@ -215,7 +215,7 @@ while (CountOf(Item.Fiber) > 6)
     var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
     uint had = CountOf(Item.Fiber);
     lastError = null;
-    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality);
+    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality, 1);
     Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
     if (lastError != null) Fail($"stashing fiber: {lastError}");
 }
@@ -313,12 +313,12 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     // Wear travels with the tool into the claim's stash and back.
     WalkTo(marker.X, marker.Z);
     lastError = null;
-    conn.Reducers.StashItem(claim.Id, spentAxe.Item, spentAxe.Quality);
+    conn.Reducers.StashItem(claim.Id, spentAxe.Item, spentAxe.Quality, 1);
     Pump(() => lastError != null || CountOf(Item.StoneAxe) == 0, 5, "the axe into the stash");
     if (lastError != null) Fail($"stashing the axe: {lastError}");
     var stashedAxe = conn.Db.MyClaimStash.Iter().First(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.StoneAxe);
     if (stashedAxe.Wear != spentAxe.Wear) Fail($"the stash lost the axe's wear ({spentAxe.Wear} -> {stashedAxe.Wear})");
-    conn.Reducers.TakeFromStash(claim.Id, stashedAxe.Item, stashedAxe.Quality);
+    conn.Reducers.TakeFromStash(claim.Id, stashedAxe.Item, stashedAxe.Quality, 1);
     Pump(() => CountOf(Item.StoneAxe) == 1, 5, "the axe back out of the stash");
     var backAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
     if (backAxe.Wear != spentAxe.Wear) Fail($"the axe came back with different wear ({spentAxe.Wear} -> {backAxe.Wear})");
@@ -464,6 +464,9 @@ Structure BuildHere(StructureKind kind)
         lastError = null;
         conn.Reducers.Build(s.Id);
         Pump(() => false, 0.35f, null);
+        // WalkTo stops up to 1.5 m short of its target, so approaching the site from the far
+        // side can leave the bot just outside the work reach: step up to the building and go on.
+        if (lastError != null && lastError.Contains("Out of reach")) WalkTo(s.X, s.Z);
     }
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
@@ -490,7 +493,9 @@ void OffRocks(Fire f)
 {
     for (int i = World.CellOf(f.X) - 2; i <= World.CellOf(f.X) + 2; i++)
         for (int j = World.CellOf(f.Z) - 2; j <= World.CellOf(f.Z) + 2; j++)
-            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null)
+            // A building clears the ground under it, so a hut's hearth can stand where a boulder was.
+            if (Rocks.LiesAt(i, j) && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j)) is null
+                && !conn.Db.Structure.Iter().Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, i, j, 0.4f)))
             {
                 var (rx, rz) = Rocks.Center(i, j);
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
@@ -559,12 +564,23 @@ void WalkTo(float tx, float tz)
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 1.5f) break;
         float step = Math.Min(d - 1f, 0.5f);
-        x += dx / d * step;
-        z += dz / d * step;
+        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
+        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        {
+            x += dx / d * step;
+            z += dz / d * step;
+        }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
     }
-    Pump(() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f, 3, "position to settle");
+    for (var settle = Stopwatch.StartNew(); ; )
+    {
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
+        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
+        conn.Reducers.Move(x, z, 0f);
+        Pump(() => false, 0.1f, null);
+    }
 }
 
 void Pump(Func<bool> until, float seconds, string? what)

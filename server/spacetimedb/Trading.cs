@@ -198,6 +198,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WatchTrades(ReducerContext ctx, TradeWatchTimer timer)
     {
+        RequireServer(ctx);
         foreach (var trade in ctx.Db.Trade.Iter().ToList())
         {
             bool online = ctx.Db.Player.PlayerId.Find(trade.AId) is { Online: true } && ctx.Db.Player.PlayerId.Find(trade.BId) is { Online: true };

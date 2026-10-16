@@ -176,6 +176,19 @@ Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != nu
 Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
+// claims-12: a fence near the border snaps onto it, both ends on the circle.
+{
+    bool ok = true;
+    foreach (var (px, pz) in new[] { (19.4f, 0.6f), (-3f, 20.8f), (13f, -14.5f) })
+    {
+        var (fx, fz, yaw) = Social.SnapToClaimBorder(100f, 50f, 100f + px, 50f + pz);
+        var (e1, e2) = Structures.FenceEnds(fx, fz, yaw);
+        foreach (var (ex, ez) in new[] { e1, e2 })
+            ok &= MathF.Abs(MathF.Sqrt((ex - 100f) * (ex - 100f) + (ez - 50f) * (ez - 50f)) - Social.ClaimRadius) < 0.05f;
+    }
+    Check(ok && Social.NearClaimBorder(0, 0, 19f, 0) && !Social.NearClaimBorder(0, 0, 10f, 0), "a fence near the border snaps onto it");
+}
+
 // claims-10: whisper and shout.
 Check(Social.VoiceOf("/w hi") == Social.Voice.Whisper && Social.VoiceBody("/W  hi ") == "hi" && Social.VoiceOf("/s hey") == Social.Voice.Shout
     && Social.VoiceOf("/sky") == Social.Voice.Say && Social.RangeOf(Social.Voice.Shout) == Social.ShoutRange, "/w whispers and /s shouts");
@@ -247,12 +260,16 @@ Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "member pick up")
 Check(b.Count(Item.Stone) == 1, $"member B can pick up inside the claim ({b.LastError ?? "ok"})");
 Walk(b, claim.X + 1, claim.Z);
 b.LastError = null;
-b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone) || b.LastError != null, 5, "stash");
 Check(a.Conn.Db.MyClaimStash.Iter().Any(s => s.Item == (ushort)Item.Stone), $"B's stone shows in the owner's stash ({b.LastError ?? "ok"})");
-b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality);
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 999), "have that many", "you can't take more than the stash holds");
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 0), "Nothing", "a stash move needs a count");
+b.LastError = null;
+b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => b.Count(Item.Stone) == 1 || b.LastError != null, 5, "take");
 Check(b.Count(Item.Stone) == 1, "B can take from the stash");
+ExpectError(b, () => b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 999), "that many", "you can't stash more than you carry");
 Check(Wait(() => a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count > 0)
     && a.Conn.Db.MyClaimStashLog.Iter().Any(e => e.PlayerId == b.PlayerId && e.Count < 0), 5), "the owner sees who left and took the stone");
 Check(Social.StashLine("Tam", Items.Def(Item.Stick), -2) == "Tam took 2 sticks", "a stash line reads well");
@@ -327,15 +344,25 @@ Pump(() => TradeFor(b)?.State == Social.TradeOpen, 5, "open to walk away");
 a.LastTradeEnd = null;
 Walk(a, b.X + Social.TradeBreakDistance + 2, b.Z);
 Check(Wait(() => a.LastTradeEnd == "apart" && TradeFor(a) == null, 5), $"walking apart ends a trade ({a.LastTradeEnd ?? "-"})");
-b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality);
+b.Conn.Reducers.StashItem(claim.Id, (ushort)Item.Stone, stone.Quality, 1);
 Pump(() => b.Count(Item.Stone) == 0, 5, "stash again");
 
 // A member may lay out a building on the claim.
+// The land is hilly now, so the first spot may be too steep or wet: try spots round the claim's
+// middle until the server accepts one. Any other refusal (rights, reach) still fails the check.
 float hx = claim.X + 6, hz = claim.Z + 5;
-Walk(b, hx - 2, hz);
-b.LastError = null;
-b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
-Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+for (int ring = 0, tries = 0; ring < 3 && tries < 20; ring++)
+    for (int k = 0; k < 8; k++, tries++)
+    {
+        float r = 6f + 4f * ring, ang = MathF.Tau * k / 8f + 0.6f;
+        hx = claim.X + MathF.Cos(ang) * r;
+        hz = claim.Z + MathF.Sin(ang) * r;
+        Walk(b, hx - 2, hz);
+        b.LastError = null;
+        b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, hx, hz, 0);
+        Pump(() => b.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity) || b.LastError != null, 5, "member lays out");
+        if (b.LastError == null || !(b.LastError.Contains("steep") || b.LastError.Contains("wet"))) { ring = 99; break; }
+    }
 var hut = b.Conn.Db.Structure.Iter().FirstOrDefault(s => s.Kind == StructureKind.LeanTo && s.Owner == b.Conn.Identity);
 Check(hut != null, $"member B can lay out a building in the claim ({b.LastError ?? "ok"})");
 
@@ -349,7 +376,7 @@ Check(true, "owner can allow fighting");
 // Removing B locks them out again.
 a.Conn.Reducers.RemoveClaimMember(b.PlayerId);
 Pump(() => !b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.PlayerId), 5, "removal");
-ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality), "not yours", "removed member cannot open the stash");
+ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone, stone.Quality, 1), "not yours", "removed member cannot open the stash");
 
 // The land's owner can clear anything on it; nobody else can take down the owner's things.
 Walk(b, site.X + 1.5f, site.Z);

@@ -94,6 +94,9 @@ namespace LifeGame.Shared
         public float FailBelow;
         // The station it is made at; None is a hand craft from the C menu.
         public StationKind Station;
+        // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
+        // guess from the id; set it on new processes.
+        public WorkMotion Motion;
     }
 
     public static class Processes
@@ -156,6 +159,19 @@ namespace LifeGame.Shared
                 Id = "cook.stew", Name = "Simmer mutton stew", Doing = "Setting a pot of stew by the fire", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton), new Ingredient(Item.Berries, 2) },
                 Seconds = 2, Outcome = Outcome.Placed, Makes = Item.PotOfStew,
+            },
+            new ProcessDef
+            {
+                // Mutton fat rendered in a pot of water by a fire (ceramics-9): lamp fuel.
+                Id = "cook.tallow", Name = "Render tallow", Doing = "Setting a pot of mutton fat by the fire", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
+                Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
+            },
+            new ProcessDef
+            {
+                Id = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawVenison) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedVenison,
             },
             new ProcessDef
             {
@@ -232,6 +248,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
+                Seconds = 8, Makes = Item.ScrapedHide,
+            },
+            new ProcessDef
+            {
                 Id = "hide.stretch", Name = "Stretch a hide to dry", Doing = "Lacing the hide onto a rack", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.ScrapedHide), new Ingredient(Item.Stick, 2), new Ingredient(Item.Cordage) },
                 Seconds = Base(2, 0.5f), Outcome = Outcome.Placed, Station = StationKind.DryingRack,
@@ -260,8 +282,15 @@ namespace LifeGame.Shared
                 Seconds = Base(2, 2f), Makes = Item.WoolCloth, Station = StationKind.Spindle,
             },
 
-            // Clothing (Animals lane): cut and laced at the leather drying rack (D-139), worn in
-            // the equipment panel, slows the cold (see Clothing.cs).
+            // Clothing (Animals lane): worn in the equipment panel, slows the cold (see
+            // Clothing.cs). Foot wraps are cut and laced at the leather drying rack (D-139);
+            // the tunic is sewn from wool cloth at the crafting table.
+            new ProcessDef
+            {
+                Id = "sew.wool_tunic", Name = "Sew a wool tunic", Doing = "Cutting and sewing a tunic", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.WoolCloth, 3), new Ingredient(Item.Yarn) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 2f), Makes = Item.WoolTunic, Station = StationKind.Table,
+            },
             new ProcessDef
             {
                 Id = "sew.leather_wraps", Name = "Make leather foot wraps", Doing = "Cutting and lacing foot wraps", Tier = 2,
@@ -313,6 +342,12 @@ namespace LifeGame.Shared
                 Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
                 Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay) },
+                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {

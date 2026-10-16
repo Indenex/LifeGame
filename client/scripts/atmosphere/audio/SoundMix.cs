@@ -54,28 +54,29 @@ public sealed class SoundMix
     // Master level. Raised from 1.3 (audio-1): Justin heard the mix as quiet.
     public float Volume = 1.7f;
 
-    readonly Noise noise;
-    readonly WindVoice wind;
-    readonly FoliageVoice foliage;
-    readonly RainVoice rain;
-    readonly ThunderVoice thunder;
-    readonly FireVoice fire;
-    readonly Birds birds;
-    readonly NightVoices night;
-    readonly WaterVoice water;
-    readonly Frogs frogs;
-    readonly DayInsects insects;
-    readonly Cues cues;
-    readonly StreamVoice stream;
-    readonly Deer deer;
-    readonly Steps steps;
-    readonly WorkVoice work;
+    Noise noise = null!;
+    WindVoice wind;
+    FoliageVoice foliage;
+    RainVoice rain;
+    ThunderVoice thunder;
+    FireVoice fire;
+    Birds birds;
+    NightVoices night;
+    WaterVoice water;
+    Frogs frogs;
+    DayInsects insects;
+    Cues cues;
+    StreamVoice stream;
+    Deer deer;
+    Steps steps;
+    WorkVoice work;
     // Other players at work nearby, by player id (D-072).
     readonly Dictionary<uint, WorkVoice> others = new();
+    int seed;
     readonly List<uint> quiet = new();
-    readonly Sheep sheep;
-    readonly Music music;
-    readonly Reverb reverb;
+    Sheep sheep;
+    Music music;
+    Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
     float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
     float[] stepL = Array.Empty<float>(), stepR = Array.Empty<float>();
@@ -90,6 +91,15 @@ public sealed class SoundMix
     public SoundMix(int rate, int seed = 1)
     {
         Rate = rate;
+        this.seed = seed;
+        Build();
+    }
+
+    // Makes every voice and filter from scratch. Called at the start, and again if the
+    // output ever goes non-finite, so one bad value can never silence the game for good.
+    void Build()
+    {
+        var rate = Rate;
         var rng = new Random(seed);
         noise = new Noise((uint)seed * 2654435761u + 1u);
         wind = new WindVoice(rate, noise);
@@ -110,19 +120,59 @@ public sealed class SoundMix
         sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
+        others.Clear();
+        quiet.Clear();
+        wallL = default;
+        wallR = default;
+        cover = 0f;
+        ambience = 0.01f;
+    }
+
+    // Reports a fault in the synth (an exception, or a block that went non-finite and
+    // was silenced and rebuilt). The game logs it; SoundPreview's soak test prints it.
+    public static Action<string>? Fault;
+    public int Faults { get; private set; }
+    // For the soak test: make the next block bad, to prove the mix recovers.
+    internal bool InjectNaN, InjectThrow;
+
+    void Report(string what)
+    {
+        Faults++;
+        if (Faults <= 5) Fault?.Invoke(what);
+    }
+
+    static float Fin(float x, float fallback = 0f) => float.IsFinite(x) ? x : fallback;
+    static float Unit(float x) => Math.Clamp(Fin(x), 0f, 1f);
+    static float Side(float x) => Math.Clamp(Fin(x), -1f, 1f);
+
+    // Inputs come from the game; a NaN or a wild value must not get into a filter.
+    void Sane()
+    {
+        Daylight = Unit(Daylight); Rain = Unit(Rain); Wind = Unit(Wind); Wetness = Unit(Wetness); Cover = Unit(Cover);
+        TimeOfDay = Fin(TimeOfDay, 0.5f); TimeOfDay -= MathF.Floor(TimeOfDay);
+        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan);
+        Water = Unit(Water); WaterPan = Side(WaterPan); Stream = Unit(Stream); StreamPan = Side(StreamPan);
+        Year = Fin(Year, 0.3f); SnowCover = Unit(SnowCover);
+        MasterLevel = Unit(MasterLevel); MusicLevel = Unit(MusicLevel); EffectsLevel = Unit(EffectsLevel); AmbienceLevel = Unit(AmbienceLevel);
+    }
+
+    static bool Finite(float[] a, int n)
+    {
+        for (int i = 0; i < n; i++) if (!float.IsFinite(a[i])) return false;
+        return true;
     }
 
     // How hard the wind is gusting right now, 0 to 1, so grass and trees can move
     // with what is heard. Written by the synth thread; a stale read is harmless.
     public float Gust => wind.Gust;
 
-    public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
+    public void Step(Ground ground, float wetness) => steps.Trigger(ground, Unit(wetness));
 
     // Coming down from a jump: both feet at once on whatever is underfoot, heavier
     // and lower the harder the landing (strength 0 to 1).
     public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f)
     {
-        strength = Math.Clamp(strength, 0f, 1f);
+        strength = Unit(strength); gain = Math.Clamp(Fin(gain), 0f, 4f); pan = Side(pan);
         steps.Trigger(ground, Wetness, (1.1f + 0.9f * strength) * gain, 0.85f - 0.2f * strength, Math.Clamp(pan - 0.2f, -1f, 1f));
         steps.Trigger(ground, Wetness, (1.0f + 0.8f * strength) * gain, 0.95f - 0.2f * strength, Math.Clamp(pan + 0.2f, -1f, 1f));
     }
@@ -130,7 +180,7 @@ public sealed class SoundMix
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, gain, pan);
+    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -158,8 +208,8 @@ public sealed class SoundMix
     public void OtherPlace(uint player, float gain, float pan)
     {
         if (!others.TryGetValue(player, out var voice)) return;
-        voice.Gain = gain;
-        voice.Side = pan;
+        voice.Gain = Math.Clamp(Fin(gain), 0f, 4f);
+        voice.Side = Side(pan);
     }
 
     // Which sound a craft process makes, from its id ("knap.flake" -> Knap).
@@ -180,16 +230,39 @@ public sealed class SoundMix
 
     // A sheep somewhere around the listener: pan from -1 (left) to 1 (right),
     // gain from distance, startled when the flock bolts.
-    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(pan, gain, startled, lamb);
+    public void Bleat(float pan, float gain, bool startled, bool lamb = false) => sheep.Trigger(Side(pan), Math.Clamp(Fin(gain), 0f, 4f), startled, lamb);
 
     // A deer somewhere around the listener (pan -1 to 1, gain from distance, far 0 to 1).
-    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, pan, gain, far);
+    public void DeerCry(DeerCall call, float pan, float gain, float far) => deer.Trigger(call, Side(pan), Math.Clamp(Fin(gain), 0f, 4f), Unit(far));
 
     // Thunder after a flash: delay in seconds (sound is slower than light), gain
     // from 0 to 1, near from 0 (a distant rumble) to 1 (a crack overhead).
-    public void Thunder(float delay, float gain, float near) => thunder.Trigger(delay, gain, near);
+    public void Thunder(float delay, float gain, float near) => thunder.Trigger(Math.Clamp(Fin(delay), 0f, 30f), Math.Clamp(Fin(gain), 0f, 2f), Unit(near));
 
+    // Never throws and never returns a non-finite sample: a fault is reported once, the
+    // block is silenced and the whole mix is rebuilt, so the sound comes back by itself.
     public void Render(float[] left, float[] right, int count)
+    {
+        Sane();
+        string stage = "start";
+        try
+        {
+            RenderCore(left, right, count, ref stage);
+            if (InjectThrow) { InjectThrow = false; throw new InvalidOperationException("injected"); }
+            if (InjectNaN) { InjectNaN = false; left[0] = float.NaN; }
+            if (Finite(left, count) && Finite(right, count)) return;
+            Report($"SoundMix produced a non-finite block after stage '{stage}'; rebuilt the mix");
+        }
+        catch (Exception e)
+        {
+            Report($"SoundMix.Render threw after stage '{stage}': {e}");
+        }
+        Array.Clear(left, 0, count);
+        Array.Clear(right, 0, count);
+        Build();
+    }
+
+    void RenderCore(float[] left, float[] right, int count, ref string stage)
     {
         if (sendL.Length < count)
         {
@@ -261,6 +334,7 @@ public sealed class SoundMix
             sendL[i] *= ambienceGain;
             sendR[i] *= ambienceGain;
         }
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "ambience (wind, foliage, rain, thunder, fire, birds, night, insects, sheep, deer, water, stream, frogs)"; throw new InvalidOperationException("non-finite ambience"); }
         float stepGain = StepGain(ambience) * effectsGain, workGain = WorkGain(ambience) * effectsGain;
         Array.Clear(stepL, 0, count);
         Array.Clear(stepR, 0, count);
@@ -281,8 +355,11 @@ public sealed class SoundMix
             left[i] += stepL[i] * stepGain + workL[i] * workGain;
             right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "effects (steps, work, cues, others)"; throw new InvalidOperationException("non-finite mix before music"); }
         music.Render(left, right, sendL, sendR, count, MusicOn, SliderGain(MusicLevel), night01);
+        if (!Finite(left, count) || !Finite(right, count)) { stage = "music"; throw new InvalidOperationException("non-finite after music"); }
         reverb.Process(sendL, sendR, left, right, count);
+        stage = "reverb and master";
 
         for (int i = 0; i < count; i++)
         {
@@ -398,7 +475,11 @@ public sealed class SoundMix
         }
     }
 
-    static float Pan(float pan, bool left) => left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    static float Pan(float pan, bool left)
+    {
+        pan = Side(pan);
+        return left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    }
 
     static float Range(Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
 
@@ -408,7 +489,7 @@ public sealed class SoundMix
     sealed class WindVoice
     {
         readonly int rate;
-        readonly Noise noise;
+        Noise noise = null!;
         BandPass bandL, bandR;
         Lowpass rumbleL, rumbleR, gustSmooth;
         float gust = 0.5f, gustTarget = 0.5f, level;
@@ -515,10 +596,15 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         Lowpass hissLowL, hissLowR, hissTopL, hissTopR, washL, washR, roarL, roarR, muffleL, muffleR;
+        Lowpass roofHiL, roofHiR, roofLoL, roofLoR;
         readonly List<Drop> drops = new();
         float level, cover;
+        readonly Lowpass[] dropHpL = new Lowpass[3], dropHpR = new Lowpass[3], dropLpL = new Lowpass[3], dropLpR = new Lowpass[3];
+        float[][] dropL = { Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>() }, dropR = { Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>() };
 
-        record struct Drop(float Freq, float Decay, float Amp, float Pan, float Age, float Phase, float Bend);
+        // Kind: 0 a drop on leaves, 1 a drip off a branch, 2 a tap on the roof. Each is a short
+        // burst of noise with no pitch, shaped by its kind's filter, so rain is plain hiss and patter.
+        record struct Drop(int Kind, float Decay, float Amp, float Pan, float Age);
 
         public RainVoice(int rate, Noise noise, Random rng)
         {
@@ -531,6 +617,7 @@ public sealed class SoundMix
         {
             float low = Lowpass.Coef(1400f, rate), top = Lowpass.Coef(7000f, rate), wash = Lowpass.Coef(350f, rate);
             float roarCoef = Lowpass.Coef(160f, rate), muffle = Lowpass.Coef(900f, rate);
+            float roofHi = Lowpass.Coef(750f, rate), roofLo = Lowpass.Coef(150f, rate);
             float levelCoef = Lowpass.Coef(0.3f, rate), coverCoef = Lowpass.Coef(0.8f, rate);
             float dt = 1f / rate;
             for (int i = 0; i < n; i++)
@@ -550,42 +637,67 @@ public sealed class SoundMix
                 l[i] += openL * (1f - cover) + muffleL.Process(openL, muffle) * cover * 0.5f;
                 r[i] += openR * (1f - cover) + muffleR.Process(openR, muffle) * cover * 0.5f;
 
+                // Heavy rain on a roof thickens into a steady low drumming: plain noise
+                // around 150 to 750 Hz, with no pulse or pitch.
+                float heavy = Smooth(0.45f, 1f, level) * cover;
+                float bodyL = roofHiL.Process(nl, roofHi) - roofLoL.Process(nl, roofLo);
+                float bodyR = roofHiR.Process(nr, roofHi) - roofLoR.Process(nr, roofLo);
+                l[i] += bodyL * heavy * 0.12f;
+                r[i] += bodyR * heavy * 0.12f;
+
                 // Patter: single drops on leaves, sparse in a drizzle, a crowd in a storm
                 // where the hiss carries them.
                 float patter = (20f + 380f * level * level) * Smooth(0.02f, 0.15f, level) * (1f - cover);
                 if (rng.NextDouble() < patter * dt)
-                    drops.Add(new Drop(Range(rng, 1800f, 5200f), Range(rng, 0.003f, 0.009f),
-                        Range(rng, 0.012f, 0.04f) * (0.6f + 0.6f * level), Range(rng, -0.9f, 0.9f), 0f, 0f, 0.6f));
+                    drops.Add(new Drop(0, Range(rng, 0.002f, 0.006f),
+                        Range(rng, 0.012f, 0.04f) * (0.6f + 0.6f * level), Range(rng, -0.9f, 0.9f), 0f));
                 // Drips off the branches: during rain and while the leaves are still wet.
                 float drips = (rain > 0.02f ? 1.5f + 3f * level : 0f) + Math.Max(0f, wetness - level) * 4f;
                 if (rng.NextDouble() < drips * (1f - cover * 0.7f) * dt)
-                    drops.Add(new Drop(Range(rng, 500f, 1100f), Range(rng, 0.02f, 0.04f), Range(rng, 0.03f, 0.07f), Range(rng, -0.8f, 0.8f), 0f, 0f, 0.6f));
+                    drops.Add(new Drop(1, Range(rng, 0.008f, 0.02f), Range(rng, 0.03f, 0.07f), Range(rng, -0.8f, 0.8f), 0f));
                 // On the roof: low, close taps that thicken into a drumming.
                 // Softer than the open rain, so stepping inside always quietens it.
                 float roof = cover * (20f + 200f * level) * Smooth(0.02f, 0.1f, level);
                 if (rng.NextDouble() < roof * dt)
-                    drops.Add(new Drop(Range(rng, 180f, 480f), Range(rng, 0.006f, 0.014f), Range(rng, 0.015f, 0.04f), Range(rng, -0.6f, 0.6f), 0f, 0f, 0.2f));
+                    drops.Add(new Drop(2, Range(rng, 0.004f, 0.01f), Range(rng, 0.015f, 0.04f), Range(rng, -0.6f, 0.6f), 0f));
             }
 
+            if (dropL[0].Length < n)
+                for (int k = 0; k < 3; k++) { dropL[k] = new float[n]; dropR[k] = new float[n]; }
+            for (int k = 0; k < 3; k++) { Array.Clear(dropL[k], 0, n); Array.Clear(dropR[k], 0, n); }
             for (int d = drops.Count - 1; d >= 0; d--)
             {
                 var drop = drops[d];
                 int start = (int)(rng.NextDouble() * n * 0.98);
                 float pl = Pan(drop.Pan, true), pr = Pan(drop.Pan, false);
-                // Each drop sits at a random spot in this block, then rings down.
+                var sumL = dropL[drop.Kind];
+                var sumR = dropR[drop.Kind];
+                // Each drop sits at a random spot in this block, then dies away.
                 for (int i = drop.Age == 0f ? start : 0; i < n; i++)
                 {
                     float env = MathF.Exp(-drop.Age / drop.Decay);
                     if (env < 0.001f) break;
-                    // Drips fall in pitch as they ring, like water off a leaf.
-                    drop.Phase += 2f * MathF.PI * drop.Freq * (1f + drop.Bend * env) * dt;
-                    float s = MathF.Sin(drop.Phase) * env * drop.Amp;
-                    l[i] += s * pl;
-                    r[i] += s * pr;
+                    float s = noise.Next() * env * drop.Amp;
+                    sumL[i] += s * pl;
+                    sumR[i] += s * pr;
                     drop.Age += dt;
                 }
                 if (MathF.Exp(-drop.Age / drop.Decay) < 0.001f) drops.RemoveAt(d);
                 else drops[d] = drop;
+            }
+            // Shape each kind: leaves ring bright (above 2 kHz), drips sit mid (400 to 1500 Hz),
+            // the roof is a dull thud (below 700 Hz). None is pitched.
+            float[] hpCut = { 2000f, 400f, 0f }, lpCut = { 7000f, 1500f, 700f }, gain = { 1.6f, 1.8f, 2.0f };
+            for (int k = 0; k < 3; k++)
+            {
+                float hp = Lowpass.Coef(Math.Max(hpCut[k], 1f), rate), lp = Lowpass.Coef(lpCut[k], rate);
+                for (int i = 0; i < n; i++)
+                {
+                    float xl = dropL[k][i], xr = dropR[k][i];
+                    if (hpCut[k] > 0f) { xl -= dropHpL[k].Process(xl, hp); xr -= dropHpR[k].Process(xr, hp); }
+                    l[i] += dropLpL[k].Process(xl, lp) * gain[k];
+                    r[i] += dropLpR[k].Process(xr, lp) * gain[k];
+                }
             }
         }
     }
@@ -600,7 +712,7 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         readonly List<Roll> rolls = new();
-        Lowpass lowL, lowR, crackL, crackR;
+        Lowpass lowL, lowR, crackL, crackR, snapLow, tearLow;
 
         record struct Roll(float Delay, float Gain, float Near, float Age, float Length, float Pan, float Seed);
 
@@ -619,6 +731,7 @@ public sealed class SoundMix
             if (rolls.Count == 0) return;
             float dt = 1f / rate;
             float lowCoef = Lowpass.Coef(110f, rate), crackCoef = Lowpass.Coef(2500f, rate);
+            float snapCoef = Lowpass.Coef(2500f, rate), tearCoef = Lowpass.Coef(1800f, rate);
             for (int d = rolls.Count - 1; d >= 0; d--)
             {
                 var roll = rolls[d];
@@ -638,8 +751,21 @@ public sealed class SoundMix
                     float crack = roll.Near * MathF.Exp(-t / 0.18f) * 0.6f;
                     float cl = crackL.Process(noise.Next(), crackCoef) * crack, cr = crackR.Process(noise.Next(), crackCoef) * crack;
                     float g = roll.Gain * swell * wobble * 0.35f;
-                    l[i] += (rumbleL * g + cl * roll.Gain) * pl;
-                    r[i] += (rumbleR * g + cr * roll.Gain) * pr;
+                    // A close strike (near over 0.5) cracks: a bright snap in the first few
+                    // hundredths of a second, then a ripping tear that dies in half a second.
+                    float sharp = Smooth(0.5f, 0.9f, roll.Near);
+                    float snap = 0f, tear = 0f;
+                    if (sharp > 0f && t < 0.7f)
+                    {
+                        float bright = noise.Next();
+                        bright -= snapLow.Process(bright, snapCoef);
+                        snap = bright * MathF.Min(1f, t / 0.0015f) * MathF.Exp(-t / 0.025f) * 0.9f;
+                        float flutter = 0.5f + 0.5f * MathF.Sin(t * 2f * MathF.PI * (38f + 20f * u) + roll.Seed);
+                        tear = tearLow.Process(noise.Next(), tearCoef) * 2.2f * flutter * MathF.Exp(-t / 0.22f);
+                    }
+                    float sharpGain = roll.Gain * sharp * 0.32f;
+                    l[i] += (rumbleL * g + cl * roll.Gain + (snap + tear) * sharpGain) * pl;
+                    r[i] += (rumbleR * g + cr * roll.Gain + (snap + tear) * sharpGain) * pr;
                 }
                 if (roll.Age - roll.Delay >= roll.Length) rolls.RemoveAt(d);
                 else rolls[d] = roll;

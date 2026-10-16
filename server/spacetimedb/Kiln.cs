@@ -124,6 +124,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void FinishKiln(ReducerContext ctx, KilnTimer timer)
     {
+        RequireServer(ctx);
         if (ctx.Db.Kiln.StructureId.Find(timer.KilnId) is not { } kiln) return;
         var load = kiln.Load ?? new List<KilnPot>();
         // Taken down while firing: the pots still come out, and the state goes.

@@ -64,17 +64,57 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         if (now - mind.StruckAt < StrikeEveryMicros) return;
 
-        // A spear takes two good strikes, a stone blade about three.
+        // A spear takes two good strikes, a stone blade about three (a deer needs a few
+        // more: 100 health). Every strike does its normal damage; a sneak attack (see
+        // SneakCrit) may add a large bonus.
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
+        int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
         WearTool(ctx, (spear ?? blade)!.Value);
-        if (damage >= mind.Health)
+        HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
+    }
+
+    // Justin's rule (Q13): a sneak attack (the hunter is sneaking and the animal is not
+    // alarmed) has a chance, from Stalking skill, to land a large bonus on top of normal
+    // damage, shown as a crit. Returns the extra damage, 0 when it doesn't trigger.
+    // Chance and bonus come from the shared progression (Progression.Effect, tuned in
+    // shared/Progression.cs); animal.kill trains and reads Stalking.
+    static int SneakCrit(ReducerContext ctx, uint playerId, Animal animal, int damage)
+    {
+        if (animal.State == AnimalState.Run || ctx.Db.PlayerSneaking.PlayerId.Find(playerId) == null) return 0;
+        int rank = SkillRank(ctx, playerId, Skills.Kill);
+        float chance = Progression.Effect(EffectKind.SneakCritChance, rank);
+        float bonus = Progression.Effect(EffectKind.SneakCritBonus, rank);
+        return ctx.Rng.NextDouble() < chance ? (int)MathF.Round(damage * bonus) : 0;
+    }
+
+    // One hit landed, for the client's flash (and a distinct burst when it was a crit).
+    [SpacetimeDB.Table(Accessor = "AnimalHit", Public = true, Event = true)]
+    public partial struct AnimalHit
+    {
+        public ulong AnimalId;
+        public float X;
+        public float Z;
+        // Where the hitter stood, so the client can flinch the animal away from it.
+        public float FromX;
+        public float FromZ;
+        public bool Crit;
+        public bool Killed;
+    }
+
+    // Damage lands: it dies if that is all the health it has, otherwise it is wounded
+    // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
+    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
+    {
+        bool kills = damage >= mind.Health;
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills });
+        if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
             return;
         }
 
-        float dx = animal.X - pos.X, dz = animal.Z - pos.Z;
+        float dx = animal.X - fromX, dz = animal.Z - fromZ;
         float d = MathF.Max(0.01f, MathF.Sqrt(dx * dx + dz * dz));
         ctx.Db.AnimalMind.AnimalId.Update(mind with
         {
@@ -84,7 +124,7 @@ public static partial class Module
             FleeX = dx / d,
             FleeZ = dz / d,
         });
-        float lx = animal.X + dx / d * StartleLeap, lz = animal.Z + dz / d * StartleLeap;
+        float lx = animal.X + dx / d * leap, lz = animal.Z + dz / d * leap;
         if (!AnimalCanStand(lx, lz) || AnimalStepBlocked(ctx, animal.X, animal.Z, lx, lz)) (lx, lz) = (animal.X, animal.Z);
         ctx.Db.Animal.Id.Update(animal with
         {
@@ -154,10 +194,14 @@ public static partial class Module
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
         WearTool(ctx, tool);
 
-        // A grown sheep gives a few cuts and a hide; a lamb gives one small cut.
+        // A grown sheep gives a few cuts and a hide; a lamb gives one small cut. A deer
+        // gives venison, its hide and an antler; a fawn one small cut.
         bool grown = carcass.Growth >= 80;
-        for (int i = 0; i < (grown ? 3 : 1); i++) DropNear(ctx, carcass, Item.RawMutton, quality);
-        if (grown) DropNear(ctx, carcass, Item.SheepHide, quality);
+        bool deer = carcass.Species == AnimalSpecies.Deer;
+        var meat = deer ? Item.RawVenison : Item.RawMutton;
+        for (int i = 0; i < (grown ? (deer ? 2 : 3) : 1); i++) DropNear(ctx, carcass, meat, quality);
+        if (grown) DropNear(ctx, carcass, deer ? Item.DeerHide : Item.SheepHide, quality);
+        if (grown && deer) DropNear(ctx, carcass, Item.Antler, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }
 

@@ -20,6 +20,9 @@ namespace LifeGame.Shared
         public bool Solid;
         // Where a hung door goes: the doorway's center on the local +Z axis, 0 when it has none.
         public float DoorwayZ;
+        // Where smoke from a fire inside leaves the building: metres above the ground at the
+        // centre, 0 for none (Atmosphere draws the plume; atmosphere-19, D-206).
+        public float SmokeY;
         // Hours untouched before it starts to weather (D-046); 0 uses WeatherAfterHours.
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
@@ -29,8 +32,13 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
+        public bool Kiln, Jar;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
+        // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
+        // mud-brick house and the log cabin share the walls, door and fire-warms-the-room rule.
+        public bool Room;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -54,6 +62,7 @@ namespace LifeGame.Shared
                 Clearance = 2.2f,
                 RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
                 DoorwayZ = 1.7f,
+                SmokeY = 2.9f,
                 Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
             },
             // A land claim's marker post (Claims.cs makes the claim when it is finished).
@@ -68,6 +77,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
+                Kiln = true,
                 Name = "Updraft kiln",
                 Round = true, Radius = 0.85f,
                 Clearance = 1.2f,
@@ -93,6 +103,8 @@ namespace LifeGame.Shared
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
                 WeatherAfter = 168,
+                Room = true,
+                SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
             // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
@@ -100,6 +112,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Jar = true,
                 Round = true, Radius = 0.32f,
                 Clearance = 0.6f,
                 Solid = true,
@@ -173,6 +186,20 @@ namespace LifeGame.Shared
                 Clearance = 1.0f,
                 Station = StationKind.PottersBench,
                 Stages = new[] { "Bench" },
+            },
+            // A log cabin (building-10, D-151): the forest's way to the same home as the
+            // mud-brick house, with the same room, shelter and weathering, built of logs.
+            new StructureShape
+            {
+                Name = "Log cabin",
+                HalfWidth = 2.4f, HalfDepth = 2.0f,
+                Clearance = 3.2f,
+                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                DoorwayZ = 1.8f,
+                WeatherAfter = 168,
+                Room = true,
+                SmokeY = 3.3f,
+                Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
             // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
             new StructureShape
@@ -273,6 +300,14 @@ namespace LifeGame.Shared
             {
                 new[] { (Item.Log, 1u), (Item.Stone, 2u) },
             },
+            // Log cabin: Sill, Log walls, Rafters, Thatch (D-151)
+            new[]
+            {
+                new[] { (Item.Stone, 4u), (Item.Log, 4u) },
+                new[] { (Item.Log, 16u) },
+                new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                new[] { (Item.Fiber, 14u) },
+            },
             // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
             new[]
             {
@@ -313,11 +348,13 @@ namespace LifeGame.Shared
 
         // Stacks a finished store of this kind and quality holds.
         public static int StoreStacksFor(int kind, byte quality) =>
-            kind == ClayRules.JarStructureKind ? JarStacks(quality) : Shape(kind).StoreStacks;
+            Shape(kind).Jar ? JarStacks(quality) : Shape(kind).StoreStacks;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
         public const double WeatherAfterHours = 72, WeatherForHours = 24;
+
+        public static bool IsRoom(int kind) => Shape(kind).Room;
 
         // Whether a finished building of this kind takes a door, and where its doorway is.
         public static bool HasDoorway(int kind) => Shape(kind).DoorwayZ > 0;
@@ -350,12 +387,14 @@ namespace LifeGame.Shared
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
-            ClayRules.KilnStructureKind => ClayRules.KilnProcess,
+            _ when Shape(kind).Kiln => ClayRules.KilnProcess,
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             2 => Social.MarkProcess,
             4 => WeaveProcess,
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
+            _ when Shape(kind).Room => stage >= 3 ? RoofProcess : FrameProcess,
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
             // Hearth: laying the stone ring is framing; the clay surround is daub work.
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
@@ -435,7 +474,7 @@ namespace LifeGame.Shared
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
                 return doorShut || MathF.Abs(MathF.Atan2(mx, mz)) > HutDoorHalfAngle;
             }
-            if (kind == 5)
+            if (Shape(kind).Room)
             {
                 bool inA = MathF.Abs(ax) < HouseWallX && MathF.Abs(az) < HouseWallZ;
                 bool inB = MathF.Abs(bx) < HouseWallX && MathF.Abs(bz) < HouseWallZ;

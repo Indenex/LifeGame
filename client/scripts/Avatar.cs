@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -27,9 +28,9 @@ public partial class Avatar : Node3D
         figure = body;
         AddChild(figure);
         animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
-        // Breath in the cold leaves the mouth (Head joint, or a "HeadAttach" bone attachment).
-        if ((figure.FindChild("HeadAttach", true, false) ?? figure.FindChild("Head", true, false)) is Node3D head)
-            head.AddChild(new Breath { Position = new Vector3(0, 0.03f, 0.17f) });
+        // Breath in the cold leaves the mouth, on the head bone's attachment.
+        if (figure.FindChild("HeadAttach", true, false) is Node3D head)
+            head.AddChild(new Breath { Position = PlayerModel.MouthAt });
 
         nameplate = new Label3D
         {
@@ -69,6 +70,15 @@ public partial class Avatar : Node3D
     // Use it for other players' jumps: their node glides toward the server position every
     // frame, which would pull a raised Y straight back down.
     public void SetAirHeight(float metres) => figure.Position = new Vector3(0, Mathf.Max(metres, 0f), 0);
+
+    // Shows a garment in a clothing slot (item 0: the slot's default), from worn_item.
+    public void Wear(byte slot, ushort item)
+    {
+        if (slot >= worn.Length || worn[slot] == item) return;
+        worn[slot] = item;
+        PlayerModel.Wear((Skeleton3D)figure, slot, item);
+    }
+    readonly ushort[] worn = new ushort[2];
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 

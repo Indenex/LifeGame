@@ -97,6 +97,15 @@ public static partial class Module
         ctx.Db.Player.Identity.Update(player with { Name = name });
     }
 
+    // How much walking a player has banked (World.MoveAllowance). Private.
+    [SpacetimeDB.Table(Accessor = "MoveBank")]
+    public partial struct MoveBank
+    {
+        [PrimaryKey]
+        public uint PlayerId;
+        public float Meters;
+    }
+
     // Clients predict movement locally and report where they are about ten times a second.
     // The server clamps each step to what the player could have walked since the last one,
     // then holds it until the next tick so all movement goes out in one batch.
@@ -111,15 +120,20 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
-        float dt = Math.Min(SecondsBetween(state.LastMoveAt, ctx.Timestamp), 1f);
-        float allowed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender) * dt + World.MoveSlack;
+        float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
+        var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
+        float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
         float dx = x - fromX, dz = z - fromZ;
         float dist = MathF.Sqrt(dx * dx + dz * dz);
         if (dist > allowed)
         {
             x = fromX + dx / dist * allowed;
             z = fromZ + dz / dist * allowed;
+            dist = allowed;
         }
+        var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
+        if (bank is null) ctx.Db.MoveBank.Insert(left);
+        else ctx.Db.MoveBank.PlayerId.Update(left);
 
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
@@ -132,6 +146,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ApplyMoves(ReducerContext ctx, MoveTickTimer timer)
     {
+        RequireServer(ctx);
         foreach (var input in ctx.Db.MoveInput.Iter().ToList())
         {
             ctx.Db.PlayerPos.PlayerId.Update(new PlayerPos
@@ -226,6 +241,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RespawnItems(ReducerContext ctx, RespawnTimer timer)
     {
+        RequireServer(ctx);
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -261,6 +277,13 @@ public static partial class Module
             ChunkX = chunkX,
             ChunkZ = chunkZ,
         });
+    }
+
+    // Scheduled reducers are public, so a client could call them with a made-up timer row.
+    // Only the server's own scheduler may.
+    static void RequireServer(ReducerContext ctx)
+    {
+        if (!ctx.SenderAuth.IsInternal) throw new Exception("Only the server runs this");
     }
 
     static Player RequirePlayer(ReducerContext ctx) =>

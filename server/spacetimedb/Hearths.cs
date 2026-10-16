@@ -77,13 +77,17 @@ public static partial class Module
             for (int j = cz - 2; j <= cz + 2; j++)
             {
                 if (DepthAt(ctx, i, j) != 0) continue;
+                // Test the cheap shared lookups first; a building clears the ground under it
+                // (the client draws no boulder or tree there), checked only where one stands.
                 if (Rocks.LiesAt(i, j))
                 {
+                    if (UnderStructure(ctx, i, j)) continue;
                     var (rx, rz) = Rocks.Center(i, j);
                     if (Dist(rx, rz, x, z) < Rocks.Radius(i, j) + Fires.RingRadius) return false;
                 }
                 else if (Trees.GrowsAt(i, j))
                 {
+                    if (UnderStructure(ctx, i, j)) continue;
                     var (tx, tz) = Trees.Trunk(i, j);
                     if (Dist(tx, tz, x, z) < 0.4f + Fires.RingRadius) return false;
                 }
@@ -100,6 +104,10 @@ public static partial class Module
             }
         return true;
     }
+
+    // Whether a building's footprint covers this cell, as the client clears it (BuildingSystem.SetCleared).
+    static bool UnderStructure(ReducerContext ctx, int i, int j) =>
+        StructuresNear(ctx, i, j).Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, i, j, 0.4f));
 
     static ColdHearth? NearestColdHearth(ReducerContext ctx, float x, float z, float reach)
     {

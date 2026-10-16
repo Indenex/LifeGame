@@ -357,30 +357,53 @@ public static partial class Module
         RemoveClaim(ctx, claim);
     }
 
+    // claims-14: move a whole stack (or part of one) in one call; the stash panel's
+    // drag and drop sends the stack size. The bag's own limit still applies.
     [SpacetimeDB.Reducer]
-    public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality)
+    public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        if (count == 0) throw new Exception("Nothing to leave");
         var claim = RequireStashAccess(ctx, claimId);
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
-        RemoveFromStack(ctx, stack, 1);
-        if (FindStash(ctx, claim.Id, item, quality, stack.Wear) is { } row)
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + 1 });
-        else
-            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = 1, Wear = stack.Wear });
-        LogStash(ctx, claim.Id, item, 1);
+        uint carried = CarriedCount(ctx, ctx.Sender, (Item)item, quality);
+        if (carried == 0) throw new Exception("You are not carrying that");
+        if (carried < count) throw new Exception("You are not carrying that many");
+        // The most worn go first, and each keeps its wear (shared/Durability.cs).
+        uint left = count;
+        while (left > 0 && FindStack(ctx, ctx.Sender, (Item)item, quality) is { } stack)
+        {
+            uint n = Math.Min(left, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            if (FindStash(ctx, claim.Id, item, quality, stack.Wear) is { } row)
+                ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + n });
+            else
+                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear });
+            left -= n;
+        }
+        LogStash(ctx, claim.Id, item, (int)count);
     }
 
     [SpacetimeDB.Reducer]
-    public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality)
+    public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        if (count == 0) throw new Exception("Nothing to take");
         var claim = RequireStashAccess(ctx, claimId);
-        var row = FindStash(ctx, claim.Id, item, quality) ?? throw new Exception("The stash has none of that");
-        if (row.Count <= 1)
-            ctx.Db.ClaimStash.Id.Delete(row.Id);
-        else
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - 1 });
-        AddToInventory(ctx, ctx.Sender, (Item)item, 1, quality, row.Wear);
-        LogStash(ctx, claim.Id, item, -1);
+        uint held = 0;
+        foreach (var r in ctx.Db.ClaimStash.ByClaimItem.Filter((claim.Id, item)))
+            if (r.Quality == quality) held += r.Count;
+        if (held == 0) throw new Exception("The stash has none of that");
+        if (held < count) throw new Exception("The stash doesn't have that many");
+        uint left = count;
+        while (left > 0 && FindStash(ctx, claim.Id, item, quality) is { } row)
+        {
+            uint n = Math.Min(left, row.Count);
+            if (row.Count == n)
+                ctx.Db.ClaimStash.Id.Delete(row.Id);
+            else
+                ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - n });
+            AddToInventory(ctx, ctx.Sender, (Item)item, n, quality, row.Wear);
+            left -= n;
+        }
+        LogStash(ctx, claim.Id, item, -(int)count);
     }
 
     // Database owner only: how long markers stand untended. Applies to markers
@@ -406,6 +429,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DecayClaims(ReducerContext ctx, ClaimDecayTimer timer)
     {
+        RequireServer(ctx);
         foreach (var claim in ctx.Db.Claim.Iter().ToList())
             if (!IsStanding(ctx, claim))
                 RemoveClaim(ctx, claim);

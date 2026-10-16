@@ -27,6 +27,20 @@
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
+// Soak test (audio-hotfix-1): hours of game time of random weather, seasons and events
+// through the mix, checking every block stays finite and nothing throws.
+//   dotnet run -c Release -- --edges      (every setting at its limits; must report no faults)
+//   dotnet run -c Release -- --soak=6 [--seed=1] [--fuzz] [--inject]    (6 game hours)
+// --fuzz hands the mix NaN, infinite and out-of-range inputs; --inject makes bad blocks and
+// exceptions on purpose to prove the mix recovers.
+if (args.Contains("--edges")) Environment.Exit(Soak.Edges());
+if (args.FirstOrDefault(a => a.StartsWith("--soak=")) is { } soakArg)
+{
+    double hours = double.Parse(soakArg[7..], System.Globalization.CultureInfo.InvariantCulture);
+    int soakSeed = args.FirstOrDefault(a => a.StartsWith("--seed=")) is { } sa ? int.Parse(sa[7..]) : 1;
+    Environment.Exit(Soak.Run(hours, soakSeed, args.Contains("--fuzz"), args.Contains("--inject")));
+}
+
 bool music = !args.Contains("--no-music");
 // Slider positions, 0 to 1 (0.5 default): --master=0.7 --music= --effects= --ambience=
 float Slider(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}=")) is { } a
@@ -51,7 +65,7 @@ foreach (var scene in scenes)
         "drizzle" => (0.85f, 0.2f, 0.3f, 0.4f, 0.45f),
         "light" => (0.8f, 0.4f, 0.45f, 0.7f, 0.45f),
         "steady" or "roof" or "hut" => (0.75f, 0.65f, 0.6f, 1f, 0.45f),
-        "rain" or "storm" => (0.6f, 1f, 0.9f, 1f, 0.45f),
+        "rain" or "storm" or "crack" or "stormroof" => (0.6f, 1f, 0.9f, 1f, 0.45f),
         "dusk" => (0.35f, 0f, 0.3f, 0.2f, 0.76f),
         "fire" => (0f, 0f, 0.2f, 0.1f, 0.9f),
         "firerain" => (0.1f, 0.4f, 0.4f, 0.7f, 0.85f),
@@ -108,7 +122,7 @@ foreach (var scene in scenes)
         mix.Rain += (rain - mix.Rain) * k;
         mix.Wind += (wind - mix.Wind) * k;
         mix.Wetness += (wet - mix.Wetness) * k;
-        mix.Cover = parts[0] is "roof" or "hut" ? 1f : 0f;
+        mix.Cover = parts[0] is "roof" or "hut" or "stormroof" ? 1f : 0f;
         mix.TimeOfDay += (time - mix.TimeOfDay) * k;
         mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
         mix.FirePan = -0.3f;
@@ -159,6 +173,15 @@ foreach (var scene in scenes)
             if (At(7)) mix.Play(Cue.Jump);
             if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
             if (At(10)) mix.Step(Ground.Grass, 0f);
+        }
+        // Crack scene: close strikes, then a far one, in a storm.
+        if (parts[0] == "crack")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(2)) mix.Thunder(0.3f, 1f, 0.95f);
+            if (At(9)) mix.Thunder(0.8f, 0.8f, 0.7f);
+            if (At(16)) mix.Thunder(4f, 0.6f, 0.1f);
         }
         // Deer scene (autumn dusk): bark close, bark far, roar far, roar near, then a herd bolting.
         if (parts[0] == "deer")
