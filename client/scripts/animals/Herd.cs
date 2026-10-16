@@ -64,6 +64,7 @@ public partial class Herd : Node3D
         conn.Db.AnimalHit.OnInsert += (_, h) =>
         {
             if (animals.TryGetValue(h.AnimalId, out var node)) node.Flinch(h.Crit, new Vector3(h.FromX, 0f, h.FromZ));
+            HitPop.Show(new Vector3(h.X, terrain.HeightAt(h.X, h.Z), h.Z), h.Crit, h.Killed);
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });

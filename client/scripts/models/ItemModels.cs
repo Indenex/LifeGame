@@ -45,19 +45,21 @@ public static class ItemModels
         return mesh;
     }
 
-    // In the hand, in the ToolR frame; falls back to the ground look, centered.
+    // In the hand, in the ToolR frame; items without a model here (the clay pots)
+    // use their ground look, held by the top like a pot by its rim.
     public static Mesh HeldMesh(Item item)
     {
         if (Held.TryGetValue(item, out var mesh) && mesh != null) return mesh;
-        mesh = Make(item, true) ?? Centered(ItemLook.MeshFor(item));
+        mesh = Make(item, true) ?? HungFromTop(ItemLook.MeshFor(item));
         Held[item] = mesh;
         return mesh;
     }
 
-    static Mesh Centered(Mesh source)
+    static Mesh HungFromTop(Mesh source)
     {
         var mesh = new ArrayMesh();
-        var shift = -source.GetAabb().GetCenter();
+        var box = source.GetAabb();
+        var shift = new Vector3(-box.GetCenter().X, -box.End.Y, -box.GetCenter().Z);
         for (int s = 0; s < source.GetSurfaceCount(); s++)
         {
             var arrays = source.SurfaceGetArrays(s);

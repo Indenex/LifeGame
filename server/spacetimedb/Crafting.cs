@@ -69,6 +69,8 @@ public static partial class Module
     // Hooks for the skills system. It implements these in its own file; until it
     // does, the compiler drops the calls and every cap stays at 100.
     static partial void OnProcessPerformed(ReducerContext ctx, uint playerId, string processId, byte quality, bool failed);
+    // Lanes refuse a craft before its inputs are taken by setting refusal (bugfix-20).
+    static partial void CanStartCraft(ReducerContext ctx, uint playerId, ProcessDef def, ref string? refusal);
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap);
     // Skill shortens processes: scale `seconds` down (never below zero).
     static partial void DurationFor(ReducerContext ctx, uint playerId, string processId, ref float seconds);
@@ -101,22 +103,31 @@ public static partial class Module
 
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
             throw new Exception("You need the right tool");
+        // Station crafts are made at a finished station in a claim (Stations.cs).
+        Structure? station = null;
+        if (def.Station != StationKind.None)
+            station = StationNear(ctx, def.Station, pos.X, pos.Z)
+                ?? throw new Exception($"You need to be at a {StationInfo.Name(def.Station)} in your claim");
         // Find the fire's spot before anything is used up, in case there is none.
         (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
-            if (CountOf(ctx, input.Item) < input.Count)
+            if (CountFor(ctx, station, input.Item) < input.Count)
                 throw new Exception($"You need {input.Count} {Items.Def(input.Item).Count(input.Count).ToLowerInvariant()}");
         // A stone used as the hammer cannot also be the stone being knapped.
         if (def.NeedsTool.HasFlag(ItemTags.Hammer) && !HasSpareHammer(ctx, def))
             throw new Exception("You need a second stone to strike with");
+        // Another lane can refuse before anything is used up (Ceramics: too much clay out).
+        string? refusal = null;
+        CanStartCraft(ctx, player.PlayerId, def, ref refusal);
+        if (refusal != null) throw new Exception(refusal);
 
         float inputQuality = 0f;
         uint taken = 0;
         foreach (var input in def.Consumes)
         {
-            inputQuality += Take(ctx, input.Item, input.Count);
+            inputQuality += TakeFor(ctx, station, input.Item, input.Count);
             taken += input.Count;
         }
         inputQuality = taken > 0 ? inputQuality / taken : Items.RawQuality;
@@ -129,6 +140,7 @@ public static partial class Module
         // clear ground near there, or into a cold hearth within reach (Hearths.cs).
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;
         if (fireSpot is { } spot) (fx, fz) = spot;
+        if (station is { } st) (fx, fz) = BesideStation(st, pos.X, pos.Z);
         // Roasting goes over a fire already burning within reach.
         if (def.Outcome == Outcome.Roast)
         {
