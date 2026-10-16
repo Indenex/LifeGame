@@ -13,10 +13,11 @@ Sheep can't walk through a finished stick fence, a shut gate, or a hut/house wal
 - No schema change.
 
 ## Progress log
+- 2026-10-16 20:40: live test with building-8 (claude/house-building-8ueqz2-fence 70f5850) merged locally: TEMP reducer laid a finished 6 m square fence pen round a flock; a bot charged the flock from changing sides for 90 s. Without the pen, sheep went 6.86 m from the centre; with it, the furthest was 2.70 m (fence line 3 m minus 0.3 m body). No server errors. Order: #115 must merge before building-8.
 - 2026-10-16 20:05: hook added on a branch from main cc75409; proposed to House building (session_01RrKHUxWRH973Ndnxsad9nv) instead of a direct call.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for CI on #115, send the PM the green sha; once building-8 ships, live-test a sheep walking at a fence.
+Wait for CI on #115 and send the PM the green sha (it must merge before building-8).
