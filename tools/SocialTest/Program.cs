@@ -4,8 +4,9 @@
 //
 // Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [decay=0|1]
 // Run it on a fresh database: it lays out a claim marker at (35, 30).
-// With decay=1 it also waits for the claim to fall; run
-// `spacetime call <db> set_claim_lifetime 30` as the database owner first.
+// With decay=1 it also waits for the claim to fall.
+// It sets the newcomer grace to 0 (and with decay=1 the claim lifetime to 30 s) itself,
+// through spacetimedb-cli as the database owner, so a local run matches CI.
 using System.Diagnostics;
 using LifeGame.Shared;
 using SpacetimeDB;
@@ -15,10 +16,35 @@ string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 bool decay = args.Length > 2 && args[2] == "1";
 
+// Admin settings the checks below rely on. Grace is fixed when a player joins, so
+// this runs before A and B connect.
+AsOwner("set_newcomer_grace", "0");
+if (decay) AsOwner("set_claim_lifetime", "30");
+
 var a = new Tester("A", uri, db);
 var b = new Tester("B", uri, db);
 var all = new[] { a, b };
 int failures = 0;
+
+// Calls an admin reducer as the CLI's identity, which published the database. Runs
+// from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
+void AsOwner(string reducer, string value)
+{
+    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer, value })
+    {
+        WorkingDirectory = Path.GetTempPath(),
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+    })!;
+    string output = run.StandardOutput.ReadToEnd() + run.StandardError.ReadToEnd();
+    run.WaitForExit();
+    if (run.ExitCode != 0)
+    {
+        Console.WriteLine($"FAIL  {reducer} {value} as the database owner: {output.Trim()}");
+        Environment.Exit(1);
+    }
+    Console.WriteLine($"Set {reducer} {value}");
+}
 
 void Pump(Func<bool> until, double seconds, string what)
 {
@@ -135,6 +161,21 @@ Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "hello neighbour"), 5
 var heard = b.Conn.Db.ChatMessage.Iter().First(m => m.Text == "hello neighbour");
 Check(new Vector(heard.X - b.X, heard.Z - b.Z).Length <= Social.ChatRange, "B hears A's chat within range");
 
+// claims-6: "/me" actions are stored the same way whatever the case, and an empty one says nothing.
+var afterHello = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterHello, 2, "chat cooldown");
+a.Conn.Reducers.SendChat("/ME waves");
+Pump(() => b.Conn.Db.ChatMessage.Iter().Any(m => m.Text == "/me waves"), 5, "emote");
+Check(Social.IsEmote("/me waves") && Social.EmoteBody("/me waves") == "waves", "an action reads as \"waves\"");
+var afterWave = DateTime.UtcNow.AddSeconds(0.5);
+Pump(() => DateTime.UtcNow > afterWave, 2, "chat cooldown");
+int chatCount = b.Conn.Db.ChatMessage.Iter().Count();
+a.LastError = null;
+a.Conn.Reducers.SendChat("/me");
+Wait(() => b.Conn.Db.ChatMessage.Iter().Count() > chatCount || a.LastError != null, 1.5);
+Check(b.Conn.Db.ChatMessage.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
+
 // Outsiders cannot dig or take items inside the claim.
 ExpectError(b, () => b.Conn.Reducers.Dig((int)MathF.Round(b.X), (int)MathF.Round(b.Z)), "claimed", "B cannot dig inside A's claim");
 a.Conn.Reducers.Drop((ushort)Item.Stone, a.Quality(Item.Stone));
@@ -221,7 +262,7 @@ a.Conn.Reducers.Dismantle(hut!.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
-// --- Fighting (claims-3). CI sets the newcomer grace to 0 before this runs.
+// --- Fighting (claims-3). The grace was set to 0 at the top.
 float Hp(Tester t, uint id) => t.Conn.Db.PlayerHealth.PlayerId.Find(id)?.Health ?? -1f;
 // Not on claimed land with fighting off. Tend first: CI gives claims only 30 s.
 Walk(a, claim.X + 1.5f, claim.Z);

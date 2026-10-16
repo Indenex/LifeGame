@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# One run per branch or PR at a time. A new push to a PR cancels that PR's older run;
+# on main the running build finishes and a newer merge replaces any build still queued.
+concurrency:
+  group: build-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   GODOT_VERSION: 4.6.2
   SPACETIME_VERSION: 2.12.0
