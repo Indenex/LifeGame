@@ -1,0 +1,16 @@
+// How a player's body moves while a craft job runs (Animation lane, anim-2). A process
+// names its motion on its ProcessDef; the client poses the figure from it. Append-only:
+// never renumber or reorder.
+namespace LifeGame.Shared
+{
+    public enum WorkMotion : byte
+    {
+        // Unset on the Def: the client falls back to its old guess from the process id.
+        None,
+        Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend,
+        // Standing at a waist-high station (D-098).
+        Station,
+        // Two-handed axe swing at a trunk.
+        Chop,
+    }
+}

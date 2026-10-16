@@ -2,6 +2,8 @@ using System;
 using Godot;
 using LifeGame.Shared;
 
+namespace LifeGame;
+
 // claims-12: lay fences along a claim's border. House building calls SnapFenceHook first
 // in SnapFence; a fence ghost near the border of a claim you belong to snaps onto the
 // circle, end to end. Social.SnapToClaimBorder's yaw is the Structures.ToWorld convention
