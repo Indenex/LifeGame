@@ -1,7 +1,7 @@
 # skills-10: Things to try (M2, the first evening)
 Lane: Journal and skills
 Owner: Journal and skills thread (session_013QuyGdXAWemhkois2ictmc)
-Status: in_progress
+Status: in_review
 Branch: claude/journal-skills-10 (stacked on claude/journal-skills-iseewg, PR #43)
 PR: #112 (draft, stacked on #43)
 
@@ -17,6 +17,7 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 
 ## Progress log
 - 2026-10-16 17:50: PM was offered 4 options (hints / visible gains / road-ahead checklist / hints then gains); started option 1 as the stated default. Branch made from #43's head plus main (merged cleanly).
+- 2026-10-16 18:19: CI green on 131e27d (run https://github.com/Indenex/LifeGame/actions/runs/38942933136; Godot client builds Linux and Windows); PR marked ready, sha sent to the PM.
 - 2026-10-16 18:08: draft PR #112 opened; render requested.
 - 2026-10-16 18:05: NextSteps.cs + panel block + chop fixes written. Hints follow D-081's road (fire, food, shelter, fired pot): road steps past the furthest one reached first, skipped ones after, one slot kept for something off the road. Logic checked outside Godot with a .NET harness against shared/: every one of the 42 processes has a hint, and following the hints (first or third each time) reaches all 42. Godot client not built locally (no Godot/bindings here); CI builds it. `chop` mapped to Foraging (default).
 
@@ -25,4 +26,4 @@ Also: `chop.log` (main) trained no skill and its journal line said "C to make it
 - `chop.log` skill: default Foraging (felling and gathering wood); sent to the PM as a choice.
 
 ## Next step
-Wait for CI on PR #112; when green, mark it ready and send the PM the sha. Render requested for the Things to try block.
+Wait for the PM to merge #43 then #112 (green on 131e27d) and for their answers on the skills-10 option and chop's skill; then start the next ticket the PM gives.
