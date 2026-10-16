@@ -48,7 +48,7 @@ public static class NextSteps
         ["clay.pinch_pot"] = "Tempered clay can be pinched into a small pot.",
         ["clay.storage_jar"] = "A big coiled jar, fired in a kiln, keeps a lot safe at home.",
         ["weave.mat"] = "A thick weave of fiber makes a mat to sleep on, off the cold ground.",
-        [Claim] = "Plant a claim marker away from the clearing, and the land around it is yours to build on.",
+        [Claim] = "A marker of sticks and fiber, raised away from the waking clearing, makes the land around it yours.",
         [Bench] = "A potter's bench in your claim, made from a log and two stones, is where clay is shaped.",
         ["clay.coil_pot"] = "Rolled into coils, tempered clay builds a bigger pot.",
         ["clay.brick"] = "Clay and fiber, pressed into shape and dried, make a brick.",

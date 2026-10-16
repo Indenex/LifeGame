@@ -92,7 +92,7 @@ namespace LifeGame.Shared
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
             [Run] = "Running",
-            // D-127 first-evening steps, once Claims and Ceramics report them.
+            // D-127 first-evening steps: Claims reports the marker (#174); the bench comes with ceramics-8.
             ["claim.mark"] = "Planting a claim",
             ["build.bench"] = "Building a potter's bench",
         };
@@ -114,6 +114,7 @@ namespace LifeGame.Shared
             yield return Butcher;
             yield return DryHide;
             yield return Run;
+            yield return "claim.mark";
         }
 
         // Some things can't be picked up by watching someone else do them.
