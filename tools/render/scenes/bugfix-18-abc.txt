@@ -25,6 +25,7 @@ sql UPDATE clay_piece SET moisture = 0.0 WHERE fire_id = 0
 wait 700
 # clear the ring: the 4 fired pots there would take G first (take-from-fire, bugfix-17)
 pickup 105 4
+pickup 103 8
 face 0
 # (c) no fuel carried
 sql DELETE FROM inventory_item WHERE item = 1
