@@ -19,7 +19,9 @@ The PM's playtest 2 findings (/mnt/project-files/screenshots/playtest2-*). Costs
 - 2026-10-16: D-061, Justin keeps the mat, so #61 merges with building-5 as is. Merged main in (clean, no conflicts); all local checks green. Pushed for a fresh CI run.
 
 ## Open questions / blockers
-- None. Note for Ceramics: the jar's stage costs now go in `Structures.StageCosts` in shared/Structures.cs, not Building.cs.
+- Next building ticket sent to the PM 2026-10-16 (default: fence and gate). Note for Ceramics: the jar's stage costs now go in `Structures.StageCosts` in shared/Structures.cs, not Building.cs.
+
+- Asked the PM for the next ticket (building-4 already merged as #53): fence and gate (recommended), raised hearth, or log cabin. Default: fence as building-8 after #61 is green.
 
 ## Next step
 Wait for CI on #61's new head, then send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
