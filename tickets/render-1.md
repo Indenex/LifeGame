@@ -68,6 +68,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 22:05: new: animals-11 stations de48c3f (Animals): scene animals-11-stations.txt (claim at 45,0; table, spindle station, drying rack, 3 hides stretched; no spin minigame, no wet/dry pair).
 - 2026-10-16 22:15: audio-1 follow-up (Audio, c09f9b8): in-game audio capture not workable here (0.5 fps real time starves the synth; Movie Maker desyncs game time from the server's craft jobs). Fallback: SoundPreview clip renders/audio/audio-1-c09f9b8-work-sounds.mp3 + Options shot queued.
 - 2026-10-16 22:20: new: claims-9 name your camp baecf02 (Claims): scene claims-9-name.txt (puppet `type` step).
+- 2026-10-16 22:30: ceramics-7 day captured (prompts and labels as asked); dusk running. New: env-2 land reshape before 2a6b8eb / after ee46b71 (Environment), put first in the queue (fresh in-memory server: never Justin's world).
 
 ## Open questions / blockers
 - (none)

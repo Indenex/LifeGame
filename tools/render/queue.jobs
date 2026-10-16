@@ -1,5 +1,6 @@
 # One job per line: <name> <command...>. queue.sh rereads this file between jobs,
 # so jobs can be added or reordered while it runs. Live scenes go last.
+env-2 tools/render/scenes/env-2.sh
 model-1-player tools/render/render.sh model-1-player b3be674 "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,-35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35"
 ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
 crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
