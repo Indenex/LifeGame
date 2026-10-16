@@ -13,7 +13,7 @@ public partial class ChatPanel : CanvasLayer
 
     readonly VBoxContainer lines = new();
     readonly LineEdit input = new();
-    readonly List<(Control node, float age)> entries = new();
+    readonly List<(Control node, float age, float dim)> entries = new();
 
     public event Action<string>? Sent;
     public bool Typing => input.HasFocus();
@@ -37,7 +37,7 @@ public partial class ChatPanel : CanvasLayer
         lines.MouseFilter = Control.MouseFilterEnum.Ignore;
         column.AddChild(lines);
 
-        input.PlaceholderText = "Say something   (Enter to send, Esc to close, /name to rename)";
+        input.PlaceholderText = "Say something   (Enter to send, Esc to close, /me to act, /name to rename)";
         input.MaxLength = LifeGame.Shared.Social.ChatMaxLength;
         input.AddThemeFontSizeOverride("font_size", 15);
         input.AddThemeColorOverride("font_color", Look.Cream);
@@ -73,7 +73,7 @@ public partial class ChatPanel : CanvasLayer
         input.GrabFocus();
         // Bring back what was said recently while the box is open.
         for (int i = 0; i < entries.Count; i++)
-            entries[i] = (entries[i].node, Mathf.Min(entries[i].age, LineLife - 6f));
+            entries[i] = (entries[i].node, Mathf.Min(entries[i].age, LineLife - 6f), entries[i].dim);
     }
 
     void Close()
@@ -90,7 +90,9 @@ public partial class ChatPanel : CanvasLayer
         Close();
     }
 
-    public void Add(string who, string text, bool mine)
+    // dim: how bright the line is, lower for someone farther away (claims-6).
+    // emote: "/me waves" lines, shown in italics as "Mira waves".
+    public void Add(string who, string text, bool mine, float dim = 1f, bool emote = false)
     {
         var label = new RichTextLabel
         {
@@ -104,7 +106,9 @@ public partial class ChatPanel : CanvasLayer
         string nameColor = mine ? "#e8d6a8" : "#cfe0b4";
         label.Text = who.Length == 0
             ? $"[i][color=#d9c9a8]{Escape(text)}[/color][/i]"
-            : $"[color={nameColor}]{Escape(who)}[/color]  {Escape(text)}";
+            : emote
+                ? $"[i][color={nameColor}]{Escape(who)}[/color] {Escape(text)}[/i]"
+                : $"[color={nameColor}]{Escape(who)}[/color]  {Escape(text)}";
         label.AddThemeFontSizeOverride("normal_font_size", 15);
         label.AddThemeColorOverride("default_color", Look.Cream);
         label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
@@ -112,7 +116,7 @@ public partial class ChatPanel : CanvasLayer
         var panel = Hud.Panel(label, Vector2.Zero);
         panel.Modulate = new Color(1, 1, 1, 0);
         lines.AddChild(panel);
-        entries.Add((panel, 0f));
+        entries.Add((panel, 0f, Mathf.Clamp(dim, 0f, 1f)));
         while (entries.Count > MaxLines)
         {
             entries[0].node.QueueFree();
@@ -127,13 +131,13 @@ public partial class ChatPanel : CanvasLayer
         float dt = (float)delta;
         for (int i = 0; i < entries.Count; i++)
         {
-            var (node, age) = entries[i];
+            var (node, age, dim) = entries[i];
             if (!Typing) age += dt;
-            entries[i] = (node, age);
+            entries[i] = (node, age, dim);
             // Ease in over a third of a second, linger, then fade over the last few.
             float alpha = Mathf.Min(age / 0.35f, 1f) * Mathf.Clamp((LineLife - age) / 4f, 0f, 1f);
             if (Typing) alpha = Mathf.Max(alpha, 0.9f);
-            node.Modulate = new Color(1, 1, 1, alpha);
+            node.Modulate = new Color(1, 1, 1, alpha * dim);
         }
     }
 }
