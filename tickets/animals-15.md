@@ -29,10 +29,12 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16: Justin picked option A (via PM). Bow.cs already implements A. Skill effects move to Progression.Effect when skills-12 (claude/journal-skills-12, Stalking skill) merges. Modeling asked for bow and arrow models; Crafting for items/recipes/tag.
 
+- 2026-10-16: Justin: bow must be much harder at level 1 (6-7 hits on a deer), one-shot possible at the top or with crits. Proposed (sent to PM, Journal, Crafting): Archery skill (id archery, trained by animal.shoot) with ArcheryDamage 0.6 to 2.4, ArcheryHitChance 0.8 to 1.0, ArcheryDrawTime 2.0 s to 0.8 s; powers stay bow 60 x arrow 0.65. Rank 0/25/50/100 per-hit damage, crude: 15/35/49/61; excellent: 23/53/74/91. Crafting's fields are on crafting-bow (0ea829f); they write BowShotHook once this branch and #267 are on main.
+
 ## Open questions / blockers
 - Numbers decided: A.
 - Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
 - Crafting's item ids and power values.
 
 ## Next step
-Client targeting cone + arrow animation in client/scripts/animals/; implement BowShotHook when Crafting's Bow/Arrow items land (or ask Crafting to).
+When #219 is on main: merge main here, apply Archery effects (damage, hit chance, draw time) from Progression.Effect once Journal's skills-12/#237 has them, then the client targeting cone + arrow flight (ItemModels.ArrowFlight from Modeling's #235) in client/scripts/animals/. Crafting writes BowShotHook.
