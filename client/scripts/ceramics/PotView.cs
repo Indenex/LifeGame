@@ -156,7 +156,7 @@ void fragment() {
                 ? form switch
                 {
                     ClayForm.Brick => "Dry brick",
-                    ClayForm.StorageJar => "Bone dry, ready for a kiln",
+                    ClayForm.StorageJar or ClayForm.Tile => "Bone dry, ready for a kiln",
                     _ => "Bone dry, ready to fire",
                 }
                 : $"{char.ToUpperInvariant(state[0])}{state[1..]}, drying";

@@ -41,6 +41,7 @@ public static class Subscriptions
         "SELECT * FROM my_worn",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
+        "SELECT * FROM worn_item",
         $"SELECT * FROM structure WHERE {range}",
     };
 }

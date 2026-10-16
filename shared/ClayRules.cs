@@ -15,6 +15,8 @@ namespace LifeGame.Shared
         StorageJar,
         // A small oil lamp: a shallow bowl with a pinched spout (ceramics-9).
         Lamp,
+        // A curved roof tile; kiln-fired only, like the jar (ceramics-10).
+        Tile,
     }
 
     // Where a piece of worked clay set down in the world is in its life. Once a
@@ -83,7 +85,7 @@ namespace LifeGame.Shared
         // the jar and the kiln by their StructureShape flags (Kiln, Jar).
         public const int JarClay = 4;
         // Only a kiln heats a piece this big evenly enough.
-        public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar;
+        public static bool KilnOnly(ClayForm form) => form == ClayForm.StorageJar || form == ClayForm.Tile;
 
         // Clay grades by depth (D-041). Hand digging stops at World.MaxDigDepth; a
         // digging stick reaches one level further, into the deep clay: purer, with
@@ -139,6 +141,7 @@ namespace LifeGame.Shared
             ClayForm.CoilPot => "coil pot",
             ClayForm.StorageJar => "storage jar",
             ClayForm.Lamp => "lamp",
+            ClayForm.Tile => "roof tile",
             _ => "brick",
         };
 
@@ -150,6 +153,7 @@ namespace LifeGame.Shared
             "clay.brick" => ClayForm.Brick,
             "clay.storage_jar" => ClayForm.StorageJar,
             "clay.lamp" => ClayForm.Lamp,
+            "clay.tile" => ClayForm.Tile,
             _ => null,
         };
 
@@ -159,6 +163,7 @@ namespace LifeGame.Shared
             ClayForm.CoilPot => Item.UnfiredCoilPot,
             ClayForm.StorageJar => Item.UnfiredStorageJar,
             ClayForm.Lamp => Item.UnfiredLamp,
+            ClayForm.Tile => Item.UnfiredRoofTile,
             _ => Item.UnfiredPinchPot,
         };
 
@@ -168,6 +173,7 @@ namespace LifeGame.Shared
             Item.UnfiredCoilPot => ClayForm.CoilPot,
             Item.UnfiredStorageJar => ClayForm.StorageJar,
             Item.UnfiredLamp => ClayForm.Lamp,
+            Item.UnfiredRoofTile => ClayForm.Tile,
             _ => null,
         };
 
@@ -176,6 +182,7 @@ namespace LifeGame.Shared
             ClayForm.CoilPot => Item.CoilPot,
             ClayForm.StorageJar => Item.StorageJar,
             ClayForm.Lamp => Item.ClayLamp,
+            ClayForm.Tile => Item.RoofTile,
             _ => Item.PinchPot,
         };
 
