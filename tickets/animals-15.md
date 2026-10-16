@@ -37,10 +37,12 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16 21:40: merged the deer branch and Crafting's crafting-bow (Item.Bow 16, Arrow 17, powers). Client: Herd.cs registers a Strike finder `animals.bow`: carrying a bow and an arrow, the strike key shoots the nearest animal in a 25-degree cone within 40 m (calls ShootAnimal); ArrowFlight.cs draws a plain arrow flying to where the animal was (Modeling's ItemModels.ArrowFlight replaces it when #235 is on main). Server and client build. Not played. KEYMAP.md (UX) should note that the Strike key shoots when a bow is carried.
 
+- 2026-10-16 22:10: #237 is on main. Bow.cs now reads Archery from Progression.Effect: ArcheryDamage multiplies damage, ArcheryHitChance multiplies hit chance (capped 95%), ArcheryDrawTime sets the per-player time between shots (AnimalPlayerSeen.ShotAt). Rank = SkillRank(ctx, pid, Skills.Shoot). Sneak crit comes from SneakCrit (Stalking, in Hunting.cs). Builds; not played.
+
 ## Open questions / blockers
 - Numbers decided: A.
 - Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
 - Crafting's item ids and power values.
 
 ## Next step
-When #219 is on main: merge main here, apply Archery effects (damage, hit chance, draw time) from Progression.Effect once Journal's skills-12/#237 has them, then the client targeting cone + arrow flight (ItemModels.ArrowFlight from Modeling's #235) in client/scripts/animals/. Crafting writes BowShotHook.
+When #219 is on main: merge main here and open the PR (needs Crafting's BowShotHook, server/spacetimedb/CraftingBow.cs, to be useful in play); swap ArrowFlight.cs's plain shaft for Modeling's ItemModels.ArrowFlight if it is on main.

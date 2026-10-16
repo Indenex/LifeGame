@@ -24,7 +24,6 @@ public static partial class Module
     const float BowConeRadians = 0.7f;
     // Full damage out to this far, then it falls to half at BowMaxRange.
     const float BowFullDamageRange = 15f;
-    const long BowEveryMicros = 1_200_000;
     const string ShootProcess = "animal.shoot";
 
     [SpacetimeDB.Reducer]
@@ -42,17 +41,23 @@ public static partial class Module
         aim = MathF.Abs(MathF.IEEERemainder(aim, MathF.Tau));
         if (d > 1f && aim > BowConeRadians) throw new Exception("Face the animal to shoot");
 
+        // Archery (shared Progression): skill speeds the draw, steadies the aim and
+        // multiplies the damage; gear quality matters much less (D-197).
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        if (now - mind.StruckAt < BowEveryMicros) return;
+        int rank = SkillRank(ctx, player.PlayerId, Skills.Shoot);
+        long drawMicros = (long)(Progression.Effect(EffectKind.ArcheryDrawTime, rank) * 1_000_000f);
+        var seen = ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId);
+        if (seen is { } last && now - last.ShotAt < drawMicros) return;
 
         var shot = new BowShot();
         BowShotHook(ctx, player.PlayerId, ref shot);
         if (!shot.Ready) throw new Exception("You need a bow and an arrow");
+        if (seen is { } s0) ctx.Db.AnimalPlayerSeen.PlayerId.Update(s0 with { ShotAt = now });
 
         var t = Traits(animal.Species);
         float speed = animal.State == AnimalState.Run ? t.Run * (0.3f + 0.7f * mind.Health / 100f)
             : animal.State == AnimalState.Walk ? t.Walk : 0f;
-        float hit = BowHitChance(d, speed);
+        float hit = MathF.Min(0.95f, BowHitChance(d, speed) * Progression.Effect(EffectKind.ArcheryHitChance, rank));
         byte shotQuality = (byte)Math.Clamp((int)(shot.BowQ * 100f), 1, 100);
 
         if (ctx.Rng.NextDouble() >= hit)
@@ -66,7 +71,7 @@ public static partial class Module
         }
 
         OnProcessPerformed(ctx, player.PlayerId, ShootProcess, shotQuality, false);
-        int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble())));
+        int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble()) * Progression.Effect(EffectKind.ArcheryDamage, rank)));
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0);
     }
