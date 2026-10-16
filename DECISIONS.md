@@ -389,3 +389,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-094 — 2026-10-16 — I opens the equipment panel
 **Decision:** The equipment panel (D-074) opens with I.
 **Who:** Justin ("I", which the PM recommended)
+
+## D-095 — 2026-10-16 — Integration executes merges
+**Decision:** The PM delegates merge execution to the Integration lane. Integration merges any PR that is green on its current head, merges cleanly, matches decisions already in DECISIONS.md and does not wipe Justin's world, in the order it judges safe, and reports each batch to the PM. Lanes send green shas to Integration, not the PM. Wipes, undecided design changes Justin would notice, and anything the PM has put on hold still go through the PM (and Justin where D-032 requires).
+**Who:** PM (within D-032), to keep merges flowing while the PM takes design questions to Justin
