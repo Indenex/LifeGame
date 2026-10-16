@@ -365,6 +365,7 @@ public static partial class Module
             ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + 1 });
         else
             ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = 1 });
+        LogStash(ctx, claim.Id, item, 1);
     }
 
     [SpacetimeDB.Reducer]
@@ -377,6 +378,7 @@ public static partial class Module
         else
             ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - 1 });
         AddToInventory(ctx, ctx.Sender, (Item)item, 1, quality);
+        LogStash(ctx, claim.Id, item, -1);
     }
 
     // Database owner only: how long markers stand untended. Applies to markers
@@ -425,6 +427,7 @@ public static partial class Module
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).ToList())
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         RemoveClaimName(ctx, claim.Id);
+        RemoveStashLog(ctx, claim.Id);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
