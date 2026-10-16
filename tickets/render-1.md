@@ -40,6 +40,7 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 18:05: ui-9 mock shots at short delays caught an unloaded world (the mock's timers run from game start, loading takes 20-30 s). Added --render-slowstart=scale,seconds (render_cam.gd) so game time crawls while the world loads. All remaining work is now in tools/render/queue.sh, run detached with nohup (log $RENDER_WORK/queue.log, finished jobs in queue.done; rerun it to resume). Queue 2 (claims-6 rerun, model-1 baseline) finishes first.
 - 2026-10-16 18:10: PM decided renders stay on this branch; only tools/render/ merges via a small PR (send raw links). PM asked for a 10-15 s cloud-shadow clip of #66 (queued after animals-8). ui-9 live moved to ffdabf3 (+ un-accept check).
 - 2026-10-16 18:20: claims-6 sent to the PM (frames 2, 3, 11, 20 of renders/claims-6-c126163-*.png, e5f2d45). Tools PR #103 opened (branch claude/render-1-tools).
+- 2026-10-16 18:35: queue.sh now rereads tools/render/queue.jobs between jobs (add/reorder jobs there while it runs); lib.sh makes RENDER_OUT absolute (Godot saved relative paths under client/). model-1 baseline shots done except the player close-ups (redo running with corrected camera heights: the rig focus is ~0.65 m above the feet, yaw 0 faces the player).
 
 ## Open questions / blockers
 - (none)

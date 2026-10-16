@@ -17,6 +17,7 @@ if [ -z "${RENDER_OUT:-}" ]; then
   fi
 fi
 mkdir -p "$RENDER_OUT"
+RENDER_OUT=$(cd "$RENDER_OUT" && pwd)   # Godot saves relative to client/
 
 sha=$(git -C "$repo" rev-parse --short=7 "$ref^{commit}")
 work=${RENDER_WORK:-${TMPDIR:-/tmp}/lifegame-render}
