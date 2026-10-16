@@ -13,7 +13,8 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | W A S D / arrows | Walk | Crafting | same |
 | Q / E | Turn | Crafting | same |
 | Hold right mouse + drag | Turn the view freely, eased (D-050) | UX/UI | new |
-| Hold Shift | Sneak (slow walk; sheep stay calm) | Animals (small hook in Main.cs) | new, D-026 |
+| Hold Shift | Run (uses stamina, D-088) | whichever lane builds stamina; reads the `run` action | new, D-088 |
+| Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088; key pending Justin (Ctrl recommended, or Alt, or Caps Lock toggle) | Animals (small hook in Main.cs) | D-026, moved by D-088 |
 | Space | Pick up | Crafting | same |
 | F | Dig | Crafting | same |
 | G | **Use** what you're facing: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker | all | G forage (Survival), G feed fire (Crafting), G drink (Survival, R gone), H add materials (Building), R read note (Journal) |
