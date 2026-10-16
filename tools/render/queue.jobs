@@ -2,6 +2,8 @@
 # so jobs can be added or reordered while it runs. Live scenes go last.
 env-2 tools/render/scenes/env-2.sh
 survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
+ceramics-8 env BENCH=1 TICKET=ceramics-8 tools/render/scenes/ceramics-7.sh a432ab6 0.45
+ceramics-8-panel tools/render/render.sh ceramics-8-panel a432ab6 "--time-of-day=0.45 --screenshot-craft=3"
 model-1-player tools/render/render.sh model-1-player b3be674 "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.6,0.7,-35,0.35" "--time-of-day=0.5 --rain=0 --cloud=0.1 --render-cam=3.2,0.5,0,0.35"
 ui-9-mock tools/render/scenes/ui-9-mock.sh e4319e5
 crafting-11 tools/render/render.sh crafting-11 11ca4f8 "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire=cold --render-cam=3.5,2.2,0,0.3" "--time-of-day=0.45 --debug-position=0,0 --screenshot-fire --render-cam=3.5,2.2,0,0.3"
