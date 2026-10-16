@@ -443,7 +443,39 @@ public partial class BuildingSystem : Node
         if (placing) UpdateGhost(dt);
         UpdateUse();
         UpdateWeathering(dt);
+        UpdateSeeThrough(dt);
         UpdatePrompt();
+    }
+
+    // Finished shelters ease to a ghost while they hide the player from the camera (D-168).
+    void UpdateSeeThrough(float dt)
+    {
+        var camera = me.GetViewport()?.GetCamera3D();
+        foreach (var s in rows.Values)
+        {
+            if (!views.TryGetValue(s.Id, out var v)) continue;
+            var shape = ShapeOf(s);
+            bool hides = false;
+            if (s.Complete && shape.RainCover > 0f && camera != null
+                && new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared() < 25f * 25f)
+                hides = Look.HidesPlayer(Footprint(s, shape, v.Position.Y), camera.GlobalPosition, me.Position);
+            if (hides || v.Fading) v.UpdateSeeThrough(hides, dt);
+        }
+    }
+
+    // The world-space box a shelter fills, roof included, for the see-through test.
+    static Aabb Footprint(Structure s, StructureShape shape, float ground)
+    {
+        const float height = 3.0f;
+        float hx = shape.Round ? shape.Radius : shape.HalfWidth, hz = shape.Round ? shape.Radius : shape.HalfDepth;
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        foreach (var (lx, lz) in new[] { (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
+        {
+            var (wx, wz) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+            minX = Mathf.Min(minX, wx); maxX = Mathf.Max(maxX, wx);
+            minZ = Mathf.Min(minZ, wz); maxZ = Mathf.Max(maxZ, wz);
+        }
+        return new Aabb(new Vector3(minX, ground - 0.5f, minZ), new Vector3(maxX - minX, height + 0.5f, maxZ - minZ));
     }
 
     void UpdateGhost(float dt)

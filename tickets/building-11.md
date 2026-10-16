@@ -1,8 +1,8 @@
 # building-11: See-through structures
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: todo
-Branch: (new, off origin/main after #202 merges)
+Status: in_review
+Branch: claude/house-building-8ueqz2-seethrough (stacked on building-10, #271)
 PR: (not yet)
 
 ## Goal
@@ -11,10 +11,11 @@ D-168 (Justin): any time the player is rendered underneath something, the see-th
 ## Progress log
 - 2026-10-16: ticket opened from the PM's message. Read the code: `StructureView` holds `pieces` (Stage, Mesh, Material, Anchor) with one MeshInstance3D per piece and no roof/wall tag yet; `Look.GhostOf` only knows tree materials (`Look.cs` ~110); `Terrain.ShowGhosts` is the tree pattern to copy.
 
+- 2026-10-16 21:45: built (client only; client project compiles, shader not run: no Godot here). Look.HidesPlayer is on main. Look.cs: the painted shader gets `uniform float fade_override = -1.0` (when >= 0 it replaces the tree test) and `Look.StructureGhost(source)` makes a ghost copy. StructureView.UpdateSeeThrough(hides, dt) eases a 0..1 fade (about 0.33 s), swaps each finished piece's mesh for a ghost mesh (same shader, alpha 1 - fade*(0.35..1), fully clear in a soft circle round the player), and back. BuildingSystem.UpdateSeeThrough tests each finished shelter (RainCover > 0: lean-to, hut, house, cabin) within 25 m with Look.HidesPlayer on its footprint box (3 m tall) and the camera.
+- Default chosen: the whole finished building ghosts, not only roof and camera-side walls; the clear circle round the player stands in for the "camera-side wall" part and avoids tagging every model piece. Say if Justin wants only roof and near walls (needs a roof/wall tag per Piece).
+
 ## Open questions / blockers
-- Waiting on Environment's segment-crosses-box helper in Look (sha from Environment).
-- `Piece` needs a tag (roof / wall / other) per shape so only roof and camera-side walls fade; the house, hut, lean-to and cabin models each need tagging.
-- No dotnet in this container: client changes can't be built locally, so CI is the only check.
+- Not seen running: needs a Godot run or a render (shader change is small but unverified at runtime).
 
 ## Next step
-Wait for Environment's helper sha, then: tag pieces in StructureModel (roof vs wall), give Look.GhostOf a path for structure materials, and add `StructureView.SetSeeThrough(float fade)` driven from BuildingSystem each frame.
+Open/refresh the PR (base: claude/house-building-8ueqz2 until #271 merges), wait for CI, request a render (walk into a hut, house and cabin; camera behind a wall), send the PM the green sha.

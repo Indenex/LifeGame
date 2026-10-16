@@ -112,6 +112,10 @@ public static class Look
         material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
         material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
 
+    // A see-through copy of any painted surface for a building to fade by hand: set its
+    // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
+    public static ShaderMaterial StructureGhost(ShaderMaterial source) => Ghost(source);
+
     static ShaderMaterial Ghost(ShaderMaterial source)
     {
         var ghost = new ShaderMaterial { Shader = GhostShader };
@@ -319,6 +323,9 @@ public static class Look
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
             uniform bool see_through = false;
+            // Set on a ghost (never a solid) to fade it by hand, 0 solid to 1 clear, in place of the
+            // tree test: buildings drive it while the player is under their roof.
+            uniform float fade_override = -1.0;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -362,7 +369,7 @@ public static class Look
                 season_kind = INSTANCE_CUSTOM.w;
                 // Broadleaf canopies thin to nothing in winter and grow back in spring.
                 if (sway > 0.0 && season_kind > 0.5 && season_kind < 1.5) VERTEX *= 1.0 - 0.85 * leaf_drop();
-                fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+                fade = fade_override >= 0.0 ? fade_override : see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
                 // A tree or rock on a cell that was just cleared goes away instead of
                 // vanishing: trees topple slowly and settle into the ground, rocks sink.
                 // On a cell that comes back they grow in. Custom data: x when it started,

@@ -101,6 +101,56 @@ public partial class StructureView : Node3D
         return appeared;
     }
 
+    // --- See-through (building-11, D-168) --------------------------------
+
+    // Under a roof, or with the walls between the camera and the player, the building eases
+    // to a see-through ghost, clear in a soft circle round the player, like the trees.
+    float seeThrough;
+    readonly Dictionary<Material, ShaderMaterial> seeThroughMaterials = new();
+    readonly Dictionary<int, MeshInstance3D> ghostMeshes = new();
+
+    // True while anything is still faded, so callers can keep it ticking until it is solid again.
+    public bool Fading => seeThrough > 0.001f;
+
+    public void UpdateSeeThrough(bool hidesPlayer, float dt)
+    {
+        float target = hidesPlayer ? 1f : 0f;
+        if (Mathf.IsEqualApprox(seeThrough, target) && (target > 0f || ghostMeshes.Count == 0)) return;
+        seeThrough = Mathf.MoveToward(seeThrough, target, dt * 3f);
+        bool on = seeThrough > 0.02f;
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            var (piece, holder, mesh) = pieces[i];
+            // Only finished pieces fade; the plan of an unfinished building stays as it is.
+            bool fade = on && solid.Contains(i) && piece.Material is ShaderMaterial;
+            if (!fade)
+            {
+                if (ghostMeshes.TryGetValue(i, out var off)) off.Visible = false;
+                if (!mesh.Visible) mesh.Visible = true;
+                continue;
+            }
+            if (!ghostMeshes.TryGetValue(i, out var ghostMesh))
+            {
+                var source = (ShaderMaterial)piece.Material;
+                if (!seeThroughMaterials.TryGetValue(source, out var material))
+                    seeThroughMaterials[source] = material = Look.StructureGhost(source);
+                ghostMesh = new MeshInstance3D
+                {
+                    Mesh = piece.Mesh,
+                    MaterialOverride = material,
+                    Position = -piece.Anchor,
+                    CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                };
+                holder.AddChild(ghostMesh);
+                ghostMeshes[i] = ghostMesh;
+            }
+            ghostMesh.Visible = true;
+            mesh.Visible = false;
+        }
+        foreach (var material in seeThroughMaterials.Values)
+            material.SetShaderParameter("fade_override", seeThrough);
+    }
+
     // Hides the see-through plan of what isn't built yet (showcase shots only).
     public void HideUnbuilt()
     {
