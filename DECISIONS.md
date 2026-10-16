@@ -373,3 +373,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-090 — 2026-10-16 — Full fires refuse fuel; fire length grows with skill (amends D-054)
 **Decision:** Feeding a fire at its cap is refused ("The fire is burning as high as it will") and the stick is kept. A newly lit fire burns 20 minutes (was 15, D-054). The most a fire can hold grows with Firecraft from 20 minutes up to 40 minutes (+100%) at Master.
 **Who:** Justin ("Refuse. Fires should start at 20 minutes and last longer maybe up to 100% more scaled with skill.")
+
+## D-091 — 2026-10-16 — Sneak moves to held Ctrl
+**Decision:** Sneak is held Ctrl (Shift is now run, D-088). Holding Ctrl while starting a craft still plays the minigame at Master (D-047); the two happen at different moments.
+**Who:** Justin ("Hold Ctrl", which the PM recommended)
+
+## D-092 — 2026-10-16 — Craft times scale with the item and the skill
+**Decision:** Base craft times scale: cheap, simple items are quick; higher-tier items and higher-quality results take incrementally longer. Rising skill shortens craft times, noticeably as you first learn a skill (fast early, per D-075). Crafting proposes the formula and a table of examples to the PM before shipping.
+**Who:** Justin ("easier/cheaper items should be faster, and take incrementally longer ... on higher quality items ... Increases in skill level should also lower craft times")
+
+## D-093 — 2026-10-16 — Storage jar holds 4 to 8 stacks by quality
+**Decision:** A storage jar holds 4 stacks at low quality, rising to 8 at high quality, faster through the first part of the quality range (D-075).
+**Who:** Justin ("4 rising to 8 with quality"; the PM had recommended a flat 6)
+
+## D-094 — 2026-10-16 — I opens the equipment panel
+**Decision:** The equipment panel (D-074) opens with I.
+**Who:** Justin ("I", which the PM recommended)

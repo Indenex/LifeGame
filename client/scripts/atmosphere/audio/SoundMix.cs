@@ -26,6 +26,9 @@ public sealed class SoundMix
     // The nearest campfires: how loud (0 to 1, from distance and how well it burns)
     // and where (pan -1 left to 1 right).
     public float Fire, FirePan;
+    // Open water nearby: how close and how much of it (0 none, 1 at the edge of a
+    // pond), and which side it lies (pan -1 left to 1 right).
+    public float Water, WaterPan;
     public bool MusicOn = true;
     // The music's own level, 0 to 1, under the master volume (the menu's music slider).
     public float MusicVolume = 1f;
@@ -39,12 +42,17 @@ public sealed class SoundMix
     readonly FireVoice fire;
     readonly Birds birds;
     readonly NightVoices night;
+    readonly WaterVoice water;
+    readonly Frogs frogs;
     readonly Steps steps;
     readonly Sheep sheep;
     readonly Music music;
     readonly Reverb reverb;
     float[] sendL = Array.Empty<float>(), sendR = Array.Empty<float>();
     float[] outL = Array.Empty<float>(), outR = Array.Empty<float>();
+    float[] stepL = Array.Empty<float>(), stepR = Array.Empty<float>();
+    // How loud the surroundings are (smoothed RMS), so footsteps sit just above them.
+    float ambience = 0.01f;
     Lowpass wallL, wallR;
     float cover;
 
@@ -60,11 +68,17 @@ public sealed class SoundMix
         fire = new FireVoice(rate, noise, rng);
         birds = new Birds(rate, rng);
         night = new NightVoices(rate, rng);
+        water = new WaterVoice(rate, rng);
+        frogs = new Frogs(rate, rng);
         steps = new Steps(rate, noise, rng);
         sheep = new Sheep(rate, rng);
         music = new Music(rate, rng);
         reverb = new Reverb(rate);
     }
+
+    // How hard the wind is gusting right now, 0 to 1, so grass and trees can move
+    // with what is heard. Written by the synth thread; a stale read is harmless.
+    public float Gust => wind.Gust;
 
     public void Step(Ground ground, float wetness) => steps.Trigger(ground, wetness);
 
@@ -84,6 +98,8 @@ public sealed class SoundMix
             sendR = new float[count];
             outL = new float[count];
             outR = new float[count];
+            stepL = new float[count];
+            stepR = new float[count];
         }
         Array.Clear(left, 0, count);
         Array.Clear(right, 0, count);
@@ -103,6 +119,8 @@ public sealed class SoundMix
         birds.Render(outL, outR, sendL, sendR, count, birdLevel * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), chorus);
         night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind));
         sheep.Render(outL, outR, sendL, sendR, count);
+        water.Render(outL, outR, count, Water, WaterPan, Wind, wind.Gust, Rain);
+        frogs.Render(outL, outR, sendL, sendR, count, Water * Smooth(0.15f, 0.6f, night01) * (1f - 0.4f * Wind), WaterPan);
         float coverCoef = Lowpass.Coef(1.2f, Rate), wall = Lowpass.Coef(650f, Rate);
         for (int i = 0; i < count; i++)
         {
@@ -115,7 +133,22 @@ public sealed class SoundMix
         }
 
         rain.Render(left, right, count, Rain, Wetness, Cover);
-        steps.Render(left, right, count);
+
+        // Footsteps sit a little above whatever surrounds them: soft on a still
+        // dawn, firmer in a storm, never louder than they need to be.
+        double power = 0;
+        for (int i = 0; i < count; i++) power += left[i] * left[i] + right[i] * right[i];
+        float rms = (float)Math.Sqrt(power / (2.0 * count));
+        ambience += (1f - MathF.Exp(-count / (float)Rate / 1.5f)) * (rms - ambience);
+        float stepGain = StepGain(ambience);
+        Array.Clear(stepL, 0, count);
+        Array.Clear(stepR, 0, count);
+        steps.Render(stepL, stepR, count);
+        for (int i = 0; i < count; i++)
+        {
+            left[i] += stepL[i] * stepGain;
+            right[i] += stepR[i] * stepGain;
+        }
         music.Render(left, right, sendL, sendR, count, MusicOn, MusicVolume, night01);
         reverb.Process(sendL, sendR, left, right, count);
 
@@ -136,6 +169,10 @@ public sealed class SoundMix
         float dusk = MathF.Exp(-Sq((t - 0.725f) / 0.025f));
         return (awake * Math.Min(1f, 0.35f + 0.65f * dawn + 0.35f * dusk), awake * dawn);
     }
+
+    // Footstep level for an ambience RMS: about 0.17 (-15 dB) over a still dawn bed
+    // near -45 dBFS, so steps land about 5 dB above it, rising to full in a storm.
+    public static float StepGain(float ambienceRms) => Math.Clamp(0.12f + 9f * ambienceRms, 0.12f, 1f);
 
     static float Sq(float x) => x * x;
 
@@ -734,6 +771,161 @@ public sealed class SoundMix
         }
     }
 
+    // --- Water ------------------------------------------------------------------
+
+    // A pond's edge: small waves lapping at the bank, coming in uneven sets that
+    // grow with the wind, the odd gulp of water under an overhang, and rain plinking
+    // on the surface. Everything fades with distance from the water.
+    sealed class WaterVoice
+    {
+        readonly int rate;
+        readonly Random rng;
+        readonly Noise noise = new(131u);
+        BandPass lapL, lapR;
+        Lowpass level, side, swellL, swellR;
+        readonly List<Bubble> bubbles = new();
+        float waveTime, wavePeriod = 2.2f;
+
+        record struct Bubble(float Freq, float Rise, float Decay, float Amp, float Pan, float Age, float Phase);
+
+        public WaterVoice(int rate, Random rng)
+        {
+            this.rate = rate;
+            this.rng = rng;
+        }
+
+        public void Render(float[] l, float[] r, int n, float water, float pan, float wind, float gust, float rain)
+        {
+            float dt = 1f / rate;
+            float levelCoef = Lowpass.Coef(0.4f, rate), swell = Lowpass.Coef(0.6f, rate);
+            float stir = 0.35f + 0.65f * Math.Clamp(wind + rain * 0.2f, 0f, 1f) * (0.5f + 0.5f * gust);
+            for (int i = 0; i < n; i++)
+            {
+                float lv = level.Process(water, levelCoef);
+                float p = side.Process(pan, levelCoef);
+                if (lv < 0.002f) continue;
+                // Each little wave rises and slaps softly, then drains back.
+                waveTime += dt;
+                if (waveTime > wavePeriod)
+                {
+                    waveTime = 0f;
+                    wavePeriod = Range(rng, 1.4f, 3.4f) / (0.7f + 0.6f * stir);
+                }
+                float u = waveTime / wavePeriod;
+                float wave = MathF.Pow(MathF.Sin(MathF.PI * Math.Min(1f, u * 1.4f)), 3f) + 0.25f;
+                float a = Math.Max(0f, 0.5f + 5f * swellL.Process(noise.Next(), swell));
+                float b = Math.Max(0f, 0.5f + 5f * swellR.Process(noise.Next(), swell));
+                float g = 0.22f * lv * stir * wave;
+                float sl = lapL.Process(noise.Next(), 380f + 260f * wave, 0.7f, rate) * a * g;
+                float sr = lapR.Process(noise.Next(), 420f + 260f * wave, 0.7f, rate) * b * g;
+                l[i] += sl * Pan(p * 0.7f, true);
+                r[i] += sr * Pan(p * 0.7f, false);
+
+                // A gulp now and then as a wave runs under the bank: a bubble whose
+                // pitch rises as it closes.
+                if (rng.NextDouble() < (0.8f + 3f * stir) * wave * lv * dt)
+                    bubbles.Add(new Bubble(Range(rng, 280f, 650f), Range(rng, 0.6f, 1.4f), Range(rng, 0.03f, 0.07f),
+                        Range(rng, 0.02f, 0.05f) * lv, p * 0.7f + Range(rng, -0.25f, 0.25f), 0f, 0f));
+                // Rain on the water: bright plinks, pitch rising, many in a downpour.
+                float plinks = rain > 0.02f ? (8f + 160f * rain * rain) * lv : 0f;
+                if (rng.NextDouble() < plinks * dt)
+                    bubbles.Add(new Bubble(Range(rng, 900f, 2600f), Range(rng, 0.8f, 1.8f), Range(rng, 0.008f, 0.02f),
+                        Range(rng, 0.008f, 0.03f) * lv, p * 0.5f + Range(rng, -0.6f, 0.6f), 0f, 0f));
+            }
+
+            for (int k = bubbles.Count - 1; k >= 0; k--)
+            {
+                var bubble = bubbles[k];
+                float pl = Pan(Math.Clamp(bubble.Pan, -1f, 1f), true), pr = Pan(Math.Clamp(bubble.Pan, -1f, 1f), false);
+                int start = bubble.Age == 0f ? (int)(rng.NextDouble() * n * 0.98) : 0;
+                for (int i = start; i < n; i++)
+                {
+                    float env = MathF.Exp(-bubble.Age / bubble.Decay);
+                    if (env < 0.001f) break;
+                    bubble.Phase += 2f * MathF.PI * bubble.Freq * (1f + bubble.Rise * (1f - env)) * dt;
+                    float s = MathF.Sin(bubble.Phase) * env * bubble.Amp * Math.Min(1f, bubble.Age * rate / 24f);
+                    l[i] += s * pl;
+                    r[i] += s * pr;
+                    bubble.Age += dt;
+                }
+                if (MathF.Exp(-bubble.Age / bubble.Decay) < 0.001f) bubbles.RemoveAt(k);
+                else bubbles[k] = bubble;
+            }
+        }
+    }
+
+    // Frogs by the water at night: a few voices, each a short rattle of throaty
+    // pulses ("rrrup"), answering one another from different spots on the bank.
+    sealed class Frogs
+    {
+        readonly int rate;
+        readonly Random rng;
+        readonly Frog[] frogs = new Frog[4];
+        Lowpass level;
+
+        struct Frog
+        {
+            public float Pitch, Pan, Until, Time, Phase, Pulses, Gain;
+            public bool Calling;
+        }
+
+        public Frogs(int rate, Random rng)
+        {
+            this.rate = rate;
+            this.rng = rng;
+            for (int f = 0; f < frogs.Length; f++)
+                frogs[f] = new Frog { Pitch = Range(rng, 170f, 320f), Pan = Range(rng, -0.6f, 0.6f), Until = Range(rng, 1f, 8f), Gain = Range(rng, 0.5f, 1f) };
+        }
+
+        public void Render(float[] l, float[] r, float[] sl, float[] sr, int n, float target, float pan)
+        {
+            float dt = 1f / rate, levelCoef = Lowpass.Coef(0.3f, rate);
+            float lv = 0f;
+            for (int i = 0; i < n; i++) lv = level.Process(target, levelCoef);
+            if (lv < 0.01f) return;
+            for (int f = 0; f < frogs.Length; f++)
+            {
+                ref var frog = ref frogs[f];
+                // Fewer frogs call when there is less water near, the first ones first.
+                bool awake = lv > f * 0.2f;
+                float p = Math.Clamp(pan * 0.6f + frog.Pan, -1f, 1f);
+                float gl = Pan(p, true) * 0.05f * lv * frog.Gain, gr = Pan(p, false) * 0.05f * lv * frog.Gain;
+                for (int i = 0; i < n; i++)
+                {
+                    if (!frog.Calling)
+                    {
+                        frog.Until -= dt;
+                        if (frog.Until <= 0f && awake)
+                        {
+                            frog.Calling = true;
+                            frog.Time = 0f;
+                            frog.Pulses = MathF.Round(Range(rng, 4f, 9f));
+                        }
+                        continue;
+                    }
+                    frog.Time += dt;
+                    float length = frog.Pulses * 0.04f;
+                    if (frog.Time >= length)
+                    {
+                        frog.Calling = false;
+                        frog.Until = Range(rng, 1.2f, 6f);
+                        continue;
+                    }
+                    // Each pulse is a quick throaty burst; the call rises a little at the end.
+                    float u = frog.Time / length;
+                    float pulse = MathF.Sin(MathF.PI * (frog.Time % 0.04f) / 0.04f);
+                    float env = pulse * pulse * MathF.Sin(MathF.PI * Math.Min(1f, u * 1.1f));
+                    frog.Phase += 2f * MathF.PI * frog.Pitch * (1f + 0.12f * u) * dt;
+                    float s = (MathF.Sin(frog.Phase) + 0.5f * MathF.Sin(frog.Phase * 2f) + 0.25f * MathF.Sin(frog.Phase * 3f)) * env;
+                    l[i] += s * gl;
+                    r[i] += s * gr;
+                    sl[i] += s * gl * 0.6f;
+                    sr[i] += s * gr * 0.6f;
+                }
+            }
+        }
+    }
+
     // --- Footsteps --------------------------------------------------------------
 
     // Soft swishes on grass, duller thuds on bare earth, a heavy sticky press on
@@ -830,7 +1022,7 @@ public sealed class SoundMix
                         else
                         {
                             float d = step.Dull.Process(x, dull);
-                            s = d * MathF.Exp(-t / 0.03f) * attack * 0.5f + thump * 0.22f;
+                            s = d * MathF.Exp(-t / 0.03f) * attack * 0.3f + thump * 0.18f;
                         }
                         if (step.Wet > 0.15f && step.Ground != Ground.Clay)
                         {
