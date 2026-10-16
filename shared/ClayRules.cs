@@ -199,9 +199,6 @@ namespace LifeGame.Shared
 
         public static string DishName(Item dish) => dish == Item.PotOfStew ? "mutton stew" : "berry broth";
 
-        // What a dish leaves behind once eaten: the coil pot it was cooked in.
-        public static Item? EmptyAfterEating(Item item) => item is Item.PotOfBroth or Item.PotOfStew ? Item.CoilPot : null;
-
         static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
     }
 }

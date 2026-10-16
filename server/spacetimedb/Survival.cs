@@ -132,10 +132,15 @@ public static partial class Module
         if (v.Food >= 1f)
             throw new Exception("You are full");
 
-        // A dish cooked in a pot gives the pot back at its quality (Ceramics, ceramics-7).
-        float eatenQuality = Take(ctx, (Item)item, 1);
-        if (ClayRules.EmptyAfterEating((Item)item) is { } empty)
-            AddToInventory(ctx, ctx.Sender, empty, 1, (byte)Math.Round(eatenQuality));
+        // Eaten from a pot, the pot goes back in your hands at its quality, as DrinkFrom does (ceramics-7).
+        if (Needs.EatenFrom((Item)item) is { } empty)
+        {
+            var stack = AnyStack(ctx, (Item)item)!.Value;
+            RemoveFromStack(ctx, stack, 1);
+            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+        }
+        else
+            Take(ctx, (Item)item, 1);
         ctx.Db.Vitals.PlayerId.Update(v with
         {
             Food = Math.Min(1f, v.Food + food),

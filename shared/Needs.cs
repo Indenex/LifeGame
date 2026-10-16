@@ -32,13 +32,13 @@ namespace LifeGame.Shared
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
-        // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
-        public const float PinchPotWater = 0.5f;
-        public const float CoilPotWater = 1f;
-        // Cooked in a pot (ceramics-7, numbers proposed to Survival): better than
+        // Cooked in a pot (ceramics-7, agreed by Survival and Ceramics): better than
         // the same food eaten raw or roasted, and it quenches some thirst too.
         public const float BrothFood = 0.45f, BrothWater = 0.3f;
         public const float StewFood = 0.65f, StewWater = 0.3f;
+        // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
+        public const float PinchPotWater = 0.5f;
+        public const float CoilPotWater = 1f;
 
         // Weather (Justin, 2026-10-15): the cold drain doubles from a mild 15 °C
         // down to 0 °C, and rain adds half again unless you are under cover.
@@ -89,6 +89,9 @@ namespace LifeGame.Shared
             Item.PotOfStew => (StewFood, StewWater),
             _ => (0f, 0f),
         };
+
+        // The container a food is eaten from, which goes back in your hands; null for none.
+        public static Item? EatenFrom(Item item) => item is Item.PotOfBroth or Item.PotOfStew ? Item.CoilPot : null;
 
         public static bool Edible(Item item) => Nourishment(item).food > 0f;
 
