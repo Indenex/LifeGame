@@ -64,6 +64,9 @@ public partial class Avatar : Node3D
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
+    // Claims tints a name red while that player is marked for striking someone down.
+    public void SetNameTint(Color color) => nameplate.Modulate = color;
+
     public override void _Process(double delta)
     {
         float dt = (float)delta;

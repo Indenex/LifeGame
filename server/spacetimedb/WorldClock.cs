@@ -149,6 +149,47 @@ public static partial class Module
         return w;
     }
 
+    // --- Setting the time (admins only) ---------------------------------------
+
+    // Who may change the time from the game. The publisher (the claims admin) can
+    // always; they add a player with `spacetime call <db> make_admin '"Name"'`,
+    // since a game client signs in with its own identity, not the publisher's.
+    [SpacetimeDB.Table(Accessor = "WorldAdmin", Public = true)]
+    public partial struct WorldAdmin
+    {
+        [PrimaryKey]
+        public Identity Identity;
+    }
+
+    static bool IsWorldAdmin(ReducerContext ctx) =>
+        ctx.Db.ClaimConfig.Id.Find(0)?.Admin == ctx.Sender || ctx.Db.WorldAdmin.Identity.Find(ctx.Sender) is not null;
+
+    [SpacetimeDB.Reducer]
+    public static void MakeAdmin(ReducerContext ctx, string playerName)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can make admins");
+        Player? found = null;
+        foreach (var p in ctx.Db.Player.Iter())
+            if (string.Equals(p.Name, playerName.Trim(), StringComparison.OrdinalIgnoreCase)) { found = p; break; }
+        if (found is not { } player) throw new Exception($"No player named {playerName}");
+        if (ctx.Db.WorldAdmin.Identity.Find(player.Identity) is null)
+            ctx.Db.WorldAdmin.Insert(new WorldAdmin { Identity = player.Identity });
+    }
+
+    // Moves the clock so it is now this far through the day (0 midnight, 0.25
+    // sunrise, 0.5 noon, 0.75 sunset). Clients glide to the new time.
+    [SpacetimeDB.Reducer]
+    public static void SetTimeOfDay(ReducerContext ctx, float fraction)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can change the time");
+        if (float.IsNaN(fraction) || fraction < 0f || fraction > 1f) throw new Exception("Time of day runs from 0 to 1");
+        EnsureWorldClock(ctx);
+        if (ctx.Db.WorldClock.Id.Find(0) is not { } clock) return;
+        long length = clock.DayLengthSeconds * 1_000_000L;
+        long start = ctx.Timestamp.MicrosecondsSinceUnixEpoch - (long)(fraction * length);
+        ctx.Db.WorldClock.Id.Update(clock with { DayStart = new Timestamp(start), ServerNow = ctx.Timestamp });
+    }
+
     // --- For other systems -------------------------------------------------
 
     // How far through the day it is: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset.

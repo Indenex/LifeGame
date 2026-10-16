@@ -94,5 +94,17 @@ public partial class KeyHelp : CanvasLayer
             grid.AddChild(key);
             grid.AddChild(what);
         }
+        // Rows other lanes add, such as admin chat commands.
+        foreach (var (keys, help) in Extra?.Invoke() ?? System.Array.Empty<(string, string)>())
+        {
+            var key = new Label { Text = keys, HorizontalAlignment = HorizontalAlignment.Right };
+            Hud.Soft(key, 17, 1f);
+            var what = new Label { Text = help };
+            Hud.Soft(what, 17, 0.8f);
+            grid.AddChild(key);
+            grid.AddChild(what);
+        }
     }
+
+    public static System.Func<System.Collections.Generic.IEnumerable<(string Keys, string Help)>>? Extra;
 }
