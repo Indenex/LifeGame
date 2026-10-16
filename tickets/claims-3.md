@@ -3,7 +3,7 @@ Lane: Claims, chat and PvP rules
 Owner: Claims, chat and PvP rules thread (session cse_01CfATdbRNPF9XXuAmTui6jb)
 Status: in_review
 Branch: claude/claims-chat-pvp-vk2qak
-PR: (opening)
+PR: https://github.com/Indenex/LifeGame/pull/50
 
 ## Goal
 Players can strike each other in the wild with the Strike key (left click / Z, shared with Animals). A strike is refused on claimed land unless the owner allows fighting, in the waking clearing (20 m around spawn), and against newcomers for their first 10 minutes. Striking someone ends your own grace. Players have 100 health, which shows only as a soft ring once hurt and refills slowly after 10 s without a hit, if fed and watered. Being struck down is the same death as hunger or cold: everything carried drops, you wake at the wilderness edge, and you keep knowledge and skills. Nearby players see "X was struck down by Y" in chat, and the one who struck them down shows a red name to others for 30 minutes (D-053). Being hurt shows as a soft dark-red screen edge instead of a health ring. Damage by the best weapon carried: fists 8.5 (about 12 hits), flake 12, hand axe 17 (about 6), spear 20.
