@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -6,9 +7,12 @@ namespace LifeGame;
 // particle burst every few seconds per avatar, so 32 players cost next to nothing.
 public partial class Breath : CpuParticles3D
 {
-    // How cold the air is around here, 0 (no breath) to 1 (clearly visible). Survival
-    // sets it; until then nobody breathes visibly.
+    // How visible breath is around here, 0 (none) to 1 (clearly seen): the same curve as
+    // the cold drain (Needs.Breath, D-144) on Atmosphere's air temperature, fainter in
+    // falling snow. Shared by every avatar and refreshed at most once a second.
     public static float Coldness;
+    static Atmosphere? atmosphere;
+    static ulong refreshedAt;
 
     float wait;
 
@@ -56,7 +60,28 @@ public partial class Breath : CpuParticles3D
         if (wait > 0f) return;
         // A breath every 3 to 4 s; colder air shows more of them.
         wait = (float)GD.RandRange(3.0, 4.2);
+        Refresh();
         if (Coldness <= 0.01f || GD.Randf() > Coldness + 0.2f || !IsVisibleInTree()) return;
         Restart();
+    }
+
+    void Refresh()
+    {
+        ulong now = Time.GetTicksMsec();
+        if (now - refreshedAt < 1000 && refreshedAt != 0) return;
+        refreshedAt = now;
+        if (atmosphere == null || !IsInstanceValid(atmosphere))
+            atmosphere = Find(GetTree().Root);
+        if (atmosphere == null) return;
+        Coldness = Needs.Breath(Needs.AirCold(atmosphere.AirCelsius)) * (1f - 0.6f * atmosphere.Snowfall);
+    }
+
+    // Main puts Atmosphere under the 3D view; look for it once rather than by path.
+    static Atmosphere? Find(Node node)
+    {
+        if (node is Atmosphere a) return a;
+        foreach (var child in node.GetChildren())
+            if (Find(child) is { } found) return found;
+        return null;
     }
 }
