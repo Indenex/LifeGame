@@ -6,26 +6,18 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Trading face to face (D-069). G on a player asks to trade; they see "Mara wants to
-// trade" and press G to say yes or Esc to say no. The window shows both offers side by
-// side, with what you carry below to add from. Each side accepts; any change to either
-// offer clears both accepts, and the window says so. Esc, walking away or dying calls
-// the trade off. Main sets Link, Players and Dead.
+// Trading face to face (D-069). G on a player asks to trade (Claims' handler); they see
+// "Mara wants to trade" and press G to say yes or Esc to say no. The window shows both
+// offers side by side, with what you carry below to add from. Each side accepts; any
+// change to either offer clears both accepts, and the window says so. Esc calls the
+// trade off; the server ends it when you walk apart, die or go offline.
 public partial class TradeWindow : CanvasLayer
 {
     // Talks to the server (claims-7); a mock until that lands.
     public ITradeLink Link = new MockTradeLink();
-    // Players near enough to see: id, name, where they stand. Set by Main.
-    public Func<IEnumerable<(uint id, string name, Vector3 at)>> Players = () => Array.Empty<(uint, string, Vector3)>();
-    // Where you stand. Set by Main.
-    public Func<Vector3> Me = () => Vector3.Zero;
-    // True while you are dead (mourning); a trade can't outlive you.
-    public Func<bool> Dead = () => false;
     // A short line for the HUD ("You trade with Mara").
     public Action<string> Note = _ => { };
 
-    // How close another player must be to ask, and how far apart calls the trade off.
-    const float AskReach = 2.5f, Apart = 5f;
     static readonly Color Agreed = new(0.62f, 0.86f, 0.46f);
     static readonly Color Caution = new(0.98f, 0.76f, 0.38f);
 
@@ -39,7 +31,7 @@ public partial class TradeWindow : CanvasLayer
     Label mineState = null!, theirsState = null!, theirsHeading = null!;
     Button accept = null!;
     string shown = "";
-    int lastVersion = -1;
+    long lastVersion = -1;
     bool lastAnyAccepted;
     float clearedTime;
 
@@ -47,11 +39,7 @@ public partial class TradeWindow : CanvasLayer
     {
         Layer = 2;
         Link.Said += line => Note(line);
-        // Until the server side (claims-7) lands, G on a player only trades with the
-        // pretend Mara when asked to: --mock-trade, or a --screenshot-trade preview.
-        bool mockWanted = OS.GetCmdlineUserArgs().Any(a => a == "--mock-trade" || a.StartsWith("--screenshot-trade"));
-        if (Link is not MockTradeLink || mockWanted)
-            Use.Register(new UseHandler { Id = "ui.trade", Priority = 100, Find = FindUse });
+        Use.Register(new UseHandler { Id = "ui.trade", Priority = 100, Find = FindUse });
 
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -71,7 +59,8 @@ public partial class TradeWindow : CanvasLayer
         root.AddChild(window);
 
         // --screenshot-trade opens a pretend trade with Mara; =asked shows her request,
-        // =accepted has both sides accepted, =changed shows the cleared accepts.
+        // =accepted has Mara accepted (both accepting swaps at once, so it never shows),
+        // =changed shows the cleared accepts after you add something.
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--screenshot-trade") && Link is MockTradeLink mock)
                 GetTree().CreateTimer(1.5).Timeout += () => Preview(mock, arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..] : "");
@@ -81,55 +70,26 @@ public partial class TradeWindow : CanvasLayer
     {
         if (what == "asked") { mock.AskMe(); return; }
         mock.OpenNow();
-        mock.Offer(new TradeStack(Item.Stick, 0, 4));
-        mock.Offer(new TradeStack(Item.Flake, 60, 1));
+        mock.Set(new TradeStack(Item.Stick, 0, 4));
+        mock.Set(new TradeStack(Item.Flake, 60, 1));
         if (what == "accepted" || what == "changed")
         {
             mock.Tick(double.MaxValue);
             Refresh();
-            if (what == "changed") mock.Offer(new TradeStack(Item.Fiber, 0, 3));
+            if (what == "changed") mock.Set(new TradeStack(Item.Fiber, 0, 3));
         }
     }
 
-    UseOffer? FindUse(Vector3 at)
-    {
-        if (IsOpen || Dead()) return null;
-        // Someone waits on you: G says yes, whatever you face. Its target is where you
-        // stand, so it counts as in front of you and beats nearby bushes and fires.
-        if (Link.Incoming is { } who)
-            return new UseOffer($"Trade with {who.name}", 0f, () => Link.Answer(true), Target: at);
-        if (Link.Outgoing != null) return null;
-        (uint id, string name, Vector3 pos)? best = null;
-        float bestDist = AskReach;
-        foreach (var p in Players())
-        {
-            float d = Flat(p.at, at);
-            if (d <= bestDist) { best = p; bestDist = d; }
-        }
-        // A low bar: a player is only the best thing to use when you face them.
-        return best is { } b
-            ? new UseOffer($"Trade with {b.name}", bestDist, () => Link.Ask(b.id, b.name), Target: b.pos)
-            : null;
-    }
-
-    Vector3? PartnerAt(uint id)
-    {
-        foreach (var p in Players()) if (p.id == id) return p.at;
-        return null;
-    }
-
-    static float Flat(Vector3 a, Vector3 b) => new Vector2(a.X - b.X, a.Z - b.Z).Length();
+    // Someone waits on you: G says yes, whatever you face. Its target is where you stand,
+    // so it counts as in front of you and beats nearby bushes and fires.
+    UseOffer? FindUse(Vector3 at) => !IsOpen && Link.Incoming is { } who
+        ? new UseOffer($"Trade with {who.name}", 0f, () => Link.Answer(true), Target: at)
+        : null;
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
         if (Link is MockTradeLink mock) mock.Tick(Time.GetTicksMsec() / 1000.0);
-
-        var trade = Link.Current;
-        // Death or walking apart calls it off; the server checks the same.
-        if ((trade != null || Link.Outgoing != null) && Dead()) Link.Cancel();
-        else if (trade != null && PartnerAt(trade.PartnerId) is { } where && Flat(where, Me()) > Apart)
-            Link.Cancel();
 
         asked.Text = Link.Incoming is { } who ? $"{who.name} wants to trade    Esc says no"
             : Link.Outgoing is { } ask ? $"Waiting for {ask.name}    Esc takes it back"
@@ -168,7 +128,7 @@ public partial class TradeWindow : CanvasLayer
 
         accept = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
         accept.AddThemeFontSizeOverride("font_size", 17);
-        accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted); };
+        accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted, t.Version); };
         box.AddChild(accept);
 
         // Said loudly when a change wipes the accepts, so nobody agrees to the old deal.
@@ -256,7 +216,7 @@ public partial class TradeWindow : CanvasLayer
 
         title.Text = $"Trading with {trade.Partner}";
         theirsHeading.Text = $"{trade.Partner} gives";
-        Fill(mineList, trade.Mine, s => Link.Withdraw(s));
+        Fill(mineList, trade.Mine, (s, n) => Link.Set(s with { Count = s.Count - n }));
         Fill(theirsList, trade.Theirs, null);
         Mark(mineBox, mineState, trade.MineAccepted, "You accept", "You haven't accepted");
         Mark(theirsBox, theirsState, trade.TheirsAccepted, $"{trade.Partner} accepts", $"{trade.Partner} hasn't accepted");
@@ -264,10 +224,11 @@ public partial class TradeWindow : CanvasLayer
         accept.Modulate = trade.MineAccepted ? Agreed : Colors.White;
 
         // What you could still add: what you carry less what you already offer.
-        var left = carried.Select(s => s with { Count = s.Count - (trade.Mine.FirstOrDefault(m => m.Item == s.Item && m.Quality == s.Quality)?.Count ?? 0) })
+        var left = carried.Select(s => s with { Count = s.Count - Offered(trade, s) })
             .Where(s => s.Count > 0).ToList();
         foreach (var child in carryRow.GetChildren()) { carryRow.RemoveChild(child); child.QueueFree(); }
-        foreach (var s in left) carryRow.AddChild(ItemButton(s, Link.Offer));
+        foreach (var s in left)
+            carryRow.AddChild(ItemButton(s, (_, n) => Link.Set(s with { Count = Offered(trade, s) + n })));
         if (left.Count == 0) carryRow.AddChild(Faint("Nothing more to offer"));
 
         // The carrying limit (D-042): warn when the swap would leave you overloaded.
@@ -277,6 +238,9 @@ public partial class TradeWindow : CanvasLayer
             ? "After this trade you'd carry more than you comfortably can, and walk slower"
             : "";
     }
+
+    static uint Offered(TradeView trade, TradeStack s) =>
+        trade.Mine.FirstOrDefault(m => m.Item == s.Item && m.Quality == s.Quality)?.Count ?? 0;
 
     static IEnumerable<(Item, uint)> Merge(List<TradeStack> carried, IReadOnlyList<TradeStack> give, IReadOnlyList<TradeStack> get)
     {
@@ -295,7 +259,7 @@ public partial class TradeWindow : CanvasLayer
         state.AddThemeColorOverride("font_color", accepted ? Agreed : new Color(Look.Cream, 0.55f));
     }
 
-    static void Fill(VBoxContainer list, IReadOnlyList<TradeStack> stacks, Action<TradeStack>? take)
+    static void Fill(VBoxContainer list, IReadOnlyList<TradeStack> stacks, Action<TradeStack, uint>? take)
     {
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
         foreach (var s in stacks)
@@ -307,9 +271,9 @@ public partial class TradeWindow : CanvasLayer
         if (stacks.Count == 0) list.AddChild(Faint("Nothing yet"));
     }
 
-    // An item with its picture. Click moves one, Shift+click the whole stack; with no
-    // action it's just shown (the other side's offer).
-    static Button ItemButton(TradeStack s, Action<TradeStack>? move)
+    // An item with its picture. Click moves one, Shift+click the whole stack (move gets
+    // the stack and how many); with no action it's just shown (the other side's offer).
+    static Button ItemButton(TradeStack s, Action<TradeStack, uint>? move)
     {
         var button = new Button
         {
@@ -323,7 +287,7 @@ public partial class TradeWindow : CanvasLayer
         button.AddThemeConstantOverride("icon_max_width", 30);
         button.AddThemeColorOverride("font_disabled_color", Look.Cream);
         if (move != null)
-            button.Pressed += () => move(s with { Count = Input.IsKeyPressed(Key.Shift) ? s.Count : 1 });
+            button.Pressed += () => move(s, Input.IsKeyPressed(Key.Shift) ? s.Count : 1);
         return button;
     }
 

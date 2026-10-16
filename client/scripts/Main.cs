@@ -86,13 +86,7 @@ public partial class Main : Node3D
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         social.HideChip = () => survival.Mourning;
         // Trading face to face (ui-9, D-069).
-        var trade = new TradeWindow
-        {
-            Players = () => others.Where(kv => kv.Value.Visible).Select(kv => (kv.Key, names.GetValueOrDefault(kv.Key, "Wanderer"), kv.Value.Position)),
-            Me = () => me.Position,
-            Dead = () => survival.Mourning,
-            Note = hud.Note,
-        };
+        var trade = new TradeWindow { Note = hud.Note };
         AddChild(trade);
         JournalPanel? journalPanel = null;
         ClaimPanel? claimPanel = null;

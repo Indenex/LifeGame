@@ -13,10 +13,11 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 
 - 2026-10-16 17:45: window built against a mock. `ui/Trade.cs` holds `ITradeLink` (the contract the window needs) and `MockTradeLink` (Mara). `ui/TradeWindow.cs` draws the window: both offers side by side, item pictures, an Accept button, green borders and ticks when a side accepts, an amber "The offer changed, so both accepts were cleared" line, a carry-limit warning from `Carry.Of`, and Esc, walking 5 m apart or death to call it off. G on a player within 2.5 m asks; the asked player sees "Mara wants to trade    Esc says no" above the G prompt, and G says yes. Main has a small hook (players, Me, Dead, Panels.Open). Until claims-7 lands, G on a player only does anything with `--mock-trade` or `--screenshot-trade`. Previews: `--screenshot-trade`, `=asked`, `=accepted`, `=changed`. Client builds with 0 errors.
 - 2026-10-16 17:50: Render requested 119c068 (four previews). Sent Claims (session_013ECn821EbTpbj4h7d3PepH) the calls and reads the window needs, plus the assumptions in Open questions.
+- 2026-10-16 18:05: claims-7 contract received (branch claude/claims-7-hand-item, 857662f, tickets/claims-7.md "Contract"). Reshaped the client to match: one `Set` call with an absolute count (SetTradeItem), Accept carries the version, and the trade has an id. The server owns the apart, death and lapse checks, so the client-side ones are gone, and so is my G handler for asking (Claims' `claims.trade` does it). Asked Claims for `AcceptTrade(tradeId, version, bool accept)` so you can take an Accept back. Build 0 errors.
 
 ## Open questions / blockers
-- Server contract from Claims (claims-7) not received yet; building against a mock meanwhile.
-- Assumed (sent to Claims to confirm): offered items stay in your inventory until the swap; the server clears both accepts on any change, cancels on death, past ~5 m apart or on disconnect, and times requests out (30 s suggested); the client warns about overload but doesn't block it.
+- Asked Claims 2026-10-16: can AcceptTrade take a bool so you can take an Accept back? Until they answer, the window keeps a take-back button.
+- Bindings for claims-7 not pushed yet; the window still runs on MockTradeLink.
 
 ## Next step
-Wait for the render of 119c068 and the claims-7 contract; when Claims sends the claims-7 contract, write a real ITradeLink over the bindings.
+When Claims pushes claims-7 with bindings, write ServerTradeLink (ITradeLink over my_trade, my_trade_items, trade_ended and the five reducers) and make Main use it.

@@ -10,19 +10,21 @@ namespace LifeGame;
 public record TradeStack(Item Item, byte Quality, uint Count);
 
 // A trade in progress as the window shows it (D-069). Version goes up whenever either
-// offer changes; the server clears both accepts at the same moment.
+// offer changes; the server clears both accepts at the same moment, and an Accept names
+// the version it saw, so nobody agrees to an offer that changed under them.
 public sealed record TradeView(
+    ulong TradeId,
     uint PartnerId,
     string Partner,
     IReadOnlyList<TradeStack> Mine,
     IReadOnlyList<TradeStack> Theirs,
     bool MineAccepted,
     bool TheirsAccepted,
-    int Version);
+    uint Version);
 
-// What the trade window talks to. The server side is claims-7 (Claims lane); until its
-// contract lands, MockTradeLink stands in, and the real link implements this over the
-// generated bindings.
+// What the trade window talks to. The server side is claims-7 (Claims lane, contract in
+// tickets/claims-7.md); Claims' own G handler asks. Until the bindings land,
+// MockTradeLink stands in, and the real link implements this over them.
 public interface ITradeLink
 {
     // The open trade, or null.
@@ -34,14 +36,14 @@ public interface ITradeLink
     // Everything you carry, offered or not; the window takes the offer away itself.
     IEnumerable<TradeStack> Carried();
 
-    void Ask(uint playerId, string name);
     void Answer(bool yes);
-    void Offer(TradeStack stack);
-    void Withdraw(TradeStack stack);
-    void Accept(bool on);
+    // Sets how much of a stack your side offers (Count 0 takes it out).
+    void Set(TradeStack stack);
+    // Accepts (or takes back) the offer at the version on screen.
+    void Accept(bool on, uint version);
     void Cancel();
 
-    // A finished trade, a refusal or a cancel, as one line for the HUD.
+    // A finished trade, a refusal, a cancel or a server error, as one line for the HUD.
     event Action<string>? Said;
 }
 
@@ -60,14 +62,14 @@ public sealed class MockTradeLink : ITradeLink
     };
     readonly List<TradeStack> mine = new(), theirs = new();
     bool mineAccepted, theirsAccepted, open;
-    int version;
+    uint version;
     double theirAcceptAt = double.MaxValue;
 
     public TradeView? Current => open
-        ? new TradeView(7, "Mara", mine.ToList(), theirs.ToList(), mineAccepted, theirsAccepted, version)
+        ? new TradeView(1, 7, "Mara", mine.ToList(), theirs.ToList(), mineAccepted, theirsAccepted, version)
         : null;
     public (uint id, string name)? Incoming { get; private set; }
-    public (uint id, string name)? Outgoing { get; private set; }
+    public (uint id, string name)? Outgoing => null;
     public event Action<string>? Said;
 
     public IEnumerable<TradeStack> Carried() => carried;
@@ -85,12 +87,6 @@ public sealed class MockTradeLink : ITradeLink
     // Mara asks you, as if she had pressed G on you.
     public void AskMe() => Incoming = (7, "Mara");
 
-    public void Ask(uint playerId, string name)
-    {
-        Outgoing = (playerId, name);
-        Said?.Invoke($"You ask {name} to trade");
-    }
-
     public void Answer(bool yes)
     {
         if (Incoming is not { } who) return;
@@ -100,34 +96,30 @@ public sealed class MockTradeLink : ITradeLink
     }
 
     // You can offer up to what you carry; offered things stay in your hands until the swap.
-    public void Offer(TradeStack stack)
+    public void Set(TradeStack stack)
     {
-        var have = carried.FirstOrDefault(s => Same(s, stack));
-        uint already = mine.FirstOrDefault(s => Same(s, stack))?.Count ?? 0;
-        if (have == null || already >= have.Count) return;
-        Add(mine, stack with { Count = Math.Min(stack.Count, have.Count - already) });
+        uint have = carried.FirstOrDefault(s => Same(s, stack))?.Count ?? 0;
+        var set = stack with { Count = Math.Min(stack.Count, have) };
+        int i = mine.FindIndex(s => Same(s, stack));
+        if (i >= 0 && set.Count > 0) mine[i] = set;
+        else if (i >= 0) mine.RemoveAt(i);
+        else if (set.Count > 0) mine.Add(set);
         Changed();
     }
 
-    public void Withdraw(TradeStack stack)
+    public void Accept(bool on, uint seen)
     {
-        Take(mine, stack);
-        Changed();
-    }
-
-    public void Accept(bool on)
-    {
+        if (seen != version) { Said?.Invoke("The offer changed; look again"); return; }
         mineAccepted = on;
         if (mineAccepted && theirsAccepted) Finish();
     }
 
     public void Cancel()
     {
-        if (!open && Outgoing == null) return;
+        if (!open) return;
         mine.Clear();
         theirs.Clear();
         open = false;
-        Outgoing = null;
         Said?.Invoke("The trade is off");
     }
 
