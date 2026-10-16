@@ -317,6 +317,9 @@ public partial class SocialLayer : Node
 
     bool IsMine(Claim c) => conn?.Db.Player.Identity.Find(c.Owner) is { } p ? p.PlayerId == myId : c.OwnerPlayerId == myId;
 
+    // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
+    public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
+
     bool HasRights(Claim c) =>
         IsMine(c) || (conn?.Db.ClaimMember.Iter().Any(m => m.ClaimId == c.Id && m.PlayerId == myId) ?? false);
 

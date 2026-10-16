@@ -24,6 +24,8 @@ public partial class BuildingSystem : Node
     readonly CameraRig cameraRig;
     readonly SubViewport view;
     readonly Func<DbConnection?> conn;
+    // Whether you may bar doors at a point (you own or belong to the claim there); Main wires it to Social.
+    public Func<float, float, bool> MayBar = (_, _) => false;
 
     readonly Node3D root = new() { Name = "Structures" };
     readonly Dictionary<ulong, StructureView> views = new();
