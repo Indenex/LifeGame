@@ -32,6 +32,8 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
   - Antler: a plain crafting material, plus an antler hammer or pick recipe, with Crafting (new session_01N9APthjRDfjknUvCweqzzN).
   - Bow and arrows: a new ticket animals-15 with Crafting. Client auto-targets (nearest huntable in a cone in front, within range); the server resolves each shot instantly in one reducer (no projectile simulation; the client animates the arrow). Damage = bowPower x arrowPower x (0.7 + 0.3 bowQ) x (0.7 + 0.3 arrowQ) x rangeFactor x rand(0.85, 1.15); with deer HP 100 the first crude bow and arrows do about 17-33, so 3 to 6 arrows; hit chance falls with distance and target speed. PM is proposing the formula to Justin. Keep #219 on spear plus sneak first.
 
+- 2026-10-16 (new Sonnet session): added Roast venison 205, Burnt venison 206, `cook.venison`, food values and roast mapping (Cooking.cs RoastResult). Not built locally (no dotnet in this container): CI is the check. Subscribed to #195 and #219; #195 CI was queued at d6aa968.
+
 ## Open questions / blockers
 - Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
@@ -49,4 +51,4 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 - Local test bots used (scratch only, not in the repo): wool/clothing/station/season/deer checks with TEMP give/teleport/season reducers. To re-test, write a TEMP reducer file in server/spacetimedb/, publish locally, regenerate bindings, run, then delete the file and regenerate bindings before committing.
 
 ## Next step
-Add Roast venison 205, Burnt venison 206 and `cook.venison` (copy of cook.meat) to this branch, build, push; then work the Lane handoff list above in order.
+Check CI on the venison commit; then replace StrikeScale with deer/sheep health plus a sneak-skill gate (ask Journal and skills how to read sneak), then AnimalStepBlocked trunks (own PR from main), then animals-15 bow.

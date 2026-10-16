@@ -62,6 +62,8 @@ namespace LifeGame.Shared
         RawVenison = 202,
         DeerHide = 203,
         Antler = 204,
+        CookedVenison = 205,
+        BurntVenison = 206,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -142,7 +144,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Leather, Name = "Leather", Plural = "Leather", HasQuality = true },
             new ItemDef { Id = Item.RawVenison, Name = "Raw venison", Plural = "Raw venison", HasQuality = true },
             new ItemDef { Id = Item.DeerHide, Name = "Deer hide", Plural = "Deer hides", HasQuality = true },
-            new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true });
+            new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true },
+            new ItemDef { Id = Item.CookedVenison, Name = "Roast venison", Plural = "Roast venison", HasQuality = true },
+            new ItemDef { Id = Item.BurntVenison, Name = "Burnt venison", Plural = "Burnt venison" });
 
         public static ItemDef Def(Item item) => All[item];
 
