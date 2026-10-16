@@ -3,7 +3,7 @@ Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
 Status: in_review
 Branch: claude/house-building-8ueqz2 (backup: claude/house-building-8ueqz2-hearth)
-PR: (not yet)
+PR: #202 (opened 2026-10-16 19:54, head 5793230 plus ticket commits)
 
 ## Goal
 D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132). A raised hearth is built inside a finished clay hut or mud-brick house: a ring of stones (4 stone), then a clay surround (3 daub). A fire lit within reach of it goes onto it and burns 1.5× as long per stick, and it makes a hut fully warm, as a fire already does in the house. Smoke rises through the roof. Justin sees a stone-and-clay hearth by the wall with the fire on it.
@@ -27,6 +27,14 @@ D-087, second of three (fence, hearth, cabin). Justin picked option (a) (D-132).
 
 - 2026-10-16 19:50: #122 merged without FireTopUpHook, so the self-feed ships as a plain `HearthTopUp` method. Crafting put the hook up as #194; once it's on main, one line wires it up. Merged main into claude/house-building-8ueqz2 along with building-9. All local checks green: LoadTest, BuildTest (all modes in "both"), SpawnCheck, CraftCheck, SocialTest, and the upgrade check over origin/main.
 - 2026-10-16 19:55: for Claims' claims-12 (claim fences), declared `GateOpenHook(ctx, s, ref bool allowed)`, called in ToggleDoor for gates, and the client `SnapFenceHook(target, ref snapped, ref yaw, ref done)`, called first in SnapFence. Claims implements both in its own files. BuildTest fence passes.
+
+- 2026-10-16 19:54: opened #202. Render requested 5793230 (Render session_013qe8zPzzBHx9rFPEYoKMr5): hearth lit inside a hut at dusk, half-built, with a basket beside it.
+- Claim fences (claims-12, Claims session_013ECn821EbTpbj4h7d3PepH), split the PM asked for:
+  - House building keeps the Fence/Gate structures, models and collision.
+  - Claims does the members-only gate rule (implementing `GateOpenHook` in its own server/spacetimedb/ClaimFences.cs) and border placement (`Social.SnapToClaimBorder`, plus implementing the client `SnapFenceHook` in its own `partial class BuildingSystem` file).
+  - Lapsed claims are Claims' business. Server-side player walls are out of scope; the client already blocks players at fences, shut gates and walls.
+  - Both hook declarations are in #202. Claims was told the sha.
+- 2026-10-16 19:56: HANDOFF to a Sonnet session (D-159).
 
 ## Open questions / blockers
 - Crafting's #194 (FireTopUpHook): once merged, add `static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil) => HearthTopUp(ctx, fire, ref fuelUntil);` to BuildingHearth.cs.
