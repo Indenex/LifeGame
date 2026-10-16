@@ -23,7 +23,7 @@ public partial class Atmosphere
     bool seasonSynced;
     float targetSnow, targetSnowCover, snow, snowCover;
     float? targetAir;
-    float air = 10f;
+    float airCelsius = 10f;
     float? argSeason, argSnow, argSnowCover;
     readonly Rain snowfall = new(snow: true);
 
@@ -37,7 +37,7 @@ public partial class Atmosphere
     public float Snowfall => snow;
     // Outdoor air temperature, degrees C: the server's AirTemperature, refreshed
     // every weather tick (20 s) and eased between ticks (e.g. visible breath, D-144).
-    public float AirCelsius => air;
+    public float AirCelsius => airCelsius;
 
     void ReadySeasons()
     {
@@ -81,7 +81,7 @@ public partial class Atmosphere
 
         snow = Mathf.Lerp(snow, argSnow ?? targetSnow, 1f - Mathf.Exp(-dt / 6f));
         snowCover = Mathf.Lerp(snowCover, argSnowCover ?? targetSnowCover, 1f - Mathf.Exp(-dt / 10f));
-        if (targetAir is { } t) air = Mathf.Lerp(air, t, 1f - Mathf.Exp(-dt / 8f));
+        if (targetAir is { } t) airCelsius = Mathf.Lerp(airCelsius, t, 1f - Mathf.Exp(-dt / 8f));
 
         RenderingServer.GlobalShaderParameterSet(NSeasonWarmth, Seasons.Warmth(Year));
         RenderingServer.GlobalShaderParameterSet(NSeasonAutumn, Seasons.Autumn(Year));
