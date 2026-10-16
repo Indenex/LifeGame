@@ -827,3 +827,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-203 — 2026-10-16 — Roof clears in a soft circle when you are behind a building (extends D-201)
 **Decision:** When the player is behind a building, seen from outside, its roof also clears in a soft circle around them, in addition to the walls fading. Owner: House building (building-11).
 **Who:** Justin, picking "Soft clear circle".
+
+## D-204 — 2026-10-16 — Kiln and rack output gets no place prompt; drag from the bag
+**Decision:** Output from a kiln or drying rack does not trigger a place prompt. The player drags the item out of the bag to place it.
+**Who:** Justin ("No, drag from bag")
+
+## D-205 — 2026-10-16 — Atmosphere next: storms and lightning, wet world, warm homes at night
+**Decision:** After "Give me more options", the next Atmosphere features are Storms and lightning, Wet world (puddles and a wet sheen that dries), and Warm homes at night (firelight from doorways, hearth smoke). Owner: Atmosphere, with Audio and House building.
+**Who:** Justin, choosing Storms and lightning, Wet world and Warm homes at night.
