@@ -11,9 +11,10 @@ Roast mutton fills 40% of hunger (Justin, D-039). Burnt mutton fills 10% (our de
 ## Progress log
 - 2026-10-16 00:30: Needs.Nourishment, Edible and BestFood are now in shared/Needs.cs, and the server's Eat uses them. X picks with BestFood; raw mutton gets "needs cooking first". Tested on a local server: roast took food from 0.80 to 1.0, burnt was eaten, raw was refused.
 - 2026-10-16 00:40: ui-4 follow-ups: forage passes a Use Target and survival.forage_facing is gone; the needs rings fade while Panels.Open(). No Hints.Done needed, since eating only happens through X.
+- 2026-10-16 00:55: Justin chose slower walk for overloading (D-052), which matches survival-3 as shipped, so no change is needed.
 
 ## Open questions / blockers
-- Burnt mutton at 10% is our default; Justin hasn't set it.
+- Burnt mutton at 10% is our default; the PM accepted it.
 - (none for ui-4: done locally)
 
 ## Next step
