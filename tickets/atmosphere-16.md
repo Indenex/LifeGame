@@ -29,6 +29,8 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 18:52: Survival wired D-134 through a partial hook declared in Survival.cs (claude/survival-arrival, 465a09b): `static partial void SnowfallAt(ReducerContext ctx, ref float snow);`. Add the body in WorldClock.cs ONLY once their declaration is on main (CS0759 otherwise): `static partial void SnowfallAt(ReducerContext ctx, ref float snow) => snow = Snowfall(ctx);`.
 
+- 2026-10-16 19:00: D-136 (Justin): milder winter days, harsh cold at night. TemperatureOffset(warmth, daylight): summer +8; deep winter -5 by day, -17 at night. Measured locally (set_season 0.875): noon, cloud 0.2 -> 12.6 C (Survival chill about 1.16x); night 0.95 -> -8.6 C (capped 2x). Overcast winter day about 10 C (1.33x), rain and wind about 6 C (1.6x). Snow now falls mostly at night, so melt slowed to 0.0006 x min(T,10) x (1 + daylight + 2 rain) per tick: night snow lasts into the afternoon. Agreed with Survival (sent).
+
 ## Open questions
 - (answered) D-134: falling snow wets you at half rain's rate; Survival wires it from Module.Snowfall (told them). Justin is fine with the -16 C winter. / blockers
 

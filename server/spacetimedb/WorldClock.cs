@@ -149,11 +149,12 @@ public static partial class Module
         w.Rain = season.Precipitation - season.Snow;
 
         // Heavy snow covers the ground in about seven minutes. Above freezing it
-        // melts over twenty minutes or so, faster in sun and in rain.
+        // melts slowly, faster in sun and rain: snow from a winter night lasts into
+        // the afternoon and thins out by dusk.
         if (season.Snow > 0.05f)
             season.SnowCover = Math.Min(1f, season.SnowCover + season.Snow * 0.05f);
         else if (season.Temperature > 0.5f)
-            season.SnowCover = Math.Max(0f, season.SnowCover - 0.004f * Math.Min(season.Temperature, 8f) * (1f + WorldTime.Daylight(TimeOfDay(ctx)) + 2f * w.Rain));
+            season.SnowCover = Math.Max(0f, season.SnowCover - 0.0006f * Math.Min(season.Temperature, 10f) * (1f + WorldTime.Daylight(TimeOfDay(ctx)) + 2f * w.Rain));
         ctx.Db.SeasonState.Id.Update(season);
 
         // Heavy rain soaks the ground in about five minutes. It dries over half an
@@ -325,8 +326,8 @@ public static partial class Module
         0.15f + 0.85f * WorldTime.Daylight(TimeOfDay(ctx)) * (1f - 0.6f * w.Cloud);
 
     // Outdoor air temperature in degrees Celsius: a mild forest, cooler at night,
-    // in rain or snow and in wind; warmer in summer, around freezing on a winter
-    // day and about -8 on a winter night, 27 on a summer afternoon.
+    // in rain or snow and in wind; 27 on a summer afternoon; a cool 10 or so on a
+    // winter day and about -8 on a winter night (D-136).
     public static float AirTemperature(ReducerContext ctx) =>
         Temperature(ctx, CurrentWeather(ctx), ctx.Db.SeasonState.Id.Find(0)?.Precipitation ?? CurrentWeather(ctx).Rain);
 
@@ -334,7 +335,7 @@ public static partial class Module
     {
         float day = WorldTime.Daylight(TimeOfDay(ctx));
         return 9f + 10f * day * (1f - 0.4f * w.Cloud) - 3f * precipitation - 2f * w.Wind
-            + Seasons.TemperatureOffset(SeasonNow(ctx).Warmth);
+            + Seasons.TemperatureOffset(SeasonNow(ctx).Warmth, day);
     }
 
     static float Toward(float value, float target, float step) =>

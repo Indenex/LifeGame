@@ -47,10 +47,12 @@ namespace LifeGame.Shared
             return Smooth(0.5f, 0.68f, year);
         }
 
-        // What the season adds to the day's air temperature, degrees C: about +8 in
-        // high summer and -16 in deep winter, so winter days hover near freezing
-        // (snow under cloud) and nights fall to about -8.
-        public static float TemperatureOffset(float warmth) => warmth >= 0f ? 8f * warmth : 16f * warmth;
+        // What the season adds to the air temperature, degrees C, given daylight (0
+        // night to 1 full day): about +8 in high summer; in deep winter -5 by day and
+        // -17 at night, so winter days only cool you and the hard cold comes at night
+        // (D-136): about 14 on a clear winter day, 10 overcast, -8 at night.
+        public static float TemperatureOffset(float warmth, float daylight) =>
+            warmth >= 0f ? 8f * warmth : warmth * (5f + 12f * (1f - Math.Clamp(daylight, 0f, 1f)));
 
         // How much of the precipitation falls as snow at this air temperature, 0 to 1.
         public static float SnowFraction(float temperature) => 1f - Smooth(SnowBelow, SleetTop, temperature);
