@@ -453,3 +453,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-110 — 2026-10-16 — Chat bubbles stay about 3 s plus reading time
 **Decision:** Each speech bubble stays about 3 s plus time to read its length; up to 3 stacked.
 **Who:** Justin ("About 3 s plus reading time", which the PM recommended)
+
+## D-111 — 2026-10-16 — Stamina numbers
+**Decision:** From full, a new player runs 8 s, and the bar refills from empty in 12 s. Refill starts 1 s after you stop running and is faster when the bar is low (Valheim-style). Both improve linearly with Survival skill, to 16 s of running and a 7 s refill at Master (per `docs/PROGRESSION.md`). A good meal gives +25% run time for 10 minutes.
+**Who:** Justin ("8 s run / 12 s refill" and "Yes, +25% run for 10 min", both the PM's recommendation, from the researched curves)
