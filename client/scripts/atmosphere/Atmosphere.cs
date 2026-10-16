@@ -99,6 +99,13 @@ public partial class Atmosphere : Node3D
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
             debugPosition = new Vector2(x, z);
+        // --debug-clear=seconds bares the ground around the player after that long,
+        // as placing a building does, to check that it eases over.
+        if (ArgFloat("debug-clear") is { } clearAfter)
+            GetTree().CreateTimer(clearAfter).Timeout += () =>
+            {
+                if (parent.GetChildren().OfType<Terrain>().FirstOrDefault() is { } terrain) DebugClear(terrain);
+            };
         if (argRain is > 0f)
         {
             argCloud ??= 0.95f;
@@ -160,6 +167,7 @@ public partial class Atmosphere : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
+        Look.Tick(dt);
         // A whole day in about 45 seconds while T is held.
         if (InputMap.HasAction("preview_time") && Input.IsActionPressed("preview_time")) previewDays += dt / 45f;
         if (debugPosition is { } d && Player != null)
@@ -361,6 +369,17 @@ public partial class Atmosphere : Node3D
         float licks = 0.06f * Mathf.Sin(time * 11.3f) + 0.05f * Mathf.Sin(time * 17.9f + 1.3f) + 0.03f * Mathf.Sin(time * 29.1f + 2.1f);
         float shift = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(time * 0.37f + 1.1f) * Mathf.Sin(time * 0.53f)), 6f) * 0.25f;
         return 0.92f + breathe + licks - shift;
+    }
+
+    void DebugClear(Terrain terrain)
+    {
+        if (Player == null) return;
+        int cx = Mathf.RoundToInt(Player.GlobalPosition.X), cz = Mathf.RoundToInt(Player.GlobalPosition.Z);
+        var before = terrain.Cleared;
+        terrain.Cleared = (x, z) => before?.Invoke(x, z) == true || (x - cx) * (x - cx) + (z - cz) * (z - cz) <= 9;
+        for (int x = cx - 3; x <= cx + 3; x++)
+            for (int z = cz - 3; z <= cz + 3; z++)
+                terrain.Refresh(x, z);
     }
 
     float strikeAge = 10f, strikePeak;

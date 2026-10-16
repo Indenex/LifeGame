@@ -201,7 +201,7 @@ public static partial class Module
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
-        ctx.Db.WorldItem.Insert(new WorldItem
+        var dropped = ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0,
             Item = item,
@@ -211,6 +211,7 @@ public static partial class Module
             ChunkX = pos.ChunkX,
             ChunkZ = pos.ChunkZ,
         });
+        OnPlayerDroppedItem(ctx, dropped);
     }
 
     // Tops up loose sticks, stones and fiber in the seeded area.

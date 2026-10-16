@@ -24,18 +24,22 @@ public static class StructureModel
     static readonly Dictionary<int, List<Piece>> Cache = new();
     static ShaderMaterial? wood, fiber, thatch, clay, stone;
 
-    static ShaderMaterial Wood => wood ??= Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f));
+    internal static ShaderMaterial Wood => wood ??= Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f));
     static ShaderMaterial Fiber => fiber ??= Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f);
     static ShaderMaterial Thatch => thatch ??= Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f);
     internal static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
     internal static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
+    static ShaderMaterial? weave, paleWood;
+    // Freshly cut wood, for things that should catch the eye (a door's bar).
+    internal static ShaderMaterial PaleWood => paleWood ??= Tinted(Look.BarkSurface, new Color(0.86f, 0.74f, 0.55f));
+    internal static ShaderMaterial Weave => weave ??= Tinted(Look.Foliage, new Color(0.72f, 0.58f, 0.32f), sway: 0f);
 
     public static int StageCount(int kind) => LifeGame.Shared.Structures.Shape(kind).Stages.Length;
 
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind == 1 ? ClayHut() : kind == 2 ? ClaimMarkerModel.Pieces() : kind == 3 ? KilnModel.Pieces() : LeanTo();
+        pieces = kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), _ => LeanTo() };
         Cache[kind] = pieces;
         return pieces;
     }
@@ -141,6 +145,59 @@ public static class StructureModel
             Add(list, 3, Thatch, Cone(rb, rt + 0.03f, yb, yt, 28, l));
         }
         return list;
+    }
+
+    // --- Storage basket: coils of twisted fiber stacked and stitched, a little wider at the top.
+
+    static List<Piece> Basket()
+    {
+        var list = new List<Piece>();
+        var ring = new Vector3[8];
+        for (int i = 0; i < ring.Length; i++)
+            ring[i] = Around(0.42f, i * Mathf.Tau / ring.Length, 0);
+        Site(list, ring);
+
+        // A flat coiled base, then the wall coil by coil.
+        Add(list, 0, Weave, Cone(0.27f, 0.02f, 0.0f, 0.05f, 18, 3));
+        const int coils = 6;
+        for (int c = 0; c < coils; c++)
+        {
+            float y = 0.04f + c * 0.075f, r = 0.27f + c * 0.012f;
+            Add(list, 0, Weave, Wall(r, 0.045f, y, y + 0.072f, 0f, Mathf.Tau, top: c == coils - 1));
+        }
+        return list;
+    }
+
+    // A woven hurdle door for a hut's doorway, in the hinge's frame: it runs from the
+    // hinge (origin) along +X for `width`, and stands `height` tall.
+    public static Mesh Door(float width, float height)
+    {
+        var st = Begin();
+        const int uprights = 7, rods = 13;
+        for (int i = 0; i < uprights; i++)
+        {
+            float x = 0.05f + i * (width - 0.1f) / (uprights - 1);
+            StickInto(st, new Vector3(x, 0.02f, 0), new Vector3(x + (Hash(i, 11) - 0.5f) * 0.03f, height, 0), 0.03f, Shade(i * 5));
+        }
+        for (int r = 0; r < rods; r++)
+        {
+            float y = 0.1f + r * (height - 0.18f) / (rods - 1), weave = (r % 2 == 0 ? 1 : -1) * 0.025f;
+            StickInto(st, new Vector3(0.0f, y, weave), new Vector3(width, y + 0.02f, -weave), 0.05f, Shade(r * 13 + 2));
+        }
+        return st.Commit();
+    }
+
+    // The bar across a locked door, in the door's frame: a pole a little longer than
+    // the door, resting on two short pegs.
+    public static Mesh Bar(float width)
+    {
+        var st = Begin();
+        // Fresh, pale wood so it reads at a glance against the weathered door.
+        var pale = Shade(91).Lightened(0.55f);
+        StickInto(st, new Vector3(-0.15f, 0.02f, -0.05f), new Vector3(width + 0.15f, 0f, -0.05f), 0.06f, pale);
+        foreach (float x in new[] { 0.16f, width - 0.16f })
+            StickInto(st, new Vector3(x, -0.09f, 0.04f), new Vector3(x, -0.07f, -0.14f), 0.03f, pale.Darkened(0.15f));
+        return st.Commit();
     }
 
     // Pegs at each corner of the footprint with a fiber string between them.
