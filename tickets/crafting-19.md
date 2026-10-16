@@ -1,7 +1,7 @@
 # crafting-19: Durability for hand tools and worn equipment (proposal first)
 Lane: Crafting
 Owner: Crafting thread (handed to a new Sonnet session per D-159, 2026-10-16 20:20)
-Status: todo
+Status: in_progress
 Branch: crafting-durability
 PR: (none yet)
 
@@ -38,9 +38,10 @@ Local setup that worked: dotnet 8 SDK (dotnet-install.sh into ~/.dotnet, with th
 
 ## Progress log
 - 2026-10-16 20:20: ticket created at handoff; nothing built yet.
+- 2026-10-16 (Sonnet session): merged main into #160 (958cf73, conflict in shared/Processes.cs resolved both-keep: basket = Base(2, 2.5f) + Station Table) and #203 (b1c3f6f); both pushed, CI running. Sent PM the durability options (4 questions, recommended a/a/a/a). Reviewed bugfix-20 CanStartCraft and Ceramics VesselQuality: both approved, sent to those lanes.
 
 ## Open questions / blockers
-- (none yet; the options go to the PM first)
+- Durability options sent to the PM 2026-10-16; building the recommended set (break and drop head, 40 to 150 uses by quality, no repair minigame, words in tooltip) unless told otherwise.
 
 ## Next step
-Send the PM the green shas of #160 and #203 when CI finishes (merging main first if they conflict), then draft the durability options above and send them to the PM.
+Send the PM the green shas of #160 (958cf73) and #203 (b1c3f6f) when CI finishes. Meanwhile start crafting-19 server side: per-item wear storage (new table or column, check tools/upgrade-check.sh), wear in StartCraft via BestTool, break drops head.
