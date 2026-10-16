@@ -18,4 +18,4 @@ Give players things to steer by and name (D-081, a world to get lost in): deer t
 - Swap in Modeling's Outcrop and RiverStone meshes once on main (model-2-env).
 
 ## Next step
-Request renders of a few giant trees, outcrops and fords side by side (to show they differ), and open the PR after #213 merges; bump Terrain.ShowGhosts margin for giant crowns once #223 is on main.
+Render requested at dc01ca3 (giant trees (30,12) (11,-40) (-34,57); outcrops (36,61) (-13,80) (79,-29); fords (-46,27) (-47,-13 log) (-42,-53); a trail). Open the PR after #213 merges; bump Terrain.ShowGhosts margin for giant crowns once #223 is on main.
