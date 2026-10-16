@@ -1,7 +1,7 @@
 # claims-13: Server-authority audit of the Claims lane (D-182)
 Lane: Claims, chat and PvP rules
 Owner: Claims lane (Sonnet session)
-Status: in_progress
+Status: in_review
 Branch: claude/claims-13-authority
 PR: #315
 
@@ -20,9 +20,10 @@ Every Claims, Chat, Trading, stash and fighting reducer validates reach, ownersh
 - 2026-10-16: read Combat.cs, Stance.cs, ClaimNames.cs. StrikePlayer checks online, reach (+slack), spawn clearing, PvP rule at both positions, newcomer grace and strike cooldown, all on the server. SetNewcomerGrace and SetClaimLifetime are admin-only. NameClaim cleans the name and needs an owned standing claim. SetSneaking only touches the caller's own row. No further gaps found; audit done apart from PR #315.
 - 2026-10-16: installed dotnet 8.0.426 to /tmp/dotnet and the SpacetimeDB CLI 2.12.0 to /tmp/stdb-dl (dot.net/v1/dotnet-install.sh --channel 8.0 --install-dir /tmp/dotnet; the spacetime-x86_64-unknown-linux-gnu release tarball; `spacetimedb-cli build` installs the wasi workload itself). Locally on 42ff9cdf: server module builds, SocialTest passes all checks (incl. the out-of-earshot whisper), and tools/upgrade-check.sh origin/main passes (chat_message public to private carries over, no wipe). SocialTest's member-building site now searches for level, dry, clear ground (PM's #289/#305 flake note). The client was not built (no Godot here); CI builds it.
 - 2026-10-16 23:08: CI on 8faa2ac failed only on SocialTest's fighting check ("a strike in the wild lands: Too far away", and the cooldown line after it). Cause: Walk returns once the client has stepped there, but moves reach the server in batches, so the strike can land before the server has B's last position. Not the chat change (chat checks all passed). Fix: the test now waits until the server's own PlayerPos shows B within StrikeReach of A before striking. Passes locally.
+- 2026-10-16 23:41: PR #315 head 867e63a2: CI green (https://github.com/Indenex/LifeGame/actions/runs/38981251603). Sent the PM the sha.
 
 ## Open questions / blockers
 - Gap A: PM chose (b), done (see log). Options were: (a) keep as is, since chat is only ever near-field and a hostile client can read the lot (cheap, leaves the leak); (b) server-side range: move whispers and shouts out of the public table into a per-recipient private table written by SendChat for players in range [recommended; more writes per message, 0 client leak]; (c) a SpacetimeDB client visibility filter by chunk (smallest code, depends on filter support in our SDK version, unverified).
 
 ## Next step
-Wait for CI on PR #315 (check the upgrade check passes without a wipe), fix anything red, then send the PM the green sha.
+Wait for the PM to merge #315.
