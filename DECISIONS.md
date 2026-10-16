@@ -557,3 +557,4 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-136 — 2026-10-16 — Milder winter days
 **Decision:** Winter days only cool you; the harsh cold comes at night. Atmosphere and Survival tune the winter day temperature or cold drain so winter days aren't near-freezing all day.
 **Who:** Justin ("Milder winter days"; the PM had recommended keeping it for now)
+**Final values (2026-10-16):** Mid-winter is about 12.6 °C at clear noon (chill about 1.16x), 10 °C overcast, 6 °C in rain and wind, and about −8.6 °C at night (at the 2x cap). Snow falls mostly at night and lasts into the afternoon.
