@@ -8,6 +8,7 @@ public enum StructureKind
     LeanTo,
     ClayHut,
     ClaimMarker,
+    Kiln,
 }
 
 // One material a structure's current stage still needs.
@@ -106,6 +107,12 @@ public static partial class Module
         new[]
         {
             new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+        },
+        // Updraft kiln (Ceramics): Base, Dome
+        new[]
+        {
+            new[] { (Item.Brick, 4u) },
+            new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
         },
     };
 

@@ -63,10 +63,11 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var site = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That kiln is gone");
-        if ((int)site.Kind != ClayRules.KilnStructureKind) throw new Exception("That isn't a kiln");
+        if (site.Kind != StructureKind.Kiln) throw new Exception("That isn't a kiln");
         if (!site.Complete) throw new Exception("The kiln isn't finished yet");
         if (!Structures.Contains((int)site.Kind, site.X, site.Z, site.Yaw, pos.X, pos.Z, Structures.WorkReach))
             throw new Exception("Too far away");
+        RequireClaimAccess(ctx, site.X, site.Z);
         var kiln = ctx.Db.Kiln.StructureId.Find(structureId) ?? ctx.Db.Kiln.Insert(new Kiln
         {
             StructureId = site.Id,
@@ -182,10 +183,9 @@ public static partial class Module
 
     // Building calls this after a structure is taken down. A cold kiln's load
     // comes back out where it stood; a firing one finishes on its timer.
-    // TODO(after #10): becomes Building's `static partial void CeramicsStructureRemoved`.
     static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
     {
-        if ((int)s.Kind != ClayRules.KilnStructureKind || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
+        if (s.Kind != StructureKind.Kiln || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
         if (kiln.State == (byte)KilnState.Firing) return;
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
         int slot = 0;

@@ -254,17 +254,19 @@ int KilnCheck()
     WalkTo(fx + 4f, fz + 1f, 0.3f);
     float kx = x + 1.8f, kz = z;
     lastError = null;
-    conn.Reducers.PlaceStructure((StructureKind)ClayRules.KilnStructureKind, kx, kz, MathF.Atan2(x - kx, z - kz));
-    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me), 5, "the kiln blueprint");
+    conn.Reducers.PlaceStructure(StructureKind.Kiln, kx, kz, MathF.Atan2(x - kx, z - kz));
+    Pump(() => lastError != null || conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.Kiln && s.Owner == me), 5, "the kiln blueprint");
     if (lastError != null) Fail($"placing the kiln: {lastError}");
-    var site = conn.Db.Structure.Iter().First(s => s.Kind == (StructureKind)ClayRules.KilnStructureKind && s.Owner == me);
+    var site = conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.Kiln && s.Owner == me);
     Log("STAGE kiln-blueprint");
-    for (int i = 0; i < 20 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
+    for (int i = 0; i < 80 && conn.Db.Structure.Id.Find(site.Id) is { Complete: false }; i++)
     {
         lastError = null;
         var before = conn.Db.Structure.Id.Find(site.Id)!;
         conn.Reducers.Build(site.Id);
         Pump(() => lastError != null || !ReferenceEquals(conn.Db.Structure.Id.Find(site.Id), before), 3, "a brick to go on");
+        // Building paces each addition like any other action; wait and add again.
+        if (lastError == "Still working") { Pump(() => false, 0.5f, null); continue; }
         if (lastError != null) Fail($"building: {lastError}");
         Pump(() => false, 0.3f, null);
     }
