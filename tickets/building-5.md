@@ -23,7 +23,7 @@ Survival's wilderness edge. Justin sees a woven grass mat on the floor by the he
   LoadTest 5x5, SpawnCheck, CraftCheck, SocialTest, upgrade-check over origin/main.
 
 ## Open questions / blockers
-- Survival to confirm the `RespawnPointHook` call in `Survival.cs`.
+- (none) Survival approved the `RespawnPointHook` call in `Survival.cs` (2026-10-16); their survival-5 adds `Wetness = 0,` a few lines below, which should merge cleanly.
 
 ## Next step
 Wait for CI on the PR, then send the PM the green head sha.
