@@ -27,6 +27,8 @@ namespace LifeGame.Shared
             d *= SmoothStep(-0.9f, -0.4f, World.BaseHeight(x, z));
             // Hilltops open into heath, with only the odd lone tree.
             d *= 1f - 0.85f * Heath(x, z);
+            // Deer trails keep a path open through the trees (env-5).
+            d *= 1f - 0.9f * Landmarks.Trail(x, z);
             return d;
         }
 
