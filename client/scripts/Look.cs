@@ -219,9 +219,11 @@ public static class Look
 
         float cloud_shadow(vec3 p) {
             if (cloud_cover <= 0.01) return 1.0;
-            float n = texture(clouds, (p.xz + cloud_offset) * 0.004).r;
-            float edge = 1.0 - cloud_cover;
-            return 1.0 - smoothstep(edge - 0.08, edge + 0.22, n) * 0.6;
+            // Clouds a few dozen meters across, so on a fair day their shadows
+            // slide over the land in patches; under full overcast they merge.
+            float n = texture(clouds, (p.xz + cloud_offset) * 0.01).r;
+            float edge = mix(0.68, 0.2, cloud_cover);
+            return 1.0 - smoothstep(edge - 0.1, edge + 0.12, n) * 0.5;
         }
         """;
 

@@ -42,6 +42,7 @@ public partial class Atmosphere : Node3D
     readonly ShaderMaterial sky = new() { Shader = SkyShader };
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
+    readonly Mist mist = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -97,6 +98,7 @@ public partial class Atmosphere : Node3D
 
         AddChild(rain);
         AddChild(fireflies);
+        AddChild(mist);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
 
@@ -250,6 +252,8 @@ public partial class Atmosphere : Node3D
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
+        // Dawn mist glows with the same light as the fog: warm at sunrise.
+        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
@@ -628,7 +632,7 @@ public partial class Atmosphere : Node3D
                         col += vec3(star) * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
                     }
                     // The same cloud layer whose shadows drift over the ground.
-                    vec2 uv = (d.xz / (d.y + 0.03) * 300.0 + cloud_offset) * 0.004;
+                    vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
                     float n = texture(clouds, uv).r;
                     float edge = 1.0 - cloud_cover;
                     float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
