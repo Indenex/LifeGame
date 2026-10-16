@@ -47,6 +47,12 @@ namespace LifeGame.Shared
         // Cold and wet together bite at most this much harder than a mild dry day
         // (Justin, D-099): about 8 minutes from warm to frozen at worst, away from fire.
         public const float MaxChill = 2f;
+        // How cold the air is: 0 at MildCelsius or warmer, 1 at 0 C or colder. The cold
+        // drain is 1 + this; the client shows breath from it (D-144).
+        public static float AirCold(float celsius) => Math.Clamp((MildCelsius - celsius) / MildCelsius, 0f, 1f);
+        // How clearly breath shows (D-144), 0 to 1: from about 6 C (AirCold 0.6), full
+        // at 0 C. Animation reads it as Needs.Breath(Needs.AirCold(Atmosphere.AirCelsius)).
+        public static float Breath(float airCold) => Math.Clamp((airCold - 0.6f) / 0.4f, 0f, 1f);
 
         // Getting wet (survival-5). Wetness runs from 0 (dry) to 1 (soaked). Full
         // rain soaks you in two minutes and wading in about ten seconds; you dry
