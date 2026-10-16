@@ -68,6 +68,10 @@ public partial class FireView : Node3D
                 Position = new Vector3(at.X + dx, heightAt(at.X, at.Z) + 0.38f, at.Z + dz),
                 Rotation = new Vector3(0, dx * 9f, 0),
             });
+        // The bow drill that lit it, set down beside the fire.
+        float bx = at.X + 0.55f, bz = at.Z + 0.6f;
+        AddChild(new MeshInstance3D { Mesh = ItemLook.MeshFor(Item.BowDrill),
+            Position = new Vector3(bx, heightAt(bx, bz), bz), Rotation = new Vector3(0, 0.6f, 0) });
     }
 
     // A chunk of meat on a green stick over the coals, browning and then

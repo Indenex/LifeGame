@@ -56,11 +56,14 @@ public static partial class Module
     static float DurationScale(ReducerContext ctx, uint playerId, string processId) =>
         Skills.DurationScale(SkillRank(ctx, playerId, processId));
 
-    static void GiveDugClay(ReducerContext ctx, Player player)
+    // depth is the cell's depth before this dig: deep clay (ClayRules, D-041) or the
+    // digger's skill, whichever grades it higher.
+    static void GiveDugClay(ReducerContext ctx, Player player, int depth)
     {
         int rank = SkillRank(ctx, player.PlayerId, Skills.Dig);
         uint count = ctx.Rng.NextDouble() < Skills.SecondLumpChance(rank) ? 2u : 1u;
-        AddToInventory(ctx, player.Identity, Item.Clay, count, Skills.DugClayQuality(rank));
+        byte quality = Math.Max(ClayRules.DugClayQuality(depth), Skills.DugClayQuality(rank));
+        AddToInventory(ctx, player.Identity, Item.Clay, count, quality);
     }
 
     [SpacetimeDB.Reducer]

@@ -47,15 +47,19 @@ namespace LifeGame.Shared
         public const string Berries = "gather.berries";
         // Shearing, reported by the Animals lane (Shearing.cs ShearProcess).
         public const string Shear = "animal.shear";
+        // Reported on every strike that lands, and when a carcass is butchered (Animals lane).
+        public const string Kill = "animal.kill";
+        public const string Butcher = "animal.butcher";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
-        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof" };
+        // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
+        static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
 
         public static readonly Specialization[] Specializations =
         {
             new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, lashing simple tools.", "knap", "cord", "lash"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets, lashing simple tools.", "knap", "cord", "weave", "lash"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
@@ -73,8 +77,12 @@ namespace LifeGame.Shared
             ["build.wattle"] = "Weaving wattle walls",
             ["build.daub"] = "Daubing walls",
             ["build.roof"] = "Thatching a roof",
+            ["build.weave"] = "Weaving a storage basket",
+            ["build.door"] = "Hanging a door",
             [Berries] = "Picking berries",
             [Shear] = "Shearing a sheep",
+            [Kill] = "Hunting",
+            [Butcher] = "Butchering a carcass",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -88,6 +96,8 @@ namespace LifeGame.Shared
             yield return ClayRules.PitFireProcess;
             foreach (var id in BuildStages) yield return id;
             yield return Shear;
+            yield return Kill;
+            yield return Butcher;
         }
 
         public static Specialization? Spec(string id)

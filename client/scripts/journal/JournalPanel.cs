@@ -14,6 +14,9 @@ public partial class JournalPanel : Control
     public Action<string> WriteNote = _ => { };
     public Action<string, SkillMode> SetMode = (_, _) => { };
     public bool IsOpen { get; private set; }
+    // Skills and discoveries that changed since the journal was last closed; marked
+    // with a small dot so you can see what moved without a fanfare.
+    public readonly HashSet<string> Fresh = new();
 
     readonly VBoxContainer skillList = new();
     readonly VBoxContainer entryList = new();
@@ -83,6 +86,8 @@ public partial class JournalPanel : Control
     public void Toggle()
     {
         IsOpen = !IsOpen;
+        // Closing clears the marks; Journal redraws after toggling.
+        if (!IsOpen) Fresh.Clear();
         fade?.Kill();
         fade = CreateTween().SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
         if (IsOpen)
@@ -133,6 +138,7 @@ public partial class JournalPanel : Control
         box.AddThemeConstantOverride("separation", 4);
 
         var top = new HBoxContainer();
+        if (Fresh.Contains(spec.Id)) top.AddChild(Text("•  ", 16, Accent));
         top.AddChild(Text(spec.Name, 16, Ink));
         top.AddChild(Text($"  {Skills.Title(rank)}", 14, Faint));
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
@@ -184,6 +190,7 @@ public partial class JournalPanel : Control
         card.AddChild(box);
 
         var top = new HBoxContainer();
+        if (Fresh.Contains(e.ProcessId)) top.AddChild(Text("•  ", 16, Accent));
         top.AddChild(Text(Skills.ProcessName(e.ProcessId), 16, Ink));
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         var note = new Button { Text = "Leave a note", Flat = true, TooltipText = "Drop a note at your feet so others can learn this" };

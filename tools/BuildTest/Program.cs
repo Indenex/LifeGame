@@ -50,13 +50,20 @@ if (which is "lean-to" or "both")
 if (which is "clay-hut" or "both")
     BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
-        new() { [Item.Stick] = 11, [Item.Fiber] = 8, [Item.Clay] = 12 });
+        new() { [Item.Stick] = 11, [Item.Fiber] = 14, [Item.Clay] = 12 },
+        // B turns the clay into daub for the walls: clean it, then mix in fiber.
+        prepareB: () =>
+        {
+            for (int i = 0; i < 6; i++) b.Craft("clay.clean", Pump);
+            for (int i = 0; i < 6; i++) b.Craft("clay.daub", Pump);
+            Check(b.CountOf(Item.Daub) >= 12, $"mixed daub for the walls ({b.Carried()})");
+        });
 
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
 
-void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB)
+void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null)
 {
     string name = Structures.Shape((int)kind).Name;
     Console.WriteLine($"--- {name}");
@@ -71,6 +78,7 @@ void BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<I
         Pump(100);
     }
     Check(bots.All(x => x.HasWants), $"both gathered materials for the {name} ({a.Carried()} / {b.Carried()})");
+    prepareB?.Invoke();
 
     // A lays out a footprint on dry, level ground nearby.
     var site = a.FindSite(kind);
@@ -160,6 +168,7 @@ sealed class Bot
                         "SELECT * FROM terrain_edit",
                         "SELECT * FROM structure",
                         "SELECT * FROM my_inventory",
+                        "SELECT * FROM my_craft_job",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"));
@@ -179,9 +188,9 @@ sealed class Bot
         Conn = Connect();
     }
 
-    uint Count(Item kind) => (uint)Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)kind).Sum(i => i.Count);
+    public uint CountOf(Item item) => Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
 
-    public bool HasWants => Wants.All(w => Count(w.Key) >= w.Value);
+    public bool HasWants => Wants.All(w => CountOf(w.Key) >= w.Value);
 
     public string Carried() => string.Join(" ", Conn.Db.MyInventory.Iter().Select(i => $"{(Item)i.Item}:{i.Count}"));
 
@@ -189,7 +198,7 @@ sealed class Bot
     public void GatherStep(float dt)
     {
         actionTimer -= dt;
-        var missing = Wants.Where(w => Count(w.Key) < w.Value).Select(w => w.Key).ToHashSet();
+        var missing = Wants.Where(w => CountOf(w.Key) < w.Value).Select(w => w.Key).ToHashSet();
         if (missing.Count == 0) return;
 
         if (missing.Contains(Item.Clay) && missing.Count == 1)
@@ -270,6 +279,17 @@ sealed class Bot
                 return (x, z);
             }
         return null;
+    }
+
+    // Starts a craft and waits for it to finish.
+    public void Craft(string processId, Action<int> pump)
+    {
+        Conn.Reducers.StartCraft(processId, 0.6f);
+        var def = Processes.Find(processId)!;
+        pump(200);
+        var until = DateTime.UtcNow.AddSeconds(def.Seconds + 5);
+        while (Conn.Db.MyCraftJob.Count > 0 && DateTime.UtcNow < until) pump(100);
+        pump(200);
     }
 
     public void TryBuild(ulong id)

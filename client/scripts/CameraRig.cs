@@ -38,6 +38,9 @@ public partial class CameraRig : Node3D
 
     public void Turn(int steps) => yawTarget += steps * Mathf.Pi / 4f;
 
+    // Free turning, for dragging with the right mouse button (ui/CameraDrag.cs).
+    public void TurnBy(float radians) => yawTarget += radians;
+
     public void Zoom(float amount) => distanceTarget = Mathf.Clamp(distanceTarget + amount, 6f, 40f);
 
     public override void _Process(double delta)

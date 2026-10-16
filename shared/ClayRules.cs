@@ -66,6 +66,29 @@ namespace LifeGame.Shared
 
         public const int SherdsPerCrack = 2;
 
+        // The updraft kiln (ceramics-2). Built from bricks and daub, loaded with dry
+        // pots, then fired with fuel from your bag. It heats evenly, so pots rarely
+        // crack and come out a little better than from a pit.
+        // Building gives this process to everyone who helps finish a kiln stage.
+        public const string KilnProcess = "clay.kiln";
+        // StructureKind.Kiln as a number, for shared code (the enum is the server's);
+        // appended after LeanTo, ClayHut and ClaimMarker (D-035).
+        public const int KilnStructureKind = 3;
+        public const string KilnFireProcess = "clay.kiln_fire";
+        public const int KilnCapacity = 6;
+        public const int KilnQualityBonus = 10;
+
+        // Clay grades by depth (D-041). Hand digging stops at World.MaxDigDepth; a
+        // digging stick reaches one level further, into the deep clay: purer, with
+        // fewer stones and roots, so it starts at "fine" quality. That quality
+        // carries through cleaning and tempering into the pots, which then crack
+        // less. depth is the cell's depth before this dig (0 = untouched ground).
+        public const byte DeepClayQuality = 80;
+        public static byte DugClayQuality(int depth) =>
+            depth >= World.MaxDigDepth ? DeepClayQuality : Items.RawQuality;
+
+        public static byte KilnFired(byte quality) => (byte)Math.Min(100, quality + KilnQualityBonus);
+
         // rain and warmth are both 0..1.
         public static float DryRate(float rain, float warmth) =>
             (1f - RainSlowdown * Clamp01(rain)) * (1f + WarmthSpeedup * Clamp01(warmth)) / BaseDrySeconds;
