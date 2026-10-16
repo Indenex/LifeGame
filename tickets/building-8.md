@@ -1,7 +1,7 @@
 # building-8: Stick fence and gate
 Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
-Status: in_review
+Status: done
 Branch: claude/house-building-8ueqz2
 PR: #153 (stacked on Animals' #115)
 
@@ -35,4 +35,4 @@ Costs (D-117, Justin approved the cheap ones): fence posts 2 sticks, rails 2 sti
 - (none) Costs D-117 and shelter D-116 are decided. This PR includes #115's commits until #115 merges.
 
 ## Next step
-Wait for CI on #153, send the PM the green sha, then start building-9 (raised hearth, D-087).
+Done (merged as #153 on 2026-10-16).
