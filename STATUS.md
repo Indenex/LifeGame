@@ -31,7 +31,7 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Animation (D-073) (session_019roNRWQBPw4ozNLDhzseig) | anim-2; PR #205 | `claude/anim-2` | `client/scripts/animation/`, `client/scripts/Avatar.cs` |
 | Environment (D-078) (session_012hVejTxLoxBpZyX3GQmNL9) | env-4; PR #213 | `claude/environment-env-4` | `client/scripts/environment/`, `client/scripts/Terrain.cs` |
 | Audio (D-079) (session_01SXcxtoyeqDmypiHxkHedU6) | audio-2a+b, then audio-3 (Sonnet, D-159) | session records its branch | `client/scripts/atmosphere/audio/`, `SoundScape.cs`, `tools/SoundPreview/`, music, `client/scripts/audio/` |
-| Crafting (session_01N9APthjRDfjknUvCweqzzN) | #160, #203, crafting-19 durability (Sonnet, D-159) | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
+| Crafting (session_01N9APthjRDfjknUvCweqzzN) | #160, #203, crafting-19 durability (Sonnet, D-159) | `crafting-durability` (crafting-19) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs (session_01RedPo6NfcLBPNHQNVhC4qf) | survival-12 PR #206, then survival-10 (Sonnet, D-159) | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills (session_013iTXrpndd1fMtDLqqBPgJ5) | skills-11; PR #193 (Sonnet, D-159) | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
 | Claims, chat and PvP rules (session_01CAk6p7Z42GfVwi8QMfNMhZ) | claims-12 fences; #191 and #196 merged (Sonnet, D-159) | `claude/claims-chat-pvp-vk2qak` | `Claims.cs`, `Chat.cs`, `client/scripts/social/` |
