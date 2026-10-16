@@ -264,3 +264,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-064 — 2026-10-16 — The wiki moves to Opus, in a plainer voice (amends D-063)
 **Decision:** The Wiki lane runs on Opus, not Sonnet. The wiki is rewritten in a plain, direct voice like a good game manual: no cosy or affectionate tone, no "be kind", no cute one-liners. The spoiler rule from D-063 stays.
 **Who:** Justin ("the sonnet worker's writing style is weird and oddly affectionate")
+
+## D-065 — 2026-10-16 — Leatherwork becomes its own specialty later
+**Decision:** Hide work (scrape, stretch, dry into leather) will train a new capped Leatherwork specialty once leather has more uses. Until that skill exists, hide work trains Husbandry (PM default, so it trains something meanwhile).
+**Who:** Justin ("Leatherwork later"; the PM had recommended Husbandry)
+
+## D-066 — 2026-10-16 — Ceramics builds a storage jar next
+**Decision:** ceramics-6 is a large kiln-fired storage jar set down as a store: ~6 stacks, keeps contents dry, 4 tempered clay, coil minigame, pit firing usually cracks it.
+**Who:** Justin ("Storage jar", which the PM recommended)
+
+## D-067 — 2026-10-16 — Skill toasts only at new titles
+**Decision:** Rank-ups show a toast with a chime only at a new title; other ranks show as dots in the journal (skills-8 as built).
+**Who:** Justin ("Titles only", which the PM recommended)
+
+## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
+**Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
+**Who:** Justin ("10%", which the PM recommended)
