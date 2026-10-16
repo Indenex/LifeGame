@@ -1,0 +1,38 @@
+# animals-8 (PR #90): wool recipes. The camera is the puppet, so the HUD shows its inventory.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2
+wait 35
+# a stone flake (cutting), sticks, a stone and 10 raw wool
+give 6 1 60
+give 1 4 50
+give 2 1 50
+give 193 10 60
+wait 3
+# 1. crafting panel (C), then the next tier (Tab); keep whichever shows tier 2
+key c
+wait 4
+snap
+key Tab
+wait 4
+snap
+key Tab
+wait 4
+snap
+key Escape
+wait 2
+# 2. craft: spindle, 5 x yarn (10 wool), 1 cloth (4 yarn, 2 sticks) -> spindle, 1 yarn, 1 cloth
+craft carve.drop_spindle
+craft cord.spin_wool
+craft cord.spin_wool
+craft cord.spin_wool
+craft cord.spin_wool
+craft cord.spin_wool
+craft weave.wool_cloth
+wait 4
+snap
+# 3. on the ground
+drop 197
+drop 198
+drop 199
+wait 4
+snap

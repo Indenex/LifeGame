@@ -12,6 +12,13 @@
 //   say hello there   send a chat line ("/me waves" works too)
 //   snap              save the screen to <snap prefix>-<n>.png (n counts from 1)
 //   clip 6            record 6 s of the screen to <snap prefix>-<n>.mp4
+//   give 193 8 60     the database owner puts 8 of item 193 at quality 60 in my hands
+//   craft cord.spin_wool   start a recipe (as the server's own default score) and wait for it
+//   drop 199          drop one of an item at my feet
+//   key c             press a key in the camera client's window (xdotool)
+// With PUPPET_TOKEN_OUT set, the puppet writes its login token there once it has
+// joined; scene.sh hands it to the camera client for "client-as-puppet" scenes, so
+// the camera shows the puppet's own inventory and work.
 using System.Diagnostics;
 using SpacetimeDB;
 using SpacetimeDB.Types;
@@ -26,10 +33,13 @@ float x = 0, z = 0;
 string? lastError = null;
 var conn = DbConnection.Builder()
     .WithUri(uri)
+    .WithToken(Environment.GetEnvironmentVariable("PUPPET_TOKEN_IN") is { Length: > 0 } tokenIn && File.Exists(tokenIn) ? File.ReadAllText(tokenIn).Trim() : null)
     .WithDatabaseName(db)
-    .OnConnect((c, identity, _) =>
+    .OnConnect((c, identity, token) =>
     {
         me = identity;
+        if (Environment.GetEnvironmentVariable("PUPPET_TOKEN_OUT") is { Length: > 0 } tokenOut)
+            File.WriteAllText(tokenOut, token);
         c.SubscriptionBuilder()
             .OnApplied(ctx =>
             {
@@ -38,7 +48,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos" });
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job" });
     })
     .OnConnectError(e => { Console.WriteLine($"puppet: connect error {e.Message}"); Environment.Exit(1); })
     .Build();
@@ -142,6 +152,36 @@ foreach (var line in steps)
             shots++;
             Run("ffmpeg", $"-loglevel error -y -f x11grab -video_size 1600x900 -framerate 10 -t {rest} -i {Display()} -pix_fmt yuv420p {prefix}-{shots}.mp4");
             Console.WriteLine($"puppet: saved {prefix}-{shots}.mp4");
+            break;
+        case "give":
+        {
+            var n = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            string quality = n.Length > 2 ? n[2] : "50";
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{me}, {n[0]}, {quality}, {n[1]})\"");
+            Pump(1.0);
+            break;
+        }
+        case "craft":
+        {
+            lastError = null;
+            conn.Reducers.StartCraft(rest, 0.8f);
+            Pump(3, () => conn.Db.MyCraftJob.Iter().Any() || lastError != null);
+            Pump(120, () => !conn.Db.MyCraftJob.Iter().Any() || lastError != null);
+            Pump(0.5);
+            break;
+        }
+        case "drop":
+        {
+            ushort item = ushort.Parse(rest);
+            var held = conn.Db.MyInventory.Iter().FirstOrDefault(i => i.Item == item);
+            if (held == null) { Console.WriteLine($"puppet: server said nothing to drop ({item})"); break; }
+            conn.Reducers.Drop(item, held.Quality);
+            Pump(0.8);
+            break;
+        }
+        case "key":
+            Run("xdotool", $"search --sync --onlyvisible --class Godot windowactivate --sync key --clearmodifiers {rest}");
+            Pump(0.3);
             break;
         default:
             Console.WriteLine($"puppet: unknown step '{line}'");

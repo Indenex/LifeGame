@@ -6,7 +6,8 @@
 #   tools/render/scene.sh <ticket> <git-ref> <scene file>
 #
 # The scene file's "client" lines give the camera client's options (as for
-# render.sh); every other line is a puppet step (see tools/render/Puppet/Program.cs):
+# render.sh); "client-as-puppet" makes the camera log in as the puppet, so it
+# shows the puppet's own inventory and crafting; every other line is a puppet step (see tools/render/Puppet/Program.cs):
 #
 #   client --time-of-day=0.45
 #   name B
@@ -34,10 +35,12 @@ rm -rf "$tree/tools/render/Puppet/bin" "$tree/tools/render/Puppet/obj"
 (cd "$tree/tools/render/Puppet" && dotnet build -c Release) >>"$log" 2>&1 || { echo "puppet build failed, see $log"; exit 1; }
 
 client_opts=()
+as_puppet=0
 steps=$work/$sha-scene.txt
 : >"$steps"
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
+    client-as-puppet) as_puppet=1 ;;
     client\ *) read -r -a more <<<"${line#client }"; client_opts+=("${more[@]}") ;;
     *) printf '%s\n' "$line" >>"$steps" ;;
   esac
@@ -52,9 +55,23 @@ client=$xvfb
 sleep 2
 
 echo "scene: $(basename "$scene") with client ${client_opts[*]:-}"
+userdir=$HOME/.local/share/godot/app_userdata/LifeGame
+mkdir -p "$userdir"
+rm -f "$userdir/token_camera.txt" "$work/puppet-token"
+
+# The puppet joins first; the camera client follows (as the puppet, if asked).
+PUPPET_TOKEN_OUT=$work/puppet-token DISPLAY=$disp timeout "${RENDER_SCENE_TIMEOUT:-1800}" \
+  "$tree/tools/render/Puppet/bin/Release/net8.0/Puppet" "http://127.0.0.1:$port" lifegame "$steps" "$RENDER_OUT/$ticket-$sha" \
+  > "$work/puppet.log" 2>&1 &
+puppet=$!
+if [ $as_puppet = 1 ]; then
+  for _ in $(seq 1 60); do [ -s "$work/puppet-token" ] && break; sleep 0.5; done
+  cp "$work/puppet-token" "$userdir/token_camera.txt"
+fi
 (cd "$tree/client" && DISPLAY=$disp exec "$godot" --path . --resolution 1600x900 -- \
   "--server=http://127.0.0.1:$port" --db=lifegame --profile=camera "${client_opts[@]}") >>"$log" 2>&1 &
 client=$!
 
-DISPLAY=$disp timeout "${RENDER_SCENE_TIMEOUT:-1800}" "$tree/tools/render/Puppet/bin/Release/net8.0/Puppet" \
-  "http://127.0.0.1:$port" lifegame "$steps" "$RENDER_OUT/$ticket-$sha" 2>&1 | tee -a "$log" | grep -E "^puppet: (saved|server said|never|nobody|unknown|connect)" || true
+wait $puppet || true
+cat "$work/puppet.log" >>"$log"
+grep -E "^puppet: (saved|server said|never|nobody|unknown|connect|.* failed)" "$work/puppet.log" || true
