@@ -461,3 +461,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-112 — 2026-10-16 — Station split (amends D-098)
 **Decision:** These stay basic in the C menu: tinder, fires, knapping, digging stick, cordage, bricks, clay preparation (clean, grit, grog, temper, daub), and the first hafted tools (spear, knife, axe, bow drill), so you can survive anywhere. Shaping pots (pinch pot, coil pot, storage jar) moves to a new Potter's bench station. Crafting Table: basket, drop spindle, wool tunic. Spindle: spin wool, weave cloth. Leather drying rack: hide work, leather wraps. Broth, stew and roasting stay at the fire. The Crafting Table costs 4 sticks, 2 cordage and a log (so an axe comes first). A station draws from your inventory, from baskets and jars within 4 m, and from the claim stash.
 **Who:** Justin ("Pots at a Potter's bench"; the PM had recommended keeping all clay basic. "Also a log"; the PM had recommended 4 sticks + 2 cordage. "Storage within 4 m + claim stash" and "Hand craft" for first tools, both as recommended)
+
+## D-113 — 2026-10-16 — Craft-time formula
+**Decision:** Craft time = tier base (t0 3 s, t1 6 s, t2 12 s, t3 20 s, times a per-recipe effort of 0.5 to 3) × quality (0.8 + 0.4 × target quality/100) × skill (1 − 0.6 × the D-075 curve of rank: ×1.00 at rank 0, ×0.76 at 15, ×0.61 at 50, ×0.40 at Master) × tool (up to 15% faster, D-089). Examples from rank 0 to Master: basket 28→13 s, stone axe 17→8 s, coil pot 38→18 s, storage jar 56→26 s.
+**Who:** Justin ("Ship this formula", which the PM recommended)
+
+## D-114 — 2026-10-16 — Seasons: pace, first content, order
+**Decision:** The test cycle is one in-game day (90 min) per season, so a year is 6 real hours. Seasons come right after atmosphere-13 (forest light) and before atmosphere-14 and 15. Cold and snow land first: seasonal temperature (about +8 °C in summer, −12 °C in winter, through AirTemperature and under the 2x chill cap), snowfall below about 0.5 °C, snow cover that builds and melts, and winter light. Admin commands `/season` and `/season-speed`.
+**Who:** Justin ("1 day per season", "Cold and snow", "Seasons next", all the PM's recommendation)
