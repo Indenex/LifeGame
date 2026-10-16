@@ -40,6 +40,8 @@ public partial class SurvivalClient : Node
     float walkedFor;
     // Seconds since you last ran; refill waits a moment (D-111).
     float rested = 999f;
+    // Deaths when the new-arrival half hour was last seen running, null once it ends.
+    uint? arrivalDeaths;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -165,6 +167,7 @@ public partial class SurvivalClient : Node
             var (food, water, warmth) = Current();
             needsHud.SetNeeds(food, water, warmth, v.NearHeat);
             wetLook.Wetness = Needs.At(v.Wetness, v.WetnessRate, SecondsSince(v.AsOf));
+            UpdateArrival(v);
             Warn(ref warnedCold, warmth, v.Wet ? "The water is freezing. Get out and find a fire" : "You are getting dangerously cold");
             Warn(ref warnedFood, food, "Your stomach aches with hunger");
             Warn(ref warnedWater, water, "Your mouth is dry. Find water");
@@ -212,7 +215,21 @@ public partial class SurvivalClient : Node
         return camera.UnprojectPosition(player.GlobalPosition);
     }
 
-    // Other players look as wet as the server says (D-036), in tenths.
+    // New arrival (D-115): show the badge while it lasts, and say once when it ends.
+    void UpdateArrival(Vitals v)
+    {
+        float left = Mathf.Max(0f, v.ArrivalLeft + v.ArrivalRate * SecondsSince(v.AsOf));
+        needsHud.SetArrival(left / Needs.ArrivalSeconds);
+        if (left > 0f) arrivalDeaths = v.Deaths;
+        else if (arrivalDeaths is { } deaths)
+        {
+            // Dying ends it too, but the death card says enough then.
+            if (v.Deaths == deaths) hud.Note("You've found your feet. The cold bites harder now.");
+            arrivalDeaths = null;
+        }
+    }
+
+        // Other players look as wet as the server says (D-036), in tenths.
     void UpdateOthersWet()
     {
         if (conn == null || vitals is not { } me) return;
