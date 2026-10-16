@@ -38,6 +38,8 @@ public partial class SurvivalClient : Node
     bool winded;
     // Seconds of steady walking, to offer the run hint once on a long walk.
     float walkedFor;
+    // Seconds since you last ran; refill waits a moment (D-111).
+    float rested = 999f;
     public bool Mourning => needsHud.Mourning;
 
     // The subscription queries survival needs, for the chunk range Main subscribes to.
@@ -186,16 +188,21 @@ public partial class SurvivalClient : Node
     public float MoveSpeed(bool sneak, bool moving, float walkSpeed, float dt)
     {
         bool running = moving && !sneak && Input.IsActionPressed(NRun) && Stamina.CanRun(stamina, winded);
+        rested = running ? 0f : rested + dt;
+        bool wellFed = vitals is { } v && v.WellFedUntil > NowMicros;
         // "Hold Shift to run" shows once, the first time you walk on for a while.
         walkedFor = moving && !sneak ? walkedFor + dt : 0f;
         if (walkedFor > 8f && walkedFor - dt <= 8f) Hints.Request("run");
-        stamina = Stamina.Step(stamina, running, dt);
+        stamina = Stamina.Step(stamina, running, rested, StaminaRank(), wellFed, dt);
         if (stamina <= 0f) winded = true;
         else if (stamina >= Stamina.MinToRun) winded = false;
         staminaBar.Set(stamina, FeetOnScreen());
         float speed = sneak ? World.SneakSpeed : running ? Stamina.RunSpeed : walkSpeed;
         return speed * WalkFactor;
     }
+
+    // The skill rank stamina grows with. 0 until the PM picks which skill (survival-7).
+    static int StaminaRank() => 0;
 
     // Where the player's feet are on screen, or null when the camera can't see them.
     Vector2? FeetOnScreen()

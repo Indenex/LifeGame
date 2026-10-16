@@ -10,7 +10,7 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 
 ## Numbers (defaults = recommended options sent to PM 2026-10-16, pending Justin)
 - Run 5.6 m/s (Justin, D-100; walk 4.2, server cap World.MaxSpeed 6 unchanged).
-- 10 s of running from full; refills in 8 s when not running; run dry and you walk until back to 20%. PLACEHOLDER: the PM sends final options from docs/PROGRESSION.md (D-101).
+- D-111 (docs/PROGRESSION.md option 1): 8 s of running from full, 12 s to refill from empty; refill waits 1 s after you stop and is faster when low (rate 1.5a at empty to 0.5a at full). Both grow linearly with rank to 16 s / 7 s at Master. A good meal (roast mutton; broth and stew once ceramics-7 lands) gives +25% run time for 10 min (Vitals.WellFedUntil, reset on death). Run dry and you walk until back to 20%.
 - Indicator: small bar under the character, only while not full (Justin, D-101). client/scripts/survival/StaminaBar.cs.
 - Running costs no food or water (Justin, D-101).
 
@@ -26,8 +26,11 @@ D-088: hold the run key to move faster, spending stamina that refills whenever y
 
 - 2026-10-16: D-100/D-101: replaced the stamina ring with StaminaBar (46x5 px, 16 px under the feet on screen, hidden while a panel is open); NeedsHud and NeedGauge back to main.
 
+- 2026-10-16: D-111 built: shared/Stamina.cs curves, Needs.GoodMeal, Vitals.WellFedUntil ([Default(0L)], set in Eat), client refill delay and rank hook (StaminaRank() returns 0 until the skill is picked).
+
 ## Open questions / blockers
-- Stamina duration/refill: final numbers from the PM's docs/PROGRESSION.md.
+- Which skill rank stamina grows with (no Survival skill exists): asked PM; options A) new basic skill Endurance trained by running [rec], B) highest basic rank, C) average of basics. Until then StaminaRank() = 0.
+- ceramics-7 also edits Survival.Eat (pot comes back); whichever merges second resolves a small conflict, and Ceramics adds PotOfBroth/PotOfStew to Needs.GoodMeal.
 - If Justin picks a run speed under 5.5 m/s, tell Animation (session_019roNRWQBPw4ozNLDhzseig) to move their run band.
 - Known gap: Walk() isn't called while a panel captures input, so stamina doesn't refill then. Minor.
 
