@@ -30,13 +30,17 @@ public static class Recipes
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
+        ["claim.mark"] = "{build_mode} to lay out a claim marker away from the clearing, then add sticks and fiber with {use}.",
+        ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",
+        [Skills.Run] = "Hold {run} to run. Running far builds Endurance; slow down to get your breath back.",
         [Skills.DryHide] = "Leave a stretched hide on its rack until it dries, then take the leather with {use}.",
     };
 
     public static string? HowTo(string processId)
     {
-        if (Processes.Find(processId) is { } def) return Crafted(def);
-        return Hints.TryGetValue(processId, out var hint) ? Keys(hint) : null;
+        // Hand-written sentences first: some crafting jobs are not started with the craft key.
+        if (Hints.TryGetValue(processId, out var hint)) return Keys(hint);
+        return Processes.Find(processId) is { } def ? Crafted(def) : null;
     }
 
     static string Crafted(ProcessDef def)
@@ -70,9 +74,9 @@ public static class Recipes
         return ("aeiou".Contains(name[0]) ? "an " : "a ") + name;
     }
 
-    static string Keys(string text)
+    internal static string Keys(string text)
     {
-        foreach (var action in new[] { "pick_up", "use", "dig", "build_mode", "sneak", "strike", "craft" })
+        foreach (var action in new[] { "pick_up", "use", "dig", "build_mode", "sneak", "strike", "craft", "run" })
             text = text.Replace("{" + action + "}", KeyOf(action));
         return text;
     }

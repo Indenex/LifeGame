@@ -52,19 +52,22 @@ namespace LifeGame.Shared
         public const string Butcher = "animal.butcher";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
+        // Running, reported by Survival's stamina every 20 s of actual running (D-123).
+        public const string Run = "move.run";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
         // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
         static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
 
         public static readonly Specialization[] Specializations =
         {
-            new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
+            new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
             new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving, sewing, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", "sew"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
+            new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
             new("husbandry", "Husbandry", true, "Keeping animals calm, shearing them cleanly and working their hides.", "animal", "hide"),
         };
 
@@ -88,6 +91,10 @@ namespace LifeGame.Shared
             [Kill] = "Hunting",
             [Butcher] = "Butchering a carcass",
             [DryHide] = "Drying leather",
+            [Run] = "Running",
+            // D-127 first-evening steps: Claims reports the marker (#174); the bench comes with ceramics-8.
+            ["claim.mark"] = "Planting a claim",
+            ["build.bench"] = "Building a potter's bench",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -106,7 +113,12 @@ namespace LifeGame.Shared
             yield return Kill;
             yield return Butcher;
             yield return DryHide;
+            yield return Run;
+            yield return "claim.mark";
         }
+
+        // Some things can't be picked up by watching someone else do them.
+        public static bool Watchable(string processId) => !processId.StartsWith("move.");
 
         public static Specialization? Spec(string id)
         {

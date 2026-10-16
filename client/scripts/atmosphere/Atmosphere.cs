@@ -109,6 +109,7 @@ public partial class Atmosphere : Node3D
         AddChild(mist);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
+        ReadySeasons();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -161,6 +162,7 @@ public partial class Atmosphere : Node3D
         conn.Db.WorldClock.OnUpdate += (_, _, c) => OnClock(c);
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
+        ConnectSeasons(conn);
         // Sheep bleat; Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
         conn.Db.Animal.OnUpdate += (_, _, a) => Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100);
@@ -171,7 +173,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work" });
+            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
     }
@@ -261,6 +263,7 @@ public partial class Atmosphere : Node3D
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
+        UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
         // Dawn mist glows with the same light as the fog: warm at sunrise.
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
@@ -350,7 +353,7 @@ public partial class Atmosphere : Node3D
         float h = Mathf.Clamp(sunHeight, 0f, 1f);
         Color sunColor = h < 0.4f ? low.Lerp(mid, Mathf.SmoothStep(0f, 0.4f, h)) : mid.Lerp(high, Mathf.SmoothStep(0.4f, 1f, h));
         Color moonColor = new(0.56f, 0.66f, 1.0f);
-        sun.LightColor = Grey(isDay ? sunColor : moonColor, overcast * 0.6f, 1f);
+        sun.LightColor = Grey(isDay ? sunColor.Lerp(new Color(0.9f, 0.94f, 1f), 0.45f * WinterLight) : moonColor, overcast * 0.6f, 1f);
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
@@ -386,7 +389,8 @@ public partial class Atmosphere : Node3D
         env.AmbientLightColor = mood.Ambient;
         env.AmbientLightEnergy = mood.AmbientEnergy * (1f + 0.35f * overcast);
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
-        env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight);
+        env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
+        env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         if (flash > 0.001f)

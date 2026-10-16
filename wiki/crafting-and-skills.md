@@ -8,7 +8,7 @@ Some crafts are minigames, such as knapping stone and shaping clay. Your result 
 ## Skills
 Every craft trains a skill. Higher skill gives better results and faster work. Failed attempts still give some progress, at a reduced rate.
 
-- **Survival basics** (fire, foraging, digging, simple tools, shelter, animal husbandry) are open to everyone with no limit. Cooking trains firecraft.
+- **Survival basics** (fire, foraging, digging, simple tools, shelter, animal husbandry, endurance) are open to everyone with no limit. Cooking trains firecraft.
 - **Specialities** share a fixed total. You cannot max every speciality on one character, so choose which crafts to focus on. Players who specialise differently can make things for each other.
 - **Titles** mark ranks within a skill. Partway up a skill you choose a focus within it.
 - **Master rank** skips crafting minigames and gives a steady result. Hold Ctrl when starting a craft to play the minigame anyway, for a chance at a better result.
