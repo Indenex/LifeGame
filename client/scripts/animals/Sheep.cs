@@ -43,13 +43,15 @@ public partial class Sheep : Node3D
     // Mostly cream, some oatmeal, and the odd dark sheep.
     static readonly Color[] Fleeces =
     {
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.80f, 0.74f, 0.62f),
-        new(0.80f, 0.74f, 0.62f),
-        new(0.87f, 0.84f, 0.75f),
-        new(0.87f, 0.84f, 0.75f),
+        // Unwashed wool, not paper white: a brighter fleece glows against the
+        // grass at dusk and at night instead of dimming with everything else.
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.68f, 0.62f, 0.52f),
+        new(0.68f, 0.62f, 0.52f),
+        new(0.74f, 0.71f, 0.63f),
+        new(0.74f, 0.71f, 0.63f),
         new(0.34f, 0.27f, 0.22f),
     };
     static readonly Dictionary<int, Material> WoolMaterials = new();
@@ -57,6 +59,17 @@ public partial class Sheep : Node3D
     static Material? skinMaterial;
     static readonly Color Skin = new(0.80f, 0.66f, 0.58f);
     static Material? faceMaterial;
+
+    // Wool takes the painted shader's relief, so the crevices between curls shade
+    // in like the ground and rocks do.
+    static ShaderMaterial WoolLook(Color color)
+    {
+        var material = Look.Solid(color);
+        material.SetShaderParameter("detail_scale", 3.0f);
+        material.SetShaderParameter("bump", 1.2f);
+        material.SetShaderParameter("cavity", 0.3f);
+        return material;
+    }
 
     public Sheep(ulong id, Terrain terrain)
     {
@@ -66,7 +79,7 @@ public partial class Sheep : Node3D
 
         int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
         if (!WoolMaterials.TryGetValue(color, out var wool))
-            WoolMaterials[color] = wool = Look.Solid(Fleeces[color]);
+            WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
         woolColor = Fleeces[color];
 
         // A shorn sheep is a slim pink body; the fleece shrinks into it when shorn
