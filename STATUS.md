@@ -15,15 +15,15 @@ The PM keeps this file current on `main`. Lanes keep their live progress in thei
 | Justin's world | Wiped onto main 5adb2c1 on 2026-10-15. From now on every PR must publish over it without `--delete-data` (CI upgrade check, #25). A wipe needs Justin's OK |
 | Merged 2026-10-15 | #4, #6, #9, #11, #13, #14, #15, #7, #12, #17, #19, #22, #18, #20, #16, #24 |
 | Next merges (send the PM the green sha) | building #10, claims #8, animals #23, ceramics #21 (after #20, folds dug-clay quality), UX #26, atmosphere #27, bugfix #25, skills #28 |
-| Waiting on Justin | nothing open |
-| Next PM action | Start Opus sessions for the Integration lane (integration-1) and Render lane (render-1); Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
+| Waiting on Justin | Found in lane tickets 2026-10-16, not yet answered: (1) felling trees vs deadwood only, #70 crafting-9, default felling; (2) sleeping mat respawn, #61 building-5/7, default keep; (3) water and sky look, #66 atmosphere-10/11; (4) wetness numbers, #75 survival-5; (5) carry-limit numbers, survival-3 (shipped as default); (6) burnt mutton 10% hunger, survival-4; (7) toast only at new titles, skills-8. PM decides: Shift+G bars doors (building-3, UX/UI confirms) |
+| Next PM action | Get Justin's answers on the open questions above; Merge each PR above when its lane sends a green sha; post screenshots to Justin; record his answers in `DECISIONS.md` |
 
 ## Lanes
 
 | Lane | Next ticket / PR | Branch | Owns |
 |---|---|---|---|
-| Integration (D-058) | integration-1 take over CI and builds; unassigned, needs a session | not started | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
-| Render (D-059) | render-1 set up the capture pipeline; unassigned, needs a session | not started | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
+| Integration (D-058) | integration-1 take over CI and builds | session_01Rf5965nk4Lvd3f2QDteZSq records its branch | `client/scripts/Main.cs`, `client/scripts/Hud.cs` hooks, `Tables.cs`, `shared/World.cs`, `.github/workflows/`, `tools/gen-bindings.sh`, Use dispatcher, PR merge-readiness |
+| Render (D-059) | render-1 set up the capture pipeline | session_013qe8zPzzBHx9rFPEYoKMr5 records its branch | screenshots and clips for every lane, /mnt/project-files/screenshots/, capture tooling under `tools/render/` |
 | Crafting | crafting-3 bow drill | `crafting-bow-drill` (lane records) | `shared/Items.cs`, `shared/Processes.cs`, `Crafting.cs`, `client/scripts/crafting/` |
 | Survival needs | carrying limit raised by basket (D-042); numbers to Justin first | `claude/survival-needs-g7yrhi` | `Survival.cs`, `client/scripts/survival/` |
 | Journal and skills | #28 skills-5; then dug-clay fold-in after #21 | `claude/journal-skills-iseewg` | `Knowledge.cs`, `Skills.cs`, `shared/Skills.cs`, `client/scripts/journal/` |
