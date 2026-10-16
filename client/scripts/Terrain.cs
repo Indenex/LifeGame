@@ -276,6 +276,7 @@ public partial class Terrain : Node3D
         var reeds = new List<(Transform3D, Color, Color)>();
         var flowers = new List<(Transform3D, Color, Color)>();
         var bushes = new List<(Transform3D, Color, Color)>();
+        var landmarks = new LandmarkProps.Lists();
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
@@ -296,10 +297,9 @@ public partial class Terrain : Node3D
                 // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    // Stepping stones mark an easy place to ford a stream.
+                    // Stepping stones or a fallen log mark an easy place to ford a stream.
                     if (Landmarks.FordStoneAt(x, z))
-                        rocks.Add((Plant(x + (Hash01(x, z, 70) - 0.5f) * 0.3f, top, z + (Hash01(x, z, 71) - 0.5f) * 0.3f, yaw, 1f)
-                            .ScaledLocal(new Vector3(0.55f, 0.32f, 0.55f) * (0.9f + Hash01(x, z, 72) * 0.3f)), Look.Rock.Lightened(0.05f), custom with { B = 1f }));
+                        LandmarkProps.Ford(x, z, top, landmarks, custom);
                     else if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
                     continue;
@@ -323,26 +323,15 @@ public partial class Terrain : Node3D
                 float tree = Forest.TreeChance(density); // the same as Trees.Forest(x, z)
                 float trail = Landmarks.Trail(x, z);
 
-                // Landmarks to steer by (env-5): a huge lone oak in a glade, a rock
-                // outcrop on the heath.
+                // Landmarks to steer by (env-5), each shaped by its own seed.
                 if (Landmarks.GiantOakAt(x, z))
                 {
-                    var giant = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(new Vector3(3.2f, 2.6f, 3.2f)), new Vector3(fx, top - 0.1f, fz));
-                    trunks.Add((giant, Look.Bark.Darkened(0.12f), custom));
-                    leafy.Add((giant, Look.Leaf.Lerp(Look.LeafLight, 0.15f), custom with { A = SeasonBroadleaf }));
+                    LandmarkProps.GiantTree(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     continue;
                 }
                 if (Landmarks.OutcropAt(x, z))
                 {
-                    int stones = 4 + (int)(Hash01(x, z, 73) * 3f);
-                    for (int k = 0; k < stones; k++)
-                    {
-                        float a = k * Mathf.Tau / stones + Hash01(x, z, 74 + (uint)k) * 0.8f;
-                        float r = k == 0 ? 0f : 1.2f + Hash01(x, z, 80 + (uint)k) * 1.4f;
-                        float ox = fx + Mathf.Cos(a) * r, oz = fz + Mathf.Sin(a) * r;
-                        float size = k == 0 ? 2.8f : 1.4f + Hash01(x, z, 86 + (uint)k) * 1.2f;
-                        rocks.Add((Plant(ox, HeightAt(ox, oz) - 0.15f * size, oz, a * 2.3f, size), Look.Rock.Darkened(Hash01(x, z, 92 + (uint)k) * 0.12f), custom with { B = 1f }));
-                    }
+                    LandmarkProps.Outcrop(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     continue;
                 }
                 float sapling = tree + 0.03f * edge;
@@ -436,6 +425,10 @@ public partial class Terrain : Node3D
                 }
             }
 
+        trunks.AddRange(landmarks.Trunks);
+        leafy.AddRange(landmarks.Leafy);
+        pines.AddRange(landmarks.Pines);
+        rocks.AddRange(landmarks.Rocks);
         AddMulti(root, trunkMesh!, trunks, Look.TreeBark);
         AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
         AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
@@ -454,7 +447,7 @@ public partial class Terrain : Node3D
     // shaders (D-099): broadleaf canopies thin in winter and turn in autumn, flowers
     // only show in spring and summer, heather blooms purple in late summer. 0 (pines,
     // other bushes, rocks) never changes.
-    const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
+    internal const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
 
     static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
     {
