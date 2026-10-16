@@ -256,3 +256,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-062 — 2026-10-16 — Wetness numbers as proposed
 **Decision:** Heavy rain soaks you in 2 minutes, drizzle in 10, wading in 10 seconds; drying takes 5 minutes, 2.5 by a fire; cold is multiplied by 1 + 0.5 x wetness (survival-5, #75).
 **Who:** Justin ("As proposed", which the PM recommended)
+
+## D-063 — 2026-10-16 — A player wiki, light on spoilers
+**Decision:** A Wiki lane (a Sonnet worker) writes and keeps current a player wiki under `wiki/`. It gives direction, basic tips and the spirit of play (e.g. "being wet chills you faster; there are ways to dry off quicker") without exact numbers, full recipes or solutions to discoveries. It follows `main`: when a merged decision or PR changes what players experience, the wiki is updated.
+**Who:** Justin
