@@ -26,9 +26,14 @@ A second species (Q12 a, recommended; pending Justin via the PM): small herds of
 
 - 2026-10-16 20:12 (UTC): Modeling made the carved red deer: client/scripts/models/DeerFigure.cs on claude/model-2-env (lands with Modeling's follow-up PR after #197). Same bones, rests and two surfaces as the stand-in. When it is on main, in Sheep.cs set `deerMesh = DeerFigure.Build(false, plainMaterial); stagMesh = DeerFigure.Build(true, plainMaterial);` and delete BuildDeer (or let Modeling make the swap). Item models for 202-204 are done there too.
 
+- 2026-10-16 20:20 (UTC): Justin answered (via the PM), now the plan for #219:
+  - Q13: "One spear strike kills if your sneak skill is high enough"; otherwise it wounds. Give deer health (and sheep too, for consistency). A wounded deer bolts, then slows and stops to rest as it weakens, so it can be chased down: hunting a deer is wounds plus a chase. (Today: StrikeScale 1.6 makes any spear strike kill; replace with a sneak-skill gate. Skills lane owns the sneak skill: ask Journal and skills, session_013QuyGdXAWemhkois2ictmc, how to read it.)
+  - Sounds: alarm bark on Run plus stags roaring at autumn dusk; brief sent to Audio (session_01SXcxtoyeqDmypiHxkHedU6).
+  - Antler: a plain crafting material, plus an antler hammer or pick recipe, with Crafting (new session_01N9APthjRDfjknUvCweqzzN).
+  - Bow and arrows: a new ticket animals-15 with Crafting. Client auto-targets (nearest huntable in a cone in front, within range); the server resolves each shot instantly in one reducer (no projectile simulation; the client animates the arrow). Damage = bowPower x arrowPower x (0.7 + 0.3 bowQ) x (0.7 + 0.3 arrowQ) x rangeFactor x rand(0.85, 1.15); with deer HP 100 the first crude bow and arrows do about 17-33, so 3 to 6 arrows; hit chance falls with distance and target speed. PM is proposing the formula to Justin. Keep #219 on spear plus sneak first.
+
 ## Open questions / blockers
-- Q13 (one spear strike kills a deer, 2 venison per deer) with the PM; built on (a), keep as is.
-- Antler use: send the PM Crafting's 3 options above (D-059) if not yet sent.
+- Q13 answered (above): sneak-gated one-strike kill, wounds plus chase otherwise.
 - Deer voices: Atmosphere gated Sheep.Seen to sheep only in its PR #217 (294c458), so deer are silent; the deer calls (alarm bark on Run, stags roaring at autumn dusk) are routed via the PM to Audio's new session.
 - Justin wants durability on hand tools and worn clothing (tunic, wraps): Crafting (new Sonnet session, tickets/crafting-19.md) proposes how it plays; coordinate for clothing (Clothing.cs / worn_item).
 
