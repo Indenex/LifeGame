@@ -111,7 +111,7 @@ public partial class StationPanel : CanvasLayer
         if (mine == null) return;
         tipped = true;
         string name = StationInfo.Name(Structures.Shape((int)mine.Kind).Station);
-        Hints.Tip("station_use", $"Stand at the {name} and press {Controls.KeyFor("use") ?? "G"} to see what's made there.");
+        Hints.Tip("station_use", $"Stand at the {name} and press {Controls.KeyFor("use") ?? "E"} to see what's made there.");
     }
 
     // --- Layout ------------------------------------------------------------
@@ -125,7 +125,7 @@ public partial class StationPanel : CanvasLayer
         rows = new VBoxContainer { CustomMinimumSize = new Vector2(560, 0) };
         rows.AddThemeConstantOverride("separation", 8);
         box.AddChild(rows);
-        hint = Hud.Text("Takes from your bag first, then baskets and jars nearby, then the claim's stash    G or Esc closes", 13);
+        hint = Hud.Text($"Takes from your bag first, then baskets and jars nearby, then the claim's stash    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
