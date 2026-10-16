@@ -11,9 +11,9 @@ public static partial class Module
     static bool ClaimGateAllows(ReducerContext ctx, Structure gate) =>
         ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, ctx.Sender);
 
-    // Wired once House building's building-9 declares the hook:
-    // static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed)
-    // {
-    //     if (!ClaimGateAllows(ctx, s)) allowed = false;
-    // }
+    // Declared in BuildingStorage.cs (building-9, #202).
+    static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed)
+    {
+        if (!ClaimGateAllows(ctx, s)) allowed = false;
+    }
 }
