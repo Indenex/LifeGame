@@ -10,6 +10,19 @@ namespace LifeGame.Shared
         // Chat is heard by anyone within this many meters of the speaker.
         public const float ChatRange = 24f;
         public const int ChatMaxLength = 200;
+
+        // claims-6: "/me waves" is an action, shown as "Mira waves".
+        public static bool IsEmote(string text) =>
+            text.StartsWith("/me ", StringComparison.OrdinalIgnoreCase) || text.Equals("/me", StringComparison.OrdinalIgnoreCase);
+        public static string EmoteBody(string text) => text.Length > 3 ? text[3..].Trim() : "";
+
+        // How bright a chat line is in the log: full within a third of chat range,
+        // easing to 55% at the edge.
+        public static float ChatDim(float distance)
+        {
+            float t = Math.Clamp((distance - ChatRange / 3f) / (ChatRange * 2f / 3f), 0f, 1f);
+            return 1f - 0.45f * t * t * (3f - 2f * t);
+        }
         public const long ChatCooldownMicros = 400_000;
         // Messages are kept briefly so people who walk up can catch the last few lines.
         public const long ChatKeepMicros = 120_000_000;
