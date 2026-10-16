@@ -36,6 +36,8 @@ public static class Subscriptions
         $"SELECT * FROM simmer_pot WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
+        // What you wear (animals-12, read by the equipment panel, ui-10).
+        "SELECT * FROM my_worn",
         "SELECT * FROM my_hotbar",
         "SELECT * FROM held_item",
         "SELECT * FROM my_craft_job",
