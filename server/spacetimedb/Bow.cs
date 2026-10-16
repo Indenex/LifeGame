@@ -76,11 +76,13 @@ public static partial class Module
     public static float BowHitChance(float distance, float speed) =>
         Math.Clamp(0.95f - 0.012f * (distance - 5f), 0.3f, 0.95f) * Math.Clamp(1f - 0.07f * speed, 0.35f, 1f);
 
-    // bowPower x arrowPower x (0.7 + 0.3 bowQ) x (0.7 + 0.3 arrowQ) x rangeFactor x rand(0.85, 1.15).
+    // bowPower x arrowPower x (0.9 + 0.1 bowQ) x (0.9 + 0.1 arrowQ) x rangeFactor x rand(0.85, 1.15).
+    // Justin: skill matters much more than gear, so gear quality only spreads damage by
+    // about 13% from crude to excellent (it was 0.7 + 0.3 q); the Archery skill carries the rest.
     public static float BowDamage(BowShot shot, float distance, double roll)
     {
         float range = distance <= BowFullDamageRange ? 1f
             : 1f - 0.5f * Math.Clamp((distance - BowFullDamageRange) / (BowMaxRange - BowFullDamageRange), 0f, 1f);
-        return shot.BowPower * shot.ArrowPower * (0.7f + 0.3f * shot.BowQ) * (0.7f + 0.3f * shot.ArrowQ) * range * (0.85f + 0.3f * (float)roll);
+        return shot.BowPower * shot.ArrowPower * (0.9f + 0.1f * shot.BowQ) * (0.9f + 0.1f * shot.ArrowQ) * range * (0.85f + 0.3f * (float)roll);
     }
 }

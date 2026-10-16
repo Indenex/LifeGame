@@ -31,6 +31,8 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 
 - 2026-10-16: Justin: bow must be much harder at level 1 (6-7 hits on a deer), one-shot possible at the top or with crits. Proposed (sent to PM, Journal, Crafting): Archery skill (id archery, trained by animal.shoot) with ArcheryDamage 0.6 to 2.4, ArcheryHitChance 0.8 to 1.0, ArcheryDrawTime 2.0 s to 0.8 s; powers stay bow 60 x arrow 0.65. Rank 0/25/50/100 per-hit damage, crude: 15/35/49/61; excellent: 23/53/74/91. Crafting's fields are on crafting-bow (0ea829f); they write BowShotHook once this branch and #267 are on main.
 
+- 2026-10-16 21:20: Justin: combat skills progress slower; the ceiling must be a single named constant per effect that we raise in later content; skill matters much more than gear. Redone: gear factor now (0.9 + 0.1 q) per item (crude to excellent only ~13% apart, in Bow.cs BowDamage); ArcheryDamage 0.44 at rank 0 to 2.0 at the ceiling (hi is one named constant in Journal's Progression), combat category pace ~0.5x on skill gain. Per-hit damage rank 0/25/50/100: crude 15/38/55/68, excellent 17/43/62/77.
+
 ## Open questions / blockers
 - Numbers decided: A.
 - Hard kill threshold vs Journal's proposed one-strike chance (0 to 0.9 by rank) for the sneak kill: asked PM.
