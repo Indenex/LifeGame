@@ -1,7 +1,7 @@
 # bugfix-9: BuildTest no longer checks a craft before it lands
 Lane: Bug fixes
 Owner: Bug fixes thread (session cse_01Eo43mKAGzgoCFVpXAGCUqW)
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #59 (rides with bugfix-8, per the PM)
 
@@ -16,4 +16,4 @@ CI's building check stops failing at random on "twisted cordage for the basket".
 - (none)
 
 ## Next step
-Wait for CI on PR #59 and send the PM the green sha.
+None; merged.

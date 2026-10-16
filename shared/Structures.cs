@@ -1,7 +1,6 @@
 // Shapes and rules for buildings, shared by the server module and the client so
-// placement checks and "am I inside?" agree on both sides. Material costs live
-// on the server (Building.cs) because they name item kinds; the client reads
-// them from each structure's row. Keep this file free of engine and SpacetimeDB types.
+// placement checks, "am I inside?" and what each stage costs agree on both sides.
+// Keep this file free of engine and SpacetimeDB types.
 using System;
 
 namespace LifeGame.Shared
@@ -99,6 +98,58 @@ namespace LifeGame.Shared
                 StoreStacks = JarStacksMax,
                 WeatherAfter = 336,
                 Stages = new[] { "Set the jar" },
+            },
+        };
+
+        // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
+        // for thatch; the hut's walls are daub (clean clay mixed with fiber, from Ceramics).
+        // The server builds each stage's needs from this; the client shows it before you lay out.
+        public static readonly (Item Item, uint Count)[][][] StageCosts =
+        {
+            // Lean-to: Frame, Lashing, Ribs, Thatch
+            new[]
+            {
+                new[] { (Item.Stick, 4u) },
+                new[] { (Item.Fiber, 3u) },
+                new[] { (Item.Stick, 6u) },
+                new[] { (Item.Fiber, 8u) },
+            },
+            // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
+            new[]
+            {
+                new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
+                new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
+                new[] { (Item.Daub, 12u) },
+                new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
+            },
+            // Claim marker: one stage, costs set by Claims in shared/Social.cs
+            new[]
+            {
+                new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
+            },
+            // Updraft kiln (Ceramics): Base, Dome
+            new[]
+            {
+                new[] { (Item.Brick, 4u) },
+                new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
+            },
+            // Storage basket: Weave
+            new[]
+            {
+                new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+            },
+            // Brick house: Footings, Brick walls, Rafters, Thatch
+            new[]
+            {
+                new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                new[] { (Item.Fiber, 14u) },
+            },
+            // Storage jar (Ceramics): set down one kiln-fired jar
+            new[]
+            {
+                new[] { (Item.StorageJar, 1u) },
             },
         };
 

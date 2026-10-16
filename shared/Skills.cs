@@ -50,6 +50,8 @@ namespace LifeGame.Shared
         // Reported on every strike that lands, and when a carcass is butchered (Animals lane).
         public const string Kill = "animal.kill";
         public const string Butcher = "animal.butcher";
+        // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
+        public const string DryHide = "hide.dry";
         // Building stages, reported by the Building lane (Structures.FrameProcess and friends).
         // build.weave is the storage basket's one stage; build.door is reported by HangDoor (building-3).
         static readonly string[] BuildStages = { "build.frame", "build.wattle", "build.daub", "build.roof", "build.weave", "build.door" };
@@ -59,11 +61,11 @@ namespace LifeGame.Shared
             new("foraging", "Foraging", true, "Finding and gathering what the land offers.", "gather"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets, lashing simple tools.", "knap", "cord", "weave", "lash"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving, sewing, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", "sew"),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             // Animal work (shear now, butcher and herd later) is a survival basic (D-049).
-            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", "animal"),
+            new("husbandry", "Husbandry", true, "Keeping animals calm, shearing them cleanly and working their hides.", "animal", "hide"),
         };
 
         // Names for processes that are not in Processes.List.
@@ -73,6 +75,8 @@ namespace LifeGame.Shared
             [Forage] = "Foraging",
             [ClayRules.PitFireProcess] = "Pit firing",
             [ClayRules.FillProcess] = "Filling a pot",
+            [ClayRules.KilnProcess] = "Building a kiln",
+            [ClayRules.KilnFireProcess] = "Kiln firing",
             ["build.frame"] = "Raising a frame",
             ["build.wattle"] = "Weaving wattle walls",
             ["build.daub"] = "Daubing walls",
@@ -83,6 +87,7 @@ namespace LifeGame.Shared
             [Shear] = "Shearing a sheep",
             [Kill] = "Hunting",
             [Butcher] = "Butchering a carcass",
+            [DryHide] = "Drying leather",
         };
 
         // Everything the journal counts toward "still to discover".
@@ -94,10 +99,13 @@ namespace LifeGame.Shared
             foreach (var def in Processes.List) yield return def.Id;
             yield return ClayRules.FillProcess;
             yield return ClayRules.PitFireProcess;
+            yield return ClayRules.KilnProcess;
+            yield return ClayRules.KilnFireProcess;
             foreach (var id in BuildStages) yield return id;
             yield return Shear;
             yield return Kill;
             yield return Butcher;
+            yield return DryHide;
         }
 
         public static Specialization? Spec(string id)

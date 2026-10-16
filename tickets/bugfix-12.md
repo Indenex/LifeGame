@@ -1,7 +1,7 @@
 # bugfix-12: "New in your journal" repeats on every pickup
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-lyle6o
 PR: #68
 
@@ -17,4 +17,4 @@ Cause: `my_journal` is a view without a primary key, so when the server bumps `T
 - (none)
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha.
+None; merged.

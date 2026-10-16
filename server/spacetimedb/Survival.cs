@@ -270,6 +270,7 @@ public static partial class Module
         }
 
         var (sx, sz) = WildernessEdge(ctx);
+        RespawnPointHook(ctx, player.PlayerId, ref sx, ref sz);
         var spawn = new PlayerPos
         {
             PlayerId = player.PlayerId,
@@ -400,6 +401,9 @@ public static partial class Module
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
     // when weather arrives.
+    // House building implements this: a player with a sleeping mat laid out wakes on it.
+    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z);
+
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
     // What a pot of water gives back when drunk, and how much it quenches.
