@@ -73,6 +73,9 @@ public partial class CraftingUi : CanvasLayer
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
         progressPanel.Position = new Vector2(-150, -130);
         root.AddChild(progressPanel);
+        // --screenshot-minigame shows the hand-drill game's box without a server.
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-minigame") >= 0)
+            AddChild(new DrillGame(Processes.List.First(p => p.Minigame == Minigame.Drill)).Root);
     }
 
     public void Attach(DbConnection conn)
@@ -483,9 +486,8 @@ public partial class CraftingUi : CanvasLayer
             box.AddChild(Bar);
             box.AddChild(Hint);
             card.AddChild(box);
-            card.SetAnchorsPreset(Control.LayoutPreset.Center);
-            card.GrowHorizontal = Control.GrowDirection.Both;
-            card.GrowVertical = Control.GrowDirection.Both;
+            // Low on the screen, so the player and the fire stay in view (Hud's lanes).
+            Hud.PlaceLow(card);
             Root = card;
         }
 
