@@ -27,15 +27,15 @@ public static class StructureModel
     static ShaderMaterial Wood => wood ??= Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f));
     static ShaderMaterial Fiber => fiber ??= Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f);
     static ShaderMaterial Thatch => thatch ??= Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f);
-    static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
-    static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
+    internal static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
+    internal static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
 
     public static int StageCount(int kind) => LifeGame.Shared.Structures.Shape(kind).Stages.Length;
 
     public static List<Piece> Pieces(int kind)
     {
         if (Cache.TryGetValue(kind, out var pieces)) return pieces;
-        pieces = kind == 1 ? ClayHut() : kind == 2 ? ClaimMarkerModel.Pieces() : LeanTo();
+        pieces = kind == 1 ? ClayHut() : kind == 2 ? ClaimMarkerModel.Pieces() : kind == 3 ? KilnModel.Pieces() : LeanTo();
         Cache[kind] = pieces;
         return pieces;
     }
@@ -144,7 +144,7 @@ public static class StructureModel
     }
 
     // Pegs at each corner of the footprint with a fiber string between them.
-    static void Site(List<Piece> list, Vector3[] corners)
+    internal static void Site(List<Piece> list, Vector3[] corners)
     {
         var st = Begin();
         for (int i = 0; i < corners.Length; i++)

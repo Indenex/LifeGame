@@ -32,6 +32,35 @@ public static class KilnModel
     // The sooty inside, seen through the door and between the bricks.
     public static Mesh Interior => interior ??= MakeInterior();
 
+    // As a building: pegs and string round the footprint, then the base courses
+    // (to just above the door), then the dome and chimney, each course appearing
+    // as its share of bricks arrives.
+    public static List<StructureModel.Piece> Pieces()
+    {
+        var list = new List<StructureModel.Piece>();
+        var ring = new Vector3[8];
+        for (int i = 0; i < ring.Length; i++)
+        {
+            float a = i * Mathf.Tau / ring.Length;
+            ring[i] = new Vector3(Mathf.Sin(a) * (Radius + 0.12f), 0, Mathf.Cos(a) * (Radius + 0.12f));
+        }
+        StructureModel.Site(list, ring);
+        var brick = Look.Solid(Colors.White);
+        list.Add(new StructureModel.Piece { Stage = 0, Mesh = Interior, Material = (Material)Interior.SurfaceGetMaterial(0), Anchor = Vector3.Zero });
+        for (int c = 0; c < Courses.Count; c++)
+            list.Add(new StructureModel.Piece
+            {
+                Stage = c < BaseCourses ? 0 : 1,
+                Mesh = Courses[c],
+                Material = brick,
+                Anchor = new Vector3(0, c < DomeCourses ? c * Course : DomeHeight + (c - DomeCourses) * Course, 0),
+            });
+        return list;
+    }
+
+    // Courses in the first stage: up to just over the door.
+    static int BaseCourses => Mathf.CeilToInt((DoorHeight + Course) / Course);
+
     static Mesh MakeInterior()
     {
         var mesh = new SphereMesh { Radius = Radius * 0.93f, Height = DomeHeight * 1.86f, RadialSegments = 20, Rings = 10 };
