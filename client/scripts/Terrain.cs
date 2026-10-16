@@ -90,7 +90,12 @@ public partial class Terrain : Node3D
         if (BenchWanted) { RunViewBench(chunkX, chunkZ); return; }
 
         int r = ViewRadius;
-        if (r != focusRadius) ViewDistance.TellFog(r);
+        if (r != focusRadius)
+        {
+            ViewDistance.TellFog(r);
+            // Dug cells, felled trees and buildings arrive out to the drawn edge (#339).
+            Subscriptions.FarRadius = r;
+        }
         if (center != (chunkX, chunkZ) || r != focusRadius)
         {
             center = (chunkX, chunkZ);
