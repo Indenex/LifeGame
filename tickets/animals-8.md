@@ -1,7 +1,7 @@
 # animals-8: Wool spun into yarn and woven into cloth
 Lane: Animals
 Owner: Animals thread (session session_01SAcVBUUfPFFk1rdXuiQZRU)
-Status: in_progress
+Status: blocked
 Branch: claude/animals-wool-cloth-5gkntn (from main after #76 merged; rebuild was needed because the first animals-8 local branch was lost with an old container)
 PR: #90
 
@@ -20,13 +20,14 @@ Raw wool from shearing becomes cloth with plain tier-2 crafting: make a drop spi
 
 ## Progress log
 - 2026-10-16: PR #76 (animals-7) green on 93043c5, sha sent to the PM. Started animals-8; items and processes written. Installing .NET + SpacetimeDB in this container to build.
+- 2026-10-16 21:00: D-120 (Justin): HOLD #90 until the Spindle station exists; ship them together (animals-11 work lands in this PR). PR set to draft. Merged main 2026-10-16 to keep current. CI on 4233255 was green (run https://github.com/Indenex/LifeGame/actions/runs/38939775364).
 - 2026-10-16 18:30: D-070/D-071 relayed. Spin minigame written; server + client build; simulated timing: 6 flicks, about 14 s, score 1 in the band, 0.45 flicking too soon. Bot test with a score still makes yarn. PM asked to hold #90 for it.
 - 2026-10-16 17:20: opened PR #90; Render requested 573a057.
 - 2026-10-16 17:10: #76 merged (a5e5b1e); merged main in. Server + client build. Local bot test (scratch WoolCheck with a TEMP give-wool reducer, not committed): flake -> drop spindle q35, 4x spin -> 4 yarn q36-37, weave -> 1 wool cloth q38, spindle kept, no yarn left. Upgrade check against main passed.
 
 ## Open questions / blockers
-- Answered: D-070 new Spin minigame; D-071 Toolmaking until a capped Weaver specialty exists.
-- Crafting lane asked to OK the AnimalsMinigameFor hook and Minigame.Spin (default: as written).
+- Blocked on Crafting's station framework (crafting-15, branch crafting-stations, pending Justin's OK). Then add the Spindle station here (see tickets/animals-11.md on claude/animals-clothing-5gkntn).
+- Answered: D-070 Spin minigame; D-071 Toolmaking until a Weaver specialty exists; D-120 hold for the station.
 
 ## Next step
-Wait for CI on #90's new head, then send a render request for the spin minigame and the green sha to the PM.
+Keep this branch current with main; when crafting-stations is on a branch, merge it in and make `cord.spin_wool` and `weave.wool_cloth` need the Spindle station.
