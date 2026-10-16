@@ -12,9 +12,11 @@ Two players can trade carried items face to face (D-069). Use (G) on another pla
 - 2026-10-16 17:16: assigned by the PM. Started the branch from ui-8 (6dd68f5).
 
 - 2026-10-16 17:45: window built against a mock. `ui/Trade.cs` holds `ITradeLink` (the contract the window needs) and `MockTradeLink` (Mara). `ui/TradeWindow.cs` draws the window: both offers side by side, item pictures, an Accept button, green borders and ticks when a side accepts, an amber "The offer changed, so both accepts were cleared" line, a carry-limit warning from `Carry.Of`, and Esc, walking 5 m apart or death to call it off. G on a player within 2.5 m asks; the asked player sees "Mara wants to trade    Esc says no" above the G prompt, and G says yes. Main has a small hook (players, Me, Dead, Panels.Open). Until claims-7 lands, G on a player only does anything with `--mock-trade` or `--screenshot-trade`. Previews: `--screenshot-trade`, `=asked`, `=accepted`, `=changed`. Client builds with 0 errors.
+- 2026-10-16 17:50: Render requested 119c068 (four previews). Sent Claims (session_013ECn821EbTpbj4h7d3PepH) the calls and reads the window needs, plus the assumptions in Open questions.
 
 ## Open questions / blockers
 - Server contract from Claims (claims-7) not received yet; building against a mock meanwhile.
+- Assumed (sent to Claims to confirm): offered items stay in your inventory until the swap; the server clears both accepts on any change, cancels on death, past ~5 m apart or on disconnect, and times requests out (30 s suggested); the client warns about overload but doesn't block it.
 
 ## Next step
-Send Render the mockup request for the pushed sha; when Claims sends the claims-7 contract, write a real ITradeLink over the bindings.
+Wait for the render of 119c068 and the claims-7 contract; when Claims sends the claims-7 contract, write a real ITradeLink over the bindings.
