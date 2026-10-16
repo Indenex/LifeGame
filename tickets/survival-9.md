@@ -1,7 +1,7 @@
 # survival-9: Endurance, a skill trained by running
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-arrival (with survival-8)
 PR: (with survival-8)
 
@@ -23,4 +23,4 @@ D-123: stamina (D-111) grows with a new basic skill, Endurance, trained by runni
 - Endurance trains only once #112 is on main; if this PR lands first, running is journaled but trains nothing until then (harmless). If needed, copy #112's Specializations line verbatim.
 
 ## Next step
-Wait for CI on the survival-8/9 PR; green: send the sha to the PM and Integration, and the PR number to Atmosphere (snow hook).
+None: merged as #167.

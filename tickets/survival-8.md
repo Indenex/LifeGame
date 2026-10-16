@@ -1,7 +1,7 @@
 # survival-8: New arrival warmth
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-arrival (main after #119 merged)
 PR: (opening now, with survival-9)
 
@@ -26,4 +26,4 @@ D-115: a new character's first 30 minutes online, cold drains at half speed, so 
 - (none)
 
 ## Next step
-Wait for CI on the survival-8/9 PR; green: send the sha to the PM and Integration, and the PR number to Atmosphere (snow hook).
+None: merged as #167.
