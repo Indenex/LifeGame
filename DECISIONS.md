@@ -683,3 +683,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-167 — 2026-10-16 — Slower thirst at first (survival-10 spawn water)
 **Decision:** For survival-10 (spawn water), thirst falls 20% slower in the first hour.
 **Who:** Justin ("Slower thirst at first")
+
+## D-168 — 2026-10-16 — Playtest fixes: see yourself under trees, smaller frost
+**Decision:** Any time the player is rendered underneath something (trees, forest canopy, structures), the see-through effect should happen. Trees: #223 (Environment); structures pending with House building. The frost overlay is shrunk about 30 to 45% and made more transparent: #218 (Survival).
+**Who:** Justin ("it's very difficult to see yourself in forests/trees. Any time the player is rendered underneath something, the see-through effect should happen." And on frost: "the freezing effect is nice, but waaay too big. It needs more transparency and shrunk by like ~30-45%.")
