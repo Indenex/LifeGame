@@ -2,7 +2,7 @@
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (Sonnet session_01Sc3N1RCsurSszfX5YwGzMU holds it now)
 Status: in_progress
-Branch: claude/clay-ceramics-10-kfr4kr (stacked on claude/clay-ceramics-9-kfr4kr until the lamp PR #309 merges)
+Branch: claude/clay-ceramics-10b-kfr4kr (replayed onto main after the lamp PR merged as a squash; the older claude/clay-ceramics-10-kfr4kr is superseded)
 PR: (none yet)
 
 ## Goal
