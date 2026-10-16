@@ -77,6 +77,7 @@ public partial class SoundScape : Node
     {
         Load();
         Sfx.Attach(this);
+        SoundMix.Fault = what => Fault(what);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
         player.Play();
@@ -106,6 +107,14 @@ public partial class SoundScape : Node
     public void OtherWorkDone(uint player, Work kind, bool failed) => events.Enqueue(m => m.OtherWorkDone(player, kind, failed));
     public void OtherPlace(uint player, float gain, float pan) => events.Enqueue(m => m.OtherPlace(player, gain, pan));
 
+    int faultsLogged;
+
+    // Logged once per fault, at most a few times, so a repeating fault cannot flood the log.
+    void Fault(string what)
+    {
+        if (faultsLogged++ < 5) GD.PushError($"SoundScape: {what}");
+    }
+
     void Synthesize()
     {
         var left = new float[Block];
@@ -118,8 +127,20 @@ public partial class SoundScape : Node
                 Thread.Sleep(4);
                 continue;
             }
-            while (events.TryDequeue(out var e)) e(mix);
-            mix.Render(left, right, Block);
+            // Nothing a single sound does may end this thread: all sound in the game comes
+            // through it. A failing event is dropped and logged; SoundMix.Render guards itself.
+            while (events.TryDequeue(out var e))
+            {
+                try { e(mix); }
+                catch (Exception ex) { Fault($"a sound event threw: {ex}"); }
+            }
+            try { mix.Render(left, right, Block); }
+            catch (Exception ex)
+            {
+                Fault($"Render threw: {ex}");
+                Array.Clear(left, 0, Block);
+                Array.Clear(right, 0, Block);
+            }
             long w = written;
             for (int i = 0; i < Block; i++) ring[(w + i) % RingFrames] = new Vector2(left[i], right[i]);
             Interlocked.Add(ref written, Block);
@@ -128,6 +149,20 @@ public partial class SoundScape : Node
 
     public override void _Process(double delta)
     {
+        // Watchdogs: if the synth thread has died or Godot stopped the player (an audio
+        // device change, say), bring them back instead of staying silent for the session.
+        if (running && synth is { IsAlive: false })
+        {
+            Fault("the synth thread had stopped; restarting it");
+            synth = new Thread(Synthesize) { IsBackground = true, Name = "SoundScape", Priority = ThreadPriority.AboveNormal };
+            synth.Start();
+        }
+        if (running && !player.Playing)
+        {
+            Fault("the audio player had stopped; restarting it");
+            player.Play();
+            playback = player.GetStreamPlayback() as AudioStreamGeneratorPlayback;
+        }
         if (playback == null) return;
         // Whole blocks only, so the same array is reused every time.
         long ready = Interlocked.Read(ref written) - read;

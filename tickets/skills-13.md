@@ -1,7 +1,7 @@
 # skills-13: Journal lines for the bow, and a skills panel check
 Lane: Journal and skills
 Owner: Journal and skills lane (Sonnet)
-Status: in_progress
+Status: done
 Branch: claude/journal-skills-13
 PR: (not yet)
 
@@ -20,4 +20,7 @@ After skills-12 (#237 merged at 0821b2d3), keep the journal in step with new con
 - sew.wool_tunic (Animals, PR #294): "Cloth and yarn from the wool of your sheep can be sewn into something you wear against the cold." Made at the crafting table with a cutting tool; `sew` trains Weaver (not Toolmaking). Prereqs: weave.wool_cloth and a cutting tool.
 
 ## Next step
-When `git grep lash.bow origin/main -- shared/Processes.cs` finds it: add NextSteps lines "A green stick bent and strung with cord will throw a light shaft a long way." (lash.bow) and "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks." (carve.arrows), prereqs (bow needs cordage and a stick; arrows need the knife), set Skills.Shoot prereq to lash.bow, run the hint harness (see skills-11 Testing notes), push, CI.
+Done (#288 merged 2026-10-16). Remaining queued lines moved to tickets/skills-15.md.
+
+<!-- old: 
+When `git grep lash.bow origin/main -- shared/Processes.cs` finds it: add NextSteps lines "A green stick bent and strung with cord will throw a light shaft a long way." (lash.bow) and "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks." (carve.arrows), prereqs (bow needs cordage and a stick; arrows need the knife), set Skills.Shoot prereq to lash.bow, run the hint harness (see skills-11 Testing notes), push, CI. -->

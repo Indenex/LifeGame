@@ -61,6 +61,11 @@ public partial class Herd : Node3D
             if (a.State == AnimalState.Run && old.State != AnimalState.Run && DistanceTo(a, player()) < BoltHintRange)
                 Hints.Request("sneak");
         };
+        conn.Db.AnimalHit.OnInsert += (_, h) =>
+        {
+            if (animals.TryGetValue(h.AnimalId, out var node)) node.Flinch(h.Crit, new Vector3(h.FromX, 0f, h.FromZ));
+            HitPop.Show(new Vector3(h.X, terrain.HeightAt(h.X, h.Z), h.Z), h.Crit, h.Killed);
+        };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
         Strike.Register("animals.animal", OfferStrike);
@@ -77,7 +82,7 @@ public partial class Herd : Node3D
         bool gently = leaving.Remove(c.AnimalId, out var sheep) || animals.Remove(c.AnimalId, out sheep);
         if (!gently)
         {
-            sheep = new Sheep(c.AnimalId, terrain);
+            sheep = new Sheep(c.AnimalId, terrain, c.Species);
             AddChild(sheep);
         }
         sheep!.LieDown(c.X, c.Z, c.Heading, c.Fleece, c.Growth, gently);
@@ -168,7 +173,7 @@ public partial class Herd : Node3D
     {
         if (!animals.TryGetValue(a.Id, out var sheep))
         {
-            sheep = new Sheep(a.Id, terrain);
+            sheep = new Sheep(a.Id, terrain, a.Species);
             animals[a.Id] = sheep;
             AddChild(sheep);
             inserted = true;

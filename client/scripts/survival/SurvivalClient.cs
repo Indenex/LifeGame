@@ -322,9 +322,7 @@ public partial class SurvivalClient : Node
     }
 
     // The smallest pot of water you carry, so the big one is saved for later.
-    Item? PotOfWater() =>
-        Carrying(Item.PinchPotOfWater) ? Item.PinchPotOfWater :
-        Carrying(Item.CoilPotOfWater) ? Item.CoilPotOfWater : null;
+    Item? PotOfWater() => Foods.Pots.FirstOrDefault(p => Carrying(p.Full))?.Full;
 
     ForageBush? NearestRipeBush()
     {
