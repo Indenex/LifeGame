@@ -1,7 +1,7 @@
 # render-1: Set up the render pipeline
 Lane: Render
-Owner: Render lane session session_013qe8zPzzBHx9rFPEYoKMr5
-Status: done
+Owner: Render lane (handed off 2026-10-16 23:40 from session_013qe8zPzzBHx9rFPEYoKMr5 to a fresh Sonnet session, D-159)
+Status: done (tooling merged as #103); the lane's render queue continues below
 Branch: claude/render-1-013qe8 (no harness branch was assigned; named by the session)
 PR: #103 (tools/render only, branch claude/render-1-tools)
 
@@ -80,8 +80,47 @@ Per D-059 the Render lane makes every screenshot and clip Justin sees. Done mean
 - 2026-10-16 23:25: new: ceramics-9 oil lamp demo cd30d6f (night, dusk, + hut door try).
 - 2026-10-16 23:30: new: env-4 corners of the forest at 36f6d1d (Environment), right after env-2b; 90 s delay for terrain loading.
 
+## Handoff (read this first)
+
+The Render lane makes every image, clip and audio file Justin sees (D-059). The PM (session_01CvoSQGRe3vDvDXWQu2qruU) receives every result with raw GitHub links and one-line captions; images stay on this branch (`claude/render-1-013qe8`, folder `renders/`), never on main (PM decision). /mnt/project-files is not mounted in the cloud container. D-145: never idle; when the queue is empty, run the `tour-main` job (scenes/tour.sh) on the latest main.
+
+### Setting up a fresh container
+1. `git checkout claude/render-1-013qe8` (all images and the queue live here).
+2. `tools/render/setup.sh` (dotnet 8, SpacetimeDB 2.12.0, Godot 4.6.2 mono, mesa-vulkan-drivers, xvfb). Also `apt-get install -y xdotool imagemagick ffmpeg` if missing.
+3. Start the queue detached: `RENDER_WORK=/tmp/render RENDER_OUT=$PWD/renders nohup tools/render/queue.sh > /tmp/render/queue.log 2>&1 &`. It runs tools/render/queue.jobs top to bottom, one job at a time, skipping names listed in `$RENDER_WORK/queue.done` (a fresh container has none, so first put the already-finished names there: `printf '%s\n' model-1-player ui-9-mock crafting-11 ui-10 crafting-11-lit ui-9-mock2 ui-10b ceramics-6-demo ceramics-6-jar bugfix-18 ceramics-6-jar2 ui-12 ceramics-6-jar3 bugfix-18b ceramics-6-jar4 bugfix-19 bugfix-18d bugfix-18e ceramics-7 ceramics-7-dusk env-2 model-172 model-172-items model-172b env-2b env-4 > $RENDER_WORK/queue.done`). Edit queue.jobs (not queue.sh) to add or reorder jobs; it is reread between jobs. Watch it: `tail -F $RENDER_WORK/queue.log | grep -E '^== |no image|failed|ended early|server said'`.
+4. After each job: look at every image (crop and zoom; the client lags 2-4 s behind the puppet, so bursts have the right moment somewhere), commit `renders/`, push, and send the PM: what each file shows, raw links (https://github.com/Indenex/LifeGame/raw/claude/render-1-013qe8/renders/<file>), anything that looked wrong (report, never judge design), and the requesting lane's summary. Copy the requester when you flag something for them.
+
+### Capture recipe and pitfalls (learned the hard way)
+- One render at a time: 4 cores; two software-rendered clients at once never reach their shots.
+- Software Forward+ (lavapipe) runs ~0.5 fps. lib.sh writes an untracked client/override.cfg in each render checkout (20 Hz physics, 60 max steps) so game time keeps up with the wall clock, and loads tools/render/render_cam.gd (`--render-cam=dist,height,yaw,look`, `--render-cam-target=sheep`, `--render-slowstart=0.05,45`). The rig's focus sits ~0.65 m above the feet, so height/look are relative to that (e.g. `--render-cam=3.2,0.5,0,0.35` frames a full figure). The figure faces its own way: to see a face, make the camera's player step toward the camera (`stroll 0.8 0.8` in a client-as-puppet scene).
+- Terrain loads chunk by chunk: wait 60-90 s (`--screenshot-delay=90`) for land/water shots, or unloaded chunks show the water plane with straight edges.
+- Lane mocks timed from game start (trade, equip, options, crafting panel): use `--render-slowstart=0.05,45 --screenshot-delay=4`.
+- Flags need a value: `--screenshot-fire=lit`, not `--screenshot-fire`. `--debug-position` is client-only; also move the player on the server (`sql UPDATE player_pos SET x=..., z=..., chunk_x=floor(x/16), chunk_z=floor(z/16) WHERE player_id = {target}`).
+- scene.sh + Puppet (see the header of tools/render/Puppet/Program.cs for every step): `client-as-puppet` shares one identity between the bot and the camera; `give` inserts items as the db owner; `sql`/`call` run owner SQL/reducers; `craft`, `firepots`, `feed`, `place`/`build`/`store`, `pickup`, `drop`, `key`/`keydown`/`keyup`/`type`/`mouse`/`click` (xdotool, window named LifeGame), `snap`/`burst`/`clip`, `frames`/`mark` and `client-movie N` (Godot Movie Maker at fixed fps; clips cut between `mark x-start` and `x-end`), `live` (append steps to $RENDER_WORK/live.txt while it runs).
+- Movie mode: game time crawls while the server runs in real time, so server jobs look instant; use `craftloop`.
+- A lane's own bot (ClayCheck, CraftCheck) must not share an identity with a live camera client while it walks (they fight over position): see scenes/ceramics-7.sh (camera joins only at a logged STAGE) and scenes/crafting-15.sh, ui-13.sh.
+- Never edit a script while it runs (bash reads it as it goes): write a copy and `mv` it into place. Never `pkill -f` a pattern that also matches your own shell command; find pids with `pgrep -x bash` + /proc/<pid>/cmdline.
+- In-game audio can't be recorded here (0.5 fps starves the synth; Movie Maker desyncs crafts). Audio requests use tools/SoundPreview (`dotnet run -c Release -- out.wav scene:secs ...`) then ffmpeg to mp3 in renders/audio/.
+
+### Queue at handoff (in order; requester session in brackets; all results go to the PM)
+1. env-4 corners of the forest 36f6d1d (Environment session_012hVejTxLoxBpZyX3GQmNL9) - was running at handoff; if renders/env-4-36f6d1d-1..6.png exist, check and send them, else rerun.
+2. env-2-pond 0abbc0c (Environment): clear pond from the bank at (30,76).
+3. model-172-walk, model-172-facefront, model-172-face34 on main 71f7c7c (PM priority: Modeling #172 new figure/items). Already captured and NOT yet sent: renders/model-172-71f7c7c-1,2.png (back views), model-172-items-71f7c7c-1..6.png (hotbar icons in frame 1, items on the ground in 4-6). Send all #172 together.
+4. atmosphere-16 seasons c41b1e6 (Atmosphere session_01KvVF5vpkYEHTKNRpHC18WN; PM priority #173), incl. shader-error grep and a snowfall clip.
+5. model-2 Showcase views 427d0cb (Modeling session_01JKX3FNjkrEkAqoTaFJiXAm): the A/B/C style options the PM is waiting for; send to the PM and Modeling.
+6. animals-13 seasonal sheep 04f4712 (Animals session_01SAcVBUUfPFFk1rdXuiQZRU).
+7. ceramics-9 oil lamp demo cd30d6f (Ceramics session_01Diab34HTvew38VmUaqhj5Q).
+8. survival-8 arrival badge aa3e443 (Survival session_014pHdaxJ7uESzsvWekpjvsH).
+9. ceramics-8 bench + broth a432ab6 and ceramics-8-panel (Ceramics). Supersedes ceramics-7 (renders/ceramics-7-1da6609-*.png were captured but not sent; the cooking pot works there).
+10. claims-10 whisper/shout bafe808 (Claims session_013ECn821EbTpbj4h7d3PepH).
+11. bugfix-18f 6e56862 (Bug fixes session_01HddD17VpF2CmiCxHoPH84Y): only parts (b) and (c) are still owed; (a) and the post-pickup check were sent.
+12. audio-1-options c09f9b8 (Audio session_01LeXCWTFVBQcCNVEDdhPek3): send with renders/audio/audio-1-c09f9b8-work-sounds.mp3 to the PM.
+13. claims-7 f85c3b9, skills-10 (journal hints), ui-12b 005572d (Options on a panel), survival-7 run clip 8a03451, ui-10c 78b834b, building-8 fences 969a7ae, crafting-15 table 859f25e, ui-13 station panel 2cdbc1c, animals-11 stations de48c3f, claims-9 camp name baecf02, claims-8 trade cue ff0ae8a, env-1 / env-1-after, atmosphere-13 before/after, bugfix-17 + before (may be moot: bugfix-18/17 merged; ask the PM), animals-8 + ground (4233255), atmosphere-66 cloud clip, anim-2 side/turn/work 1eec5b4 (Animation session_019roNRWQBPw4ozNLDhzseig), tour-main (D-145).
+14. Live scenes last (need someone appending steps to $RENDER_WORK/live.txt): animals-8-spin (spinning minigame: click "Spin wool yarn" in the panel, then `key space` every ~2 s with bursts), ui-9-liveA/B 88d7cf2 (two-player trade; puppet trade-ask/answer/add/accept steps).
+Many requested shas will have merged into main by now; if a branch moved, use the requester's latest sha.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-render-1 is done. Lane work: keep running tools/render/queue.sh (jobs in tools/render/queue.jobs), review each job's images and send them to the PM; open a follow-up PR for tools/render changes made after #103 when they settle.
+Set up the container (Handoff, steps 1-3), send env-4 if its images exist (else let the queue rerun it), then work the queue in order, sending each result to the PM.
