@@ -895,3 +895,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-220 — 2026-10-16 — Bag order: a sort button and manual arrangement
 **Decision:** The bag offers both a sort button and manual arrangement.
 **Who:** Justin, picking "Both, a sort button, and manual arrangement".
+
+## D-221 — 2026-10-16 — Camera angle can be tilted a little with the existing right-click controls
+**Decision:** The player can change the camera angle a bit, a little up and a little down, using the right-click mouse controls that already exist, so they can see the new sky changes and so on coming up. Owner: Integration.
+**Who:** Justin ("I want to be able to change the angle of the camera a bit, so I can see the new sky changes etc. coming up. a little up, a little down, just controlled by the right click mouse controls we already have")
+
+## D-222 — 2026-10-16 — Load more chunks, no pop-in LoD (revises D-208, env-9 See further)
+**Decision:** The game loads more of the world's chunks and shows no pop-in LoD. It should be performant enough to run without LoD, or hide things in fog where needed. This revises D-208 (env-9 "See further", low-detail distant terrain). Owner: Environment, with Atmosphere.
+**Who:** Justin ("I want to be able to load more of the chunks in the world. I don't want to see pop-in LoD stuff. The game should be performant enough to deal with no LoD things, or we can hide things in fog etc if we need to.")
