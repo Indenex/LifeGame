@@ -27,8 +27,16 @@ public static partial class Module
 
     // Where a new fire goes: a cold hearth within reach is rekindled in place;
     // otherwise the nearest clear, level spot to the one a step in front.
+    // House building's raised hearth (D-132): a fire lit within reach goes on it, and
+    // fuel there burns longer (scale > 1). Building implements both.
+    static partial void BuiltHearthSpotHook(ReducerContext ctx, float x, float z, ref (float X, float Z)? spot);
+    static partial void FireFuelScaleHook(ReducerContext ctx, float x, float z, ref float scale);
+
     static (float X, float Z) FireSpot(ReducerContext ctx, PlayerPos pos)
     {
+        (float X, float Z)? built = null;
+        BuiltHearthSpotHook(ctx, pos.X, pos.Z, ref built);
+        if (built is { } b) return b;
         if (NearestColdHearth(ctx, pos.X, pos.Z, World.Reach) is { } hearth)
             return (hearth.X, hearth.Z);
         float fx = pos.X + MathF.Sin(pos.Heading) * 1.2f, fz = pos.Z + MathF.Cos(pos.Heading) * 1.2f;

@@ -14,8 +14,9 @@ D-090 (amends D-054), from Justin via the PM on 2026-10-16:
 - D-109 (PM, 18:24): a cold hearth lasts 1 h outside a claim; inside a standing claim it stays as long as the claim does.
 
 ## Design
-- `shared/Processes.cs` Fires: `StartSeconds` 20 min, `MaxSeconds` 20 min, `MasterMaxSeconds` 40 min, `MaxSecondsFor(rank)`, `MinFitShare` 0.5.
-- "Full" means less than half the fuel's burn time fits under the cap. The fuel is then refused, so at most half a stick's time is ever lost to the cap.
+- `shared/Processes.cs` Fires: `StartSeconds` 20 min, `MaxSeconds` 20 min, `MasterMaxSeconds` 40 min, `MaxSecondsFor(rank)`.
+- House building's raised hearth (D-132): `BuiltHearthSpotHook` (first in FireSpot) and `FireFuelScaleHook` (LightFire start time; FeedFire fuel and cap), declared in Hearths.cs and implemented by Building.
+- Fuel is refused if any of its burn time would go past the cap (D-121), so nothing is ever lost.
 - `FeedFire` (Crafting.cs) checks before `Take`. Rank comes from Journal's `SkillRank(ctx, playerId, "fire.hand_drill")` (Firecraft).
 - `ClearOldHearths` (Hearths.cs) skips expired hearths where `ClaimAt` finds a standing claim, so they go once the claim is gone.
 - The client's fire light clamps to `MasterMaxSeconds`.
@@ -24,9 +25,10 @@ D-090 (amends D-054), from Justin via the PM on 2026-10-16:
 ## Progress log
 - 2026-10-16 18:10: implemented on top of #92 (4d9512c). Server and client build; CraftCheck passes locally.
 - 2026-10-16 18:55: D-109 added. Server builds; CraftCheck passes. The cap numbers match docs/PROGRESSION.md (20 min at rank 0, 28 at rank 40, 40 at rank 100, linear).
+- 2026-10-16 19:15: CI run 38948613858 was green on 0f5fef6. Then D-121 (refuse any overflow; CraftCheck now waits up to 150 s for room for a whole stick) and D-132 hooks added. Server and client build; CraftCheck passes.
 
 ## Open questions / blockers
-- Default chosen: "full" = less than half the item's burn time fits. Tell the PM if Justin wants it stricter (any overflow refused) or looser.
+- (none)
 
 ## Next step
 Wait for CI on #122; when #92 merges, merge main in and send the PM the green sha.

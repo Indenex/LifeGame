@@ -281,9 +281,6 @@ namespace LifeGame.Shared
         public const float MasterMaxSeconds = 40 * 60;
         public static float MaxSecondsFor(int firecraftRank) =>
             MaxSeconds + (MasterMaxSeconds - MaxSeconds) * Math.Clamp(firecraftRank, 0, 100) / 100f;
-        // Feeding is refused when less than this share of the fuel's burn time would fit
-        // under the cap, so a full fire doesn't eat sticks (D-090).
-        public const float MinFitShare = 0.5f;
         // Warmth falls off to nothing at this distance, in meters.
         public const float WarmthRadius = 5f;
         // A burned-out fire leaves a cold hearth of stones and ash this long outside a

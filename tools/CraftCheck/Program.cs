@@ -136,12 +136,12 @@ var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSin
 WalkTo(bowFire.X, bowFire.Z);
 RefusedFeed(bowFire, Item.Stick);
 
-// The first fire has burned a while; once half a stick fits under the cap it is taken.
+// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
 // Firecraft only raises the cap, so the rank-0 cap is a safe bound.
 WalkTo(fire.X, fire.Z);
 float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
-float roomNeeded = Items.Def(Item.Stick).FuelSeconds * Fires.MinFitShare + 2;
-Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 60, "room for a stick on the first fire");
+float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
+Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
 long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
 lastError = null;
 conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
