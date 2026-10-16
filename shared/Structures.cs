@@ -23,6 +23,9 @@ namespace LifeGame.Shared
         public double WeatherAfter;
         // Stacks it stores when finished, 0 for none. Any kind with stacks opens like the basket (BuildingStorage.cs).
         public int StoreStacks;
+        // A straight run along the local X axis (FenceHalfLength each side) that people
+        // and animals can't step across. A gate is a fence whose middle opens like a door.
+        public bool Fence, Gate;
         public string[] Stages = Array.Empty<string>();
     }
 
@@ -86,6 +89,25 @@ namespace LifeGame.Shared
                 WeatherAfter = 168,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
+            // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
+            // sheep and mark out a yard (building-8).
+            new StructureShape
+            {
+                Name = "Fence",
+                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
+                Clearance = 0.25f,
+                Fence = true,
+                Stages = new[] { "Posts", "Rails" },
+            },
+            // A fence length with a woven hurdle gate in it that opens and bars like a door.
+            new StructureShape
+            {
+                Name = "Gate",
+                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
+                Clearance = 0.25f,
+                Fence = true, Gate = true,
+                Stages = new[] { "Posts", "Gate" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -133,6 +155,18 @@ namespace LifeGame.Shared
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
             },
+            // Fence: Posts, Rails
+            new[]
+            {
+                new[] { (Item.Stick, 2u) },
+                new[] { (Item.Stick, 2u), (Item.Fiber, 1u) },
+            },
+            // Gate: Posts, Gate (a hurdle like a hut door)
+            new[]
+            {
+                new[] { (Item.Stick, 2u) },
+                new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -169,6 +203,15 @@ namespace LifeGame.Shared
 
         // Inside a brick house's walls, where a fire warms the whole room.
         public const float HouseWallX = 2.2f, HouseWallZ = 1.8f;
+        // A clay hut's wall circle, and the half-angle of its doorway around +Z.
+        public const float HutWallRadius = 1.7f, HutDoorHalfAngle = 0.42f;
+        // Half the width of a brick house's doorway.
+        public const float HouseDoorHalfWidth = 0.48f;
+        // Half a fence length; fences meet end to end every 2 m.
+        public const float FenceHalfLength = 1.0f;
+
+        public static bool IsFence(int kind) => Shape(kind).Fence;
+        public static bool IsGate(int kind) => Shape(kind).Gate;
 
         public static string StageProcess(int kind, int stage) => kind switch
         {
@@ -178,6 +221,8 @@ namespace LifeGame.Shared
             4 => WeaveProcess,
             // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
             5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
+            _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
@@ -210,9 +255,63 @@ namespace LifeGame.Shared
             return MathF.Abs(lx) <= shape.HalfWidth + margin && MathF.Abs(lz) <= shape.HalfDepth + margin;
         }
 
+        // The two ends of a fence in world space.
+        public static ((float x, float z) a, (float x, float z) b) FenceEnds(float sx, float sz, float yaw) =>
+            (ToWorld(sx, sz, yaw, -FenceHalfLength, 0f), ToWorld(sx, sz, yaw, FenceHalfLength, 0f));
+
+        // Whether a step from one point to another goes through a fence line, counting
+        // a body of this radius: it crosses the line within the fence's length, or it
+        // ends closer to the fence than body while moving nearer to it.
+        public static bool StepCrossesFence(float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ, float body)
+        {
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            if (az * bz < 0f)
+            {
+                float x = ax + (bx - ax) * (az / (az - bz));
+                if (MathF.Abs(x) <= FenceHalfLength + body) return true;
+            }
+            float to = FenceDistance(bx, bz), from = FenceDistance(ax, az);
+            return to < body && to < from;
+        }
+
+        // Distance from a point in a fence's own frame to its line.
+        static float FenceDistance(float lx, float lz)
+        {
+            float dx = MathF.Max(MathF.Abs(lx) - FenceHalfLength, 0f);
+            return MathF.Sqrt(dx * dx + lz * lz);
+        }
+
+        // Whether a step goes in or out through a hut's or brick house's walls rather
+        // than its doorway (open unless doorShut). Other kinds have no walls here.
+        public static bool StepCrossesWalls(int kind, float sx, float sz, float yaw, bool doorShut, float fromX, float fromZ, float toX, float toZ)
+        {
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            if (kind == 1)
+            {
+                float r2 = HutWallRadius * HutWallRadius;
+                if (ax * ax + az * az < r2 == bx * bx + bz * bz < r2) return false;
+                // Through the doorway: the crossing is within the doorway's angle around +Z.
+                float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
+                return doorShut || MathF.Abs(MathF.Atan2(mx, mz)) > HutDoorHalfAngle;
+            }
+            if (kind == 5)
+            {
+                bool inA = MathF.Abs(ax) < HouseWallX && MathF.Abs(az) < HouseWallZ;
+                bool inB = MathF.Abs(bx) < HouseWallX && MathF.Abs(bz) < HouseWallZ;
+                if (inA == inB) return false;
+                float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
+                return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidth;
+            }
+            return false;
+        }
+
         public static bool TooClose(int kindA, float ax, float az, int kindB, float bx, float bz)
         {
             float min = Shape(kindA).Clearance + Shape(kindB).Clearance;
+            // Fences join end to end and at corners; only stop two on the same spot.
+            if (IsFence(kindA) && IsFence(kindB)) min = FenceHalfLength * 0.5f;
             float dx = ax - bx, dz = az - bz;
             return dx * dx + dz * dz < min * min;
         }

@@ -11,6 +11,8 @@ public enum StructureKind
     Kiln,
     Basket,
     BrickHouse,
+    Fence,
+    Gate,
 }
 
 // One material a structure's current stage still needs.
@@ -183,6 +185,7 @@ public static partial class Module
             s = s with { Builders = (byte)Math.Min(255, s.Builders + 1) };
         ctx.Db.Structure.Id.Update(s);
         TouchStructure(ctx, s.Id);
+        if (s.Complete) FinishGate(ctx, s);
         if (s.Complete) OnStructureComplete(ctx, s);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -274,7 +277,7 @@ public static partial class Module
         {
             if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
             var shape = Structures.Shape((int)s.Kind);
-            float warmth = DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, Structures.ClosedDoorWarmth) : shape.Warmth;
+            float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, Structures.ClosedDoorWarmth) : shape.Warmth;
             if (s.Kind == StructureKind.BrickHouse && FireInside(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
