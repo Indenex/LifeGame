@@ -244,3 +244,55 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-059 — 2026-10-16 — Ideas come as choices; a dedicated Render lane
 **Decision:** (1) Whenever the PM or a worker has an idea, it goes to Justin as a short question with 2 to 4 concrete options, recommended first, answerable in a word; work continues on the recommended option meanwhile. (2) A dedicated Render lane makes all screenshots, clips and mockups. Other lanes send it a render request (ticket, branch, sha, what to show, short summary) instead of rendering themselves; when done, the Render lane sends the images and the requester's summary to the PM, who presents them to Justin. Images still go under /mnt/project-files/screenshots/ (D-034).
 **Who:** Justin
+
+## D-060 — 2026-10-16 — Chopped trees fall
+**Decision:** Chopping a tree with the stone axe fells it after 3 logs; it regrows in 2 hours (`Trees.Felling` on, crafting-9, #70).
+**Who:** Justin ("Fell it", which the PM recommended)
+
+## D-061 — 2026-10-16 — Keep the sleeping mat
+**Decision:** The woven grass mat (8 fiber, laid inside a finished hut or house) stays: you wake there after dying (building-5, #61).
+**Who:** Justin ("Keep it", which the PM recommended)
+
+## D-062 — 2026-10-16 — Wetness numbers as proposed
+**Decision:** Heavy rain soaks you in 2 minutes, drizzle in 10, wading in 10 seconds; drying takes 5 minutes, 2.5 by a fire; cold is multiplied by 1 + 0.5 x wetness (survival-5, #75).
+**Who:** Justin ("As proposed", which the PM recommended)
+
+## D-063 — 2026-10-16 — A player wiki, light on spoilers
+**Decision:** A Wiki lane (a Sonnet worker) writes and keeps current a player wiki under `wiki/`. It gives direction, basic tips and the spirit of play (e.g. "being wet chills you faster; there are ways to dry off quicker") without exact numbers, full recipes or solutions to discoveries. It follows `main`: when a merged decision or PR changes what players experience, the wiki is updated.
+**Who:** Justin
+
+## D-064 — 2026-10-16 — The wiki moves to Opus, in a plainer voice (amends D-063)
+**Decision:** The Wiki lane runs on Opus, not Sonnet. The wiki is rewritten in a plain, direct voice like a good game manual: no cosy or affectionate tone, no "be kind", no cute one-liners. The spoiler rule from D-063 stays.
+**Who:** Justin ("the sonnet worker's writing style is weird and oddly affectionate")
+
+## D-065 — 2026-10-16 — Leatherwork becomes its own specialty later
+**Decision:** Hide work (scrape, stretch, dry into leather) will train a new capped Leatherwork specialty once leather has more uses. Until that skill exists, hide work trains Husbandry (PM default, so it trains something meanwhile).
+**Who:** Justin ("Leatherwork later"; the PM had recommended Husbandry)
+
+## D-066 — 2026-10-16 — Ceramics builds a storage jar next
+**Decision:** ceramics-6 is a large kiln-fired storage jar set down as a store: ~6 stacks, keeps contents dry, 4 tempered clay, coil minigame, pit firing usually cracks it.
+**Who:** Justin ("Storage jar", which the PM recommended)
+
+## D-067 — 2026-10-16 — Skill toasts only at new titles
+**Decision:** Rank-ups show a toast with a chime only at a new title; other ranks show as dots in the journal (skills-8 as built).
+**Who:** Justin ("Titles only", which the PM recommended)
+
+## D-068 — 2026-10-16 — Burnt mutton gives 10% hunger
+**Decision:** Burnt mutton restores 10% hunger (roast 40%), as survival-4 built it.
+**Who:** Justin ("10%", which the PM recommended)
+
+## D-069 — 2026-10-16 — Player trading
+**Decision:** Players can trade. Claims builds the server side (claims-7, replacing the one-way hand-over); UX/UI builds the trade window (ui-9). PM defaults, Justin's to change: face a player and press Use to ask to trade; they accept or decline. A window shows both players' offers side by side; each adds items from what they carry. Both must press Accept; any change to either offer clears both accepts. The swap is all-or-nothing and checked on the server (items still held, carry limits respected, D-042). Walking away (beyond ~4 m), Esc, or either player dying cancels it. An empty side is a gift. One trade at a time per player; a chat line says when a trade completes. Claims writes the reducer and table contract into its ticket first so UX can build against it.
+**Who:** Justin ("Do a trading interface"); the flow above is the PM's default
+
+## D-070 — 2026-10-16 — Spinning gets its own minigame
+**Decision:** Spinning wool into yarn is a new minigame: flick the spindle and keep it turning (animals-8). Weaving stays a timed craft.
+**Who:** Justin ("New spin minigame"; the PM had recommended a plain timed craft)
+
+## D-071 — 2026-10-16 — Weaver becomes its own specialty later
+**Decision:** Spinning and weaving will train a capped Weaver specialty that later grows into dyes and clothing, like Leatherwork (D-065). Until it exists they train Toolmaking.
+**Who:** Justin ("Weaver later"; the PM had recommended Toolmaking)
+
+## D-072 — 2026-10-16 — Hear other players' work, quieter
+**Decision:** Crafting work sounds play for everyone nearby, not only your own; other players' work sounds play about 60% quieter than your own (atmosphere-12). Needs other players' running jobs to be visible to clients; Atmosphere agrees the table or hook with Crafting and Integration.
+**Who:** Justin ("Everyone's sounds, but make it other player ones like 60% quieter than your own")
