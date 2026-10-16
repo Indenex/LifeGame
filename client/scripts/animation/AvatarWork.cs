@@ -4,9 +4,10 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Drives each avatar's work pose from its running craft job, and other players'
-// sneaking from player_sneaking. Your own job comes from my_craft_job; other players'
-// from the public craft_work table (D-072), which Atmosphere already subscribes to.
+// Drives each avatar's work pose from its running craft job, other players' sneaking
+// from player_sneaking, and everyone's clothes from worn_item. Your own job comes from
+// my_craft_job; other players' from the public craft_work table (D-072), which
+// Atmosphere already subscribes to.
 public static class AvatarWork
 {
     public static void Attach(DbConnection conn, Avatar me, Func<uint, Avatar?> other)
@@ -34,7 +35,18 @@ public static class AvatarWork
             if (other(p.PlayerId) is not { } a) return;
             a.Sneaking = conn.Db.PlayerSneaking.PlayerId.Find(p.PlayerId) is not null;
             Start(a, conn.Db.CraftWork.PlayerId.Find(p.PlayerId)?.ProcessId);
+            Dress(conn, a, p.PlayerId);
         };
+
+        // What everyone wears (worn_item, D-074). Wearing a new piece deletes the old
+        // row and inserts the new one, so each change re-reads the player's whole set.
+        void Changed(WornItem w)
+        {
+            if (w.Owner == conn.Identity) Dress(conn, me, w.PlayerId);
+            else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
+        }
+        conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
+        conn.Db.WornItem.OnDelete += (_, w) => Changed(w);
     }
 
     // Felling: face the nearest standing trunk within reach (shared/Trees.cs cells).
@@ -52,6 +64,19 @@ public static class AvatarWork
                 if (d < best) (best, bx, bz) = (d, tx, tz);
             }
         if (best < 3f * 3f) avatar.Face(bx, bz);
+    }
+
+    static void Dress(DbConnection conn, Avatar avatar, uint playerId)
+    {
+        ushort body = 0, feet = 0;
+        foreach (var w in conn.Db.WornItem.Iter())
+        {
+            if (w.PlayerId != playerId) continue;
+            if (w.Slot == PlayerModel.Body) body = w.Item;
+            else if (w.Slot == PlayerModel.Feet) feet = w.Item;
+        }
+        avatar.Wear(PlayerModel.Body, body);
+        avatar.Wear(PlayerModel.Feet, feet);
     }
 
     static void Start(Avatar avatar, string? processId)
