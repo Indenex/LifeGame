@@ -46,9 +46,8 @@ public static class Controls
         new("pick_up", new[] { Key.E }, null, Fixed: true, KeyText: "{use}", Name: "Pick up"),
         new("craft", new[] { Key.C }, "Make things", "{key} to make things from what you carry"),
         new("camera_drag", Array.Empty<Key>(), "Turn the view (hold and drag)", "Hold the right mouse button and drag to turn the view", Mouse: MouseButton.Right, Name: "Turn the view (hold and drag)"),
-        // Bug fixes builds the jump (bugfix-25); it reads the "jump" action. Help stays
-        // null (out of the F1 list) until that lands and gives the row its line.
-        new("jump", new[] { Key.Space }, null, "{key} to jump", OnRequest: true, Name: "Jump"),
+        // The jump (bugfix-25) reads the "jump" action.
+        new("jump", new[] { Key.Space }, "Jump", "{key} to jump", OnRequest: true, Name: "Jump"),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),

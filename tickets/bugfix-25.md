@@ -1,7 +1,7 @@
 # bugfix-25: jump (Space)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-25
 PR: (none yet)
 
@@ -41,9 +41,11 @@ Justin's request: a jump. Space jumps. A jump clears logs, rocks, banks and ordi
 
 - 2026-10-16: Audio (PR #242): own jump `Sfx.Play(Cue.Jump)` and `Sfx.Land(strength, ground)`; other players' jumps `Sfx.PlayAt(Cue.Jump, worldPosition)` at takeoff and `Sfx.LandAt(0.3f, atmosphere.GroundAt(landingPos), landingPos)` at the end of the arc. They are quiet, fade out by about 30 m and pan, so no distance skip on my side.
 
+- 2026-10-16: built. shared/Jumping.cs (arc: apex 1.1 m, 0.65 s; fence 0.8, gate 0.9, rocks 1.5 x radius; `FenceStops` makes a fence in a claim stop non-members even mid-jump), Stamina.JumpCost 0.08; server/spacetimedb/Jump.cs (public `player_jump` row + `Jump()` reducer: refuses while sneaking and under the cooldown); client: JumpMotion (own jump: frozen takeoff direction, TrySpendStamina, Sfx.Play/Land, me.SetJump), JumpView (others: SetAirHeight/SetJump from the row, Sfx.PlayAt/LandAt), Main.Walk hooks, Building.Collide(.., airHeight) and Terrain.CollideVegetation(.., airHeight) skip what the arc clears, `building.ClaimStandingAt = social.ClaimStandingAt` (new one-line public helper in SocialLayer), Controls.cs row gets Help "Jump", Subscriptions adds player_jump. The fence collision now steps out the side you were heading to when you land on top of a line. Verified: client and server build; a scratch bot against a local server: first jump writes seq 1, an immediate repeat is "Too soon", a jump while sneaking is refused ("You can't jump while sneaking"), a later jump is seq 3. NOT verified: the feel in the running game (no Godot display here); Render clip requested.
+
 ## Open questions / blockers
 - The four choices above go to Justin through the PM.
 - (answered, see log) claim fence = ordinary Fence/Gate inside a standing claim.
 
 ## Next step
-Branch off main once #228 has merged; write shared/Jump.cs with a unit check in tools, then the client hooks.
+Wait for CI on the PR, then send the PM the green sha; Render clip of jumping a fence, a rock, a claim fence as a non-member.
