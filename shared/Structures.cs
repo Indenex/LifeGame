@@ -32,6 +32,8 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
+        public bool Kiln, Jar;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -75,6 +77,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
+                Kiln = true,
                 Name = "Updraft kiln",
                 Round = true, Radius = 0.85f,
                 Clearance = 1.2f,
@@ -109,6 +112,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Jar = true,
                 Round = true, Radius = 0.32f,
                 Clearance = 0.6f,
                 Solid = true,
@@ -330,7 +334,7 @@ namespace LifeGame.Shared
 
         // Stacks a finished store of this kind and quality holds.
         public static int StoreStacksFor(int kind, byte quality) =>
-            kind == ClayRules.JarStructureKind ? JarStacks(quality) : Shape(kind).StoreStacks;
+            Shape(kind).Jar ? JarStacks(quality) : Shape(kind).StoreStacks;
 
         // Weathering (D-046): outside claims, anything players made that nobody has
         // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
@@ -369,7 +373,7 @@ namespace LifeGame.Shared
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
             0 => stage >= 3 ? RoofProcess : FrameProcess,
-            ClayRules.KilnStructureKind => ClayRules.KilnProcess,
+            _ when Shape(kind).Kiln => ClayRules.KilnProcess,
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             2 => Social.MarkProcess,
             4 => WeaveProcess,
