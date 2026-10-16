@@ -51,6 +51,9 @@ public static class Look
         Add("player_position", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1000, 0));
         Add("view_camera_position", RenderingServer.GlobalShaderParameterType.Vec3, Vector3.Zero);
         Add("world_seconds", RenderingServer.GlobalShaderParameterType.Float, 1f);
+        Add("moon_dir", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1, 0));
+        Add("moon_light", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("night_sky", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -215,6 +218,11 @@ public static class Look
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
         global uniform float world_seconds;
+        // The night sky, for water that mirrors it: where the moon is, how full,
+        // and how clearly the stars show (0 by day or under cloud).
+        global uniform vec3 moon_dir;
+        global uniform float moon_light;
+        global uniform float night_sky;
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
         float cloud_shadow(vec3 p) {
@@ -553,6 +561,21 @@ public static class Look
             ALBEDO = mix(mix(shallow, color, smoothstep(0.0, 1.2, through)), sky, across * 0.35 + glint);
             // Even ankle-deep water reads as water; only a thin rim at the bank softens.
             ALPHA = water_color.a * mix(0.85, 1.0, smoothstep(0.05, 0.8, through)) * smoothstep(0.0, 0.04, through);
+            // On a clear night the still water holds the stars, trembling with the
+            // ripples, and a soft path of moonlight. Gone in rain or under cloud.
+            if (night_sky > 0.001) {
+                vec3 eye = normalize(world_pos - (INV_VIEW_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz);
+                vec3 up = reflect(eye, normalize(vec3(-slope.x * 1.5, 1.0, -slope.y * 1.5)));
+                vec3 q = up * 150.0;
+                vec3 cell = floor(q);
+                vec3 hp = fract(cell * 0.3183099 + 0.1) * 17.0;
+                float r = fract(hp.x * hp.y * hp.z * (hp.x + hp.y + hp.z));
+                float star = step(0.985, r) * smoothstep(0.35, 0.0, length(fract(q) - 0.5)) * (r - 0.985) * 66.0;
+                float m = max(dot(up, moon_dir), 0.0);
+                float path = (pow(m, 30.0) * 0.4 + pow(m, 160.0) * 0.35) * moon_light * smoothstep(-0.02, 0.05, moon_dir.y);
+                float still = 1.0 - rain;
+                EMISSION = (vec3(0.8, 0.85, 1.0) * star * 0.9 + vec3(0.6, 0.68, 0.85) * path) * night_sky * still * water_color.a;
+            }
             ROUGHNESS = mix(0.32, 0.45, rain);
             SPECULAR = 0.12;
             METALLIC = 0.0;

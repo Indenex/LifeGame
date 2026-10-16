@@ -34,6 +34,7 @@ public partial class Atmosphere : Node3D
     static readonly StringName NMoonDir = "moon_dir";
     static readonly StringName NDaylight = "daylight";
     static readonly StringName NStars = "stars";
+    static readonly StringName NMoonPhase = "moon_phase", NMoonLight = "moon_light", NNightSky = "night_sky";
 
     public Node3D? Player;
 
@@ -55,6 +56,9 @@ public partial class Atmosphere : Node3D
     int dayLength = WorldTime.DayLengthSeconds;
     bool synced;
     float timeOfDay = -1f, previewDays;
+    // Whole days since day zero, for the moon's phase; --moon-phase pins the phase.
+    long dayNumber;
+    float? argMoonPhase, skyView;
     float? fixedTime, dayMinutes;
 
     // What is shown eases toward what the server says.
@@ -111,6 +115,9 @@ public partial class Atmosphere : Node3D
         Bind("toggle_music", Key.M);
 
         fixedTime = ArgFloat("time-of-day");
+        argMoonPhase = ArgFloat("moon-phase");
+        // --sky-view=degrees tilts the camera up to look at the sky, for screenshots.
+        skyView = ArgFloat("sky-view");
         dayMinutes = ArgFloat("day-minutes");
         argCloud = ArgFloat("cloud");
         argRain = ArgFloat("rain");
@@ -215,6 +222,8 @@ public partial class Atmosphere : Node3D
     {
         int length = dayMinutes is { } m ? Math.Max(1, (int)(m * 60)) : dayLength;
         float target = fixedTime ?? WorldTime.TimeOfDay(LocalMicros() + clockOffsetMicros, dayStartMicros, length);
+        long lengthMicros = (long)length * 1_000_000L;
+        dayNumber = (long)Math.Floor((double)(LocalMicros() + clockOffsetMicros - dayStartMicros) / lengthMicros) + (long)Math.Floor(previewDays + target);
         target = Frac(target + previewDays);
         if (snap || timeOfDay < 0f) timeOfDay = target;
         else
@@ -249,6 +258,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
         if (GetViewport()?.GetCamera3D() is { } camera)
         {
+            if (skyView is { } tilt) camera.RotationDegrees = new Vector3(tilt, 0f, 0f);
             RenderingServer.GlobalShaderParameterSet(NViewCameraPosition, camera.GlobalPosition);
             terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
             terrain?.ShowGhosts(camera.GlobalPosition, focus);
@@ -328,27 +338,37 @@ public partial class Atmosphere : Node3D
         // in a storm.
         float storm = 0.3f * rainAmount + 0.7f * Mathf.SmoothStep(0.6f, 1f, rainAmount);
 
-        // The sun crosses the sky once a day; the moon follows on the opposite side.
-        // The light swaps between them while both are below the horizon and dark.
+        // The sun crosses the sky once a day. The moon runs the same path a little
+        // behind it, falling further back each day through its phases: new beside
+        // the sun, full opposite it, rising at sunset. The light swaps between them
+        // while the sun is below the horizon and dark.
         bool isDay = sunHeight > -0.06f;
         float sunUp = Mathf.SmoothStep(-0.06f, 0.1f, sunHeight);
-        float moonUp = Mathf.SmoothStep(0.06f, 0.25f, -sunHeight);
+        float night = Mathf.SmoothStep(0.06f, 0.25f, -sunHeight);
         float azimuth = -40f + (t - 0.68f) * 360f;
-        // The moon rides high enough as soon as it is up that early night isn't
-        // lit only by grazing light.
-        float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
-        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
-        float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
-        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
+        float phase = MoonPhase();
+        float moonLight = 0.5f - 0.5f * Mathf.Cos(phase * Mathf.Tau);
+        float moonHeight = WorldTime.SunHeight(Frac(t - phase));
+        float moonAbove = Mathf.SmoothStep(-0.03f, 0.15f, moonHeight);
+        float moonAzimuth = azimuth - phase * 360f;
+        Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonHeight * 55f, moonAzimuth);
+        // Moonlight comes from the moon, but never grazes lower than 16 degrees, so
+        // the night isn't lit only by long streaks; with the moon down or thin it is
+        // a softer starlit glow from high up with fainter shadows, still enough to
+        // see by.
+        float moonlit = 0.65f + 0.35f * moonLight * moonAbove;
+        float nightElevation = Mathf.Lerp(16f + Mathf.Max(-sunHeight, 0f) * 32f, Mathf.Max(moonHeight * 55f, 16f), moonAbove);
+        float elevation = Mathf.Max(isDay ? sunHeight * 55f : nightElevation, 3f);
+        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : moonAzimuth), 0);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
         float h = Mathf.Clamp(sunHeight, 0f, 1f);
         Color sunColor = h < 0.4f ? low.Lerp(mid, Mathf.SmoothStep(0f, 0.4f, h)) : mid.Lerp(high, Mathf.SmoothStep(0.4f, 1f, h));
         Color moonColor = new(0.56f, 0.66f, 1.0f);
         sun.LightColor = Grey(isDay ? sunColor : moonColor, overcast * 0.6f, 1f);
-        sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
+        sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * night * moonlit * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
-        sun.ShadowOpacity = 1f - 0.6f * overcast;
+        sun.ShadowOpacity = (1f - 0.6f * overcast) * (isDay ? 1f : 0.5f + 0.5f * moonLight * moonAbove);
 
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
@@ -363,7 +383,16 @@ public partial class Atmosphere : Node3D
         sky.SetShaderParameter(NDaylight, daylight);
         sky.SetShaderParameter(NCloudCover, cloud);
         sky.SetShaderParameter(NCloudOffset, cloudOffset);
-        sky.SetShaderParameter(NStars, (1f - daylight) * (1f - overcast));
+        sky.SetShaderParameter(NMoonPhase, phase);
+        sky.SetShaderParameter(NMoonLight, moonLight);
+        // Stars come out once the dusk has gone, fewer under a bright moon.
+        float dark = 1f - daylight;
+        float stars = dark * dark * (1f - overcast) * (1f - 0.45f * moonLight * moonAbove);
+        sky.SetShaderParameter(NStars, stars);
+        // Water mirrors the night sky (Look.WaterSurface).
+        RenderingServer.GlobalShaderParameterSet(NMoonDir, moonDir);
+        RenderingServer.GlobalShaderParameterSet(NMoonLight, moonLight * night * (1f - overcast));
+        RenderingServer.GlobalShaderParameterSet(NNightSky, dark * dark * (1f - overcast));
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);
@@ -567,6 +596,11 @@ public partial class Atmosphere : Node3D
 
     static float Frac(float x) => x - Mathf.Floor(x);
 
+    // The moon goes from new (0) through full (0.5) and back over MoonCycleDays,
+    // full on day zero.
+    const float MoonCycleDays = 8f;
+    float MoonPhase() => argMoonPhase ?? Frac(0.5f + (dayNumber + timeOfDay) / MoonCycleDays);
+
     static void Bind(string action, Key key)
     {
         if (InputMap.HasAction(action)) return;
@@ -622,6 +656,8 @@ public partial class Atmosphere : Node3D
             uniform float cloud_cover = 0.2;
             uniform vec2 cloud_offset;
             uniform float stars = 0.0;
+            uniform float moon_phase = 0.5;
+            uniform float moon_light = 1.0;
             uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
             float hash(vec3 p) {
@@ -643,25 +679,56 @@ public partial class Atmosphere : Node3D
                 col += sun_color * smoothstep(0.9993, 0.9997, s) * 6.0 * step(-0.02, sun_dir.y);
 
                 float night = 1.0 - daylight;
+                float above = smoothstep(-0.01, 0.02, d.y);
+                if (d.y > 0.0 && stars > 0.0) {
+                    // Stars: a few bright, many faint, faintly coloured, twinkling a
+                    // little more near the horizon where the air is thick.
+                    vec3 p = d * 260.0;
+                    vec3 cell = floor(p);
+                    float r = hash(cell);
+                    float tint = hash(cell + 17.0);
+                    float twinkle = 1.0 - (0.15 + 0.35 * (1.0 - smoothstep(0.0, 0.5, d.y))) * (0.5 + 0.5 * sin(TIME * (2.0 + 5.0 * tint) + r * 60.0));
+                    float star = step(0.985, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - 0.985) * 66.0;
+                    vec3 star_col = mix(vec3(1.0, 0.85, 0.7), vec3(0.75, 0.85, 1.0), tint);
+                    col += star_col * star * twinkle * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
+                    // The faint river of the galaxy across the sky.
+                    float band = dot(d, normalize(vec3(0.45, 0.35, 0.82)));
+                    float milky = exp(-band * band / 0.02) * texture(clouds, d.xz / (d.y + 0.4) * 0.6 + 0.3).r;
+                    col += vec3(0.55, 0.6, 0.75) * milky * stars * 0.07 * smoothstep(0.05, 0.4, d.y);
+                }
+
+                // The moon: a disc lit on the side facing the sun, so it waxes and
+                // wanes; the dark part keeps a trace of earthshine at night. Pale by
+                // day, with a halo as bright as its phase at night.
                 float m = max(dot(d, moon_dir), 0.0);
-                col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
-                col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
+                float moon_vis = smoothstep(-0.02, 0.03, moon_dir.y) * above;
+                float disc = smoothstep(0.99955, 0.9998, m);
+                if (disc > 0.0) {
+                    vec3 side = normalize(cross(vec3(0.0, 1.0, 0.0), moon_dir));
+                    vec3 rim = (d - moon_dir * dot(d, moon_dir)) / 0.0285;
+                    vec3 n = rim - moon_dir * sqrt(max(1.0 - dot(rim, rim), 0.0));
+                    float a = moon_phase * 6.2832;
+                    vec3 light = moon_dir * cos(a) + side * sin(a);
+                    float lit = smoothstep(-0.06, 0.08, dot(n, light));
+                    float maria = 0.85 + 0.15 * texture(clouds, rim.xy * 0.35 + 0.5).r;
+                    vec3 face = vec3(0.85, 0.9, 1.0) * (lit * maria + 0.035 * night);
+                    col = mix(col, col * (1.0 - 0.6 * night) + face * (0.5 + 1.5 * night), disc * moon_vis);
+                }
+                col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night * moon_light * moon_vis;
 
                 if (d.y > 0.0) {
-                    if (stars > 0.0) {
-                        vec3 p = d * 260.0;
-                        float r = hash(floor(p));
-                        float star = step(0.985, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - 0.985) * 66.0;
-                        col += vec3(star) * stars * smoothstep(0.0, 0.3, d.y) * 1.4;
-                    }
                     // The same cloud layer whose shadows drift over the ground.
                     vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
                     float n = texture(clouds, uv).r;
                     float edge = 1.0 - cloud_cover;
                     float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
-                    float lit = 0.25 + 0.75 * daylight;
+                    float lit = 0.1 + 0.9 * daylight;
                     vec3 cloud_col = mix(horizon_color * 1.1, vec3(0.92, 0.92, 0.95) * lit + sun_color * 0.15 * sun_vis, 0.5 + 0.5 * n);
                     cloud_col *= 1.0 - 0.45 * cloud_cover * smoothstep(0.4, 0.8, n);
+                    // At night the clouds are darker than the gaps' glow would make them,
+                    // and catch the moon, silver nearest it.
+                    cloud_col *= mix(0.5, 1.0, daylight);
+                    cloud_col += vec3(0.45, 0.5, 0.65) * moon_light * night * moon_vis * (0.06 + 0.4 * pow(m, 6.0));
                     col = mix(col, cloud_col, c * 0.9);
                 }
                 COLOR = col;
