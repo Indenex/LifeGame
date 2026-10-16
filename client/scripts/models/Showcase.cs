@@ -7,7 +7,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -28,11 +28,12 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
             else if (view == "props") Props();
+            else if (view == "env") EnvProps();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -172,6 +173,35 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.5f), new Vector3(0, 0.8f, 0), Vector3.Up);
+    }
+
+    // Environment's env-4 props, drawn the way Terrain draws them: a MultiMesh
+    // instance with a color, under the world materials.
+    void EnvProps()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.5f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        Place(PropMeshes.Birch, Look.BarkSurface, new Vector3(-2.6f, 0, -1.2f), new Color(0.86f, 0.84f, 0.80f));
+        Place(PropMeshes.Outcrop, Look.RockSurface, new Vector3(1.6f, 0, -1.8f), Look.Rock);
+        Place(PropMeshes.Heather, Look.Foliage, new Vector3(-1.0f, 0, 0.4f), Colors.White);
+        Place(PropMeshes.Heather, Look.Foliage, new Vector3(-0.5f, 0, 0.9f), Colors.White, 0.8f);
+        Place(PropMeshes.Gorse, Look.Foliage, new Vector3(0.2f, 0, -0.2f), Colors.White);
+        Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.4f, 0, 0.8f), Look.GrassBlade);
+        Place(PropMeshes.Cattails, Look.Grass, new Vector3(2.9f, 0, 0.5f), Look.GrassBlade, 0.85f);
+        for (int i = 0; i < 6; i++)
+            Place(PropMeshes.RiverStone(i), Look.RockSurface, new Vector3(0.9f + i * 0.35f, 0, 1.4f + (i % 2) * 0.25f), Look.Rock.Lightened(0.1f), 0.8f + (i % 3) * 0.2f);
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(-1.8f, 0, 0.6f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("close")) camera.LookAtFromPosition(new Vector3(-2.2f, 1.4f, 0.2f), new Vector3(-2.6f, 1.3f, -1.2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0, 2.6f, 6.4f), new Vector3(0, 0.7f, -0.3f), Vector3.Up);
     }
 
     // Work stations side by side (model-2), with a player for scale.
