@@ -25,8 +25,10 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 
 - 2026-10-16 18:33: D-114, all A: DaysPerSeason = 1 (a year is 4 days, 6 real hours); temperature and snow first; seasons before 14 and 15. Started branch claude/atmosphere-16-seasons on top of #136.
 
+- 2026-10-16 18:45: pushed c41b1e6. Server (WorldClock.cs): SeasonClock {YearStart, DaysPerSeason=1} and SeasonState {Precipitation, Snow, SnowCover, Temperature}, both new public tables; precipitation eases as Weather.Rain used to and splits by Seasons.SnowFraction(temperature) into Weather.Rain (liquid, so Survival, ceramics drying and client rain are unchanged) and SeasonState.Snow; snow cover builds about 7 min in heavy snow, melts above 0.5 C. AirTemperature + Seasons.TemperatureOffset: +8 summer, -16 winter (raised from -12 after testing: at -12 a winter midday was 5.6 C and it only snowed at night; now 1.6 C and snows under cloud, nights about -8). Seasonal front odds. Admin reducers SetSeason, SetDaysPerSeason; Module.SeasonNow, SnowCover, Snowfall. Client: AtmosphereSeasons.cs (globals season_warmth, season_autumn, snow_cover, snowing; --season, --snow, --snow-cover args), Look shaders: snow on upward faces, autumn broadleaf colours and winter leaf drop on INSTANCE_CUSTOM.w == 1 foliage, flowers (w == 2) only spring/summer, grass straw in cold and snow-pressed, Rain.cs snow mode, paler winter sun and greyer saturation, snow brightens ambient. /season and /season-speed chat commands (KEYMAP.md). Checks: upgrade-check over origin/main passed; LoadTest 5x5, BuildTest, SpawnCheck, CraftCheck passed locally; set_season 0.875 -> 1.6 C at midday; set_days_per_season keeps the point in the year. Shaders not compiled yet (no Godot here); render requested.
+
 ## Open questions
 - For Justin later (with the seasons render): should falling snow wet you? Options: no (Survival's current default); yes, as half of rain's rate (recommended, so snow feels cold but not drenching); same as rain. / blockers
 
 ## Next step
-Add shared/Seasons.cs and the SeasonClock and SeasonState tables in WorldClock.cs; seasonal AirTemperature and snow; build and run the upgrade check.
+Wait for the Render lane's shots of c41b1e6 (and any shader errors); open the PR after #136 merges.
