@@ -1,9 +1,9 @@
 # building-8: Stick fence and gate
 Lane: House building
 Owner: House building thread (session_01RrKHUxWRH973Ndnxsad9nv)
-Status: in_progress
+Status: in_review
 Branch: claude/house-building-8ueqz2
-PR: (not yet)
+PR: #153 (stacked on Animals' #115)
 
 ## Goal
 Justin picked the fence first (D-087; then a raised hearth, then a log cabin). From the B build menu (Tab to cycle) a player lays out a 2 m stick fence or a gate. A fence goes up in two stages: posts, then lashed rails. A new length laid near a free end of another fence snaps on, end to end, along its own heading, so T turns corners. A finished gate hangs a woven hurdle, shut. G opens and shuts it for anyone, and Shift+G bars it for whoever laid it out or the claim's members, the same as a hut door. Players can't walk through a finished fence or a shut gate. Sheep stop at fences, shut gates, and hut and house walls; open doorways let them through. That last part needs one line from Animals, calling `StructureBlocksStep`.
@@ -26,9 +26,11 @@ Costs (D-117, Justin approved the cheap ones): fence posts 2 sticks, rails 2 sti
 - 2026-10-16 18:40: #61 merged. D-116 and D-117 approved. On claude/house-building-8ueqz2: merged main, building-8 (from the -fence branch) and Animals' claude/animals-fence-5gkntn (#115, stacked, because the hook declaration is needed to compile).
   - D-116 shelter numbers, carried in this PR: lean-to rain cover 0.6 / warmth 0.2; hut 0.9 / 0.4 (0.5 door shut); house 1.0 / 0.5 (0.55 door shut); a fire inside the house is still 1. ClosedDoorWarmth is replaced by a per-shape ShutWarmth.
 
+- 2026-10-16 18:40: locally all green on 969a7ae (LoadTest, BuildTest all modes, SpawnCheck, CraftCheck, SocialTest, upgrade check over origin/main). Opened #153. Render requested 969a7ae.
+
 ## Open questions / blockers
 - Animals agreed and declared `StructureStepHook(ctx, fromX, fromZ, toX, toZ, ref bool blocked)` in AnimalFires.cs (PR #115, claude/animals-fence-5gkntn 22c0a61). BuildingFence.cs implements it (8ebc64b). A partial implementation without its declaration won't compile, so this PR must merge after #115 (merge main once #115 is in). Animals will live-test sheep at a fence.
 - (none) Costs D-117 and shelter D-116 are decided. This PR includes #115's commits until #115 merges.
 
 ## Next step
-Once #61 and #115 are merged, on claude/house-building-8ueqz2 merge main and claude/house-building-8ueqz2-fence, push, run the full local checks and open the building-8 PR. Then send a render request for a fenced yard with a gate, open and shut.
+Wait for CI on #153, send the PM the green sha, then start building-9 (raised hearth, D-087).
