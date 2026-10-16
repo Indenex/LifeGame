@@ -38,6 +38,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_craft_job",
                 "SELECT * FROM roast",
                 "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -138,6 +139,25 @@ Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.Microse
 if (lastError != null) Fail($"feeding the fire: {lastError}");
 Console.WriteLine("Fed the fire a stick");
 
+// Chopping: the stone axe takes logs from the nearest standing tree until it falls.
+var (treeX, treeZ) = NearestTree();
+var trunk = Trees.Trunk(treeX, treeZ);
+WalkTo(trunk.X, trunk.Z);
+int chops = Trees.Felling ? Trees.LogsPerTree : 1;
+for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
+if (Trees.Felling)
+{
+    Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
+    Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
+}
+WalkTo(fire.X, fire.Z);
+fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+lastError = null;
+conn.Reducers.FeedFire(fire.Id, (ushort)Item.Log);
+Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "a log to burn");
+if (lastError != null) Fail($"feeding the fire a log: {lastError}");
+Console.WriteLine("Fed the fire a log");
+
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
 if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
@@ -194,6 +214,23 @@ void OffRocks(Fire f)
                 float d = MathF.Sqrt((rx - f.X) * (rx - f.X) + (rz - f.Z) * (rz - f.Z));
                 if (d < Rocks.Radius(i, j) + Fires.RingRadius) Fail($"a fire at ({f.X:F1}, {f.Z:F1}) sits on the boulder at ({rx:F1}, {rz:F1})");
             }
+}
+
+// The standing tree nearest the bot, by the same rules the server uses.
+(int X, int Z) NearestTree()
+{
+    int cx = (int)MathF.Round(x), cz = (int)MathF.Round(z);
+    for (int r = 0; r < 60; r++)
+        for (int i = cx - r; i <= cx + r; i++)
+            for (int j = cz - r; j <= cz + r; j++)
+            {
+                if (Math.Max(Math.Abs(i - cx), Math.Abs(j - cz)) != r || !Trees.GrowsAt(i, j)) continue;
+                long key = World.CellKey(i, j);
+                if (conn.Db.TerrainEdit.CellKey.Find(key) != null || conn.Db.ChoppedTree.CellKey.Find(key) != null) continue;
+                return (i, j);
+            }
+    Fail("no tree within 60 m");
+    return (0, 0);
 }
 
 uint CountOf(Item item) =>

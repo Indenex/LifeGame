@@ -79,6 +79,16 @@ public partial class FireView : Node3D
             Position = new Vector3(at.X, heightAt(at.X, at.Z), at.Z),
         });
 
+    // How long a fire burns before it needs more fuel, the way a player would say it:
+    // "1 min left", "about 5 min left", "dying".
+    public static string TimeLeft(Fire fire)
+    {
+        float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+        if (left < 30f) return "dying";
+        int minutes = (int)MathF.Round(left / 60f);
+        return minutes <= 1 ? "1 min left" : $"about {minutes} min left";
+    }
+
     // A local-only fire, for checking the look in screenshots without a server.
     public void Preview(Vector3 at)
     {

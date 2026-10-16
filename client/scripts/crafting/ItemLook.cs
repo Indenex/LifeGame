@@ -27,6 +27,7 @@ public static class ItemLook
             Item.DiggingStick => Lying(new CylinderMesh { TopRadius = 0.005f, BottomRadius = 0.035f, Height = 1.1f, RadialSegments = 5 }, Look.Bark.Lightened(0.35f)),
             Item.Basket => Look.Faceted(new CylinderMesh { TopRadius = 0.2f, BottomRadius = 0.15f, Height = 0.22f, RadialSegments = 9 }, Look.LeafWarm.Darkened(0.1f)),
             Item.BowDrill => BowDrillMesh.Build(),
+            Item.Log => Lying(new CylinderMesh { TopRadius = 0.08f, BottomRadius = 0.09f, Height = 0.8f, RadialSegments = 7 }, Look.Bark.Lightened(0.1f)),
             Item.RawMutton => Look.Faceted(new SphereMesh { Radius = 0.1f, Height = 0.12f, RadialSegments = 7, Rings = 4 }, new Color(0.78f, 0.36f, 0.34f)),
             Item.CookedMutton => Look.Faceted(new SphereMesh { Radius = 0.1f, Height = 0.12f, RadialSegments = 7, Rings = 4 }, new Color(0.50f, 0.27f, 0.12f)),
             Item.BurntMutton => Look.Faceted(new SphereMesh { Radius = 0.09f, Height = 0.11f, RadialSegments = 7, Rings = 4 }, new Color(0.09f, 0.07f, 0.06f)),

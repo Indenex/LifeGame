@@ -133,6 +133,9 @@ public static partial class Module
                 throw new Exception("That fire is full");
             (fx, fz) = (fire.X, fire.Z);
         }
+        // Chopping takes a log from the tree within reach (Woodcutting.cs).
+        if (def.Outcome == Outcome.Chop)
+            (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
         float seconds = def.Seconds;
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         seconds = Math.Max(seconds, 0.5f);
@@ -175,6 +178,8 @@ public static partial class Module
         }
         else if (def.Outcome == Outcome.Roast)
             PutOnFire(ctx, job, def, job.Quality);
+        else if (def.Outcome == Outcome.Chop)
+            ChopTree(ctx, job, def);
         else
             AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
     }
