@@ -21,6 +21,17 @@ public partial class ClaimMarker : Node3D
     readonly Node3D cloth = new();
     readonly MeshInstance3D clothMesh = new();
     readonly MeshInstance3D ring = new();
+    // claims-5: "Tended 2 days ago · stands 1 more day", shown softly when you're close.
+    readonly Label3D line = new()
+    {
+        Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+        FontSize = 22,
+        PixelSize = 0.006f,
+        OutlineSize = 6,
+        Position = new Vector3(0, 2.35f, 0),
+        HorizontalAlignment = HorizontalAlignment.Center,
+        Visible = false,
+    };
     readonly StandardMaterial3D clothMaterial = new()
     {
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
@@ -36,7 +47,7 @@ public partial class ClaimMarker : Node3D
 
     Claim claim = null!;
     bool friendly;
-    float wear, ringAlpha, phase;
+    float wear, ringAlpha, lineAlpha, lineTarget, lineClock, phase;
     bool falling;
     Vector3 lastRingBuiltFrom = new(float.NaN, 0, 0);
 
@@ -85,6 +96,7 @@ public partial class ClaimMarker : Node3D
         ring.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         ring.TopLevel = true;
         AddChild(ring);
+        AddChild(line);
     }
 
     public void Set(Claim c, bool mine)
@@ -99,6 +111,7 @@ public partial class ClaimMarker : Node3D
             PlaceStakes();
         }
         lastRingBuiltFrom = new Vector3(float.NaN, 0, 0);
+        lineClock = 0f;
     }
 
     // Short stakes around the edge, so the boundary reads even without the ring.
@@ -133,6 +146,8 @@ public partial class ClaimMarker : Node3D
         ringAlpha = Mathf.Lerp(ringAlpha, target, 0.05f);
         ring.Visible = ringAlpha > 0.01f;
         if (ring.Visible && float.IsNaN(lastRingBuiltFrom.X)) BuildRing();
+        float toMarker = new Vector2(player.X - claim.X, player.Z - claim.Z).Length();
+        lineTarget = Mathf.Clamp(1f - (toMarker - Social.MarkerLineDistance) / 2f, 0f, 1f);
     }
 
     public override void _Process(double delta)
@@ -152,6 +167,21 @@ public partial class ClaimMarker : Node3D
 
         var tint = friendly ? Friendly : Foreign;
         ringMaterial.AlbedoColor = new Color(tint, ringAlpha * (0.5f - weathered * 0.3f));
+
+        lineAlpha = Mathf.MoveToward(lineAlpha, lineTarget, (float)delta * 2.5f);
+        line.Visible = lineAlpha > 0.01f;
+        if (line.Visible)
+        {
+            lineClock -= (float)delta;
+            if (lineClock <= 0f)
+            {
+                lineClock = 1f;
+                string when = Social.TendedLine(tended, claim.ExpiresAt.MicrosecondsSinceUnixEpoch, SocialLayer.NowMicros);
+                line.Text = friendly ? when : $"{claim.OwnerName}'s land\n{when}";
+            }
+            line.Modulate = new Color(Look.Cream, lineAlpha * 0.85f);
+            line.OutlineModulate = new Color(0.1f, 0.1f, 0.08f, lineAlpha * 0.5f);
+        }
     }
 
     // A thin band that hugs the ground along the claim's edge, soft at both sides.
@@ -200,6 +230,7 @@ public partial class ClaimMarker : Node3D
     {
         falling = true;
         ring.Visible = false;
+        line.Visible = false;
         var tween = CreateTween();
         tween.TweenProperty(post, "rotation:x", 1.45f, 1.4f).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
         tween.TweenInterval(1.5f);
