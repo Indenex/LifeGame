@@ -17,7 +17,10 @@ D-099: a seasons system led by Atmosphere through WorldClock. Seasons shift temp
 ## Progress log
 - 2026-10-16: queued (D-099); plan and options sent to the PM.
 
-## Open questions / blockers
+- 2026-10-16 18:17: Survival agrees to fold the seasonal offset into AirTemperature; their cold maxes at 2x at 0 C and below (cold x wet capped 2x), so -6 C nights are no harsher than 0 C (about 8 min without fire). They'll raise winter newcomer spawns with the PM (D-081). Snow doesn't wet players for now.
+
+## Open questions
+- For Justin later (with the seasons render): should falling snow wet you? Options: no (Survival's current default); yes, as half of rain's rate (recommended, so snow feels cold but not drenching); same as rain. / blockers
 - PM/Justin: test cycle length and what changes first (options sent).
 
 ## Next step
