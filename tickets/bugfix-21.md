@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-21
-PR: (opening)
+PR: #179
 
 ## Goal
 Ground items seeded at world start and topped up by RespawnItems land only on dry ground. None sit in a pond or on a stream bed, where a player can't reach them and where they still counted toward the chunk's 12-item target, which kept nearby dry ground from being topped up.
