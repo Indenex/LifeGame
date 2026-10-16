@@ -11,6 +11,11 @@ public partial class Terrain
 {
     const float WalkerRadius = 0.3f;
 
+    // Placement radii, one helper per kind so they follow the meshes in Terrain.EnsureMeshes.
+    // The trunk mesh's bottom radius is 0.2 and the boulder mesh's is about 0.45, times the instance scale.
+    static float TrunkRadius(float scale) => 0.2f * scale;
+    static float RockRadius(float scale) => 0.4f * scale;
+
     // Pushes a step out of any trunk or boulder, sliding along its edge instead of stopping dead.
     public Vector3 CollideVegetation(Vector3 to)
     {
@@ -46,7 +51,7 @@ public partial class Terrain
         if (roll < sapling)
         {
             if (roll >= tree) scale *= 0.45f + Hash01(x, z, 21) * 0.3f;
-            radius = 0.2f * scale;
+            radius = TrunkRadius(scale);
             return true;
         }
         bool shore = NearWater(x, z, top);
@@ -54,7 +59,7 @@ public partial class Terrain
         float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
         if (roll >= rock) return false;
         float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
-        radius = 0.4f * scale * size;
+        radius = RockRadius(scale * size);
         // Pebbles are stepped over.
         return radius >= 0.2f;
     }
