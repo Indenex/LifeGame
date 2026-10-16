@@ -578,3 +578,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-141 — 2026-10-16 — Forest light ships before the screenshots
 **Decision:** atmosphere-13 (sun shafts and dappled light through the canopy, #136) merges without Justin having seen it; it gets tuned afterwards from the Render shots.
 **Who:** Justin ("Merge now, tune later"; the PM had recommended waiting for the pictures)
+
+## D-142 — 2026-10-16 — Renders never block merges
+**Decision:** A PR that is green and matches decisions merges without waiting for Render shots or for Justin to see them. Renders still get made and shown to Justin afterwards, and any changes he asks for come as follow-up PRs. Wipes still need his confirmation of the date (D-129).
+**Who:** Justin ("Don't hold up merges waiting on rendering, they can go in before I see them, but the work should continue and be logged correctly")
+
+## D-143 — 2026-10-16 — Wipe whenever env-2 is ready (amends D-129)
+**Decision:** Justin pre-approves the world wipe for whenever env-2 (the land reshape) is green and ready. No separate date confirmation is needed while he is the only playtester. The PM adds the `world-wipe` label (D-130) and merges it; the launcher still shows its wipe warning when Justin updates.
+**Who:** Justin ("world wipe can be ready whenever it's ready, it's just me playtesting right now")
+
+## D-144 — 2026-10-16 — First-evening tuning; visible breath in the cold
+**Decision:** Survival's next milestone is a first-evening tuning pass on the new land (berries near spawn, water reach, early warmth) so nobody dies before their first fire. Players also show a visible breath puff in cold air; there is no camera shake.
+**Who:** Justin ("1, but when cold I do like the idea of seeing your breath")
+
+## D-145 — 2026-10-16 — Workers never sit idle
+**Decision:** When a lane finishes its ticket and has no assigned next work, it immediately picks the next most useful item for its lane from the current milestones (`STATUS.md`, D-081) or the design docs, starts it, and tells the PM what it picked. Any design choice Justin would notice goes to the PM as options while the lane works on the recommended one. Waiting on CI or on a merge is not a reason to idle; start the next ticket.
+**Who:** Justin ("Workers should not sit idle. If we don't have more work for them, pull from the design doc and figure some out, or ask me")
