@@ -23,7 +23,10 @@ jobs:
   launcher:
     name: Launcher (${{ matrix.preset }})
     # Only pushes to main; pull request runs never release.
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -111,29 +114,19 @@ jobs:
           pattern: LifeGameLauncher-*
           path: artifacts
 
-      # D-130: a merged PR labelled world-wipe marks its release, so the launcher asks first.
-      - name: Read the merged PR
-        id: pr
-        run: |
-          pr=$(gh api "repos/${{ github.repository }}/commits/$SHA/pulls" --jq '[.[] | select(.merged_at != null)][0] // empty')
-          if [ -n "$pr" ]; then
-            echo "number=$(jq -r .number <<<"$pr")" >> "$GITHUB_OUTPUT"
-            echo "wipe=$(jq -r '[.labels[].name] | index("world-wipe") != null' <<<"$pr")" >> "$GITHUB_OUTPUT"
-            { echo "title<<EOF"; jq -r .title <<<"$pr"; echo "EOF"; } >> "$GITHUB_OUTPUT"
-          else
-            echo "wipe=false" >> "$GITHUB_OUTPUT"
-          fi
+      # D-130: a world-wipe label on any PR merged since the previous release marks this one,
+      # because a newer merge can replace a queued Build and skip that PR's own release.
+      - name: List the PRs this release covers
+        run: tools/release/merged-prs.sh "${{ github.repository }}" "$SHA" | tee prs.json
 
       - name: Pack assets
-        env:
-          PR_TITLE: ${{ steps.pr.outputs.title }}
-        run: tools/release/make-release.sh artifacts out "$BUILD" "$SHA" "${{ steps.pr.outputs.wipe }}" "${{ steps.pr.outputs.number }}" "$PR_TITLE"
+        run: tools/release/make-release.sh artifacts out "$BUILD" "$SHA" prs.json
 
       # Tag build-<Build run number>-<short sha>: unique, and the launcher orders by the number.
       - name: Create the release
         run: |
           tag="build-$BUILD-${SHA:0:7}"
           title="Build $BUILD"
-          if [ "${{ steps.pr.outputs.wipe }}" = true ]; then title="$title (world wipe)"; fi
+          if [ "$(jq -r .world_wipe out/release.json)" = true ]; then title="$title (world wipe)"; fi
           gh release create "$tag" out/*.zip out/StdbModule.wasm out/release.json \
             --target "$SHA" --title "$title" --notes-file out/notes.md --latest

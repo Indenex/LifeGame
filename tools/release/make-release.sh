@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # Packs one green main build into release assets (release-1, D-131).
 #
-# Usage: tools/release/make-release.sh <artifacts-dir> <out-dir> <build-number> <sha> [world-wipe=false] [pr-number] [pr-title]
+# Usage: tools/release/make-release.sh <artifacts-dir> <out-dir> <build-number> <sha> [prs.json]
+# [prs.json] is tools/release/merged-prs.sh's output: the PRs this release covers. If any is
+# labelled world-wipe the release is marked as a wipe. Without it the release covers no PRs.
 # <artifacts-dir> holds the Build run's artifacts as actions/download-artifact lays them out:
 #   LifeGame-Server/StdbModule.wasm, LifeGame-Linux/linux/..., LifeGame-Windows/windows/...
 # Writes to <out-dir>: LifeGame-Linux.zip, LifeGame-Windows.zip, StdbModule.wasm,
 # release.json, and notes.md (the release body; the launcher reads its world-wipe marker).
 set -euo pipefail
-art=$1 out=$2 build=$3 sha=$4 wipe=${5:-false} pr=${6:-} title=${7:-}
+art=$1 out=$2 build=$3 sha=$4 prs_file=${5:-}
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
+prs=$( [ -n "$prs_file" ] && cat "$prs_file" || echo '[]')
+wipe=$(jq -r 'any(.[]; .wipe)' <<<"$prs")
 
 cp "$art/LifeGame-Server/StdbModule.wasm" "$out/StdbModule.wasm"
 # Each zip holds the platform folder's contents at its root, so the launcher unpacks it as is.
@@ -27,7 +31,7 @@ cat > "$out/release.json" <<JSON
   "build": $build,
   "sha": "$sha",
   "world_wipe": $wipe,
-  "pr": "${pr}",
+  "prs": $(jq -c 'map({number, title, wipe})' <<<"$prs"),
   "server": { "file": "StdbModule.wasm", "sha256": "$(sha256 "$out/StdbModule.wasm")" },
   "client": {
     "linux": { "file": "LifeGame-Linux.zip", "exe": "LifeGame.x86_64", "sha256": "$(sha256 "$out/LifeGame-Linux.zip")" },
@@ -37,7 +41,9 @@ cat > "$out/release.json" <<JSON
 JSON
 
 {
-  echo "LifeGame build $build, from main ${sha:0:7}${pr:+ (#$pr ${title})}."
+  echo "LifeGame build $build, from main ${sha:0:7}."
+  echo
+  jq -r '.[] | "- #\(.number) \(.title)\(if .wipe then " (world wipe)" else "" end)"' <<<"$prs"
   echo
   if [ "$wipe" = true ]; then
     echo "<!-- world-wipe -->"

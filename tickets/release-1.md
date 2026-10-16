@@ -34,6 +34,7 @@ Justin opens one launcher on Linux or Windows, presses one button, and both the 
 - 2026-10-16 19:25: writing `.github/workflows/release.yml` was held: it would publish builds publicly from a public repo, so it waits on the PM/Justin (Q1). Draft design below.
 
 - 2026-10-16 19:40: PM relayed Justin: Q1 public GitHub Releases (a), Q2 launcher button (a), Q3 unsure. Wrote `.github/workflows/release.yml` (separate file, so it stays clear of Integration's #148 edits to build.yml). Tags are `build-<N>-<short sha>` per Integration; launcher and fake API parse the number. Re-tested: fresh install to 474 kept the world, a wipe build 476 ahead stopped with exit 2, world value kept.
+- 2026-10-16 19:55: per Integration: the wipe flag now comes from every PR merged since the previous release (`tools/release/merged-prs.sh`, REST compare + commits/pulls), since Build concurrency can skip a merge's own release; notes list those PRs; release only for head_branch main. Tested merged-prs.sh read-only against the real repo (115a22e..45f8913 gives #146, #147) and make-release.sh with a wipe PR in the list.
 - 2026-10-16 19:40: Q3 check (does a `lifegame` database exist on Maincloud under his login?) not done: probing Maincloud and the CLI login from this sandbox was refused by the session's permission checks, and the launcher can't verify it without touching his login. Told the PM.
 
 ## Open questions / blockers
