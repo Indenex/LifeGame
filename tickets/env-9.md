@@ -2,8 +2,8 @@
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
 Status: in_review
-Branch: claude/environment-farland
-PR: #306
+Branch: claude/environment-view
+PR: #337 (replaces #306, closed)
 
 ## Goal
 Hills, heath tops, valleys and the woods read from a distance, so players can steer by them and the world doesn't end at the last loaded chunk (about 56 m). A coarse ground mesh and simple tree silhouettes cover the land out to the fog, from the shared height and forest rules. Visual only, no wipe. Cheap: built on a background thread when the player changes chunk.
@@ -23,4 +23,4 @@ Hills, heath tops, valleys and the woods read from a distance, so players can st
 - To see out to the fog (about 240 m), Main's water plane needs to grow to about 500 m (Integration's file). Ask once A is confirmed.
 
 ## Next step
-Wait for Justin's pick (A/B/C via PM) and Atmosphere's Look.GrassTufts; then switch the tufts to it, ask Integration to raise the server subscription radius to match, and open the env-9 PR from claude/environment-view (close #306).
+Wait for CI on #337 (merges after #289); send the PM the green sha. Integration was asked to subscribe with ViewDistance.Radius. Ask Render for a hilltop view.
