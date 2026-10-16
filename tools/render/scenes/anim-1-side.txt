@@ -22,10 +22,10 @@ keyup w
 frames +36
 mark startstop-end
 mark sneak-start
-keydown shift
+keydown ctrl
 keydown w
 frames +96
 keyup w
-keyup shift
+keyup ctrl
 frames +12
 mark sneak-end
