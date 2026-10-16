@@ -20,9 +20,10 @@ Justin chose to reshape the land after groves and glades (D-084). Done means: a 
 
 ## Progress log
 - 2026-10-16: ticket drafted by Environment after D-084.
+- 2026-10-16 19:10: first prototype in `tools/env-preview/land.py` (ascii map, `python3 -I tools/env-preview/land.py`). Gentler hills (48 m broad octave) plus pond basins (36 m field above 0.78) give about 6% water and 3 to 4 ponds within 120 m, spawn kept dry. Lesson: the water plane is flat at -1.0, so a stream cut by subtracting depth leaves dry trenches over hills; next try lowers a broad valley (about 20 m falloff) along the river line and carves the bed to a fixed depth below water.
 
 ## Open questions / blockers
 - Wipe timing: PM confirms with Justin before anything that wipes is run or merged.
 
 ## Next step
-After #113 merges, write `shared/Land.cs` prototype height plus a preview script (scratch), and compare ponds/stream/hills options.
+Rework the stream in `tools/env-preview/land.py` as a valley carved to a fixed bed depth, then port the chosen height to `shared/Land.cs` (after #113 merges).
