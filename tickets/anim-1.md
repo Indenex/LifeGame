@@ -21,7 +21,7 @@ The player figure (`client/scripts/Avatar.cs`) moves with a sine arm swing and b
 - Render requested 6ed8294 (work poses).
 
 ## Open questions / blockers
-- Rig contract: waiting for Modeling's yes/changes (default: the proposal above).
+- Rig contract AGREED with Modeling 2026-10-16 17:32: same joint names/tree/rest pose, but as Skeleton3D bones with rigid weights (one draw call per player). Modeling provides `client/scripts/models/PlayerModel.cs` `static Skeleton3D Build()` (branch claude/model-1-style), ToolR = BoneAttachment3D on HandR. 27543ee: PlayerRig accepts either a Skeleton3D or the Node3D pivot tree; swap in Avatar.BuildFigure when PlayerModel lands.
 - Sent PM 2026-10-16: (a) walk speed 4.2 m/s is jogging pace, animated as a brisk walk-jog (default) vs slow walk to ~3 m/s; (b) sync a sneak flag for other players (default: infer from speed).
 - PM 2026-10-16 17:31: remote sneak takes (b), a server sneak flag through Integration. Asked Integration (session_01Rf5965nk4Lvd3f2QDteZSq) to add public table player_sneaking {PlayerId PK} (row while sneaking) + reducer SetSneaking(bool) + delete on disconnect + subscription. When it lands, AvatarWork calls SetSneaking on local Shift changes and drives remote avatars from it, replacing the speed guess in Avatar.cs. Walk speed question goes to Justin.
 
