@@ -11,8 +11,9 @@ public sealed record StrikeOffer(float Distance, Action Strike);
 // The shared registry behind the strike key, like Use is for G. Animals offers the
 // nearest animal; other lanes (e.g. Claims, for players) register their own targets.
 // Find gets the player's position and facing direction (flat, unit length) and
-// returns null when that lane has nothing in reach. Herd reads the input, checks a
-// weapon is carried and the key isn't blocked, then runs the nearest offer.
+// returns null when that lane has nothing in reach. Herd reads the input, checks the key
+// isn't blocked or cooling down, then runs the nearest offer. Each finder applies
+// its own rules (hunting needs a spear or blade; Claims allows fists).
 //
 //     Strike.Register("claims.player", (at, facing) =>
 //         NearestPlayerInFront(at, facing, 1.6f) is { } p

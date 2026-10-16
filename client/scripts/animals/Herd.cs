@@ -88,15 +88,16 @@ public partial class Herd : Node3D
     {
         if (conn == null || Blocked() || !e.IsActionPressed("strike")) return;
         double now = Time.GetTicksMsec() / 1000.0;
-        if (now - lastStrike < 0.5 || !(Carrying(ItemTags.Piercing) || Carrying(ItemTags.Cutting))) return;
+        if (now - lastStrike < 0.5) return;
         if (Strike.Best(player(), Facing()) is not { } offer) return;
         lastStrike = now;
         offer.Strike();
     }
 
+    // Hunting needs a spear or a blade; other lanes set their own rules.
     StrikeOffer? OfferStrike(Vector3 at, Vector3 facing)
     {
-        if (conn == null) return null;
+        if (conn == null || !(Carrying(ItemTags.Piercing) || Carrying(ItemTags.Cutting))) return null;
         Animal? nearest = null;
         float best = World.Reach + 1.5f;
         foreach (var a in conn.Db.Animal.Iter())

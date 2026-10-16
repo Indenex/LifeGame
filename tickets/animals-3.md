@@ -1,9 +1,9 @@
 # animals-3: Hunting sheep for meat and hide (D-039)
 Lane: Animals
 Owner: Animals thread (session session_01XS7M1yLy2fLaFdE3HWnisM)
-Status: in_progress
+Status: in_review
 Branch: claude/animals-sheep-5gkntn (developed locally as animals-3-local until #23 merged)
-PR: (opens after #23 and Crafting's #20 merge; needs Item.RawMutton from #20)
+PR: #23 (shearing and hunting together, per the PM)
 
 ## Goal
 Sheep can be killed with a spear or blade after a short chase, lie down calmly where they fall (no gore, D-036), and be butchered with a blade for Raw Mutton and a Sheep Hide at a quality set by tool and Husbandry skill. Flocks that lost animals slowly regrow with lambs. Done when Justin can hunt, butcher and cook a sheep in a build.
@@ -31,4 +31,4 @@ Sheep can be killed with a spear or blade after a short chase, lie down calmly w
 - UX lane to add an OnRequest "strike" hint row (asked).
 
 ## Next step
-When #23 is merged: reset claude/animals-sheep-5gkntn to origin/main, cherry-pick or merge animals-3-local (drop the crafting-cook merge if #20 is on main), regenerate bindings, build, push, open the PR.
+Wait for CI on #23, send the green sha to the PM (session cse_01HQQLrCgy3JhRUA9YMTqyL1).
