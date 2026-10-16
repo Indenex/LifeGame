@@ -162,6 +162,8 @@ public static partial class Module
 
         if (def.Outcome == Outcome.Fire)
             LightFire(ctx, job.PlayerId, job.X, job.Z);
+        else if (def.Outcome == Outcome.Placed && def.Id.StartsWith("hide."))
+            PlaceHideRack(ctx, job, def);
         else if (def.Outcome == Outcome.Placed)
             OnPlaced(ctx, job, def);
         else if (def.Outcome == Outcome.Roast)
