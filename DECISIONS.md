@@ -1316,3 +1316,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-322 — 2026-10-17 — Sitting and lying down are just a pose
 **Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
 **Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
+
+## D-323 — 2026-10-17 — Autopilot while Justin sleeps
+**Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
+**Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
