@@ -416,7 +416,10 @@ public partial class Atmosphere : Node3D
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
-        sun.LightEnergy *= 1f - 0.5f * storminess;
+        // Calm weather moods (D-313, the cosy layer in AtmosphereGrade): rain and storms
+        // still grey the day, but less dark and in softer blue-greys than slate.
+        float calm = cosy * grade;
+        sun.LightEnergy *= 1f - 0.5f * storminess * (1f - 0.3f * calm);
 
         // Sun shafts in the woods: at a low sun on a fair day the air between the
         // trunks thickens a little and scatters forward, so the light slants through
@@ -429,7 +432,7 @@ public partial class Atmosphere : Node3D
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
         // A thunderstorm goes darker still, toward a cold slate.
-        float dim = (1f - 0.35f * storm) * (1f - 0.3f * storminess);
+        float dim = (1f - 0.35f * storm * (1f - 0.3f * calm)) * (1f - 0.3f * storminess * (1f - 0.4f * calm));
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
@@ -453,8 +456,8 @@ public partial class Atmosphere : Node3D
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
         env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
         env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
-        env.AmbientLightEnergy *= 1f - 0.3f * storminess;
-        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f) * dim, 0.35f * storminess);
+        env.AmbientLightEnergy *= 1f - 0.3f * storminess * (1f - 0.5f * calm);
+        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f).Lerp(new Color(0.44f, 0.48f, 0.56f), calm) * dim, 0.35f * storminess);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         Grade(sunHeight, daylight, overcast);

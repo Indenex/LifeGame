@@ -20,6 +20,7 @@ On by default; `--cosy=0` shows the earlier look for before/after renders. Sun s
 ## Progress log
 - 2026-10-17 07:20: cosy layer in AtmosphereGrade.cs plus a `cosy` sky uniform in Atmosphere.cs. The client builds with 0 errors.
 - 2026-10-17 07:22: PR #608 opened (8010008f). Asked Render B for before/after stills. Shadow params stay with the Unity-spike worker (session_017Weex8fujB3VFsrpg84jEP, atmos-shadows-1).
+- 2026-10-17 08:00: calm weather moods (from the D-313 brief): with cosy on, rain and storms darken less (dim, sun and ambient cuts softened 30 to 50%), and storm fog leans soft blue-grey (0.44, 0.48, 0.56) rather than slate. In Atmosphere.cs ApplyLight.
 
 ## Open questions / blockers
 - Needs a before/after from Render (`--cosy=0` vs default) at noon, dusk and night to tune the numbers.
