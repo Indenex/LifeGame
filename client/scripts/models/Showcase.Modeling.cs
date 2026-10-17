@@ -10,6 +10,29 @@ public partial class Showcase
     [ShowcaseView("rabbit")]
     void Rabbits()
     {
+        if (args.ContainsKey("side"))
+        {
+            // One rabbit at rest and one mid-bound, square side on, to check the posture.
+            for (int i = 0; i < 2; i++)
+            {
+                var one = RabbitFigure.Create(PaintedAnimals.Coat(Look.Solid(new Color(0.55f, 0.42f, 0.3f))));
+                one.Position = new Vector3(i * 0.45f - 0.22f, 0, 0);
+                one.Rotation = new Vector3(0, Mathf.Pi / 2f, 0);
+                if (i == 1)
+                {
+                    var (lift, pitch, front, hind) = RabbitFigure.Hop(Mathf.Tau * 0.3f, 1f);
+                    one.SetBonePosePosition(RabbitFigure.BodyBone, new Vector3(0, lift, 0));
+                    one.SetBonePoseRotation(RabbitFigure.BodyBone, Quaternion.FromEuler(new Vector3(pitch, 0, 0)));
+                    for (int leg = 0; leg < 4; leg++)
+                        one.SetBonePoseRotation(RabbitFigure.FirstLegBone + leg, Quaternion.FromEuler(new Vector3(leg < 2 ? front : hind, 0, 0)));
+                }
+                AddChild(one);
+            }
+            var side = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Size = 0.5f, Current = true };
+            AddChild(side);
+            side.LookAtFromPosition(new Vector3(0, 0.14f, 2f), new Vector3(0, 0.14f, 0), Vector3.Up);
+            return;
+        }
         var coats = new[] { new Color(0.55f, 0.42f, 0.3f), new Color(0.6f, 0.57f, 0.53f), new Color(0.74f, 0.6f, 0.42f) };
         for (int i = 0; i < 5; i++)
         {
