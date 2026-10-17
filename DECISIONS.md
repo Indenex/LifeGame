@@ -1312,3 +1312,18 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
 **Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
 **Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
+
+## D-323 — 2026-10-17 — Autopilot while Justin sleeps
+**Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
+**Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
+
+PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
+1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
+2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
+3. Shadow quality defaults to Medium: 4096, 4 cascades, 50 m, about today's cost. The other levels, Low and High, are in Options. High would be crisper but costs about 60% more shadow draw calls. (PM default while Justin asleep; revisit)
+4. Butterflies (env-30, #656) are slightly larger than life, about a 34 cm wingspan, so they read at the default zoom. The alternatives were life-size at 18 cm (barely visible) and storybook at 50 cm. Ambient life gets an Options setting: Off, Some or Full, default Full. (PM default while Justin asleep; revisit)
+5. Town bans stay keyed per character, not per login. A banned player can make a new character, but it starts with nothing, and the Marshal can ban again. Not chosen: a hidden per-login ban on the server, which is stricter but means one bad character locks out the player's other characters. (PM default while Justin asleep; revisit)

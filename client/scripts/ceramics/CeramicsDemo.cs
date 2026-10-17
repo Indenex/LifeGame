@@ -44,6 +44,12 @@ public partial class CeramicsDemo : Node3D
     const float SheetLift = 2.6f;
     static bool ShowMarkSheet => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks-sheet");
 
+    // --ceramics-demo=slip shows fired pots and jars with a band or two of slip round the rim in
+    // different colours (back row), and the same pieces as they look lying on the ground or in the bag
+    // (front row); --ceramics-demo=slip-panel opens the slip window (ceramics-14).
+    static bool ShowSlip => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=slip");
+    static bool ShowSlipPanel => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=slip-panel");
+
     static bool ShowMarks => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks");
 
     public CeramicsDemo(Terrain terrain, Node3D anchor)
@@ -149,6 +155,48 @@ public partial class CeramicsDemo : Node3D
             camera.MakeCurrent();
             return;
         }
+        if (ShowSlipPanel)
+        {
+            var picker = new SlipPicker();
+            AddChild(picker);
+            GetTree().CreateTimer(1.0).Timeout += () => picker.Open(ClayForm.CoilPot, 0, (_, _) => { });
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowSlip)
+        {
+            var looks = new (ClayForm form, Item item, uint rgb, int bands)[]
+            {
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[0], 1),
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[5], 2),
+                (ClayForm.PinchPot, Item.PinchPot, Marks.Presets[1], 1),
+                (ClayForm.StorageJar, Item.StorageJar, Marks.Presets[3], 2),
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[4], 1),
+                (ClayForm.PinchPot, Item.PinchPot, Marks.Presets[7], 2),
+            };
+            for (int g = 0; g < looks.Length; g++)
+            {
+                var (form, item, rgb, bands) = looks[g];
+                uint wear = Slip.With(Marks.Pack(1), rgb, bands);
+                float x = (g - (looks.Length - 1) / 2f) * 0.7f;
+                // Back row: the pot itself, on its node scale, as a placed piece is drawn.
+                var plain = ClayLook.For(ClayStage.Fired, form == ClayForm.StorageJar ? FireKind.Kiln : FireKind.Pit, 0f, (ulong)(60 + g));
+                row.AddChild(new MeshInstance3D
+                {
+                    Mesh = PotMesh.For(form, (ulong)(60 + g)),
+                    MaterialOverride = ClayLook.WithMark(plain, wear, form),
+                    Position = new Vector3(x, 0, -0.9f),
+                    Scale = Vector3.One * PotView.Size,
+                });
+                // Front row: the baked mesh a ground item or bag uses.
+                if (ClayItemLook.MarkedMesh(item, ClayItemLook.Decoration(item, wear)) is { } baked)
+                    row.AddChild(new MeshInstance3D { Mesh = baked, Position = new Vector3(x, 0, 0.7f) });
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
         if (ShowLamps)
         {
             for (int i = 0; i < 4; i++)
@@ -249,6 +297,13 @@ public partial class CeramicsDemo : Node3D
             // High enough to see over the front row to the back one.
             camera.Position = at + new Vector3(0f, 2.3f, 4.6f);
             camera.LookAt(at + new Vector3(0f, 0.2f, -0.5f), Vector3.Up);
+            return;
+        }
+        if (ShowSlip)
+        {
+            // High enough to see the back row over the front one.
+            camera.Position = at + new Vector3(0f, 1.9f, 4.4f);
+            camera.LookAt(at + new Vector3(0f, 0.25f, -0.2f), Vector3.Up);
             return;
         }
         if (ShowLamps || ShowTrough(out _))

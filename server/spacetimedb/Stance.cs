@@ -22,7 +22,10 @@ public static partial class Module
             ctx.Db.PlayerSneaking.PlayerId.Delete(player.PlayerId);
     }
 
-    // A player who logs off mid-sneak comes back standing.
-    static void StanceDisconnected(ReducerContext ctx, Player player) =>
+    // A player who logs off mid-sneak, sitting or lying comes back standing.
+    static void StanceDisconnected(ReducerContext ctx, Player player)
+    {
         ctx.Db.PlayerSneaking.PlayerId.Delete(player.PlayerId);
+        StopResting(ctx, player.PlayerId);
+    }
 }

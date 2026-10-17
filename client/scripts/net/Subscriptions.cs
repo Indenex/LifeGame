@@ -56,6 +56,8 @@ public static class Subscriptions
         $"SELECT * FROM terrain_edit WHERE {farRange}",
         $"SELECT * FROM fire WHERE {range}",
         $"SELECT * FROM cold_hearth WHERE {range}",
+        // Smoke signals, world-wide (Atmosphere's SignalFire: only fires stoked past 75%).
+        "SELECT * FROM signal_fire",
         $"SELECT * FROM chopped_tree WHERE {farRange}",
         $"SELECT * FROM roast WHERE {range}",
         $"SELECT * FROM clay_piece WHERE {range}",
@@ -76,6 +78,7 @@ public static class Subscriptions
         "SELECT * FROM player_look",
         "SELECT * FROM player_jump",
         "SELECT * FROM player_act",
+        "SELECT * FROM player_rest",
         "SELECT * FROM worn_item",
         $"SELECT * FROM structure WHERE {farRange}",
     };

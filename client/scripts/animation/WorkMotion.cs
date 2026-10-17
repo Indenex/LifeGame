@@ -162,7 +162,7 @@ public static class WorkMotions
 
     // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
     // back; left thigh forward and shin straight down to a planted foot.
-    static void Kneel(Pose p, float legLength)
+    internal static void Kneel(Pose p, float legLength)
     {
         p.HipsOffset = new Vector3(0, -legLength * 0.44f, -0.05f);
         p[Joint.KneeR].X = Mathf.Pi / 2f;
@@ -173,7 +173,7 @@ public static class WorkMotions
 
     // --- Quick actions (anim-4): played once, blended in and out by PlayerAnimator ---
 
-    public static bool IsAct(WorkMotion m) => m >= WorkMotion.Drink && m <= WorkMotion.Flinch;
+    public static bool IsAct(WorkMotion m) => m >= WorkMotion.Drink && m <= WorkMotion.Flinch || Emotes.IsEmote(m);
 
     // How a strike is thrown, from what is in the hand.
     public enum StrikeStyle : byte { Fist, Thrust, Slash }
@@ -224,6 +224,10 @@ public static class WorkMotions
         WorkMotion.Butcher => 1.6f,
         WorkMotion.Feed => 0.9f,
         WorkMotion.Flinch => 0.35f,
+        WorkMotion.Wave => 2.0f,
+        WorkMotion.Cheer => 1.6f,
+        WorkMotion.Dance => 3.2f,
+        WorkMotion.Bow => 1.8f,
         _ => 0f,
     };
 
@@ -275,7 +279,7 @@ public static class WorkMotions
     // knee dip), so it plays over walking; the others stop when you walk off.
     // Strikes, shots, feeding a fire and flinching are upper-body too.
     public static bool ActUsesLegs(WorkMotion m) =>
-        m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch);
+        m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch or WorkMotion.Wave);
 
     // Which hand holds the action's item: a bow is held in the left.
     public static bool ActItemInLeft(WorkMotion m) => m == WorkMotion.Shoot;
@@ -363,6 +367,67 @@ public static class WorkMotions
                 p[Joint.KneeL].X = 0.2f * (back + toss);
                 p[Joint.KneeR].X = 0.2f * (back + toss);
                 Arm(p, false, 0.45f * back - 1.1f * toss, 0.05f, -0.3f);
+                break;
+            }
+            // Emotes (anim-16).
+            case WorkMotion.Wave:
+            {
+                // The right arm goes up and the forearm wags side to side, head tipped.
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.3f, (2.0f - t) / 0.35f));
+                float wag = Mathf.Sin(t * 10f) * up;
+                Arm(p, false, -2.4f * up, -0.35f * up - 0.15f * wag, -0.7f * up);
+                p[Joint.ElbowR].Z = -0.3f * wag;
+                p[Joint.Neck].Z = -0.1f * up;
+                p[Joint.Spine].Z = 0.05f * up;
+                break;
+            }
+            case WorkMotion.Cheer:
+            {
+                // Crouch, then spring up with both arms flung high, twice.
+                float hop = Mathf.Max(Mathf.Sin(t / 1.6f * Mathf.Tau * 2f - 0.6f), 0f);
+                float dip = Mathf.Max(-Mathf.Sin(t / 1.6f * Mathf.Tau * 2f - 0.6f), 0f);
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.2f, (1.6f - t) / 0.3f));
+                p.HipsOffset = new Vector3(0, (0.08f * hop - 0.06f * dip) * legLength * up, 0);
+                p[Joint.HipL].X = p[Joint.HipR].X = -0.35f * dip * up;
+                p[Joint.KneeL].X = p[Joint.KneeR].X = 0.7f * dip * up;
+                p[Joint.FootL].X = p[Joint.FootR].X = -0.35f * dip * up + 0.3f * hop * up;
+                Arm(p, true, -2.6f * up, (0.35f + 0.15f * hop) * up, -0.15f);
+                Arm(p, false, -2.6f * up, -(0.35f + 0.15f * hop) * up, -0.15f);
+                p[Joint.Neck].X = -0.2f * up * hop;
+                break;
+            }
+            case WorkMotion.Dance:
+            {
+                // A happy little side-to-side shuffle: hips sway, knees bob on the beat,
+                // arms swing loosely in front, head bobbing.
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.3f, (3.2f - t) / 0.4f));
+                float beat = t * Mathf.Tau * 1.25f;
+                float sway = Mathf.Sin(beat) * up, bob = (0.5f - 0.5f * Mathf.Cos(beat * 2f)) * up;
+                p.HipsOffset = new Vector3(0, -0.06f * legLength * bob, 0);
+                p[Joint.Hips].Z = 0.12f * sway;
+                p[Joint.Hips].Y = 0.15f * sway;
+                // Knees bend as the hips drop, so the feet stay on the ground.
+                p[Joint.HipL] = new Vector3(-0.35f * bob, -0.15f * sway, -0.12f * sway);
+                p[Joint.HipR] = new Vector3(-0.35f * bob, -0.15f * sway, -0.12f * sway);
+                p[Joint.KneeL].X = p[Joint.KneeR].X = 0.7f * bob;
+                p[Joint.FootL].X = p[Joint.FootR].X = -0.35f * bob;
+                p[Joint.Spine].Z = -0.18f * sway;
+                p[Joint.Neck].Z = 0.12f * sway;
+                p[Joint.Neck].X = -0.08f * bob;
+                Arm(p, true, (-0.9f + 0.4f * sway) * up, 0.1f * up, -1.3f * up);
+                Arm(p, false, (-0.9f - 0.4f * sway) * up, -0.1f * up, -1.3f * up);
+                break;
+            }
+            case WorkMotion.Bow:
+            {
+                // A polite bow from the hips, the right hand to the chest, held a moment.
+                float down = Mathf.SmoothStep(0f, 1f, Mathf.Min(t / 0.45f, (1.8f - t) / 0.5f));
+                p[Joint.Hips].X = 0.35f * down;
+                p[Joint.HipL].X = p[Joint.HipR].X = -0.35f * down;
+                p[Joint.Spine].X = 0.55f * down;
+                p[Joint.Neck].X = 0.2f * down;
+                Arm(p, false, -0.9f * down, 0.45f * down, -1.9f * down);
+                Arm(p, true, 0.25f * down, 0.05f, -0.1f);
                 break;
             }
             case WorkMotion.Flinch:
