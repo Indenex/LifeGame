@@ -157,6 +157,47 @@ public static class PropMeshes
         return Done(k);
     }
 
+    // Hazelnuts on the bush (model-21, for Survival's autumn hazels, D-323): two or three
+    // nuts in their frilled green-gold husks on a short stem, in the berry clusters' frame
+    // (BerryBush): local -Z points out of the bush, the stem runs back into it along +Z.
+    // Colours are in the vertices; draw it with HazelMaterial.
+    public static Mesh HazelCluster(int variant) => Variant("hazelcluster", variant, HazelClusterVariants, BuildHazelCluster);
+    public const int HazelClusterVariants = 3;
+    public static Material HazelMaterial => hazelMaterial ??= Painted.Of(Look.Solid(Colors.White));
+    static Material? hazelMaterial;
+
+    static ArrayMesh BuildHazelCluster(int v)
+    {
+        var k = new MeshKit(false) { Skinned = false };
+        var shell = new Color(0.36f, 0.26f, 0.16f);
+        var husk = new Color(0.3f, 0.4f, 0.15f);
+        k.Paint(Look.Bark.Lightened(0.15f)).Tube(new[] { new Vector3(0, 0, 0.05f), new Vector3(0, 0.005f, 0.01f), new Vector3(0, 0, -0.01f) }, 0.004f, 4, 0.003f);
+        int count = 2 + v % 2;
+        for (int i = 0; i < count; i++)
+        {
+            float a = i * Mathf.Tau / count + v;
+            var dir = new Vector3(Mathf.Cos(a) * 1.4f, Mathf.Sin(a) * 1.4f, -1f).Normalized();
+            var at = dir * 0.028f + new Vector3(0, 0, -0.005f);
+            var tilt = MeshKit.Aim(dir) * new Basis(Vector3.Right, Mathf.Pi / 2f);
+            var up = tilt * Vector3.Up;
+            k.Paint(shell, 0.9f + H(v * 3 + i, 40) * 0.15f).Ellipsoid(at + up * 0.006f, new Vector3(0.016f, 0.018f, 0.016f), 8, 5, tilt);
+            k.Paint(shell.Darkened(0.15f)).Ellipsoid(at + up * 0.024f, new Vector3(0.004f, 0.005f, 0.004f), 5, 3, tilt);
+            // The husk: a leafy cup round the lower half, a frill of short teeth at its lip.
+            k.Paint(husk).Loft(at - up * 0.017f, at + up * 0.004f, new MeshKit.Ring[]
+            {
+                new(0f, 0.006f, 0.006f), new(0.45f, 0.018f, 0.018f), new(1f, 0.021f, 0.021f),
+            }, 9, 0.3f);
+            for (int j = 0; j < 7; j++)
+            {
+                float b = j * Mathf.Tau / 7f + v;
+                var side = tilt * new Vector3(Mathf.Cos(b), 0, Mathf.Sin(b));
+                var lip = at + up * 0.003f + side * 0.02f;
+                k.Paint(husk, 0.9f + H(v * 7 + j, 43) * 0.2f).Blade(lip, lip + up * (0.008f + H(j, 41) * 0.005f) + side * 0.006f, side, 0.008f, 0.002f);
+            }
+        }
+        return Done(k);
+    }
+
     // A fallen giant (model-19, for Environment's env-33 landmark, drawn 3 to 4 times
     // bigger): FallenLog's trunk, but torn up whole and long fallen. The butt end carries
     // a root plate, a ragged, lopsided disc of earth and roots (thin root tubes read as

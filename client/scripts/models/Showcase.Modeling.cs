@@ -85,4 +85,25 @@ public partial class Showcase
         }
         AddChild(new Camera3D { Current = true });
     }
+
+    // Hazelnuts (model-21): the bush clusters' three variants four times life size,
+    // then at life size on a leafy lobe the way BerryBush hangs its berries.
+    [ShowcaseView("hazel")]
+    void Hazel()
+    {
+        for (int v = 0; v < PropMeshes.HazelClusterVariants; v++)
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.HazelCluster(v), MaterialOverride = PropMeshes.HazelMaterial, Scale = Vector3.One * 4f, Position = new Vector3(-0.5f + v * 0.5f, 0.45f, 0.3f), Rotation = new Vector3(0, Mathf.Pi, 0) });
+        var lobe = new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.42f, Height = 0.6f }, MaterialOverride = Look.Solid(Look.Leaf), Position = new Vector3(0, 0.3f, -0.6f) };
+        AddChild(lobe);
+        for (int c = 0; c < 6; c++)
+        {
+            float a = -1.2f + c * 0.45f;
+            var normal = new Vector3(Mathf.Sin(a), 0.35f + 0.15f * (c % 2), Mathf.Cos(a)).Normalized();
+            var spot = lobe.Position + normal * new Vector3(0.42f, 0.3f, 0.42f);
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.HazelCluster(c), MaterialOverride = PropMeshes.HazelMaterial, Position = spot, Basis = Basis.LookingAt(normal, Vector3.Up) });
+        }
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 0.75f, 2.0f), new Vector3(0, 0.35f, -0.1f), Vector3.Up);
+    }
 }

@@ -504,6 +504,45 @@ public static class ItemModels
         k.Plant.Paint(Look.LeafLight).Blade(new Vector3(-0.04f, 0.035f, -0.015f), new Vector3(-0.11f, 0.02f, -0.06f), Vector3.Up, 0.035f, 0.008f);
     }
 
+    // A small handful of hazelnuts (model-21, for Survival's autumn wild food, D-323):
+    // round, glossy brown shells with a pale, flat base and a little point, one still
+    // in its frilled green-gold husk.
+    static void Hazelnuts(Kit k)
+    {
+        var shell = new Color(0.36f, 0.26f, 0.16f);
+        var spots = new[] { new Vector3(-0.025f, 0, 0.01f), new Vector3(0.022f, 0, 0.018f), new Vector3(0.0f, 0, -0.025f) };
+        for (int i = 0; i < spots.Length; i++)
+        {
+            var at = spots[i] + new Vector3(0, 0.018f, 0);
+            var tilt = new Basis(new Vector3(H(i, 93) - 0.5f, 0, H(i, 94) - 0.5f).Normalized(), 0.5f + H(i, 95) * 0.6f);
+            Nut(k, at, tilt, shell.Darkened(H(i, 96) * 0.12f), i == 2);
+        }
+    }
+
+    // One hazelnut: an egg of shell with a pale scar at its base and a small tip; husked
+    // wraps it in a ragged cup of bracts.
+    static void Nut(Kit k, Vector3 at, Basis tilt, Color shell, bool husked, float size = 1f)
+    {
+        var up = tilt * Vector3.Up;
+        k.Plain.Paint(shell).Ellipsoid(at, new Vector3(0.017f, 0.019f, 0.017f) * size, 9, 6, tilt);
+        k.Plain.Paint(new Color(0.85f, 0.76f, 0.6f)).Ellipsoid(at - up * 0.016f * size, new Vector3(0.011f, 0.004f, 0.011f) * size, 7, 2, tilt);
+        k.Plain.Paint(shell.Darkened(0.15f)).Ellipsoid(at + up * 0.019f * size, new Vector3(0.004f, 0.005f, 0.004f) * size, 5, 3, tilt);
+        if (!husked) return;
+        // A leafy cup round the lower half, a frill of short teeth at its lip.
+        var husk = new Color(0.3f, 0.4f, 0.15f);
+        k.Plant.Paint(husk).Loft(at - up * 0.017f * size, at + up * 0.004f * size, new MeshKit.Ring[]
+        {
+            new(0f, 0.006f * size, 0.006f * size), new(0.45f, 0.018f * size, 0.018f * size), new(1f, 0.021f * size, 0.021f * size),
+        }, 9, 0.3f);
+        for (int j = 0; j < 7; j++)
+        {
+            float a = j * Mathf.Tau / 7f;
+            var side = tilt * new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            var lip = at + (up * 0.003f + side * 0.02f) * size;
+            k.Plant.Paint(husk, 0.9f + H(j, 99) * 0.2f).Blade(lip, lip + (up * (0.008f + H(j, 97) * 0.005f) + side * 0.006f) * size, side, 0.008f * size, 0.002f);
+        }
+    }
+
     // A leg chop: lean meat, a rind of fat round one side, the end of a bone.
     static void Mutton(Kit k, Color meat, Color fat, Color bone, float size)
     {
