@@ -1,7 +1,7 @@
 # model-31: Cattail variety (D-166)
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-31-prop-variety
 PR: #768
 

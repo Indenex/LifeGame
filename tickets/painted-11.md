@@ -1,7 +1,7 @@
 # painted-11: No wash-out at dusk
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-11-dusk (stacked on painted-12, #642)
 PR: #649
 

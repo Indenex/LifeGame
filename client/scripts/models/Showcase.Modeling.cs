@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -163,5 +164,53 @@ public partial class Showcase
         AddChild(camera);
         if (args.ContainsKey("side")) camera.LookAtFromPosition(new Vector3(-0.35f, 0.12f, 0.9f), new Vector3(-0.35f, 0.1f, 0), Vector3.Up);
         else camera.LookAtFromPosition(new Vector3(0.0f, 0.75f, 1.55f), new Vector3(0.0f, 0.06f, 0), Vector3.Up);
+    }
+    // The camp stragglers on the painted look (painted-19): a hide drying on its A-frame
+    // (wet left, dry right), meat roasting by the fire ring (raw, done, charred) and the
+    // cooking pot on its three stones with a stew in it.
+    [ShowcaseView("camp")]
+    void Camp()
+    {
+        AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = new Vector3(0.2f, 0, -0.2f) });
+        for (int i = 0; i < 2; i++)
+        {
+            var rack = new HideRacks.Rack(true) { Position = new Vector3(-1.9f + i * 1.45f, 0, -0.6f), Rotation = new Vector3(0, 0.25f, 0) };
+            AddChild(rack);
+            rack.Set(i == 0 ? 1f : 0f, 0, 0f);
+        }
+        float[] ages = { 0f, Roasting.BestSeconds, Roasting.BurnSeconds };
+        for (int i = 0; i < ages.Length; i++)
+            AddChild(new FireView.RoastView(0) { FixedAge = ages[i], Position = new Vector3(-0.15f + i * 0.35f, 0.32f, 0.35f + i * 0.05f), Rotation = new Vector3(0, -0.3f, 0) });
+        var pot = new Node3D { Position = new Vector3(1.55f, -0.02f, 0.1f) };
+        AddChild(pot);
+        var line = PotMesh.WaterLine(ClayForm.CoilPot) * PotView.Size;
+        pot.AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 0), Scale = Vector3.One * PotView.Size, MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 0) });
+        pot.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Under });
+        pot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.002f, RadialSegments = 20 }, MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.38f, 0.24f, 0.12f), Roughness = 0.2f }, Position = new Vector3(0, line.Y, 0) });
+        pot.AddChild(new MeshInstance3D { Mesh = CookingMeshes.Floaters(CookingMeshes.Dish.Stew, line.X), Position = new Vector3(0, line.Y + 0.002f, 0) });
+        var camera = new Camera3D { Fov = 50f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(-0.3f, 1.45f, 2.9f), new Vector3(-0.3f, 0.4f, -0.2f), Vector3.Up);
+    }
+    // Woodland mushrooms (model-34): the four patch variants ripe (back row) and picked
+    // (front row), and the picked item lying beside, with a rabbit for scale.
+    [ShowcaseView("mushrooms")]
+    void MushroomView()
+    {
+        for (int v = 0; v < Mushrooms.Variants; v++)
+        {
+            float x = (v - 1.5f) * 0.5f;
+            AddChild(new MeshInstance3D { Mesh = Mushrooms.Patch(v), Position = new Vector3(x, 0, -0.3f), Rotation = new Vector3(0, v * 1.3f, 0) });
+            AddChild(new MeshInstance3D { Mesh = Mushrooms.Picked(v), Position = new Vector3(x, 0, 0.25f), Rotation = new Vector3(0, v * 1.3f, 0) });
+        }
+        AddChild(new MeshInstance3D { Mesh = Mushrooms.Pile, Position = new Vector3(1.15f, 0, 0.05f), Rotation = new Vector3(0, 0.6f, 0) });
+        var rabbit = RabbitFigure.Create(PaintedAnimals.Coat(Look.Solid(RabbitFigure.Coats[0])));
+        rabbit.Position = new Vector3(-1.25f, 0, 0);
+        rabbit.Rotation = new Vector3(0, 1.2f, 0);
+        AddChild(rabbit);
+        var camera = new Camera3D { Fov = 34f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("near")) camera.LookAtFromPosition(new Vector3(-0.5f, 0.35f, 0.75f), new Vector3(-0.5f, 0.04f, -0.15f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0, 1.3f, 2.4f), new Vector3(0, 0.05f, 0), Vector3.Up);
     }
 }

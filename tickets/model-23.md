@@ -1,7 +1,7 @@
 # model-23: Icon pass 2 (stone flake, hand axe, daub)
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-23-icons2
 PR: (see below)
 

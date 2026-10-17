@@ -1,7 +1,7 @@
 # painted-2: Painted bushes
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm), Opus helper
-Status: in_review
+Status: done
 Branch: claude/painted-2-bushes (stacked on claude/painted-1-rocks, itself on #544 claude/model-10-painted-trees)
 PR: #561
 

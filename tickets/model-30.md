@@ -1,7 +1,7 @@
 # model-30: Heath variety: heather, gorse and birch (D-166)
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-30-heath-variety
 PR: #766
 

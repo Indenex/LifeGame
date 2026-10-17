@@ -1,7 +1,7 @@
 # model-8: Requested item models (waterskin, spade)
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-8-items
 PR: #502
 

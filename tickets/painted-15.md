@@ -1,7 +1,7 @@
 # painted-15: Stations and batch devices on the painted look
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/painted-15-held
 PR: (see below)
 
