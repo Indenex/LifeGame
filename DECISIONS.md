@@ -1288,3 +1288,7 @@ Owner: Claims.
 
 Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
 **Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
