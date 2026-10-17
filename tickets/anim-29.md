@@ -15,6 +15,7 @@ Options for Justin (via the PM):
 
 ## Progress log
 - 2026-10-17 12:10: prototype on claude/anim-jump-windup. JumpMotion holds a pending take-off for the wind-up, Main passes `jump.WindUp` to `Avatar.SetJump`, and PlayerAnimator adds WindUpPose and PushOff. Client builds. Render C has a clip request.
+- 2026-10-17 12:15: merged main (resolved a PlayerAnimator conflict with the anim-28 comment move). This branch also carries anim-28 marked done (#756), which needs to reach main through the next Animation PR if this one is dropped.
 
 ## Open questions / blockers
 - Justin's pick (a/b/c).

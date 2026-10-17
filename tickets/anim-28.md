@@ -1,9 +1,9 @@
 # anim-28: animation code quality pass
 Lane: Animation
 Owner: Animation thread (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-28
-PR: (not yet)
+PR: #756
 
 ## Goal
 No behaviour changes; players see nothing new. Tidy today's animation code (anim-12 to anim-27) after a read-only review:
@@ -18,9 +18,10 @@ Left out on purpose:
 
 ## Progress log
 - 2026-10-17 12:05: edits applied; client builds.
+- 2026-10-17 11:58: CI green at 5da407f3; merged (#756).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Push, open the PR, wait for CI, then send the PM the green sha.
+Done: merged in #756.
