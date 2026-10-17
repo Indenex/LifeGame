@@ -715,6 +715,8 @@ void TroughCheck(Structure kiln)
         DistanceTo(sx, sz, kiln.X, kiln.Z) >= 2.5f && DistanceTo(sx, sz, fire.X, fire.Z) >= 2f
         && conn.Db.Structure.Iter().All(o => DistanceTo(sx, sz, o.X, o.Z) >= 2.5f)
         && InMyClaim(sx, sz, 1f) && ClearGround(sx, sz, -1, 1, -1, 1)) ?? FailAt("no ground for the trough");
+    // Round the front of the kiln first: the server refuses steps through its walls (bugfix-27).
+    WalkTo(kiln.X, kiln.Z + 2.6f, 0.3f);
     WalkTo(site.X - 1.4f, site.Z, 0.2f);
     float tx = site.X, tz = site.Z;
     lastError = null;
