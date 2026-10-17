@@ -108,9 +108,10 @@ def tones(light, shade_c, mid_c, lit_c, lo=0.33, hi=0.68, edge=0.025):
 # head matches the neck and hands; the lit and shade tones only touch the crown and chin.
 B_SKIN = dict(shade=c(0.84, 0.64, 0.6), mid=c(0.93, 0.76, 0.62), lit=c(0.97, 0.84, 0.71))
 BLUSH = c(0.98, 0.62, 0.56)
-B_HAIR = dict(shade=c(0.4, 0.24, 0.23), mid=c(0.54, 0.32, 0.21), lit=c(0.67, 0.43, 0.28))
-HAIR_LINE = c(0.33, 0.19, 0.18)
-HAIR_SHINE = c(0.8, 0.6, 0.42)
+# Hair mid is ChibiFigure.Hairs[2], the look the showcase draws.
+B_HAIR = dict(shade=c(0.33, 0.2, 0.2), mid=c(0.46, 0.27, 0.18), lit=c(0.57, 0.36, 0.24))
+HAIR_LINE = c(0.27, 0.16, 0.16)
+HAIR_SHINE = c(0.68, 0.5, 0.36)
 CREASE = c(0.55, 0.36, 0.32)
 
 
@@ -152,7 +153,7 @@ def bramble(part, pos, nrm, curv, ao):
     col = mix(col, HAIR_SHINE, bevel * 0.55)
     # A broken shine band round the crown, a few strokes long.
     band = (1 - smooth(0.014, 0.03, np.abs(height - 0.15 - (strand - 0.5) * 0.04))) * smooth(0.4, 0.6, strand) * smooth(0.0, 0.4, nrm[..., 2] - 0.1)
-    col = mix(col, HAIR_SHINE, band * 0.7)
+    col = mix(col, HAIR_SHINE, band * 0.45)
     # The crevice line between clumps: cocoa, soft.
     col = mix(col, HAIR_LINE, smooth(0.47, 0.43, curv) * 0.75)
     col = mix(col, HAIR_LINE, (1 - smooth(0.25, 0.55, ao)) * 0.7)
@@ -162,7 +163,7 @@ def bramble(part, pos, nrm, curv, ao):
 
 # ---- Pebble ------------------------------------------------------------------------
 P_SKIN = dict(shade=c(0.52, 0.6, 0.52), mid=c(0.66, 0.76, 0.48), lit=c(0.76, 0.85, 0.56))
-BEAK = c(0.84, 0.85, 0.6)
+BEAK = c(0.76, 0.8, 0.55)
 SCALE_LINE = c(0.5, 0.6, 0.42)
 PETAL_C = dict(shade=c(0.82, 0.8, 0.9), mid=c(0.96, 0.94, 0.9), lit=c(1.0, 0.99, 0.96))
 HEART_C = c(0.97, 0.8, 0.33)
@@ -175,7 +176,7 @@ def pebble(part, pos, nrm, curv, ao):
     col = paint_skin(pos, nrm, ao, P_SKIN, 3)
     # The beak: the snout's front paler and warmer, with a crisp edge.
     beak = smooth(0.012, 0.0, np.hypot((pos[..., 0]) / 0.1, (pos[..., 2] + 0.1) / 0.055) - 1) * smooth(0.0, 0.1, -pos[..., 1] - 0.12)
-    col = mix(col, BEAK, beak * 0.6)
+    col = mix(col, BEAK, beak * 0.5)
     # A pale painted highlight on the upper forehead, as on the turnaround.
     d = np.hypot((pos[..., 0] + 0.08) / 0.065, (pos[..., 2] - 0.14) / 0.04)
     col = mix(col, P_SKIN["lit"] * 1.04, (1 - smooth(0.7, 1.0, d)) * smooth(0.0, 0.3, -nrm[..., 1]) * 0.6)
