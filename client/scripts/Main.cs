@@ -193,6 +193,7 @@ public partial class Main : Node3D
         // A click with food, drink, clothes or a placeable in hand uses it instead of striking (ui-36).
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
+        herd.ClaimGoodsOpenAt = social.ClaimGoodsOpenAt;
         AddChild(useKey);
         AddChild(new Hints());
         // The crit cue over an animal (HitPop.Show, called by Animals).
