@@ -48,6 +48,8 @@ public static class NextSteps
         ["chop.log"] = "Standing trees give logs to an axe. A log burns for a long time.",
         ["hide.scrape"] = "A fresh hide must be scraped clean with an edge before it will keep.",
         ["hide.scrape_deer"] = "A deer hide wants scraping clean before it will keep, and gives finer leather than a sheep's.",
+        ["hide.waterskin"] = "A hide can be sewn shut to carry a few mouthfuls of water.",
+        [Skills.Eggs] = "A hen that is left in peace lays eggs, and a patient hand can take them.",
         ["hide.stretch"] = "A clean hide laced onto a stick frame dries stiff and tan into leather, slower in rain and faster by a fire.",
         [Skills.DryHide] = "Leave a stretched hide to the sun and wind until it turns to leather.",
         ["clay.clean"] = "Dug clay is full of stones and roots. Pick them out first.",
@@ -104,6 +106,7 @@ public static class NextSteps
         [Skills.Berries] = Array.Empty<string[]>(),
         [Skills.Dig] = Array.Empty<string[]>(),
         [Skills.Run] = Array.Empty<string[]>(),
+        [Skills.Eggs] = Array.Empty<string[]>(),
         [Wading.WadeProcess] = Array.Empty<string[]>(),
         [Wading.FloatProcess] = new[] { new[] { Wading.WadeProcess } },
         [Skills.Repair] = new[] { new[] { "build.table" } },
@@ -161,7 +164,7 @@ public static class NextSteps
     {
         [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Wading.WadeProcess] = 1, [Wading.FloatProcess] = 1, [Skills.Repair] = 3, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
-        [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
+        [Skills.Eggs] = 1, [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
     // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone
