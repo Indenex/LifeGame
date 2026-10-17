@@ -1067,3 +1067,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-263 — 2026-10-17 — Tools in the doll's Tools section count as carried (refines D-219, D-223)
 **Decision:** Tools in the doll's Tools section count as carried, so recipes, trades, stashing and death can take them. The Tools section is just a weightless home: no bag space and no weight, as in D-219 and D-223.
 **Who:** Justin (relayed by the PM; no direct quote).
+
+## D-264 — 2026-10-17 — Swimming skill effects stay small (follows D-260)
+**Decision:** The Swimming skill's effects stay small. At max rank, wade speed rises from 0.60 to 0.75 and float speed from 0.50 to 0.70. The gain is front-loaded and the skill levels at a slow pace, using the one shared progression formula (D-175). The ids are `swim.wade` and `swim.float`.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
+**Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
+**Who:** Justin (relayed by the PM; no direct quote).
