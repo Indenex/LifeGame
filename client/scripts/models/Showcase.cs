@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "turntable")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -48,6 +48,7 @@ public partial class Showcase : Node3D
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
             else if (view == "roster") Roster();
+            else if (view == "turntable") Turntable();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -719,5 +720,25 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 35f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.6f, 1.7f, 7.4f), new Vector3(0.6f, 0.85f, 0), Vector3.Up);
+    }
+
+    // One chibi look turned through five views in a row (art-rnd-1): front three-quarter,
+    // side, back three-quarter, back and the other side, close up, so a part can be
+    // checked all the way round in one shot. --race=1 --main= --second= --style= pick the look.
+    void Turntable()
+    {
+        int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
+        var look = new ChibiFigure.Look((ChibiFigure.Race)Arg("race", 1), Arg("main", 0), Arg("second", 0), Arg("style", 1));
+        var yaws = new[] { -35f, -90f, -145f, 180f, 90f };
+        for (int i = 0; i < yaws.Length; i++)
+        {
+            var figure = ChibiFigure.Create(look);
+            figure.Position = new Vector3((i - 2) * 0.95f, 0, 0);
+            figure.Rotation = new Vector3(0, Mathf.DegToRad(yaws[i]), 0);
+            AddChild(figure);
+        }
+        var camera = new Camera3D { Fov = 30f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.45f, 8.2f), new Vector3(0, 0.72f, 0), Vector3.Up);
     }
 }
