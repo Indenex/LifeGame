@@ -34,6 +34,9 @@ static class ToolSounds
     static void OnImpact(Avatar avatar, WorkMotion motion, Vector3 at, bool thrown, ushort item)
     {
         if (SoundOf(motion, thrown, item) is { } def) Sfx.PlayBy(def, at);
+        // Digging in clay adds the wet suck of it to whatever the tool does.
+        if (motion == WorkMotion.Dig && World.IsClay(World.CellOf(at.X), World.CellOf(at.Z)))
+            Sfx.PlayBy(thrown ? CueDefs.ClayThrow : CueDefs.DigClay, at);
     }
 
     // The trunk starts to tip: the creak at its foot, the crown's rush a little way along the fall.
