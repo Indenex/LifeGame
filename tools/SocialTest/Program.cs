@@ -659,11 +659,11 @@ else
                 b.Conn.Reducers.TendClaim(bClaim.Id);
                 var putter = b.Conn.Db.MyInventory.Iter().Any(i => i.Count > 0 && !i.OnBelt) ? b : a;
                 Walk(putter, bClaim.X + 1.5f, bClaim.Z);
-                var carried = putter.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
-                if (carried.Count == 0) Console.WriteLine("  (A and B carry nothing to put in the town's store; store check skipped)");
+                var storeCarried = putter.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
+                if (storeCarried.Count == 0) Console.WriteLine("  (A and B carry nothing to put in the town's store; store check skipped)");
                 else
                 {
-                    var put = carried[0];
+                    var put = storeCarried[0];
                     var putItem = (Item)put.Item;
                     ExpectError(putter, () => putter.Conn.Reducers.PutInTownStore(bClaim.Id, put.Item, put.Quality, 1), "kept at", "the store is only at the town's main marker");
                     Walk(putter, aClaim.X + 1.5f, aClaim.Z);
