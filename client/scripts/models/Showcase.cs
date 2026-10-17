@@ -673,7 +673,7 @@ public partial class Showcase : Node3D
         for (int i = 0; i < spots.Count; i++)
         {
             blades.SetInstanceTransform(i, spots[i]);
-            blades.SetInstanceColor(i, new Color(0.6f, 0.63f, 0.34f).Lerp(new Color(0.76f, 0.75f, 0.42f), rng.Randf()));
+            blades.SetInstanceColor(i, new Color(0.40f, 0.49f, 0.2f).Lerp(new Color(0.58f, 0.63f, 0.28f), rng.Randf()));
         }
         AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = Look.GrassTufts, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         string[] extras = { "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03", "Forest_small_fern_01" };
