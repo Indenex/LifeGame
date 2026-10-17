@@ -132,6 +132,21 @@ public static partial class Module
         public uint Added;
     }
 
+    // Who helped build a structure and how much, for everyone to see (building-27): a site's
+    // line names its helpers and a finished home says who built it. Kept beside the private
+    // StructureBuilder rather than opening that table up.
+    [SpacetimeDB.Table(Accessor = "StructureCredit", Public = true)]
+    public partial struct StructureCredit
+    {
+        [PrimaryKey]
+        [AutoInc]
+        public ulong Id;
+        [SpacetimeDB.Index.BTree]
+        public ulong StructureId;
+        public Identity Builder;
+        public uint Added;
+    }
+
     // What each stage takes, by kind and stage: shared/Structures.cs, so the client can show it.
     static (Item Item, uint Count)[][] StageCosts(int kind) => Structures.Costs(kind);
 
@@ -318,6 +333,8 @@ public static partial class Module
     {
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(s.Id).ToList())
             ctx.Db.StructureBuilder.Id.Delete(row.Id);
+        foreach (var row in ctx.Db.StructureCredit.StructureId.Filter(s.Id).ToList())
+            ctx.Db.StructureCredit.Id.Delete(row.Id);
         ctx.Db.StructureProgress.StructureId.Delete(s.Id);
         ctx.Db.StructureStage.StructureId.Delete(s.Id);
         ctx.Db.StructureDoor.StructureId.Delete(s.Id);
@@ -450,6 +467,7 @@ public static partial class Module
     // True when this is the first thing this player has added to the structure.
     static bool RecordBuilder(ReducerContext ctx, ulong structureId)
     {
+        RecordCredit(ctx, structureId);
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId))
             if (row.Builder == Me(ctx))
             {
@@ -458,5 +476,18 @@ public static partial class Module
             }
         ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = Me(ctx), Added = 1 });
         return true;
+    }
+
+    static void RecordCredit(ReducerContext ctx, ulong structureId)
+    {
+        // Claim markers are Claims' to take down (Claims.cs deletes them directly); no credit for them.
+        if (ctx.Db.Structure.Id.Find(structureId) is not { } s || Structures.Shape((int)s.Kind).Model == "ClaimMarker") return;
+        foreach (var row in ctx.Db.StructureCredit.StructureId.Filter(structureId))
+            if (row.Builder == Me(ctx))
+            {
+                ctx.Db.StructureCredit.Id.Update(row with { Added = row.Added + 1 });
+                return;
+            }
+        ctx.Db.StructureCredit.Insert(new StructureCredit { Id = 0, StructureId = structureId, Builder = Me(ctx), Added = 1 });
     }
 }

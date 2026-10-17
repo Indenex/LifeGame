@@ -746,6 +746,7 @@ public partial class BuildingSystem : Node
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
             if (site.Owner == MyIdentity()) text += $"    Shift+{Controls.KeyFor("use") ?? "E"} take down";
+            if (HelpersLine(site.Id) is { } helpers) text += "\n" + helpers;
             // Out of what it still needs: say what to fetch, since G has nothing to add.
             var missing = site.Needs.Where(n => n.Have < n.Need).ToList();
             if (conn() is { } c && missing.Count > 0 && missing.All(n => Carried(c, (Item)n.Item) == 0))
@@ -754,7 +755,7 @@ public partial class BuildingSystem : Node
         else if (UsePrompt() is { } use)
             text = use;
         else if (ShelterAt(me.Position) is { } home)
-            text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
+            text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}" + (BuiltBy(home.Id) is { } by && by != "built by you" ? $", {by}" : "");
 
         promptPanel.Visible = text != null;
         if (text != null) prompt.Text = text;

@@ -346,6 +346,13 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
             Console.WriteLine($"  {who}: bot ({bot.X:F1}, {bot.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}), {sd:F1} m from the {name}'s middle at ({sx:F1}, {sz:F1}); reach {Structures.WorkReach} m past its edge, round={shape.Round} radius={shape.Radius}");
         }
     Check(done is { Complete: true }, $"{name} finished (stage {done?.Stage})");
+    // Whoever built it is named on it for everyone to see, item for item (building-27).
+    Pump(300);
+    var credits = b.Conn.Db.StructureCredit.StructureId.Filter(id).ToList();
+    long cost = Structures.Costs((int)kind).Sum(stage => stage.Sum(c => (long)c.Count));
+    // Claim markers are not credited (they only mark the claim).
+    if (Structures.Shape((int)kind).Model != "ClaimMarker")
+        Check(credits.Count >= 1 && credits.Sum(c => (long)c.Added) == cost, $"{name}: builders credited for all {cost} items ({string.Join(", ", credits.Select(c => c.Added))})");
     Check(done!.Builders == 2, $"both players built it (builders: {done.Builders})");
     Check(b.Conn.Db.Structure.Id.Find(id) is { Complete: true }, "the other player sees it finished");
 
@@ -921,6 +928,7 @@ sealed class Bot
                         "SELECT * FROM terrain_edit",
                         "SELECT * FROM structure",
                         "SELECT * FROM structure_door",
+                        "SELECT * FROM structure_credit",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
                         "SELECT * FROM player_rest",

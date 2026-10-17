@@ -34,6 +34,8 @@ public partial class BuildingSystem
         // A storage jar's size follows its quality (Ceramics, D-093).
         "SELECT * FROM structure_progress",
         "SELECT * FROM sleeping_mat",
+        // Who helped build what (building-27, BuildingSystem.Credit.cs).
+        "SELECT * FROM structure_credit",
     };
 
     void BindUse(DbConnection c)
