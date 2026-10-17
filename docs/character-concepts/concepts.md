@@ -22,3 +22,11 @@ Style notes: the painted look follows `docs/art-reference`. Each shape has a vio
 10. **Hearthling (wild: clay golem), 0.90 m.** A little jar-bodied clay figure with a moss cap, glowing ember eyes and an ember heart showing through a crack. It ties into ceramics and fire. It's the most distinctive option, but also the least "cuddly".
 
 Spread covered: chibi human (3), small folk (5), animal-folk (1, 4, 6, 7), plant or mushroom sprites (2, 8), blob (9) and wild (10).
+
+## Build cost (from Modeling's pipeline notes, 2026-10-17)
+
+Modeling builds every model in code with MeshKit on a shared 16-bone humanoid rig. Ears, tails and caps are cheap if they ride on Head or Hips without their own bones. Extra limbs, swinging tails and fine detail are slow. Meshes have no UVs yet, so faces are made of small painted shapes.
+
+- **Quick:** Bramble (HumanFigure's "Soft" style, made shorter), Pip, Clover, Capling (the cap rides on Head), Sprout, Mossle, Puddle.
+- **Quick with a stiff tail:** Kit. The tail is fixed to Hips; a swaying tail would need its own bones later.
+- **Some work:** Hearthling, because the jar body has to bend with the Spine. Dumpling has no visible legs, so walking would be squash-and-bob on hidden legs, which needs Animation's help.
