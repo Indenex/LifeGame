@@ -48,6 +48,8 @@ namespace LifeGame.Shared
             new FoodDef { Id = Item.CookedVenison, Food = Needs.RoastMuttonFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntVenison, Food = Needs.BurntMuttonFood },
             new FoodDef { Id = Item.Egg, Food = Needs.EggFood },
+            new FoodDef { Id = Item.BoiledEgg, Food = Needs.BoiledEggFood },
+            new FoodDef { Id = Item.BurntEgg, Food = Needs.BurntEggFood },
             new FoodDef { Id = Item.CookedChicken, Food = Needs.RoastChickenFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntChicken, Food = Needs.BurntChickenFood },
             new FoodDef { Id = Item.PotOfBroth, Food = Needs.BrothFood, Water = Needs.BrothWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
@@ -67,6 +69,7 @@ namespace LifeGame.Shared
             new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat" },
             new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison" },
             new RoastDef { Raw = Item.RawChicken, Cooked = Item.CookedChicken, Burnt = Item.BurntChicken, Process = "cook.chicken" },
+            new RoastDef { Raw = Item.Egg, Cooked = Item.BoiledEgg, Burnt = Item.BurntEgg, Process = "cook.egg" },
         };
 
         static readonly Dictionary<Item, RoastDef> RoastByRaw = Roasts.ToDictionary(r => r.Raw);
