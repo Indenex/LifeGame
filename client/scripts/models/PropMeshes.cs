@@ -66,7 +66,7 @@ public static class PropMeshes
     // top. Four kinds, since boulders are everywhere: worn lumps, a tall split stone, a
     // low slab, and a round stone cracked in two; each in two forms (variants 0 to 3, and
     // 4 to 7 the same kinds again), so a patch of one kind needn't repeat one shape.
-    public const int RockKinds = 4, RockVariants = 8, FallenLogVariants = 2, FallenGiantLogVariants = 6;
+    public const int RockKinds = 4, RockVariants = 8, FallenLogVariants = 6, FallenGiantLogVariants = 6;
 
     public static Mesh Rock(int variant) => Variant("rock", variant, RockVariants, BuildRock);
 
@@ -154,6 +154,7 @@ public static class PropMeshes
 
     static ArrayMesh BuildFallenLog(int v)
     {
+        if (v >= 2) return BuildFallenLogB(v);
         var k = Kit();
         var moss = new Color(0.62f, 0.8f, 0.45f);
         if (v == 0)
@@ -197,6 +198,102 @@ public static class PropMeshes
             {
                 new(0f, 0.02f, 0.1f), new(0.5f, 0.03f, 0.13f), new(1f, 0.015f, 0.06f),
             }, 6, 0.3f);
+        }
+        return Done(k);
+    }
+
+    // More fallen trunks (model-29, D-166) so the forest floor rarely shows the same log
+    // twice: 2 an old short butt gone hollow and thick with moss; 3 a long thin pole
+    // bent where it fell, with snapped branch stubs; 4 a trunk with its biggest limb
+    // lying out sideways; 5 two smaller logs fallen across each other.
+    // Same frame as the first two: lying along x, about 3 m long, bottom on the ground.
+    static ArrayMesh BuildFallenLogB(int v)
+    {
+        var k = Kit();
+        var moss = new Color(0.62f, 0.8f, 0.45f);
+        switch (v)
+        {
+            case 2:
+            {
+                // Short and fat, half sunk, the open end showing a dark rotten hollow.
+                var a = new Vector3(-1.0f, 0.24f, 0); var b = new Vector3(1.0f, 0.22f, 0.04f);
+                k.Paint(Colors.White, 0.7f).Loft(a, b, new MeshKit.Ring[]
+                {
+                    new(0f, 0.3f, 0.29f), new(0.5f, 0.29f, 0.27f, 0f, -0.01f), new(1f, 0.27f, 0.26f),
+                }, 9, 0.08f);
+                k.Paint(Colors.White, 0.32f).Ellipsoid(a + new Vector3(-0.005f, 0, 0), new Vector3(0.01f, 0.2f, 0.19f), 9, 2);
+                k.Paint(Colors.White, 0.95f).Ellipsoid(b + new Vector3(0.005f, 0, 0), new Vector3(0.008f, 0.25f, 0.24f), 9, 2);
+                // A thick blanket of moss over the top, spilling down one side.
+                k.Paint(moss).Loft(new Vector3(-0.95f, 0.47f, 0.02f), new Vector3(0.9f, 0.45f, 0.03f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.03f, 0.14f), new(0.4f, 0.05f, 0.2f), new(1f, 0.03f, 0.12f),
+                }, 7, 0.3f);
+                k.Paint(moss, 0.92f).Ellipsoid(new Vector3(-0.3f, 0.3f, 0.24f), new Vector3(0.35f, 0.12f, 0.06f), 7, 3);
+                k.Paint(moss, 0.95f).Ellipsoid(new Vector3(0.5f, 0.05f, -0.2f), new Vector3(0.25f, 0.06f, 0.12f), 6, 3);
+                break;
+            }
+            case 3:
+            {
+                // A slim pole, bent where it struck the ground, with snapped-off branches.
+                var path = new[] { new Vector3(-1.7f, 0.12f, 0), new Vector3(-0.5f, 0.11f, 0.12f), new Vector3(0.6f, 0.1f, 0.06f), new Vector3(1.7f, 0.09f, -0.2f) };
+                k.Paint(Colors.White, 0.78f).Tube(path, 0.12f, 7, 0.075f);
+                Splinters(k, path[3], (path[3] - path[2]).Normalized(), 0.06f);
+                for (int i = 0; i < 4; i++)
+                {
+                    float t = -1.2f + i * 0.85f + H(i, 60) * 0.3f;
+                    float side = i % 2 == 0 ? 1f : -1f;
+                    var root = new Vector3(t, 0.16f, 0.06f * side);
+                    var dir = new Vector3(0.35f, 0.55f + H(i, 61) * 0.4f, side * (0.5f + H(i, 62) * 0.3f)).Normalized();
+                    k.Paint(Colors.White, 0.74f).Tube(new[] { root, root + dir * (0.18f + H(i, 63) * 0.2f) }, 0.035f, 5, 0.022f);
+                }
+                k.Paint(moss).Loft(new Vector3(-1.5f, 0.23f, 0.03f), new Vector3(-0.3f, 0.22f, 0.11f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.012f, 0.04f), new(0.5f, 0.02f, 0.07f), new(1f, 0.01f, 0.03f),
+                }, 6, 0.3f);
+                break;
+            }
+            case 4:
+            {
+                // A trunk that came down with its biggest limb still on: the limb lies
+                // out sideways through the grass, the crown snapped off short.
+                var a = new Vector3(-1.5f, 0.2f, -0.3f); var b = new Vector3(0.9f, 0.16f, -0.15f);
+                k.Paint(Colors.White, 0.74f).Loft(a, b, new MeshKit.Ring[]
+                {
+                    new(0f, 0.21f, 0.2f), new(0.6f, 0.18f, 0.17f, 0f, 0.015f), new(1f, 0.15f, 0.14f),
+                }, 8, 0.05f);
+                k.Paint(Colors.White, 0.97f).Ellipsoid(a + new Vector3(-0.005f, 0, 0), new Vector3(0.006f, 0.19f, 0.18f), 8, 2);
+                Splinters(k, b, (b - a).Normalized(), 0.09f);
+                var fork = new Vector3(0.2f, 0.17f, -0.2f);
+                k.Paint(Colors.White, 0.71f).Tube(new[] { fork, fork + new Vector3(0.35f, -0.04f, 0.45f), fork + new Vector3(0.6f, -0.08f, 1.0f), fork + new Vector3(1.0f, -0.1f, 1.35f) }, 0.11f, 7, 0.05f);
+                k.Paint(Colors.White, 0.7f).Tube(new[] { fork + new Vector3(0.6f, -0.08f, 1.0f), fork + new Vector3(0.45f, -0.02f, 1.45f) }, 0.05f, 5, 0.025f);
+                // A short side shoot pointing up off the trunk, snapped at the tip.
+                k.Paint(Colors.White, 0.72f).Tube(new[] { new Vector3(-0.6f, 0.3f, -0.35f), new Vector3(-0.5f, 0.62f, -0.55f) }, 0.05f, 5, 0.03f);
+                k.Paint(moss).Loft(new Vector3(-1.3f, 0.39f, -0.28f), new Vector3(0.1f, 0.35f, -0.2f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.02f, 0.08f), new(0.5f, 0.03f, 0.12f), new(1f, 0.015f, 0.06f),
+                }, 6, 0.3f);
+                break;
+            }
+            default:
+            {
+                // Two smaller trunks come down across each other.
+                k.Paint(Colors.White, 0.76f).Loft(new Vector3(-1.4f, 0.15f, -0.1f), new Vector3(1.3f, 0.13f, 0.15f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.16f, 0.15f), new(1f, 0.12f, 0.115f),
+                }, 8, 0.05f);
+                Splinters(k, new Vector3(1.3f, 0.13f, 0.15f), Vector3.Right, 0.07f);
+                k.Paint(Colors.White, 0.96f).Ellipsoid(new Vector3(-1.405f, 0.15f, -0.1f), new Vector3(0.006f, 0.14f, 0.13f), 8, 2);
+                // The second lies over the first, its far end resting on the ground.
+                var a = new Vector3(-0.6f, 0.13f, -1.0f); var b = new Vector3(0.5f, 0.36f, 0.4f); var c = new Vector3(0.95f, 0.12f, 1.0f);
+                k.Paint(Colors.White, 0.7f).Tube(new[] { a, b, c }, 0.12f, 7, 0.09f);
+                k.Paint(Colors.White, 0.94f).Ellipsoid(a + (a - b).Normalized() * 0.005f, new Vector3(0.11f, 0.11f, 0.006f), 8, 2,
+                    MeshKit.Aim((a - b).Normalized()));
+                k.Paint(moss).Loft(new Vector3(-1.2f, 0.29f, -0.08f), new Vector3(-0.2f, 0.27f, 0.0f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.015f, 0.06f), new(0.5f, 0.025f, 0.09f), new(1f, 0.012f, 0.05f),
+                }, 6, 0.3f);
+                break;
+            }
         }
         return Done(k);
     }
