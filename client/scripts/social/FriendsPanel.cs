@@ -24,6 +24,9 @@ public partial class FriendsPanel : CanvasLayer
     string shown = "";
     float tick;
 
+    // --screenshot-friends: a pretend list for Render, with no server: two friends here, one away, one who hasn't added you back and one who added you.
+    static readonly bool Preview = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-friends"));
+
     public bool IsOpen => Visible;
     public bool Typing => nameBox.HasFocus();
 
@@ -50,6 +53,7 @@ public partial class FriendsPanel : CanvasLayer
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(hint);
         AddChild(Ui.Window(box));
+        if (Preview) CallDeferred(MethodName.Open);
     }
 
     public void Open()
@@ -79,6 +83,15 @@ public partial class FriendsPanel : CanvasLayer
 
     public override void _Process(double delta)
     {
+        if (Visible && Preview)
+        {
+            if (shown == "") Fill(
+                new() { (1, "Mara", true, "40 m north"), (2, "Tobin", true, "close by"), (3, "Wren", false, null) },
+                new() { (4, "Hollis") },
+                new() { (5, "Birch") });
+            shown = "preview";
+            return;
+        }
         if (!Visible || Conn == null) return;
         tick -= (float)delta;
         if (tick > 0f) return;
