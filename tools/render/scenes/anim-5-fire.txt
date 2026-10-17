@@ -1,0 +1,19 @@
+# anim-5 (PR #398): feeding a fire, the underhand toss. 24 fps movie, 3/4 side view.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.1 --render-cam=3.0,0.7,60,0.3
+frames 330
+give 1 20 50
+give 5 4 50
+face 0
+craft fire.hand_drill
+frames +24
+mark feed-start
+feed 1
+frames +36
+feed 1
+frames +36
+feed 1
+frames +36
+mark feed-end
+frames +12
