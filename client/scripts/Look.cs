@@ -84,6 +84,7 @@ public static class Look
         Add("frost", RenderingServer.GlobalShaderParameterType.Float, 0f);
         // Shifts where frost lies thickest from one morning to the next.
         Add("frost_seed", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("ground_bands", RenderingServer.GlobalShaderParameterType.Float, 0f);
         // Tint for Modeling's rim light, on top of the light colour (Atmosphere, by
         // time of day): rgb the colour, a scales the rim strength.
         Add("rim_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(1f, 0.86f, 0.66f, 1f));
@@ -323,6 +324,9 @@ public static class Look
         global uniform float season_autumn;
         global uniform float snow_cover;
         global uniform float snowing;
+        // Cutesy light-steps prototype (Atmosphere, atmosphere-29): 0 smooth light on the
+        // ground and grass, 1 the same soft shade/mid/lit steps as painted props.
+        global uniform float ground_bands;
         // How far through the year it is: 0 spring, 0.25 summer, 0.5 autumn, 0.75 winter.
         global uniform float season_year;
         // How much standing water there is after rain, 0 dry to 1 puddled; it rises
@@ -660,7 +664,13 @@ public static class Look
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
                 float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                float l = wrapped * wrapped * ATTENUATION * sky;
+                if (ground_bands > 0.0) {
+                    // Painted.Light's steps, so ground and props share one look.
+                    float stepped = 0.12 + 0.4 * smoothstep(0.22, 0.42, l) + 0.36 * smoothstep(0.54, 0.74, l);
+                    l = mix(l, stepped, ground_bands);
+                }
+                DIFFUSE_LIGHT += LIGHT_COLOR * l / PI;
                 if (wet > 0.01) {
                     vec3 half_dir = normalize(LIGHT + VIEW);
                     float glint = pow(max(dot(NORMAL, half_dir), 0.0), 24.0) * wet * 0.06;
@@ -762,7 +772,13 @@ public static class Look
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
                 float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                float l = wrapped * wrapped * ATTENUATION * sky;
+                if (ground_bands > 0.0) {
+                    // Painted.Light's steps, so ground and props share one look.
+                    float stepped = 0.12 + 0.4 * smoothstep(0.22, 0.42, l) + 0.36 * smoothstep(0.54, 0.74, l);
+                    l = mix(l, stepped, ground_bands);
+                }
+                DIFFUSE_LIGHT += LIGHT_COLOR * l / PI;
             }
             """);
 
