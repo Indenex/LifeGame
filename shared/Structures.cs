@@ -114,7 +114,7 @@ namespace LifeGame.Shared
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
             // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
-            // Outside a claim it weathers like everything else (building-13).
+            // Outside a claim it weathers like everything else.
             new StructureShape
             {
                 Name = "Storage jar",
@@ -343,12 +343,13 @@ namespace LifeGame.Shared
         public static int StoreStacksFor(int kind, byte quality) =>
             Shape(kind).Jar ? JarStacks(quality) : Shape(kind).StoreStacks;
 
-        // Weathering (D-046): outside claims, anything players made that nobody has
-        // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
-        // Justin's building-13 numbers: 48 h untouched, then it falls apart quickly.
+        // Weathering (D-046, claims-15): outside claims, anything players made that nobody
+        // has touched for WeatherAfterHours starts to fall apart, and is gone WeatherForHours
+        // later. Justin: "starts falling apart after 2 days". One raisable constant each (D-197);
+        // a shape may still set its own WeatherAfter, but none does now.
         public const double WeatherAfterHours = 48, WeatherForHours = 6;
 
-        // Whether this kind may be built outside a claim.
+        // Whether this kind may be built outside a claim (building-13).
         public static bool IsWild(int kind) => Shape(kind).Wild;
 
         public static bool IsRoom(int kind) => Shape(kind).Room;
