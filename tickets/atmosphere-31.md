@@ -30,9 +30,11 @@ Painted colour bands, not photoreal. Measure the cost, add a Graphics setting fo
   - `Look.cs`: WaterSurface and WaterNear now come from WaterLook; the old water shader is removed.
   - `OptionsPage.cs`: a "Water reflections: Off/Normal/High" button under Graphics.
 
+- 2026-10-17 04:45: floating leaves in the shader. A drifting cell grid of pointed ovals near the banks (fading by depth over 0.5 to 4 m): many and turned in autumn, a few green in summer, none when it freezes. They sit on top of the reflections. Environment (env-21, claude/environment-water-edges) keeps its damp shore band and leaves foam and edge alpha to the water; I told them the mean stays at WaterLevel.
+
 ## Open questions / blockers
 - Render C: before/after clip and GPU cost (`--gpu-bench`, which is on the atmosphere-29 branch only; until then, frame time).
 - Environment: their water-edge work. The shore foam and fade now come from the depth behind the water, so the edges need no special mesh.
 
 ## Next step
-Wait for #517 CI and Render C's before/after clip (requested 04:35). Tune from it, then take it out of draft. Next pieces: floating leaves and stream flow (waiting on Environment's answers).
+Wait for #517 CI and Render C's before/after clip (requested 04:35). Tune from it, then take it out of draft. Next piece: stream flow, if Environment confirms there are streams (only ponds so far).

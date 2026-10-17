@@ -10,7 +10,9 @@ namespace LifeGame;
 //   painted bands to a dark teal, with a wavering foam line where it meets the bank;
 // - reflections of what is on screen (trees, the player, the far shore) traced along
 //   the screen, softened, falling back to the sky's own colours, stronger at a glance;
-// - the sun's glint as a crisp painted shape rather than a smeared highlight.
+// - the sun's glint as a crisp painted shape rather than a smeared highlight;
+// - a few leaves floating near the banks, drifting with the wind: many in autumn,
+//   turned gold and red, a stray green one in summer, none under winter ice.
 // The far plane uses the same shader without the waves and gives way to the near mesh
 // inside near_radius, so the two never overlap.
 public static class WaterLook
@@ -90,6 +92,8 @@ public static class WaterLook
         global uniform float water_reflect_steps;
         global uniform sampler2D water_sim : filter_linear, repeat_disable;
         global uniform vec4 water_sim_rect;
+        global uniform float season_autumn;
+        global uniform float season_warmth;
 
         varying vec3 world_pos;
         varying float wave_fade;
@@ -142,6 +146,30 @@ public static class WaterLook
                 slope += (r > 0.001 ? d / r : vec2(0.0)) * wave;
             }
             return slope;
+        }
+
+        // A floating leaf, if one drifts over this point: its colour and how much of
+        // it covers the point (0 none). Leaves sit in cells of a slowly drifting grid,
+        // each with its own turn and shade.
+        vec4 leaf(vec2 p, float t, float density) {
+            vec2 drift = wind_dir * t * 0.06 + vec2(sin(t * 0.07), cos(t * 0.05)) * 0.4;
+            vec2 q = (p - drift) / 0.7;
+            vec2 cell = floor(q);
+            float h = hash(cell + 11.3);
+            if (h > density) return vec4(0.0);
+            vec2 centre = cell + 0.25 + 0.5 * vec2(hash(cell + 2.7), hash(cell + 8.1));
+            float a = hash(cell + 5.9) * 6.2832 + sin(t * 0.3 + h * 20.0) * 0.4;
+            vec2 d = mat2(vec2(cos(a), sin(a)), vec2(-sin(a), cos(a))) * (q - centre);
+            // A pointed oval about 9 cm long, with a faint darker vein.
+            float shape = length(vec2(d.x * 7.5, d.y * 13.0 * (1.0 + 0.6 * d.x * 7.5)));
+            float cover = 1.0 - smoothstep(0.85, 1.0, shape);
+            if (cover <= 0.0) return vec4(0.0);
+            float turned = clamp(season_autumn * 1.4 + (hash(cell + 1.3) - 0.5) * 0.4, 0.0, 1.0);
+            vec3 green = vec3(0.20, 0.32, 0.10);
+            vec3 gold = mix(vec3(0.62, 0.40, 0.07), vec3(0.55, 0.15, 0.05), hash(cell + 3.3));
+            vec3 colour = mix(green, mix(gold, vec3(0.32, 0.20, 0.10), smoothstep(0.75, 1.0, season_autumn)), turned);
+            colour *= 1.0 - 0.25 * (1.0 - smoothstep(0.0, 0.04, abs(d.y)));
+            return vec4(colour, cover);
         }
 
         void vertex() {
@@ -240,6 +268,13 @@ public static class WaterLook
             float foam = 1.0 - smoothstep(0.03, 0.1 + 0.1 * wob, through);
             foam = max(foam, smoothstep(0.035, 0.07, abs(sim(p))) * 0.6);
             col = mix(col, foam_color.rgb * (water_ambient + water_sun_color * 0.5), foam * 0.75);
+
+            // Leaves near the bank, most in autumn, none once it freezes.
+            float leafy = (0.03 + 0.3 * season_autumn) * (1.0 - smoothstep(0.5, 4.0, through0)) * smoothstep(-0.9, -0.6, season_warmth);
+            if (leafy > 0.005) {
+                vec4 lf = leaf(p, t, leafy);
+                col = mix(col, lf.rgb * (water_ambient + water_sun_color * 0.6), lf.a * (1.0 - foam));
+            }
 
             ALBEDO = col;
             ALPHA = smoothstep(0.0, 0.03, through0);
