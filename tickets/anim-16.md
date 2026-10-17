@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
 Branch: claude/anim-16 (from main)
-PR: (not yet)
+PR: #653
 
 ## Goal
 Players can wave, cheer, dance or bow on request, and everyone nearby sees it.
@@ -27,4 +27,4 @@ UX adds the key or wheel that calls the reducer. Until then, Render C can call `
 - UX: an emote wheel or keys calling `conn.Reducers.Emote((byte)WorkMotion.X)`.
 
 ## Next step
-Push, open the PR, ask UX for the wheel, and request a Render C clip.
+Wait for CI on #653, send the PM the green sha, and fix anything the Render C clip shows. UX asked for the wheel.
