@@ -3,7 +3,7 @@ Lane: Atmosphere (lighting), done by the Unity spike worker for the PM; Atmosphe
 Owner: Atmosphere lane session_014MSnDGYpnGPmnSQ4CjhF7c (landing it; written by the Unity spike worker session_017Weex8fujB3VFsrpg84jEP)
 Status: in_review
 Branch: claude/atmos-shadows-1 (Justin approved via the PM)
-PR: none yet
+PR: #667
 
 ## Goal
 Bring the steadier, crisper shadows Unity URP would give (unity-1 write-up) to the Godot client:
@@ -54,7 +54,8 @@ before and after; Render shows noon and dusk, walking, before and after.
 - 2026-10-17: landed by the Atmosphere lane: patches from claude/unity-spike ed3354f4 applied
   cleanly on main efc00f3b; hook order checked against the rim light and cosy grade on main
   (shadow lines before Grade(), CapFog() last). gen-bindings and client Release build green
-  locally (0 errors). Pushed claude/atmos-shadows-1.
+  locally (0 errors). Pushed claude/atmos-shadows-1, opened PR #667.
+  Render requested 4e571073 (Render C, walking clips main vs branch, noon and dusk).
 
 ## Open questions / blockers
 - None.
