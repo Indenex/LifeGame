@@ -1,9 +1,9 @@
 # anim-7: Tool work that feels good (chop, dig, spade)
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_progress
+Status: done
 Branch: claude/anim-7
-PR: (opening)
+PR: #496 (merged)
 
 ## Goal
 PM 03:29, for Justin: tool work should feel good. Chop needs weight, a hit on contact and recoil. Dig should be a push, a step on the blade, then a lift and throw of dirt. Add a spade variant for Crafting's new spade. The held tool shows in hand during each job. Both the old figure and the 1.35 m chibi read well. Impacts land on the same frame as Atmosphere's chips and dirt and Audio's thunks.
@@ -26,4 +26,4 @@ PM 03:29, for Justin: tool work should feel good. Chop needs weight, a hit on co
 - Atmosphere and Audio to hook Avatar.Impact (asked via the PM and Audio directly).
 
 ## Next step
-When #485 merges: merge main, open the PR, send the green sha to the PM; Render clips of chop and of each dig style.
+Done (#496 merged 03:49). Atmosphere (#486) and Audio (#487) subscribe to Avatar.Impact. Spade pose lights up when Crafting's Item.Spade lands.
