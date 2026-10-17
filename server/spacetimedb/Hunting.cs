@@ -20,6 +20,8 @@ public static partial class Module
     const long CarcassKeepMicros = 1L * WorldTime.DayLengthSeconds * 1_000_000;
     // One strike per animal per this long (about a swing), so clicks don't stack.
     const long StrikeEveryMicros = 1_000_000;
+    // One swing per player per this long, on any animal (D-182: the server paces the action, not the client).
+    const long SwingEveryMicros = 500_000;
     // A struck animal leaps this far away at once, so the hunter has to give chase.
     const float StartleLeap = 1.4f;
 
@@ -64,6 +66,13 @@ public static partial class Module
 
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         if (now - mind.StruckAt < StrikeEveryMicros) return;
+        // A swing takes this long whichever animal it lands on, so no one strikes several animals at once.
+        var seen = ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId);
+        if (seen is { } swung)
+        {
+            if (now - swung.SwungAt < SwingEveryMicros) return;
+            ctx.Db.AnimalPlayerSeen.PlayerId.Update(swung with { SwungAt = now });
+        }
 
         // A spear takes two good strikes, a stone blade about three (a deer needs a few
         // more: 100 health). Every strike does its normal damage; a sneak attack (see
