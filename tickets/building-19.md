@@ -15,6 +15,8 @@ Justin: "a sundial item, and when it's built, a little curved time-of-day UI thi
 - Model: Modeling's sundial model is merged in.
 - 2026-10-17 11:22: #638 merged (CI run 39027575978 green). Kind 20 is final (PM: Crafting renumbers its devices to 21-23). The town path of `my_sundial` has no test yet.
 
+- 2026-10-17 11:25: Render requested 02e86586 (Render B): sundial still (--view=sundial) and the arc in game, for Justin; PM asked.
+
 ## Open questions / blockers
 - (none)
 - Journal 'Things to try' line sent to the PM: "A flat stone and a stick, set in your claim, will tell the whole claim the hour."
