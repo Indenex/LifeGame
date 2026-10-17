@@ -53,11 +53,14 @@ public partial class NeedGauge : Control
 
         if (Glow)
             DrawCircle(center, radius + 3f, new Color(NeedsHud.WarmColor, 0.10f + 0.05f * Mathf.Sin(pulse * 2.5f)));
-        DrawArc(center, radius, 0, Mathf.Tau, 48, new Color(1, 1, 1, 0.14f), 4f, true);
+        // On warm paper (ui-54) the empty track is a faint ink ring and the colours deepen a
+        // little so they read on cream; on the dark look they stay as they were.
+        if (WarmLook.On) c = new Color(c.Darkened(0.12f), c.A);
+        DrawArc(center, radius, 0, Mathf.Tau, 48, WarmLook.On ? new Color(WarmLook.Ink, 0.16f) : new Color(1, 1, 1, 0.14f), 4f, true);
         if (shown > 0.005f)
             DrawArc(center, radius, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * shown, 48, c, 4f, true);
 
-        var icon = new Color(Look.Cream, 0.9f);
+        var icon = WarmLook.On ? new Color(WarmLook.Ink, 0.85f) : new Color(Look.Cream, 0.9f);
         switch (glyph)
         {
             case Glyph.Berry:

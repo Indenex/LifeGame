@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -52,6 +53,8 @@ public partial class NeedsHud : CanvasLayer
         // The load ring only fades in when you near your carrying limit.
         gauges.AddChild(load);
         gaugePanel = Hud.Panel(gauges, Vector2.Zero);
+        // On the warm look the gauges sit on a paper chip, like the bar beside them (ui-54).
+        WarmLook.HudChip(gaugePanel);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
@@ -105,7 +108,7 @@ public partial class NeedsHud : CanvasLayer
         // True while the death card covers the screen, so nothing offers itself over it.
     public bool Mourning => fade.Color.A > 0.02f;
 
-    public void ShowDeath(string cause)
+    public void ShowDeath(string cause, byte wakeKind = RestSpots.WokeAtEdge)
     {
         deathTitle.Text = cause switch
         {
@@ -115,7 +118,12 @@ public partial class NeedsHud : CanvasLayer
             "slain" => "You were struck down.",
             _ => "You died.",
         };
-        deathLine.Text = "You wake at the edge of the wilderness with nothing.\nWhat you learned stays with you.";
+        deathLine.Text = wakeKind switch
+        {
+            RestSpots.WokeAtRestSpot => "You wake where you chose to rest, with nothing.\nWhat you learned stays with you.",
+            RestSpots.WokeBedGone => "Your bed was gone; you woke at the edge of the wilderness with nothing.\nWhat you learned stays with you.",
+            _ => "You wake at the edge of the wilderness with nothing.\nWhat you learned stays with you.",
+        };
         var box = fade.GetChild<Control>(0);
         var tween = CreateTween();
         tween.TweenProperty(fade, "color:a", 1f, 0.8f);

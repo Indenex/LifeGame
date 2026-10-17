@@ -37,6 +37,10 @@ public static class Use
 {
     static readonly Dictionary<string, UseHandler> handlers = new();
 
+    // Who made the thing an offer points at (a marked jar or trough, ceramics-15), for a quiet
+    // "made by" line under the prompt (ui-53); null when nobody is known. Main sets it.
+    public static Func<Vector3, string?> MakerAt = _ => null;
+
     // Registering the same Id again replaces the old handler.
     public static void Register(UseHandler handler) => handlers[handler.Id] = handler;
 
