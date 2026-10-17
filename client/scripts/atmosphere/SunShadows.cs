@@ -46,17 +46,17 @@ public partial class SunShadows : Node
     }
 
     // What each level costs: shadow atlas size (px, shared by the cascades), cascade
-    // count, reach (m) and Godot's soft-shadow filter.
-    readonly record struct Tier(int Atlas, int Splits, float Reach, RenderingServer.ShadowQuality Filter);
+    // count, reach (m), Godot's soft-shadow filter, and how far (m) past the player the
+    // first, second and third cascades end. Bigger cascades hold more shadow casters,
+    // so the near ones stay tight on Medium to keep its draw calls near the old ones.
+    readonly record struct Tier(int Atlas, int Splits, float Reach, RenderingServer.ShadowQuality Filter,
+        float FirstPast, float SecondPast, float ThirdPast);
     static readonly Tier[] Tiers =
     {
-        new(2048, 2, 40f, RenderingServer.ShadowQuality.SoftLow),
-        new(4096, 4, 60f, RenderingServer.ShadowQuality.SoftMedium),
-        new(8192, 4, 70f, RenderingServer.ShadowQuality.SoftHigh),
+        new(2048, 2, 40f, RenderingServer.ShadowQuality.SoftLow, 8f, 8f, 8f),
+        new(4096, 4, 50f, RenderingServer.ShadowQuality.SoftMedium, 2f, 8f, 20f),
+        new(8192, 4, 70f, RenderingServer.ShadowQuality.SoftHigh, 5f, 16f, 34f),
     };
-
-    // How far (m) past the player the first cascade reaches, and the second and third.
-    const float FirstPast = 5f, SecondPast = 16f, ThirdPast = 34f;
     // The sun's shadow direction steps by this much (degrees). At the normal day
     // length that is one small step about every 1.5 s; a 10 m tree's shadow tip moves
     // under 2 cm, within one texel of the nearest cascade.
@@ -109,13 +109,12 @@ public partial class SunShadows : Node
         float toPlayer = camera.GetParent() is CameraRig ? camera.Position.Z : 16f;
         if (fittedFor >= 0f && Mathf.Abs(toPlayer - fittedFor) < RefitMetres) return;
         fittedFor = toPlayer;
-        float reach = sun.DirectionalShadowMaxDistance;
+        var tier = Tiers[(int)applied];
+        float reach = tier.Reach;
         float Split(float past, float min) => Mathf.Clamp((toPlayer + past) / reach, min, 0.95f);
-        float s1 = Split(FirstPast, 0.08f);
-        float s2 = Mathf.Max(Split(SecondPast, 0.2f), s1 + 0.05f);
-        float s3 = Mathf.Max(Split(ThirdPast, 0.4f), s2 + 0.05f);
-        if (sun.DirectionalShadowMode == DirectionalLight3D.ShadowMode.Parallel2Splits)
-            s1 = Split(SecondPast, 0.25f);
+        float s1 = Split(tier.FirstPast, 0.08f);
+        float s2 = Mathf.Max(Split(tier.SecondPast, 0.2f), s1 + 0.05f);
+        float s3 = Mathf.Max(Split(tier.ThirdPast, 0.4f), s2 + 0.05f);
         sun.DirectionalShadowSplit1 = s1;
         sun.DirectionalShadowSplit2 = s2;
         sun.DirectionalShadowSplit3 = s3;
