@@ -112,9 +112,13 @@ foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, St
 }
 
 if (Wants("lean-to"))
+{
+    LeanToCoverAndFires();
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
+    TakeDownSite();
+}
 if (Wants("clay-hut"))
 {
     ulong hut = BuildTogether(StructureKind.ClayHut,
@@ -362,6 +366,41 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 }
 
 // A hangs a door in the hut's doorway; B, who didn't make it, opens and shuts it.
+// A lean-to shelters where its roof is: out to the open front, not right against the low back.
+// No footprint goes over a fire, except a home round its hearth fire (building-25).
+void LeanToCoverAndFires()
+{
+    int lean = (int)StructureKind.LeanTo, hut = (int)StructureKind.ClayHut;
+    var shape = Structures.Shape(lean);
+    Check(Structures.Shelters(lean, 0, 0, 0f, 0, shape.HalfDepth - 0.05f), "lean-to: the open front is under cover");
+    Check(!Structures.Shelters(lean, 0, 0, 0f, 0, -shape.HalfDepth + 0.1f), "lean-to: the low back is not");
+    Check(Structures.FireProblem(lean, 0, 0, 0f, 0, 0.5f) != null, "a lean-to can't be laid over a fire");
+    Check(Structures.FireProblem(lean, 0, 0, 0f, 0, shape.HalfDepth + 1.5f) == null, "a lean-to may face a fire");
+    Check(Structures.FireProblem(hut, 0, 0, 0f, 0, 0) == null, "a hut may go up round its hearth fire");
+    Check(Structures.FireProblem(hut, 0, 0, 0f, 0, Structures.HutWallRadiusFor(hut)) != null, "a hut's wall can't sit on a fire");
+}
+
+// A lays out a second lean-to and changes their mind: B can't take it down, A can (building-25).
+void TakeDownSite()
+{
+    var site = a.FindSite(StructureKind.LeanTo);
+    Check(site != null, "found ground for a second lean-to");
+    var (sx, sz) = site!.Value;
+    a.WalkTo(sx, sz + 2.5f, 1f, Pump);
+    b.WalkTo(sx + 1f, sz + 2.5f, 1f, Pump);
+    int before = a.Conn.Db.Structure.Count;
+    a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, sx, sz, 0f);
+    WaitFor(() => a.Conn.Db.Structure.Count > before, 10, "second lean-to laid out");
+    ulong id = a.Conn.Db.Structure.Iter().OrderByDescending(r => r.PlacedAt.MicrosecondsSinceUnixEpoch).First().Id;
+    b.LastError = null;
+    b.Conn.Reducers.Dismantle(id);
+    WaitFor(() => b.LastError != null, 5, "B to be refused taking down A's site");
+    Check(b.LastError!.Contains("take it down"), $"only whoever laid it out takes it down ({b.LastError})");
+    Pump(400);
+    a.Conn.Reducers.Dismantle(id);
+    WaitFor(() => a.Conn.Db.Structure.Id.Find(id) == null, 10, "A took down their own site");
+}
+
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
@@ -1169,6 +1208,7 @@ sealed class Bot
                 if (inClaim is { } c && (x - c.x) * (x - c.x) + (z - c.z) * (z - c.z) > (Social.ClaimRadius - 5f) * (Social.ClaimRadius - 5f)) continue;
                 if (Structures.GroundProblem((int)kind, x, z, 0f, H) != null) continue;
                 if (Conn.Db.Structure.Iter().Any(s => Structures.TooClose((int)kind, x, z, (int)s.Kind, s.X, s.Z))) continue;
+                if (Conn.Db.Fire.Iter().Any(f => Structures.FireProblem((int)kind, x, z, 0f, f.X, f.Z) != null)) continue;
                 return (x, z);
             }
         return null;
@@ -1186,6 +1226,7 @@ sealed class Bot
                 if (x * x + z * z < keepOut * keepOut) continue;
                 if (Structures.GroundProblem((int)kind, x, z, 0f, H) != null) continue;
                 if (Conn.Db.Structure.Iter().Any(s => Structures.TooClose((int)kind, x, z, (int)s.Kind, s.X, s.Z))) continue;
+                if (Conn.Db.Fire.Iter().Any(f => Structures.FireProblem((int)kind, x, z, 0f, f.X, f.Z) != null)) continue;
                 return (x, z);
             }
         return null;

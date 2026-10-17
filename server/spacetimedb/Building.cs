@@ -145,6 +145,13 @@ public static partial class Module
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
         yaw = Structures.Shape(k).FixedYaw ? 0f : MathF.IEEERemainder(yaw, MathF.Tau);
+        // No footprint over a fire, except a home round its hearth fire (building-25).
+        int fcx = World.ChunkOf(x), fcz = World.ChunkOf(z);
+        for (int i = fcx - 1; i <= fcx + 1; i++)
+            for (int j = fcz - 1; j <= fcz + 1; j++)
+                foreach (var fire in ctx.Db.Fire.ByChunk.Filter((i, j)))
+                    if (Structures.FireProblem(k, x, z, yaw, fire.X, fire.Z) is { } tooHot)
+                        throw new Exception(tooHot);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
 
@@ -326,7 +333,7 @@ public static partial class Module
         var best = new Shelter(0f, 0f, 0);
         foreach (var s in StructuresNear(ctx, x, z))
         {
-            if (!s.Complete || !Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, -0.2f)) continue;
+            if (!s.Complete || !Structures.Shelters((int)s.Kind, s.X, s.Z, s.Yaw, x, z)) continue;
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (shape.Room && FireInside(ctx, s)) warmth = 1f;

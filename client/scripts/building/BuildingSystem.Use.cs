@@ -118,9 +118,9 @@ public partial class BuildingSystem
         if (Structures.IsGate((int)s.Kind))
             return Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, 1.0f);
         if (!Structures.HasDoorway((int)s.Kind)) return false;
-        // Within a step of the doorway, inside or out.
+        // Within a long step of the doorway, inside or out (1.2 m was hard to find, playtest 4).
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, p.X, p.Z);
-        return new Vector2(lx, lz - Structures.Shape((int)s.Kind).DoorwayZ).Length() < 1.2f;
+        return new Vector2(lx, lz - Structures.Shape((int)s.Kind).DoorwayZ).Length() < 1.8f;
     }
 
     // G on a finished hut's doorway or a basket. Priority sits just under adding materials (30).

@@ -42,6 +42,10 @@ public partial class BuildingSystem : Node
     int placeKind;
     float ghostYawTarget, ghostYaw;
     Vector3 ghostPos;
+    // Where a click lays it out: the cursor's spot, not where the gliding ghost has got to (building-25).
+    Vector3 placeTarget;
+    // Once you turn a lean-to outline yourself, it stops turning to face the fire.
+    bool turnedByHand;
     bool ghostPlaced;
     StructureView? ghost;
     string? placeProblem;
@@ -107,6 +111,21 @@ public partial class BuildingSystem : Node
                 if (!site.Needs.Any(n => n.Have < n.Need && carried.Contains(n.Item))) return null;
                 float d = new Vector2(site.X - at.X, site.Z - at.Z).Length();
                 return new UseOffer("Add materials", d, () => conn()?.Reducers.Build(site.Id), Repeat: WorkInterval, Target: new Vector3(site.X, at.Y, site.Z));
+            },
+        });
+
+        // Shift+E on your own unfinished site takes it down; what went in is left on the ground
+        // (building-25, from playtest 4). Only offered while Shift is held, so a plain E never
+        // takes anything down.
+        Use.Register(new UseHandler
+        {
+            Id = "building.takedown",
+            Priority = 31,
+            Find = at =>
+            {
+                if (!Input.IsKeyPressed(Key.Shift) || NearestSite() is not { } site || site.Owner != MyIdentity()) return null;
+                float d = new Vector2(site.X - at.X, site.Z - at.Z).Length();
+                return new UseOffer($"Take down this {ShapeOf(site).Name.ToLowerInvariant()} site", d, () => conn()?.Reducers.Dismantle(site.Id), Target: new Vector3(site.X, at.Y, site.Z));
             },
         });
 
@@ -290,7 +309,7 @@ public partial class BuildingSystem : Node
 
     // The finished structure sheltering this spot, if any. Matches the server's ShelterAt.
     public Structure? ShelterAt(Vector3 p) =>
-        rows.Values.FirstOrDefault(s => s.Complete && ShapeOf(s).RainCover > 0f && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z, -0.2f));
+        rows.Values.FirstOrDefault(s => s.Complete && ShapeOf(s).RainCover > 0f && Structures.Shelters((int)s.Kind, s.X, s.Z, s.Yaw, p.X, p.Z));
 
     // Keeps a step from passing through a hut wall anywhere but the door.
     // airHeight is how high the walker's feet are in a jump (bugfix-25): fences and gates lower than that
@@ -427,6 +446,7 @@ public partial class BuildingSystem : Node
         else if (e.IsActionPressed("build_rotate"))
         {
             if (!Structures.Shape(placeKind).FixedYaw) ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
+            turnedByHand = true;
             GetViewport().SetInputAsHandled();
         }
         else if (e is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
@@ -453,6 +473,7 @@ public partial class BuildingSystem : Node
         }
         placing = true;
         ghostPlaced = false;
+        turnedByHand = false;
         // Face the open side toward the camera, so you look into what you build.
         ghostYawTarget = ghostYaw = Structures.Shape(placeKind).FixedYaw ? 0f : Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
         MakeGhost();
@@ -482,7 +503,7 @@ public partial class BuildingSystem : Node
             hud.Note(placeProblem);
             return;
         }
-        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, Structures.Shape(placeKind).FixedYaw ? 0f : ghostYawTarget);
+        c.Reducers.PlaceStructure((StructureKind)placeKind, placeTarget.X, placeTarget.Z, Structures.Shape(placeKind).FixedYaw ? 0f : ghostYawTarget);
         Sfx.Play(Cue.Place);
         // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
         if (Input.IsKeyPressed(Key.Shift)) MakeGhost();
@@ -546,11 +567,17 @@ public partial class BuildingSystem : Node
         var target = PointUnderMouse() ?? me.Position + cameraRig.Forward * 3.5f;
         var offset = target - me.Position;
         offset.Y = 0;
-        if (offset.Length() > Structures.PlaceRange - 0.3f)
-            target = me.Position + offset.Normalized() * (Structures.PlaceRange - 0.3f);
+        // Close enough to build on from where you stand (the server's WorkReach), so you
+        // can start adding materials without walking (building-25).
+        var shape = Structures.Shape(placeKind);
+        float reach = Mathf.Min(Structures.PlaceRange - 0.3f, (shape.Round ? shape.Radius : Mathf.Min(shape.HalfWidth, shape.HalfDepth)) + Structures.WorkReach - 0.4f);
+        if (offset.Length() > reach)
+            target = me.Position + offset.Normalized() * reach;
         target.Y = terrain.HeightAt(target.X, target.Z);
 
         if (Structures.IsFence(placeKind)) target = SnapFence(target);
+        else target = AroundFires(target);
+        placeTarget = target;
 
         // The ghost glides after the cursor rather than jumping cell to cell.
         float ease = 1f - Mathf.Exp(-14f * dt);
@@ -560,9 +587,33 @@ public partial class BuildingSystem : Node
         ghost.Position = new Vector3(ghostPos.X, terrain.HeightAt(ghostPos.X, ghostPos.Z), ghostPos.Z);
         ghost.Rotation = new Vector3(0, ghostYaw, 0);
 
-        placeProblem = PlaceProblem(ghostPos, ghostYawTarget);
+        placeProblem = PlaceProblem(placeTarget, ghostYawTarget);
         var tint = placeProblem == null ? new Color(0.85f, 1f, 0.8f, 0.38f) : new Color(1f, 0.6f, 0.5f, 0.3f);
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(tint, 1f - Mathf.Exp(-10f * dt));
+    }
+
+    // A lean-to opens toward the nearest fire unless you've turned it, and no outline sits
+    // on a fire: it steps back from one until the fire is clear (building-25, playtest 5).
+    Vector3 AroundFires(Vector3 target)
+    {
+        if (conn() is not { } c) return target;
+        Fire? nearest = null;
+        float best = 8f * 8f;
+        foreach (var f in c.Db.Fire.Iter())
+        {
+            float d = new Vector2(f.X - target.X, f.Z - target.Z).LengthSquared();
+            if (d < best) { best = d; nearest = f; }
+        }
+        if (nearest is not { } fire) return target;
+        if (Structures.Shape(placeKind).Model == "LeanTo" && !turnedByHand)
+            ghostYawTarget = Mathf.Atan2(fire.X - target.X, fire.Z - target.Z);
+        var away = new Vector2(target.X - fire.X, target.Z - fire.Z);
+        if (away.LengthSquared() < 0.01f) away = new Vector2(-Mathf.Sin(ghostYawTarget), -Mathf.Cos(ghostYawTarget));
+        away = away.Normalized();
+        for (int i = 0; i < 16 && Structures.FireProblem(placeKind, target.X, target.Z, ghostYawTarget, fire.X, fire.Z) != null; i++)
+            target = new Vector3(target.X + away.X * 0.25f, target.Y, target.Z + away.Y * 0.25f);
+        target.Y = terrain.HeightAt(target.X, target.Z);
+        return target;
     }
 
     // A fence laid near the free end of another fence or gate joins on to it, along
@@ -616,6 +667,10 @@ public partial class BuildingSystem : Node
                 && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -Structures.HearthWallGap)))
             return "A hearth goes inside a finished hut or house";
         // Only basic survival buildings stand outside a claim (building-13); the server checks the same.
+        if (conn() is { } c)
+            foreach (var f in c.Db.Fire.Iter())
+                if (Structures.FireProblem(placeKind, at.X, at.Z, yaw, f.X, f.Z) is { } tooHot)
+                    return tooHot;
         if (!Structures.IsWild(placeKind) && !MayBar(at.X, at.Z))
             return $"A {Structures.Shape(placeKind).Name.ToLowerInvariant()} has to stand inside your claim";
         return Structures.GroundProblem(placeKind, at.X, at.Z, yaw, terrain.HeightAt);
@@ -682,6 +737,7 @@ public partial class BuildingSystem : Node
             string stage = shape.Stages[Math.Min(site.Stage, shape.Stages.Length - 1)];
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
+            if (site.Owner == MyIdentity()) text += $"    Shift+{Controls.KeyFor("use") ?? "E"} take down";
             // Out of what it still needs: say what to fetch, since G has nothing to add.
             var missing = site.Needs.Where(n => n.Have < n.Need).ToList();
             if (conn() is { } c && missing.Count > 0 && missing.All(n => Carried(c, (Item)n.Item) == 0))
