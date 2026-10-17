@@ -125,15 +125,17 @@ public partial class WarmLook : Node
     }
 
     // The one filled button in a window (Ui.MainButton): soft coral with cream words on paper,
-    // like the character page's Play, rather than re-inked (brown on brown would not read).
-    public static void MainButton(Button b)
+    // like the character page's Play, rather than re-inked (brown on brown would not read). Another
+    // colour (sage for "you've accepted", ui-76) makes the same button in that colour.
+    public static void MainButton(Button b, Color? colour = null)
     {
         if (!On) return;
+        var main = colour ?? Coral;
         b.SetMeta(Keep, true);
         b.AddThemeFontOverride("font", Ui.Font(800));
-        foreach (var (state, c) in new[] { ("normal", Coral), ("hover", Coral.Lightened(0.1f)), ("pressed", Coral.Darkened(0.06f)), ("disabled", Coral.Lerp(Paper, 0.6f)) })
+        foreach (var (state, c) in new[] { ("normal", main), ("hover", main.Lightened(0.1f)), ("pressed", main.Darkened(0.06f)), ("disabled", main.Lerp(Paper, 0.6f)) })
         {
-            var s = new StyleBoxFlat { BgColor = c, ShadowColor = new Color(Coral.Darkened(0.4f), 0.3f), ShadowSize = state == "pressed" ? 2 : 5, ShadowOffset = new Vector2(0, state == "pressed" ? 1 : 3) };
+            var s = new StyleBoxFlat { BgColor = c, ShadowColor = new Color(main.Darkened(0.4f), 0.3f), ShadowSize = state == "pressed" ? 2 : 5, ShadowOffset = new Vector2(0, state == "pressed" ? 1 : 3) };
             s.SetCornerRadiusAll(20);
             b.AddThemeStyleboxOverride(state, s);
         }
