@@ -175,6 +175,7 @@ var claim = a.MyClaim()!;
 Check(a.Count(Item.Stick) == 0 && a.Count(Item.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
 Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, b.X + 5, b.Z, 0), "claimed by", "a house on someone else's claim says whose land it is");
 
 // Chat reaches the player standing nearby.
 a.Conn.Reducers.SendChat("hello neighbour");
