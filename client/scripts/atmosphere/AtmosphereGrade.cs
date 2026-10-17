@@ -28,14 +28,19 @@ public partial class Atmosphere
     int raysApplied = -1;
 
     // The faded warm curve: each channel's darks lifted toward violet, its lights
-    // eased toward cream, and the mids nudged warm (a little more red and green, less
+    // eased toward cream with a soft shoulder so pale things (straw, skin) keep their
+    // detail instead of clipping, and the mids nudged warm (a little more red and green, less
     // blue), so lit grass reads bright yellow-green as in reference 02.
     static GradientTexture1D FadedCurve() => new()
     {
         Gradient = new Gradient
         {
-            Offsets = new[] { 0f, 0.5f, 1f },
-            Colors = new[] { new Color(0.04f, 0.03f, 0.07f), new Color(0.53f, 0.52f, 0.45f), new Color(0.99f, 0.97f, 0.88f) },
+            Offsets = new[] { 0f, 0.5f, 0.85f, 1f },
+            Colors = new[]
+            {
+                new Color(0.04f, 0.03f, 0.07f), new Color(0.53f, 0.52f, 0.45f),
+                new Color(0.84f, 0.82f, 0.74f), new Color(0.95f, 0.93f, 0.86f),
+            },
         },
     };
 
@@ -79,7 +84,6 @@ public partial class Atmosphere
         // Faded and warm, but with strong darks: violet-tinted shade, creamy lights.
         // The Golden Skull packs are muted, but lighting already greys them in engine, so
         // saturation stays where it is; the curve's warm mids do the yellowing.
-        env.TonemapExposure *= 1f + 0.06f * grade;
         env.AdjustmentContrast = 1.08f + 0.06f * grade;
         env.AdjustmentColorCorrection = grade > 0.5f ? (curve ??= FadedCurve()) : null;
         if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)
