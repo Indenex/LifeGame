@@ -34,6 +34,12 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - Saturation no longer lowered.
   - Exposure x1.06.
   The shadows stay blue-violet. I can't render here, so Modeling tests it in its view.
+- 2026-10-17 00:50: Environment's env-13 render (claude/environment-painted-ground) shows the base frame washed and hazy with weak darks against reference 02. The reference has deep, slightly violet shade and warm bright tips. The grade now deepens instead of fading:
+  - Black point (0.04, 0.03, 0.07) instead of (0.075, 0.065, 0.11); contrast 1.08 up to 1.14 instead of down.
+  - Ambient energy x0.75 and SSAO 1.8 up to 2.6, so shade holds its value.
+  - By day, away from low sun: distance fog x0.6, volumetric fog x0.5, volumetric ambient inject 0.4 down to 0.15. This clears the milky haze near the camera; dawn and dusk keep their thick air for light rays.
+  - Daytime sun is a touch warmer (toward (1, 0.93, 0.78)) and +10% stronger, for warm bright tips.
+- 2026-10-17 00:55: Modeling rendered df2c5b1: warmer and less grey, an olive carpet with violet shadows (the ground is blade grass again; Justin rejected the sprite grass). Pale colours (straw roof, skin) were near clipping into cream. The curve gets a highlight shoulder (0.85 to (0.84, 0.82, 0.74), white to (0.95, 0.93, 0.86)), and the +6% exposure is dropped since the sun is now +10%.
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
