@@ -38,6 +38,9 @@ public partial class LookPicker : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
         OpenFromMenu = () => Open(first: false);
+        // One centre window at a time (D-283): opening the bag, journal or build menu puts the picker away (Esc
+        // semantics: you keep the look you had). It never counts as a covering panel, so it can't trap input.
+        Panels.Centre(this, Close);
         // --screenshot-look opens it on a default look, as at first join.
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-look")))
             GetTree().CreateTimer(1.5).Timeout += () => Open(first: true);
@@ -51,6 +54,7 @@ public partial class LookPicker : CanvasLayer
             ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
         title.Text = first ? "Choose how you look" : "Your look";
+        if (!first) Panels.Opening(this);
         panel.Visible = true;
         Show(look);
     }
@@ -67,7 +71,12 @@ public partial class LookPicker : CanvasLayer
             else if (now - firstSeen > 3f)
             {
                 asked = true;
-                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null) Open(first: true);
+                // Once only (bugfix-41): a character that never chose a look is not asked again every session.
+                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null && !Settings.Get("look", "asked", false))
+                {
+                    Settings.Set("look", "asked", true);
+                    Open(first: true);
+                }
             }
         }
         if (!IsOpen || figure == null) return;
