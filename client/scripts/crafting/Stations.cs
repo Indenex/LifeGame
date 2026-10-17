@@ -29,7 +29,7 @@ public static class Stations
 
     // The player's own position as the server last saw it, or null before it is known.
     public static Vector3? PlayerAt(DbConnection conn) =>
-        conn.Identity is { } id && conn.Db.Player.Identity.Find(id) is { } p && conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) is { } pos
+        Me.Key(conn) is { } id && conn.Db.Player.Identity.Find(id) is { } p && conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) is { } pos
             ? new Vector3(pos.X, 0, pos.Z) : null;
 
     // The station of this kind the player stands at, if any.

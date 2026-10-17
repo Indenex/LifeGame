@@ -241,8 +241,8 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
-        // Spade (Crafting's crafting-shovel), by number until the item reaches main.
-        (Item)18 => (Spade, false),
+        // Spade (Crafting's crafting-shovel).
+        Item.Spade => (Spade, false),
         // Waterskins (survival-20).
         Item.Waterskin => (k => Waterskin(k, false), true),
         Item.WaterskinOfWater => (k => Waterskin(k, true), true),

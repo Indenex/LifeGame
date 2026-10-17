@@ -45,6 +45,8 @@ public partial class Atmosphere : Node3D
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
     readonly FallingLeaves leaves = new();
+    // Butterflies, pollen and seeds, and fireflies by water (Environment, env-30).
+    readonly AmbientLife life = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -113,12 +115,15 @@ public partial class Atmosphere : Node3D
         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
         sky.SetShaderParameter(NClouds, Look.Clouds);
         sun.ShadowEnabled = true;
+        AddChild(new SunShadows(sun));
 
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
         AddChild(leaves);
+        AddChild(life);
         ReadyWater();
+        ReadyWaterSurface();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
@@ -212,7 +217,7 @@ public partial class Atmosphere : Node3D
             .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
-        ToolSounds.Connect(conn);
+        AudioHooks.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -317,7 +322,7 @@ public partial class Atmosphere : Node3D
         var towardSun = WorldTime.SunHeight(timeOfDay) > -0.06f ? sun.GlobalBasis.Z : -sun.GlobalBasis.Z;
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f),
             towardSun, sun.LightColor * sunLow * (1f - Mathf.Clamp(cloud * 1.2f - 0.2f, 0f, 1f)), wind, dt);
-        fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
+        fireflies.Follow(focus, life.Fireflies(Mathf.SmoothStep(0.85f, 1f, 1f - daylight), 1f - daylight, Year) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
         UpdateSignals(dt, focus, Night);
@@ -330,7 +335,9 @@ public partial class Atmosphere : Node3D
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
+        life.Follow(dt, focus, terrain, daylight, Year, wind, WindDirection, woods, rainAmount);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateWaterSurface(dt, focus);
         UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
@@ -341,8 +348,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
-            ToolSounds.Tick(dt);
-            PotSounds.Tick(dt);
+            AudioHooks.Tick(dt);
         }
     }
 
@@ -407,7 +413,8 @@ public partial class Atmosphere : Node3D
         float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
         Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
         float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
-        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
+        // Stepped, not turned every frame, so shadow edges hold still (SunShadows).
+        sun.Rotation = SunShadows.Steady(elevation, isDay ? azimuth : azimuth + 180f);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
         float h = Mathf.Clamp(sunHeight, 0f, 1f);
@@ -417,7 +424,10 @@ public partial class Atmosphere : Node3D
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
-        sun.LightEnergy *= 1f - 0.5f * storminess;
+        // Calm weather moods (D-313, the cosy layer in AtmosphereGrade): rain and storms
+        // still grey the day, but less dark and in softer blue-greys than slate.
+        float calm = cosy * grade;
+        sun.LightEnergy *= 1f - 0.5f * storminess * (1f - 0.3f * calm);
 
         // Sun shafts in the woods: at a low sun on a fair day the air between the
         // trunks thickens a little and scatters forward, so the light slants through
@@ -430,10 +440,11 @@ public partial class Atmosphere : Node3D
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
         // A thunderstorm goes darker still, toward a cold slate.
-        float dim = (1f - 0.35f * storm) * (1f - 0.3f * storminess);
+        float dim = (1f - 0.35f * storm * (1f - 0.3f * calm)) * (1f - 0.3f * storminess * (1f - 0.4f * calm));
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
+        (waterSkyTop, waterSkyHorizon, waterSunDir) = (top, horizon, sunDir);
         sky.SetShaderParameter(NGroundColor, Grey(mood.Ground, grey, 1f) * dim);
         sky.SetShaderParameter(NSunColor, sunColor * (1f - overcast * 0.8f));
         sky.SetShaderParameter(NSunDir, sunDir);
@@ -454,8 +465,8 @@ public partial class Atmosphere : Node3D
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
         env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
         env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
-        env.AmbientLightEnergy *= 1f - 0.3f * storminess;
-        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f) * dim, 0.35f * storminess);
+        env.AmbientLightEnergy *= 1f - 0.3f * storminess * (1f - 0.5f * calm);
+        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f).Lerp(new Color(0.44f, 0.48f, 0.56f), calm) * dim, 0.35f * storminess);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         Grade(sunHeight, daylight, overcast);
@@ -625,6 +636,9 @@ public partial class Atmosphere : Node3D
             uniform float rainbow = 0.0;
             // The prototype colour grade (AtmosphereGrade), 0 off.
             uniform float grade = 0.0;
+            // The cutesy, relaxing look (D-313, AtmosphereGrade): pastel skies and a
+            // rosy dusk, 0 off.
+            uniform float cosy = 0.0;
             // Thunderstorms (AtmosphereStorms): how stormy, and lightning inside
             // the clouds toward flash_dir.
             uniform float storm = 0.0;
@@ -721,6 +735,15 @@ public partial class Atmosphere : Node3D
                         vec3 hue = clamp(vec3(1.0 - abs(t + 0.7) * 1.4, 1.0 - abs(t) * 1.4, 1.0 - abs(t - 0.7) * 1.4), 0.0, 1.0);
                         col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
                     }
+                }
+                // Pastel: a touch lighter and softer by day, a rosy-peach band along
+                // the horizon at dawn and dusk, and a gentler blue at night.
+                if (cosy > 0.0) {
+                    float low = smoothstep(-0.08, 0.04, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
+                    float grey = dot(col, vec3(0.3, 0.55, 0.15));
+                    vec3 pastel = mix(col, vec3(grey), 0.18) * 0.9 + vec3(0.09, 0.085, 0.10) * (0.35 + 0.65 * daylight);
+                    pastel += vec3(0.28, 0.12, 0.16) * low * pow(1.0 - up, 3.0) * smoothstep(-0.1, 0.0, d.y);
+                    col = mix(col, pastel, cosy);
                 }
                 COLOR = col;
             }

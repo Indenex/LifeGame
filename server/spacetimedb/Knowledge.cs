@@ -33,7 +33,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyJournal", Public = true)]
     public static List<JournalEntry> MyJournal(ViewContext ctx) =>
-        ctx.Db.JournalEntry.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.JournalEntry.Owner.Filter(Me(ctx)).ToList();
 
     // A written note left on the ground. Anyone in reach can read it and learn the process.
     [SpacetimeDB.Table(Accessor = "JournalNote", Public = true)]
@@ -74,13 +74,13 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyTaught", Public = true)]
     public static List<Taught> MyTaught(ViewContext ctx) =>
-        ctx.Db.Taught.Teacher.Filter(ctx.Sender).ToList();
+        ctx.Db.Taught.Teacher.Filter(Me(ctx)).ToList();
 
     // The client calls this once it has told the teacher about what they taught.
     [SpacetimeDB.Reducer]
     public static void MarkTaughtSeen(ReducerContext ctx)
     {
-        foreach (var row in ctx.Db.Taught.Teacher.Filter(ctx.Sender).Where(t => !t.Seen).ToList())
+        foreach (var row in ctx.Db.Taught.Teacher.Filter(Me(ctx)).Where(t => !t.Seen).ToList())
             ctx.Db.Taught.Id.Update(row with { Seen = true });
     }
 
@@ -125,18 +125,18 @@ public static partial class Module
     public static void WriteNote(ReducerContext ctx, string processId)
     {
         var player = RequirePlayer(ctx);
-        if (!KnowsProcess(ctx, ctx.Sender, processId))
+        if (!KnowsProcess(ctx, Me(ctx), processId))
             throw new Exception("You can only write about what you know");
         var pos = RequirePos(ctx, player);
 
-        var mine = ctx.Db.JournalNote.Author.Filter(ctx.Sender).OrderBy(n => n.WrittenAt.MicrosecondsSinceUnixEpoch).ToList();
+        var mine = ctx.Db.JournalNote.Author.Filter(Me(ctx)).OrderBy(n => n.WrittenAt.MicrosecondsSinceUnixEpoch).ToList();
         for (int i = 0; i <= mine.Count - Skills.NotesPerPlayer; i++)
             ctx.Db.JournalNote.Id.Delete(mine[i].Id);
 
         ctx.Db.JournalNote.Insert(new JournalNote
         {
             Id = 0,
-            Author = ctx.Sender,
+            Author = Me(ctx),
             AuthorName = player.Name,
             ProcessId = processId,
             X = pos.X,
@@ -154,10 +154,10 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var note = ctx.Db.JournalNote.Id.Find(noteId) ?? throw new Exception("That note is gone");
         RequireReach(RequirePos(ctx, player), note.X, note.Z);
-        if (KnowsProcess(ctx, ctx.Sender, note.ProcessId))
+        if (KnowsProcess(ctx, Me(ctx), note.ProcessId))
             throw new Exception("You already know this");
-        Learn(ctx, ctx.Sender, note.ProcessId, LearnedBy.Reading, note.AuthorName, performed: 0);
-        if (note.Author != ctx.Sender)
+        Learn(ctx, Me(ctx), note.ProcessId, LearnedBy.Reading, note.AuthorName, performed: 0);
+        if (note.Author != Me(ctx))
             RecordTeaching(ctx, note.Author, player.Name, note.ProcessId, LearnedBy.Reading);
     }
 
