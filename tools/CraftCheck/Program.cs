@@ -43,6 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM my_skills",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -52,8 +53,24 @@ conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
+
+// Every run begins from the same place (bugfix-31): new players wake at a random spot in the
+// spawn clearing, so walk to the origin first, at a pace the server accepts.
+for (var go = Stopwatch.StartNew(); go.Elapsed.TotalSeconds < 60; )
+{
+    float dx = -x, dz = -z, d = MathF.Sqrt(dx * dx + dz * dz);
+    if (d < 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } at && MathF.Abs(at.X - x) + MathF.Abs(at.Z - z) < 0.1f) break;
+    if (d >= 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen0 && MathF.Abs(seen0.X - x) + MathF.Abs(seen0.Z - z) < 1.5f)
+    {
+        float step = Math.Min(d, 0.5f);
+        x += dx / d * step; z += dz / d * step;
+    }
+    conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
+    Pump(() => false, 0.1f, null);
+}
 
 // CRAFTCHECK_PART splits the check in two for CI: "tools" (the tier 0 to 2 crafts, digging, fires, chopping)
 // and "stations" (claim, tables, placing, tool wear and repair). Unset runs both, as before.
@@ -114,6 +131,7 @@ if (runTools)
     Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
     var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
     Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+    if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
     OffRocks(fire);
 
     // A failed drill loses its inputs and lights nothing.
@@ -383,6 +401,7 @@ if (runStations)
         uint cordageBefore = CountOf(Item.Cordage);
         lastError = null;
         var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        int toolmakingBefore = conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points);
         conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
         Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
         if (lastError != null) Fail($"mending the axe: {lastError}");
@@ -393,6 +412,8 @@ if (runStations)
         if (Durability.Origin(mendedAxe.Wear) != oldAxe.Quality) Fail($"the mended axe forgot its original quality ({Durability.Origin(mendedAxe.Wear)} vs {oldAxe.Quality})");
         if (CountOf(Item.Cordage) != cordageBefore - 1) Fail($"mending the axe took {cordageBefore - CountOf(Item.Cordage)} cordage, not 1");
         Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
+        Pump(() => conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points) > toolmakingBefore, 5, "mending to train Toolmaking");
+        Console.WriteLine("Mending trained Toolmaking");
 
         uint cordageNow = CountOf(Item.Cordage);
         lastError = null;
@@ -614,20 +635,32 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within reach of a spot.
 void WalkTo(float tx, float tz)
 {
+    // Round trunks and boulders by a route, then straight in (bugfix-34).
+    var route = ground.Route(x, z, tx, tz);
+    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
+    Leg(tx, tz, 1.5f);
+}
+
+void Leg(float tx, float tz, float tol)
+{
     int lagged = 0;
     for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d < 1.5f) break;
+        if (d < tol) break;
         if (guard > 900)
         {
-            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
             var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var near = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
-                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
-            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", near)}");
+            var near = new List<string>();
+            for (int ix = (int)x - 3; ix <= (int)x + 3; ix++)
+                for (int iz = (int)z - 3; iz <= (int)z + 3; iz++)
+                    if (Obstacles.At(ground, ix, iz, out float ox, out float oz, out float r, out float h)) near.Add($"{(h == float.MaxValue ? "trunk" : "rock")}@({ox:F1},{oz:F1}) r{r:F2}");
+            foreach (var st in conn.Db.Structure.Iter())
+                if (MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6) near.Add($"{st.Kind}@({st.X:F1},{st.Z:F1}) done={st.Complete} stage={st.Stage}");
+            Console.WriteLine("  near: " + string.Join("; ", near));
+            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left");
         }
-        float step = Math.Min(d - 1f, 0.5f);
+        float step = Math.Min(tol >= 1.5f ? d - 1f : d, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
         var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
@@ -640,8 +673,10 @@ void WalkTo(float tx, float tz)
         else lagged = 0;
         if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
+            float px = x, pz = z;
             x += dx / d * step;
             z += dz / d * step;
+            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
