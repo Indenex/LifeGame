@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation thread (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-26
-PR: (not yet)
+PR: #746
 
 ## Goal
 Per-tool polish (option c). Every craft at a station (crafting table, potter's bench, spindle, drying rack) used one generic standing pose, with the hands moving vaguely at waist height. Now the player still stands at the station but the hands do the craft's own motion. Pots are pressed and shaped (Knead), spinning wool and weaving a basket roll fibre (Twist), cloth weaving, lacing a hide and sewing draw cord (Wrap), hides are scraped (Scrape), and fitting a spindle whorl works the stick (Carve). The back bends less than kneeling at the ground, because the work is at waist height.
