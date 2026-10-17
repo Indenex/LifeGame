@@ -191,7 +191,8 @@ public static class PaintedTrees
         {
             float lat0 = 0.22f + r * 2.3f / (rows - 1);
             float ringR0 = radii.X * Mathf.Sin(lat0);
-            float length = (0.04f + 0.035f * Mathf.Sin(lat0)) * width * (coarse ? 1.9f : 1.2f);
+            // Lobes on the crown's top are short, so the top stays round instead of fringed.
+            float length = (0.04f + 0.035f * Mathf.Sin(lat0)) * width * (coarse ? 1.9f : 1.2f) * Mathf.Lerp(0.55f, 1f, Mathf.Clamp(lat0 / 1.1f, 0f, 1f));
             int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * ringR0 / ((coarse ? 0.1f : 0.045f) * width)));
             // Narrow lobes, so each reads as a small pointed leaf rather than a round scale.
             float wide = Mathf.Tau * ringR0 / count * 0.55f + 0.008f;
