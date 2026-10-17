@@ -1,7 +1,8 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Each value is the kind's fixed id in shared/structures/ (its StructureDef); never renumber or reuse one.
+// Each value's position is the kind's id in shared/structures/ (its StructureDef); append only, never reorder,
+// renumber or reuse one. Init checks that the registered defs match this list exactly.
 [SpacetimeDB.Type]
 public enum StructureKind
 {
@@ -23,6 +24,7 @@ public enum StructureKind
     LogCabin,
     RepairTable,
     TiledHouse,
+    ClayTrough,
 }
 
 // One material a structure's current stage still needs.
