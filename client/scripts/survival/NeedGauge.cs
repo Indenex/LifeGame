@@ -43,6 +43,17 @@ public partial class NeedGauge : Control
         }
     }
 
+    // On warm paper each need has one clear, saturated colour (ui-60, PM after Render B):
+    // food leaf green, water blue; warmth keeps its own cold-to-warm hue (icy blue to coral
+    // orange) but fully saturated; the load sack keeps its own colour, deepened.
+    static Color WarmLevel(Glyph g, Color own) => g switch
+    {
+        Glyph.Berry => new Color(0.36f, 0.66f, 0.27f),
+        Glyph.Drop => new Color(0.22f, 0.56f, 0.88f),
+        Glyph.Flame => Color.FromHsv(own.H, Mathf.Max(own.S, 0.7f), 0.9f),
+        _ => new Color(own.Darkened(0.3f), 1f),
+    };
+
     public override void _Draw()
     {
         var center = Size / 2f;
@@ -57,7 +68,7 @@ public partial class NeedGauge : Control
         // little so they read on cream; on the dark look they stay as they were.
         // ui-59: on paper the level reads as a strong colour on a clear ink track, and the
         // icon is drawn in ink (breathing when low), so it reads at least as well as the dark HUD.
-        if (WarmLook.On) c = new Color(color.Darkened(0.22f), 1f);
+        if (WarmLook.On) c = WarmLevel(glyph, color);
         DrawArc(center, radius, 0, Mathf.Tau, 48, WarmLook.On ? new Color(WarmLook.Ink, 0.32f) : new Color(1, 1, 1, 0.14f), WarmLook.On ? 5f : 4f, true);
         if (shown > 0.005f)
             DrawArc(center, radius, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * shown, 48, c, WarmLook.On ? 5f : 4f, true);
