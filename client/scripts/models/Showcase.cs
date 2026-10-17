@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "coop" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -38,6 +38,7 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "coop") Coop();
             else if (view == "hen") Hen();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
@@ -115,7 +116,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [212] = "Boiled egg", [213] = "Burnt egg" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         // --ids=207,211 shows only those items.
@@ -251,6 +252,20 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
+    // turned a little so the pop-hole, ramp and side show.
+    void Coop()
+    {
+        int kind = System.Array.FindIndex(LifeGame.Shared.Structures.Shapes, s => s.Name == "Hen coop");
+        for (int c = 0; c < 3; c++)
+            foreach (var piece in StructureModel.Pieces(kind))
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-2.6f + c * 2.6f, 0, 0), Rotation = new Vector3(0, 0.55f, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.2f), new Vector3(0, 0.55f, 0), Vector3.Up);
     }
 
     // The hen in three feather colours (white, brown, grey, from the sheep's fleece

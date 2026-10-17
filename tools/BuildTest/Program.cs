@@ -50,6 +50,10 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+a.WalkTo(0f, 0f, 0.3f, Pump);
+b.WalkTo(1f, 0f, 0.3f, Pump);
+
 // The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
 {
     var tiled = Structures.Shape((int)StructureKind.TiledHouse);
@@ -287,6 +291,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
+    LeaveHut(hut); // both are still inside after the "standing inside" check; its walls pen them in
     a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
     b.Wants = new();
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
@@ -455,9 +460,9 @@ void BuildHearth(ulong hut)
     double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
     Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
 
-    // Walls stop the server's players (bugfix-27): leave through the doorway, as a player would.
-    a.WalkTo(door.x, door.z, 0.3f, Pump);
-    b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
+    // Walls stop the server's players (bugfix-27): the next stages gather from outside, so go out
+    // through the doorway to the yard, as a player would.
+    LeaveHut(hut);
 }
 
 // The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished

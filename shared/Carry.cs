@@ -43,6 +43,8 @@ namespace LifeGame.Shared
             [Item.Grog] = 1f,
             [Item.PinchPot] = 1f,
             [Item.CoilPot] = 2f,
+            [Item.Waterskin] = 0.5f,
+            [Item.WaterskinOfWater] = 1.5f,
             [Item.PinchPotOfWater] = 2f,
             [Item.CoilPotOfWater] = 4f,
             [Item.Brick] = 3f,
