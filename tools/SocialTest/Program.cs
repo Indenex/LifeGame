@@ -586,9 +586,10 @@ else
                 t.LastError = null;
             }
         }
-        // The earlier checks gave materials away and used some up: top both up first.
+        // The earlier checks gave materials away and used some up: top both up first. A keeps a stick
+        // and a fiber beyond the marker for the town store and upkeep checks (claims-28).
         foreach (var gatherer in new[] { a, b })
-            foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks), (Item.Fiber, (int)Social.MarkerFiber) })
+            foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks + (gatherer == a ? 1 : 0)), (Item.Fiber, (int)Social.MarkerFiber + (gatherer == a ? 1 : 0)) })
                 while (gatherer.Count(kind) < count)
                 {
                     var item = gatherer.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
@@ -857,6 +858,27 @@ ExpectError(b, () => b.Conn.Reducers.LeaveGroup(), "not in a group", "leaving wi
 Thread.Sleep(600);
 ExpectError(a, () => a.Conn.Reducers.SendChat("/g anyone?"), "not in a group", "/g with no group says so");
 
+// claims-32: friends. A one-way mark shows names only; both ways, each sees the other's rounded
+// spot and whether they are here (B stands about 80 m east of A from the group check).
+ExpectError(a, () => a.Conn.Reducers.AddFriend(a.PlayerId), "your own friend", "nobody can friend themselves");
+a.LastError = null;
+a.Conn.Reducers.AddFriend(b.PlayerId);
+Check(Wait(() => b.Conn.Db.MyFriends.Iter().Any(f => f.OwnerId == a.PlayerId && f.FriendId == b.PlayerId), 5), $"B sees that A added them ({a.LastError ?? "ok"})");
+ExpectError(a, () => a.Conn.Reducers.AddFriend(b.PlayerId), "already your friend", "a friend can't be added twice");
+Thread.Sleep(1000);
+Check(!a.Conn.Db.MyFriendSpots.Iter().Any() && !b.Conn.Db.MyFriendSpots.Iter().Any(), "a one-way mark shows nobody where anyone is");
+b.LastError = null;
+b.Conn.Reducers.AddFriend(a.PlayerId);
+Check(Wait(() => a.Conn.Db.MyFriendSpots.Iter().Any(f => f.PlayerId == b.PlayerId && f.Online) && b.Conn.Db.MyFriendSpots.Iter().Any(f => f.PlayerId == a.PlayerId && f.Online), 5 + Friends.SweepSeconds), $"friends both ways see each other here ({b.LastError ?? "ok"})");
+var bSpot = a.Conn.Db.MyFriendSpots.Iter().FirstOrDefault(f => f.PlayerId == b.PlayerId);
+string bFar = bSpot != null ? Friends.HowFar(bSpot.X - a.X, bSpot.Z - a.Z) : "-";
+Check(bSpot != null && bSpot.X % Friends.SpotStep == 0 && bSpot.Z % Friends.SpotStep == 0 && bFar.EndsWith("east"), $"A sees B rounded to {Friends.SpotStep} m, off to the east ({bFar})");
+Check(Friends.HowFar(0, -40) == "40 m north" && Friends.HowFar(5, 5) == "close by" && Friends.HowFar(-400, 400) == "far off to the southwest", "the friends list says it as the group list does");
+a.Conn.Reducers.RemoveFriend(b.PlayerId);
+Check(Wait(() => !b.Conn.Db.MyFriendSpots.Iter().Any() && !a.Conn.Db.MyFriendSpots.Iter().Any(), 5), "removing a friend stops both seeing the other");
+ExpectError(a, () => a.Conn.Reducers.RemoveFriend(b.PlayerId), "aren't on your friends list", "removing someone not listed is refused");
+b.Conn.Reducers.RemoveFriend(a.PlayerId);
+
 Console.WriteLine(failures == 0 ? "All social checks passed" : $"{failures} checks failed");
 // The SDK keeps background threads alive, so leave explicitly.
 Environment.Exit(failures == 0 ? 0 : 1);
@@ -903,7 +925,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store", "SELECT * FROM my_friends", "SELECT * FROM my_friend_spots",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
