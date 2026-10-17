@@ -27,6 +27,24 @@ public static partial class Module
         public int ChunkX;
         public int ChunkZ;
         public Timestamp PutAt;
+        // The pot's own Wear number (maker and slip) and Maker column, so it comes back as it went in.
+        [Default(0u)]
+        public uint PotWear;
+        [Default(0u)]
+        public uint PotMaker;
+    }
+
+    // The carried pot a craft is about to take (the same one Take picks: best quality first), so its
+    // maker and slip can ride the craft job. 0 and 0 when none is carried.
+    static void PeekVessel(ReducerContext ctx, Item item, out uint wear, out uint maker)
+    {
+        wear = 0;
+        maker = 0;
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)).ToList();
+        stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
+        if (stacks.Count == 0) return;
+        wear = stacks[0].Wear;
+        maker = stacks[0].Maker;
     }
 
     // Outcome.Placed for cook.broth and cook.stew: the pot goes by the burning fire
@@ -44,7 +62,8 @@ public static partial class Module
         {
             foreach (var input in def.Consumes)
                 AddToInventory(ctx, job.Owner, input.Item, input.Count,
-                    ClayRules.IsVessel(input.Item) ? PotQuality(job) : Items.RawQuality);
+                    ClayRules.IsVessel(input.Item) ? PotQuality(job) : Items.RawQuality,
+                    ClayRules.IsVessel(input.Item) ? job.VesselWear : 0u, ClayRules.IsVessel(input.Item) ? job.VesselMaker : 0u);
             News(ctx, job.PlayerId, refusal + " The food goes back in your bag.");
             return;
         }
@@ -68,6 +87,8 @@ public static partial class Module
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
             PutAt = ctx.Timestamp,
+            PotWear = job.VesselWear,
+            PotMaker = job.VesselMaker,
         });
         News(ctx, job.PlayerId, $"Your {ClayRules.DishName(dish)} is simmering. In about {ClayRules.SimmerSeconds(dish) / 60f:0.#} min, {{use}} by the pot takes it off.");
     }
@@ -93,9 +114,10 @@ public static partial class Module
         {
             // Tallow is skimmed off the top; the pot comes back empty (ceramics-9).
             AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, Items.RawQuality);
-            AddToInventory(ctx, Me(ctx), Item.CoilPot, 1, pot.Quality);
+            AddToInventory(ctx, Me(ctx), Item.CoilPot, 1, pot.Quality, pot.PotWear, pot.PotMaker);
         }
         else
-            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, pot.Quality);
+            // The dish is the pot with the food in it: it carries the pot's maker and slip, so eating it gives the same pot back.
+            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, pot.Quality, pot.PotWear, pot.PotMaker);
     }
 }

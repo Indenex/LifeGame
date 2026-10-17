@@ -1,7 +1,7 @@
 # ceramics-15: Maker's mark
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (Sonnet session_01Sc3N1RCsurSszfX5YwGzMU)
-Status: blocked
+Status: done
 Branch: claude/clay-ceramics-15-kfr4kr
 PR: #478
 
@@ -31,4 +31,4 @@ Justin's answer (via the PM, 2026-10-17): "Pick from a panel and give them a bun
 - Look: the glyph art is rough line art until Justin picks (D-154).
 
 ## Next step
-Waiting on Crafting: general 'made by' needs Crafting's Maker column (crafting-25); then switch pots to it and tell UX (ServerBagLink).
+Done in ceramics-21 (the Maker column from crafting-25 is wired in).

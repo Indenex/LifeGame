@@ -68,7 +68,6 @@ public static partial class Subscriptions
         $"SELECT * FROM player_pos WHERE {range}",
         $"SELECT * FROM terrain_edit WHERE {farRange}",
         $"SELECT * FROM chopped_tree WHERE {farRange}",
-        "SELECT * FROM player_mark",
         "SELECT * FROM my_admin",
         $"SELECT * FROM structure WHERE {farRange}",
     };
