@@ -402,7 +402,7 @@ public static class PropMeshes
     // times should look quite different every time). Pick a variant per instance
     // from its seed; variants wrap around, so any int works.
 
-    public const int BirchVariants = 3, HeatherVariants = 3, GorseVariants = 3, OutcropVariants = 6, RiverStoneVariants = 6;
+    public const int BirchVariants = 6, HeatherVariants = 6, GorseVariants = 6, OutcropVariants = 6, RiverStoneVariants = 6;
     static readonly System.Collections.Generic.Dictionary<(string, int), Mesh> Variants = new();
 
     static Mesh Variant(string kind, int variant, int count, System.Func<int, ArrayMesh> build)
@@ -465,12 +465,17 @@ public static class PropMeshes
         var purple = new Color(0.46f, 0.34f, 0.46f);
         int clumps = 12 + (int)(V(v, 1) * 9f);
         float spread = 0.2f + V(v, 2) * 0.12f, tall = 0.8f + V(v, 3) * 0.5f, flowering = 0.55f + V(v, 4) * 0.45f;
-        // Some mounds are long rather than round.
+        // Some mounds are long rather than round; from variant 3 on (model-30, D-166) the
+        // mound has grown out into two lobes, the second smaller, off to one side.
         float stretch = 0.8f + V(v, 5) * 0.5f;
+        float lobeA = V(v, 7) * Mathf.Tau;
+        var lobe = v >= 3 ? new Vector3(Mathf.Cos(lobeA), 0, Mathf.Sin(lobeA)) * spread * (1.2f + V(v, 8) * 0.4f) : Vector3.Zero;
+        if (v >= 3) clumps += 6;
         for (int i = 0; i < clumps; i++)
         {
-            float a = i * 2.4f + V(v, 6) * 3f, r = Mathf.Sqrt(i / (float)clumps) * spread;
-            var at = new Vector3(Mathf.Cos(a) * r * stretch, (0.1f + (spread - r) * 0.6f) * tall, Mathf.Sin(a) * r / stretch);
+            bool second = v >= 3 && i % 3 == 2;
+            float a = i * 2.4f + V(v, 6) * 3f, r = Mathf.Sqrt(i / (float)clumps) * spread * (second ? 0.75f : 1f);
+            var at = new Vector3(Mathf.Cos(a) * r * stretch, (0.1f + (spread - r) * 0.6f) * tall * (second ? 0.8f : 1f), Mathf.Sin(a) * r / stretch) + (second ? lobe : Vector3.Zero);
             float size = 0.08f + H(i + v * 40, 23) * 0.06f;
             k.Paint(green, 0.85f + H(i + v * 40, 24) * 0.25f).Ellipsoid(at, new Vector3(size, size * 0.8f, size), 6, 3);
             if (H(i + v * 40, 26) < flowering)
@@ -489,13 +494,17 @@ public static class PropMeshes
         var k = Kit();
         var green = new Color(0.22f, 0.32f, 0.18f);
         var yellow = new Color(0.95f, 0.80f, 0.20f);
-        // Round, tall or sprawling.
-        var shape = v switch { 0 => new Vector3(1f, 1f, 1f), 1 => new Vector3(0.8f, 1.3f, 0.8f), _ => new Vector3(1.35f, 0.75f, 1.1f) };
+        // Round, tall or sprawling; variants 3 to 5 (model-30) repeat the three with their
+        // proportions pushed about and lean to one side, so no two read the same.
+        var shape = (v % 3) switch { 0 => new Vector3(1f, 1f, 1f), 1 => new Vector3(0.8f, 1.3f, 0.8f), _ => new Vector3(1.35f, 0.75f, 1.1f) };
+        if (v >= 3) shape *= new Vector3(0.85f + V(v, 5) * 0.35f, 0.85f + V(v, 6) * 0.3f, 0.85f + V(v, 7) * 0.35f);
+        var lean = v >= 3 ? new Vector3(V(v, 8) - 0.5f, 0, V(v, 9) - 0.5f) * 0.35f : Vector3.Zero;
         int lumps = 7 + (int)(V(v, 1) * 4f);
         for (int i = 0; i < lumps; i++)
         {
             float a = i * 2.4f + V(v, 2) * 3f, r = i == 0 ? 0f : 0.25f + H(i + v * 30, 26) * 0.12f;
             var at = new Vector3(Mathf.Cos(a) * r * shape.X, (0.35f + H(i + v * 30, 27) * 0.35f - r * 0.4f) * shape.Y, Mathf.Sin(a) * r * shape.Z);
+            at += lean * at.Y;
             k.Paint(green, 0.8f + H(i + v * 30, 28) * 0.3f).Ellipsoid(at, Vector3.One * (0.25f + H(i + v * 30, 29) * 0.08f), 6, 4);
         }
         float flowers = 0.2f + V(v, 3) * 0.25f;
@@ -506,6 +515,7 @@ public static class PropMeshes
             float rr = Mathf.Sqrt(Mathf.Max(0f, 1f - y * y)), a = i * 2.39996f + v;
             var dir = new Vector3(Mathf.Cos(a) * rr, y, Mathf.Sin(a) * rr).Normalized();
             var root = new Vector3(0, 0.5f * shape.Y, 0) + dir * body;
+            root += lean * root.Y;
             if (root.Y < 0.08f) continue;
             if (H(i + v * 30, 32) < flowers)
                 k.Paint(yellow, 0.9f + H(i + v * 30, 30) * 0.15f).Ellipsoid(root + dir * 0.03f, Vector3.One * 0.035f, 5, 3);
