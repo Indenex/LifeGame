@@ -2,8 +2,8 @@
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
 Status: in_progress
-Branch: claude/anim-7 (built on claude/anim-6, #485)
-PR: (open once #485 merges)
+Branch: claude/anim-7
+PR: (opening)
 
 ## Goal
 PM 03:29, for Justin: tool work should feel good. Chop needs weight, a hit on contact and recoil. Dig should be a push, a step on the blade, then a lift and throw of dirt. Add a spade variant for Crafting's new spade. The held tool shows in hand during each job. Both the old figure and the 1.35 m chibi read well. Impacts land on the same frame as Atmosphere's chips and dirt and Audio's thunks.
