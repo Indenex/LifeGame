@@ -94,6 +94,9 @@ namespace LifeGame.Shared
         public ItemTags Tags;
         // Quality matters for made things; raw materials always come at a flat quality.
         public bool HasQuality;
+        // A thing that sits visibly in the world, so it can be set down where you choose
+        // (crafting-21). Small things like tinder and cordage just go to the bag.
+        public bool Placeable;
         // Hand tools wear with use and stop working until mended at a repair table
         // (crafting-19, shared/Durability.cs). A wearing tool needs HasQuality. Mending
         // takes RepairCost besides the visit, and RepairNeedsTool in hand (a cutting tool).
@@ -159,16 +162,16 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.TemperedClay, Name = "Tempered clay", Plural = "Tempered clay" },
             new ItemDef { Id = Item.Potsherd, Name = "Potsherd", Plural = "Potsherds" },
             new ItemDef { Id = Item.Grog, Name = "Grog", Plural = "Grog" },
-            new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true },
-            new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true },
+            new ItemDef { Id = Item.PinchPot, Name = "Pinch pot", Plural = "Pinch pots", HasQuality = true, Placeable = true },
+            new ItemDef { Id = Item.CoilPot, Name = "Coil pot", Plural = "Coil pots", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.PinchPotOfWater, Name = "Pinch pot of water", Plural = "Pinch pots of water", HasQuality = true, Use = UseAction.Drink },
             new ItemDef { Id = Item.CoilPotOfWater, Name = "Coil pot of water", Plural = "Coil pots of water", HasQuality = true, Use = UseAction.Drink },
-            new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks" },
+            new ItemDef { Id = Item.Brick, Name = "Sun-dried brick", Plural = "Sun-dried bricks", Placeable = true },
             new ItemDef { Id = Item.Daub, Name = "Daub", Plural = "Daub" },
             new ItemDef { Id = Item.UnfiredPinchPot, Name = "Unfired pinch pot", Plural = "Unfired pinch pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredCoilPot, Name = "Unfired coil pot", Plural = "Unfired coil pots", HasQuality = true },
             new ItemDef { Id = Item.UnfiredStorageJar, Name = "Unfired storage jar", Plural = "Unfired storage jars", HasQuality = true },
-            new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true },
+            new ItemDef { Id = Item.StorageJar, Name = "Storage jar", Plural = "Storage jars", HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.PotOfBroth, Name = "Pot of berry broth", Plural = "Pots of berry broth", HasQuality = true, Use = UseAction.Eat },
             new ItemDef { Id = Item.PotOfStew, Name = "Pot of mutton stew", Plural = "Pots of mutton stew", HasQuality = true, Use = UseAction.Eat },
             new ItemDef { Id = Item.UnfiredLamp, Name = "Unfired lamp", Plural = "Unfired lamps", HasQuality = true },
@@ -178,9 +181,9 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing, Use = UseAction.Tool },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairNeedsTool = ItemTags.Cutting, Use = UseAction.Tool },
-            new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true },
+            new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true, Wears = true, RepairCost = Lashing },
-            new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360 },
+            new ItemDef { Id = Item.Log, Name = "Log", Plural = "Logs", FuelSeconds = 360, Placeable = true },
             new ItemDef { Id = Item.Bow, Name = "Bow", Plural = "Bows", HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },

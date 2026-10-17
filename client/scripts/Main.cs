@@ -548,7 +548,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.Has(item.Id)) return;
-        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
