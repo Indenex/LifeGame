@@ -14,6 +14,7 @@ Fix (`AtmosphereGrade.cs`, cosy layer): at golden hour the shade fills with warm
 
 ## Progress log
 - 2026-10-17 12:15: built; the client compiles with 0 errors.
+- 2026-10-17 12:50: Render B's golden pairs (renders/golden-pair-1..4 at 7961df8f) showed #767 only a little lighter at 0.72 and 0.75. Cause: at 0.72 the sun is 10 degrees up (0.75 is sunset), and Look's ground and grass light squares a wrap of 0.3, so flat ground got about 13% of full light. Added the low-sun wrap Painted.Light already uses (wrap 0.3 to 0.6, a half-linear falloff at low sun) to both Look light() functions. Ground at a 10 degree sun gets about 0.36 instead of 0.13; noon (elevation above 0.55) is unchanged. Merged main; the client builds with 0 errors.
 
 ## Open questions / blockers
 - Needs a Render before/after (main vs this branch) at 0.65, 0.72 and 0.75, plus noon as a check.
