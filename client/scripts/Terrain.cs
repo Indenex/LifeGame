@@ -23,6 +23,9 @@ public partial class Terrain : Node3D
 
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
+    // Cells whose clearing is drawn by something else (TreeFall), so the chunk shows
+    // the change at once instead of easing it.
+    public Func<int, int, bool>? NoEase;
 
     // When a cell is cleared or grows back, its grass flattens or regrows and the
     // ground color shifts over a second or two instead of popping (D-036).
@@ -169,7 +172,7 @@ public partial class Terrain : Node3D
                 long key = World.CellKey(x, z);
                 bool cleared = Cleared?.Invoke(x, z) == true;
                 bool was = cleared ? !wasCleared.Add(key) : wasCleared.Remove(key);
-                if (rebuilt && was != cleared) clearChanges[key] = (now, cleared);
+                if (rebuilt && was != cleared && NoEase?.Invoke(x, z) != true) clearChanges[key] = (now, cleared);
                 else if (clearChanges.TryGetValue(key, out var c) && now - c.At > ClearFadeSeconds + 1f) clearChanges.Remove(key);
             }
     }
@@ -331,6 +334,7 @@ public partial class Terrain : Node3D
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
+                if (building?.Only is { } only && (x != only.X || z != only.Z)) continue;
                 // A cell cleared a moment ago keeps its grass, trees and rocks just long
                 // enough for them to go: grass flattens, trees topple, rocks sink.
                 var change = ClearChange(x, z);
