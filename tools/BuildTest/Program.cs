@@ -723,15 +723,35 @@ sealed class Bot
 
         if (missing.Contains(Item.Clay) && missing.Count == 1)
         {
-            digCell ??= NearestClay();
+            if (digCell == null)
+            {
+                digCell = NearestClay();
+                digClay = CountOf(Item.Clay);
+                digSince.Restart();
+                Console.WriteLine($"  {name}: digging clay at cell ({digCell.Value.Item1}, {digCell.Value.Item2})");
+            }
             var (cx, cz) = digCell.Value;
+            // A dig the server refused, or a cell that gives no clay for 25 s: say why, leave that cell alone, pick another.
+            if (LastError != null && digging)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: dig at ({cx}, {cz}) refused: {LastError}");
+                badCells.Add((cx, cz)); digCell = null; digging = false; LastError = null;
+                return;
+            }
+            if (digSince.Elapsed.TotalSeconds > 25 && CountOf(Item.Clay) <= digClay)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: no clay from ({cx}, {cz}) in 25 s (at {X:F1}, {Z:F1}, target {cx * World.CellSize - 0.8f:F1}, {cz * World.CellSize:F1})");
+                badCells.Add((cx, cz)); digCell = null; digging = false;
+                return;
+            }
+            if (CountOf(Item.Clay) > digClay) { digClay = CountOf(Item.Clay); digSince.Restart(); }
             float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
             if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
             else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
-                else Conn.Reducers.Dig(cx, cz);
+                else { digging = true; LastError = null; Conn.Reducers.Dig(cx, cz); }
             }
             return;
         }
@@ -760,10 +780,23 @@ sealed class Bot
                 {
                     noneLogged = true;
                     Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                    noneFor.Restart();
+                }
+                // The bots only see items near them, and earlier builds picked the nearby ones: walk on, round a
+                // widening spiral, until some come into view.
+                if (gatherPump != null && noneFor.Elapsed.TotalSeconds > 3)
+                {
+                    exploreStep++;
+                    float angle = exploreStep * 2.4f, reach = MathF.Min(15f + 8f * exploreStep, 90f);
+                    float ex = X + MathF.Cos(angle) * reach, ez = Z + MathF.Sin(angle) * reach;
+                    Console.WriteLine($"  {name}: looking further for {string.Join(", ", missing)}, step {exploreStep} to ({ex:F0}, {ez:F0})");
+                    WalkTo(ex, ez, 2f, gatherPump);
+                    noneFor.Restart();
                 }
                 return;
             }
             noneLogged = false;
+            exploreStep = 0;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -779,6 +812,12 @@ sealed class Bot
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
     bool noneLogged;
+    readonly HashSet<(int, int)> badCells = new();
+    bool digging;
+    uint digClay;
+    readonly Stopwatch digSince = Stopwatch.StartNew();
+    int exploreStep;
+    readonly Stopwatch noneFor = Stopwatch.StartNew();
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;
@@ -810,7 +849,7 @@ sealed class Bot
             for (int x = x0 - r; x <= x0 + r; x++)
                 for (int z = z0 - r; z <= z0 + r; z++)
                     if (Math.Max(Math.Abs(x - x0), Math.Abs(z - z0)) == r && World.IsClay(x, z)
-                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z))
+                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z) && !badCells.Contains((x, z)))
                         return (x, z);
         throw new Exception("No clay nearby");
     }

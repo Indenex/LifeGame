@@ -691,6 +691,30 @@ else
             Check(Wait(() => a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Note && l.Text.Contains("The well was dug")), 5), "the Scribe adds a note to the log");
             ExpectError(a, () => a.Conn.Reducers.WriteTownLog("Again"), "moment", "notes are rate limited");
 
+            // D-323: a ban is per character. A's second character is banned; A's first still builds.
+            a.Conn.Reducers.ReturnToMenu();
+            Thread.Sleep(800);
+            string secondName = "Chk" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
+            a.Conn.Reducers.CreateCharacter(secondName, 0, 0, 0, 0, 0);
+            Check(Wait(() => a.Conn.Db.MyCharacters.Iter().Count() == 2, 8), $"A makes a second character ({a.LastError ?? "no error"})");
+            var firstChar = a.Conn.Db.MyCharacters.Iter().FirstOrDefault(c => c.PlayerId == a.PlayerId);
+            var otherChar = a.Conn.Db.MyCharacters.Iter().FirstOrDefault(c => c.PlayerId != a.PlayerId);
+            Check(otherChar.Key != otherChar.Login, "the second character has its own key, not the login");
+            a.Conn.Reducers.ReturnToMenu();
+            Thread.Sleep(800);
+            a.Conn.Reducers.SelectCharacter(firstChar.Key);
+            Thread.Sleep(1500);
+            b.Conn.Reducers.BanFromTown(otherChar.PlayerId, 1);
+            Check(Wait(() => a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId && x.BannedId == otherChar.PlayerId), 5), "the Marshal bans A's second character");
+            var charBan = a.Conn.Db.TownBan.Iter().First(x => x.BannedId == otherChar.PlayerId);
+            Check(charBan.Banned == otherChar.Key && charBan.Banned != otherChar.Login && !a.Conn.Db.TownBan.Iter().Any(x => x.BannedId == a.PlayerId), "the ban names that character, not the login or the first character");
+            a.LastError = null;
+            a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, bClaim.X, bClaim.Z - 7f, 0);
+            Thread.Sleep(1500);
+            Check(a.LastError == null || !a.LastError.Contains("claimed"), $"A's first character is not kept off B's land by the other's ban ({a.LastError ?? "no error"})");
+            b.Conn.Reducers.LiftTownBan(otherChar.PlayerId);
+            Check(Wait(() => !a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId), 5), "the Marshal lifts the second character's ban");
+
             // The Mayor removes a signer; the rights go with them.
             b.Conn.Reducers.RemoveFromTown(a.PlayerId);
             Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "the Mayor removes A from the roster");
@@ -775,7 +799,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
