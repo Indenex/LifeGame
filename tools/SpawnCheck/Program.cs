@@ -245,6 +245,40 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     // A giant oak's broad trunk (bugfix-48): a landmark, so it is found by its feature cell.
     Probe(true, "giant oak", (x, z) => Features.At(x, z, FeatureGround.Dry) is { Block: FeatureBlock.Trunk }, 200);
     Probe(false, "boulder");
+    // An outcrop's stones are landmark stones, found by square (bugfix-49): the server must hold them too.
+    {
+        float ox = 0, oz = 0, r = 0;
+        bool found = false;
+        int outcropSquare = Features.Find(FeatureId.Outcrop).Square;
+        int sx0 = Landmarks.SquareOf(World.CellOf(px), outcropSquare), sz0 = Landmarks.SquareOf(World.CellOf(pz), outcropSquare);
+        for (int ring = 0; ring < 8 && !found; ring++)
+            for (int sx = sx0 - ring; sx <= sx0 + ring && !found; sx++)
+                for (int sz = sz0 - ring; sz <= sz0 + ring && !found; sz++)
+                {
+                    if (Math.Max(Math.Abs(sx - sx0), Math.Abs(sz - sz0)) != ring || !Features.Find(FeatureId.Outcrop).In(sx, sz, out int cx, out int cz)) continue;
+                    foreach (var (cxs, czs, cr) in LandmarkBlocks.Circles(Features.Find(FeatureId.Outcrop), cx, cz))
+                    {
+                        float lane = cxs - cr - 1.2f;
+                        if (cr < 0.5f || Obstacles.StepBlocked(ground, 0.4f, lane, czs, cxs - cr - 0.5f, czs, 0f) || Obstacles.PushOut(ground, 0.4f, lane, czs, 0f) != (lane, czs)) continue;
+                        (ox, oz, r) = (cxs, czs, cr);
+                        found = true;
+                        break;
+                    }
+                }
+        Check(found, "found an outcrop stone near the player");
+        Walk(ox - r - 1.2f, oz);
+        for (int i = 0; i < 12; i++)
+        {
+            px = MathF.Min(px + 0.2f, ox);
+            conn.Reducers.Move(px, oz, MathF.PI / 2);
+            Pump(120);
+        }
+        Pump(400);
+        var at = MyPos()!;
+        float dist = MathF.Sqrt((at.X - ox) * (at.X - ox) + (at.Z - oz) * (at.Z - oz));
+        Check(dist >= r + 0.2f, $"the server kept us out of the outcrop stone ({dist:F2} m from its middle, radius {r:F2})");
+        px = at.X; pz = at.Z;
+    }
 }
 
 // "I'm stuck" puts the player on ground clear of trunks and boulders too (bugfix-47): we stand right

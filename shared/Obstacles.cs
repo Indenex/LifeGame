@@ -60,7 +60,7 @@ namespace LifeGame.Shared
             height = float.MaxValue;
 
             // A landmark's broad trunk (a giant oak, env-5/env-10) is checked first: its cell has no
-            // forest roll of its own. Outcrops hold only stones, which are not enforced here yet.
+            // forest roll of its own. An outcrop holds only stones (LandmarkBlocks.Near, tested in StepBlocked).
             if (Features.At(x, z, FeatureGround.Dry) is { } feature)
             {
                 if (feature.Block != FeatureBlock.Trunk || g.Dug(x, z) || g.Cleared(x, z) || g.TileHeight(x, z) < World.WaterLevel + 0.1f) return false;
@@ -156,6 +156,15 @@ namespace LifeGame.Shared
                     float from = (fx - ox) * (fx - ox) + (fz - oz) * (fz - oz);
                     if (to < keep * keep && to < from) return true;
                 }
+            // The stones of an outcrop (LandmarkBlocks), which spread past their middle cell.
+            foreach (var (ox, oz, radius) in LandmarkBlocks.Near(tx, tz))
+            {
+                if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
+                float keep = radius + body;
+                float to = (tx - ox) * (tx - ox) + (tz - oz) * (tz - oz);
+                float from = (fx - ox) * (fx - ox) + (fz - oz) * (fz - oz);
+                if (to < keep * keep && to < from) return true;
+            }
             return false;
         }
 
@@ -174,6 +183,16 @@ namespace LifeGame.Shared
                     tx = ox + dx / d * keep;
                     tz = oz + dz / d * keep;
                 }
+            foreach (var (ox, oz, radius) in LandmarkBlocks.Near(tx, tz))
+            {
+                if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
+                float dx = tx - ox, dz = tz - oz, keep = radius + body, d2 = dx * dx + dz * dz;
+                if (d2 >= keep * keep) continue;
+                if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
+                float d = MathF.Sqrt(d2);
+                tx = ox + dx / d * keep;
+                tz = oz + dz / d * keep;
+            }
             return (tx, tz);
         }
     }

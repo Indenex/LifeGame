@@ -16,3 +16,10 @@ PM idea after #660: landmarks (giant trees, outcrops) become server obstacles to
 
 ## Next step
 Wait for CI on the PR, send the green sha to the PM, then ask Environment about part 2.
+
+## Part 2 (bugfix-49): the outcrop stones, a pure move
+- Branch claude/bugfix-49. `shared/LandmarkBlocks.cs` now holds the outcrop layout (`Outcrop(x, z, atX, atZ)` returns pieces: kind, seeds, position, size, tipped), the boulder and formation proportions (`RockStretch`, `FormationStretch`), their radii, `Circles(feature, x, z)` and `Near(px, pz)` (stones by square, cached). The client's `LandmarkProps.Outcrop` draws from the pieces; `Rock`/`Formation` take their proportions from shared; `Lists.Blocks` is gone; `TerrainCollision.CollideFeatures` reads `LandmarkBlocks.Near`. `Obstacles.StepBlocked` and `PushOut` read it too, so the server and the check bots refuse outcrop stones.
+- Pure move, checked two ways: (1) old circles from the unchanged builders (headless Godot, 269 outcrops) against `LandmarkBlocks.Circles`: 1209 circles, 0 differences; (2) every transform and colour the builders hand to the terrain for outcrops and giant oaks over 17 x 17 squares, old main against this branch: identical files (2284 lines).
+- The giant oak's foot stones never blocked (only its trunk does) and still do not.
+- SpawnCheck probes an outcrop stone: the server kept the player 0.96 m from the middle of a 0.56 m stone; 4 of 4 local runs.
+- Environment's #718 (a fourth feature, FallenGiant) can add one case to `LandmarkBlocks.Circles`/a piece list; its geometry was sent by Environment.

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 
@@ -35,50 +36,20 @@ public partial class Terrain
     }
 
     // Features that block with stones (outcrops, env-5) spread several meters from their
-    // middle cell, so their stones are found by square rather than by the cells next
-    // to the walker.
-    readonly Dictionary<(FeatureId, int, int), List<(float X, float Z, float R)>> featureStones = new();
-
+    // middle cell, so their stones come from shared/LandmarkBlocks.cs by square rather than
+    // by the cells next to the walker. The server reads the same circles (bugfix-49).
     Vector3 CollideFeatures(Vector3 to, float airHeight)
     {
-        foreach (var feature in Features.All)
+        foreach (var (ox, oz, radius) in LandmarkBlocks.Near(to.X, to.Z).ToList())
         {
-            if (feature.Block != FeatureBlock.Stones) continue;
-            int size = feature.Square;
-            float reach = feature.Spread;
-            int sx0 = Landmarks.SquareOf(Mathf.FloorToInt(to.X - reach), size), sx1 = Landmarks.SquareOf(Mathf.FloorToInt(to.X + reach), size);
-            int sz0 = Landmarks.SquareOf(Mathf.FloorToInt(to.Z - reach), size), sz1 = Landmarks.SquareOf(Mathf.FloorToInt(to.Z + reach), size);
-            for (int sx = sx0; sx <= sx1; sx++)
-                for (int sz = sz0; sz <= sz1; sz++)
-                    foreach (var (ox, oz, radius) in FeatureStones(feature, sx, sz))
-                    {
-                        if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
-                        float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
-                        if (d2 >= keep * keep) continue;
-                        if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
-                        float d = Mathf.Sqrt(d2);
-                        to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
-                    }
+            if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
+            float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
+            if (d2 >= keep * keep) continue;
+            if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
+            float d = Mathf.Sqrt(d2);
+            to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
         }
         return to;
-    }
-
-    // The blocking stones of a feature in a square, worked out once with the same
-    // seed the terrain draws them from.
-    List<(float X, float Z, float R)> FeatureStones(FeatureDef feature, int sx, int sz)
-    {
-        if (featureStones.TryGetValue((feature.Id, sx, sz), out var stones)) return stones;
-        stones = new();
-        if (feature.In(sx, sz, out int x, out int z))
-        {
-            var (fx, fz) = Trees.Trunk(x, z);
-            var built = new LandmarkProps.Lists();
-            LandmarkProps.For(feature).Build(x, z, new Vector3(fx, 0f, fz), (_, _) => 0f, built, new Color(0, 0, 0, 0));
-            stones.AddRange(built.Blocks);
-        }
-        if (featureStones.Count > 256) featureStones.Clear();
-        featureStones[(feature.Id, sx, sz)] = stones;
-        return stones;
     }
 
     // How far a felled tree on a cell has grown back (0 to 1), or -1 (TreeFall sets it).
