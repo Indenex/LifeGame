@@ -177,8 +177,8 @@ public partial class Main : Node3D
         // ui-39: the character menu, the first screen once a login has characters (AtCharacterMenu).
         characterMenu.NewCharacter = () => NewCharacter(null);
         AddChild(characterMenu);
-        // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
-        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
+        // The sundial's time-of-day arc (ui-32); Has reads House building's my_sundial view (a finished sundial in your claim or town).
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay, Has = () => conn != null && conn.Db.MySundial.Count > 0 });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || bugReport?.IsOpen == true
