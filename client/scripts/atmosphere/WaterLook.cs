@@ -37,11 +37,10 @@ public static class WaterLook
     {
         if (globals) return;
         globals = true;
-        var have = RenderingServer.GlobalShaderParameterGetList();
-        void Add(StringName name, RenderingServer.GlobalShaderParameterType type, Variant value)
-        {
-            if (!have.Contains(name)) RenderingServer.GlobalShaderParameterAdd(name, type, value);
-        }
+        // Added once per run (the flag above); never list the globals to check, as
+        // GlobalShaderParameterGetList is editor-only and slow.
+        static void Add(StringName name, RenderingServer.GlobalShaderParameterType type, Variant value) =>
+            RenderingServer.GlobalShaderParameterAdd(name, type, value);
         Add(SkyTop, RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0.35f, 0.55f, 0.8f));
         Add(SkyHorizon, RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0.7f, 0.78f, 0.82f));
         Add(SunDir, RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0.3f, 0.8f, 0.5f).Normalized());
