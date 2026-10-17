@@ -24,7 +24,7 @@ UX adds the key or wheel that calls the reducer. Until then, Render C can call `
 
 ## Open questions / blockers
 - Waiting on the PM/Justin's pick of the next Animation item (emotes recommended).
-- UX: an emote wheel or keys calling `conn.Reducers.Emote((byte)WorkMotion.X)`.
+- UX: the wheel is #655 (hold Q). It switches to Emotes.All and the Emote reducer once #653 merges. Tell UX if anything in #653 is renamed.
 
 ## Next step
 Wait for CI on #653, send the PM the green sha, and fix anything the Render C clip shows. UX asked for the wheel.
