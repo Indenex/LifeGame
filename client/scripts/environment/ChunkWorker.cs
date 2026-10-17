@@ -101,6 +101,7 @@ public partial class Terrain
         prewarmed = true;
         EnsureMeshes();
         PaintedTrees.Prewarm();
+        NatureKit.Prewarm();
         _ = Painted.GhostOf(Painted.Rock);
         _ = Painted.Bush;
         _ = Painted.Foliage;
