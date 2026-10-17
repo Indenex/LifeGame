@@ -108,6 +108,10 @@ Subscribe(Subscriptions.Self, 20, "own player subscribed after reconnect");
 var back = MyPos();
 Check(back != null && MathF.Abs(back.X - far.X) < 1.5f && MathF.Abs(back.Z - far.Z) < 1.5f,
     $"own position is where we logged off ({back?.X:F1}, {back?.Z:F1})");
+// A login that already has a character waits at the character menu (survival-24): play it.
+Check(!Me.InWorld(conn), "a returning login starts at the character menu");
+conn.Reducers.SelectCharacter(Me.Key(conn)!.Value);
+WaitFor(() => Me.InWorld(conn), 10, "the returning character in the world");
 Subscribe(Subscriptions.Area(AreaAround(back!.X, back.Z)), 20, "area around the saved position subscribed");
 Check(conn.Db.PlayerPos.Iter().Any(p => p.PlayerId == back.PlayerId), "the area includes us too");
 Check(conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, "logging off stood us up again");
@@ -143,7 +147,7 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     // Walking itself is tested here and nowhere else (integration-12): this walker is strict, so a stall
     // fails the check instead of repositioning the bot as the other tools' walkers would.
     var walker = new BotWalker(conn, myId, "Spawn check", "bot", Pump, msg => { Check(false, msg); }, strict: true);
-    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f);
+    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f, stand: true);
     WalkTo(sx, wz);
     WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
     Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");

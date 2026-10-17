@@ -115,7 +115,7 @@ public partial class StationPanel : CanvasLayer
     {
         if (tipped || (tipWait -= (float)GetProcessDeltaTime()) > 0f) return;
         tipWait = 1f;
-        if (Conn() is not { } c || c.Identity is not { } me) return;
+        if (Conn() is not { } c || LifeGame.Me.Key(c) is not { } me) return;
         var mine = c.Db.Structure.Iter().FirstOrDefault(s => s.Complete && s.Owner == me
             && Structures.Shape((int)s.Kind).Station != StationKind.None);
         if (mine == null) return;

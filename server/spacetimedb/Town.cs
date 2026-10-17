@@ -122,6 +122,40 @@ public static partial class Module
         public Timestamp LastAt;
     }
 
+    // Private: lets the server admin shorten terms for a playtest (and for the SocialTest).
+    [SpacetimeDB.Table(Accessor = "TownConfig")]
+    public partial struct TownConfig
+    {
+        [PrimaryKey]
+        public byte Id;
+        public long TermMicros;
+        public long VacancyMicros;
+    }
+
+    static long TermMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.TermMicros ?? Social.TownTermMicros;
+    static long VacancyMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.VacancyMicros ?? Social.TownVacancyMicros;
+
+    // Database owner only: how long an office term (and a vacant seat's wait) lasts, in seconds.
+    // 0 puts the defaults back. Applies to seats filled from now on.
+    [SpacetimeDB.Reducer]
+    public static void SetTownTerm(ReducerContext ctx, long seconds)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
+        if (seconds < 0) throw new Exception("Seconds cannot be negative");
+        var row = new TownConfig { Id = 0, TermMicros = seconds == 0 ? Social.TownTermMicros : seconds * 1_000_000, VacancyMicros = seconds == 0 ? Social.TownVacancyMicros : seconds * 1_000_000 };
+        if (ctx.Db.TownConfig.Id.Find(0) == null) ctx.Db.TownConfig.Insert(row); else ctx.Db.TownConfig.Id.Update(row);
+    }
+
+    // Database owner only: settle the terms that have ended now rather than at the next hourly pass.
+    [SpacetimeDB.Reducer]
+    public static void SettleTownTermsNow(ReducerContext ctx)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can do this");
+        SettleTerms(ctx);
+    }
+
     [SpacetimeDB.Table(Accessor = "TownTermTimer", Scheduled = nameof(TownTerms), ScheduledAt = nameof(ScheduledAt))]
     public partial struct TownTermTimer
     {
@@ -132,7 +166,7 @@ public static partial class Module
     }
 
     [SpacetimeDB.View(Accessor = "MyTownInvites", Public = true)]
-    public static List<TownInvite> MyTownInvites(ViewContext ctx) => ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList();
+    public static List<TownInvite> MyTownInvites(ViewContext ctx) => ctx.Db.TownInvite.Invitee.Filter(Me(ctx)).ToList();
 
     // Whether `who` signed the same roster as this claim (and is not just its owner or a member).
     static bool IsTownmate(ReducerContext ctx, Claim claim, Identity who)
@@ -176,19 +210,20 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireOwnStandingClaim(ctx);
-        if (SignerOf(ctx, ctx.Sender) != null) throw new Exception("You are already on a town roster");
+        if (SignerOf(ctx, Me(ctx)) != null) throw new Exception("You are already on a town roster");
         name = Social.CleanClaimName(name);
         if (name.Length == 0) throw new Exception("Give the town a name");
         EnsureTownTimer(ctx);
         var town = ctx.Db.Town.Insert(new Town { Id = 0, Name = name, StartedAt = ctx.Timestamp });
         Sign(ctx, town.Id, claim, player);
+        TownLogLine(ctx, town.Id, $"{player.Name} started the town");
         // Invitations to other towns no longer apply once you have started your own.
-        foreach (var invite in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList()) ctx.Db.TownInvite.Id.Delete(invite.Id);
+        foreach (var invite in ctx.Db.TownInvite.Invitee.Filter(Me(ctx)).ToList()) ctx.Db.TownInvite.Id.Delete(invite.Id);
         // The founder is the first Mayor until the signers vote.
         ctx.Db.TownOffice.Insert(new TownOffice
         {
             Id = 0, TownId = town.Id, Office = Social.OfficeMayor, Holder = player.Identity, HolderId = player.PlayerId,
-            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownTermMicros),
+            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(TermMicros(ctx)),
         });
     }
 
@@ -204,10 +239,10 @@ public static partial class Module
     public static void InviteToTown(ReducerContext ctx, uint playerId)
     {
         var me = RequirePlayer(ctx);
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("Start or join a town first");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("Start or join a town first");
         var town = ctx.Db.Town.Id.Find(mine.TownId) ?? throw new Exception("That town is gone");
         var them = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
-        if (them.Identity == ctx.Sender) throw new Exception("You are already on the roster");
+        if (them.Identity == Me(ctx)) throw new Exception("You are already on the roster");
         var theirClaim = ctx.Db.Claim.Owner.Filter(them.Identity).FirstOrDefault(c => IsStanding(ctx, c));
         if (theirClaim.Id == 0) throw new Exception($"{them.Name} has no claim to sign with");
         if (SignerOf(ctx, them.Identity) != null) throw new Exception($"{them.Name} is already on a town roster");
@@ -228,7 +263,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var town = ctx.Db.Town.Id.Find(townId) ?? throw new Exception("That town is gone");
-        var invite = ctx.Db.TownInvite.ByTownInvitee.Filter((townId, ctx.Sender)).FirstOrDefault();
+        var invite = ctx.Db.TownInvite.ByTownInvitee.Filter((townId, Me(ctx))).FirstOrDefault();
         if (invite.Id == 0) throw new Exception("You haven't been invited to sign this roster");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch - invite.At.MicrosecondsSinceUnixEpoch > Social.TownInviteMicros)
         {
@@ -236,27 +271,28 @@ public static partial class Module
             throw new Exception("That invitation has expired. Ask for a new one");
         }
         var claim = RequireOwnStandingClaim(ctx);
-        if (SignerOf(ctx, ctx.Sender) != null) throw new Exception("You are already on a town roster");
+        if (SignerOf(ctx, Me(ctx)) != null) throw new Exception("You are already on a town roster");
         if (!NearTown(ctx, town.Id, claim))
             throw new Exception($"Your claim is too far from the town: within {Social.TownNearMetres:0} m of a signed marker, please");
         if (ctx.Db.TownSigner.ByTown.Filter(town.Id).Count() >= Social.TownMaxClaims)
             throw new Exception($"A town holds at most {Social.TownMaxClaims} claims");
         Sign(ctx, town.Id, claim, player);
-        foreach (var mine in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList())
+        TownLogLine(ctx, town.Id, $"{player.Name} signed the roster");
+        foreach (var mine in ctx.Db.TownInvite.Invitee.Filter(Me(ctx)).ToList())
             ctx.Db.TownInvite.Id.Delete(mine.Id);
     }
 
     [SpacetimeDB.Reducer]
     public static void DeclineTown(ReducerContext ctx, ulong townId)
     {
-        foreach (var invite in ctx.Db.TownInvite.ByTownInvitee.Filter((townId, ctx.Sender)).ToList())
+        foreach (var invite in ctx.Db.TownInvite.ByTownInvitee.Filter((townId, Me(ctx))).ToList())
             ctx.Db.TownInvite.Id.Delete(invite.Id);
     }
 
     [SpacetimeDB.Reducer]
     public static void LeaveTown(ReducerContext ctx)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         DropSigner(ctx, mine);
     }
 
@@ -264,12 +300,12 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RemoveFromTown(ReducerContext ctx, uint playerId)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Remove))
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Remove))
             throw new Exception("Only the town's Mayor can remove a claim from the roster");
         var target = ctx.Db.TownSigner.ByTown.Filter(mine.TownId).FirstOrDefault(r => r.PlayerId == playerId);
         if (target.Id == 0) throw new Exception("They are not on this roster");
-        if (target.Owner == ctx.Sender) throw new Exception("Use leave to step down yourself");
+        if (target.Owner == Me(ctx)) throw new Exception("Use leave to step down yourself");
         DropSigner(ctx, target);
     }
 
@@ -290,26 +326,27 @@ public static partial class Module
     }
 
     static IEnumerable<Identity> HoldersWith(ReducerContext ctx, ulong townId, TownPower power) =>
-        ctx.Db.TownOffice.ByTown.Filter(townId).ToList()
+        ctx.Db.TownOffice.ByTown.Filter(townId).ToList().OrderBy(o => o.Office)
             .Where(o => o.HolderId != 0 && Towns.Get(o.Office) is { } d && (d.Powers & power) != 0).Select(o => o.Holder);
 
     [SpacetimeDB.Reducer]
     public static void RenameTown(ReducerContext ctx, string name)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Rename)) throw new Exception("Only the Mayor can rename the town");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Rename)) throw new Exception("Only the Mayor can rename the town");
         name = Social.CleanClaimName(name);
         if (name.Length == 0) throw new Exception("Give the town a name");
         var town = ctx.Db.Town.Id.Find(mine.TownId) ?? throw new Exception("That town is gone");
         ctx.Db.Town.Id.Update(town with { Name = name });
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} renamed the town {name}");
     }
 
     // The Herald (or Mayor) sends one word to every signer, not more than once a minute.
     [SpacetimeDB.Reducer]
     public static void AnnounceToTown(ReducerContext ctx, string text)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Announce)) throw new Exception("Only the Herald or the Mayor can speak for the town");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Announce)) throw new Exception("Only the Herald or the Mayor can speak for the town");
         text = Social.StripControl(text).Trim();
         if (text.Length == 0) return;
         if (text.Length > Towns.AnnounceMax) text = text[..Towns.AnnounceMax];
@@ -328,8 +365,8 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.ClearRuins)) throw new Exception("Only the Warden or the Mayor can clear ruins");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.ClearRuins)) throw new Exception("Only the Warden or the Mayor can clear ruins");
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
         float dx = s.X - pos.X, dz = s.Z - pos.Z;
         if (dx * dx + dz * dz > Towns.ClearRuinReach * Towns.ClearRuinReach) throw new Exception("Walk up to it first");
@@ -341,14 +378,15 @@ public static partial class Module
         if (ctx.Db.TownSigner.ByTown.Filter(mine.TownId).Any(r => r.Owner == s.Owner)) throw new Exception("Its builder is still on the roster");
         foreach (var row in ctx.Db.BasketItem.StructureId.Filter(s.Id).ToList()) ctx.Db.BasketItem.Id.Delete(row.Id);
         RemoveStructure(ctx, s);
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} cleared a ruin");
     }
 
     // Two towns join when a majority of each town's signers say yes within three days.
     [SpacetimeDB.Reducer]
     public static void ProposeTownMerge(ReducerContext ctx, ulong otherTownId)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Merge)) throw new Exception("Only the Mayor can propose a merge");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Merge)) throw new Exception("Only the Mayor can propose a merge");
         if (otherTownId == mine.TownId) throw new Exception("That is your own town");
         var from = ctx.Db.Town.Id.Find(mine.TownId) ?? throw new Exception("That town is gone");
         var to = ctx.Db.Town.Id.Find(otherTownId) ?? throw new Exception("That town is gone");
@@ -365,13 +403,13 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void VoteTownMerge(ReducerContext ctx, ulong mergeId, bool yes)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("Only signers vote");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("Only signers vote");
         var merge = ctx.Db.TownMerge.Id.Find(mergeId) ?? throw new Exception("That proposal is gone");
         if (mine.TownId != merge.FromTownId && mine.TownId != merge.ToTownId) throw new Exception("That is not your town's to vote on");
         if (merge.ExpiresAt.MicrosecondsSinceUnixEpoch <= ctx.Timestamp.MicrosecondsSinceUnixEpoch) { DeleteMerge(ctx, merge); throw new Exception("That proposal has run out"); }
-        foreach (var old in ctx.Db.TownMergeVote.ByMerge.Filter(mergeId).Where(v => v.Voter == ctx.Sender).ToList())
+        foreach (var old in ctx.Db.TownMergeVote.ByMerge.Filter(mergeId).Where(v => v.Voter == Me(ctx)).ToList())
             ctx.Db.TownMergeVote.Id.Delete(old.Id);
-        ctx.Db.TownMergeVote.Insert(new TownMergeVote { Id = 0, MergeId = mergeId, TownId = mine.TownId, Voter = ctx.Sender, Yes = yes });
+        ctx.Db.TownMergeVote.Insert(new TownMergeVote { Id = 0, MergeId = mergeId, TownId = mine.TownId, Voter = Me(ctx), Yes = yes });
         bool Majority(ulong townId) =>
             ctx.Db.TownMergeVote.ByMerge.Filter(mergeId).Count(v => v.TownId == townId && v.Yes) * 2 > ctx.Db.TownSigner.ByTown.Filter(townId).Count();
         if (Majority(merge.FromTownId) && Majority(merge.ToTownId)) ExecuteMerge(ctx, merge);
@@ -412,8 +450,11 @@ public static partial class Module
         if (ctx.Db.TownVoice.TownId.Find(gone.Id) != null) ctx.Db.TownVoice.TownId.Delete(gone.Id);
         foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == gone.Id || m.ToTownId == gone.Id || m.FromTownId == keep.Id || m.ToTownId == keep.Id).ToList())
             DeleteMerge(ctx, m);
+        foreach (var ban in ctx.Db.TownBan.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownBan.Id.Update(ban with { TownId = keep.Id });
+        foreach (var line in ctx.Db.TownLog.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownLog.Id.Update(line with { TownId = keep.Id });
         ctx.Db.Town.Id.Delete(gone.Id);
-        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+        TownLogLine(ctx, keep.Id, $"{gone.Name} joined {keep.Name}");
+        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // Vote for who should hold an office. Open ballot: one vote per signer per office, changeable.
@@ -422,15 +463,15 @@ public static partial class Module
     public static void VoteTownOffice(ReducerContext ctx, byte office, uint candidatePlayerId)
     {
         if (Towns.Get(office) == null) throw new Exception("There is no such office");
-        var me = SignerOf(ctx, ctx.Sender) ?? throw new Exception("Only signers vote");
+        var me = SignerOf(ctx, Me(ctx)) ?? throw new Exception("Only signers vote");
         // An office nobody holds yet gets a vacant seat on its first vote, so its term can end.
         if (OfficeOf(ctx, me.TownId, office) == null)
-            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
         var candidate = ctx.Db.TownSigner.ByTown.Filter(me.TownId).FirstOrDefault(r => r.PlayerId == candidatePlayerId);
         if (candidate.Id == 0) throw new Exception("They are not on this roster");
-        foreach (var old in ctx.Db.TownVote.ByTown.Filter(me.TownId).Where(v => v.Office == office && v.Voter == ctx.Sender).ToList())
+        foreach (var old in ctx.Db.TownVote.ByTown.Filter(me.TownId).Where(v => v.Office == office && v.Voter == Me(ctx)).ToList())
             ctx.Db.TownVote.Id.Delete(old.Id);
-        ctx.Db.TownVote.Insert(new TownVote { Id = 0, TownId = me.TownId, Office = office, Voter = ctx.Sender, VoterId = me.PlayerId, CandidateId = candidatePlayerId });
+        ctx.Db.TownVote.Insert(new TownVote { Id = 0, TownId = me.TownId, Office = office, Voter = Me(ctx), VoterId = me.PlayerId, CandidateId = candidatePlayerId });
         int signers = ctx.Db.TownSigner.ByTown.Filter(me.TownId).Count();
         var leader = ctx.Db.TownVote.ByTown.Filter(me.TownId).Where(v => v.Office == office)
             .GroupBy(v => v.CandidateId).Select(g => (id: g.Key, n: g.Count())).OrderByDescending(g => g.n).First();
@@ -440,7 +481,9 @@ public static partial class Module
     // The winner takes the seat for a full term; the ballot starts afresh.
     static void SeatOffice(ReducerContext ctx, ulong townId, byte office, TownSigner winner)
     {
-        var term = ctx.Timestamp + new TimeDuration(Social.TownTermMicros);
+        var term = ctx.Timestamp + new TimeDuration(TermMicros(ctx));
+        if (OfficeOf(ctx, townId, office) is not { } held || held.HolderId != winner.PlayerId)
+            TownLogLine(ctx, townId, $"{winner.OwnerName} became {Towns.Get(office)?.Name ?? "an officer"}");
         if (OfficeOf(ctx, townId, office) is { } seat)
             ctx.Db.TownOffice.Id.Update(seat with { Holder = winner.Owner, HolderId = winner.PlayerId, HolderName = winner.OwnerName, TermEndsAt = term });
         else
@@ -455,7 +498,13 @@ public static partial class Module
     public static void TownTerms(ReducerContext ctx, TownTermTimer timer)
     {
         RequireServer(ctx);
+        SettleTerms(ctx);
+    }
+
+    static void SettleTerms(ReducerContext ctx)
+    {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        ExpireBans(ctx);
         foreach (var merge in ctx.Db.TownMerge.Iter().Where(m => m.ExpiresAt.MicrosecondsSinceUnixEpoch <= now).ToList())
             DeleteMerge(ctx, merge);
         foreach (var seat in ctx.Db.TownOffice.Iter().Where(o => o.TermEndsAt.MicrosecondsSinceUnixEpoch <= now).ToList())
@@ -467,7 +516,7 @@ public static partial class Module
             {
                 int best = tally.Max(t => t.n);
                 var tied = signers.Where(sg => tally.Any(t => t.id == sg.PlayerId && t.n == best)).ToList();
-                // A tie goes to whoever the Judge voted for, else to the longest-standing signer.
+                // A tie goes to whoever the Judge (or, with no Judge voting, the Elder) voted for, else to the longest-standing signer.
                 var judgeVote = HoldersWith(ctx, seat.TownId, TownPower.BreakTies)
                     .Select(j => ctx.Db.TownVote.ByTown.Filter(seat.TownId).FirstOrDefault(v => v.Office == seat.Office && v.Voter == j))
                     .FirstOrDefault(v => v.Id != 0);
@@ -476,7 +525,7 @@ public static partial class Module
                     : tied.OrderBy(sg => sg.SignedAt.MicrosecondsSinceUnixEpoch).FirstOrDefault();
                 if (winner.Id != 0) { SeatOffice(ctx, seat.TownId, seat.Office, winner); continue; }
             }
-            long wait = seat.HolderId == 0 ? Social.TownVacancyMicros : Social.TownTermMicros;
+            long wait = seat.HolderId == 0 ? VacancyMicros(ctx) : TermMicros(ctx);
             ctx.Db.TownOffice.Id.Update(seat with { TermEndsAt = ctx.Timestamp + new TimeDuration(wait) });
         }
     }
@@ -486,6 +535,7 @@ public static partial class Module
     static void DropSigner(ReducerContext ctx, TownSigner row)
     {
         ctx.Db.TownSigner.Id.Delete(row.Id);
+        TownLogLine(ctx, row.TownId, $"{row.OwnerName} left the roster");
         foreach (var v in ctx.Db.TownVote.ByTown.Filter(row.TownId).Where(v => v.Voter == row.Owner || v.CandidateId == row.PlayerId).ToList())
             ctx.Db.TownVote.Id.Delete(v.Id);
         if (!ctx.Db.TownSigner.ByTown.Filter(row.TownId).Any())
@@ -496,12 +546,14 @@ public static partial class Module
                 ctx.Db.TownOffice.Id.Delete(seat.Id);
             foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == row.TownId || m.ToTownId == row.TownId).ToList()) DeleteMerge(ctx, m);
             if (ctx.Db.TownVoice.TownId.Find(row.TownId) != null) ctx.Db.TownVoice.TownId.Delete(row.TownId);
+            foreach (var ban in ctx.Db.TownBan.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownBan.Id.Delete(ban.Id);
+            foreach (var line in ctx.Db.TownLog.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownLog.Id.Delete(line.Id);
             ctx.Db.Town.Id.Delete(row.TownId);
             return;
         }
         // A seat the leaver held falls vacant for a day, while the signers vote.
         foreach (var seat in ctx.Db.TownOffice.ByTown.Filter(row.TownId).Where(o => o.HolderId == row.PlayerId).ToList())
-            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // A claim that falls or is taken down leaves its roster.

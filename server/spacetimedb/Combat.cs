@@ -54,7 +54,7 @@ public static partial class Module
     public static void SetNewcomerGrace(ReducerContext ctx, long seconds)
     {
         var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Not set up");
-        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
         var row = new CombatConfig { Id = 0, GraceMicros = Math.Max(0, seconds) * 1_000_000 };
         if (ctx.Db.CombatConfig.Id.Find(0) is null) ctx.Db.CombatConfig.Insert(row);
         else ctx.Db.CombatConfig.Id.Update(row);
