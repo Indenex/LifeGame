@@ -1,7 +1,7 @@
 From 9040a90f9df16a22068d606a6a3b9f7091b751cd Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 06:51:46 +0000
-Subject: [PATCH 1/7] atmos-shadows-1: fitted, blended, steady sun shadows with
+Subject: [PATCH 1/8] atmos-shadows-1: fitted, blended, steady sun shadows with
  a quality setting
 
 - SunShadows fits the 4 cascades to the follow camera (first ends just past the player),

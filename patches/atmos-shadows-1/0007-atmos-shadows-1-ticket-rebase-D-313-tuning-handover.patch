@@ -1,7 +1,7 @@
 From e931730748a0820bba1a79a72dd91e98ea6cb35e Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sat, 17 Oct 2026 08:25:45 +0000
-Subject: [PATCH 7/7] atmos-shadows-1: ticket: rebase, D-313 tuning, handover
+Subject: [PATCH 7/8] atmos-shadows-1: ticket: rebase, D-313 tuning, handover
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP

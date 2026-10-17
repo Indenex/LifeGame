@@ -1,0 +1,32 @@
+From a70f989e8b819a8ce70833734b1f3aac087e4c90 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 09:18:03 +0000
+Subject: [PATCH 8/8] atmos-shadows-1: ticket: before/after stills
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP
+---
+ tickets/atmos-shadows-1.md | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/tickets/atmos-shadows-1.md b/tickets/atmos-shadows-1.md
+index db50a91d..be69408a 100644
+--- a/tickets/atmos-shadows-1.md
++++ b/tickets/atmos-shadows-1.md
+@@ -52,6 +52,13 @@ before and after; Render shows noon and dusk, walking, before and after.
+   untouched; shade colour stays with Atmosphere's ambient (#608). Atmosphere wants the PR number
+   to review.
+ 
++- 2026-10-17 09:20: before/after stills (main 3c94bf63 vs 6618f859 Medium), same frame and
++  camera: low sun 0.27 close-up, noon, dusk 0.725 low view. Images on claude/unity-spike in
++  patches/atmos-shadows-1/shots/. Low sun and dusk: main shows acne speckle on rock tops and
++  dark self-shadow smudges/streaks on bare ground and grass; this branch is clean, with
++  softer, rounder edges. Noon: same picture, softer tree-shadow edges, player shadow attached.
++  The CardPine band edges look unchanged at Medium. The walking clip is still for Render.
++
+ ## Open questions / blockers
+ - None for the code. Publishing needs a session allowed to push claude/atmos-shadows-1.
+ 
+-- 
+2.43.0
+
