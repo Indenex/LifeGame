@@ -65,10 +65,11 @@ public partial class Atmosphere
             Height = 0.07f,
             RadialSegments = 6,
             Rings = 3,
+            // Lit like everything else, so the drops don't glow white at night (env-38).
             Material = new StandardMaterial3D
             {
-                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                AlbedoColor = new Color(0.86f, 0.92f, 0.95f, 0.85f),
+                AlbedoColor = new Color(0.88f, 0.94f, 0.96f, 0.85f),
+                Roughness = 0.6f,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             },
         },

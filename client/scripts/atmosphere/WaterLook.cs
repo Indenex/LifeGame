@@ -7,10 +7,12 @@ namespace LifeGame;
 // - near the player, a dense surface with gentle waves moving its vertices, plus the
 //   ripples of the interactive wave simulation (WaterRipples) where things disturb it;
 // - the bed seen through the shallows, bent a little by the waves, deepening in soft
-//   painted bands to a dark teal, with a wavering foam line where it meets the bank;
-// - reflections of what is on screen (trees, the player, the far shore) traced along
-//   the screen, softened, falling back to the sky's own colours, stronger at a glance;
-// - the sun's glint as a crisp painted shape rather than a smeared highlight;
+//   flat painted bands (aqua shelf, teal, soft blue-teal deep; env-38, Justin: "cuter
+//   and match the style more"), a soft foam band at the bank with a thin line lapping
+//   out from it, and pale painted ripple lines where the wind's ripples crest;
+// - a light, blurred hint of what is on screen (trees, the player, the far shore),
+//   falling back to the sky's own colours, in two soft steps at a glance;
+// - no sun glare: only a soft warm sheen on the ripples facing the sun;
 // - a few leaves floating near the banks, drifting with the wind: many in autumn,
 //   turned gold and red, a stray green one in summer, none under winter ice;
 // - streams that run: their ripples, leaves and a few pale streaks of foam slide
@@ -76,9 +78,17 @@ public static class WaterLook
 
         uniform bool is_near = false;
         uniform float near_radius = 44.0;
-        uniform vec4 deep_color : source_color = vec4(0.05, 0.19, 0.21, 1.0);
+        // Painted tints (env-38): a pale aqua shelf, a teal middle and a soft blue-teal
+        // deep, laid in flat bands by how deep the water is.
+        uniform vec4 shelf_color : source_color = vec4(0.56, 0.80, 0.72, 1.0);
+        uniform vec4 mid_color : source_color = vec4(0.30, 0.60, 0.60, 1.0);
+        uniform vec4 deep_color : source_color = vec4(0.15, 0.36, 0.46, 1.0);
         uniform vec4 shallow_color : source_color = vec4(0.42, 0.66, 0.58, 1.0);
-        uniform vec4 foam_color : source_color = vec4(0.93, 0.95, 0.92, 1.0);
+        uniform vec4 foam_color : source_color = vec4(0.96, 0.97, 0.93, 1.0);
+        // A trough's water is only a hand deep: it reads its depth this many times
+        // over and has no lapping line (ClayLook.TroughWater).
+        uniform float depth_scale = 1.0;
+        uniform float shore_lap = 1.0;
         uniform sampler2D screen : hint_screen_texture, filter_linear_mipmap;
         uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
         uniform sampler2D noise : repeat_enable, filter_linear;
@@ -240,34 +250,44 @@ public static class WaterLook
             vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
             vec3 nv = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 
-            // How much water lies between the surface and the bed behind it.
+            // How deep the water is here: straight down from the surface to whatever is
+            // behind it (the bed, or a wader's legs). Measured along the view ray, as it
+            // used to be, the shore foam and the colour bands grew and shrank as the
+            // camera turned and haloed anything standing in the water (env-38).
             float d0 = textureLod(depth_tex, SCREEN_UV, 0.0).r;
             vec4 b0 = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, d0, 1.0);
             b0.xyz /= b0.w;
-            float through0 = clamp(VERTEX.z - b0.z, 0.0, 20.0);
+            float depth0 = clamp(world_pos.y - (INV_VIEW_MATRIX * vec4(b0.xyz, 1.0)).y, 0.0, 20.0);
 
             // The bed, bent a little by the waves; never pulling in anything in front.
-            vec2 ruv = SCREEN_UV + n.xz * 0.035 * clamp(through0, 0.0, 1.0);
+            vec2 ruv = SCREEN_UV + n.xz * 0.025 * clamp(depth0, 0.0, 1.0);
             float d1 = textureLod(depth_tex, ruv, 0.0).r;
             vec4 b1 = INV_PROJECTION_MATRIX * vec4(ruv * 2.0 - 1.0, d1, 1.0);
             b1.xyz /= b1.w;
             if (b1.z > VERTEX.z) { ruv = SCREEN_UV; b1 = b0; }
-            float through = clamp(VERTEX.z - b1.z, 0.0, 20.0);
             vec3 bed = textureLod(screen, ruv, 0.0).rgb;
+            float depth = clamp(world_pos.y - (INV_VIEW_MATRIX * vec4(b1.xyz, 1.0)).y, 0.0, 20.0);
 
-            // Deeper reads darker, in soft painted bands.
-            float k = clamp(through / 2.2, 0.0, 1.0);
-            float bands = smoothstep(0.02, 0.1, k) * 0.34 + smoothstep(0.3, 0.38, k) * 0.33 + smoothstep(0.66, 0.74, k) * 0.33;
-            k = mix(k, bands, 0.7);
-            vec3 lit = water_ambient + water_sun_color * 0.2;
-            vec3 deep = deep_color.rgb * lit;
-            vec3 col = mix(bed * shallow_color.rgb * 1.5, deep, k);
+            // Flat painted bands by depth, with soft short blends between them and a
+            // gentle wobble so the edges are hand-drawn rather than ruled.
+            float wob = texture(noise, p * 0.18 + vec2(t * 0.015, t * 0.01)).r;
+            // Streams' beds lie 0.22 m down and ponds' 0.4 m, so a stream reads teal
+            // with a pale shelf at its banks and a pond deepens to its blue-teal middle.
+            float dk = depth * depth_scale * (0.9 + 0.2 * wob);
+            vec3 lit = water_ambient + water_sun_color * 0.25;
+            vec3 col = mix(shelf_color.rgb, mid_color.rgb, smoothstep(0.1, 0.16, dk));
+            col = mix(col, deep_color.rgb, smoothstep(0.26, 0.32, dk));
+            col *= lit;
+            // The bed shows through only on the shelf, tinted by the water.
+            float clear = 1.0 - smoothstep(0.03, 0.15, dk);
+            col = mix(col, bed * shallow_color.rgb * 1.4, clear * 0.55);
 
-            // Reflections: march along the screen for what stands above the water;
-            // where nothing is found, the sky.
+            // Reflections: a soft, blurred hint of what stands above the water (traced
+            // along the screen), falling back to the sky's own colours. Kept light so
+            // the water stays painted rather than mirror-like.
             vec3 rv = reflect(-VIEW, nv);
             vec3 rw = normalize((INV_VIEW_MATRIX * vec4(rv, 0.0)).xyz);
-            vec3 refl = mix(water_sky_horizon, water_sky_top, pow(clamp(rw.y, 0.0, 1.0), 0.5));
+            vec3 refl = mix(water_sky_horizon, water_sky_top, smoothstep(0.15, 0.45, rw.y));
             int steps = int(water_reflect_steps);
             if (steps > 0) {
                 vec3 pos = VERTEX;
@@ -282,24 +302,40 @@ public static class WaterLook
                     float sd = textureLod(depth_tex, uv, 0.0).r;
                     vec4 sp = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, sd, 1.0);
                     sp.xyz /= sp.w;
-                    if (sp.z > pos.z && sp.z - pos.z < len * 2.0 + 0.4) {
-                        float border = smoothstep(0.0, 0.12, min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y)));
-                        refl = mix(refl, textureLod(screen, uv, 1.5).rgb, border);
+                    // A hit is something just in front of the ray, not the bank far
+                    // behind it (the old, looser test smeared grass across the water).
+                    if (sp.z > pos.z && sp.z - pos.z < len * 1.2 + 0.15) {
+                        float border = smoothstep(0.0, 0.15, min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y)));
+                        refl = mix(refl, textureLod(screen, uv, 3.0).rgb, border * 0.8);
                         break;
                     }
                 }
             }
             float facing = clamp(dot(nv, VIEW), 0.0, 1.0);
-            float fres = 0.12 + 0.68 * pow(1.0 - facing, 4.0);
+            // Two soft steps instead of a smooth mirror ramp.
+            float glance = 1.0 - facing;
+            float fres = 0.08 + 0.14 * smoothstep(0.55, 0.65, glance) + 0.16 * smoothstep(0.8, 0.88, glance);
             col = mix(col, refl, fres);
 
-            // The sun's glint: a crisp painted shape, with a soft halo round it.
-            float s = max(dot(rw, normalize(water_sun_dir)), 0.0);
-            col += water_sun_color * (smoothstep(0.988, 0.992, s) * 0.9 + smoothstep(0.94, 0.97, s) * 0.08);
+            // Painted ripple lines: thin pale strokes where the wind's ripples crest,
+            // fading with distance; no sun glare, only a soft warm sheen on the
+            // ripples that face the sun.
+            float rp = fine_ripples(p * 0.8, t * 0.8, f);
+            float line = smoothstep(0.62, 0.7, rp) * (1.0 - smoothstep(0.78, 0.9, rp));
+            line *= (0.25 + 0.35 * wind_strength) * (1.0 - smoothstep(12.0, 30.0, reach)) * smoothstep(0.08, 0.25, depth);
+            vec3 sunw = normalize(water_sun_dir);
+            float sheen = smoothstep(0.85, 0.9, dot(rw, sunw)) * smoothstep(0.1, 0.4, sunw.y);
+            col = mix(col, foam_color.rgb * lit * 1.05, line * 0.5);
+            col += water_sun_color * sheen * 0.06;
 
-            // A wavering foam line along the bank, and foam on high simulated crests.
-            float wob = texture(noise, p * 0.18 + vec2(t * 0.015, t * 0.01)).r;
-            float foam = 1.0 - smoothstep(0.03, 0.1 + 0.1 * wob, through);
+            // Shore foam: a soft band hugging the bank, and a thin second line that
+            // laps slowly out from it and fades, like a gentle tide; foam on high
+            // simulated crests too.
+            float foam = 1.0 - smoothstep(0.035, 0.06 + 0.05 * wob, depth * depth_scale);
+            float lap = fract(t * 0.18 + wob * 0.6);
+            // It stays on the bank's slope, shallower than any stream or pond bed.
+            float lap_at = 0.07 + 0.08 * lap;
+            foam = max(foam, (1.0 - smoothstep(0.0, 0.012, abs(depth - lap_at))) * (1.0 - lap) * 0.7 * shore_lap);
             foam = max(foam, smoothstep(0.035, 0.07, abs(sim(p))) * 0.6);
             // Pale streaks of foam slide down a running stream.
             float fl = length(f);
@@ -311,10 +347,10 @@ public static class WaterLook
                 float s1 = texture(noise, (sp - vec2(0.0, ph.y * 3.3 * fl * 0.35)) * 0.15 + 0.5).r;
                 foam = max(foam, smoothstep(0.66, 0.74, mix(s1, s0, ph.z)) * clamp(fl * 0.6, 0.0, 0.35));
             }
-            col = mix(col, foam_color.rgb * (water_ambient + water_sun_color * 0.5), foam * 0.75);
+            col = mix(col, foam_color.rgb * (water_ambient + water_sun_color * 0.5), foam * 0.8);
 
             // Leaves near the bank, most in autumn, none once it freezes.
-            float leafy = (0.03 + 0.3 * season_autumn) * (1.0 - smoothstep(0.5, 4.0, through0)) * smoothstep(-0.9, -0.6, season_warmth);
+            float leafy = (0.03 + 0.3 * season_autumn) * (1.0 - smoothstep(0.12, 0.3, depth0)) * smoothstep(-0.9, -0.6, season_warmth);
             if (leafy > 0.005) {
                 vec4 lf;
                 if (dot(f, f) < 1e-5) lf = leaf(p, t, leafy);
@@ -329,7 +365,7 @@ public static class WaterLook
             }
 
             ALBEDO = col;
-            ALPHA = smoothstep(0.0, 0.03, through0);
+            ALPHA = smoothstep(0.0, 0.02, depth0);
 
             // Like the land, the water melts into the fog at the edge of the far land.
             if (far_land_radius > 0.0) {

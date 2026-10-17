@@ -133,6 +133,9 @@ public static class ClayLook
     {
         var m = (ShaderMaterial)Look.WaterSurface.Duplicate();
         m.SetShaderParameter("shallow_color", new Color(0.09f, 0.22f, 0.26f));
+        // A hand deep reads as the pond's deep water, with no lapping line (env-38).
+        m.SetShaderParameter("depth_scale", 4f);
+        m.SetShaderParameter("shore_lap", 0f);
         return m;
     }
 

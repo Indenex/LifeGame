@@ -72,9 +72,10 @@ public partial class Atmosphere
         RenderingServer.GlobalShaderParameterSet(WaterLook.ReflectSteps, ReflectionSteps[WaterReflections]);
     }
 
-    // Which way the streams run near the player. A stream runs along its line, across
-    // the slope of the distance to it; downstream is taken as south (+z) everywhere,
-    // strongest mid-channel and gone by the edge of its water.
+    // Which way the streams run near the player: along the stream's line (Land.StreamAlong,
+    // steady mid-channel; env-38 replaced the slope of the distance, which flipped there
+    // and set the ripples and leaves jittering), downstream taken as south (+z)
+    // everywhere, strongest mid-channel and gone by the edge of its water.
     void RebuildFlow(Vector2 origin)
     {
         flowOrigin = origin;
@@ -87,17 +88,10 @@ public partial class Atmosphere
                 var c = new Color(0.5f, 0.5f, 0f, 1f);
                 if (d < 12f)
                 {
-                    var g = new Vector2(Land.StreamDistance(x + 1, z) - Land.StreamDistance(x - 1, z),
-                                        Land.StreamDistance(x, z + 1) - Land.StreamDistance(x, z - 1));
-                    var along = new Vector2(-g.Y, g.X);
-                    if (along.LengthSquared() > 1e-6f)
-                    {
-                        along = along.Normalized();
-                        if (along.Y < 0f) along = -along;
-                        float strength = 1f - Mathf.SmoothStep(4f, 11f, d);
-                        c = new Color(0.5f + 0.5f * along.X * strength, 0.5f + 0.5f * along.Y * strength, 0f, 1f);
-                        any = true;
-                    }
+                    var (ax, az) = Land.StreamAlong(x, z);
+                    float strength = 1f - Mathf.SmoothStep(4f, 11f, d);
+                    c = new Color(0.5f + 0.5f * ax * strength, 0.5f + 0.5f * az * strength, 0f, 1f);
+                    any = true;
                 }
                 flowImage.SetPixel(i, j, c);
             }
