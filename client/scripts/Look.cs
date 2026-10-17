@@ -84,6 +84,9 @@ public static class Look
         Add("frost", RenderingServer.GlobalShaderParameterType.Float, 0f);
         // Shifts where frost lies thickest from one morning to the next.
         Add("frost_seed", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Tint for Modeling's rim light, on top of the light colour (Atmosphere, by
+        // time of day): rgb the colour, a scales the rim strength.
+        Add("rim_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(1f, 0.86f, 0.66f, 1f));
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
