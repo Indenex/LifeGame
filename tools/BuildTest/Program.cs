@@ -77,9 +77,9 @@ if (which is "basket" or "both")
 
 if (which is "fence" or "both")
 {
-    BuildTogether(StructureKind.Fence,
+    WallsStopWalkers(BuildTogether(StructureKind.Fence,
         new() { [Item.Stick] = 2 },
-        new() { [Item.Stick] = 2, [Item.Fiber] = 1 });
+        new() { [Item.Stick] = 2, [Item.Fiber] = 1 }));
     UseGate(BuildTogether(StructureKind.Gate,
         new() { [Item.Stick] = 3 },
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
@@ -135,6 +135,32 @@ if (which is "log-cabin")
 Console.WriteLine($"All building checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 foreach (var bot in bots) bot.Conn.Disconnect();
 return 0;
+
+// The server refuses a step straight through a finished fence, even from a hacked client (bugfix-27),
+// and lets a jump hop it (a low fence on nobody's claim).
+void WallsStopWalkers(ulong id)
+{
+    Console.WriteLine("--- Walls stop walkers");
+    var s = a.Conn.Db.Structure.Id.Find(id)!;
+    Pump(1200);
+    var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, a.X, a.Z);
+    var across = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, -lz);
+    a.Conn.Reducers.Move(across.x, across.z, 0f);
+    Pump(1000);
+    var srv = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    var (_, sz) = Structures.ToLocal(s.X, s.Z, s.Yaw, srv.X, srv.Z);
+    Check(MathF.Sign(sz) == MathF.Sign(lz), "a step straight through the fence is refused");
+    a.X = srv.X; a.Z = srv.Z;
+    Pump(1200);
+    a.Conn.Reducers.Jump();
+    Pump(100);
+    a.Conn.Reducers.Move(across.x, across.z, 0f);
+    Pump(1000);
+    srv = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    (_, sz) = Structures.ToLocal(s.X, s.Z, s.Yaw, srv.X, srv.Z);
+    Check(MathF.Sign(sz) == -MathF.Sign(lz), "a jump hops the fence");
+    a.X = srv.X; a.Z = srv.Z;
+}
 
 ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null, Action? prepareA = null)
 {
@@ -331,6 +357,10 @@ void BuildHearth(ulong hut)
     Check(MathF.Abs(fire.X - done!.X) < 0.01f && MathF.Abs(fire.Z - done.Z) < 0.01f, "the fire sits on the hearth");
     double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
     Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
+
+    // Walls stop the server's players (bugfix-27): leave through the doorway, as a player would.
+    a.WalkTo(door.x, door.z, 0.3f, Pump);
+    b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
 }
 
 // A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
@@ -521,12 +551,37 @@ sealed class Bot
     }
 
     // How far the server still has this player from where the bot thinks it stands.
+    float lastSx, lastSz, stuckFor, detourLeft, detourSign = 1f;
+
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
 
     // Moves up to one tick's walk toward a point and returns the distance left.
     float Step(float tx, float tz, float dt)
     {
         float dx = tx - X, dz = tz - Z, dist = MathF.Sqrt(dx * dx + dz * dz);
+        // Walls bind the server's player now (bugfix-27): when the server keeps us put while we
+        // push on, step aside like a player would instead of walking into the wall for ever.
+        if (Conn.Db.PlayerPos.PlayerId.Find(myId) is { } srv)
+        {
+            bool lagging = MathF.Abs(srv.X - X) + MathF.Abs(srv.Z - Z) > 1.0f;
+            bool still = MathF.Abs(srv.X - lastSx) + MathF.Abs(srv.Z - lastSz) < 0.05f;
+            lastSx = srv.X; lastSz = srv.Z;
+            stuckFor = lagging && still ? stuckFor + dt : 0f;
+            if (stuckFor > 1.2f)
+            {
+                X = srv.X; Z = srv.Z;
+                detourLeft = 1.6f; detourSign = -detourSign; stuckFor = 0f;
+                dx = tx - X; dz = tz - Z; dist = MathF.Sqrt(dx * dx + dz * dz);
+            }
+        }
+        if (detourLeft > 0f && dist > 0.05f)
+        {
+            detourLeft -= dt;
+            float px = -dz / dist * detourSign, pz = dx / dist * detourSign;
+            X += px * 5f * dt; Z += pz * 5f * dt;
+            Conn.Reducers.Move(X, Z, MathF.Atan2(px, pz));
+            return dist;
+        }
         if (dist > 0.05f)
         {
             float step = MathF.Min(dist, 5f * dt);

@@ -471,6 +471,31 @@ namespace LifeGame.Shared
             return false;
         }
 
+        // Whether a step crosses a lean-to's two sides or its back (the front is open).
+        // Other kinds have no such walls.
+        public static bool StepCrossesLeanTo(int kind, float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ)
+        {
+            var shape = Shape(kind);
+            if (shape.Round || shape.Fence || shape.Room || kind != 0) return false;
+            float wx = shape.HalfWidth, wz = shape.HalfDepth;
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            // The back wall at z = -wz.
+            if ((az > -wz) != (bz > -wz))
+            {
+                float x = ax + (bx - ax) * ((-wz - az) / (bz - az));
+                if (MathF.Abs(x) <= wx) return true;
+            }
+            // The two sides at x = +-wx.
+            foreach (float side in new[] { -wx, wx })
+                if ((ax > side) != (bx > side))
+                {
+                    float z = az + (bz - az) * ((side - ax) / (bx - ax));
+                    if (z >= -wz && z <= wz) return true;
+                }
+            return false;
+        }
+
         public static bool TooClose(int kindA, float ax, float az, int kindB, float bx, float bz)
         {
             float min = Shape(kindA).Clearance + Shape(kindB).Clearance;
