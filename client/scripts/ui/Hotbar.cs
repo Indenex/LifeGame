@@ -18,6 +18,10 @@ public interface IHotbarLink
     void Move(int from, int to);
     // Uses one carried item the way its Def says (eat, drink, wear).
     void Use(Item item);
+    // The slot in hand, or -1 (crafting-29: a tool works only from the equipped slot).
+    int Equipped { get; }
+    // Takes a slot in hand; the slot already in hand, or -1, puts it away.
+    void Equip(int index);
     event Action? Changed;
 }
 
@@ -43,6 +47,14 @@ public sealed class MockHotbarLink : IHotbarLink
     }
 
     public void Use(Item item) => Changed?.Invoke();
+
+    public int Equipped { get; private set; } = -1;
+
+    public void Equip(int index)
+    {
+        Equipped = index == Equipped ? -1 : index;
+        Changed?.Invoke();
+    }
 }
 
 public sealed class ServerHotbarLink : IHotbarLink
@@ -58,6 +70,9 @@ public sealed class ServerHotbarLink : IHotbarLink
         conn.Db.MyHotbar.OnInsert += (_, _) => Changed?.Invoke();
         conn.Db.MyHotbar.OnDelete += (_, _) => Changed?.Invoke();
         conn.Db.MyHotbar.OnUpdate += (_, _, _) => Changed?.Invoke();
+        conn.Db.PlayerEquip.OnInsert += (_, _) => Changed?.Invoke();
+        conn.Db.PlayerEquip.OnDelete += (_, _) => Changed?.Invoke();
+        conn.Db.PlayerEquip.OnUpdate += (_, _, _) => Changed?.Invoke();
     }
 
     public Item? SlotItem(int index) =>
@@ -66,4 +81,7 @@ public sealed class ServerHotbarLink : IHotbarLink
     public void Set(int index, Item? item) => conn.Reducers.SetHotbarSlot((byte)index, (ushort)(item ?? 0));
     public void Move(int from, int to) => conn.Reducers.MoveHotbarSlot((byte)from, (byte)to);
     public void Use(Item item) => conn.Reducers.UseItem((ushort)item);
+
+    public int Equipped => conn.Identity is { } me && conn.Db.PlayerEquip.Owner.Find(me) is { } e ? e.Slot : -1;
+    public void Equip(int index) => conn.Reducers.EquipSlot(index < 0 ? (byte)255 : (byte)index);
 }

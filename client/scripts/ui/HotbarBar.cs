@@ -11,9 +11,11 @@ namespace LifeGame;
 // assigned keybind"). Ten round slots along the bottom edge in the bag row's quiet
 // style (D-045), each with its key in the corner. A new kind of item takes the first
 // empty slot by itself; drag a slot onto another to swap them, or off the bar to clear
-// it. The key uses the item through the server (UseItem): eat, drink or wear. Tools
-// need no key (Justin): they work from the bag or the tools section, so they don't
-// fill slots by themselves. A slot keeps its item while you have none left, shown faded.
+// it. The key uses the item through the server (UseItem): eat, drink or wear. A tool's
+// key takes it in hand instead, and again puts it away (crafting-29, Justin: "for a tool
+// to be used, it needs to be on your bar and equipped"); the slot in hand wears a gold
+// ring. Tools fill slots by themselves like anything else now. A slot keeps its item
+// while you have none left, shown faded.
 // The row dims when nothing changes and brightens when you gain or use something; a
 // newly gained item's name floats up above its slot.
 public partial class HotbarBar : Control
@@ -67,6 +69,15 @@ public partial class HotbarBar : Control
         name.Modulate = new Color(1, 1, 1, 0);
         AddChild(name);
         Attach(Link);
+        // --screenshot-hotbar: berries, a hand axe and a stone axe, with the stone axe in hand.
+        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-hotbar")) && Link is MockHotbarLink mock)
+        {
+            SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1), new InventoryEntry(Item.StoneAxe, "Stone axe", 1) });
+            mock.Set(0, Item.Berries);
+            mock.Set(1, Item.HandAxe);
+            mock.Set(2, Item.StoneAxe);
+            Equip(2, Item.StoneAxe);
+        }
     }
 
     public void Attach(IHotbarLink link)
@@ -116,7 +127,8 @@ public partial class HotbarBar : Control
 
     void Fill(Item item)
     {
-        if (SlotOf(item) >= 0 || Items.UseOf(item) == UseAction.Tool) return;
+        // Tools too since crafting-29: a tool works only from the bar, equipped.
+        if (SlotOf(item) >= 0) return;
         int free = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
         if (free < 0) return;
         Link.Set(free, item);
@@ -132,7 +144,7 @@ public partial class HotbarBar : Control
             var item = Link.SlotItem(i);
             uint n = item is { } it ? carried.GetValueOrDefault(it) : 0;
             views[i].Show(item, n, item is { } x && labels.TryGetValue(x, out var l) ? l : item is { } y ? ItemName(y) : "",
-                KeyName(i));
+                KeyName(i), equipped: item != null && Link.Equipped == i);
         }
     }
 
@@ -156,11 +168,30 @@ public partial class HotbarBar : Control
         }
     }
 
+    // A tool's key takes it in hand, and again puts it away (crafting-29, Justin: "for a tool
+    // to be used, it needs to be on your bar and equipped"); an empty slot's key puts away
+    // what you hold. Anything else is used as before (eaten, drunk, worn, set down).
     public void UseSlot(int i)
     {
-        if (Link.SlotItem(i) is not { } item) return;
+        if (Link.SlotItem(i) is not { } item)
+        {
+            if (Link.Equipped >= 0) Link.Equip(-1);
+            return;
+        }
         views[i].Pop();
+        if (Items.UseOf(item) == UseAction.Tool) { Equip(i, item); return; }
         UseItem(item);
+    }
+
+    void Equip(int i, Item item)
+    {
+        sinceChange = 0f;
+        bool away = Link.Equipped == i;
+        Link.Equip(i);
+        string what = labels.TryGetValue(item, out var l) ? l : ItemName(item);
+        floatingName = away ? $"{what} put away" : $"{what} in hand";
+        nameAt = i;
+        nameTime = 1.6f;
     }
 
     // Uses one carried item: places it, or asks the server to eat, drink, wear or hold it.
@@ -171,7 +202,12 @@ public partial class HotbarBar : Control
         if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
         if (Placeable(item)) { PlaceRequested?.Invoke(item); return; }
         if (Items.UseOf(item) == UseAction.None) { Note($"{what} is used in making things"); return; }
-        if (Items.UseOf(item) == UseAction.Tool) { Note($"The {what.ToLowerInvariant()} works by itself while you carry it"); return; }
+        if (Items.UseOf(item) == UseAction.Tool)
+        {
+            if (SlotOf(item) is var at and >= 0) Equip(at, item);
+            else Note($"Put the {what.ToLowerInvariant()} on your bar, then press its key to take it in hand");
+            return;
+        }
         Link.Use(item);
     }
 
@@ -284,7 +320,10 @@ public partial class HotbarSlotView : PanelContainer
         stack.AddChild(key);
     }
 
-    public void Show(Item? what, uint n, string label, string keyName)
+    // The slot in hand wears a warm gold ring (crafting-29).
+    static readonly Color InHand = new(0.96f, 0.78f, 0.42f);
+
+    public void Show(Item? what, uint n, string label, string keyName, bool equipped = false)
     {
         item = what;
         picture.Texture = what is { } i ? ItemIcon.For(i) : null;
@@ -292,9 +331,11 @@ public partial class HotbarSlotView : PanelContainer
         picture.Modulate = new Color(1, 1, 1, n > 0 ? 1f : 0.3f);
         count.Text = n > 1 ? n.ToString() : "";
         key.Text = keyName;
-        TooltipText = label;
-        style.BorderColor = new Color(Look.Cream, what == null ? 0.14f : 0.28f);
-        style.BgColor = new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+        style.BorderColor = equipped ? InHand : new Color(Look.Cream, what == null ? 0.14f : 0.28f);
+        style.SetBorderWidthAll(equipped ? 2 : 1);
+        style.BgColor = equipped ? new Color(0.20f, 0.16f, 0.08f, 0.78f) : new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+        style.ShadowColor = equipped ? new Color(InHand, 0.35f) : new Color(0, 0, 0, 0.25f);
+        TooltipText = equipped ? $"{label} (in hand)" : label;
     }
 
     // A small bounce when its key is pressed.
