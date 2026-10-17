@@ -60,6 +60,33 @@ public partial class Avatar : Node3D
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
 
+    // Sit or lie down (anim-12), from the player's rest state: seat is the hips' height
+    // when sitting on something (0 on the ground). RestKind.None gets up again. The
+    // figure lies along the way the avatar faces, head forward.
+    public void Rest(RestKind kind, float seat = 0f, bool asleep = false, bool instant = false)
+    {
+        animator.Rest = kind;
+        animator.Seat = seat;
+        animator.Asleep = asleep;
+        if (instant) animator.SettleRest();
+    }
+
+    // Your own avatar: the rest key sits you down, lies you down from sitting, and gets
+    // you up again; walking off also gets you up (the server ends the rest).
+    public event System.Action<RestKind>? RestRequested;
+    public const string RestAction = "rest";
+
+    void RestKey()
+    {
+        if (!InputMap.HasAction(RestAction))
+        {
+            InputMap.AddAction(RestAction);
+            InputMap.ActionAddEvent(RestAction, new InputEventKey { PhysicalKeycode = Key.H });
+        }
+        if (!Input.IsActionJustPressed(RestAction) || GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
+        RestRequested?.Invoke(animator.Rest switch { RestKind.None => RestKind.Sit, RestKind.Sit => RestKind.Lie, _ => RestKind.None });
+    }
+
     // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
     public void Face(float x, float z)
     {
@@ -205,8 +232,14 @@ public partial class Avatar : Node3D
     void PlaceNameplate()
     {
         if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { Mesh: { } mesh })
-            nameplate.Position = new Vector3(0, mesh.GetAabb().End.Y + 0.3f, 0);
+        {
+            rig.Height = mesh.GetAabb().End.Y;
+            nameplateY = rig.Height + 0.3f;
+        }
+        nameplate.Position = new Vector3(0, nameplateY, 0);
     }
+
+    float nameplateY = PlayerModel.Height + 0.3f;
 
     // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
     void PlaceMouth()
@@ -238,6 +271,7 @@ public partial class Avatar : Node3D
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
+        if (!Remote) RestKey();
         // Your own sneak is the key; other players' comes from the server (player_sneaking).
         bool sneaking = Remote ? Sneaking : Input.IsActionPressed(SneakAction);
         if (!Remote && sneaking != Sneaking)
@@ -253,6 +287,8 @@ public partial class Avatar : Node3D
             CarryTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
+            // The name comes down with the head when sitting or lying.
+            nameplate.Position = new Vector3(0, nameplateY - rig.Height * animator.RestLowering, 0);
         }
     }
 }

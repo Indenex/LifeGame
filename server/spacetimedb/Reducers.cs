@@ -160,6 +160,9 @@ public static partial class Module
             z = fromZ;
         }
 
+        // Stepping off gets a sitting or lying player up (Resting.cs).
+        if ((x - fromX) * (x - fromX) + (z - fromZ) * (z - fromZ) > 0.02f * 0.02f) StopResting(ctx, player.PlayerId);
+
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
             ctx.Db.MoveInput.PlayerId.Update(input);
