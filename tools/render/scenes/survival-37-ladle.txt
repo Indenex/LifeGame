@@ -9,7 +9,7 @@ wait 30
 act SeedFire -6 -8
 wait 3
 sqlout SELECT id, x, z FROM fire
-sql INSERT INTO simmer_pot (id, fire_id, owner, player_id, dish, quality, x, z, chunk_x, chunk_z, put_at, pot_wear, pot_maker, served) VALUES (0, 1, {me}, 0, 116, 60, -6.7, -7.2, -1, -1, 1000000, 0, 0, 0)
+act SeedPot 1 -6.7 -7.2 116
 sqlout SELECT id, fire_id, dish, served FROM simmer_pot
 warp -7.4 -6.6
 wait 8

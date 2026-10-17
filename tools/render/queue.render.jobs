@@ -48,7 +48,7 @@ env38-before tools/render/render.sh env-38-before 1f3b1431 "--debug-position=-44
 bugfix-58-after env RENDER_PATCH=tools/render/patches/ghost.sh tools/render/scene.sh bugfix-58-after 3166cf99 tools/render/scenes/bugfix-58-rings.txt
 bugfix-58-before env RENDER_PATCH=tools/render/patches/ghost.sh tools/render/scene.sh bugfix-58-before 5064a254 tools/render/scenes/bugfix-58-rings.txt
 ui866-ladle2 env RENDER_PATCH=tools/render/patches/cabin.sh RENDER_SIZE=960x540 tools/render/scene.sh survival-37-ladle 0191a5f2 tools/render/scenes/survival-37-ladle.txt
-mushrooms2 env RENDER_SIZE=960x540 tools/render/scene.sh survival-35 272feafc tools/render/scenes/survival-35-mushrooms.txt
+mushrooms3 env RENDER_SIZE=960x540 env RENDER_PATCH=tools/render/patches/cabin.sh tools/render/scene.sh survival-35 272feafc tools/render/scenes/survival-35-mushrooms.txt
 roots36 tools/render/scene.sh survival-36 b90563e8 tools/render/scenes/survival-36-roots.txt
 roots36-wide tools/render/scene.sh survival-36-wide b90563e8 tools/render/scenes/survival-36-roots-wide.txt
 death34 tools/render/render.sh survival-34 3b098f0a "--time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --debug-position=0,12 --death-preview=60 --screenshot-delay=62.5" "--time-of-day=0.74 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --debug-position=0,12 --death-preview=60 --screenshot-delay=72" "--time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --debug-position=0,12 --death-preview=60 --screenshot-delay=72"
@@ -84,3 +84,5 @@ emotes-front env RENDER_SIZE=960x540 tools/render/scene.sh anim-render-front 92f
 ui74-keys env RENDER_SIZE=1280x720 tools/render/render.sh ui-74 560dd5c9 "--time-of-day=0.45 --screenshot-hud --screenshot-keys --render-slowstart=0.05,45 --screenshot-delay=4"
 ui76-before env RENDER_SIZE=1280x720 tools/render/render.sh ui-76-before c6a5ede "--time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-trade" "--time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-trade=accepted"
 ui76-after env RENDER_SIZE=1280x720 tools/render/render.sh ui-76-after 6c6a8530 "--time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-trade" "--time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-trade=accepted"
+
+ui866-ladle3 env RENDER_PATCH=tools/render/patches/cabin.sh RENDER_SIZE=960x540 tools/render/scene.sh survival-37-ladle 0191a5f2 tools/render/scenes/survival-37-ladle.txt

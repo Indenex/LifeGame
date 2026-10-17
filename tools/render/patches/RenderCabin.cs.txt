@@ -1,3 +1,4 @@
+using LifeGame.Shared;
 using SpacetimeDB;
 
 // Render-tree-only (never committed): SeedCabin lays a finished log cabin with a burning fire
@@ -29,6 +30,31 @@ public static partial class Module
         {
             Id = 0, X = x, Z = z, ChunkX = (int)System.MathF.Floor(x / 16f), ChunkZ = (int)System.MathF.Floor(z / 16f),
             LitBy = 0, LitAt = ctx.Timestamp, FuelUntil = ctx.Timestamp + new TimeDuration(3L * 3600 * 1_000_000), FuelCapSeconds = 3 * 3600,
+        });
+    }
+
+    // A forage patch (kind 1 mushrooms, 2 roots) where owner SQL can't insert (Timestamp column);
+    // dug = true leaves it unripe for a day.
+    [SpacetimeDB.Reducer]
+    public static void SeedForage(ReducerContext ctx, float x, float z, byte kind, bool dug)
+    {
+        ctx.Db.ForageBush.Insert(new ForageBush
+        {
+            Id = 0, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
+            RipeAt = dug ? ctx.Timestamp + new TimeDuration(86400L * 1_000_000) : ctx.Timestamp, Kind = kind,
+        });
+    }
+
+    // A finished pot of stew (dish 116) beside a fire, owned by the caller, ready to ladle (survival-37).
+    [SpacetimeDB.Reducer]
+    public static void SeedPot(ReducerContext ctx, ulong fireId, float x, float z, ushort dish)
+    {
+        var player = ctx.Db.Player.Identity.Find(ctx.Sender) ?? throw new System.Exception("no player");
+        ctx.Db.SimmerPot.Insert(new SimmerPot
+        {
+            Id = 0, FireId = fireId, Owner = Me(ctx), PlayerId = player.PlayerId, Dish = dish, Quality = 60,
+            X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
+            PutAt = ctx.Timestamp + new TimeDuration(-3600L * 1_000_000),
         });
     }
 }

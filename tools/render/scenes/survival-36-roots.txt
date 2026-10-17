@@ -4,7 +4,9 @@
 client-as-puppet
 client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.05 --season=0.25 --render-cam=3.2,1.7,0,0.2
 wait 35
-sh S="spacetimedb-cli sql --server http://127.0.0.1:3300 lifegame"; ids=$($S "SELECT id FROM forage_bush WHERE kind = 2" | grep -oE '^ *[0-9]+ *$' | head -2 | tr -d ' '); set -- $ids; echo "patches $1 $2"; $S "DELETE FROM forage_bush WHERE id = $1"; $S "DELETE FROM forage_bush WHERE id = $2"; $S "INSERT INTO forage_bush (id, x, z, chunk_x, chunk_z, ripe_at, kind) VALUES (0, -6.9, -7.5, -1, -1, 0, 2)"; $S "INSERT INTO forage_bush (id, x, z, chunk_x, chunk_z, ripe_at, kind) VALUES (0, -5.1, -7.5, -1, -1, 4102444800000000, 2)"; $S "SELECT id, x, z, kind FROM forage_bush WHERE kind = 2 AND z = -7.5"
+sh S="spacetimedb-cli sql --server http://127.0.0.1:3300 lifegame"; for id in $($S "SELECT id FROM forage_bush WHERE kind = 2" | grep -oE '^ *[0-9]+ *$' | tr -d ' '); do $S "DELETE FROM forage_bush WHERE id = $id"; done
+act SeedForage -6.9 -7.5 2 false
+act SeedForage -5.1 -7.5 2 true
 warp -6 -6
 face 180
 wait 14
