@@ -192,14 +192,16 @@ if (runTools)
 if (part == "stations")
 {
     // Part two starts from nothing: it makes the tools the stations and repairs need, and one log.
-    Gather(Item.Stick, 8);
-    Gather(Item.Stone, 4);
-    Gather(Item.Fiber, 12);
+    Gather(Item.Stick, 10);
+    Gather(Item.Stone, 6);
+    Gather(Item.Fiber, 16);
+    Craft("cord.twist", 0, Item.Cordage);
     Craft("cord.twist", 0, Item.Cordage);
     Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
     Craft("lash.stone_axe", 0, Item.StoneAxe);
-    Craft("cord.twist", 0, Item.Cordage);
     Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("cord.twist", 0, Item.Cordage);
     Craft("carve.digging_stick", 0, Item.DiggingStick);
     var (stX, stZ) = NearestTree();
     var stTrunk = Trees.Trunk(stX, stZ);
