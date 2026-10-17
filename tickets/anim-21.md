@@ -1,7 +1,7 @@
 # anim-21: Pebble's arms keep clear of its shell
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-21 (from main)
 PR: #714
 
