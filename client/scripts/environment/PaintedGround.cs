@@ -6,28 +6,28 @@ using Godot;
 namespace LifeGame;
 
 // A prototype of the ground in Justin's art references (docs/art-reference 02 and
-// 03): thick painted grass, flowers, clover, ferns and mushrooms drawn as crossed
-// alpha cards from his licensed Golden Skull foliage pack (client/assets/environment,
-// NOTICE.md); the ground in the pack's bright yellow-green grass-top colour; sandy
-// paths on the deer trails; twigs and old stumps scattered through. Only with
-// --ground=painted on the command line, until Justin picks (D-154). The cards sway
-// in the same wind as the grass and fade out by distance like the tufts.
+// 03). Justin wants the dense, wind-swept blade grass kept as one lush carpet, but
+// restyled: the pack palette (olive-yellow lit tips, muted greens) in two or three
+// painted tone bands instead of a smooth gradient, with a darker soft base where it
+// meets the ground. Flowers, clover, ferns and mushrooms from his licensed Golden
+// Skull foliage pack (client/assets/environment, NOTICE.md) are sparse accents in it,
+// drawn as crossed alpha cards; the ground takes the pack's grass-top colour, with
+// sandy paths on the deer trails and twigs and old stumps scattered through. Only
+// with --ground=painted on the command line, until Justin picks (D-154).
 public static class PaintedGround
 {
-    // --ground=painted: the pack's cards replace the grass. --ground=mixed: today's
-    // fine grass carpet stays, with the painted clumps, flowers and mushrooms as accents.
-    static readonly string[] Args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
-    public static readonly bool Mixed = Args.Contains("--ground=mixed");
-    public static readonly bool On = Mixed || Args.Contains("--ground=painted");
+    public static readonly bool On = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ground=painted");
 
-    // Three painted tones for grass (sRGB, before the grass shader's warm tips).
-    static readonly Color Lit = new(0.66f, 0.70f, 0.26f), Mid = new(0.47f, 0.55f, 0.19f), Shade = new(0.30f, 0.38f, 0.15f);
-    // The ground's own colour, from the pack's grass tile top (iso-starter
-    // ISO_Overlay_Grass_01 averages about (0.62, 0.70, 0.29)), and the sandy path
-    // (ISO_Tile_Dirt_01_GrassPath).
-    static readonly Color MeadowTop = new(0.60f, 0.66f, 0.28f), PathSand = new(0.70f, 0.58f, 0.38f);
+    // The pack's grass tones (Modeling's variant D, from the Golden Skull tiles): the
+    // muted mid green each blade is tinted with, and the olive-yellow lit tip the
+    // shader paints toward (it holds its own copies, in the band code).
+    static readonly Color GrassMid = new(0.47f, 0.58f, 0.20f), GrassLit = new(0.81f, 0.79f, 0.44f);
+    // The ground under the carpet, a deep olive matching the blades' shaded base so the
+    // gaps read as shade (as in reference 02), and the pack's sandy path.
+    static readonly Color MeadowTop = new(0.35f, 0.41f, 0.17f), PathSand = new(0.70f, 0.58f, 0.38f);
 
-    static Mesh? blades, mushroom, twig;
+    static Mesh? twig;
+    static ShaderMaterial? grassMaterial;
 
     // The atlas cells (tools/env-assets/build_foliage_atlas.py): each sprite's width
     // and height as a fraction of its 256 px cell, standing on the cell's bottom.
@@ -45,100 +45,81 @@ public static class PaintedGround
     public const int FlowerCards = 7, CloverCards = 10, FernCards = 13, MushroomCards = 15;
 
     static readonly Mesh?[] cards = new Mesh?[19];
-    static ShaderMaterial? cardMaterial, grassCardMaterial;
+    static ShaderMaterial? cardMaterial;
 
     // One sprite as two crossed cards, about `size` metres across its larger side.
     public static Mesh Card(int index, float size = 0.4f) => cards[index] ??= BuildCard(index, size);
 
     // A square metre of thick painted grass: five tufts, each a crossed pair of
     // cards of a different grass sprite, at their own heights and turns.
-    public const int ClumpVariants = 3;
-    static readonly Mesh?[] clumps = new Mesh?[ClumpVariants];
-    public static Mesh GrassClump(int variant) => clumps[variant] ??= BuildGrassClump(variant);
-
-    // Cards for scattered plants, and for the grass (which fades out by 48 m, like
-    // the tufts it replaces, so chunks without grass never show).
+    // Cards for the scattered plants.
     public static ShaderMaterial CardMaterial => cardMaterial ??= MakeCardMaterial(0f);
-    public static ShaderMaterial GrassCardMaterial => grassCardMaterial ??= MakeCardMaterial(48f);
 
-    public static Mesh Blades => blades ??= BuildBlades();
-    public static Mesh Mushroom => mushroom ??= BuildMushroom();
     public static Mesh Twig => twig ??= BuildTwig();
 
-    // The ground colour: today's tile colour pulled half way to the pack's bright
-    // yellow-green grass top (still browner under trees and on the heath), with the
-    // deer trails worn to sandy paths.
+    // A square metre of the restyled grass: 64 blades in a jittered 8 x 8 grid like
+    // today's 100, but each a broad, arching leaf (full width for the lower half, then
+    // a tapered point that bends over) rather than a thin spike, as the pack's tufts
+    // are drawn. Each blade's vertex shade varies a little, so neighbours read apart.
+    public static Mesh BroadTuft => broadTuft ??= BuildBroadTuft();
+    static Mesh? broadTuft;
+
+    static Mesh BuildBroadTuft()
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        const int grid = 8;
+        for (int gx = 0; gx < grid; gx++)
+            for (int gz = 0; gz < grid; gz++)
+            {
+                float px = (gx + 0.5f) / grid - 0.5f + (H(gx, gz, 620) - 0.5f) / grid;
+                float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621) - 0.5f) / grid;
+                float angle = H(gx, gz, 622) * Mathf.Pi;
+                float height = 0.34f + H(gx, gz, 623) * 0.34f;
+                float half = 0.035f + H(gx, gz, 624) * 0.025f;
+                var side = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * half;
+                var lean = new Vector3(H(gx, gz, 625) - 0.5f, 0, H(gx, gz, 626) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627) * 0.16f);
+                var shade = Colors.White.Darkened(H(gx, gz, 628) * 0.18f);
+                var root = new Vector3(px, -0.02f, pz);
+                var mid = root + lean * 0.35f + Vector3.Up * height * 0.55f;
+                var tip = root + lean + Vector3.Up * height * 0.9f;
+                // UV.x runs -1 to 1 across the blade (0 at the tip), for the dark rim.
+                Blade(st, root - side, new(-1f, 0f), root + side, new(1f, 0f), mid + side * 0.85f, new(1f, 0.55f), shade);
+                Blade(st, root - side, new(-1f, 0f), mid + side * 0.85f, new(1f, 0.55f), mid - side * 0.85f, new(-1f, 0.55f), shade);
+                Blade(st, mid - side * 0.85f, new(-1f, 0.55f), mid + side * 0.85f, new(1f, 0.55f), tip, new(0f, 1f), shade);
+            }
+        return st.Commit();
+    }
+
+    static void Blade(SurfaceTool st, Vector3 a, Vector2 ua, Vector3 b, Vector2 ub, Vector3 c, Vector2 uc, Color shade)
+    {
+        foreach (var (v, t) in new[] { (a, ua), (b, ub), (c, uc) })
+        {
+            st.SetNormal(Vector3.Up);
+            st.SetUV(t);
+            st.SetColor(shade);
+            st.AddVertex(v);
+        }
+    }
+
+    // The restyled grass (the same tuft mesh and density as today's).
+    public static ShaderMaterial GrassMaterial => grassMaterial ??= MakeGrassMaterial();
+
+    // The ground colour: today's tile colour pulled half way to the deep olive (still
+    // browner under trees and on the heath), with the deer trails worn to sandy paths.
     public static Color Ground(Color tile, float trail) =>
         tile.Lerp(MeadowTop, 0.5f).Lerp(PathSand, Mathf.SmoothStep(0.25f, 0.7f, trail));
-
-    // A card's tint on a tile: near white so the painted sprite keeps its colours,
-    // nudged toward the tile's hue (darker under trees, browner on the heath).
-    public static Color CardTint(Color tile) =>
-        Colors.White.Lerp(tile * (1f / Mathf.Max(tile.V, 0.05f)), 0.22f).Darkened(0.1f * (1f - tile.V / 0.6f));
 
     // The same instances, tinted near white (painted cards bring their own colours).
     public static List<(Transform3D, Color, Color)> Whiten(List<(Transform3D, Color, Color)> items) =>
         items.ConvertAll(i => (i.Item1, Colors.White.Lerp(i.Item2, 0.15f), i.Item3));
 
-    // A grass clump's colour on a tile, at its lit tone (the blades bake their mid and
-    // shade tones below it): brighter where the meadow is lush, and still darker
-    // under trees, on the heath and in the wet (as the tile colour says).
+    // A grass tuft's tint on a tile: the pack's muted mid green, a little toward the
+    // olive-yellow where the meadow is lush, and still darker under trees, browner on
+    // the heath and mossier in the wet (as the tile colour says).
     public static Color Grass(Color tile, float lush) =>
-        Lit.Darkened(0.12f * (1f - Mathf.Clamp(lush * 1.2f - 0.15f, 0f, 1f))).Lerp(tile * (Lit.V / Mathf.Max(tile.V, 0.05f)), 0.3f);
-
-    // One square metre of thick grass: three clumps of broad, tapering, arching
-    // blades. Each blade is a lit, mid or shade tone (baked in the vertex colour,
-    // multiplied by the instance colour), with its left half a touch lighter than
-    // its right, like a painted leaf.
-    static Mesh BuildBlades()
-    {
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        int blade = 0;
-        for (int c = 0; c < 3; c++)
-        {
-            float cx = (H(c, 0, 600) - 0.5f) * 0.6f, cz = (H(c, 1, 600) - 0.5f) * 0.6f;
-            int count = 4 + (int)(H(c, 2, 600) * 3f);
-            for (int b = 0; b < count; b++, blade++)
-            {
-                float angle = b * Mathf.Tau / count + H(blade, 3, 601) * 0.9f;
-                var dir = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
-                var side = new Vector3(-dir.Z, 0, dir.X);
-                var root = new Vector3(cx, -0.03f, cz) + dir * (0.02f + H(blade, 4, 601) * 0.08f);
-                float length = 0.26f + H(blade, 5, 601) * 0.28f;
-                float width = 0.045f + H(blade, 6, 601) * 0.03f;
-                float lean = 0.25f + H(blade, 7, 601) * 0.35f;
-                float roll = H(blade, 8, 601);
-                var tone = roll < 0.3f ? Shade : roll < 0.7f ? Mid : Lit;
-                // Vertex colours are relative to the instance colour (the lit tone), so
-                // they stay at or below 1 (vertex colours are stored in 8 bits).
-                var baked = new Color(tone.R / Lit.R, tone.G / Lit.G, tone.B / Lit.B).Darkened(0.06f);
-                Vector3 At(float t) => root + dir * (lean * length * t * t) + Vector3.Up * (length * (t - 0.18f * t * t));
-                float Width(float t) => width * Mathf.Pow(1f - t, 0.8f);
-                const int segments = 3;
-                for (int s = 0; s < segments; s++)
-                {
-                    float t0 = s / (float)segments, t1 = (s + 1) / (float)segments;
-                    Vector3 a = At(t0), b2 = At(t1);
-                    Vector3 w0 = side * Width(t0), w1 = side * Width(t1);
-                    Tri(st, a - w0, t0, baked.Lightened(0.06f), a + w0, t0, baked.Darkened(0.06f), b2 + w1, t1, baked.Darkened(0.06f));
-                    Tri(st, a - w0, t0, baked.Lightened(0.06f), b2 + w1, t1, baked.Darkened(0.06f), b2 - w1, t1, baked.Lightened(0.06f));
-                }
-            }
-        }
-        return st.Commit();
-    }
-
-    // A small mushroom about 12 cm tall: a pale stem under a rounded russet cap. The
-    // instance colour only varies them a little.
-    static Mesh BuildMushroom()
-    {
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        Terrain.Append(st, new CylinderMesh { TopRadius = 0.012f, BottomRadius = 0.018f, Height = 0.09f, RadialSegments = 6, Rings = 1 }, Terrain.Xf(0, 0.045f, 0), new Color(0.9f, 0.86f, 0.76f));
-        Terrain.Append(st, new SphereMesh { Radius = 0.045f, Height = 0.045f, RadialSegments = 8, Rings = 3, IsHemisphere = true }, Terrain.Xf(0, 0.085f, 0), new Color(0.66f, 0.38f, 0.2f));
-        return st.Commit();
-    }
+        GrassMid.Lerp(GrassLit, 0.25f * Mathf.Clamp(lush * 1.3f - 0.2f, 0f, 1f))
+            .Lerp(tile * (GrassMid.V / Mathf.Max(tile.V, 0.05f)), 0.35f) * Mathf.Clamp(tile.V / 0.45f, 0.75f, 1.05f);
 
     // A dead twig lying in the grass: a bent stick with a fork, about 40 cm long.
     static Mesh BuildTwig()
@@ -157,20 +138,6 @@ public static class PaintedGround
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
         AddCard(st, Cells[index], Vector3.Zero, size, 0f);
-        return st.Commit();
-    }
-
-    static Mesh BuildGrassClump(int variant)
-    {
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        for (int k = 0; k < 5; k++)
-        {
-            int seed = variant * 16 + k;
-            var cell = Cells[(int)(H(seed, 0, 610) * 7f)];
-            var at = new Vector3((H(seed, 1, 610) - 0.5f) * 0.8f, -0.03f, (H(seed, 2, 610) - 0.5f) * 0.8f);
-            AddCard(st, cell, at, 0.7f + H(seed, 3, 610) * 0.4f, H(seed, 4, 610) * Mathf.Pi);
-        }
         return st.Commit();
     }
 
@@ -269,20 +236,94 @@ public static class PaintedGround
         }
         """;
 
+    // The restyled grass: today's tuft motion (wind waves and flutter, snow, cleared
+    // cells lying down, fading out by 48 m), but painted in three tone bands with soft
+    // edges: a darker olive-brown base where the blades meet the ground, the tile's
+    // muted green, and olive-yellow lit tips. Where the bands fall shifts a little per
+    // patch, so they never line up across the field. Prototype; the real one belongs
+    // in Look's grass shader, with Atmosphere.
+    static ShaderMaterial MakeGrassMaterial()
+    {
+        _ = Look.Grass; // registers the weather globals the shader reads
+        var material = new ShaderMaterial { Shader = new Shader { Code = GrassCode } };
+        material.SetShaderParameter("fade_far", 48f);
+        return material;
+    }
+
+    const string GrassCode = """
+        shader_type spatial;
+        render_mode cull_disabled, specular_disabled;
+        uniform float fade_far = 0.0;
+        global uniform vec3 player_position;
+        global uniform float wind_strength;
+        global uniform float wind_gust;
+        global uniform vec2 wind_dir;
+        global uniform float snow_cover;
+        global uniform float season_warmth;
+        global uniform float world_seconds;
+        global uniform float wetness;
+        varying vec3 tint;
+        varying float tip;
+        varying float gust;
+        varying float patch;
+        varying float across;
+
+        void vertex() {
+            if (fade_far > 0.0) {
+                float away = length(MODEL_MATRIX[3].xz - player_position.xz);
+                VERTEX *= 1.0 - smoothstep(0.65 * fade_far, fade_far, away);
+            }
+            VERTEX.y *= 1.0 - 0.75 * snow_cover;
+            if (INSTANCE_CUSTOM.x > 0.0) {
+                float k = smoothstep(0.0, 1.6, world_seconds - INSTANCE_CUSTOM.x);
+                float height = INSTANCE_CUSTOM.y > 0.0 ? 1.0 - k : k;
+                VERTEX.y *= height;
+                VERTEX.xz *= mix(0.7, 1.0, height);
+            }
+            vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+            tip = UV.y;
+            across = UV.x;
+            float wave = sin(dot(world.xz, vec2(0.23, 0.31)) - TIME * 1.3);
+            gust = smoothstep(0.2, 1.0, wave);
+            float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
+            float wind = (0.45 + wind_strength * 1.8) * (0.7 + 0.6 * wind_gust);
+            vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
+            vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
+            VERTEX.xz += local.xz * tip * tip;
+            VERTEX.y -= gust * 0.06 * tip * tip;
+            NORMAL = vec3(0.0, 1.0, 0.0);
+            tint = pow(COLOR.rgb, vec3(2.2));
+            // A per-blade-patch value from the blade's own position, for varying the bands.
+            patch = fract(sin(dot(floor(world.xz * 3.0), vec2(12.9898, 78.233))) * 43758.5453);
+        }
+
+        void fragment() {
+            // The base matches the ground between the blades (PaintedGround.Ground), so a
+            // patch without a tuft never shows as a square.
+            vec3 base = tint * vec3(0.5, 0.52, 0.6);
+            vec3 lit = mix(tint * vec3(1.15, 1.1, 0.9), pow(vec3(0.81, 0.79, 0.44), vec3(2.2)), 0.35 + 0.2 * patch);
+            float low = 0.26 + 0.1 * patch, high = 0.68 + 0.12 * patch;
+            vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
+            color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));
+            color += vec3(0.04, 0.04, 0.01) * gust * step(high, tip);
+            // A soft dark rim along each blade's edges, as the painted leaves have.
+            color *= mix(1.0, 0.62, smoothstep(0.55, 0.95, abs(across)));
+            color *= mix(1.0, 0.88, wetness);
+            vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
+            color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
+            color = mix(color, vec3(0.86, 0.89, 0.94), snow_cover * (0.55 + 0.45 * tip));
+            ALBEDO = clamp(color, 0.0, 1.0);
+            NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+            ROUGHNESS = 1.0;
+            SPECULAR = 0.0;
+        }
+
+        void light() {
+            float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
+            DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION / PI;
+        }
+        """;
+
     static float H(int a, int b, uint salt) => Terrain.Hash01(a, b, salt);
 
-    static void Tri(SurfaceTool st, Vector3 a, float ta, Color ca, Vector3 b, float tb, Color cb, Vector3 c, float tc, Color cc)
-    {
-        Vertex(st, a, ta, ca);
-        Vertex(st, b, tb, cb);
-        Vertex(st, c, tc, cc);
-    }
-
-    static void Vertex(SurfaceTool st, Vector3 v, float tip, Color color)
-    {
-        st.SetNormal(Vector3.Up);
-        st.SetUV(new Vector2(0, tip));
-        st.SetColor(color);
-        st.AddVertex(v);
-    }
 }
