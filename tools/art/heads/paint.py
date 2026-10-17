@@ -185,10 +185,10 @@ def pebble(part, pos, nrm, curv, ao):
     face_on = smooth(0.2, 0.6, -nrm[..., 1])
     rim = np.abs(np.hypot(pos[..., 0] / 0.1, (pos[..., 2] + 0.1) / 0.055) - 1)
     upper = smooth(-0.11, -0.085, pos[..., 2])
-    col = mix(col, SCALE_LINE * 0.85, (1 - smooth(0.04, 0.14, rim)) * upper * face_on * 0.55)
+    col = mix(col, SCALE_LINE * 0.85, (1 - smooth(0.04, 0.14, rim)) * upper * face_on * 0.3)
     for side in (-1, 1):
         d = np.hypot((pos[..., 0] - side * 0.017) / 0.0075, (pos[..., 2] + 0.071) / 0.0055)
-        col = mix(col, SCALE_LINE * 0.7, (1 - smooth(0.6, 1.0, d)) * face_on * 0.75)
+        col = mix(col, SCALE_LINE * 0.7, (1 - smooth(0.6, 1.0, d)) * face_on * 0.45)
     # A pale painted highlight on the upper forehead, as on the turnaround.
     d = np.hypot((pos[..., 0] + 0.08) / 0.065, (pos[..., 2] - 0.14) / 0.04)
     col = mix(col, P_SKIN["lit"] * 1.04, (1 - smooth(0.7, 1.0, d)) * smooth(0.0, 0.3, -nrm[..., 1]) * 0.6)
