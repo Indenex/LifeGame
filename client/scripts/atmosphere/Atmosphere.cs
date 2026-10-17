@@ -622,6 +622,9 @@ public partial class Atmosphere : Node3D
             uniform float rainbow = 0.0;
             // The prototype colour grade (AtmosphereGrade), 0 off.
             uniform float grade = 0.0;
+            // The cutesy, relaxing look (D-313, AtmosphereGrade): pastel skies and a
+            // rosy dusk, 0 off.
+            uniform float cosy = 0.0;
             // Thunderstorms (AtmosphereStorms): how stormy, and lightning inside
             // the clouds toward flash_dir.
             uniform float storm = 0.0;
@@ -715,6 +718,15 @@ public partial class Atmosphere : Node3D
                         vec3 hue = clamp(vec3(1.0 - abs(t + 0.7) * 1.4, 1.0 - abs(t) * 1.4, 1.0 - abs(t - 0.7) * 1.4), 0.0, 1.0);
                         col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
                     }
+                }
+                // Pastel: a touch lighter and softer by day, a rosy-peach band along
+                // the horizon at dawn and dusk, and a gentler blue at night.
+                if (cosy > 0.0) {
+                    float low = smoothstep(-0.08, 0.04, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
+                    float grey = dot(col, vec3(0.3, 0.55, 0.15));
+                    vec3 pastel = mix(col, vec3(grey), 0.18) * 0.9 + vec3(0.09, 0.085, 0.10) * (0.35 + 0.65 * daylight);
+                    pastel += vec3(0.28, 0.12, 0.16) * low * pow(1.0 - up, 3.0) * smoothstep(-0.1, 0.0, d.y);
+                    col = mix(col, pastel, cosy);
                 }
                 COLOR = col;
             }
