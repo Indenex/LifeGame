@@ -18,9 +18,15 @@ public partial class Terrain
         snapshot.Keep(x, z);
         var data = Compute(snapshot);
         var root = new Node3D { Name = $"Tree_{x}_{z}" };
-        foreach (var (mesh, material, items, shadow) in data.Batches)
-            if (material == Look.TreeBark || material == Look.TreeFoliage)
+        foreach (var (mesh, material, items, shadow, range) in data.Batches)
+        {
+            bool painted = material == PaintedTrees.PineMaterial || material == PaintedTrees.BroadleafMaterial;
+            // Painted trees come as a near and a far batch; a falling tree is always near,
+            // so only the near one is drawn, with no distance limit.
+            if (painted && range.Item1 > 0f) continue;
+            if (painted || material == Look.TreeBark || material == Look.TreeFoliage)
                 AddMulti(root, mesh, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
+        }
         if (root.GetChildCount() == 0) { root.Free(); return null; }
         // A tree near the player fades out of the camera's way and its see-through copy
         // draws it; with one tree, that copy can simply stay on.
