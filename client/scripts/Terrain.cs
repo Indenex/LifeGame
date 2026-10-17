@@ -477,10 +477,10 @@ public partial class Terrain : Node3D
                     // Heather and gorse carry their own colours (Modeling); the tint only
                     // varies them a little.
                     if (plant < heather)
-                        landmarks.Put(PropMeshes.Heather(Variant(x, z, 28, PropMeshes.HeatherVariants)), Look.Foliage,
+                        landmarks.Put(PropMeshes.Heather(Variant(x, z, 28, PropMeshes.HeatherVariants)), Painted.Foliage,
                             (Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.45f), Colors.White.Darkened(Hash01(x, z, 56) * 0.15f), custom with { A = SeasonHeather }));
                     else if (plant < heather + gorse)
-                        landmarks.Put(PropMeshes.Gorse(Variant(x, z, 29, PropMeshes.GorseVariants)), Look.Foliage,
+                        landmarks.Put(PropMeshes.Gorse(Variant(x, z, 29, PropMeshes.GorseVariants)), Painted.Foliage,
                             (Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 55) * 0.5f), Colors.White.Darkened(Hash01(x, z, 56) * 0.12f), custom));
                     else if (plant < heather + gorse + sedge)
                         reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Look.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
@@ -553,9 +553,9 @@ public partial class Terrain : Node3D
         data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
-        // Bushes lean toward the grass tufts' muted olive (env-20).
-        for (int i = 0; i < bushes.Count; i++) bushes[i] = bushes[i] with { Item2 = Undergrowth.Olive(bushes[i].Item2) };
-        data.Add(Undergrowth.Bush, bushes, Look.Foliage);
+        // Bushes are painted (painted-2), in the painted trees' muted olive and grey-green.
+        for (int i = 0; i < bushes.Count; i++) bushes[i] = bushes[i] with { Item2 = PaintedBushes.Tint(bushes[i].Item2) };
+        data.Add(PaintedBushes.Bush, bushes, Painted.Bush);
     }
 
     // Which of a prop's shape variants stands on a cell: at random, or (Regional) the
