@@ -269,7 +269,10 @@ public partial class BagSlotView : PanelContainer
         picture.SetAnchorsPreset(LayoutPreset.FullRect);
         picture.OffsetLeft = picture.OffsetTop = 2;
         picture.OffsetRight = picture.OffsetBottom = -2;
+        // On a soft light plate in full colour, like the hotbar (ui-70).
+        var (plate, shadow) = SlotLook.Behind(stack, picture, BagGrid.Slot);
         stack.AddChild(picture);
+        SlotLook.Set(plate, shadow, picture, picture.Texture, true);
         if (Stack.Count > 1)
         {
             var count = Hud.Text(Stack.Count.ToString(), 13);
