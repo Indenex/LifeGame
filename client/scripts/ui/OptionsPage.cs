@@ -35,12 +35,15 @@ public partial class OptionsPage : Control
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
+    Label sizeName = null!;
 
     public override void _Ready()
     {
         Visible = false;
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        // The player's UI size applies from the start (ui-63).
+        UiScale.Hook(GetTree().Root);
 
         // The same soft dark panel as the other windows (trade, equipment), centred (D-125).
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -94,6 +97,15 @@ public partial class OptionsPage : Control
         viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
+        // How big the windows, HUD and words are (ui-63); Auto grows them on big screens.
+        var size = ControlsPage.SliderRow(column, "UI size", 0, UiScale.Names.Length - 1, 1, UiScale.Setting, v =>
+        {
+            UiScale.Setting = (int)v;
+            sizeName.Text = UiScale.Names[(int)v];
+        });
+        sizeName = new Label { Text = UiScale.Names[UiScale.Setting], CustomMinimumSize = new Vector2(70, 0) };
+        Hud.Soft(sizeName, 16, 0.7f);
+        size.GetParent().AddChild(sizeName);
         // How thick the grass is drawn (Environment, env-32); Low for slower PCs.
         Button grass = null!;
         grass = ControlsPage.TextButton(GrassText(), () =>
