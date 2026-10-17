@@ -1,0 +1,9 @@
+# atmosphere-32 (PR #524): smoke signal NEAR. With --smoke-signal=1 and no live fire the client raises a demo
+# column 12 m ahead of the camera's focus (set once). Camera 4 m behind the player tilted up the column. 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.4 --cloud=0.2 --wind=0.5 --smoke-signal=1 --render-cam=3,1.2,0,4.5
+frames 72
+mark smoke-near-start
+frames +120
+mark smoke-near-end

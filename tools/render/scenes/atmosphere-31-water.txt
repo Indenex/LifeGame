@@ -1,0 +1,21 @@
+# atmosphere-31 (PR #517): the pond near (30,76): walk into the shallows, wade, stand still, turn, walk back out.
+# Ponds on main are at most 0.4 m deep, so there is no swimming water here. 12 fps movie, camera a little closer and lower.
+# EXTRA is appended to the client options by the job (e.g. --rain=0.6, --water-reflections=0).
+client-as-puppet
+client-movie 12
+client --time-of-day=0.38 --cloud=0.2 --wind=0.4 --debug-position=29,75 --render-cam=2.6,0.5,35,0.3 EXTRA
+sql UPDATE player_pos SET x = 29.0, z = 75.0, chunk_x = 1, chunk_z = 4
+frames 72
+mark water-start
+keydown s
+frames +48
+keyup s
+frames +24
+keydown a
+frames +18
+keyup a
+keydown w
+frames +54
+keyup w
+frames +12
+mark water-end
