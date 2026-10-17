@@ -6,7 +6,8 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Your group on screen (ui-38, the shell): a quiet list of members down the left edge, no box
+// Your group on screen (ui-38, the shell): a quiet list of members down the left edge, each with
+// how far off they are (ui-78), no box
 // (D-045), with "Leave group" under it; "Mara asks you to join her group    E joins" (the Use
 // key as bound) above the Use prompt while an invitation waits, and a soft "wants you in their group" over the
 // inviter's head, like the trade cue. The server decides everything (Groups.cs); this reads
@@ -75,7 +76,7 @@ public partial class GroupView : CanvasLayer
 
         // Rebuild the list only when it changes.
         var members = conn.Db.MyGroup.Iter().OrderBy(m => m.JoinedAt.MicrosecondsSinceUnixEpoch).ToList();
-        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}"));
+        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}:{HowFar(m.PlayerId)}"));
         if (key == shown) return;
         shown = key;
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
@@ -87,7 +88,8 @@ public partial class GroupView : CanvasLayer
         foreach (var m in members)
         {
             bool here = Online(m.PlayerId);
-            var name = Hud.Text((m.PlayerId == MyId() ? "You" : m.Name) + (here ? "" : "  (away)"), 15);
+            string far = m.PlayerId == MyId() || !here ? "" : HowFar(m.PlayerId) is { } f ? $"   {f}" : "";
+            var name = Hud.Text((m.PlayerId == MyId() ? "You" : m.Name) + (here ? far : "  (away)"), 15);
             Hud.Soft(name, 15, here ? 0.9f : 0.45f);
             list.AddChild(name);
         }
@@ -99,6 +101,16 @@ public partial class GroupView : CanvasLayer
     }
 
     bool Online(uint playerId) => conn?.Db.Player.PlayerId.Find(playerId) is { Online: true };
+
+    // How far a member is, in steps of 10 m so the list doesn't flicker as people walk (ui-78):
+    // "close by", "40 m", "far off". Null when either position isn't known.
+    string? HowFar(uint playerId)
+    {
+        if (conn == null || playerId == MyId()) return null;
+        if (conn.Db.PlayerPos.PlayerId.Find(playerId) is not { } them || conn.Db.PlayerPos.PlayerId.Find(MyId()) is not { } me) return null;
+        float d = new Vector2(them.X - me.X, them.Z - me.Z).Length();
+        return d < 12f ? "close by" : d >= 300f ? "far off" : $"{Mathf.RoundToInt(d / 10f) * 10} m";
+    }
 
     // "wants you in their group" over the inviter's head while you are asked; only you see it.
     void Cue(uint from)
