@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/model-13-tree-fixes
-PR: (opening)
+PR: #617
 
 ## Goal
 Fix Justin's bug report, "there's trees that didn't get painted" (screenshot: renders/justin/2026-10-17-unpainted-trees.webp at bbb19315). Every tree in the world is drawn with PaintedTrees' painted crowns, and the painted broadleaf shows no dark hole when seen from above.
