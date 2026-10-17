@@ -10,34 +10,32 @@ namespace LifeGame;
 // a last shower of leaves, coloured by the season. Painted and simple: small faceted
 // chips, soft round puffs, all short-lived one-shots that free themselves.
 //
-// Animation calls Atmosphere.ToolContact at the frame a swing lands (with the motion,
-// the tool head's world position and the way the worker faces); a felled tree is
-// read straight from the ChoppedTree table.
+// Each one lands on Animation's impact frame (anim-7's Avatar.Impact: the motion, the
+// tool point in the world, and whether it is a spade throwing its dirt); a felled
+// tree is read straight from the ChoppedTree table. Knapping knocks off grey stone
+// flakes, and fuel landing on a fire throws up sparks and a little ash.
 //
 // Command line: --impacts=seconds throws a chop, a dig and a falling tree's dust
 // and leaves in front of the player that often, for screenshots.
 public partial class Atmosphere
 {
-    // Called by Animation when a tool strikes: the motion, where the tool head is,
-    // and the way the worker faces (flat). Set once the atmosphere is ready.
-    public static System.Action<WorkMotion, Vector3, Vector3>? ToolContact;
-
     // Effects only within this many metres of the player.
     const float ImpactReach = 50f;
 
     static readonly Color ChipLight = new(0.80f, 0.64f, 0.40f), ChipBark = new(0.36f, 0.25f, 0.17f);
     static readonly Color Clod = new(0.34f, 0.25f, 0.16f), Dust = new(0.72f, 0.64f, 0.50f);
+    static readonly Color Flint = new(0.55f, 0.56f, 0.58f), Ember = new(1f, 0.62f, 0.22f), Ash = new(0.55f, 0.53f, 0.50f);
 
     double connectedAt = -1;
     float? argImpacts;
     float impactClock;
     int impactStep;
 
-    void ReadyImpacts()
-    {
-        ToolContact = OnToolContact;
-        argImpacts = ArgFloat("impacts");
-    }
+    void ReadyImpacts() => argImpacts = ArgFloat("impacts");
+
+    // Avatar.Impact's handler (subscribed once anim-7 is on main).
+    void OnAvatarImpact(Node3D avatar, WorkMotion motion, Vector3 at, bool thrown) =>
+        OnToolContact(motion, at, -avatar.GlobalBasis.Z, thrown);
 
     // Only for --impacts: take turns at a chop, a dig and a tree coming down.
     void UpdateImpacts(float dt)
@@ -53,7 +51,10 @@ public partial class Atmosphere
         switch (impactStep++ % 3)
         {
             case 0: OnToolContact(WorkMotion.Chop, ahead + Vector3.Up * 0.9f, facing); break;
-            case 1: OnToolContact(WorkMotion.Dig, ahead, facing); break;
+            case 1:
+                OnToolContact(WorkMotion.Dig, ahead, facing);
+                OnToolContact(WorkMotion.Dig, ahead + Vector3.Up * 0.6f, facing, thrown: true);
+                break;
             default:
             {
                 var at = p.GlobalPosition + facing * 6f;
@@ -72,7 +73,7 @@ public partial class Atmosphere
         conn.Db.ChoppedTree.OnInsert += (_, t) => { if (t.Felled && Time.GetTicksMsec() / 1000.0 - connectedAt > 5.0) TreeFell(t); };
     }
 
-    void OnToolContact(WorkMotion motion, Vector3 at, Vector3 facing)
+    void OnToolContact(WorkMotion motion, Vector3 at, Vector3 facing, bool thrown = false)
     {
         if (!IsInsideTree() || !Near(at)) return;
         facing.Y = 0f;
@@ -87,9 +88,41 @@ public partial class Atmosphere
             case WorkMotion.Dig:
             {
                 var ground = new Vector3(at.X, terrain?.HeightAt(at.X, at.Z) ?? at.Y, at.Z);
-                Burst(ground, (Vector3.Up * 1.4f - facing * 0.4f).Normalized(), 45f, 1.4f, 2.6f, 8, 0.8f,
-                    Faceted(new SphereMesh { Radius = 0.035f, Height = 0.06f, RadialSegments = 5, Rings = 3 }), Clod, Clod.Darkened(0.2f), spin: true);
+                if (thrown)
+                {
+                    // The spade's load flies off forward and to the side.
+                    Burst(at, (facing + Vector3.Up * 0.9f).Normalized(), 30f, 2.2f, 3.4f, 12, 0.9f,
+                        Faceted(new SphereMesh { Radius = 0.04f, Height = 0.07f, RadialSegments = 5, Rings = 3 }), Clod, Clod.Darkened(0.2f), spin: true);
+                    Puff(at, 0.2f, 4, 0.9f, Dust, 0.35f);
+                    break;
+                }
+                // The blade or stick goes in: a few crumbs kick up and a little dust.
+                Burst(ground, (Vector3.Up * 1.4f - facing * 0.4f).Normalized(), 45f, 1.0f, 2.0f, 6, 0.7f,
+                    Faceted(new SphereMesh { Radius = 0.03f, Height = 0.05f, RadialSegments = 5, Rings = 3 }), Clod, Clod.Darkened(0.2f), spin: true);
                 Puff(ground, 0.35f, 6, 1.1f, Dust, 0.45f);
+                break;
+            }
+            case WorkMotion.Knap:
+                // Grey flakes chip off the core.
+                Burst(at, (Vector3.Up + facing * 0.5f).Normalized(), 70f, 0.8f, 1.8f, 5, 0.6f,
+                    new BoxMesh { Size = new Vector3(0.03f, 0.008f, 0.025f) }, Flint, Flint.Lightened(0.25f), spin: true);
+                break;
+            case WorkMotion.Feed:
+            {
+                // Fuel lands on the fire: a flurry of sparks and a breath of ash.
+                var sparks = Burst(at, Vector3.Up, 35f, 1.2f, 2.6f, 14, 1.1f,
+                    new SphereMesh { Radius = 0.012f, Height = 0.024f, RadialSegments = 4, Rings = 2 }, Ember, Ember.Lightened(0.3f), spin: false);
+                sparks.Gravity = new Vector3(0f, 0.6f, 0f);
+                sparks.DampingMin = 1.5f;
+                sparks.DampingMax = 2.5f;
+                if (sparks.Mesh.SurfaceGetMaterial(0) is StandardMaterial3D glow)
+                {
+                    glow.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
+                    glow.EmissionEnabled = true;
+                    glow.Emission = Ember;
+                    glow.EmissionEnergyMultiplier = 3f;
+                }
+                Puff(at, 0.15f, 4, 1.4f, Ash, 0.4f);
                 break;
             }
         }
