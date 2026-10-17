@@ -19,6 +19,7 @@ namespace LifeGame.Shared
         Ban = 64,        // keep a player off the town's claims for a set time
         Gates = 128,     // bar or unbar the gates on the town's claims
         Log = 256,       // add notes to the town's log
+        Store = 512,     // take things out of the town's store (anyone on the roster puts in)
     }
 
     public sealed record TownOfficeDef(byte Id, string Name, string Job, TownPower Powers, byte StandsInFor = TownOfficeDef.NoOffice)
@@ -31,13 +32,13 @@ namespace LifeGame.Shared
         // Ids are append-only (the Mayor is Social.OfficeMayor, 0).
         public static readonly TownOfficeDef[] Offices =
         {
-            new(0, "Mayor", "Removes a claim from the roster, renames the town, proposes a merge, speaks to all.", TownPower.Remove | TownPower.Rename | TownPower.Merge | TownPower.Announce | TownPower.ClearRuins),
+            new(0, "Mayor", "Removes a claim from the roster, renames the town, proposes a merge, speaks to all, takes from the store.", TownPower.Remove | TownPower.Rename | TownPower.Merge | TownPower.Announce | TownPower.ClearRuins | TownPower.Store),
             new(1, "Deputy", "Stands in for the Mayor while the seat is empty.", TownPower.None, 0),
             new(2, "Judge", "Settles a tied election.", TownPower.BreakTies),
             new(3, "Herald", "Sends a word to the whole town.", TownPower.Announce),
             new(4, "Warden", "Clears ruins left by those who have gone.", TownPower.ClearRuins),
             new(5, "Marshal", "Keeps the peace: bans a player from the town's claims for a time.", TownPower.Ban),
-            new(6, "Treasurer", "Keeps the town's store. (Powers to come.)", TownPower.None),
+            new(6, "Treasurer", "Keeps the town's store: takes things out of it for the town.", TownPower.Store),
             new(7, "Gatekeeper", "Bars and unbars the gates on the town's claims.", TownPower.Gates),
             new(8, "Scribe", "Keeps the town's log and adds notes to it.", TownPower.Log),
             new(9, "Elder", "Settles a tied election.", TownPower.BreakTies),
@@ -57,5 +58,7 @@ namespace LifeGame.Shared
         public const int LogKeep = 200;           // entries kept per town, oldest go first
         public const int LogNoteMax = 120;
         public const long LogNoteEveryMicros = 10L * 1_000_000;
+        // claims-28: different stacks the town's store holds; raisable (D-197).
+        public const int StoreStacksMax = 40;
     }
 }

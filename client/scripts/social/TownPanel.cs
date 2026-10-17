@@ -62,6 +62,7 @@ public partial class TownPanel : CanvasLayer
         Panels.Centre(this, Close);
         root.AddChild(window);
         ReadyBoxes();
+        ReadyStore();
         map.Picked += Pick;
     }
 
@@ -271,7 +272,7 @@ public partial class TownPanel : CanvasLayer
         foreach (var child in side.GetChildren())
         {
             side.RemoveChild(child);
-            if (child != nameRow && child != sayRow && child != logRow) child.QueueFree();
+            if (child != nameRow && child != sayRow && child != logRow && child != storeBox) child.QueueFree();
         }
         var s = Read();
         if (s.Me == null) votingFor = null;
@@ -311,6 +312,7 @@ public partial class TownPanel : CanvasLayer
         BuildRoster(s);
         BuildOffices(s);
         BuildMerges(s);
+        BuildStore(s);
         BuildActions(s);
     }
 

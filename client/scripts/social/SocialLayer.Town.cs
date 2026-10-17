@@ -32,11 +32,17 @@ public partial class SocialLayer
         c.Db.MyTownInvites.OnInsert += (_, invite) => { dirty(); Invited(invite); };
         c.Db.MyTownInvites.OnDelete += (_, _) => dirty();
         c.Db.Claim.OnInsert += (_, _) => dirty(); c.Db.Claim.OnUpdate += (_, _, _) => dirty(); c.Db.Claim.OnDelete += (_, _) => dirty();
+        // claims-28: the store's grids follow the store and your bag without a full redraw.
+        Action store = town.RefreshStore;
+        c.Db.MyTownStore.OnInsert += (_, _) => store(); c.Db.MyTownStore.OnUpdate += (_, _, _) => store(); c.Db.MyTownStore.OnDelete += (_, _) => store();
+        c.Db.MyInventory.OnInsert += (_, _) => store(); c.Db.MyInventory.OnUpdate += (_, _, _) => store(); c.Db.MyInventory.OnDelete += (_, _) => store();
     }
 
     // The claim panel is docked, not centred, so it closes by hand; Panels.Opening closes other centre windows.
     void OpenTown()
     {
+        // The town's store works at the marker the panel was opened from (claims-28).
+        town.AtClaim = panel.Claim?.Id ?? 0;
         panel.Close();
         town.Open();
     }
