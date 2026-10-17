@@ -82,7 +82,7 @@ public static partial class Module
         if (kiln.State == (byte)KilnState.Firing)
             throw new Exception("The kiln is firing");
 
-        var pots = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var pots = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FormOfUnfired((Item)i.Item) is not null)
             .ToList();
         var load = kiln.Load ?? new List<KilnPot>();
@@ -171,7 +171,7 @@ public static partial class Module
     // longest-burning fuels first; throws without taking anything if there isn't enough.
     static void BurnFuel(ReducerContext ctx, float seconds)
     {
-        var fuel = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var fuel = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && Items.Def((Item)i.Item).FuelSeconds > 0)
             // Longest-burning first, like feeding a fire: sticks and logs go in before
             // fiber and tinder, which a new player needs for lighting fires.

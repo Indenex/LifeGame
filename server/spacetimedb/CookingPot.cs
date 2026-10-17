@@ -40,7 +40,7 @@ public static partial class Module
     {
         wear = 0;
         maker = 0;
-        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)).ToList();
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)).ToList();
         stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
         if (stacks.Count == 0) return;
         wear = stacks[0].Wear;
@@ -103,7 +103,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var pot = ctx.Db.SimmerPot.Id.Find(potId) ?? throw new Exception("That pot is gone");
-        if (pot.Owner != ctx.Sender)
+        if (pot.Owner != Me(ctx))
             throw new Exception("That isn't your pot");
         RequireReach(pos, pot.X, pot.Z);
         float left = ClayRules.SimmerSeconds((Item)pot.Dish) - SecondsBetween(pot.PutAt, ctx.Timestamp);
@@ -113,11 +113,11 @@ public static partial class Module
         if (ClayRules.KeepsPot((Item)pot.Dish))
         {
             // Tallow is skimmed off the top; the pot comes back empty (ceramics-9).
-            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, Items.RawQuality);
-            AddToInventory(ctx, ctx.Sender, Item.CoilPot, 1, pot.Quality, pot.PotWear, pot.PotMaker);
+            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.CoilPot, 1, pot.Quality, pot.PotWear, pot.PotMaker);
         }
         else
             // The dish is the pot with the food in it: it carries the pot's maker and slip, so eating it gives the same pot back.
-            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, pot.Quality, pot.PotWear, pot.PotMaker);
+            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, pot.Quality, pot.PotWear, pot.PotMaker);
     }
 }

@@ -673,7 +673,7 @@ public partial class BuildingSystem : Node
     static string ItemName(ushort item, uint count) =>
         Items.IsKnown(item) ? Items.Def((Item)item).Count(count).ToLowerInvariant() : "something";
 
-    SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
+    SpacetimeDB.Identity? MyIdentity() => Me.Key(conn());
 
     void Puff(Vector3 at, Color color)
     {

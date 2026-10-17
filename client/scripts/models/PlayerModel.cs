@@ -67,6 +67,7 @@ public static class PlayerModel
             Remember(figure, look);
             var built = ChibiFigure.Build(ChibiLook(look));
             if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } chibi) chibi.Mesh = built.Mesh;
+            ChibiShell.Sync(figure, ChibiLook(look));
             // The face set follows the new race and skin, keeping the face shown.
             if (figure.HasMeta(ChibiFigure.FaceMeta)) ChibiFigure.DressFace(figure, ChibiLook(look));
             // Put back on whatever it wears, cut for the new race.
