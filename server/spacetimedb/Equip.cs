@@ -1,0 +1,72 @@
+// Which hotbar slot a player has equipped (crafting-29, Justin: "for a tool to be used, it
+// needs to be on your bar and equipped"). World tool actions (chopping, digging, shearing,
+// butchering) work only with the tool in that slot; a tool in the bag or on the tools belt
+// does not count there. Crafting recipes that need a tool keep BestTool (belt and bag count,
+// D-263). The client picks the slot with a hotbar key (UX); the server only trusts this row.
+using System;
+using System.Linq;
+using LifeGame.Shared;
+using SpacetimeDB;
+
+public static partial class Module
+{
+    // One row per player who has a slot equipped; no row means nothing is equipped.
+    [SpacetimeDB.Table(Accessor = "PlayerEquip", Public = true)]
+    public partial struct PlayerEquip
+    {
+        [PrimaryKey]
+        public Identity Owner;
+        public byte Slot;
+    }
+
+    // Equips a hotbar slot (0 to 9). The slot already equipped, or 255, puts it away.
+    [SpacetimeDB.Reducer]
+    public static void EquipSlot(ReducerContext ctx, byte index)
+    {
+        RequirePlayer(ctx);
+        var row = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender);
+        if (index >= HotbarSlots || (row is { } r && r.Slot == index))
+        {
+            if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+            return;
+        }
+        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index };
+        if (row is null) ctx.Db.PlayerEquip.Insert(next);
+        else ctx.Db.PlayerEquip.Owner.Update(next);
+    }
+
+    // The tool in the equipped slot if it carries these tags, is in the bag (not on the tools
+    // belt) and still works; null when nothing fitting is equipped.
+    static InventoryItem? EquippedTool(ReducerContext ctx, ItemTags tags)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return null;
+        if (SlotAt(ctx, equip.Slot) is not { } slot || !Items.IsKnown(slot.Item)) return null;
+        if ((Items.Def((Item)slot.Item).Tags & tags) != tags) return null;
+        InventoryItem? best = null;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+        {
+            if (row.OnBelt || row.Count == 0) continue;
+            if (Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear)) continue;
+            if (best is null || row.Quality > best.Value.Quality) best = row;
+        }
+        return best;
+    }
+
+    // The same, or the reason there is none, for the player's message.
+    static InventoryItem EquippedToolOrThrow(ReducerContext ctx, ItemTags tags, string what)
+    {
+        if (EquippedTool(ctx, tags) is { } tool) return tool;
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
+            && Items.IsKnown(slot.Item) && (Items.Def((Item)slot.Item).Tags & tags) == tags)
+        {
+            // The right tool is equipped but spent, or only on the belt.
+            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+                if (!row.OnBelt && Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
+                    return throwSpent(slot.Item);
+            throw new Exception($"Take your {Items.Def((Item)slot.Item).Name.ToLowerInvariant()} out of the tools belt and into the bag to use it");
+        }
+        throw new Exception($"Put {what} on your bar and equip it");
+        static InventoryItem throwSpent(ushort item) =>
+            throw new Exception($"Your {Items.Def((Item)item).Name.ToLowerInvariant()} is spent. Mend it at a repair table.");
+    }
+}

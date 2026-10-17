@@ -70,6 +70,7 @@ public static class Subscriptions
         // What you wear (animals-12, read by the equipment panel, ui-10).
         "SELECT * FROM my_worn",
         "SELECT * FROM my_hotbar",
+        "SELECT * FROM player_equip WHERE owner = :sender",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
         "SELECT * FROM player_look",

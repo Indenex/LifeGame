@@ -189,7 +189,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need a blade to butcher with"));
+        var tool = EquippedToolOrThrow(ctx, ItemTags.Cutting, "a blade");
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);

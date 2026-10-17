@@ -43,6 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM player_equip",
                 "SELECT * FROM my_skills",
             });
     })
@@ -108,6 +109,7 @@ if (runTools)
         .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
             && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
     WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
+    EquipTool(Item.DiggingStick);
     for (int dig = 0; dig <= World.MaxDigDepth; dig++)
     {
         uint clayBefore = CountOf(Item.Clay);
@@ -379,6 +381,7 @@ if (runStations)
         var stick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
         var (dx, dz) = (World.CellOf(x) + 1, World.CellOf(z) + 1);
         WalkTo(dx * World.CellSize, dz * World.CellSize);
+        EquipTool(Item.DiggingStick);
         for (int dig = 0; dig <= World.MaxDigDepth; dig++)
         {
             lastError = null;
@@ -433,6 +436,16 @@ if (runStations)
         WalkTo(ctrunk.X, ctrunk.Z);
         Craft("chop.log", 0, Item.Log);
         Console.WriteLine("The mended axe chops again");
+
+        // World tool actions need the tool equipped (crafting-29): put the axe away and a chop is refused.
+        conn.Reducers.EquipSlot(9);
+        Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the axe to be put away");
+        lastError = null;
+        conn.Reducers.StartCraft("chop.log", 0);
+        Pump(() => lastError != null, 5, "a chop without the axe equipped to be refused");
+        if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
+        Console.WriteLine($"Axe not equipped: {lastError}");
+        EquipTool(Item.StoneAxe);
     }
 
     // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
@@ -540,8 +553,19 @@ Structure BuildHere(StructureKind kind)
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
 
+// World tool actions need the tool on the bar and equipped (crafting-29): put it on slot 9 and equip that.
+void EquipTool(Item item)
+{
+    const byte slot = 9;
+    conn.Reducers.SetHotbarSlot(slot, (ushort)item);
+    if (conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }) return;
+    conn.Reducers.EquipSlot(slot);
+    Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }, 5, "the tool to be equipped");
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipTool(Item.StoneAxe);
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     conn.Reducers.StartCraft(processId, score);
