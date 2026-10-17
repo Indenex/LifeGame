@@ -13,6 +13,8 @@ Justin picked the hen as the next animal. A small tame yard flock (an `AnimalDef
 
 - 2026-10-17: PR #454 opened, head 1e5dd9e6afd7dad55f036564825355fda3f3f5d8, CI run https://github.com/Indenex/LifeGame/actions/runs/38996817654 in progress. Justin's answers: eggs cookable as a boiled egg (Crafting, cook.egg, ids 212/213); hens roost at night: walk into the coop at dusk, out at dawn, or settle in a sheltered spot nearby if there is no coop (needs House building's claim-only coop, D-265); feathers go to fletched arrows (Crafting).
 
+- 2026-10-17: #454 merged. Modeling's HenFigure (#474) wired into Sheep.cs (animals-19b): hens use their own figure at true size (the 0.4 stand-in was overridden by the final adult scale anyway), peck on Graze, flap wings on Run, tail bone kept full size. PR below.
+
 ## Open questions / blockers
 - Numbers for the PM/Justin (D-075): 1 egg per hen per 1.5 game days (135 min real), cap 3, egg food 0.08, roast chicken 0.3 (mutton 0.4). 4 hens at (-8, 7).
 - Needs: Modeling hen (peck, flap), Audio clucks and startled squawk, House building coop structure, item models for egg/feather/chicken (Showcase pending list).

@@ -165,6 +165,7 @@ public static partial class Module
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
         // A roast keeps its meat's quality until it comes off the fire.
         byte quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap);
+        if (def.QualityBonus > 0 && def.Outcome != Outcome.Roast) quality = (byte)Math.Min(cap, quality + def.QualityBonus);
         // Better work takes a little longer (D-113); fires and roasts keep their times.
         float seconds = def.Seconds;
         if (def.Outcome is not (Outcome.Fire or Outcome.Roast))

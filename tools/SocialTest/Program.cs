@@ -89,6 +89,9 @@ void ExpectError(Tester t, Action call, string contains, string what)
 void Walk(Tester t, float x, float z) => Pump(() => t.StepToward(x, z), 60, $"{t.Name} walking");
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+Walk(a, 0f, 0f);
+Walk(b, 1f, 0f);
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
 
 // A gathers what a marker needs.
@@ -154,6 +157,7 @@ var claim = a.MyClaim()!;
 Check(a.Count(Item.Stick) == 0 && a.Count(Item.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
 Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, b.X + 5, b.Z, 0), "claimed by", "a house on someone else's claim says whose land it is");
 
 // Chat reaches the player standing nearby.
 a.Conn.Reducers.SendChat("hello neighbour");
