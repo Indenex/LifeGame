@@ -156,7 +156,7 @@ public static class MaterialLook
     // flat bands rather than mottling. Each bough is the card's deep green with one
     // lighter patch along its upper middle, darkening toward the trunk where the
     // tier above shades it, and a soft ink line round its edge and points. The trunk
-    // takes the card's own bark. Lit in soft bands so it sits in the scene's light
+    // takes the card's bark colours. Lit in soft bands so it sits in the scene's light
     // without fighting the painted shading.
     public static ShaderMaterial CardPine(Texture2D card)
     {
@@ -170,10 +170,12 @@ public static class MaterialLook
         render_mode cull_disabled;
         uniform sampler2D card : source_color, filter_linear_mipmap, repeat_disable;
         // Colours picked from the card.
-        uniform vec3 shade_col : source_color = vec3(0.13, 0.19, 0.15);
-        uniform vec3 base_col : source_color = vec3(0.21, 0.31, 0.23);
-        uniform vec3 lit_col : source_color = vec3(0.31, 0.43, 0.3);
-        uniform vec3 ink : source_color = vec3(0.08, 0.12, 0.09);
+        uniform vec3 shade_col : source_color = vec3(0.16, 0.19, 0.13);
+        uniform vec3 base_col : source_color = vec3(0.23, 0.29, 0.19);
+        uniform vec3 lit_col : source_color = vec3(0.34, 0.39, 0.25);
+        uniform vec3 ink : source_color = vec3(0.1, 0.11, 0.08);
+        uniform vec3 bark_dark : source_color = vec3(0.24, 0.16, 0.19);
+        uniform vec3 bark_lit : source_color = vec3(0.39, 0.31, 0.27);
         varying vec3 obj;
         varying vec3 world_n;
         void vertex() {
@@ -183,8 +185,10 @@ public static class MaterialLook
         void fragment() {
             vec3 col;
             if (UV2.x < 0.5) {
-                // Trunk: the card's bark, read up its middle.
-                col = textureLod(card, vec2(0.5 + obj.x * 0.6, clamp(0.97 - obj.y * 0.6, 0.8, 0.97)), 0.0).rgb * 0.75;
+                // Trunk: the card's purple-brown bark in long vertical strokes.
+                float ang = atan(obj.x, obj.z);
+                float stroke = fract(ang * 1.4 + sin(obj.y * 18.0 + ang * 3.0) * 0.12);
+                col = mix(bark_dark, bark_lit, 0.7 * smoothstep(0.55, 0.62, stroke) * (1.0 - smoothstep(0.78, 0.85, stroke)));
             } else if (UV2.x < 1.5) {
                 col = shade_col * COLOR.rgb;
             } else {
@@ -213,7 +217,7 @@ public static class MaterialLook
         }
         void light() {
             float l = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
-            float band = 0.4 + 0.3 * smoothstep(0.45, 0.6, l);
+            float band = 0.3 + 0.22 * smoothstep(0.45, 0.6, l);
             DIFFUSE_LIGHT += LIGHT_COLOR * band / PI;
         }
         """;

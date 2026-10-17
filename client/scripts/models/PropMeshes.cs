@@ -281,13 +281,13 @@ public static class PropMeshes
             var end = At(1f);
             var nUp = (Vector3.Up + dir * 0.6f).Normalized();
             float tipW = wide * Profile(1f);
-            var tipC = end + (dir * 0.6f + Vector3.Down * 0.8f).Normalized() * length * 0.22f;
+            var tipC = end + (dir * 0.55f + Vector3.Down * 0.85f).Normalized() * length * (0.24f + rnd * 0.16f);
             Tri(end - side * tipW, end + side * tipW, tipC, new(-1, 0.9f), new(1, 0.9f), new(0, 1f), nUp, uv2);
             foreach (float s in new[] { -1f, 1f })
             {
                 var baseA = At(0.6f) + side * s * wide * Profile(0.6f);
                 var baseB = end + side * s * tipW;
-                var tip = baseA.Lerp(baseB, 0.4f) + (side * s * 0.7f + dir * 0.4f + Vector3.Down * 0.7f).Normalized() * length * (0.2f + rnd * 0.12f);
+                var tip = baseA.Lerp(baseB, 0.4f) + (side * s * 0.7f + dir * 0.4f + Vector3.Down * 0.7f).Normalized() * length * (0.24f + (1f - rnd) * 0.16f);
                 Tri(baseA, baseB, tip, new(s, 0.8f), new(s, 0.9f), new(s * 0.2f, 1f), nUp, uv2);
             }
         }
@@ -313,11 +313,11 @@ public static class PropMeshes
         {
             float rootY = foliage + step * t;
             float frac = (rootY - foliage) / span;
-            float length = (0.015f + 0.215f * Mathf.Pow(1f - frac, 1.05f)) * width;
-            float droop = Mathf.Max(length * 0.72f, step * 1.2f);
+            float length = (0.012f + 0.225f * Mathf.Pow(1f - frac, 1.25f)) * width;
+            float droop = Mathf.Min(Mathf.Max(length * 0.95f, step * 1.25f), rootY - trunkTop + 0.02f);
             Core(rootY - droop * 0.75f, Mathf.Min(rootY + step * 1.3f, 1f), length * 0.5f);
-            int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * length / (0.07f * width)));
-            float wide = Mathf.Tau * length * 0.5f / count * 1.15f;
+            int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * length / (0.1f * width)));
+            float wide = Mathf.Tau * length * 0.5f / count * 1.2f;
             float turn = R(30 + t) * Mathf.Tau;
             for (int ring = 0; ring < 2; ring++)
             {
@@ -331,7 +331,7 @@ public static class PropMeshes
                     if (t == gapTier && ring == 0 && Mathf.Abs(Mathf.AngleDifference(a, gapAngle)) < 0.55f) continue;
                     // Hem lobes of uneven length, some hanging well below the rest, as on the card.
                     float hang = H(v * 53 + t * 11, i + 700);
-                    float len = length * full * (ring == 0 ? 0.8f + rnd * 0.3f + (hang > 0.75f ? 0.18f : 0f) : 0.55f);
+                    float len = length * full * (ring == 0 ? 0.72f + rnd * 0.45f + (hang > 0.7f ? 0.25f : 0f) : 0.55f);
                     float y = rootY + (ring == 0 ? 0f : step * 0.5f) + (rnd - 0.5f) * step * 0.25f;
                     Bough(new Vector3(0, y, 0) + dir * length * 0.08f, dir, len, droop * (ring == 0 ? 0.85f + rnd * 0.3f + (hang > 0.75f ? 0.25f : 0f) : 0.7f), wide * (ring == 0 ? 1f : 0.85f), rnd);
                 }
