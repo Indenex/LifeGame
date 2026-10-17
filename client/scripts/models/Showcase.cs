@@ -18,6 +18,20 @@ public partial class Showcase : Node3D
     string? shot;
     int frames;
 
+    // A view is a parameterless instance method marked [ShowcaseView("name")], in this file or in a
+    // Showcase.<Lane>.cs of the lane's own (found by reflection), so lanes never edit one shared list.
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class ShowcaseViewAttribute : Attribute
+    {
+        public string Name { get; }
+        public ShowcaseViewAttribute(string name) => Name = name;
+    }
+
+    static readonly Dictionary<string, System.Reflection.MethodInfo> views = typeof(Showcase)
+        .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+        .Where(m => m.GetParameters().Length == 0 && m.GetCustomAttributes(typeof(ShowcaseViewAttribute), false).Length > 0)
+        .ToDictionary(m => ((ShowcaseViewAttribute)m.GetCustomAttributes(typeof(ShowcaseViewAttribute), false)[0]).Name);
+
     public override void _Ready()
     {
         foreach (var a in OS.GetCmdlineUserArgs())
@@ -30,37 +44,9 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view == "coop") { Coop(); return; }
-        if (view is "sundial" or "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots" or "turntable" or "art")
+        if (views.TryGetValue(view, out var show))
         {
-            if (view == "faces") ChibiFaces();
-            else
-            if (view == "hearth") Hearth();
-            else if (view == "stations") Stations();
-            else if (view == "props") Props();
-            else if (view == "env") EnvProps();
-            else if (view == "cooking") Cooking();
-            else if (view == "deer") Deer();
-            else if (view == "hen") Hen();
-            else if (view == "stonehearth") StoneHearthView();
-            else if (view == "treelod") TreeLod();
-            else if (view == "rocks") Rocks();
-            else if (view == "structures") Structures(args.GetValueOrDefault("set", "homes"));
-            else if (view == "animals") Animals();
-            else if (view == "bushes") Bushes();
-            else if (view == "logs") Logs();
-            else if (view == "sundial") SundialView();
-            else if (view == "pots") Pots();
-            else if (view == "wear") WearRows();
-            else if (view == "devices") Devices();
-            else if (view == "crowd") Crowd();
-            else if (view == "items" && args.ContainsKey("compare")) PaintedItemRows();
-            else if (view == "roster") Roster();
-            else if (view == "turntable") Turntable();
-            else if (view == "art") ArtPiece();
-            else if (view == "items") ItemGrid(args.ContainsKey("old"));
-            else if (view == "held") HeldTools();
-            else Clothes();
+            show.Invoke(this, null);
             return;
         }
 
@@ -127,6 +113,16 @@ public partial class Showcase : Node3D
     }
 
     // Every item lying on the grass in rows, the new model or (--old) today's.
+    [ShowcaseView("items")]
+    void ItemsView()
+    {
+        if (args.ContainsKey("compare")) PaintedItemRows();
+        else ItemGrid(args.ContainsKey("old"));
+    }
+
+    [ShowcaseView("structures")]
+    void StructuresView() => Structures(args.GetValueOrDefault("set", "homes"));
+
     void ItemGrid(bool old)
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
@@ -205,6 +201,7 @@ public partial class Showcase : Node3D
     }
 
     // The player figure holding tools in its right hand, arm raised a little.
+    [ShowcaseView("held")]
     void HeldTools()
     {
         // Stand-in ids for the bow and arrow until Crafting's reach main.
@@ -232,6 +229,7 @@ public partial class Showcase : Node3D
     }
 
     // World props for Environment (model-2), tinted the way Terrain tints them.
+    [ShowcaseView("props")]
     void Props()
     {
         ShaderMaterial Tinted(ShaderMaterial source, Color color)
@@ -260,6 +258,7 @@ public partial class Showcase : Node3D
     }
 
     // Each tool that wears, as new, worn and spent (D-155), lying in rows.
+    [ShowcaseView("wear")]
     void WearRows()
     {
         var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.BowDrill, (LifeGame.Shared.Item)16 };
@@ -278,6 +277,7 @@ public partial class Showcase : Node3D
     }
 
     // Red deer for Animals: a hind and a stag, with a person and a sheep for scale.
+    [ShowcaseView("deer")]
     void Deer()
     {
         var coat = Look.Solid(new Color(0.55f, 0.30f, 0.18f));
@@ -305,6 +305,7 @@ public partial class Showcase : Node3D
 
     // The hen in three feather colours (white, brown, grey, from the sheep's fleece
     // tints), one pecking and one flapping, beside a sheep and the player for scale.
+    [ShowcaseView("hen")]
     void Hen()
     {
         var tints = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f), new Color(0.6f, 0.58f, 0.55f) };
@@ -330,21 +331,7 @@ public partial class Showcase : Node3D
 
     // The stone-ringed hearth (model-9, D-286): its first course on the left, the
     // finished kerb on the right, the player beside for scale.
-    // The sundial (model-12): stage 0 and the finished dial, seen from the south-east; run
-    // with --time-of-day to check the stick's shadow against the hour lines.
-    void SundialView()
-    {
-        var pieces = StructureModel.Sundial();
-        for (int c = 0; c < 2; c++)
-            foreach (var piece in pieces)
-                if (piece.Stage >= 0 && piece.Stage <= c)
-                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-0.9f + c * 1.1f, 0, c * 0.4f) });
-        var camera = new Camera3D { Fov = 34f, Current = true };
-        AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0.4f, 2.1f, 2.4f), new Vector3(-0.2f, 0.4f, 0.1f), Vector3.Up);
-        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
-    }
-
+    [ShowcaseView("stonehearth")]
     void StoneHearthView()
     {
         var pieces = StructureModel.StoneHearth();
@@ -363,6 +350,7 @@ public partial class Showcase : Node3D
 
     // The painted trees as the world draws them (model-10): each variant's detailed
     // version in the front row and its far version behind, pines left, broadleaf right.
+    [ShowcaseView("treelod")]
     void TreeLod()
     {
         for (int v = 0; v < PaintedTrees.Variants; v++)
@@ -382,6 +370,7 @@ public partial class Showcase : Node3D
 
     // Rocks as the world draws them (painted-1): today's material in the back row, the
     // painted one in front: boulders, outcrops and river stones.
+    [ShowcaseView("rocks")]
     void Rocks()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -463,6 +452,7 @@ public partial class Showcase : Node3D
 
     // The animals painted (painted-4): today's look in the back row, the painted one in
     // front: a sheep in two fleece colours, a deer hind and a stag, and two hens.
+    [ShowcaseView("animals")]
     void Animals()
     {
         ShaderMaterial Wool(Color color)
@@ -516,6 +506,7 @@ public partial class Showcase : Node3D
     // Bushes as the world draws them (painted-2): today's in the back row (forest bush,
     // heather, gorse, a stand-in for the old berry bush's sphere lobes), the painted ones
     // in front, with a berry bush ripe and one picked.
+    [ShowcaseView("bushes")]
     void Bushes()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -556,6 +547,7 @@ public partial class Showcase : Node3D
 
     // Bark and leaves as the world draws them (painted-3): today's materials in the back
     // row, the painted ones in front: birches with their canopies and fallen logs.
+    [ShowcaseView("logs")]
     void Logs()
     {
         void Place(Mesh mesh, Material material, Transform3D at, Color tint)
@@ -588,6 +580,7 @@ public partial class Showcase : Node3D
 
     // Ceramics' clay under ClayLook (painted-8): one row per form, wet, dry, pit-fired,
     // kiln-fired and cracked left to right, and a slip-banded coil pot at the end.
+    [ShowcaseView("pots")]
     void Pots()
     {
         var forms = new[] { ClayForm.CoilPot, ClayForm.PinchPot, ClayForm.Lamp };
@@ -611,6 +604,7 @@ public partial class Showcase : Node3D
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
     // floating in it, roughly as SimmerView draws it.
+    [ShowcaseView("cooking")]
     void Cooking()
     {
         AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = new Vector3(0, 0, -0.55f) });
@@ -633,6 +627,7 @@ public partial class Showcase : Node3D
 
     // Environment's env-4 props, drawn the way Terrain draws them: a MultiMesh
     // instance with a color, under the world materials.
+    [ShowcaseView("env")]
     void EnvProps()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -683,6 +678,7 @@ public partial class Showcase : Node3D
     }
 
     // Work stations side by side (model-2), with a player for scale.
+    [ShowcaseView("stations")]
     void Stations()
     {
         var stations = new[]
@@ -708,6 +704,7 @@ public partial class Showcase : Node3D
     }
 
     // Batch devices (D-195): each at fill 1 idle in front, full and working behind.
+    [ShowcaseView("devices")]
     void Devices()
     {
         var builds = new (string, System.Func<int, bool, List<StructureModel.Piece>>)[]
@@ -733,6 +730,7 @@ public partial class Showcase : Node3D
 
     // Players side by side, each with their own look from their player id (skin, hair,
     // cut, beard), the first in the default look.
+    [ShowcaseView("crowd")]
     void Crowd()
     {
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "0"), System.Globalization.CultureInfo.InvariantCulture));
@@ -751,6 +749,7 @@ public partial class Showcase : Node3D
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
+    [ShowcaseView("hearth")]
     void Hearth()
     {
         AddChild(new MeshInstance3D { Mesh = HearthModel.Ring });
@@ -761,6 +760,7 @@ public partial class Showcase : Node3D
     }
 
     // Leaf wrap, then wool tunic and foot wraps standing, walking, and from behind.
+    [ShowcaseView("clothes")]
     void Clothes()
     {
         for (int i = 0; i < 4; i++)
@@ -875,6 +875,7 @@ public partial class Showcase : Node3D
 
     // The chibi face states (model-15), close up: Bramble's row above Pebble's, each
     // open, blink, happy and sleepy. --far steps the camera back to a play distance.
+    [ShowcaseView("faces")]
     void ChibiFaces()
     {
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-12"), System.Globalization.CultureInfo.InvariantCulture));
@@ -903,6 +904,7 @@ public partial class Showcase : Node3D
 
     // The chibi player base (model-6) beside today's figure and a 0.75 m table:
     // Bramble and Pebble, each in a couple of looks, front and three-quarter.
+    [ShowcaseView("roster")]
     void Roster()
     {
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-20"), System.Globalization.CultureInfo.InvariantCulture));
@@ -941,6 +943,7 @@ public partial class Showcase : Node3D
 
     // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
     // turned a little so the pop-hole, ramp and side show.
+    [ShowcaseView("coop")]
     void Coop()
     {
         int kind = (int)SpacetimeDB.Types.StructureKind.HenCoop;
@@ -956,6 +959,7 @@ public partial class Showcase : Node3D
     // One chibi look turned through five views in a row (art-rnd-1): front three-quarter,
     // side, back three-quarter, back and the other side, close up, so a part can be
     // checked all the way round in one shot. --race=1 --main= --second= --style= pick the look.
+    [ShowcaseView("turntable")]
     void Turntable()
     {
         int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
@@ -988,6 +992,7 @@ public partial class Showcase : Node3D
     // (client/scripts/models/art/), which has Node3D Today(), Node3D Authored() and the
     // float fields Spacing (m between models) and Height (m, for framing).
     // --yaws=30,-60,-150 picks the views; --close frames the authored ones only.
+    [ShowcaseView("art")]
     void ArtPiece()
     {
         string piece = args.GetValueOrDefault("piece", "tree");

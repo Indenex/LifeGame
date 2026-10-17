@@ -223,9 +223,25 @@ void WallsStopWalkers(ulong id)
 {
     Console.WriteLine("--- Walls stop walkers");
     var s = a.Conn.Db.Structure.Id.Find(id)!;
+    // Stand 0.9 m from the fence with the same distance on its far side as the target: a step that is
+    // short enough to be allowed in one go and free of trunks and boulders, which the server refuses
+    // (bugfix-45), however the bot happened to be standing after the last stage.
+    var og = new BotGround(a.Conn);
+    (float x, float z)? start = null, target = null;
+    foreach (var off in new[] { 0f, 0.5f, -0.5f, 0.9f, -0.9f })
+        foreach (var side in new[] { 1f, -1f })
+        {
+            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * 0.9f);
+            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * 0.9f);
+            if (start != null || Obstacles.StepBlocked(og, 0.4f, f.x, f.z, t.x, t.z, 0f)
+                || Obstacles.PushOut(og, 0.4f, f.x, f.z, 0f) != (f.x, f.z) || Obstacles.PushOut(og, 0.4f, t.x, t.z, 0f) != (t.x, t.z)) continue;
+            start = f; target = t;
+        }
+    Check(start != null, "found clear ground either side of the fence");
+    a.WalkTo(start!.Value.x, start.Value.z, 0.2f, Pump);
     Pump(1200);
     var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, a.X, a.Z);
-    var across = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, -lz);
+    var across = target!.Value;
     a.Conn.Reducers.Move(across.x, across.z, 0f);
     Pump(1000);
     var srv = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;

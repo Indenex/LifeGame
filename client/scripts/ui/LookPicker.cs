@@ -93,6 +93,28 @@ public partial class LookPicker : CanvasLayer
 
     public void Close() => panel.Visible = scrim.Visible = false;
 
+    // A new character from the character menu (ui-39): a fresh look and a suggested name; Done
+    // hands both to create (CreateCharacter), Esc goes back (cancel). Justin: today's picker
+    // "can be used temporarily for new characters".
+    Action<string, HumanFigure.Appearance>? creating;
+    Action? cancelled;
+
+    public void OpenNew(Action<string, HumanFigure.Appearance> create, Action cancel, string? refused = null)
+    {
+        creating = create;
+        cancelled = cancel;
+        Open(first: true);
+        title.Text = "Someone new";
+        // A fresh start: the first race, its first choices.
+        race = 0;
+        Array.Clear(values);
+        Fit();
+        if (refused == null) nameField.Fill("");
+        else nameField.Refused(refused);
+        Show();
+        UpdateDone();
+    }
+
     public override void _Process(double delta)
     {
         // At first join, once the rows have had a moment to arrive, ask if there is no look yet.
@@ -139,7 +161,14 @@ public partial class LookPicker : CanvasLayer
     public override void _UnhandledInput(InputEvent e)
     {
         if (!IsOpen || e is not InputEventKey { Pressed: true, Echo: false }) return;
-        if (e.IsActionPressed("ui_cancel")) Close();
+        if (e.IsActionPressed("ui_cancel"))
+        {
+            Close();
+            var back = cancelled;
+            creating = null;
+            cancelled = null;
+            back?.Invoke();
+        }
         else if (e is InputEventKey { PhysicalKeycode: Key.Enter or Key.KpEnter }) Done();
         else return;
         GetViewport().SetInputAsHandled();
@@ -147,6 +176,15 @@ public partial class LookPicker : CanvasLayer
 
     void Done()
     {
+        if (creating is { } create)
+        {
+            if (!nameField.Valid) return;
+            creating = null;
+            cancelled = null;
+            Close();
+            create(nameField.Value, Appearance);
+            return;
+        }
         if (first)
         {
             if (!nameField.Valid) return;

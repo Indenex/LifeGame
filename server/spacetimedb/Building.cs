@@ -195,7 +195,12 @@ public static partial class Module
                 .Select(n => $"{n.Need - n.Have} {Items.Def((Item)n.Item).Count(n.Need - n.Have).ToLowerInvariant()}")));
 
         var need = s.Needs[slot];
+        // A jar or trough being set down keeps who made it (Ceramics, StructureMarks.cs).
+        bool marked = Marks.Marked((Item)need.Item);
+        uint markWear = 0, markMaker = 0;
+        if (marked) PeekVessel(ctx, (Item)need.Item, out markWear, out markMaker);
         float quality = Take(ctx, (Item)need.Item, 1);
+        if (marked) RememberStructureMark(ctx, s.Id, MarkFromStack(markWear, markMaker));
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
         var p = ProgressOf(ctx, s.Id);

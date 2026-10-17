@@ -121,9 +121,19 @@ conn.Reducers.SetSneaking(false);
 WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "standing up clears it");
 
 // Walking still works from there.
-float stepX = back.X + 3;
-for (int i = 0; i < 10; i++) { conn.Reducers.Move(back.X + 0.3f * (i + 1), back.Z, MathF.PI / 2); Pump(100); }
-WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after reconnecting");
+// The server refuses steps into trunks and boulders (bugfix-34), so the walk slides round them, as
+// the game's client does; where the saved spot is random, a straight line east may meet one.
+{
+    var walkGround = new BotGround(conn);
+    float wx = back.X, wz = back.Z;
+    for (int i = 0; i < 10; i++)
+    {
+        (wx, wz) = walkGround.Slide(wx, wz, wx + 0.3f, wz);
+        conn.Reducers.Move(wx, wz, MathF.PI / 2);
+        Pump(100);
+    }
+    WaitFor(() => MyPos() is { } p && MathF.Sqrt((p.X - back.X) * (p.X - back.X) + (p.Z - back.Z) * (p.Z - back.Z)) > 1.5f, 10, "can walk on after reconnecting");
+}
 
 // Water is walkable (bugfix-32): find a pond or stream with dry ground on both sides, walk across
 // it at the wading pace and come out the other side.
@@ -170,6 +180,64 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
 // fails the whole thing and no client ever sees the time or season change (bugfix-39).
 Subscribe(Subscriptions.Atmosphere, 20, "the clock, weather and season subscription applies");
 Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the world clock and season clock arrive");
+
+// The server refuses steps into trunks and boulders (bugfix-34), however the client behaves.
+{
+    var ground = new BotGround(conn);
+    float px = MyPos()!.X, pz = MyPos()!.Z;
+    void Walk(float tx, float tz)
+    {
+        for (int guard = 0; guard < 2000; guard++)
+        {
+            float dx = tx - px, dz = tz - pz, d = MathF.Sqrt(dx * dx + dz * dz);
+            if (d < 0.1f) break;
+            var seen = MyPos()!;
+            if (MathF.Abs(seen.X - px) + MathF.Abs(seen.Z - pz) < 0.8f)
+            {
+                float step = MathF.Min(d, 0.3f);
+                float qx = px, qz = pz;
+                px += dx / d * step; pz += dz / d * step;
+                (px, pz) = ground.Slide(qx, qz, px, pz);
+            }
+            conn.Reducers.Move(px, pz, MathF.Atan2(dx, dz));
+            Pump(100);
+        }
+        WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - px) + MathF.Abs(p.Z - pz) < 1.0f, 15, "server has us there");
+    }
+    void Probe(bool wantTrunk, string what)
+    {
+        float ox = 0, oz = 0, r = 0;
+        bool found = false;
+        int bx = World.CellOf(px), bz = World.CellOf(pz);
+        for (int ring = 3; ring < 60 && !found; ring++)
+            for (int x = bx - ring; x <= bx + ring && !found; x++)
+                for (int z = bz - ring; z <= bz + ring && !found; z++)
+                {
+                    if (Math.Max(Math.Abs(x - bx), Math.Abs(z - bz)) != ring) continue;
+                    if (!Obstacles.At(ground, x, z, out ox, out oz, out r, out float h) || (h == float.MaxValue) != wantTrunk) continue;
+                    // Room to come at it from the west without meeting anything else.
+                    float sx = ox - r - 1.2f;
+                    found = !Obstacles.StepBlocked(ground, 0.4f, sx, oz, ox - r - 0.5f, oz, 0f) && Obstacles.PushOut(ground, 0.4f, sx, oz, 0f) == (sx, oz);
+                }
+        Check(found, $"found a {what} near the player");
+        float start = ox - r - 1.2f;
+        Walk(start, oz);
+        // Push straight at its middle in small steps: the server must keep us outside its edge.
+        for (int i = 0; i < 12; i++)
+        {
+            px = MathF.Min(px + 0.2f, ox);
+            conn.Reducers.Move(px, oz, MathF.PI / 2);
+            Pump(120);
+        }
+        Pump(400);
+        var at = MyPos()!;
+        float dist = MathF.Sqrt((at.X - ox) * (at.X - ox) + (at.Z - oz) * (at.Z - oz));
+        Check(dist >= r + 0.2f, $"the server kept us out of the {what} ({dist:F2} m from its middle, radius {r:F2})");
+        px = at.X; pz = at.Z;
+    }
+    Probe(true, "tree trunk");
+    Probe(false, "boulder");
+}
 
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
