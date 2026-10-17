@@ -1,7 +1,7 @@
 # anim-12: Sitting and lying down
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-12
 PR: #600
 
@@ -21,7 +21,8 @@ Players can sit on the ground and lie down, and everyone sees it. The H key sits
 
 ## Progress log
 - 2026-10-17 07:30: poses, layer, server table and reducers, client wiring done; client and server build.
-- 2026-10-17 07:40: pushed a030b0ce, opened #600. Told Survival the server side is theirs to take over if they want; asked UX for the Controls row; Render C clip requested; resting-effect question sent to the PM.
+- 2026-10-17 07:40: pushed a030b0ce, opened #600.
+- 2026-10-17 08:25: CI on ab06f2a7: clients and server module green. SpawnCheck failed on a walk target inside a boulder, which main fixed in #593; merged main and pushed f190065c. Told Survival the server side is theirs to take over if they want; asked UX for the Controls row; Render C clip requested; resting-effect question sent to the PM.
 
 ## Open questions / blockers
 - Survival: should resting do anything for gameplay (faster recovery, sleeping to pass the night)? Default: purely a pose. Who owns the sleep-at-a-mat button (default: their mat dialog calls Rest(2) and sets SpotId)?
