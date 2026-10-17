@@ -35,6 +35,12 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetHotbarSlot(ReducerContext ctx, byte index, ushort item)
     {
+        SetHotbarSlotCore(ctx, index, item);
+        SyncEquip(ctx);
+    }
+
+    static void SetHotbarSlotCore(ReducerContext ctx, byte index, ushort item)
+    {
         RequirePlayer(ctx);
         if (index >= HotbarSlots) throw new Exception("No such slot");
         if (item != 0 && !Items.IsKnown(item)) throw new Exception("Unknown item");
@@ -61,6 +67,12 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void MoveHotbarSlot(ReducerContext ctx, byte from, byte to)
     {
+        MoveHotbarSlotCore(ctx, from, to);
+        SyncEquip(ctx);
+    }
+
+    static void MoveHotbarSlotCore(ReducerContext ctx, byte from, byte to)
+    {
         RequirePlayer(ctx);
         if (from >= HotbarSlots || to >= HotbarSlots) throw new Exception("No such slot");
         if (from == to) return;
@@ -76,6 +88,7 @@ public static partial class Module
     {
         RequirePlayer(ctx);
         if (!Items.IsKnown(item)) throw new Exception("Unknown item");
+        RequireHeld(ctx, item);
         var stack = BestStack(ctx, (Item)item) ?? throw new Exception("You are not carrying that");
         switch (Items.UseOf((Item)item))
         {

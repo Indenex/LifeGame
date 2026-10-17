@@ -42,6 +42,8 @@ extends Control
 #   --no-self-update     never replace the launcher itself
 
 const WIPE_MARK := "<!-- world-wipe -->"
+const NOTES_OPEN := "<!-- notes -->"      # the release body lists the patch notes between these
+const NOTES_CLOSE := "<!-- /notes -->"
 
 const BG := Color(0.07, 0.08, 0.06)
 const PANEL := Color(0.09, 0.10, 0.07, 0.92)
@@ -59,6 +61,9 @@ var stdb_server := "local"
 var server_url := "http://127.0.0.1:3000"
 var db := "lifegame"
 var manage_server := true
+var notes_box: TextEdit      # "What's new": the patch notes of the builds you are about to get / just got
+var whats_new_button: Button
+var whats_new_from := -1    # build the last update started from; -1 = use the installed build
 var address_edit: LineEdit   # player build: where friends type the host's address
 var player := false        # the player build: no server parts, joins a server address
 
@@ -260,6 +265,18 @@ func _build_ui() -> void:
 		address_edit.text_submitted.connect(func(_t): _on_main())
 		addr_row.add_child(address_edit)
 
+	notes_box = TextEdit.new()
+	notes_box.editable = false
+	notes_box.visible = false
+	notes_box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	notes_box.custom_minimum_size = Vector2(0, 150)
+	notes_box.add_theme_font_size_override("font_size", 15)
+	notes_box.add_theme_color_override("font_readonly_color", CREAM)
+	notes_box.add_theme_stylebox_override("normal", _notes_style())
+	notes_box.add_theme_stylebox_override("focus", _notes_style())
+	notes_box.add_theme_stylebox_override("read_only", _notes_style())
+	col.add_child(notes_box)
+
 	bar = ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 8)
 	bar.show_percentage = false
@@ -300,6 +317,9 @@ func _build_ui() -> void:
 	refresh_button.tooltip_text = "Check for a newer build again"
 	refresh_button.pressed.connect(_on_refresh)
 	row.add_child(refresh_button)
+	whats_new_button = _button("What's new", false)
+	whats_new_button.pressed.connect(_toggle_whats_new)
+	row.add_child(whats_new_button)
 	log_button = _button("Details", false)
 	log_button.pressed.connect(func(): log_box.visible = not log_box.visible)
 	row.add_child(log_button)
@@ -362,6 +382,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if wipe_overlay.visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		wipe_answered.emit(false)
+
+func _notes_style() -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(CREAM, 0.05)
+	st.set_corner_radius_all(8)
+	st.set_content_margin_all(12)
+	return st
 
 func _small(text: String, color: Color) -> Label:
 	var l := Label.new()
@@ -428,6 +455,7 @@ func _update_buttons() -> void:
 		play_button.visible = false
 	world_button.disabled = busy
 	refresh_button.disabled = busy
+	whats_new_button.disabled = busy
 	refresh_button.text = "Checking..." if checking else "Refresh"
 	game_label.text = "Game: " + _build_name(state.client_build)
 	if manage_server:
@@ -467,7 +495,8 @@ func _refresh() -> void:
 			var body = r.get("body", "")
 			releases.append({
 				"build": num.to_int(), "tag": tag, "title": r.get("name", tag),
-				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets})
+				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets,
+				"notes": _parse_notes(body if body is String else "")})
 		releases.sort_custom(func(a, b): return a.build > b.build)
 	latest = releases[0] if not releases.is_empty() else {}
 	if not latest.is_empty() and await _self_update():
@@ -486,8 +515,55 @@ func _refresh() -> void:
 		if _wipe_ahead():
 			d += "  It wipes the world; you'll be asked first."
 		_set_status("An update is ready.", d)
+		_show_whats_new(true)
 	if manage_server and _find_spacetime() == "":
 		_needs_spacetime()
+
+# The bullet lines between the notes markers of a release body, without their "- ".
+func _parse_notes(body: String) -> Array:
+	var out := []
+	var a := body.find(NOTES_OPEN)
+	var b := body.find(NOTES_CLOSE)
+	if a < 0 or b < a:
+		return out
+	for line in body.substr(a + NOTES_OPEN.length(), b - a - NOTES_OPEN.length()).split("\n"):
+		var t := line.strip_edges().trim_prefix("- ").trim_prefix("* ").strip_edges()
+		if t != "":
+			out.append(t)
+	return out
+
+# What's new, newest first and grouped by build: every build after the one the game was on
+# (before an update, the installed build; after one, the build it started from), up to the
+# newest. With nothing newer, the last few builds.
+func _whats_new_text() -> String:
+	if releases.is_empty():
+		return ""
+	var from: int = whats_new_from if whats_new_from >= 0 else int(state.client_build)
+	var shown := []
+	for r in releases:
+		if r.build > from and r.build <= latest.build:
+			shown.append(r)
+	if shown.is_empty():
+		shown = releases.slice(0, 3)
+	var text := ""
+	for r in shown:
+		text += "Build %d\n" % r.build
+		if r.notes.is_empty():
+			text += "  - Small fixes and tweaks.\n"
+		for n in r.notes:
+			text += "  - %s\n" % n
+		text += "\n"
+	return text.strip_edges()
+
+func _show_whats_new(on: bool) -> void:
+	if on:
+		notes_box.text = _whats_new_text()
+		_log("What's new:\n" + notes_box.text)
+		notes_box.scroll_vertical = 0
+	notes_box.visible = on and notes_box.text != ""
+
+func _toggle_whats_new() -> void:
+	_show_whats_new(not notes_box.visible)
 
 func _wipe_ahead() -> bool:
 	if not manage_server or latest.is_empty():
@@ -606,6 +682,7 @@ func _update(client: bool, world: bool) -> bool:
 		return true
 	_set_busy(true)
 	exit_code = 0
+	var started_from: int = state.client_build
 	var wipe := false
 	if need_world and _wipe_ahead():
 		if opts.has("auto"):
@@ -642,6 +719,9 @@ func _update(client: bool, world: bool) -> bool:
 	bar.value = 1.0
 	_set_busy(false)
 	_set_status("Everything is up to date.", "Build %d" % latest.build)
+	if need_client:
+		whats_new_from = started_from
+		_show_whats_new(true)
 	return true
 
 func _fail() -> bool:
@@ -896,7 +976,8 @@ func _play() -> void:
 		return
 	_log("Started the game (pid %d)" % pid)
 	_set_status("Have a good evening in the woods.")
-	await get_tree().create_timer(1.5).timeout
+	# Leave the launcher up longer after an update, so the patch notes can be read.
+	await get_tree().create_timer(10.0 if notes_box.visible and not opts.has("auto") else 1.5).timeout
 	get_tree().quit()
 
 func _screenshot(path: String) -> void:

@@ -11,9 +11,12 @@ namespace LifeGame;
 // assigned keybind"). Ten round slots along the bottom edge in the bag row's quiet
 // style (D-045), each with its key in the corner. A new kind of item takes the first
 // empty slot by itself; drag a slot onto another to swap them, or off the bar to clear
-// it. The key uses the item through the server (UseItem): eat, drink or wear. Tools
-// need no key (Justin): they work from the bag or the tools section, so they don't
-// fill slots by themselves. A slot keeps its item while you have none left, shown faded.
+// it. A slot's key takes its item in hand and again puts it away (crafting-29, Justin:
+// "for a tool to be used, it needs to be on your bar and equipped", then "every slot
+// equips"); the slot in hand wears a gold ring. A click in the world uses what you hold:
+// eat, drink, put on, or set a made thing down; with a tool or weapon it is the strike as
+// before, and E still chops or digs with the tool in hand. A slot keeps its item while
+// you have none left, shown faded.
 // The row dims when nothing changes and brightens when you gain or use something; a
 // newly gained item's name floats up above its slot.
 public partial class HotbarBar : Control
@@ -67,6 +70,15 @@ public partial class HotbarBar : Control
         name.Modulate = new Color(1, 1, 1, 0);
         AddChild(name);
         Attach(Link);
+        // --screenshot-hotbar: berries, a hand axe and a stone axe, with the stone axe in hand.
+        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-hotbar")) && Link is MockHotbarLink mock)
+        {
+            SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1), new InventoryEntry(Item.StoneAxe, "Stone axe", 1) });
+            mock.Set(0, Item.Berries);
+            mock.Set(1, Item.HandAxe);
+            mock.Set(2, Item.StoneAxe);
+            Equip(2, Item.StoneAxe);
+        }
     }
 
     public void Attach(IHotbarLink link)
@@ -116,7 +128,8 @@ public partial class HotbarBar : Control
 
     void Fill(Item item)
     {
-        if (SlotOf(item) >= 0 || Items.UseOf(item) == UseAction.Tool) return;
+        // Tools too since crafting-29: a tool works only from the bar, equipped.
+        if (SlotOf(item) >= 0) return;
         int free = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
         if (free < 0) return;
         Link.Set(free, item);
@@ -132,7 +145,7 @@ public partial class HotbarBar : Control
             var item = Link.SlotItem(i);
             uint n = item is { } it ? carried.GetValueOrDefault(it) : 0;
             views[i].Show(item, n, item is { } x && labels.TryGetValue(x, out var l) ? l : item is { } y ? ItemName(y) : "",
-                KeyName(i));
+                KeyName(i), equipped: item != null && Link.Equipped == i);
         }
     }
 
@@ -146,6 +159,13 @@ public partial class HotbarBar : Control
 
     public override void _UnhandledInput(InputEvent e)
     {
+        // A click in the world uses what you hold (Justin's pick (b): "every slot equips").
+        if (InputMap.HasAction("strike") && e.IsActionPressed("strike") && !e.IsEcho() && !Blocked() && HeldUse() is { } use)
+        {
+            use();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e is not InputEventKey { Pressed: true, Echo: false } || Blocked()) return;
         for (int i = 0; i < Slots; i++)
         {
@@ -156,11 +176,68 @@ public partial class HotbarBar : Control
         }
     }
 
+    // A slot's key takes its item in hand, and again puts it away (crafting-29; Justin: "for a
+    // tool to be used, it needs to be on your bar and equipped", then "every slot equips").
+    // An empty slot's key puts away what you hold. A click then uses what you hold (HeldUse).
     public void UseSlot(int i)
     {
-        if (Link.SlotItem(i) is not { } item) return;
+        if (Link.SlotItem(i) is not { } item)
+        {
+            if (Link.Equipped >= 0) Link.Equip(-1);
+            return;
+        }
         views[i].Pop();
-        UseItem(item);
+        Equip(i, item);
+    }
+
+    void Equip(int i, Item item)
+    {
+        sinceChange = 0f;
+        bool away = Link.Equipped == i;
+        Link.Equip(i);
+        string what = labels.TryGetValue(item, out var l) ? l : ItemName(item);
+        floatingName = away ? $"{what} put away" : ClickVerb(item) is { } verb ? $"{what} in hand    Click to {verb}" : $"{what} in hand";
+        nameAt = i;
+        nameTime = away ? 1.6f : 2.6f;
+    }
+
+    // The item in hand, if any.
+    public Item? Held => Link.Equipped >= 0 ? Link.SlotItem(Link.Equipped) : null;
+
+    // What a click does with the item in hand, or null when a click is the strike as before
+    // (tools and weapons swing, and E still chops or digs with the tool in hand).
+    static string? ClickVerb(Item item) =>
+        Placeable(item) ? "set it down"
+        : Items.UseOf(item) switch { UseAction.Eat => "eat", UseAction.Drink => "drink", UseAction.Wear => "put it on", _ => null };
+
+    // True while a click would use the held item, so the strike leaves the click alone (Main).
+    public bool ClickUsesHeld => !Blocked() && Held is { } h && ClickVerb(h) != null;
+
+    // The click: a placeable starts placing; anything else goes to the server's UseHeld, which
+    // uses whatever it has in your hand (crafting-29, D-182).
+    Action? HeldUse() => Held is { } item && ClickVerb(item) != null
+        ? () =>
+        {
+            sinceChange = 0f;
+            if (Placeable(item)) PlaceRequested?.Invoke(item);
+            else Link.UseHeld();
+        }
+        : null;
+
+    // Puts an item on the bar if it isn't there and takes its slot in hand, so the server's
+    // "use or set down only what is in hand" holds for bag clicks and drags too. The calls
+    // reach the server in order, before the use that follows. False when the bar is full.
+    public bool TakeInHand(Item item)
+    {
+        int slot = SlotOf(item);
+        if (slot < 0)
+        {
+            slot = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
+            if (slot < 0) { Note("Make room on your bar first: you use things from your hand"); return false; }
+            Link.Set(slot, item);
+        }
+        if (Link.Equipped != slot) Link.Equip(slot);
+        return true;
     }
 
     // Uses one carried item: places it, or asks the server to eat, drink, wear or hold it.
@@ -171,8 +248,18 @@ public partial class HotbarBar : Control
         if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
         if (Placeable(item)) { PlaceRequested?.Invoke(item); return; }
         if (Items.UseOf(item) == UseAction.None) { Note($"{what} is used in making things"); return; }
-        if (Items.UseOf(item) == UseAction.Tool) { Note($"The {what.ToLowerInvariant()} works by itself while you carry it"); return; }
-        Link.Use(item);
+        // A tool from the bag: into your hand, ready to work with.
+        if (Items.UseOf(item) == UseAction.Tool)
+        {
+            if (TakeInHand(item))
+            {
+                floatingName = $"{what} in hand";
+                nameAt = SlotOf(item);
+                nameTime = 1.6f;
+            }
+            return;
+        }
+        if (TakeInHand(item)) Link.Use(item);
     }
 
     // Whether an item is set down rather than used: Main reads ItemDef.Placeable (crafting-21).
@@ -284,7 +371,10 @@ public partial class HotbarSlotView : PanelContainer
         stack.AddChild(key);
     }
 
-    public void Show(Item? what, uint n, string label, string keyName)
+    // The slot in hand wears a warm gold ring (crafting-29).
+    static readonly Color InHand = new(0.96f, 0.78f, 0.42f);
+
+    public void Show(Item? what, uint n, string label, string keyName, bool equipped = false)
     {
         item = what;
         picture.Texture = what is { } i ? ItemIcon.For(i) : null;
@@ -292,9 +382,11 @@ public partial class HotbarSlotView : PanelContainer
         picture.Modulate = new Color(1, 1, 1, n > 0 ? 1f : 0.3f);
         count.Text = n > 1 ? n.ToString() : "";
         key.Text = keyName;
-        TooltipText = label;
-        style.BorderColor = new Color(Look.Cream, what == null ? 0.14f : 0.28f);
-        style.BgColor = new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+        style.BorderColor = equipped ? InHand : new Color(Look.Cream, what == null ? 0.14f : 0.28f);
+        style.SetBorderWidthAll(equipped ? 2 : 1);
+        style.BgColor = equipped ? new Color(0.20f, 0.16f, 0.08f, 0.78f) : new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+        style.ShadowColor = equipped ? new Color(InHand, 0.35f) : new Color(0, 0, 0, 0.25f);
+        TooltipText = equipped ? $"{label} (in hand)" : label;
     }
 
     // A small bounce when its key is pressed.
