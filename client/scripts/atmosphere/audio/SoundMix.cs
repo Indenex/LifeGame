@@ -6,7 +6,7 @@ namespace LifeGame;
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
-public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump }
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump, BowDraw, BowShot, ArrowFlesh, ArrowWood, ArrowEarth }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -1601,7 +1601,7 @@ public sealed class SoundMix
             {
                 var v = active[k];
                 float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, _ => 0.4f };
+                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, Cue.BowDraw => 0.8f, Cue.BowShot => 0.6f, Cue.ArrowWood => 0.5f, _ => 0.4f };
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1667,6 +1667,57 @@ public sealed class SoundMix
                             float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
                             s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
                             send = ring * 0.024f;
+                            break;
+                        }
+                        case Cue.BowDraw:
+                        {
+                            // Wood and sinew under strain: an irregular, slow creak. Band-passed
+                            // noise whose centre wanders and whose loudness stutters, never a steady tone.
+                            float wander = 650f + 220f * MathF.Sin(t * 5.1f) + 140f * MathF.Sin(t * 12.7f + 1f);
+                            float stutter = Math.Max(0f, MathF.Sin(t * 2f * MathF.PI * 7.3f) * MathF.Sin(t * 2f * MathF.PI * 11.1f + 0.7f));
+                            float rub = v.Band.Process(x, wander * v.Pitch, 0.35f, rate);
+                            float strain = MathF.Sin(MathF.PI * Math.Min(1f, t / 0.8f));
+                            s = rub * (0.25f + stutter) * strain * 0.16f;
+                            break;
+                        }
+                        case Cue.BowShot:
+                        {
+                            // The string's twang (a few damped low tones, a touch sharp at first) and the
+                            // whoosh of the arrow leaving.
+                            float glide = 1f + 0.03f * MathF.Exp(-t / 0.04f);
+                            v.Phase += 2f * MathF.PI * 165f * v.Pitch * glide * dt;
+                            v.Phase2 += 2f * MathF.PI * 330f * v.Pitch * glide * dt;
+                            float twang = MathF.Sin(v.Phase) * MathF.Exp(-t / 0.2f) + 0.5f * MathF.Sin(v.Phase2) * MathF.Exp(-t / 0.11f)
+                                + 0.25f * MathF.Sin(v.Phase * 3f) * MathF.Exp(-t / 0.07f);
+                            float whoosh = v.Band.Process(x, 1900f - 1200f * Math.Min(1f, t / 0.3f), 0.6f, rate) * Burst(t, 0.01f, 0.1f);
+                            s = Math.Min(1f, t / 0.002f) * twang * 0.08f + whoosh * 0.22f;
+                            send = twang * 0.01f;
+                            break;
+                        }
+                        case Cue.ArrowFlesh:
+                        {
+                            // Into an animal: a dull, wet thunk.
+                            v.Phase += 2f * MathF.PI * (120f - 200f * Math.Min(t, 0.08f)) * v.Pitch * dt;
+                            float wet = v.Low.Process(x, Lowpass.Coef(800f, rate)) * Burst(t, 0f, 0.04f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.14f + wet * 0.25f;
+                            break;
+                        }
+                        case Cue.ArrowWood:
+                        {
+                            // Into a tree: a sharp thock and the shaft humming for a moment.
+                            v.Phase += 2f * MathF.PI * 380f * v.Pitch * dt;
+                            v.Phase2 += 2f * MathF.PI * 940f * v.Pitch * dt;
+                            float knock = v.Band.Process(x, 1500f, 0.7f, rate) * Burst(t, 0f, 0.012f);
+                            s = knock * 0.4f + MathF.Sin(v.Phase) * Burst(t, 0f, 0.08f) * 0.12f + MathF.Sin(v.Phase2) * Burst(t, 0f, 0.22f) * 0.03f;
+                            send = s * 0.2f;
+                            break;
+                        }
+                        case Cue.ArrowEarth:
+                        {
+                            // Into the ground: a dull thud and a little grit.
+                            v.Phase += 2f * MathF.PI * 85f * v.Pitch * dt;
+                            float grit = v.Low.Process(x, Lowpass.Coef(1000f, rate)) * Burst(t, 0f, 0.05f);
+                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.06f) * 0.14f + grit * 0.18f;
                             break;
                         }
                         case Cue.Jump:
