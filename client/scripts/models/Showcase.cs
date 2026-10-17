@@ -745,6 +745,10 @@ public partial class Showcase : Node3D
         }
         var camera = new Camera3D { Fov = 30f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
+        // --close: the middle three views, near.
+        if (args.ContainsKey("close"))
+            camera.LookAtFromPosition(new Vector3(0, 0.95f, 3.7f), new Vector3(0, 0.66f, 0), Vector3.Up);
+        else
+            camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
     }
 }
