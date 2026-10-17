@@ -102,6 +102,7 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
         Mending.Register(conn);
+        Knows = id => conn.Db.MyJournal.Iter().Any(e => e.ProcessId == id);
         // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
         Use.Register(new UseHandler
         {
@@ -345,18 +346,29 @@ public partial class CraftingUi : CanvasLayer
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
             Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
             Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
-            // A pot (or waterskin) of water: filled from its empty one (Foods.Pots).
-            _ when Foods.Pots.FirstOrDefault(p => p.Full == item) is { } pot =>
-                $"Fill {Article(Items.Def(pot.Empty).Name.ToLowerInvariant())} at the water's edge{Key("use")}.",
-            // Fired and unfired clay: shaped at the potter's bench, dried, then fired (ClayRules).
+            // A pot (or waterskin) of water: filled from its empty one (Foods.Pots). Filling is
+            // a step no menu shows, so until it's in your journal only a nudge is given (Justin).
+            _ when Foods.Pots.FirstOrDefault(p => p.Full == item) is { } pot => Knows(ClayRules.FillProcess)
+                ? $"Fill {Article(Items.Def(pot.Empty).Name.ToLowerInvariant())} at the water's edge{Key("use")}."
+                : $"Not yet discovered: try taking {Article(Items.Def(pot.Empty).Name.ToLowerInvariant())} to the water's edge.",
+            // Fired and unfired clay: shaped at the potter's bench (a recipe you can see there),
+            // dried, then fired, which is a hidden step until your journal has it (Justin).
             _ when Shaping(item) is ({ } shape, var fired, var form) =>
-                $"{shape.Name} at a potter's bench ({Inputs(shape)}), let it dry" + (fired ? $", then fire it in a {(ClayRules.KilnOnly(form) ? "kiln" : "fire or kiln")}." : "."),
+                $"{shape.Name} at a potter's bench ({Inputs(shape)}), let it dry" + (!fired ? "."
+                    : ClayRules.KilnOnly(form)
+                        ? Knows(ClayRules.KilnFireProcess) ? ", then fire it in a kiln." : ". Firing it is not yet discovered: try a kiln."
+                        : Knows(ClayRules.PitFireProcess) || Knows(ClayRules.KilnFireProcess) ? ", then fire it in a fire or kiln." : ". Firing it is not yet discovered: try setting it by a hot fire."),
             _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => maker.Station == StationKind.None
                 ? $"Make it first: {maker.Name} ({Inputs(maker)})."
                 : $"Make it first at a {StationInfo.Name(maker.Station)}: {maker.Name} ({Inputs(maker)}).",
             _ => "",
         };
     }
+
+    // Whether a step is in your journal (MyJournal); Attach sets it. Steps no menu shows
+    // (filling, firing) are only spelled out once known; until then a nudge names a place or
+    // material to try, so a new player is never stuck (Justin).
+    internal static Func<string, bool> Knows = _ => true;
 
     // The item one step before this one on its way, when that step isn't a recipe: the empty
     // pot a pot of water is filled from. Missing shows it too when you have none.
