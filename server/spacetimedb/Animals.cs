@@ -146,6 +146,9 @@ public static partial class Module
         public long SneakReportAt;
         [Default(0L)]
         public long ShotAt;
+        // When this player last swung at an animal (Hunting.cs), so one player's swings are paced whichever animal they hit.
+        [Default(0L)]
+        public long SwungAt;
     }
 
     [SpacetimeDB.Table(Accessor = "AnimalTickTimer", Scheduled = nameof(AnimalTick), ScheduledAt = nameof(ScheduledAt))]
