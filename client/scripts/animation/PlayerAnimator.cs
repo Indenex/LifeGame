@@ -208,6 +208,9 @@ public sealed class PlayerAnimator
         Face = blinkLeft > 0f && mood is Face.Open or Face.Sleepy ? Face.Closed : mood;
     }
 
+    // A side-to-side rock of the hips over each foot in the walk, 0 to 1 (Pebble's waddle).
+    public float Waddle;
+
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
     float Bounce => rig.HipHeight < 0.6f ? 1f : 0.15f;
 
@@ -634,7 +637,7 @@ public sealed class PlayerAnimator
             -Mathf.Lerp(0.03f, 0.018f, g) * c * (1f - 0.5f * r),
             Mathf.Lerp(walkY, runY, r) + hop,
             0);
-        p[Joint.Hips] = new Vector3(0.03f * g, -Mathf.Lerp(0.1f, 0.16f, g) * s, -0.045f * c);
+        p[Joint.Hips] = new Vector3(0.03f * g, -Mathf.Lerp(0.1f, 0.16f, g) * s, -(0.045f + 0.11f * Waddle * (1f - r)) * c);
         Legs(p);
 
         Leg(p, Joint.HipL, Joint.KneeL, Joint.FootL, phase, hipAmp, kneeAmp, stance);
