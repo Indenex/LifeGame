@@ -10,7 +10,7 @@ UX asked (for ui-72) for a `--screenshot-town` flag so Render can take before/af
 
 ## Progress log
 - 2026-10-17: TownPanel.Preview.cs added; Read/Spots/Rebuild/BuildLog use the pretend town when previewing, and the real connection is not attached while previewing.
-- 2026-10-17: CI on a1bf34c9: SocialTest claims fell during the claims-28 store walks (30 s lifetime); both owners now tend again after the store block.
+- 2026-10-17: CI on a1bf34c9 and b11eadd6: SocialTest claims fell during the town checks (30 s lifetime); the town section now sets a 600 s lifetime once the decay check is done.
 
 ## Open questions / blockers
 - (none)

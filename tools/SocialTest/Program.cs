@@ -609,7 +609,9 @@ else
         Check(aClaim != null && bClaim != null, $"A and B each hold a claim for the town check (A {(aClaim != null ? "ok" : a.LastError ?? "none")}, B {(bClaim != null ? "ok" : b.LastError ?? "none")})");
         if (aClaim != null && bClaim != null)
         {
-            // B stays at their marker and tends it, so both claims are fresh for the next 30 s.
+            // The decay check is done: the town checks walk a lot, so claims stand 10 minutes from here
+            // (tending renews them for the new lifetime).
+            if (decay) AsOwner("set_claim_lifetime", "600");
             b.Conn.Reducers.TendClaim(bClaim.Id);
             a.Conn.Reducers.TendClaim(aClaim.Id);
 
@@ -652,7 +654,7 @@ else
             // while both claims are fresh. Anyone on the roster puts in; only the Treasurer or the Mayor
             // (A here) takes out; the Treasurer keeps up a claim from it; the log has each.
             {
-                // Claims last 30 s in this run: both owners tend first.
+                // Both owners tend first.
                 Walk(a, aClaim.X - 1.5f, aClaim.Z);
                 a.Conn.Reducers.TendClaim(aClaim.Id);
                 Walk(b, bClaim.X - 1.5f, bClaim.Z);
@@ -707,13 +709,7 @@ else
                 }
                 else Console.WriteLine("  (A carries no stick and fiber; upkeep from the store not checked)");
                 Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store | TownPower.Upkeep) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
-                // The walks above use up most of a 30 s claim: both owners tend again before the checks below.
-                Walk(a, aClaim.X - 1.5f, aClaim.Z);
-                a.Conn.Reducers.TendClaim(aClaim.Id);
                 Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
-                Walk(b, bClaim.X - 1.5f, bClaim.Z);
-                b.Conn.Reducers.TendClaim(bClaim.Id);
-                Wait(() => (a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 + 20_000_000, 5);
             }
 
             // Builder rights now; the stash and the marker's upkeep stay B's.
