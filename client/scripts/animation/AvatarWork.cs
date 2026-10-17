@@ -26,6 +26,16 @@ public static class AvatarWork
         conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId, tool: w.Tool); };
         conn.Db.CraftWork.OnDelete += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, null); };
 
+        // Warmth from burning fires, for a happy sway by the fire (#15).
+        Avatar.FireWarmthAt = at =>
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+            float warmth = 0f;
+            foreach (var f in conn.Db.Fire.Iter())
+                if (f.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                    warmth = Math.Max(warmth, Fires.WarmthFrom(f.X, f.Z, at.X, at.Z));
+            return warmth;
+        };
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);
         conn.Db.PlayerSneaking.OnInsert += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = true; };
         conn.Db.PlayerSneaking.OnDelete += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = false; };
