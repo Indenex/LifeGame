@@ -31,8 +31,8 @@ def c(*rgb):
 
 # The palette, after the Golden Skull tiles: warm browns, ochre lights, shade leaning
 # violet, seams nearly black-brown.
-PLATE = dict(lit=c(0.74, 0.56, 0.31), mid=c(0.55, 0.40, 0.24), shade=c(0.39, 0.27, 0.19), seam=c(0.2, 0.13, 0.13), bevel=c(0.88, 0.74, 0.5))
-MARG = dict(lit=c(0.82, 0.66, 0.4), mid=c(0.67, 0.51, 0.3), shade=c(0.47, 0.33, 0.22), seam=c(0.2, 0.13, 0.13), bevel=c(0.92, 0.8, 0.56))
+PLATE = dict(lit=c(0.66, 0.5, 0.31), mid=c(0.49, 0.36, 0.23), shade=c(0.34, 0.24, 0.18), seam=c(0.17, 0.11, 0.12), bevel=c(0.8, 0.67, 0.47))
+MARG = dict(lit=c(0.74, 0.6, 0.39), mid=c(0.6, 0.46, 0.29), shade=c(0.42, 0.3, 0.21), seam=c(0.17, 0.11, 0.12), bevel=c(0.86, 0.75, 0.55))
 PLAS = dict(lit=c(0.96, 0.9, 0.7), mid=c(0.9, 0.82, 0.58), shade=c(0.75, 0.63, 0.43), seam=c(0.5, 0.38, 0.27), bevel=c(1.0, 0.96, 0.82))
 INNER = c(0.3, 0.21, 0.17)
 EDGE = c(0.78, 0.64, 0.43)

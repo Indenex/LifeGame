@@ -19,9 +19,9 @@ import numpy as np
 # Carapace size and place.
 A = 0.345          # half height (y)
 B = 0.29           # half width (x)
-H = 0.30          # dome height (outwards, -z): a high tortoise dome
+H = 0.37          # dome height (outwards, -z): a high tortoise dome
 YC = 0.525         # centre height
-RING_F = 0.8       # fraction of the arc from the top to the rim where the marginal ring starts
+RING_F = 0.83      # fraction of the arc from the top to the rim where the marginal ring starts
 N_MARG = 24
 SCALLOP = 0.035    # how far each marginal's outer edge bulges between seams
 THICK = 0.022      # shell wall
@@ -54,7 +54,7 @@ def cara_point(rho, theta, inner=False):
     sc = scallop(rho, theta)
     x = B * rho * np.cos(theta) * sc
     yy = A * rho * np.sin(theta) * sc
-    h = H * np.sqrt(np.clip(1 - rho ** 3, 0, 1))
+    h = H * np.clip(1 - rho ** 2.4, 0, 1) ** 0.6
     # The rim bends back at the top and bottom, behind the neck and over the hips.
     zr = 0.02 - 0.14 * (rho * np.sin(theta)) ** 2
     if inner:
