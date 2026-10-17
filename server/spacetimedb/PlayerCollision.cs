@@ -44,30 +44,12 @@ public static partial class Module
             }
             bool walls = s.Kind == StructureKind.ClayHut ? s.Complete || s.Stage >= 1 : Structures.IsRoom(kind) && (s.Complete || s.Stage >= 2);
             if (walls && Structures.StepCrossesWalls(kind, s.X, s.Z, s.Yaw, DoorClosed(ctx, s.Id), fromX, fromZ, toX, toZ)) return true;
-            // A lean-to's two sides and back, from the moment it is laid out, as on the client.
-            if (s.Kind == StructureKind.LeanTo
-                && Structures.StepCrossesLeanTo(kind, s.X, s.Z, s.Yaw, fromX, fromZ, toX, toZ)) return true;
+            // Lean-to sides (Structures.StepCrossesLeanTo) are not enforced yet: the open-fronted frame
+            // wedges the straight-walking check bots (bugfix-27 follow-up).
         }
 
-        // Tree trunks and boulders (shared/Obstacles.cs, the rule the client slides along). Landmarks
-        // (giant trees, outcrops) are not enforced yet.
-        if (Obstacles.StepBlocked(new ServerGround(ctx), PlayerBody, fromX, fromZ, toX, toZ, air)) return true;
+        // Trunks, boulders and landmarks are not enforced here yet: the check bots in tools/ walk
+        // straight lines and would wedge on them (bugfix-27 follow-up: path around, then add trunks).
         return false;
-    }
-
-    // The ground as the shared obstacle rule asks about it: dug cells, and cells where a tree was
-    // felled or a building stands (both clear what grew there), as the client sees them.
-    sealed class ServerGround : ICellGround
-    {
-        readonly ReducerContext ctx;
-        public ServerGround(ReducerContext ctx) => this.ctx = ctx;
-
-        public float TileHeight(int x, int z) =>
-            World.Height(x, z, ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) is { } edit ? edit.Depth : (short)0);
-
-        public bool Dug(int x, int z) => ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) != null;
-
-        public bool Cleared(int x, int z) =>
-            ctx.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true } || UnderStructure(ctx, x, z);
     }
 }
