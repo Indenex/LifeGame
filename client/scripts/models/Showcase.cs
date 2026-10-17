@@ -660,15 +660,15 @@ public partial class Showcase : Node3D
         string[] cypress = { "Forest_big_cypress_01", "Forest_big_cypress_02", "Forest_big_cypress_03" };
         // --trees=meshes shows variant D's 3D scalloped pines instead of the cards.
         bool meshTrees = args.GetValueOrDefault("trees", "cards") == "meshes";
+        // The 3D pine wearing the card pine's own painting (Justin: "85% the same").
+        var pineMat = MaterialLook.CardPine(Tex("Forest_big_tree_needle_04"));
         var bark = MaterialLook.For(MaterialLook.Pattern.Bark, MaterialLook.Variant.D, Look.Bark);
         var needlesMat = MaterialLook.For(MaterialLook.Pattern.Leaves, MaterialLook.Variant.D, Look.Pine);
         foreach (var (x, z) in new[] { (-6.5f, -6f), (-8.5f, -3f), (-4.5f, -9f), (7f, -7.5f), (-10f, -8f), (9.5f, -4f), (4f, -10f) })
         {
             float tall = 6.5f + rng.Randf() * 1.5f;
             if (!meshTrees) { Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), tall); continue; }
-            var scale = Vector3.One * tall / 4.6f;
-            AddChild(new MeshInstance3D { Mesh = PropMeshes.Trunk, MaterialOverride = bark, Position = new Vector3(x, 0, z), Scale = scale });
-            AddChild(new MeshInstance3D { Mesh = PropMeshes.ScallopPine, MaterialOverride = needlesMat, Position = new Vector3(x, 0, z), Scale = scale, Rotation = new Vector3(0, x, 0) });
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x, 0) });
         }
         foreach (var (x, z) in new[] { (5.5f, -3.5f), (-2.5f, -8.5f) })
             Card(cypress[rng.RandiRange(0, 2)], new Vector3(x, 0, z), 5.5f + rng.Randf());

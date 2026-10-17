@@ -176,13 +176,19 @@ public static class MaterialLook
             if (!trunk) v = min(v, 0.75);
             // Right half of the card: the trunk at its centre, the tier tips at its edge.
             vec4 c = vec4(0.0);
+            // Around the tree the card is read from both its halves, swinging between
+            // them with the angle, so the clumps change as you walk round instead of
+            // repeating in rings.
+            float ang = atan(obj.x, obj.z);
+            float side = sin(ang * 1.5) >= -0.5 ? 1.0 : -1.0;
+            float wobble = 0.03 * sin(ang * 5.0 + obj.y * 23.0);
             for (int i = 0; i < 8 && c.a < 0.95; i++) {
                 float rr = r * (1.0 - float(i) * 0.12);
-                c = textureLod(card, vec2(centre + (trunk ? 0.0 : rr * aspect), min(v, 0.97)), 0.0);
+                c = textureLod(card, vec2(centre + (trunk ? 0.0 : side * rr * aspect), clamp(v + wobble, 0.0, 0.97)), 0.0);
             }
             // A soft dark rim, like the card's ink line round each tier.
             float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
-            ALBEDO = c.rgb * 0.8 * mix(1.0, 0.6, smoothstep(0.7, 0.92, rim));
+            ALBEDO = c.rgb * 0.9 * mix(1.0, 0.6, smoothstep(0.7, 0.92, rim));
             ROUGHNESS = 0.95;
             SPECULAR = 0.05;
         }

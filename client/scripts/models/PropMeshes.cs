@@ -205,10 +205,17 @@ public static class PropMeshes
         {
             new(0f, 0.034f, 0.034f), new(0.1f, 0.026f, 0.026f), new(1f, 0.018f, 0.018f),
         }, 7, 0.2f);
+        // Root flare: a few roots spreading into the ground, as on the card.
+        for (int i = 0; i < 4; i++)
+        {
+            float a = i * Mathf.Tau / 4 + 0.4f;
+            var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+            k.Paint(Colors.White).Tube(new[] { dir * 0.012f + Vector3.Up * 0.05f, dir * 0.06f + Vector3.Up * 0.004f }, 0.012f, 4, 0.004f);
+        }
         // (bottom, apex, radius) of each tier, from the card's outline.
         var tiers = new (float Bottom, float Apex, float R)[]
         {
-            (0.19f, 0.44f, 0.2f), (0.3f, 0.6f, 0.245f), (0.5f, 0.75f, 0.19f), (0.69f, 0.89f, 0.13f), (0.83f, 1f, 0.07f),
+            (0.19f, 0.44f, 0.2f), (0.3f, 0.6f, 0.245f), (0.5f, 0.75f, 0.19f), (0.69f, 0.89f, 0.13f), (0.83f, 0.99f, 0.07f),
         };
         for (int t = 0; t < tiers.Length; t++)
         {
@@ -217,7 +224,7 @@ public static class PropMeshes
             {
                 new(0f, r * 0.72f, r * 0.72f), new(0.5f, r * 0.4f, r * 0.4f), new(1f, 0.004f, 0.004f),
             }, 10, 0.1f);
-            int fingers = 18 - t * 3;
+            int fingers = 16 - t * 2 + (int)(H(t, 12) * 3);
             for (int i = 0; i < fingers; i++)
             {
                 float a = (i + H(t * 31 + i, 7) * 0.5f) * Mathf.Tau / fingers + t * 0.9f;
@@ -230,7 +237,7 @@ public static class PropMeshes
                 var sideways = new Vector3(dir.Z, 0, -dir.X) * (H(t * 31 + i, 11) - 0.5f) * r * 0.5f;
                 var tip = dir * r * (0.7f + H(t * 31 + i, 9) * 0.45f) + sideways + new Vector3(0, bottom - 0.03f - H(t * 31 + i, 10) * 0.08f, 0);
                 var normal = (Vector3.Up + dir * 0.9f).Normalized();
-                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.05f, 0.02f);
+                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.3f, 0.025f);
             }
         }
         return Done(k);
