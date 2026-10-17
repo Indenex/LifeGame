@@ -118,8 +118,8 @@ namespace LifeGame.Shared
         // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
         public const string ForageProcess = "gather.berries";
 
-        // The surface of rivers and ponds, in meters. Matches Look.WaterLevel on the client.
-        public const float WaterLevel = -1.0f;
+        // The surface of rivers and ponds, in meters (World.WaterLevel).
+        public const float WaterLevel = World.WaterLevel;
 
         // Below this a need is worth warning about.
         public const float Low = 0.25f;

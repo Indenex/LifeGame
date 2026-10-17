@@ -250,6 +250,60 @@ conn.Reducers.Ran();
 Pump(() => Endurance() > e1, 5, "Endurance to rise after moving on");
 Ok("a report after moving on trains Endurance again");
 
+// --- The server keeps its own stamina bar: a sprint without end is capped at a walk (D-182) ---
+// The bot paces back and forth over an 8 m stretch near where it stands (a trunk further out could
+// stop it), and adds up how far the server actually moved it.
+float ServerX() => conn.Db.PlayerPos.PlayerId.Find(myId)!.X;
+float startX = ServerX(), dir = 1;
+float PaceFor(float metersPer100ms, float seconds)
+{
+    int stuck = 0;
+    float travelled = 0, last = ServerX();
+    for (int i = 0; i < (int)(seconds * 10); i++)
+    {
+        float cur = ServerX();
+        if (cur > startX + 8) dir = -1;
+        else if (cur < startX) dir = 1;
+        px = cur + dir * metersPer100ms * 3;   // always asks for more than the pace allows
+        conn.Reducers.Move(px, pz, MathF.PI / 2);
+        Settle(100);
+        float moved = MathF.Abs(ServerX() - last);
+        travelled += moved;
+        last = ServerX();
+        // Turn round at anything in the way.
+        if (moved < 0.15f && ++stuck >= 3) { dir = -dir; stuck = 0; } else if (moved >= 0.15f) stuck = 0;
+    }
+    return travelled;
+}
+// What 5 s of running covers from a full bar. A bot that covers far less is stuck on something in
+// the way, so it moves over a lane and tries again.
+float fresh = 0;
+for (int lane = 0; lane < 10; lane++)
+{
+    Settle(14_000);
+    fresh = PaceFor(0.56f, 5);
+    if (fresh >= 22) break;
+    pz += 3; startX = ServerX(); dir = 1;
+}
+if (fresh < 22) Fail($"the bot could not find a clear stretch to run on ({fresh:F1} m in 5 s)");
+Settle(14_000);   // a full bar to start from
+PaceFor(0.59f, 12);
+float winded = PaceFor(0.59f, 20);
+// Winded, the bar refills at a walk and lets a short run through each time it is back above a fifth,
+// as the client's does, so the cap sits between a walk and the bot's 5.9 m/s sprint.
+float cap = 5.4f * 20;
+if (winded > cap) Fail($"a sprint without end still covered {winded:F1} m in its last 20 s (the cap allows {cap:F1})");
+if (winded < 50f) Fail($"the bot got stuck while winded ({winded:F1} m in 20 s)");
+Ok($"a sprint without end is capped at a walk ({winded:F1} m in 20 s once winded, a sprint without limit would cover 118)");
+// Run dry only caps pace; an honest rhythm of a short run and a rest is never slowed.
+Settle(14_000);
+float honest = PaceFor(0.56f, 5);
+Settle(12_000);
+honest += PaceFor(0.56f, 5);
+float wanted = fresh * 2 * 0.9f;
+if (honest < wanted) Fail($"an honest run, rest, run was slowed: {honest:F1} m, expected at least {wanted:F1} m");
+Ok($"an honest run and rest pattern is never slowed ({honest:F1} m)");
+
 // --- Waking after a death with no waking place: the rim of the starting area, under open sky ---
 // A fresh world has no felled trees, so the shared tree rule says where trees stand.
 long diedBefore = V().DiedAt.MicrosecondsSinceUnixEpoch;
