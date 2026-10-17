@@ -94,7 +94,7 @@ public static partial class Module
                 uint used = 0;
                 while (used < stack.Count && load.Count < ClayRules.KilnCapacity)
                 {
-                    loadMarks.Add(stack.Wear);
+                    loadMarks.Add(MarkFromStack(stack.Wear, stack.Maker));
                     load.Add(new KilnPot
                     {
                         Form = (byte)ClayRules.FormOfUnfired((Item)stack.Item)!.Value,
@@ -195,6 +195,7 @@ public static partial class Module
     // comes back out where it stood; a firing one finishes on its timer.
     static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
     {
+        ctx.Db.StructureMark.StructureId.Delete(s.Id);
         if (s.Kind == StructureKind.ClayTrough) ctx.Db.TroughWater.StructureId.Delete(s.Id);
         if (s.Kind != StructureKind.Kiln || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
         if (kiln.State == (byte)KilnState.Firing) return;
@@ -218,6 +219,7 @@ public static partial class Module
             Id = 0, Item = (ushort)item, Quality = quality,
             X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
             Wear = wear,
+            Maker = MakerOfMark(wear),
         });
     }
 

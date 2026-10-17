@@ -86,3 +86,7 @@ Each happens when a lane next adds to that family, not before:
 3. **Device** (lamps, D-195).
 4. **Item and Tool** art lookups, and tool durability (crafting-19).
 5. **Food**, **Landmark**, **Weather**, **Sound** as Environment, Atmosphere and Audio add to them.
+
+## Showcase views
+
+`client/scripts/models/Showcase.cs` renders model views for the Render lane. A view is a parameterless instance method of `partial class Showcase` marked `[ShowcaseView("name")]`; `--view=name` finds it by reflection. Add your lane's views in your own `client/scripts/models/Showcase.<Lane>.cs` (`public partial class Showcase : Node3D`), not in the shared file. Read options from the `args` dictionary (e.g. `args.GetValueOrDefault("set", "homes")`).

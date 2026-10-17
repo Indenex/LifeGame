@@ -27,12 +27,12 @@ namespace LifeGame.Shared
         public static bool Has(uint wear) => (wear & (1u << 16)) != 0;
         public static uint Maker(uint wear) => wear & 0xFFFFu;
 
-        // The clay items that carry their maker: pots, jars and lamps, unfired or fired, full or empty.
+        // The clay items that carry their maker: pots, jars, lamps and troughs, unfired or fired, full or empty.
         public static bool Marked(Item item) => item switch
         {
             Item.PinchPot or Item.CoilPot or Item.PinchPotOfWater or Item.CoilPotOfWater
                 or Item.UnfiredPinchPot or Item.UnfiredCoilPot or Item.StorageJar or Item.UnfiredStorageJar
-                or Item.ClayLamp or Item.UnfiredLamp => true,
+                or Item.ClayLamp or Item.UnfiredLamp or Item.UnfiredClayTrough or Item.ClayTrough => true,
             _ => false,
         };
 
