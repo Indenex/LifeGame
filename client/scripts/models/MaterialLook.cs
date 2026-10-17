@@ -174,10 +174,10 @@ public static class MaterialLook
     {
         var material = CardPine(card);
         material.SetShaderParameter("crown_y", PropMeshes.BroadleafCrownY);
-        // The card broadleaf's warmer leaf olive.
-        material.SetShaderParameter("shade_col", new Color(0.1f, 0.13f, 0.1f));
-        material.SetShaderParameter("base_col", new Color(0.17f, 0.22f, 0.15f));
-        material.SetShaderParameter("lit_col", new Color(0.26f, 0.32f, 0.2f));
+        // The card broadleaf's dark grey-green.
+        material.SetShaderParameter("shade_col", new Color(0.09f, 0.12f, 0.11f));
+        material.SetShaderParameter("base_col", new Color(0.15f, 0.2f, 0.17f));
+        material.SetShaderParameter("lit_col", new Color(0.22f, 0.28f, 0.22f));
         return material;
     }
 

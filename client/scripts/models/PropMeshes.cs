@@ -290,7 +290,7 @@ public static class PropMeshes
     {
         float R(int salt) => H(v * 89 + 11, salt + 800);
         float width = 0.86f + R(1) * 0.28f;
-        int rows = 12 + (int)(R(2) * 4f);
+        int rows = 16 + (int)(R(2) * 5f);
         float squash = 0.92f + R(3) * 0.16f;
         float leanAmount = R(4) * 0.04f, leanAngle = R(5) * Mathf.Tau;
         var leanDir = new Vector3(Mathf.Sin(leanAngle), 0, Mathf.Cos(leanAngle));
@@ -320,9 +320,10 @@ public static class PropMeshes
         {
             float lat0 = 0.22f + r * 2.3f / (rows - 1);
             float ringR0 = radii.X * Mathf.Sin(lat0);
-            float length = (0.05f + 0.045f * Mathf.Sin(lat0)) * width;
-            int count = Mathf.Max(4, Mathf.RoundToInt(Mathf.Tau * ringR0 / (0.05f * width)));
-            float wide = Mathf.Tau * ringR0 / count * 0.7f + 0.015f;
+            float length = (0.04f + 0.035f * Mathf.Sin(lat0)) * width;
+            int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * ringR0 / (0.034f * width)));
+            // Narrow lobes, so each reads as a small pointed leaf rather than a round scale.
+            float wide = Mathf.Tau * ringR0 / count * 0.55f + 0.008f;
             float turn = R(30 + r) * Mathf.Tau;
             for (int i = 0; i < count; i++)
             {
@@ -333,7 +334,9 @@ public static class PropMeshes
                 // Each lobe sits a little above or below its row, so rows don't read as plates.
                 float lat = lat0 + (H(v * 157 + r * 23, i + 950) - 0.5f) * 2.3f / (rows - 1) * 1.1f;
                 float ringR = radii.X * Mathf.Sin(lat), y = center.Y + radii.Y * Mathf.Cos(lat);
-                var root = new Vector3(0, y, 0) + dir * ringR * full * 0.85f;
+                // A few broad bulges, so the crown's outline is lumpy like the card's.
+                float lump = 1f + 0.11f * Mathf.Sin(a * 3f + lat * 2.3f + R(61) * 6f) + 0.06f * Mathf.Sin(a * 5f - lat * 3.1f + R(62) * 6f);
+                var root = new Vector3(0, y, 0) + dir * ringR * full * lump * 0.85f;
                 // Lobes near the top reach out more; lower ones hang down the crown's side.
                 float droop = length * (0.35f + 0.75f * Mathf.Clamp(lat / 1.6f, 0f, 1.2f)) * (0.85f + rnd * 0.3f);
                 f.Bough(root, dir, length * (0.85f + rnd * 0.35f), droop, wide * (0.9f + rnd * 0.2f), rnd);
