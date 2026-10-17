@@ -38,6 +38,46 @@ public static class PaintedStructures
         lock (Twins) return Sources.TryGetValue(material, out var source) ? source : material;
     }
 
+    // The Quaternius village kit's painted surfaces (building-26, Justin's kit): wood grain on
+    // timber, plaster strokes on daub, round stones on footings. Each kit texture keeps its
+    // average colour beside it, so hue can blend between the kit's colour and the material's own.
+    public enum Surface { WoodLight, WoodDark, Plaster, RoundRocks }
+
+    static readonly Dictionary<(Material, Surface), ShaderMaterial> Surfaced = new();
+    // --no-kit draws structures as before the kit, for before-and-after shots.
+    static readonly bool NoKit = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--no-kit") >= 0;
+
+    static (string file, Color mean, float scale) KitSurface(Surface surface) => surface switch
+    {
+        // Sticks and logs carry UVs in metres: one repeat runs 1.6 m along the grain.
+        Surface.WoodLight => ("res://assets/quaternius/village/wood_light.png", Color.Color8(146, 100, 56), 1.6f),
+        Surface.WoodDark => ("res://assets/quaternius/village/wood_dark.png", Color.Color8(104, 67, 39), 1.6f),
+        Surface.Plaster => ("res://assets/quaternius/village/plaster.png", Color.Color8(175, 158, 127), 2.2f),
+        _ => ("res://assets/quaternius/village/round_rocks.png", Color.Color8(78, 76, 83), 1.4f),
+    };
+
+    // A painted structure material with a kit surface laid over it. mix is how much of the kit
+    // shows; hue 1 keeps the material's own colour and takes only the kit's strokes.
+    public static Material WithSurface(Material painted, Surface surface, float mix = 1f, float hue = 0f)
+    {
+        if (NoKit || painted is not ShaderMaterial material || !Painted.IsPainted(material)) return painted;
+        lock (Twins)
+        {
+            if (Surfaced.TryGetValue((painted, surface), out var cached)) return cached;
+            var (file, mean, scale) = KitSurface(surface);
+            var twin = (ShaderMaterial)material.Duplicate();
+            twin.SetShaderParameter("surface_tex", GD.Load<Texture2D>(file));
+            twin.SetShaderParameter("surface_mean", mean);
+            twin.SetShaderParameter("surface_scale", scale);
+            twin.SetShaderParameter("surface_mix", mix);
+            twin.SetShaderParameter("surface_hue", hue);
+            // The kit's own colour carries the surface; don't pull it toward the family's palette.
+            twin.SetShaderParameter("base_mix", (float)twin.GetShaderParameter("base_mix") * hue);
+            if (Sources.TryGetValue(material, out var source)) Sources[twin] = source;
+            return Surfaced[(painted, surface)] = twin;
+        }
+    }
+
     static void Tune(ShaderMaterial twin, ShaderMaterial source, Family family)
     {
         switch (family)
