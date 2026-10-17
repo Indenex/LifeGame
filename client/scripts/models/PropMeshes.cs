@@ -63,9 +63,10 @@ public static class PropMeshes
     }
 
     // A weathered boulder about 1 m across, settled into the ground with moss on
-    // top. Four shapes, since boulders are everywhere: worn lumps, a tall split
-    // stone, a low slab, and a round stone cracked in two.
-    public const int RockVariants = 4, FallenLogVariants = 2, FallenGiantLogVariants = 6;
+    // top. Four kinds, since boulders are everywhere: worn lumps, a tall split stone, a
+    // low slab, and a round stone cracked in two; each in two forms (variants 0 to 3, and
+    // 4 to 7 the same kinds again), so a patch of one kind needn't repeat one shape.
+    public const int RockKinds = 4, RockVariants = 8, FallenLogVariants = 2, FallenGiantLogVariants = 6;
 
     public static Mesh Rock(int variant) => Variant("rock", variant, RockVariants, BuildRock);
 
@@ -73,6 +74,7 @@ public static class PropMeshes
     {
         var k = Kit();
         var moss = new Color(0.62f, 0.78f, 0.45f);
+        if (v >= RockKinds) return BuildRockB(k, v % RockKinds, moss);
         switch (v)
         {
             case 0:
@@ -99,6 +101,48 @@ public static class PropMeshes
                 k.Paint(Colors.White, 0.95f).Ellipsoid(new Vector3(0.22f, 0.15f, 0.03f), new Vector3(0.28f, 0.38f, 0.38f), 8, 5, new Basis(Vector3.Forward, 0.08f), 0.5f);
                 k.Paint(moss, 0.9f).Ellipsoid(new Vector3(0.0f, 0.3f, 0.0f), new Vector3(0.06f, 0.18f, 0.3f), 6, 3);
                 k.Paint(moss).Ellipsoid(new Vector3(0.25f, 0.5f, 0.02f), new Vector3(0.18f, 0.05f, 0.2f), 6, 2);
+                break;
+        }
+        return Done(k);
+    }
+
+    // The second form of each rock kind (model-28, D-166): variant v is kind v % RockKinds,
+    // so a region of one kind of stone can mix both forms rather than repeat one shape.
+    static ArrayMesh BuildRockB(MeshKit k, int kind, Color moss)
+    {
+        switch (kind)
+        {
+            case 0:
+                // Worn lumps, lower and longer: a whaleback with two knuckles at one end.
+                k.Paint(Colors.White).Ellipsoid(new Vector3(-0.08f, 0.07f, 0), new Vector3(0.58f, 0.26f, 0.36f), 9, 5, new Basis(Vector3.Up, -0.4f), 0.4f);
+                k.Paint(Colors.White, 0.93f).Ellipsoid(new Vector3(0.42f, 0.12f, -0.1f), new Vector3(0.22f, 0.25f, 0.22f), 7, 4, new Basis(Vector3.Up, 0.8f), 0.4f);
+                k.Paint(Colors.White, 0.97f).Ellipsoid(new Vector3(0.5f, 0.03f, 0.2f), new Vector3(0.16f, 0.13f, 0.15f), 6, 3, new Basis(Vector3.Up, 2.4f), 0.4f);
+                k.Paint(moss, 0.95f).Ellipsoid(new Vector3(-0.25f, 0.29f, 0.05f), new Vector3(0.26f, 0.05f, 0.2f), 8, 3, new Basis(Vector3.Up, -0.4f), 0.3f);
+                break;
+            case 1:
+                // Split, but squatter: one half fallen away and a chunk lying at its foot.
+                k.Paint(Colors.White).Ellipsoid(new Vector3(-0.12f, 0.26f, 0), new Vector3(0.26f, 0.46f, 0.38f), 7, 5, new Basis(Vector3.Forward, -0.06f), 0.4f);
+                k.Paint(Colors.White, 0.92f).Ellipsoid(new Vector3(0.26f, 0.16f, 0.04f), new Vector3(0.22f, 0.34f, 0.33f), 7, 5, new Basis(Vector3.Forward, 0.45f), 0.4f);
+                k.Paint(Colors.White, 0.96f).Ellipsoid(new Vector3(0.48f, 0.05f, -0.22f), new Vector3(0.13f, 0.09f, 0.12f), 6, 3, new Basis(Vector3.Up, 1.1f), 0.4f);
+                k.Paint(moss).Ellipsoid(new Vector3(-0.13f, 0.68f, 0.02f), new Vector3(0.16f, 0.05f, 0.22f), 6, 2, new Basis(Vector3.Forward, -0.06f));
+                break;
+            case 2:
+                // Slabs stepped like a little ledge, moss along the step.
+                k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.06f, 0), new Vector3(0.62f, 0.16f, 0.46f), 8, 3, new Basis(Vector3.Up, -0.3f), 0.5f);
+                k.Paint(Colors.White, 0.94f).Ellipsoid(new Vector3(-0.16f, 0.2f, -0.08f), new Vector3(0.38f, 0.14f, 0.3f), 8, 3, new Basis(Vector3.Up, -0.15f) * new Basis(Vector3.Right, 0.05f), 0.5f);
+                k.Paint(moss, 0.95f).Ellipsoid(new Vector3(0.2f, 0.17f, 0.1f), new Vector3(0.16f, 0.03f, 0.3f), 7, 2, new Basis(Vector3.Up, -0.3f));
+                k.Paint(moss).Ellipsoid(new Vector3(-0.2f, 0.33f, -0.08f), new Vector3(0.22f, 0.03f, 0.17f), 7, 2, new Basis(Vector3.Up, -0.15f));
+                break;
+            default:
+                // A round stone cracked three ways, the pieces settled a little apart.
+                for (int i = 0; i < 3; i++)
+                {
+                    float a = i * Mathf.Tau / 3f + 0.4f;
+                    var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                    k.Paint(Colors.White, 0.92f + i * 0.04f).Ellipsoid(dir * 0.17f + new Vector3(0, 0.16f - i * 0.02f, 0), new Vector3(0.24f, 0.34f - i * 0.03f, 0.24f), 7, 5, MeshKit.Aim(dir) * new Basis(Vector3.Right, -0.12f), 0.5f);
+                }
+                k.Paint(moss, 0.9f).Ellipsoid(new Vector3(0, 0.28f, 0), new Vector3(0.1f, 0.12f, 0.1f), 6, 3);
+                k.Paint(moss).Ellipsoid(new Vector3(0.12f, 0.46f, -0.05f), new Vector3(0.16f, 0.04f, 0.14f), 6, 2);
                 break;
         }
         return Done(k);
