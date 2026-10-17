@@ -40,6 +40,9 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - By day, away from low sun: distance fog x0.6, volumetric fog x0.5, volumetric ambient inject 0.4 down to 0.15. This clears the milky haze near the camera; dawn and dusk keep their thick air for light rays.
   - Daytime sun is a touch warmer (toward (1, 0.93, 0.78)) and +10% stronger, for warm bright tips.
 - 2026-10-17 00:55: Modeling rendered df2c5b1: warmer and less grey, an olive carpet with violet shadows (the ground is blade grass again; Justin rejected the sprite grass). Pale colours (straw roof, skin) were near clipping into cream. The curve gets a highlight shoulder (0.85 to (0.84, 0.82, 0.74), white to (0.95, 0.93, 0.86)), and the +6% exposure is dropped since the sun is now +10%.
+- 2026-10-17 01:10: Environment rendered with --grade=1 (renders/env-13/env-13-grass-before-after-ref02.png on claude/environment-painted-ground, 79e0508): a clear win, the veil gone and the grass warm and bright. Remaining gaps against 02 and changes:
+  - Shade between leaves: SSAO intensity up to 3.0 and radius 1.6 to 2.2.
+  - Far haze too bright and cool: fog aerial perspective 0.5 to 0.2, so less sky blue; by day the fog light leans 35% toward warm beige (0.78, 0.72, 0.60).
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
