@@ -15,5 +15,8 @@ Justin: "place fires where you want." Today `StartCraft("fire.*")` picks the spo
 - Client ghost (UX): does the fire ghost snap to a hearth ring, and is the spot confirmed with a click, or is the fire lit straight away at the cursor? Options sent to the PM.
 - CraftCheck cannot run until bugfix-34 lands.
 
+## Follow-up (crafting-30, small PR after #547 and #582 merge; PM, 2026-10-17)
+Integration's #569 census found 7 CraftCheck failures from fire spots on boulders or no level ground: not walking, CraftCheck choosing a bad spot. Make CraftCheck pick a validated fire spot with the same rules as the server (ClearForFire) before lighting. Plan: move the static part of ClearForFire (water level, slope over the 3x3 cells, boulder and trunk distances via Rocks/Trees, using a depth lookup) into shared/ as `FireGround.Clear(x, z, depthAt)`; the server's ClearForFire calls it and keeps the fire/hearth spacing and UnderStructure checks; CraftCheck scans rings around the bot with the shared check (plus its own fire list) and lights with `StartFireAt`; UX's ghost (#545) can show amber for bad ground with the same call. Tell UX when it lands.
+
 ## Next step
 Send UX the API; when bugfix-34 is on main, merge main, run CraftCheck and tools/upgrade-check.sh origin/main, push, open the PR.
