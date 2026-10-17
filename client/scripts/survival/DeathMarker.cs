@@ -22,7 +22,7 @@ void fragment() {
     ALPHA = (1.0 - up) * (1.0 - up) * side * 0.22 * pulse * strength;
 }";
 
-    // Whether the shaft is shown at all (Justin's call, via the PM); the card line has its own switch.
+    // Whether the shaft is shown at all; Justin picked line and light (2026-10-17). The card line has its own switch.
     public const bool Shown = true;
     // You have reached it when this close.
     const float ReachedDistance = 3f;

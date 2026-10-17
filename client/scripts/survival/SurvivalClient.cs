@@ -17,7 +17,7 @@ public partial class SurvivalClient : Node
     readonly StaminaBar staminaBar = new();
     readonly RestSpotView restSpots = new();
     readonly DeathMarker deathMarker = new();
-    // Whether the death card says which way your things lie (Justin's call, via the PM).
+    // Whether the death card says which way your things lie; Justin picked line and light (2026-10-17).
     const bool DeathCardDirection = true;
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
