@@ -30,7 +30,13 @@ public partial class WarmLook : Node
         On = !OS.GetCmdlineUserArgs().Contains("--cold");
         if (!On) return;
         GetTree().NodeAdded += Added;
-        GetTree().Root.Theme = Defaults();
+        var warm = Defaults();
+        GetTree().Root.Theme = warm;
+        // Windows and the HUD sit under CanvasLayers, and a theme set on the root window doesn't
+        // reach through a CanvasLayer: their plain buttons and text boxes fell back to Godot's
+        // own dark grey (ui-58, Render B's pairs). Merging into the engine's default theme
+        // reaches every control; anything that styles itself still wins.
+        ThemeDB.GetDefaultTheme().MergeWith(warm);
     }
 
     // The game-wide defaults (ui-44): Nunito for every control that doesn't choose a font, and

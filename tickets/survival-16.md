@@ -1,9 +1,9 @@
 # survival-16: TrySpendStamina for jumping
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-spend-stamina
-PR: (to open)
+PR: merged, first commit 916b7919
 
 ## Goal
 Bug fixes lane (bugfix-25, Justin's Space jump, default 8% of the bar per jump, not while winded) asked for `bool TrySpendStamina(float fraction)` on SurvivalClient: false and nothing spent if winded or the bar holds less than the cost; resets the refill delay. Bugfix adds Stamina.JumpCost and the call.
@@ -15,4 +15,4 @@ Bug fixes lane (bugfix-25, Justin's Space jump, default 8% of the bar per jump, 
 - (none)
 
 ## Next step
-Open PR, wait for CI, send green sha to the PM and tell the Bug fixes lane (session_01AeuMsF8LfzDsWW8jUh1Fkp) when it merges.
+Done and merged; nothing further on this ticket.

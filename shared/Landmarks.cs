@@ -9,6 +9,11 @@ namespace LifeGame.Shared
 {
     public static class Landmarks
     {
+        // How broad a giant tree's trunk is, as a multiple of an ordinary tree: the client draws it and
+        // every walker's collision (client, server and bots) reads it, so it lives here (bugfix-48).
+        // The seed is the client's landmark seed 1000 + 2.
+        public static float GiantGirth(int x, int z) => 2.4f + Trees.Hash01(x, z, 1002u) * (3.6f - 2.4f);
+
         // How worn the ground is by a deer trail, 0 untouched to 1 the middle of the
         // path. Trails follow the contours of a slow noise, so they wander, fork and
         // loop like real game paths, one to two and a half meters wide.
@@ -52,6 +57,25 @@ namespace LifeGame.Shared
         public const int OutcropSquare = 48;
 
         public static bool OutcropFits(int x, int z) => Forest.Heath(x, z) > 0.55f && x * x + z * z > 20 * 20;
+
+        // A huge old trunk lying across a glade (env-33), one at most in each 56 m square:
+        // in an open glade with the wood not far off, on dry ground, away from the spawn
+        // clearing and trails.
+        public const int FallenGiantSquare = 56;
+
+        public static bool FallenGiantFits(int x, int z)
+        {
+            if (x * x + z * z < 24 * 24 || Trees.GrowsAt(x, z)) return false;
+            float density = Forest.Density(x, z);
+            if (density > 0.2f || Forest.Heath(x, z) > 0.5f || Forest.Wetland(x, z) > 0.3f
+                || World.BaseHeight(x, z) < World.WaterLevel + 0.5f || Trail(x, z) > 0.3f) return false;
+            // Room for a trunk up to 13 m long whichever way it fell: no standing tree
+            // within 7 m, so none grows through it or hides it under its crown.
+            for (int dx = -7; dx <= 7; dx++)
+                for (int dz = -7; dz <= 7; dz++)
+                    if (dx * dx + dz * dz <= 49 && Trees.GrowsAt(x + dx, z + dz)) return false;
+            return true;
+        }
 
         public static int SquareOf(int cell, int size) => FloorDiv(cell, size);
 

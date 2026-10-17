@@ -241,6 +241,11 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
+        // Rabbit (animals-22), by number until the items reach main: raw, roast and burnt, and its fur.
+        (Item)214 => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
+        (Item)215 => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
+        (Item)216 => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        (Item)217 => (RabbitFur, true),
         // Spade (Crafting's crafting-shovel).
         Item.Spade => (Spade, false),
         // Waterskins (survival-20).
@@ -533,6 +538,39 @@ public static class ItemModels
         }, 8, 0.2f);
         k.Plain.Paint(Bone).Tube(new[] { new Vector3(0, 0.022f, 0.055f), new Vector3(0, 0.02f, 0.09f) }, 0.007f, 6);
         k.Plain.Paint(Bone, 0.95f).Ellipsoid(new Vector3(0, 0.02f, 0.094f), new Vector3(0.011f, 0.01f, 0.009f), 7, 4);
+    }
+
+    // A small dressed rabbit lying on its side: a rounded body, the two long hind legs
+    // folded forward under it, the short front legs tucked; skin and meat in two tones.
+    static void Rabbit(Kit k, Color meat, Color skin)
+    {
+        const float z = 1.3f;
+        k.Plain.Paint(skin).Ellipsoid(new Vector3(0, 0.035f, 0) * z, new Vector3(0.045f, 0.034f, 0.085f) * z, 10, 6);
+        k.Plain.Paint(meat).Ellipsoid(new Vector3(0, 0.03f, 0.06f) * z, new Vector3(0.034f, 0.028f, 0.035f) * z, 8, 5);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            k.Plain.Paint(skin, 0.95f).Loft(new Vector3(s * 0.03f, 0.03f, -0.06f) * z, new Vector3(s * 0.036f, 0.016f, 0.03f) * z, new MeshKit.Ring[]
+            {
+                new(0f, 0.022f * z, 0.02f * z), new(0.6f, 0.014f * z, 0.013f * z), new(1f, 0.008f * z, 0.008f * z),
+            }, 7, 0.2f);
+            k.Plain.Paint(meat, 0.95f).Loft(new Vector3(s * 0.022f, 0.024f, 0.07f) * z, new Vector3(s * 0.026f, 0.012f, 0.11f) * z, new MeshKit.Ring[]
+            {
+                new(0f, 0.012f * z, 0.011f * z), new(1f, 0.006f * z, 0.006f * z),
+            }, 6, 0.2f);
+        }
+    }
+
+    // A rabbit's pelt, rolled loosely: soft brown fur outside, the pale belly showing at
+    // one end and the white scut.
+    static void RabbitFur(Kit k)
+    {
+        var coat = new Color(0.55f, 0.42f, 0.3f);
+        k.Plant.Paint(coat).Loft(new Vector3(-0.07f, 0.035f, 0), new Vector3(0.07f, 0.035f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.028f, 0.03f), new(0.2f, 0.036f, 0.034f), new(0.8f, 0.035f, 0.034f), new(1f, 0.026f, 0.028f),
+        }, 10, 0.4f);
+        k.Plain.Paint(new Color(0.9f, 0.85f, 0.77f)).Ellipsoid(new Vector3(0.068f, 0.035f, 0), new Vector3(0.008f, 0.024f, 0.026f), 8, 4);
+        k.Plain.Paint(new Color(0.97f, 0.96f, 0.93f)).Ellipsoid(new Vector3(-0.072f, 0.04f, 0.012f), new Vector3(0.016f, 0.016f, 0.015f), 7, 4);
     }
 
     // A tuft of shorn fleece.

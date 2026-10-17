@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "clap", "rest" };
+    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "clap", "rest", "deer" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -77,6 +77,11 @@ static class AudioScenes
                 for (int i = 0; i < 5; i++) if (At(1.25 + i / 3.2)) mix.Play(CueDefs.EmoteHandClap);
                 if (At(4.25)) mix.Play(CueDefs.EmoteSwish, 0.8f);
                 if (At(5.05)) mix.Play(CueDefs.EmoteSwish, 0.65f);
+                break;
+            // Deer grazing scene: crunches every 2 s, a snort at 8 s.
+            case "deer":
+                for (int i = 0; i < 6; i++) if (At(1.0 + 2.0 * i)) mix.Play(CueDefs.DeerCrunch);
+                if (At(8)) mix.Play(CueDefs.DeerSnort);
                 break;
             // Rest scene: sit (1 s), get up (3 s), lie on the ground (5 s), get up (8 s), lie on a mat (10 s), get up (13 s).
             case "rest":
