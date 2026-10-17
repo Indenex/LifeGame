@@ -4,6 +4,7 @@
 // that other systems (skills, the journal) key on: never rename one.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
@@ -154,7 +155,8 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = Base(1, 1.5f), Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
             },
-            Roast(Item.RawMutton),
+        }.Concat(Foods.Roasts.Select(r => Roast(r.Raw))).Concat(new[]
+        {
             // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
             // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
             new ProcessDef
@@ -176,9 +178,6 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
                 Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
             },
-            Roast(Item.RawVenison),
-            Roast(Item.RawChicken),
-            Roast(Item.Egg),
             new ProcessDef
             {
                 Id = "carve.spade", Name = "Carve a spade", Doing = "Carving a spade", Tier = 2,
@@ -421,7 +420,7 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CleanClay), new Ingredient(Item.Fiber) },
                 Seconds = Base(3, 0.25f), Makes = Item.Daub, MakesCount = 2,
             },
-        };
+        }).ToList();
 
         static readonly Dictionary<string, ProcessDef> ById = Index();
 
