@@ -77,9 +77,15 @@ Subscribe(Subscriptions.Area(AreaAround(start.X, start.Z)), 20, "area around spa
 
 // Walk west until the old origin area (3 chunks either side of chunk 0) is far behind.
 float targetX = -(World.ViewRadiusChunks + 2) * World.ChunkSize * World.CellSize, x = start.X, z = start.Z;
-while (x > targetX)
+// Round trunks, boulders and landmarks, which the server refuses to be walked into (bugfix-34, 48):
+// where a step makes no headway, drift sideways a little, as a player steering round would.
+var westGround = new BotGround(conn);
+for (int guard = 0; x > targetX && guard < 2000; guard++)
 {
-    x = MathF.Max(targetX, x - 0.5f);
+    float wantX = MathF.Max(targetX, x - 0.5f);
+    var (nx, nz) = westGround.Slide(x, z, wantX, z);
+    if (nx > x - 0.05f) nz = z + 0.4f; // head-on and held: go round
+    (x, z) = westGround.Slide(x, z, nx, nz);
     conn.Reducers.Move(x, z, -MathF.PI / 2);
     Pump(100);
 }
@@ -204,16 +210,16 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
         }
         WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - px) + MathF.Abs(p.Z - pz) < 1.0f, 15, "server has us there");
     }
-    void Probe(bool wantTrunk, string what)
+    void Probe(bool wantTrunk, string what, Func<int, int, bool>? only = null, int maxRing = 60)
     {
         float ox = 0, oz = 0, r = 0;
         bool found = false;
         int bx = World.CellOf(px), bz = World.CellOf(pz);
-        for (int ring = 3; ring < 60 && !found; ring++)
+        for (int ring = 3; ring < maxRing && !found; ring++)
             for (int x = bx - ring; x <= bx + ring && !found; x++)
                 for (int z = bz - ring; z <= bz + ring && !found; z++)
                 {
-                    if (Math.Max(Math.Abs(x - bx), Math.Abs(z - bz)) != ring) continue;
+                    if (Math.Max(Math.Abs(x - bx), Math.Abs(z - bz)) != ring || (only != null && !only(x, z))) continue;
                     if (!Obstacles.At(ground, x, z, out ox, out oz, out r, out float h) || (h == float.MaxValue) != wantTrunk) continue;
                     // Room to come at it from the west without meeting anything else.
                     float sx = ox - r - 1.2f;
@@ -236,6 +242,8 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
         px = at.X; pz = at.Z;
     }
     Probe(true, "tree trunk");
+    // A giant oak's broad trunk (bugfix-48): a landmark, so it is found by its feature cell.
+    Probe(true, "giant oak", (x, z) => Features.At(x, z, FeatureGround.Dry) is { Block: FeatureBlock.Trunk }, 200);
     Probe(false, "boulder");
 }
 

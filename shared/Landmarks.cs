@@ -9,6 +9,11 @@ namespace LifeGame.Shared
 {
     public static class Landmarks
     {
+        // How broad a giant tree's trunk is, as a multiple of an ordinary tree: the client draws it and
+        // every walker's collision (client, server and bots) reads it, so it lives here (bugfix-48).
+        // The seed is the client's landmark seed 1000 + 2.
+        public static float GiantGirth(int x, int z) => 2.4f + Trees.Hash01(x, z, 1002u) * (3.6f - 2.4f);
+
         // How worn the ground is by a deer trail, 0 untouched to 1 the middle of the
         // path. Trails follow the contours of a slow noise, so they wander, fork and
         // loop like real game paths, one to two and a half meters wide.
