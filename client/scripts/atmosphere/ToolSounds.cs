@@ -28,6 +28,7 @@ static class ToolSounds
     {
         WorkMotion.Chop => CueDefs.ChopThunk,
         WorkMotion.Dig => thrown ? CueDefs.DirtThrow : item == (ushort)Item.Spade ? CueDefs.DigSpade : item != 0 ? CueDefs.DigStick : CueDefs.DigHands,
+        WorkMotion.Pound => CueDefs.PoundThud,
         _ => null,
     };
 
