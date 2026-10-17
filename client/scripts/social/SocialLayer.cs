@@ -83,7 +83,7 @@ public partial class SocialLayer : Node
                 foreach (var c in conn.Db.Claim.Iter())
                 {
                     float d = new Vector2(c.X - at.X, c.Z - at.Z).Length();
-                    if (d <= bestD && HasRights(c)) { best = c; bestD = d; }
+                    if (d <= bestD && IsOwnerOrMember(c)) { best = c; bestD = d; }
                 }
                 return best is { } claim
                     ? new UseOffer("Tend the marker", bestD, () => conn.Reducers.TendClaim(claim.Id))
@@ -131,7 +131,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites" });
     }
 
     public Func<bool> HideChip = () => false;
@@ -167,7 +167,7 @@ public partial class SocialLayer : Node
             if (panel.IsOpen) { panel.Close(); return; }
             var marker = NearestMarker();
             if (marker == null) hud.Note("Walk up to a claim marker first");
-            else if (!HasRights(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
+            else if (!IsOwnerOrMember(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
             else panel.Open(marker, IsMine(marker));
         }
         else if (e.IsActionPressed("ui_cancel") && panel.IsOpen)
@@ -319,7 +319,7 @@ public partial class SocialLayer : Node
             markers[c.Id] = marker;
             world.AddChild(marker);
         }
-        marker.Set(c, HasRights(c));
+        marker.Set(c, IsOwnerOrMember(c));
         if (panel.Claim?.Id == c.Id) panel.Open(c, IsMine(c));
     }
 
@@ -336,7 +336,7 @@ public partial class SocialLayer : Node
     {
         if (conn == null) return;
         foreach (var c in conn.Db.Claim.Iter())
-            if (markers.TryGetValue(c.Id, out var marker)) marker.Set(c, HasRights(c));
+            if (markers.TryGetValue(c.Id, out var marker)) marker.Set(c, IsOwnerOrMember(c));
         panel.MarkDirty();
     }
 
@@ -375,8 +375,20 @@ public partial class SocialLayer : Node
         return null;
     }
 
-    bool HasRights(Claim c) =>
+    // Builder rights, as the server decides them: the owner, its members, and anyone who signed
+    // the same town roster as this claim (claims-19). Stashes and the marker's upkeep are the
+    // owner's and members' alone (IsOwnerOrMember).
+    bool HasRights(Claim c) => IsOwnerOrMember(c) || IsTownmate(c);
+
+    bool IsOwnerOrMember(Claim c) =>
         IsMine(c) || (conn?.Db.ClaimMember.Iter().Any(m => m.ClaimId == c.Id && m.PlayerId == myId) ?? false);
+
+    bool IsTownmate(Claim c)
+    {
+        if (conn == null) return false;
+        var there = conn.Db.TownSigner.ClaimId.Find(c.Id);
+        return there != null && conn.Db.TownSigner.Iter().Any(t => t.PlayerId == myId && t.TownId == there.TownId);
+    }
 
     void UpdateLandChip()
     {
