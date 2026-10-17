@@ -168,6 +168,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:14: survival-35 mushrooms (#837, c7a1c4eb): ripe and picked patches side by side beside the tree at (14.2,-2), after bugfix-58.
 
+- 2026-10-17 15:16: survival-34 death line and light (#834, 3b098f0a), --death-preview: card up, then the shaft at dusk and midday; after mushrooms. PM order: ui-70 (when it comes), #835, #837, #834, env-35, env-31, the rest, Home and friends playtest last.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
