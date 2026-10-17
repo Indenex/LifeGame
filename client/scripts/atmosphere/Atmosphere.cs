@@ -469,6 +469,7 @@ public partial class Atmosphere : Node3D
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
+        CapFog();
     }
 
     // The campfires you can hear: louder the closer and the better they burn,

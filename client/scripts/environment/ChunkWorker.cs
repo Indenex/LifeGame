@@ -101,6 +101,9 @@ public partial class Terrain
         prewarmed = true;
         EnsureMeshes();
         PaintedTrees.Prewarm();
+        _ = Painted.GhostOf(Painted.Rock);
+        _ = Painted.GhostOf(Painted.Bark);
+        _ = Painted.GhostOf(Painted.Leaves);
         _ = PropMeshes.Trunk;
         _ = PropMeshes.Cattails;
         for (int v = 0; v < PropMeshes.RockVariants; v++) PropMeshes.Rock(v);
