@@ -108,6 +108,7 @@ public partial class Hud : CanvasLayer
 
     public void Note(string text)
     {
+        BugLog.Note(text);
         toast.Text = text;
         toastTime = 3f;
     }

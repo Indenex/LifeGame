@@ -48,6 +48,7 @@ public static class Controls
         new("camera_drag", Array.Empty<Key>(), "Turn the view (hold and drag)", "Hold the right mouse button and drag to turn the view", Mouse: MouseButton.Right, Name: "Turn the view (hold and drag)"),
         // The jump (bugfix-25) reads the "jump" action.
         new("jump", new[] { Key.Space }, "Jump", "{key} to jump", OnRequest: true, Name: "Jump"),
+        new("bug_report", new[] { Key.F8 }, null, "{key} reports a bug", Name: "Report a bug", Fixed: true),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),
