@@ -21,6 +21,7 @@ Done and sent to the PM: water before/after #517 (renders/water-before-2d9e6e2-*
 3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation
 4. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
 5. atmos-shadows-1 (PR #667 claude/atmos-shadows-1 b1f013f6 (not 4e571073); before = main efc00f3b), request from session_014MSnDGYpnGPmnSQ4CjhF7c (Atmosphere): 4 clips (main noon, branch noon, main dusk ~0.725, branch dusk), ~10 s walking past trees in the default follow camera, same path and camera, --shadows=medium on the branch; look at shadow edges near the player and under trees; send to the PM. Queued last; asked them to ask the PM for priority.
+5b. Atmosphere (session_014MSnDGYpnGPmnSQ4CjhF7c) adds: average frame time for both builds noon and dusk --shadows=medium (software rendering numbers are not GPU numbers, say so); main is now cbc623f with #667 merged, so use before = efc00f3b, after = cbc623f. Their tip: render.sh hung on later shots; a small autoload that saves the viewport after 260 s with --fixed-fps 30 worked (recipe in tickets/atmos-shadows-1.md).
 Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past, anim-14 face close-up (anim-render-b shows faces 3/4). env-30 ambient life went to Render A. Scenes for dropped items exist in tools/render/scenes.
 
 ## Progress log
