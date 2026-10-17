@@ -57,7 +57,7 @@ public static class AvatarWork
         // row and inserts the new one, so each change re-reads the player's whole set.
         void Changed(WornItem w)
         {
-            if (w.Owner == conn.Identity) Dress(conn, me, w.PlayerId);
+            if (w.Owner == Me.Key(conn)) Dress(conn, me, w.PlayerId);
             else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
         }
         conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
@@ -66,7 +66,7 @@ public static class AvatarWork
         // none when the hand is empty).
         void Holding(PlayerEquip row, bool gone)
         {
-            var avatar = row.Owner == conn.Identity ? me
+            var avatar = row.Owner == Me.Key(conn) ? me
                 : conn.Db.Player.Identity.Find(row.Owner) is { } p ? other(p.PlayerId) : null;
             avatar?.Equip(gone ? null : Equipped.ItemOf(row));
         }
@@ -121,7 +121,7 @@ public static class AvatarWork
         playerId == MyPlayerId(conn) ? me : other(playerId);
 
     static uint? MyPlayerId(DbConnection conn) =>
-        conn.Identity is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
+        Me.Key(conn) is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
 
     static void Dress(DbConnection conn, Avatar avatar, uint playerId)
     {

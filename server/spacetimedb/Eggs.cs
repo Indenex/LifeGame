@@ -21,7 +21,7 @@ public static partial class Module
         if (animal.State == AnimalState.Run || mind.Nervous > ShearNervousLimit)
             throw new Exception("The hen is flustered. Let her settle");
 
-        AddToInventory(ctx, ctx.Sender, egg, animal.Eggs, EggQuality);
+        AddToInventory(ctx, Me(ctx), egg, animal.Eggs, EggQuality);
         OnProcessPerformed(ctx, player.PlayerId, Skills.Eggs, EggQuality, false);
         // Taking the eggs restarts the clock for the next one.
         ctx.Db.Animal.Id.Update(animal with { Eggs = 0 });

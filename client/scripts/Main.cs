@@ -47,7 +47,7 @@ public partial class Main : Node3D
     BuildingSystem building = null!;
 
     DbConnection? conn;
-    Identity? myIdentity;
+    Identity? myIdentity => Me.Key(conn);
     uint myId;
     readonly TradeWindow trade = new();
     readonly AdminPanel admin = new();
@@ -465,7 +465,6 @@ public partial class Main : Node3D
 
     void OnConnected(DbConnection c, Identity identity, string token)
     {
-        myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
@@ -508,8 +507,8 @@ public partial class Main : Node3D
         conn.SubscriptionBuilder()
             .OnApplied(_ =>
             {
-                var at = MyPos();
-                Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+                if (!Me.InWorld(conn)) { AtCharacterMenu(); return; }
+                EnterWorldArea();
             })
             .OnError((_, e) =>
             {
@@ -517,6 +516,24 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+        // Picking a character at the menu puts it in the world: its row goes online.
+        conn.Db.MyPlayer.OnUpdate += (_, _, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+        conn.Db.MyPlayer.OnInsert += (_, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+    }
+
+    void EnterWorldArea()
+    {
+        var at = MyPos();
+        Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+    }
+
+    // The login has characters and none is in the world yet. UX's character menu (Play, New,
+    // Delete) replaces this; until it lands the game plays the last character you had.
+    void AtCharacterMenu()
+    {
+        if (conn == null) return;
+        if (conn.Db.MyActiveCharacter.Iter().FirstOrDefault() is { } active) conn.Reducers.SelectCharacter(active.Key);
+        else if (Me.Characters(conn).FirstOrDefault() is { } first) conn.Reducers.SelectCharacter(first.Key);
     }
 
     // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
@@ -531,9 +548,7 @@ public partial class Main : Node3D
         return null;
     }
 
-    PlayerPos? MyPos() =>
-        conn != null && myIdentity is { } id && conn.Db.Player.Identity.Find(id) is { } p
-            ? conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) : null;
+    PlayerPos? MyPos() => conn?.Db.MyPlayerPos.Iter().FirstOrDefault();
 
     void Subscribe(int chunkX, int chunkZ)
     {
@@ -617,7 +632,7 @@ public partial class Main : Node3D
     bool IsMine(uint playerId)
     {
         if (conn == null || myIdentity == null) return false;
-        if (conn.Db.Player.Identity.Find(myIdentity.Value) is not { } mine) return false;
+        if (Me.Player(conn) is not { } mine) return false;
         myId = mine.PlayerId;
         return mine.PlayerId == playerId;
     }

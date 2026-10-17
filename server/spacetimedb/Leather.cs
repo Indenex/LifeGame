@@ -153,11 +153,11 @@ public static partial class Module
         RequireReach(RequirePos(ctx, player), rack.X, rack.Z);
         if (HideMoisture(rack, ctx.Timestamp.MicrosecondsSinceUnixEpoch) > 0f)
             throw new Exception("The hide is still damp. Leave it to dry");
-        AddToInventory(ctx, ctx.Sender, Item.Leather, 1, rack.Quality);
+        AddToInventory(ctx, Me(ctx), Item.Leather, 1, rack.Quality);
         OnProcessPerformed(ctx, player.PlayerId, "hide.dry", rack.Quality, false);
         ctx.Db.HideRack.Id.Delete(rackId);
         // An old A-frame rack comes apart; the sticks are worth keeping, the cord is
         // worn through. A station's bar stays up for the next hide.
-        if (rack.StationId == 0) AddToInventory(ctx, ctx.Sender, Item.Stick, 2, Items.RawQuality);
+        if (rack.StationId == 0) AddToInventory(ctx, Me(ctx), Item.Stick, 2, Items.RawQuality);
     }
 }
