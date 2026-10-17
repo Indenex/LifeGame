@@ -253,11 +253,15 @@ void WallsStopWalkers(ulong id)
     // (bugfix-45), however the bot happened to be standing after the last stage.
     var og = new BotGround(a.Conn);
     (float x, float z)? start = null, target = null;
-    foreach (var off in new[] { 0f, 0.5f, -0.5f, 0.9f, -0.9f })
+    // Along the fence and at three gaps: a tree beside it once blocked every spot in a short list
+    // ("found clear ground either side of the fence" failed on #861, bugfix-68).
+    var offs = new[] { 0f, 0.25f, -0.25f, 0.5f, -0.5f, 0.7f, -0.7f, 0.9f, -0.9f };
+    foreach (var gap in new[] { 0.9f, 0.7f, 1.1f })
+      foreach (var off in offs)
         foreach (var side in new[] { 1f, -1f })
         {
-            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * 0.9f);
-            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * 0.9f);
+            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * gap);
+            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * gap);
             if (start != null || Obstacles.StepBlocked(og, 0.4f, f.x, f.z, t.x, t.z, 0f)
                 || Obstacles.PushOut(og, 0.4f, f.x, f.z, 0f) != (f.x, f.z) || Obstacles.PushOut(og, 0.4f, t.x, t.z, 0f) != (t.x, t.z)) continue;
             start = f; target = t;
