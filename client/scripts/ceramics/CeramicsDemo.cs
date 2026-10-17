@@ -29,6 +29,8 @@ public partial class CeramicsDemo : Node3D
 
     // --ceramics-demo=marks shows kiln-fired coil pots with each of the twelve maker's marks
     // facing the camera, for judging the glyphs (ceramics-15, rough prototype art).
+    static bool ShowMarkSheet => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks-sheet");
+
     static bool ShowMarks => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks");
 
     public CeramicsDemo(Terrain terrain, Node3D anchor)
@@ -58,16 +60,46 @@ public partial class CeramicsDemo : Node3D
             camera.MakeCurrent();
             return;
         }
+        if (ShowMarkSheet)
+        {
+            // All the glyphs flat on a clay slab, for judging the line art (rough, until Justin picks).
+            var sheetY = 2.2f;
+            row.AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(4.9f, 4.3f, 0.05f) },
+                MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, 3),
+                Position = new Vector3(0, sheetY, -0.04f),
+            });
+            var sheet = new MeshInstance3D
+            {
+                Mesh = new QuadMesh { Size = new Vector2(4.8f, 4.8f * MakerStamp.Rows / MakerStamp.Cols) },
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoTexture = MakerStamp.Atlas,
+                    AlbedoColor = new Color(Marks.Presets[1]),
+                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                },
+                Position = new Vector3(0, sheetY, 0),
+            };
+            row.AddChild(sheet);
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
         if (ShowMarks)
         {
-            for (int g = 0; g < Marks.Glyphs; g++)
+            // Twelve sample marks across the groups, in the preset colours, facing the camera.
+            int[] slots = { 0, 3, 6, 10, 12, 17, 20, 22, 30, 34, 38, 44 };
+            for (int g = 0; g < slots.Length; g++)
             {
                 ulong id = (ulong)(70 + g);
                 var plain = ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, id);
+                var form = g % 3 == 2 ? ClayForm.StorageJar : ClayForm.CoilPot;
                 row.AddChild(new MeshInstance3D
                 {
-                    Mesh = PotMesh.For(ClayForm.CoilPot, id),
-                    MaterialOverride = ClayLook.Stamped(plain, g, ClayForm.CoilPot),
+                    Mesh = PotMesh.For(form, id),
+                    MaterialOverride = ClayLook.Stamped(plain, slots[g], new Color(Marks.Presets[g % Marks.Presets.Length]), form),
                     // Turned so the stamp faces the camera, which looks along -Z.
                     Position = new Vector3((g % 6 - 2.5f) * 0.55f, 0, (g / 6) * 0.65f),
                     Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
@@ -166,6 +198,12 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
+        if (ShowMarkSheet)
+        {
+            camera.Position = at + new Vector3(0f, 2.3f, 7.8f);
+            camera.LookAt(at + new Vector3(0f, 2.2f, 0), Vector3.Up);
+            return;
+        }
         if (ShowLamps || ShowMarks)
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);

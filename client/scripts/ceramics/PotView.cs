@@ -150,7 +150,7 @@ void fragment() {
         {
             lastStep = s;
             var plain = ClayLook.For(stage, fire, now, id);
-            body.MaterialOverride = Marks.Has(mark) && form != ClayForm.Brick ? ClayLook.Stamped(plain, Marks.Glyph(mark), form) : plain;
+            body.MaterialOverride = ClayLook.WithMark(plain, mark, form);
         }
         if (label.Visible && stage == ClayStage.Drying)
         {

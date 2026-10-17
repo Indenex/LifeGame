@@ -47,13 +47,20 @@ public static class ClayItemLook
         return mesh;
     }
 
-    static readonly Dictionary<(Item, int), Mesh?> MarkedMeshes = new();
+    static readonly Dictionary<(Item, uint), Mesh?> MarkedMeshes = new();
 
     // The same item with its maker's mark pressed in (ceramics-15): glyph 0 to 11. Null for an
     // item that carries no mark, so the caller falls back to the plain mesh.
-    public static Mesh? MarkedMesh(Item item, int glyph)
+    public static Mesh? MarkedMesh(Item item, uint maker)
     {
-        if (MarkedMeshes.TryGetValue((item, glyph), out var cached)) return cached;
+        if (MarkedMeshes.TryGetValue((item, maker), out var cached)) return cached;
+        var look = ClayLook.MarkLookup?.Invoke(maker);
+        if (look is not { } found)
+        {
+            MarkedMeshes[(item, maker)] = null;
+            return null;
+        }
+        var glyph = (slot: found.slot, color: found.color);
         Mesh? mesh = item switch
         {
             Item.PinchPot => Pot(ClayForm.PinchPot, ClayStage.Fired, false, null, glyph),
@@ -68,14 +75,14 @@ public static class ClayItemLook
             Item.UnfiredStorageJar => Jar(ClayStage.Drying, glyph),
             _ => null,
         };
-        MarkedMeshes[(item, glyph)] = mesh;
+        MarkedMeshes[(item, maker)] = mesh;
         return mesh;
     }
 
-    static Mesh Pot(ClayForm form, ClayStage stage, bool full, Material? liquid = null, int glyph = -1)
+    static Mesh Pot(ClayForm form, ClayStage stage, bool full, Material? liquid = null, (int slot, Color color)? glyph = null)
     {
         var plain = ClayLook.For(stage, FireKind.Pit, 0f, 2);
-        var mesh = Baked(PotMesh.For(form, 2), glyph >= 0 ? ClayLook.Stamped(plain, glyph, form) : plain, PotView.Size);
+        var mesh = Baked(PotMesh.For(form, 2), glyph is { } g ? ClayLook.Stamped(plain, g.slot, g.color, form) : plain, PotView.Size);
         if (full)
         {
             var line = PotMesh.WaterLine(form) * PotView.Size;
@@ -95,10 +102,10 @@ public static class ClayItemLook
         Baked(PotMesh.For(ClayForm.Tile, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
 
     // A jar on the ground is kiln-fired, so it takes the kiln's darker red.
-    static Mesh Jar(ClayStage stage, int glyph = -1)
+    static Mesh Jar(ClayStage stage, (int slot, Color color)? glyph = null)
     {
         var plain = ClayLook.For(stage, FireKind.Kiln, 0f, 2);
-        return Baked(PotMesh.For(ClayForm.StorageJar, 2), glyph >= 0 ? ClayLook.Stamped(plain, glyph, ClayForm.StorageJar) : plain, PotView.Size);
+        return Baked(PotMesh.For(ClayForm.StorageJar, 2), glyph is { } g ? ClayLook.Stamped(plain, g.slot, g.color, ClayForm.StorageJar) : plain, PotView.Size);
     }
 
     // A copy of a mesh, scaled, with its material baked in, since ground items

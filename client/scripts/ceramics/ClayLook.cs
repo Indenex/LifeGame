@@ -42,24 +42,38 @@ public static class ClayLook
         return m;
     }
 
-    static readonly Dictionary<(ShaderMaterial, int), ShaderMaterial> StampedMaterials = new();
+    static readonly Dictionary<(ShaderMaterial, int, uint, int), ShaderMaterial> StampedMaterials = new();
 
-    // The same clay as `plain` with a maker's mark pressed in (ceramics-15). The glyph is 0 to 11
-    // (shared/Marks.cs). The stamp sits at a height that suits the form: higher on a tall jar,
-    // lower on a squat lamp.
-    public static ShaderMaterial Stamped(ShaderMaterial plain, int glyph, ClayForm form)
+    // Finds a maker's glyph (slot in the stamp atlas) and colour from their player id (low 16
+    // bits); Main fills this in from the player_mark table. Null when they have no mark.
+    public static System.Func<uint, (int slot, Color color)?>? MarkLookup;
+
+    // The same clay as `plain` with a maker's mark painted in (ceramics-15): the glyph's slot in the
+    // atlas and the stamp colour. The stamp sits at a height that suits the form.
+    public static ShaderMaterial Stamped(ShaderMaterial plain, int slot, Color color, ClayForm form)
     {
-        var key = (plain, glyph + 100 * (int)form);
+        uint packed = color.ToRgba32() >> 8;
+        var key = (plain, slot, packed, (int)form);
         if (StampedMaterials.TryGetValue(key, out var m)) return m;
+        if (StampedMaterials.Count > 300) StampedMaterials.Clear();
         m = new ShaderMaterial { Shader = Shader };
         foreach (var name in new[] { "albedo", "wetness", "clouds", "broken", "seed", "glow" })
             m.SetShaderParameter(name, plain.GetShaderParameter(name));
         m.SetShaderParameter("stamp_atlas", MakerStamp.Atlas);
-        m.SetShaderParameter("stamp_glyph", (float)glyph);
+        m.SetShaderParameter("stamp_glyph", (float)slot);
+        m.SetShaderParameter("stamp_grid", new Vector2(MakerStamp.Cols, MakerStamp.Rows));
+        m.SetShaderParameter("stamp_color", color);
         float height = PotMesh.Height(form);
         m.SetShaderParameter("stamp_spot", new Vector2(height * 0.55f, Mathf.Min(0.075f, height * 0.3f)));
         StampedMaterials[key] = m;
         return m;
+    }
+
+    // The plain material, or one with the maker's mark when the item row says who made it.
+    public static ShaderMaterial WithMark(ShaderMaterial plain, uint wear, ClayForm form)
+    {
+        if (!Marks.Has(wear) || form == ClayForm.Brick || MarkLookup?.Invoke(Marks.Maker(wear)) is not { } mark) return plain;
+        return Stamped(plain, mark.slot, mark.color, form);
     }
 
     // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
@@ -121,6 +135,8 @@ public static class ClayLook
             // A maker's mark (ceramics-15): the glyph's cell in the stamp atlas, or -1 for none.
             uniform sampler2D stamp_atlas : filter_linear;
             uniform float stamp_glyph = -1.0;
+            uniform vec2 stamp_grid = vec2(8.0, 7.0);
+            uniform vec3 stamp_color : source_color = vec3(0.7, 0.4, 0.12);
             uniform vec2 stamp_spot = vec2(0.095, 0.075); // height of the stamp's centre, and its half size
 
             varying vec3 local_pos;
@@ -179,11 +195,12 @@ public static class ClayLook
                         da = atan(sin(da), cos(da));
                         vec2 uv = vec2(-da * radius / stamp_spot.y, -(local_pos.y - stamp_spot.x) / stamp_spot.y) * 0.5 + 0.5;
                         if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
-                            float col = mod(stamp_glyph, 4.0);
-                            float row = floor(stamp_glyph / 4.0);
-                            vec2 cell = vec2((col + uv.x) / 4.0, (row + uv.y) / 3.0);
+                            float col = mod(stamp_glyph, stamp_grid.x);
+                            float row = floor(stamp_glyph / stamp_grid.x);
+                            vec2 cell = vec2((col + uv.x) / stamp_grid.x, (row + uv.y) / stamp_grid.y);
                             float ink = texture(stamp_atlas, cell).a;
-                            color = mix(color, color * 0.32, ink * 0.9);
+                            // Painted in the maker's colour, a touch darker where it sits in the clay.
+                            color = mix(color, stamp_color * (0.92 + grain * 0.1), ink * 0.94);
                         }
                     }
                 }
