@@ -1,0 +1,24 @@
+# anim-12 (sit/lie, H key) + anim-13 (idle fidgets, walk hop, jump squash) on claude/anim-13 (includes anim-12). Chibi.
+# Side view (camera yaw 90 is perpendicular to the w walk direction). 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,0.8,90,0.5 --chibi
+frames 48
+mark rest-start
+key h
+frames +48
+key h
+frames +60
+key h
+frames +48
+frames +168
+keydown w
+frames +72
+keyup w
+frames +24
+key space
+frames +36
+key space
+frames +36
+mark rest-end
+frames +12
