@@ -82,6 +82,39 @@ if (runTools)
     Craft("cord.twist", 0, Item.Cordage);
     Craft("knap.flake", 0.95f, Item.Flake);
     Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+
+    // A perfect score with no minigame behind it is capped (CraftScore.cs, crafting-36); a played one is not.
+    {
+        Gather(Item.Stone, 3);
+        List<byte> FlakeQualities() => conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Flake).SelectMany(r => Enumerable.Repeat(r.Quality, (int)r.Count)).ToList();
+        byte NewFlake(Action make)
+        {
+            var before = FlakeQualities();
+            make();
+            Pump(() => FlakeQualities().Count > before.Count, 8, "a flake");
+            var after = FlakeQualities();
+            foreach (var q in before) after.Remove(q);
+            return after.Single();
+        }
+        byte quick = NewFlake(() =>
+        {
+            lastError = null;
+            conn.Reducers.StartCraft("knap.flake", 1f);   // no BeginMinigame: nobody played it
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a quick flake to start");
+            if (lastError != null) Fail($"quick flake: {lastError}");
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 10, "the quick flake to finish");
+        });
+        byte played = NewFlake(() =>
+        {
+            PlayMinigame("knap.flake");
+            conn.Reducers.StartCraft("knap.flake", 1f);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a played flake to start");
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 10, "the played flake to finish");
+        });
+        if (quick >= played) Fail($"a perfect score with no minigame behind it was not capped (quick quality {quick}, played {played})");
+        Console.WriteLine($"A score with no play behind it is capped: quality {quick} against {played} when played");
+    }
+
     Craft("lash.spear", 0, Item.Spear);
     Craft("lash.stone_axe", 0, Item.StoneAxe);
 
@@ -191,8 +224,11 @@ if (runTools)
     for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
     if (Trees.Felling)
     {
-        Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
-        Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
+        // The server chops the nearest standing tree in reach of where the bot stands, which is not always the one
+        // walked to, so look for any felled tree close by.
+        bool FelledNear() => conn.Db.ChoppedTree.Iter().Any(t => t.Felled && Math.Abs(t.CellX * World.CellSize - x) < 6f && Math.Abs(t.CellZ * World.CellSize - z) < 6f);
+        Pump(FelledNear, 3, $"a tree to fall near ({x:F1}, {z:F1}) (walked to the tree at {treeX}, {treeZ})");
+        Console.WriteLine($"Felled a tree near the bot after {chops} logs");
     }
     WalkTo(bowFire.X, bowFire.Z);
     RefusedFeed(bowFire, Item.Log);
@@ -670,6 +706,9 @@ if (runStations)
     conn.Reducers.CollectDevice(tub.Id);
     Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the first clay to be collected");
     if (one.Count != 1 || one.Quality != Items.RawQuality) Fail($"one unit made {one.Count} at quality {one.Quality}, not 1 at {Items.RawQuality}");
+    // What a device makes carries the loader's mark, like the same thing made by hand (crafting-25).
+    if (one.Maker != myId || !conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.CleanClay && r.Maker == myId))
+        Fail($"the tub's clean clay lost its maker (output maker {one.Maker}, expected {myId})");
 
     // Five units in a batch: five come out, at the by-hand quality, with no bonus.
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
@@ -714,6 +753,15 @@ Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
 
+// Opens the minigame a process has and waits as long as a person needs, like the client does, so the server
+// believes the score that follows (CraftScore.cs).
+void PlayMinigame(string processId)
+{
+    if (Processes.Find(processId) is not { Minigame: not Minigame.None } def) return;
+    conn.Reducers.BeginMinigame(processId);
+    Pump(() => false, MinigamePlay.MinSeconds(def.Minigame) + 0.3f, null);
+}
+
 // Lights a fire (or tries to). The server sets a fire only on clear, level ground
 // near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
 // when it finds none here, step a few metres along and try again.
@@ -741,6 +789,7 @@ void FireCraft(string processId, float score)
     {
         tries++;
         lastError = null;
+        PlayMinigame(processId);
         conn.Reducers.StartFireAt(processId, score, spot.X, spot.Z);
         Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
         if (lastError == null) break;
@@ -807,6 +856,7 @@ void Craft(string processId, float score, Item? expect)
     if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipTool(Item.StoneAxe);
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
+    PlayMinigame(processId);
     conn.Reducers.StartCraft(processId, score);
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");

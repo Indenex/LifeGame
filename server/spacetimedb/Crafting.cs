@@ -137,6 +137,8 @@ public static partial class Module
         if (def.Minigame == Minigame.None)
             score = Processes.DefaultScore;
         score = Math.Clamp(score, 0f, 1f);
+        // The client reports how the minigame went; how far it is believed is CraftScore.cs.
+        score = TrustScore(ctx, player.PlayerId, def.Id, def.Minigame, score);
 
         // Chopping is a world action: only the equipped tool does it (Equip.cs). Other recipes
         // take the best tool carried, belt or bag (D-263).
