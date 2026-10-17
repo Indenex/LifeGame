@@ -26,6 +26,8 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: merged sheep + stone axe (1ccca5b0): renders/art-rnd-1-sheep.png, renders/art-rnd-1-axe.png; sent to the PM.
 
+- 2026-10-17: Modeling set up Blender (tools/art/get-blender.sh on #623) and reproduced the shell rebuild pixel-identical; #623 carries the no-grain shell.
+
 ## Open questions / blockers
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
