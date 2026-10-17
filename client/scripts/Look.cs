@@ -308,7 +308,8 @@ public static class Look
         global uniform float wet_amount;
         // Rime after a cold clear night, 0 none to 1 full; it melts away patchily.
         global uniform float frost;
-        const vec3 FROST = vec3(0.80, 0.86, 0.93);
+        // Rime is a cool blue-white, so the warm dawn light doesn't turn it pink.
+        const vec3 FROST = vec3(0.74, 0.84, 0.97);
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -531,11 +532,15 @@ public static class Look
                 if (frost > 0.0 && cavity > 0.01) {
                     float patches = texture(detail, world_pos.xz * 0.06).r;
                     float rime = smoothstep(patches - 0.12, patches + 0.12, frost * 1.25 - 0.12);
-                    rime *= smoothstep(-0.1, 0.6, world_normal.y) * mix(0.6, 1.0, h) * (1.0 - snow);
+                    // Only on the raised grain of what faces up, so the colour beneath
+                    // still shows through: a dusting, not a snow cover. Bare ground
+                    // takes less than rocks and leaves, which the grass covers anyway.
+                    rime *= smoothstep(0.2, 0.75, world_normal.y) * smoothstep(0.35, 0.8, h) * (1.0 - snow);
+                    rime *= puddles_ok > 0.5 ? 0.3 : 0.55;
                     vec3 cell = floor(world_pos * 28.0);
                     float glint = step(0.985, fract(sin(dot(cell + floor(view_camera_position * 3.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453));
-                    color = mix(color, FROST * (1.0 + paint), rime * 0.75);
-                    color = mix(color, vec3(1.0), glint * rime * 0.8);
+                    color = mix(color, FROST * (1.0 + paint), rime);
+                    color = mix(color, vec3(1.0), glint * min(rime * 2.0, 1.0) * 0.8);
                     wet *= 1.0 - rime;
                 }
                 // Puddles gather on flat ground in the low spots of a slow pattern,
@@ -697,7 +702,8 @@ public static class Look
                 if (frost > 0.0) {
                     float patches = texture(clouds, world_pos.xz * 0.035).r;
                     float rime = smoothstep(patches - 0.15, patches + 0.15, frost * 1.3 - 0.15) * (1.0 - snow_cover);
-                    color = mix(color, FROST, rime * (0.35 + 0.5 * tip));
+                    // Just the tips silver over; the blades stay green below.
+                    color = mix(color, FROST, rime * 0.55 * smoothstep(0.45, 1.0, tip));
                 }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);

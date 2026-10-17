@@ -13,8 +13,10 @@ Option (a), sent to the PM for Justin on 2026-10-17 (recommended: morning frost;
 
 - 2026-10-17 03:02: CI run 38997049144 green on bbec24b8. Justin picked (a). Render has 6 stills queued (meadow near spawn: frost 1, 0.45 and 0, each wide and close).
 
+- 2026-10-17 06:20: Render B's stills (renders/atmosphere-28-7c8b799-1..7) show the shader draws, but full frost read as light snow, tinted pink by dawn. Lighter version: rime only on upward faces and the raised grain (relief h 0.35 to 0.8), at 30% strength on bare ground and 55% on rocks and leaves, about 35 to 45% of before. The colour is a cooler blue-white (0.74, 0.84, 0.97); grass silvers only at the tips (top 55%, at most 55%). The half-melt pattern is unchanged. The dark, see-through foreground pine in shots 3 and 5 is the trees' camera fade (it stands between the camera and the player), as designed.
+
 ## Open questions / blockers
 - (none) Justin picked (a) morning frost (via the PM, 2026-10-17 03:02).
 
 ## Next step
-Wait for CI on this ticket push, then send the PM the green sha. Tune from Render's frost stills; the PM may merge once they confirm the shaders compile.
+The PM merges after Justin's word on strength. Render B re-shoots the frost stills at the new head.
