@@ -123,7 +123,7 @@ public static partial class Module
     {
         var trade = RequireOpenTrade(ctx, tradeId);
         byte side = trade.A == ctx.Sender ? Social.SideA : Social.SideB;
-        uint held = FindStack(ctx, ctx.Sender, (Item)item, quality)?.Count ?? 0;
+        uint held = CarriedCount(ctx, ctx.Sender, (Item)item, quality);
         if (count > held) throw new Exception("You are not carrying that many");
 
         var mine = ctx.Db.TradeItem.TradeId.Filter(trade.Id).Where(i => i.Side == side).ToList();
@@ -173,14 +173,13 @@ public static partial class Module
         foreach (var it in items)
         {
             var owner = it.Side == Social.SideA ? trade.A : trade.B;
-            if ((FindStack(ctx, owner, (Item)it.Item, it.Quality)?.Count ?? 0) < it.Count)
+            if (CarriedCount(ctx, owner, (Item)it.Item, it.Quality) < it.Count)
                 throw new Exception($"{(it.Side == Social.SideA ? trade.AName : trade.BName)} no longer has {ItemWords(it.Item, it.Count)}");
         }
         foreach (var it in items)
         {
             var (from, to) = it.Side == Social.SideA ? (trade.A, trade.B) : (trade.B, trade.A);
-            RemoveFromStack(ctx, FindStack(ctx, from, (Item)it.Item, it.Quality)!.Value, it.Count);
-            AddToInventory(ctx, to, (Item)it.Item, it.Count, it.Quality);
+            MoveCarried(ctx, from, to, (Item)it.Item, it.Quality, it.Count);
         }
 
         // D-080: nothing is said to bystanders; the two traders get TradeEnded "done".

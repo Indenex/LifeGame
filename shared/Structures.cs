@@ -220,6 +220,16 @@ namespace LifeGame.Shared
                 SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
+            // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
+            new StructureShape
+            {
+                Name = "Repair table",
+                Category = "Crafting",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Repair,
+                Stages = new[] { "Table" },
+            },
         });
 
         // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
@@ -336,6 +346,11 @@ namespace LifeGame.Shared
                 new[] { (Item.Log, 16u) },
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
+            },
+            // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
+            new[]
+            {
+                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
             },
         };
 

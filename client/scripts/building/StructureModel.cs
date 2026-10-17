@@ -53,7 +53,7 @@ public static partial class StructureModel
         // Stations by their shape's station kind, never by number (kinds are numbered by merge order).
         pieces = LifeGame.Shared.Structures.Shape(kind).Station switch
         {
-            LifeGame.Shared.StationKind.Table => CraftingTableModel.Pieces(),
+            LifeGame.Shared.StationKind.Table or LifeGame.Shared.StationKind.Repair => CraftingTableModel.Pieces(),
             LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(),
             LifeGame.Shared.StationKind.Spindle => StationMeshes.Distaff(),
             LifeGame.Shared.StationKind.DryingRack => StationMeshes.DryingRack(),
