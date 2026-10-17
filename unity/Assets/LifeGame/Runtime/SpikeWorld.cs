@@ -416,10 +416,13 @@ namespace LifeGame.Spike
                     }
                 }
             }
+            // 500 per call: what fits Unity's instancing constant buffer on D3D11, so the
+            // per-instance colour array never has to be split by the engine.
+            const int perCall = 500;
             foreach (var ((mesh, sub, mat, shadows), (mats4, cols)) in merged)
-                for (int start = 0; start < mats4.Count; start += 1023)
+                for (int start = 0; start < mats4.Count; start += perCall)
                 {
-                    int n = Mathf.Min(1023, mats4.Count - start);
+                    int n = Mathf.Min(perCall, mats4.Count - start);
                     var b = new Batch
                     {
                         Mesh = mesh, Submesh = sub, Material = mat, Shadows = shadows,

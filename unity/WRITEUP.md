@@ -87,13 +87,13 @@ Checks that run without a licence:
 | Tonemap and grade | ACES, brightness/contrast/saturation, 1D gradient | ACES or Neutral, colour adjustments, LUTs, curves | URP's grading tools are richer; Godot's exact curve is reproducible in URP (done) |
 | Depth of field | Far blur at 32 m | Gaussian or Bokeh | Similar |
 | Anti-aliasing | MSAA 4×, FXAA (we use both), TAA | MSAA, FXAA, SMAA, TAA, STP upscaler | Unity has more choice |
-| Many trees and rocks | MultiMesh per chunk (3,559 draws here) | GPU instancing (merged to 78 batches here), GPU Resident Drawer | Unity scales better as the forest grows |
+| Many trees and rocks | MultiMesh per chunk (3,559 draws here) | GPU instancing (merged to about 80 batches here), GPU Resident Drawer | Unity scales better as the forest grows |
 | Particles | GPU and CPU particles | VFX Graph, Shuriken | Both fine. Fireflies were not ported in the spike |
 
 ## Performance notes
 
 - I couldn't measure Unity here (no licence in the cloud). Structurally, the spike
-  draws the same 140 m of world as Godot: about 78 instanced batches, plus 289
+  draws the same 140 m of world as Godot: about 80 instanced batches, plus 289
   ground chunks and a few hundred single objects. That is light work for URP on
   any recent GPU.
 - The Godot export of the same area holds 3,851 draws, because Godot builds one

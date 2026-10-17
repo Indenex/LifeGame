@@ -1,7 +1,7 @@
 # unity-1: Unity lighting comparison spike
 Lane: Unity spike (one worker, comparison only; Godot stays the product)
 Owner: Unity spike session (session_017Weex8fujB3VFsrpg84jEP)
-Status: in_progress
+Status: in_review
 Branch: claude/unity-spike
 PR: none (never to main unless the PM asks)
 
@@ -33,20 +33,22 @@ honest cost of a real port).
 - 2026-10-17 06:16: Tools~/compile_check.sh (C# vs URP 17.3 + Unity 6.3 sources, no licence)
   clean; Tools~/hlsl_check.py (DXC vs URP shader library) 104/104; both catch planted errors.
 - 2026-10-17 06:20: pushed 88bc27d0: README (what Justin clicks), WRITEUP.md, twilight preset
-  (0.76 is after sunset), instancing merged (3,559 Godot multimesh draws -> 78 batches).
+  (0.76 is after sunset), instancing merged (3,559 Godot multimesh draws -> about 80 batches).
 - 2026-10-17 06:24: Tools~/GroundCheck: Unity ground from shared/ vs Godot's exported ground
   mesh: heights exact, colours within 1/255 (2,640 vertices).
 - 2026-10-17 06:25: exporter fix: skinned player lost its material (baked mesh copy has
   none); re-exporting noon, plus golden-hour dusk (0.725) and low views (render-cam 9,2.2,0,2.2).
+
+- 2026-10-17 06:45: all six presets exported and committed (f16fc71f): noon, noon-low,
+  dusk (0.725, golden hour), dusk-low, twilight (0.76, after sunset), twilight-low (low =
+  render-cam 9,2.2,0,2.2). Godot frames in renders/unity-spike-<preset>-godot.png. Instancing
+  batches capped at 500 (D3D11 instancing buffer). Compile and HLSL checks clean.
+  The spike is done from the cloud side: the Unity half needs Justin's PC (README).
 
 ## Open questions / blockers
 - Unity can't run here without a license (see log). Unity-side screenshots come from
   Justin's PC; the project has a key to save them at the matching camera presets.
 
 ## Next step
-When the exports in /root/spike-export finish (noon, dusk, dusk-low; twilight and
-twilight-low done), copy noon fully and the rest lighting-only (scene.json, materials.json,
-shaders/, textures/) into unity/Assets/StreamingAssets/spike/, copy each godot.png to
-renders/unity-spike-<preset>-godot.png, commit, push, send the PM the raw links. If the
-container is gone: rebuild a render checkout with tools/render/render.sh and rerun
-unity/Tools~/export_scene.sh (README "Making new exports").
+Wait for Justin's Unity screenshots (README: Play, keys 1-6, P saves renders/unity-spike-<preset>-<mode>.png),
+then pair each with renders/unity-spike-<preset>-godot.png and update unity/WRITEUP.md with what he saw.
