@@ -499,6 +499,20 @@ if (runStations)
             Pump(() => false, 3f, null);
             if (CountOf(Item.Log) != logsBefore) Fail("a cancelled chop still gave a log");
             Console.WriteLine("Putting the axe away and CancelCraft stopped a chop");
+
+            // A craft that took inputs gives them back when it is stopped (crafting-34), none of its output made.
+            Gather(Item.Fiber, 3);
+            uint fiberBefore = CountOf(Item.Fiber), cordageBeforeCancel = CountOf(Item.Cordage);
+            lastError = null;
+            conn.Reducers.StartCraft("cord.twist", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a cordage twist to start");
+            if (lastError != null) Fail($"twisting cordage for the refund check: {lastError}");
+            Pump(() => CountOf(Item.Fiber) < fiberBefore, 5, "the fiber to be taken");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0 && CountOf(Item.Fiber) == fiberBefore, 5, "the fiber to come back");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Cordage) != cordageBeforeCancel) Fail("a stopped twist still made cordage");
+            Console.WriteLine("Stopping a craft returned its inputs and made nothing");
         }
     }
 

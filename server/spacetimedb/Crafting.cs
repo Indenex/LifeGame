@@ -29,6 +29,10 @@ public static partial class Module
         // the exact tool (Animation, anim-3).
         [Default((ushort)0)]
         public ushort Tool;
+        // The average quality of what the job took, so ending it early (CancelJob) can return the
+        // inputs as they were. 0 for jobs started before this column existed.
+        [Default((byte)0)]
+        public byte InputQuality;
     }
 
     // Clients see only their own job, to show its progress.
@@ -225,6 +229,7 @@ public static partial class Module
             Z = fz,
             VesselQuality = vesselQuality,
             Tool = toolUsed,
+            InputQuality = (byte)Math.Clamp((int)MathF.Round(inputQuality), 0, 255),
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
         OnCraftStarted(ctx, started);
