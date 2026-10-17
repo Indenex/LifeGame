@@ -166,6 +166,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:12: PM: end of queue, the two-player "Home and friends" playtest (/mnt/project-files/bugfix/playtest-home-and-friends.md) for Bug fixes. Plan: one camera client plus the puppet as the second player (two Godot clients at once do not fit 4 cores at ~0.5 fps); steps scripted via puppet reducers, keys only where unavoidable.
 
+- 2026-10-17 15:14: survival-35 mushrooms (#837, c7a1c4eb): ripe and picked patches side by side beside the tree at (14.2,-2), after bugfix-58.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

@@ -1,0 +1,17 @@
+# survival-35 (#837): two mushroom patches beside the tree at (14.2,-2.0), daylight close-up; the
+# right one picked (the puppet forages it), so ripe and picked sit side by side. Patches are seeded
+# at random spots, so the first two are moved here by owner SQL.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.05 --season=0.25 --render-cam=3.2,1.7,0,0.2
+wait 35
+sh S="spacetimedb-cli sql --server http://127.0.0.1:3300 lifegame"; ids=$($S "SELECT id FROM forage_bush WHERE kind = 1" | grep -oE '^ *[0-9]+ *$' | head -2 | tr -d ' '); set -- $ids; echo "patches $1 $2"; $S "UPDATE forage_bush SET x = 13.3, z = -0.9, chunk_x = 0, chunk_z = -1 WHERE id = $1"; $S "UPDATE forage_bush SET x = 15.1, z = -0.9, chunk_x = 0, chunk_z = -1 WHERE id = $2"
+warp 15.1 0.2
+wait 6
+act Forage bush
+wait 4
+warp 14.2 0.6
+face 180
+wait 12
+snap
+wait 6
+snap
