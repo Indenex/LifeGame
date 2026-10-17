@@ -162,6 +162,9 @@ public partial class Main : Node3D
         lookPicker.MyId = () => myId;
         lookPicker.Note = hud.Note;
         AddChild(lookPicker);
+        // ui-39: the character menu. It shows only in its preview (--screenshot-characters) until
+        // Survival's multi-character model lands and the menu becomes the first screen.
+        AddChild(new CharacterMenu());
         // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
         AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
