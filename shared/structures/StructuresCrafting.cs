@@ -18,6 +18,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Crafting table",
+                    Scale = 1.25f,
                     Wild = true,
                     Category = "Crafting",
                     HalfWidth = 0.8f, HalfDepth = 0.45f,
@@ -58,6 +59,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Repair table",
+                    Scale = 1.25f,
                     Category = "Crafting",
                     HalfWidth = 0.8f, HalfDepth = 0.45f,
                     Clearance = 1.0f,

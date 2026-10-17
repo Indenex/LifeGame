@@ -29,10 +29,10 @@ Lanes stop colliding in four files. Each lane/feature owns its own file and regi
 
 ## Progress log
 - 2026-10-17: PM approved the plan and the lane ranges (House building 100+, Crafting stations 200+, Animals 300+, Claims 400+; existing kinds keep their values).
-- 2026-10-17: step 1 (structures) in PR #422: `StructureDef` registry, defs in shared/structures/Structures{Core,House,Crafting,Animals,Claims}.cs, callers use `Structures.Kinds/Exists/Costs/Shape`. Rebuilt twice on top of main (building-12 moved stage costs into the shapes; TiledHouse added). Checked: every field of every kind's scaled shape, costs included, is identical to main (17 kinds).
+- 2026-10-17: step 1 (structures) in PR #422: `StructureDef` registry, defs in shared/structures/Structures{Core,House,Crafting,Animals,Claims}.cs, callers use `Structures.Kinds/Exists/Costs/Shape`. Rebuilt several times on top of main as other lanes edited Structures.cs (building-12 costs in shapes, TiledHouse, building-14 scale); `tickets` note: tools/ has no copy of the conversion, redo it by moving each shape's text into the lane file. Checked: every field of every kind's scaled shape, costs included, is identical to main.
 
 ## Open questions
 - None.
 
 ## Next step
-Merge step 1, tell the lanes where their defs live (add a def in your lane file, add the same id to StructureKind; #285 and #417 rebase onto it), then step 2 (Subscriptions).
+Merge step 1, tell the lanes where their defs live (add a def in your lane file, add the same id to StructureKind; #285, #417 rebase onto it), then step 2 (Subscriptions).
