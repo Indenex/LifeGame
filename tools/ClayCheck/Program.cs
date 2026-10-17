@@ -60,6 +60,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
                 "SELECT * FROM lamp",
+                "SELECT * FROM trough_water",
                 "SELECT * FROM animal",
                 "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",

@@ -42,6 +42,13 @@ public static class PotMesh
         new(0.068f, 0.036f), new(0.064f, 0.044f),
     };
 
+    // The clay trough (ceramics-13): a wide, shallow basin with a rounded lip.
+    static readonly Vector2[] TroughProfile =
+    {
+        new(0.000f, 0.000f), new(0.090f, 0.000f), new(0.140f, 0.014f), new(0.176f, 0.050f),
+        new(0.190f, 0.092f), new(0.184f, 0.120f),
+    };
+
     public static float Height(ClayForm form) => form switch
     {
         ClayForm.PinchPot => 0.122f,
@@ -49,6 +56,7 @@ public static class PotMesh
         ClayForm.StorageJar => 0.400f,
         ClayForm.Lamp => 0.044f,
         ClayForm.Tile => 0.030f,
+        ClayForm.Trough => 0.120f,
         _ => 0.08f,
     };
 
@@ -72,6 +80,7 @@ public static class PotMesh
             ClayForm.StorageJar => Turn(JarProfile, true, variant),
             ClayForm.Lamp => Turn(LampProfile, false, variant),
             ClayForm.Tile => Tile(variant),
+            ClayForm.Trough => Turn(TroughProfile, true, variant),
             _ => Turn(PinchProfile, false, variant),
         };
         Cache[(form, variant)] = mesh;

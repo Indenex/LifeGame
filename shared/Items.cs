@@ -55,6 +55,9 @@ namespace LifeGame.Shared
         // Roof tiles (ceramics-10): shaped at the bench, kiln-fired only; House building roofs with them.
         UnfiredRoofTile = 120,
         RoofTile = 121,
+        // A big fired basin set down to hold water (ceramics-13).
+        UnfiredClayTrough = 122,
+        ClayTrough = 123,
 
         // House building, 130-159.
         SleepingMat = 130,
@@ -166,6 +169,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.ClayLamp, Name = "Clay lamp", Plural = "Clay lamps", HasQuality = true },
             new ItemDef { Id = Item.UnfiredRoofTile, Name = "Unfired roof tile", Plural = "Unfired roof tiles", HasQuality = true },
             new ItemDef { Id = Item.RoofTile, Name = "Roof tile", Plural = "Roof tiles", HasQuality = true },
+            new ItemDef { Id = Item.UnfiredClayTrough, Name = "Unfired clay trough", Plural = "Unfired clay troughs", HasQuality = true },
+            new ItemDef { Id = Item.ClayTrough, Name = "Clay trough", Plural = "Clay troughs", HasQuality = true },
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Use = UseAction.Tool },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Use = UseAction.Tool },

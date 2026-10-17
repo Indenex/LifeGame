@@ -21,6 +21,7 @@ public enum StructureKind
     DryingRack,
     PottersBench,
     LogCabin,
+    ClayTrough,
 }
 
 // One material a structure's current stage still needs.

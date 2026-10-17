@@ -188,6 +188,7 @@ public static partial class Module
     // comes back out where it stood; a firing one finishes on its timer.
     static partial void CeramicsStructureRemoved(ReducerContext ctx, Structure s)
     {
+        if (s.Kind == StructureKind.ClayTrough) ctx.Db.TroughWater.StructureId.Delete(s.Id);
         if (s.Kind != StructureKind.Kiln || ctx.Db.Kiln.StructureId.Find(s.Id) is not { } kiln) return;
         if (kiln.State == (byte)KilnState.Firing) return;
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);

@@ -33,7 +33,7 @@ namespace LifeGame.Shared
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
-        public bool Kiln, Jar;
+        public bool Kiln, Jar, Trough;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -198,6 +198,16 @@ namespace LifeGame.Shared
                 SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
             },
+            // Ceramics' clay trough (ceramics-13): a kiln-fired basin set down and filled by hand.
+            new StructureShape
+            {
+                Name = "Clay trough",
+                Trough = true,
+                Round = true, Radius = 0.4f,
+                Clearance = 0.7f,
+                Solid = true,
+                Stages = new[] { "Set the trough" },
+            },
         };
 
         // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
@@ -296,6 +306,11 @@ namespace LifeGame.Shared
                 new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                 new[] { (Item.Fiber, 14u) },
             },
+            // Clay trough (Ceramics): set down one kiln-fired trough
+            new[]
+            {
+                new[] { (Item.ClayTrough, 1u) },
+            },
         };
 
         // How far from the player a footprint may be laid out.
@@ -321,6 +336,15 @@ namespace LifeGame.Shared
         // a fine one. The first 15% of quality gives 40% of the gain, so an early,
         // better-made jar is quickly worth it; then it climbs slowly (D-075).
         public const int JarStacksMin = 4, JarStacksMax = 8;
+
+        // Litres a trough holds: its own quality sets the size, quicker at first then
+        // slowly (D-075), as a jar's stacks do.
+        public static int TroughLitres(byte quality)
+        {
+            float t = Math.Clamp((int)quality, 1, 100) / 100f;
+            float curve = 1f - (1f - t) * (1f - t);
+            return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
+        }
 
         public static int JarStacks(byte quality)
         {

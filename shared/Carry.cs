@@ -55,6 +55,8 @@ namespace LifeGame.Shared
             [Item.ClayLamp] = 0.5f,
             [Item.UnfiredRoofTile] = 1.5f,
             [Item.RoofTile] = 1.5f,
+            [Item.UnfiredClayTrough] = 8f,
+            [Item.ClayTrough] = 8f,
             [Item.Tallow] = 0.3f,
             [Item.Berries] = 0.1f,
             [Basket] = 0.5f,
