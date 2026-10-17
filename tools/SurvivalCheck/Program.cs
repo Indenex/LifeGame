@@ -299,21 +299,37 @@ for (int lane = 0; lane < 10; lane++)
     pz += 3; startX = ServerX(); dir = 1;
 }
 if (fresh < 22) Fail($"the bot could not find a clear stretch to run on ({fresh:F1} m in 5 s)");
-Settle(14_000);   // a full bar to start from
-PaceFor(0.59f, 12);
-float winded = PaceFor(0.59f, 20);
 // Winded, the bar refills at a walk and lets a short run through each time it is back above a fifth,
 // as the client's does, so the cap sits between a walk and the bot's 5.9 m/s sprint.
-float cap = 5.4f * 20;
-if (winded > cap) Fail($"a sprint without end still covered {winded:F1} m in its last 20 s (the cap allows {cap:F1})");
+// Too little ground covered means the bot was stuck on something (28.6 m once, bugfix-69), so it moves over a
+// lane and tries again; too much is the cap failing, and that fails at once.
+float cap = 5.4f * 20, winded = 0;
+for (int lane = 0; lane < 3; lane++)
+{
+    Settle(14_000);   // a full bar to start from
+    PaceFor(0.59f, 12);
+    winded = PaceFor(0.59f, 20);
+    if (winded > cap) Fail($"a sprint without end still covered {winded:F1} m in its last 20 s (the cap allows {cap:F1})");
+    if (winded >= 50f) break;
+    Console.WriteLine($"  winded, the bot covered {winded:F1} m in 20 s; trying the next lane");
+    pz += 3; startX = ServerX(); dir = 1;
+}
 if (winded < 50f) Fail($"the bot got stuck while winded ({winded:F1} m in 20 s)");
 Ok($"a sprint without end is capped at a walk ({winded:F1} m in 20 s once winded, a sprint without limit would cover 118)");
 // Run dry only caps pace; an honest rhythm of a short run and a rest is never slowed.
-Settle(14_000);
-float honest = PaceFor(0.56f, 5);
-Settle(12_000);
-honest += PaceFor(0.56f, 5);
-float wanted = fresh * 2 * 0.9f;
+// A trunk or an unlucky turn can cost a stretch of one pair of runs (46.5 of 47.4 m once, bugfix-69), so a
+// short pair tries the next lane; a real slow-down from the server's bar shows on every lane.
+float honest = 0, wanted = fresh * 2 * 0.9f;
+for (int lane = 0; lane < 3; lane++)
+{
+    Settle(14_000);
+    honest = PaceFor(0.56f, 5);
+    Settle(12_000);
+    honest += PaceFor(0.56f, 5);
+    if (honest >= wanted) break;
+    Console.WriteLine($"  an honest run, rest, run came to {honest:F1} m of {wanted:F1}; trying the next lane");
+    pz += 3; startX = ServerX(); dir = 1;
+}
 if (honest < wanted) Fail($"an honest run, rest, run was slowed: {honest:F1} m, expected at least {wanted:F1} m");
 Ok($"an honest run and rest pattern is never slowed ({honest:F1} m)");
 
