@@ -61,8 +61,6 @@ namespace LifeGame.Shared
         public bool Roosts;
         // Damage is multiplied by this: a small animal falls to a light blow (rabbit 4).
         public float DamageTaken = 1f;
-        // Drawn this big compared with the model plan's normal size.
-        public float Size = 1f;
 
         // The client's model plan ("sheep", "deer" or "hen") and the share of males that carry antlers.
         public string Model = "sheep";
@@ -115,15 +113,15 @@ namespace LifeGame.Shared
                 Herds = new[] { new AnimalHerdSpot(-8f, 7f, 4, 4f) },
             },
             // Wild rabbits (animals-22): small, quick and skittish, in warrens at the meadow edges. A light blow
-            // brings one down; it gives a small meal and a scrap of fur. Drawn as a small sheep until Modeling's rabbit.
+            // brings one down; it gives a small meal and a scrap of fur. Modeling's RabbitFigure draws it.
             new()
             {
                 Id = Rabbit, Key = "animal.rabbit", Name = "Rabbit",
                 Walk = 0.8f, Trot = 2.0f, Run = 7.5f, Notice = 18f, CalmSpeed = 1.4f,
                 HomeRange = 9f, FleeAhead = 10f, WanderMin = 2f, WanderMax = 7f, WoodPref = 0.2f, Curious = false,
-                Wary = 6f, DamageTaken = 4f, Size = 0.4f,
+                Wary = 6f, DamageTaken = 4f,
                 Meat = Item.RawRabbit, MeatGrown = 1, MeatYoung = 1, Hide = Item.RabbitFur,
-                Model = "sheep",
+                Model = "rabbit",
                 Herds = new[] { new AnimalHerdSpot(18f, 14f, 4, 8f), new AnimalHerdSpot(-22f, -12f, 3, 10f), new AnimalHerdSpot(50f, -8f, 4, 12f) },
             },
         };
