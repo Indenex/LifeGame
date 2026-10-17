@@ -107,8 +107,8 @@ def build_fleece(bm):
 fleece = blob("Fleece", build_fleece, 0.011, 4, 0.055, 0.5)
 
 # --- Tuft: a few small puffs on the crown.
-tuft = [(HEAD + np.array([0, 0.115, 0.07]), 0.06), (HEAD + np.array([-0.05, 0.1, 0.03]), 0.05),
-        (HEAD + np.array([0.05, 0.1, 0.03]), 0.05), (HEAD + np.array([0, 0.1, 0.13]), 0.045)]
+tuft = [(HEAD + np.array([0, 0.13, 0.07]), 0.065), (HEAD + np.array([-0.055, 0.115, 0.03]), 0.055),
+        (HEAD + np.array([0.055, 0.115, 0.03]), 0.055), (HEAD + np.array([0, 0.115, 0.14]), 0.048)]
 
 
 def build_tuft(bm):
@@ -120,9 +120,9 @@ tuft_ob = blob("Tuft", build_tuft, 0.007, 3, 0.09, 0.5)
 
 # --- Head: round skull, a pale muzzle, eye domes, little ears drooping to the sides.
 SKULL = HEAD + np.array([0, 0.01, 0.11])
-SKULL_R = np.array([0.12, 0.115, 0.135])
-MUZZLE = HEAD + np.array([0, -0.045, 0.215])
-MUZZLE_R = np.array([0.083, 0.07, 0.075])
+SKULL_R = np.array([0.135, 0.128, 0.145])
+MUZZLE = HEAD + np.array([0, -0.045, 0.23])
+MUZZLE_R = np.array([0.09, 0.074, 0.078])
 eyes = []
 for side in (-1, 1):
     d = np.array([side * 0.62, 0.22, 0.75])
@@ -130,14 +130,14 @@ for side in (-1, 1):
     eyes.append(SKULL + d * SKULL_R * 0.97)
 ears = []
 for side in (-1, 1):
-    ears.append(HEAD + np.array([side * 0.16, 0.04, 0.08]))
+    ears.append(HEAD + np.array([side * 0.175, 0.045, 0.08]))
 
 
 def build_head(bm):
     sphere(bm, SKULL, SKULL_R)
     sphere(bm, MUZZLE, MUZZLE_R)
     for e in eyes:
-        sphere(bm, e, (0.03, 0.034, 0.022), seg=12, rings=8)
+        sphere(bm, e, (0.033, 0.038, 0.024), seg=12, rings=8)
     for side, e in zip((-1, 1), ears):
         # Droop: turn about the forward axis (Blender -Y).
         rot = Matrix.Rotation(side * 0.5, 4, "Y")

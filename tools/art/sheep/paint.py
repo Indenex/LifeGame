@@ -16,7 +16,7 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 src, dst = sys.argv[1], sys.argv[2]
 os.makedirs(dst, exist_ok=True)
@@ -46,7 +46,8 @@ def noise3(p, scale, seed):
 
 
 def load(tex):
-    ao = np.asarray(Image.open(os.path.join(src, f"{tex}_ao.png")).convert("L"), float) / 255
+    # Blurred: the bake's sample noise would read as pitting (Justin: no grain, no grit).
+    ao = np.asarray(Image.open(os.path.join(src, f"{tex}_ao.png")).convert("L").filter(ImageFilter.GaussianBlur(4)), float) / 255
     pos = np.load(os.path.join(src, f"{tex}_pos.npy"))[..., :3]
     nrm = np.load(os.path.join(src, f"{tex}_nrm.npy"))[..., :3]
     pid = np.rint(np.load(os.path.join(src, f"{tex}_id.npy"))[..., 0] * 16).astype(int)
@@ -71,7 +72,7 @@ def save(col, name):
 
 
 # ---------------------------------------------------------------- wool
-WOOL = dict(lit=c(1.0, 0.97, 0.9), mid=c(0.93, 0.89, 0.81), shade=c(0.77, 0.73, 0.8), line=c(0.56, 0.49, 0.56), curl=c(0.83, 0.78, 0.76))
+WOOL = dict(lit=c(0.95, 0.92, 0.84), mid=c(0.86, 0.81, 0.73), shade=c(0.71, 0.66, 0.72), line=c(0.55, 0.43, 0.38), curl=c(0.78, 0.72, 0.68))
 ao, p, n, pid = load("wool")
 col = np.ones((len(ao), 3)) * WOOL["mid"]
 for which, key in ((1, "puffs"), (2, "tuft")):
@@ -86,7 +87,7 @@ for which, key in ((1, "puffs"), (2, "tuft")):
     k = np.argmin(dist, 1)
     d = q - cen[k]
     d /= np.maximum(np.linalg.norm(d, axis=-1, keepdims=True), 1e-6)
-    wob = noise3(q, 60, 3) * 0.08
+    wob = noise3(q, 14, 3) * 0.05
     s = 0.6 * (d @ LIGHT) + 0.4 * (n[m] @ LIGHT) + wob
     a = ao[m]
     lit = smooth(0.4, 0.46, s)
@@ -101,22 +102,21 @@ for which, key in ((1, "puffs"), (2, "tuft")):
     rho = np.arccos(np.clip(np.sum(d * crown, -1), -1, 1))
     th = np.arctan2(np.sum(d * e2, -1), np.sum(d * e1, -1)) / (2 * np.pi) + k * 0.37
     ph = (rho * 1.6 - th) % 1.0
-    stroke = (1 - smooth(0.035, 0.07, np.abs(ph - 0.5))) * smooth(0.12, 0.3, rho) * (1 - smooth(0.9, 1.25, rho))
-    stroke *= smooth(-0.2, 0.3, noise3(q, 25, 5) + 0.25)
+    stroke = (1 - smooth(0.02, 0.11, np.abs(ph - 0.5))) * smooth(0.12, 0.3, rho) * (1 - smooth(0.9, 1.25, rho))
     curl = np.where(lit[:, None] > 0.5, WOOL["mid"], WOOL["curl"])
-    pc += (curl - pc) * (stroke * 0.75)[:, None]
+    pc += (curl - pc) * (stroke * 0.55)[:, None]
     # A pale lit lip on the upper edge of each puff, where it turns down towards the light.
     lip = smooth(0.6, 0.75, s) * smooth(0.1, 0.3, rho)
     pc += (WOOL["lit"] * 1.02 - pc) * (lip * 0.5)[:, None]
-    # Soft violet-cocoa line in the crevices, and the AO laid lightly over.
-    line = 1 - smooth(0.38, 0.55, a + wob * 0.5)
-    pc += (WOOL["line"] - pc) * (line * 0.85)[:, None]
+    # Soft cocoa line in the crevices, and the AO laid lightly over.
+    line = 1 - smooth(0.4, 0.66, a)
+    pc += (WOOL["line"] - pc) * (line * 0.75)[:, None]
     pc *= (0.86 + 0.14 * a)[:, None]
     col[m] = pc
 save(col, "wool.png")
 
 # ---------------------------------------------------------------- skin
-FACE = dict(lit=c(0.42, 0.33, 0.3), mid=c(0.32, 0.25, 0.24), shade=c(0.23, 0.19, 0.23), line=c(0.15, 0.12, 0.14))
+FACE = dict(lit=c(0.27, 0.21, 0.2), mid=c(0.19, 0.15, 0.15), shade=c(0.13, 0.11, 0.14), line=c(0.08, 0.06, 0.08))
 MUZ = dict(lit=c(0.98, 0.9, 0.82), mid=c(0.9, 0.79, 0.72), shade=c(0.76, 0.65, 0.66), line=c(0.5, 0.38, 0.38))
 PINK = c(0.95, 0.66, 0.66)
 NOSE = c(0.36, 0.22, 0.24)
@@ -125,7 +125,7 @@ HOOF = dict(lit=c(0.3, 0.25, 0.25), mid=c(0.16, 0.13, 0.14), shade=c(0.1, 0.08, 
 BODY = dict(lit=c(0.96, 0.8, 0.74), mid=c(0.88, 0.7, 0.66), shade=c(0.74, 0.6, 0.64))
 
 ao, p, n, pid = load("skin")
-s = n @ LIGHT + noise3(p, 50, 7) * 0.06
+s = n @ LIGHT
 lit = smooth(0.5, 0.56, s)
 shade = 1 - smooth(-0.05, 0.01, s - (0.7 - ao))
 col = tone(FACE, lit, shade * 0.85)
@@ -135,7 +135,7 @@ mz = np.array(lay["muzzle"])
 mc, mr = mz[:3], mz[3:]
 # Muzzle: the front of the head inside a slightly grown muzzle ellipsoid.
 md = np.linalg.norm((p - mc) / (mr * 1.12), axis=-1)
-muz = head & (md < 1.0 + noise3(p, 80, 9) * 0.03) & (p[:, 2] > mc[2] - mr[2] * 0.35)
+muz = head & (md < 1.0) & (p[:, 2] > mc[2] - mr[2] * 0.35)
 col[muz] = tone(MUZ, lit[muz], shade[muz] * 0.7)
 # Soft edge line where the muzzle meets the face.
 edge = head & (np.abs(md - 1.0) < 0.06) & (p[:, 2] > mc[2] - mr[2] * 0.35)
@@ -152,7 +152,7 @@ col[phil | smile] = NOSE
 # Eyes: big dark ovals with a white catchlight up towards the light and a small second one.
 for i, e in enumerate(np.array(lay["eyes"])):
     q = p - e
-    de = np.sqrt((q[:, 0] / 0.034) ** 2 + (q[:, 1] / 0.04) ** 2 + (q[:, 2] / 0.034) ** 2)
+    de = np.sqrt((q[:, 0] / 0.037) ** 2 + (q[:, 1] / 0.044) ** 2 + (q[:, 2] / 0.037) ** 2)
     eye = head & (de < 1.0)
     col[eye] = EYE
     rim = head & (de >= 1.0) & (de < 1.18) & (q[:, 1] > -0.005)
@@ -173,15 +173,15 @@ for e in np.array(lay["ears"]):
     col[inner] = tone(dict(lit=PINK, mid=PINK * 0.88, shade=PINK * 0.7), lit[inner], shade[inner] * 0.6)
 # Legs: face colour with a darker hoof and a lit rim on its top edge.
 legs = (pid >= 5) & (pid <= 8)
-hoof = legs & (p[:, 1] < 0.058 + noise3(p, 90, 4) * 0.004)
+hoof = legs & (p[:, 1] < 0.058)
 col[hoof] = tone(HOOF, lit[hoof], shade[hoof])
 rim = legs & (np.abs(p[:, 1] - 0.06) < 0.005)
-col[rim] += (FACE["lit"] * 1.25 - col[rim]) * 0.6
+col[rim] += (FACE["lit"] * 1.4 - col[rim]) * 0.6
 # Shorn body.
 body = pid == 4
 col[body] = tone(BODY, lit[body], shade[body])
 # Crevice lines and light AO.
-line = 1 - smooth(0.35, 0.5, ao)
+line = 1 - smooth(0.3, 0.55, ao)
 col += (FACE["line"] - col) * (line * 0.6)[:, None]
 col *= (0.88 + 0.12 * ao)[:, None]
 save(col, "skin.png")
