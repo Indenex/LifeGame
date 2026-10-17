@@ -282,7 +282,7 @@ public partial class BagSlotView : PanelContainer
         SlotLook.Set(plate, shadow, picture, picture.Texture, true);
         if (InHand)
         {
-            var ring = new ActiveRing { Radius = BagGrid.Slot / 2 + 4 };
+            var ring = new ActiveRing { Radius = BagGrid.Slot / 2 + 5 };
             stack.AddChild(ring);
             ring.SetOn(true);
         }

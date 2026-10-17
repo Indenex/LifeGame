@@ -119,9 +119,12 @@ public partial class ActiveRing : Control
         var centre = Size / 2;
         float r = Radius * spring;
         var c = Colour;
-        // The glow, then the ring, then a thin light line inside it so it looks soft and rounded.
-        DrawArc(centre, r + 2f, 0, Mathf.Tau, 64, new Color(c, 0.22f * show), 8f, true);
-        DrawArc(centre, r, 0, Mathf.Tau, 64, new Color(c, 0.95f * show), 3.5f, true);
-        DrawArc(centre, r - 1f, 0, Mathf.Tau, 64, new Color(1f, 1f, 1f, 0.35f * show), 1f, true);
+        // A soft glow, a thin darker edge so it reads on bright grass, the ring itself, and a light
+        // line inside it so it looks round and soft. Bold enough to spot at a glance (ui-73: the
+        // first, 3.5 px ring was barely visible in Render's shots).
+        DrawArc(centre, r + 1f, 0, Mathf.Tau, 64, new Color(c, 0.28f * show), 13f, true);
+        DrawArc(centre, r, 0, Mathf.Tau, 64, new Color(c.Darkened(0.35f), 0.7f * show), 6.5f, true);
+        DrawArc(centre, r, 0, Mathf.Tau, 64, new Color(c, show), 5f, true);
+        DrawArc(centre, r - 1.5f, 0, Mathf.Tau, 64, new Color(1f, 1f, 1f, 0.45f * show), 1.2f, true);
     }
 }
