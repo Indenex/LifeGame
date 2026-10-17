@@ -4,7 +4,7 @@ using SpacetimeDB;
 // "I'm stuck" (bugfix-44, D-182). A player (or a check bot) who is wedged in something can ask
 // the server to move them to the nearest free standing spot. The server decides everything: it
 // searches outward from where they stand, then falls back to their own claim marker, then to
-// the world's spawn. A 60 s cooldown and the search radius keep it from being a way to travel.
+// the world's spawn. From free ground it still nudges (UnstuckNudge). A 60 s cooldown and the search radius keep it from being a way to travel.
 public static partial class Module
 {
     public const float UnstuckRadius = 12f;
@@ -12,6 +12,8 @@ public static partial class Module
     // A destination is kept this far from any solid footprint; a player already this clear is not stuck.
     const float UnstuckClearance = 0.45f;
     const float UnstuckStep = 0.5f;
+    // The least a player who already stands on free ground is moved.
+    const float UnstuckNudge = 1.5f;
 
     // When each player last used it. Private: only the server reads it.
     [SpacetimeDB.Table(Accessor = "UnstuckUse")]
@@ -39,9 +41,12 @@ public static partial class Module
             && Dist(pending.X, pending.Z, pos.X, pos.Z) > 1.5f)
             throw new Exception("Stand still a moment first");
 
-        if (StandingFree(ctx, pos.X, pos.Z, PlayerBody)) throw new Exception("You don't seem to be stuck");
-
-        var (x, z) = FindFreeSpot(ctx, pos.X, pos.Z, UnstuckRadius)
+        // Most real stuck cases look free to the server (pressed against a wall's edge), so it
+        // always helps: from free ground the player is nudged at least UnstuckNudge away, to the
+        // spot with the most room round it.
+        var (x, z) = (StandingFree(ctx, pos.X, pos.Z, PlayerBody)
+                ? NudgeSpot(ctx, pos.X, pos.Z)
+                : FindFreeSpot(ctx, pos.X, pos.Z, UnstuckRadius))
             ?? OwnClaimSpot(ctx)
             ?? FindFreeSpot(ctx, 0f, 0f, UnstuckRadius)
             ?? (0f, 0f);
@@ -84,6 +89,32 @@ public static partial class Module
             }
         }
         return null;
+    }
+
+    // From free ground: of the free spots on the first rings at least UnstuckNudge away, the one
+    // with the most clear room around it (so away from the nearest wall or obstacle); nearer wins a tie.
+    static (float, float)? NudgeSpot(ReducerContext ctx, float cx, float cz)
+    {
+        (float, float)? best = null;
+        float bestRoom = -1f;
+        bool found = false;
+        for (float r = UnstuckNudge; r <= UnstuckRadius; r += UnstuckStep)
+        {
+            int points = (int)MathF.Ceiling(MathF.Tau * r / UnstuckStep);
+            for (int i = 0; i < points; i++)
+            {
+                float a = MathF.Tau * i / points;
+                float x = cx + MathF.Cos(a) * r, z = cz + MathF.Sin(a) * r;
+                if (!StandingFree(ctx, x, z, UnstuckClearance)) continue;
+                float room = UnstuckClearance;
+                while (room < 3f && StandingFree(ctx, x, z, room + UnstuckStep)) room += UnstuckStep;
+                if (room > bestRoom) { bestRoom = room; best = (x, z); }
+                found = true;
+            }
+            // Look one metre past the first ring that has a free spot, then settle.
+            if (found && r >= UnstuckNudge + 1f) break;
+        }
+        return best;
     }
 
     // Whether a body of this size can stand here: ground that is dry or only wading depth, no

@@ -532,6 +532,18 @@ void UnstuckInHut(ulong hut)
     a.Conn.Reducers.Unstuck();
     WaitFor(() => a.LastError != null, 10, "a second unstuck inside the cooldown is answered");
     Check(a.LastError!.Contains("again in"), $"the second try is refused for the cooldown ({a.LastError})");
+
+    // B stands on free ground in the yard: unstuck still helps, moving B at least 1.5 m (and within the radius).
+    var bFrom = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, bFrom.X, bFrom.Z, 0.25f), "B stands on free ground");
+    b.LastError = null;
+    b.Conn.Reducers.Unstuck();
+    WaitFor(() => b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId) is { } p && (p.X != bFrom.X || p.Z != bFrom.Z) || b.LastError != null, 10, "the server answered B's unstuck");
+    Check(b.LastError == null, $"unstuck from free ground was allowed ({b.LastError ?? "-"})");
+    var bTo = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    float bMoved = MathF.Sqrt((bTo.X - bFrom.X) * (bTo.X - bFrom.X) + (bTo.Z - bFrom.Z) * (bTo.Z - bFrom.Z));
+    Check(bMoved >= 1.4f && bMoved <= Module_UnstuckRadius, $"B was nudged {bMoved:F1} m");
+    b.X = bTo.X; b.Z = bTo.Z;
 }
 
 // A puts sticks in the basket; B takes one out.
