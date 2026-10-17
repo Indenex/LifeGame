@@ -140,8 +140,13 @@ public partial class Mist : Node3D
                 // Looking toward a low sun, the mist lights up warm and bright.
                 vec3 look = normalize(world_pos - CAMERA_POSITION_WORLD);
                 float scatter = pow(max(dot(look, normalize(sun_dir)), 0.0), 6.0);
-                ALBEDO = mist_color.rgb + glow_color * scatter * 0.9;
-                ALPHA = clamp(amount * pool * (0.2 + 0.8 * wisps) * edge * 0.55 * (1.0 + 0.35 * scatter), 0.0, 0.72);
+                // Never brighter than a soft glow, so a low sun can't blow it out.
+                ALBEDO = min(mist_color.rgb + glow_color * scatter * 0.5, vec3(1.0));
+                // Thin close to the camera, so the player and what's near stay clear,
+                // and each of the three layers kept light so together they never
+                // become a wall (atmosphere-34).
+                float near = mix(0.3, 1.0, smoothstep(6.0, 40.0, length(world_pos - CAMERA_POSITION_WORLD)));
+                ALPHA = clamp(amount * pool * (0.2 + 0.8 * wisps) * edge * near * 0.4 * (1.0 + 0.2 * scatter), 0.0, 0.22);
             }
             """,
     };
