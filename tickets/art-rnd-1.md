@@ -28,6 +28,8 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: Modeling set up Blender (tools/art/get-blender.sh on #623) and reproduced the shell rebuild pixel-identical; #623 carries the no-grain shell.
 
+- 2026-10-17: merged birch + pine: renders/art-rnd-1-birch.png, -pine.png (+ -close); sent to the PM.
+
 ## Open questions / blockers
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
