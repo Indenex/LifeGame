@@ -2,8 +2,8 @@
 Lane: Claims
 Owner: Claims thread
 Status: in_progress
-Branch: claude/claims-nxkyjn (new PR from main once #861 merges)
-PR: (not yet)
+Branch: claude/claims-nxkyjn
+PR: (opening)
 
 ## Goal
 Justin picked the friends list (2026-10-17, via the PM). Players mark others as friends. Once both
@@ -12,7 +12,7 @@ in the group list's words ("Mara   40 m north", ui-78). A quiet note says "Mara 
 comes online. "/friends" opens the list; you add people by name there, or "Add back" anyone who added you.
 
 ## Design
-- Mutual only for whereabouts (default, sent to the PM): a one-way mark shows only names, so nobody is
+- Mutual only for whereabouts (Justin's pick): a one-way mark shows only names, so nobody is
   tracked by someone they never chose. Spots are rounded to 10 m and refreshed every 5 s (shared/Friends.cs).
 - server/spacetimedb/Friends.cs: Friend (private; view MyFriends: mine and who marked me), FriendSpot
   (private; view MyFriendSpots: mutual friends only), FriendSweepTimer/SweepFriends, AddFriend, RemoveFriend.
@@ -21,10 +21,10 @@ comes online. "/friends" opens the list; you add people by name there, or "Add b
 - UX asks: a key for the list and "Add friend" in the player menu (PlayerMenu.cs is UX's).
 
 ## Progress log
-- 2026-10-17: server, shared, client panel and SocialTest friend checks written on a local branch; waiting for #861 to merge before pushing (one branch).
+- 2026-10-17: server, shared, client panel and SocialTest friend checks written on a local branch; #861 merged; applied on main and pushed.
 
 ## Open questions / blockers
-- Mutual-only whereabouts is the default; Justin may prefer one-way.
+- (none) Justin picked mutual-only whereabouts (2026-10-17).
 
 ## Next step
-After #861 merges: merge main into claude/claims-nxkyjn, apply these commits, push, open the PR, request a render of the Friends panel.
+Get the PR green, then ask Render for a shot of the Friends panel (/friends) and send the PM one message with sha and shot.
