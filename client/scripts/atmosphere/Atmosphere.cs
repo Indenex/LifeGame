@@ -53,6 +53,7 @@ public partial class Atmosphere : Node3D
     public readonly SheepVoices Sheep = new();
     // The same for red deer: a bark when a herd bolts, hoof thuds, and stags roaring at autumn dusk (audio-4).
     public readonly DeerVoices Deer = new();
+    public readonly HenVoices Hens = new();
 
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
@@ -184,7 +185,7 @@ public partial class Atmosphere : Node3D
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
         conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
-        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
+        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); Hens.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
         conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
         // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
@@ -293,6 +294,8 @@ public partial class Atmosphere : Node3D
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
             Deer.RoarTime = StagRoarTime();
             Deer.Tick(dt, focus, camera.GlobalBasis.X);
+            Hens.NightTime = Mathf.SmoothStep(0.7f, 0.85f, timeOfDay < 0f ? 0.5f : timeOfDay) + Mathf.SmoothStep(0.3f, 0.2f, timeOfDay < 0f ? 0.5f : timeOfDay);
+            Hens.Tick(dt);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
