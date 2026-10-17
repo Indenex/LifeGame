@@ -1,7 +1,7 @@
 # atmosphere-35: Cosy look tune (D-313)
 Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-35-cosy
 PR: #608
 
@@ -21,9 +21,10 @@ On by default; `--cosy=0` shows the earlier look for before/after renders. Sun s
 - 2026-10-17 07:20: cosy layer in AtmosphereGrade.cs plus a `cosy` sky uniform in Atmosphere.cs. The client builds with 0 errors.
 - 2026-10-17 07:22: PR #608 opened (8010008f). Asked Render B for before/after stills. Shadow params stay with the Unity-spike worker (session_017Weex8fujB3VFsrpg84jEP, atmos-shadows-1).
 - 2026-10-17 08:00: calm weather moods (from the D-313 brief): with cosy on, rain and storms darken less (dim, sun and ambient cuts softened 30 to 50%), and storm fog leans soft blue-grey (0.44, 0.48, 0.56) rather than slate. In Atmosphere.cs ApplyLight.
+- 2026-10-17 08:26: CI green on 005d7b69; merged as #608.
 
 ## Open questions / blockers
 - Needs a before/after from Render (`--cosy=0` vs default) at noon, dusk and night to tune the numbers.
 
 ## Next step
-Wait for CI on #608 and Render B's before/after stills (requested 07:22), then tune the numbers from them.
+None (done). Render B's before/after (`--cosy=0` vs default) is queued; any tuning goes in a new ticket.

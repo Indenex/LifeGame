@@ -30,6 +30,7 @@ public partial class OptionsPage : Control
     Button music = null!;
     Button lightRays = null!;
     Button softGlow = null!, vignette = null!;
+    Button shadows = null!;
     Button ambientLife = null!;
     HSlider view = null!;
     Button markButton = null!;
@@ -139,6 +140,14 @@ public partial class OptionsPage : Control
         });
         reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(reflections);
+        // Sun shadow quality (SunShadows): Low for slower PCs.
+        shadows = ControlsPage.TextButton(ShadowsText(), () =>
+        {
+            SunShadows.Setting = (SunShadows.Level)(((int)SunShadows.Setting + 1) % SunShadows.Names.Length);
+            shadows.Text = ShadowsText();
+        });
+        shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(shadows);
         // Butterflies, pollen and fireflies (Environment, env-30); Off for slower PCs.
         ambientLife = ControlsPage.TextButton(LifeText(), () =>
         {
@@ -167,6 +176,7 @@ public partial class OptionsPage : Control
 
     static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
+    static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
     static string LifeText() => $"Ambient life: {AmbientLife.Names[AmbientLife.Setting]}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
@@ -185,6 +195,7 @@ public partial class OptionsPage : Control
         lightRays.Text = RaysText();
         softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
         vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        shadows.Text = ShadowsText();
         Visible = true;
     }
 
