@@ -15,8 +15,14 @@ Option (a), sent to the PM for Justin on 2026-10-17 (recommended: morning frost;
 
 - 2026-10-17 06:20: Render B's stills (renders/atmosphere-28-7c8b799-1..7) show the shader draws, but full frost read as light snow, tinted pink by dawn. Lighter version: rime only on upward faces and the raised grain (relief h 0.35 to 0.8), at 30% strength on bare ground and 55% on rocks and leaves, about 35 to 45% of before. The colour is a cooler blue-white (0.74, 0.84, 0.97); grass silvers only at the tips (top 55%, at most 55%). The half-melt pattern is unchanged. The dark, see-through foreground pine in shots 3 and 5 is the trees' camera fade (it stands between the camera and the player), as designed.
 
+- 2026-10-17 06:35: Justin answered via the PM.
+  - (1) Autumn only: frost needs Year between about 0.5 and 0.75.
+  - (2) Some mornings only, by local cold, the same for every player. Each night (counted toward the morning it ends in) rolls World.Noise(night, 0, 1, 977): frost on a little under half of autumn mornings, with its own strength (0.55 to 1). The cold threshold is now under about 8 °C, so autumn nights can frost. In the shaders, `frost_local()` makes higher ground and damp ground by the water frost more, in broad patches (about 250 m) that shift each morning through the `frost_seed` global.
+  - (3) Lighter, as in 864924de.
+  - (4) He likes the heavy white look for snow: follow-up ticket atmosphere-33.
+
 ## Open questions / blockers
 - (none) Justin picked (a) morning frost (via the PM, 2026-10-17 03:02).
 
 ## Next step
-The PM merges after Justin's word on strength. Render B re-shoots the frost stills at the new head.
+Wait for #459 CI and send the PM the green sha.

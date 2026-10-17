@@ -82,6 +82,8 @@ public static class Look
         Add("wet_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
         // Morning frost (Atmosphere): 0 none to 1 a full white rime.
         Add("frost", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Shifts where frost lies thickest from one morning to the next.
+        Add("frost_seed", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -308,6 +310,7 @@ public static class Look
         global uniform float wet_amount;
         // Rime after a cold clear night, 0 none to 1 full; it melts away patchily.
         global uniform float frost;
+        global uniform float frost_seed;
         // Rime is a cool blue-white, so the warm dawn light doesn't turn it pink.
         const vec3 FROST = vec3(0.74, 0.84, 0.97);
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
@@ -330,6 +333,15 @@ public static class Look
             return (1.0 - smoothstep(-0.85, -0.35, season_warmth)) * step(0.3, season_autumn);
         }
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
+
+        // How cold this spot runs on a frosty morning, 0 to 1: higher ground and damp
+        // hollows by the water more, in broad patches that shift from day to day.
+        float frost_local(vec3 p) {
+            float n = texture(clouds, p.xz * 0.004 + vec2(frost_seed, frost_seed * 0.37)).r;
+            float high = smoothstep(0.0, 25.0, p.y + 1.0) * 0.35;
+            float damp = (1.0 - smoothstep(0.0, 1.5, p.y + 1.0)) * 0.3;
+            return clamp(n * 0.9 + high + damp - 0.15, 0.0, 1.0);
+        }
 
         float cloud_shadow(vec3 p) {
             if (cloud_cover <= 0.01) return 1.0;
@@ -531,7 +543,7 @@ public static class Look
                 // cavity) stay clear of it. Tiny glints sparkle as you move.
                 if (frost > 0.0 && cavity > 0.01) {
                     float patches = texture(detail, world_pos.xz * 0.06).r;
-                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * 1.25 - 0.12);
+                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * frost_local(world_pos) * 1.25 - 0.12);
                     // Only on the raised grain of what faces up, so the colour beneath
                     // still shows through: a dusting, not a snow cover. Bare ground
                     // takes less than rocks and leaves, which the grass covers anyway.
@@ -701,7 +713,7 @@ public static class Look
                 // Frost silvers the blades, most at the tips, gone first where it melts.
                 if (frost > 0.0) {
                     float patches = texture(clouds, world_pos.xz * 0.035).r;
-                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * 1.3 - 0.15) * (1.0 - snow_cover);
+                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * frost_local(world_pos) * 1.3 - 0.15) * (1.0 - snow_cover);
                     // Just the tips silver over; the blades stay green below.
                     color = mix(color, FROST, rime * 0.55 * smoothstep(0.45, 1.0, tip));
                 }
