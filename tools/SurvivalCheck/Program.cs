@@ -182,7 +182,7 @@ Pump(() => lastError != null, 5, "a missing building to be refused");
 if (!lastError!.Contains("gone")) Fail($"a missing building said: {lastError}");
 Ok($"a building that is not there is refused ({lastError})");
 if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a refused choice must not set a waking place");
-Ok("a refused choice sets nothing (the accepted choice is checked in BuildTest; waking after a death has no check yet)");
+Ok("a refused choice sets nothing (the accepted choice and waking after a death are checked in BuildTest)");
 // --- Endurance is trained by running, which the server checks it saw (D-182) ---
 int Endurance() => conn.Db.MySkills.Iter().Where(r => r.Spec == Stamina.Skill).Sum(r => (int)r.Points);
 uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;

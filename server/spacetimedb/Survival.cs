@@ -313,6 +313,16 @@ public static partial class Module
 
     // --- Death -------------------------------------------------------------
 
+    // For tests (survival-29): an admin ends their own character's life, so the waking place can be checked
+    // without waiting for hunger or a fight. Admins only, like AdminGive.
+    [SpacetimeDB.Reducer]
+    public static void AdminDie(ReducerContext ctx)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can do that");
+        var player = RequirePlayer(ctx);
+        Die(ctx, player, RequireVitals(ctx, player), RequirePos(ctx, player), "an admin's test");
+    }
+
     // Everything carried falls where the player died. They wake naked at the edge
     // of the wilderness; what they know stays with them.
     static void Die(ReducerContext ctx, Player player, Vitals v, PlayerPos pos, string cause)
