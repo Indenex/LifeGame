@@ -12,6 +12,8 @@ D-182: the server, not just the client, stops a step into a tree trunk, a boulde
 - 2026-10-17: restored the enforcement from bugfix-34's history (reverted ceffdf60 on the server part): `PlayerCollision.cs` has `ServerGround : ICellGround`, `Obstacles.StepBlocked` and `Structures.StepCrossesLeanTo`. Client `TerrainCollision` uses the shared `Obstacles.At` again. env-21's shore stones moved into `Obstacles.ShoreStones` (the early-return bound is now 0.334) so the client, server and bots use one number. SpawnCheck's trunk/boulder probe restored.
 - 2026-10-17: all pass locally against the enforcing server: SpawnCheck (incl. trunk and boulder probes), LoadTest 5 bots 5 s, SocialTest, CraftCheck, BuildTest clay-hut and lean-to,basket,fence.
 
+- 2026-10-17: CI failed `SpawnCheck: can walk on after reconnecting` on 2e02cf69: the test walked 3 m straight east from a random z at x=-80 and the server (rightly) refused a step into a trunk. Fixed: it now slides round obstacles with BotGround and checks it moved >1.5 m. 6 of 6 local runs pass.
+
 ## Open questions / blockers
 - Landmarks (giant trees, outcrops) are not enforced on the server yet.
 - Unstuck (bugfix-44) should also avoid trunks: add `Obstacles.At` to its `StandingFree` once this lands.

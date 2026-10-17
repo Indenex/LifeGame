@@ -117,9 +117,19 @@ conn.Reducers.SetSneaking(false);
 WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "standing up clears it");
 
 // Walking still works from there.
-float stepX = back.X + 3;
-for (int i = 0; i < 10; i++) { conn.Reducers.Move(back.X + 0.3f * (i + 1), back.Z, MathF.PI / 2); Pump(100); }
-WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after reconnecting");
+// The server refuses steps into trunks and boulders (bugfix-34), so the walk slides round them, as
+// the game's client does; where the saved spot is random, a straight line east may meet one.
+{
+    var walkGround = new BotGround(conn);
+    float wx = back.X, wz = back.Z;
+    for (int i = 0; i < 10; i++)
+    {
+        (wx, wz) = walkGround.Slide(wx, wz, wx + 0.3f, wz);
+        conn.Reducers.Move(wx, wz, MathF.PI / 2);
+        Pump(100);
+    }
+    WaitFor(() => MyPos() is { } p && MathF.Sqrt((p.X - back.X) * (p.X - back.X) + (p.Z - back.Z) * (p.Z - back.Z)) > 1.5f, 10, "can walk on after reconnecting");
+}
 
 // Water is walkable (bugfix-32): find a pond or stream with dry ground on both sides, walk across
 // it at the wading pace and come out the other side.
