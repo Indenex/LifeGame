@@ -47,8 +47,19 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
+{
+    var tiled = Structures.Shape((int)StructureKind.TiledHouse);
+    var brick = Structures.Shape((int)StructureKind.BrickHouse);
+    Check(tiled.Room && tiled.BrickWalls && tiled.TileRoof && !brick.TileRoof, "the tiled house is a brick-walled home with a tile roof");
+    Check(tiled.Stages.Length == brick.Stages.Length && tiled.Costs.Length == tiled.Stages.Length, "the tiled house has the brick house's stages");
+    Check(tiled.Costs[3].Length == 1 && tiled.Costs[3][0] == (Item.RoofTile, 12u), "its roof takes 12 roof tiles");
+    for (int i = 0; i < 3; i++) Check(tiled.Costs[i].SequenceEqual(brick.Costs[i]), $"its stage {i + 1} costs what the brick house's does");
+    Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
+}
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
-foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin })
+foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin, StructureKind.TiledHouse })
 {
     int k = (int)kind;
     var shape = Structures.Shape(k);
@@ -376,22 +387,7 @@ void UseGate(ulong gate)
 void BuildHearth(ulong hut)
 {
     Console.WriteLine("--- Raised hearth");
-    // The bots are still inside the hut from the mat, and its walls stop the server's players
-    // (bugfix-27): go out through the doorway before gathering, or they stay penned in.
-    var hutRow = a.Conn.Db.Structure.Id.Find(hut)!;
-    var doorway = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).DoorwayZ + 0.6f);
-    var yard = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).Radius + 2.5f);
-    a.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
-    if (a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true })
-    {
-        a.Conn.Reducers.ToggleDoor(hut); // a shut door stops walkers too
-        WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the hut door opens for the way out");
-    }
-    foreach (var bot in bots)
-    {
-        bot.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
-        bot.WalkTo(yard.x, yard.z, 0.5f, Pump);
-    }
+    LeaveHut(hut);
     a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
     b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
     var until = clock.Elapsed + TimeSpan.FromSeconds(300);
@@ -446,10 +442,32 @@ void BuildHearth(ulong hut)
     b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
 }
 
+// The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished
+// something inside must go out through the doorway before they gather: the door is opened, then
+// both walk out to the yard in front of it.
+void LeaveHut(ulong hut)
+{
+    var hutRow = a.Conn.Db.Structure.Id.Find(hut)!;
+    var doorway = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).DoorwayZ + 0.6f);
+    var yard = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).Radius + 2.5f);
+    a.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+    if (a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true })
+    {
+        a.Conn.Reducers.ToggleDoor(hut);
+        WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the hut door opens for the way out");
+    }
+    foreach (var bot in bots)
+    {
+        bot.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+        bot.WalkTo(yard.x, yard.z, 0.5f, Pump);
+    }
+}
+
 // A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
 void LayMat(ulong hut)
 {
     Console.WriteLine("--- Sleeping mat");
+    LeaveHut(hut);
     a.Wants = new() { [Item.Fiber] = 8 };
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
     while (!a.HasWants && clock.Elapsed < until)
