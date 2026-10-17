@@ -274,6 +274,7 @@ public partial class LookPicker : CanvasLayer
         {
             int at = i;
             var b = new Button { CustomMinimumSize = new Vector2(34, 34), FocusMode = Control.FocusModeEnum.None };
+            WarmLook.KeepColours(b);
             b.Pressed += () => { pick(at); Show(); };
             b.SetMeta("colour", colours[i]);
             into[i] = b;
@@ -355,7 +356,7 @@ public partial class LookPicker : CanvasLayer
     // A swatch: its colour in a round, with a bright ring when chosen.
     static void Ring(Button b, bool chosen)
     {
-        var style = new StyleBoxFlat { BgColor = b.GetMeta("colour").AsColor(), BorderColor = new Color(Look.Cream, chosen ? 0.95f : 0.25f) };
+        var style = new StyleBoxFlat { BgColor = b.GetMeta("colour").AsColor(), BorderColor = WarmLook.RingColour(chosen ? 0.95f : 0.25f) };
         style.SetBorderWidthAll(chosen ? 3 : 1);
         style.SetCornerRadiusAll(16);
         foreach (var state in new[] { "normal", "hover", "pressed" }) b.AddThemeStyleboxOverride(state, style);
