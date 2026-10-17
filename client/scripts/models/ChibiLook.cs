@@ -9,7 +9,7 @@ namespace LifeGame;
 // Look's painted shader (vertex colours are raised to 2.2).
 public static class ChibiLook
 {
-    public static ShaderMaterial Material => material ??= new ShaderMaterial { Shader = new Shader { Code = Code.Replace("RIM", Painted.Rim) } };
+    public static ShaderMaterial Material => material ??= new ShaderMaterial { Shader = new Shader { Code = Code.Replace("RIM_UNIFORM", Painted.RimUniform).Replace("RIM", Painted.Rim) } };
     static ShaderMaterial? material;
 
     const string Code = """
@@ -17,6 +17,7 @@ public static class ChibiLook
         render_mode cull_disabled;
         uniform vec3 shade_tint : source_color = vec3(0.6, 0.56, 0.84);
         uniform float rim_dark = 0.58;
+        RIM_UNIFORM
         varying vec3 tint;
         varying vec3 world_n;
         void vertex() {
