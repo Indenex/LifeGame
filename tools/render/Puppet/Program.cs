@@ -247,7 +247,7 @@ bool Step(string line)
             string quality = n.Length > 2 ? n[2] : "50";
             var owner = me;
             if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]})\"");
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false)\"");
             Pump(1.0);
             break;
         }
