@@ -717,7 +717,8 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions.
+    // One identity per install, so you keep your character between sessions. It lives in the
+    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
     static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
 
     static string? LoadToken()
@@ -730,6 +731,13 @@ public partial class Main : Node3D
 
     static void SaveToken(string token)
     {
+        // A different token from the one on disk (server wiped, key changed) keeps the old one as
+        // a .bak, so a character is never lost for good by an overwrite.
+        if (LoadToken() is { } old && old != token)
+        {
+            using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
+            bak.StoreString(old);
+        }
         using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Write);
         file.StoreString(token);
     }
