@@ -1,7 +1,7 @@
 # unity-1: Unity lighting comparison spike
 Lane: Unity spike (one worker, comparison only; Godot stays the product)
 Owner: Unity spike session (session_017Weex8fujB3VFsrpg84jEP)
-Status: in_review
+Status: done
 Branch: claude/unity-spike
 PR: none (never to main unless the PM asks)
 
@@ -45,10 +45,14 @@ honest cost of a real port).
   batches capped at 500 (D3D11 instancing buffer). Compile and HLSL checks clean.
   The spike is done from the cloud side: the Unity half needs Justin's PC (README).
 
+- 2026-10-17 09:20: Justin decided to stay on Godot (via the PM). Follow-up atmos-shadows-1
+  (steady, soft sun shadows, from this spike's findings) was parked as patches here and landed
+  by another session as #667, merged cbc623f. Godot contact sheet:
+  renders/unity-spike-godot-contact-sheet.png. Session ended at the PM's request.
+
 ## Open questions / blockers
 - Unity can't run here without a license (see log). Unity-side screenshots come from
   Justin's PC; the project has a key to save them at the matching camera presets.
 
 ## Next step
-Wait for Justin's Unity screenshots (README: Play, keys 1-6, P saves renders/unity-spike-<preset>-<mode>.png),
-then pair each with renders/unity-spike-<preset>-godot.png and update unity/WRITEUP.md with what he saw.
+None unless Justin wants the Unity half after all: he opens unity/ per unity/README.md and sends the P-key screenshots; pair them with renders/unity-spike-*-godot.png.
