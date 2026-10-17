@@ -69,6 +69,7 @@ public static class Ui
         b.AddThemeColorOverride("font_color", Look.Cream);
         b.AddThemeColorOverride("font_hover_color", Look.Cream);
         b.AddThemeColorOverride("font_disabled_color", new Color(Look.Cream, 0.45f));
+        WarmLook.MainButton(b);
         b.Pressed += pressed;
         return b;
     }

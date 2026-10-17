@@ -127,7 +127,8 @@ public partial class MarkPicker : CanvasLayer
         foreach (var c in Presets.Select(MarkColour.Clamp))
         {
             var swatch = new Button { CustomMinimumSize = new Vector2(30, 30), FocusMode = Control.FocusModeEnum.None };
-            var style = new StyleBoxFlat { BgColor = c, BorderColor = new Color(Look.Cream, 0.3f) };
+            WarmLook.KeepColours(swatch);
+            var style = new StyleBoxFlat { BgColor = c, BorderColor = WarmLook.RingColour(0.3f) };
             style.SetBorderWidthAll(1);
             style.SetCornerRadiusAll(15);
             foreach (var state in new[] { "normal", "hover", "pressed" }) swatch.AddThemeStyleboxOverride(state, style);
@@ -189,7 +190,7 @@ public partial class MarkPicker : CanvasLayer
             view.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             view.OffsetLeft = view.OffsetTop = 16;
             view.OffsetRight = view.OffsetBottom = -16;
-            view.Show(g, Look.Cream);
+            view.Show(g, WarmLook.On ? WarmLook.Ink : Look.Cream);
             tile.AddChild(view);
             var chosen = g.Id;
             tile.Pressed += () => { glyph = chosen; Refresh(); };

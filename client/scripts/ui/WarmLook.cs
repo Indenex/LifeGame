@@ -28,7 +28,65 @@ public partial class WarmLook : Node
     public override void _EnterTree()
     {
         On = !OS.GetCmdlineUserArgs().Contains("--cold");
-        if (On) GetTree().NodeAdded += Added;
+        if (!On) return;
+        GetTree().NodeAdded += Added;
+        GetTree().Root.Theme = Defaults();
+    }
+
+    // The game-wide defaults (ui-44): Nunito for every control that doesn't choose a font, and
+    // hover tooltips as small paper notes in brown ink instead of Godot's grey box.
+    static Theme Defaults()
+    {
+        var theme = new Theme { DefaultFont = Ui.Font(650), DefaultFontSize = 15 };
+        var note = new StyleBoxFlat
+        {
+            BgColor = Paper,
+            BorderColor = new Color(Ink, 0.28f),
+            ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.25f),
+            ShadowSize = 6,
+            ShadowOffset = new Vector2(0, 2),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        note.SetBorderWidthAll(2);
+        note.SetCornerRadiusAll(12);
+        theme.SetStylebox("panel", "TooltipPanel", note);
+        theme.SetColor("font_color", "TooltipLabel", Ink);
+        theme.SetColor("font_shadow_color", "TooltipLabel", new Color(0, 0, 0, 0));
+        theme.SetFontSize("font_size", "TooltipLabel", 14);
+        theme.SetFont("font", "TooltipLabel", Ui.Font(700));
+        return theme;
+    }
+
+    // The one filled button in a window (Ui.MainButton): soft coral with cream words on paper,
+    // like the character page's Play, rather than re-inked (brown on brown would not read).
+    public static void MainButton(Button b)
+    {
+        if (!On) return;
+        b.SetMeta(Keep, true);
+        b.AddThemeFontOverride("font", Ui.Font(800));
+        foreach (var (state, c) in new[] { ("normal", Coral), ("hover", Coral.Lightened(0.1f)), ("pressed", Coral.Darkened(0.06f)), ("disabled", Coral.Lerp(Paper, 0.6f)) })
+        {
+            var s = new StyleBoxFlat { BgColor = c, ShadowColor = new Color(Coral.Darkened(0.4f), 0.3f), ShadowSize = state == "pressed" ? 2 : 5, ShadowOffset = new Vector2(0, state == "pressed" ? 1 : 3) };
+            s.SetCornerRadiusAll(20);
+            b.AddThemeStyleboxOverride(state, s);
+        }
+        foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color" }) b.AddThemeColorOverride(key, new Color(1f, 0.98f, 0.95f));
+        b.AddThemeColorOverride("font_disabled_color", new Color(1f, 0.98f, 0.95f, 0.7f));
+    }
+
+    // Controls that style themselves for paper are left as they are.
+    const string Keep = "warm_keep";
+
+    // A colour swatch shows a real colour (skin, hair, a mark's ink): never re-inked.
+    public static void KeepColours(Control c) => c.SetMeta(Keep, true);
+
+    // The ring round a swatch: cream on dark, brown ink on paper.
+    public static Color RingColour(float alpha) => On ? new Color(Ink, alpha) : new Color(Look.Cream, alpha);
+
+    // Content already on paper (a tooltip note): ink it like a window's, without a frame.
+    public static void InkInside(Control c)
+    {
+        if (On) c.SetMeta(Mark, true);
     }
 
     // Ui.Window calls this for its frame; panels framed by hand with Ui.Frame are found as they're added.
@@ -105,7 +163,7 @@ public partial class WarmLook : Node
     // looking again changes only what the panel has set since.
     static void Reink(Control c)
     {
-        if (c.HasMeta(Mark)) return;
+        if (c.HasMeta(Mark) || c.HasMeta(Keep)) return;
         foreach (var key in ColourKeys)
         {
             if (!c.HasThemeColorOverride(key)) continue;
