@@ -1,9 +1,9 @@
 # atmosphere-37: Clear the warm haze veil (dawn and noon)
 Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-37-haze
-PR: (opening)
+PR: #690
 
 ## Goal
 Modeling's world check on main (dawn 0.28, noon 0.5, dusk 0.74; renders on claude/painted-16-rock-value, w-0.28/0.5/0.74.png) and Render B's frost dawn wide shot both show a heavy warm haze washing out the view at dawn and noon, with distant trees nearly gone at dawn. A mild morning mist is fine; noon should be clear (PM, 09:51).
@@ -21,9 +21,10 @@ Fix:
 
 ## Progress log
 - 2026-10-17 09:58: built; the client compiles with 0 errors.
+- 2026-10-17 09:58: CI green on 38ecdf73; merged as #690.
 
 ## Open questions / blockers
 - Needs Render before/after (main vs this branch) at 0.28, 0.5 and 0.74.
 
 ## Next step
-Open the PR, ask Render B for the before/after, send the PM the green sha.
+None (done). Render B's before/after at 0.28, 0.5 and 0.74 is queued; tune in a new ticket if needed.

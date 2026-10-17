@@ -225,7 +225,13 @@ public static class ItemModels
         (Item)16 => (Bow, false),
         (Item)17 => (Arrow, false),
         // Red deer (animals-14), by number until the items reach main.
-        (Item)202 => (Venison, true),
+        (Item)202 => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
+        // Roast and burnt venison (model-20's icon pass: they had no model and drew as a plain blob).
+        // Tallow and grog (model-20's icon pass: their stand-in shapes read as plain blobs).
+        Item.Tallow => (Tallow, true),
+        Item.Grog => (Grog, true),
+        Item.CookedVenison => (k => Venison(k, new Color(0.45f, 0.24f, 0.11f), new Color(0.58f, 0.34f, 0.16f), new Color(0.72f, 0.52f, 0.28f)), true),
+        Item.BurntVenison => (k => Venison(k, new Color(0.1f, 0.08f, 0.07f), new Color(0.17f, 0.12f, 0.09f), new Color(0.3f, 0.26f, 0.21f)), true),
         (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
         (Item)204 => (AntlerItem, false),
         // Wool (animals-8), by number until the items reach main.
@@ -241,6 +247,11 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
+        // Rabbit (animals-22), by number until the items reach main: raw, roast and burnt, and its fur.
+        (Item)214 => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
+        (Item)215 => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
+        (Item)216 => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        (Item)217 => (RabbitFur, true),
         // Spade (Crafting's crafting-shovel).
         Item.Spade => (Spade, false),
         // Waterskins (survival-20).
@@ -535,6 +546,39 @@ public static class ItemModels
         k.Plain.Paint(Bone, 0.95f).Ellipsoid(new Vector3(0, 0.02f, 0.094f), new Vector3(0.011f, 0.01f, 0.009f), 7, 4);
     }
 
+    // A small dressed rabbit lying on its side: a rounded body, the two long hind legs
+    // folded forward under it, the short front legs tucked; skin and meat in two tones.
+    static void Rabbit(Kit k, Color meat, Color skin)
+    {
+        const float z = 1.3f;
+        k.Plain.Paint(skin).Ellipsoid(new Vector3(0, 0.035f, 0) * z, new Vector3(0.045f, 0.034f, 0.085f) * z, 10, 6);
+        k.Plain.Paint(meat).Ellipsoid(new Vector3(0, 0.03f, 0.06f) * z, new Vector3(0.034f, 0.028f, 0.035f) * z, 8, 5);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            k.Plain.Paint(skin, 0.95f).Loft(new Vector3(s * 0.03f, 0.03f, -0.06f) * z, new Vector3(s * 0.036f, 0.016f, 0.03f) * z, new MeshKit.Ring[]
+            {
+                new(0f, 0.022f * z, 0.02f * z), new(0.6f, 0.014f * z, 0.013f * z), new(1f, 0.008f * z, 0.008f * z),
+            }, 7, 0.2f);
+            k.Plain.Paint(meat, 0.95f).Loft(new Vector3(s * 0.022f, 0.024f, 0.07f) * z, new Vector3(s * 0.026f, 0.012f, 0.11f) * z, new MeshKit.Ring[]
+            {
+                new(0f, 0.012f * z, 0.011f * z), new(1f, 0.006f * z, 0.006f * z),
+            }, 6, 0.2f);
+        }
+    }
+
+    // A rabbit's pelt, rolled loosely: soft brown fur outside, the pale belly showing at
+    // one end and the white scut.
+    static void RabbitFur(Kit k)
+    {
+        var coat = new Color(0.55f, 0.42f, 0.3f);
+        k.Plant.Paint(coat).Loft(new Vector3(-0.07f, 0.035f, 0), new Vector3(0.07f, 0.035f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.028f, 0.03f), new(0.2f, 0.036f, 0.034f), new(0.8f, 0.035f, 0.034f), new(1f, 0.026f, 0.028f),
+        }, 10, 0.4f);
+        k.Plain.Paint(new Color(0.9f, 0.85f, 0.77f)).Ellipsoid(new Vector3(0.068f, 0.035f, 0), new Vector3(0.008f, 0.024f, 0.026f), 8, 4);
+        k.Plain.Paint(new Color(0.97f, 0.96f, 0.93f)).Ellipsoid(new Vector3(-0.072f, 0.04f, 0.012f), new Vector3(0.016f, 0.016f, 0.015f), 7, 4);
+    }
+
     // A tuft of shorn fleece.
     static void Wool(Kit k)
     {
@@ -604,12 +648,43 @@ public static class ItemModels
 
     static readonly Color DeerCoat = new(0.55f, 0.32f, 0.2f);
 
-    // A lean, dark-red cut of venison, no rind of fat like mutton.
-    static void Venison(Kit k)
+    // A lean cut of venison, no rind of fat like mutton: the body, a raised top and a
+    // pale sliver of sinew along one edge; raw dark red, roast browned, or burnt black.
+    static void Venison(Kit k, Color meat, Color top, Color sinew)
     {
-        k.Plain.Paint(new Color(0.40f, 0.12f, 0.11f)).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.12f, 0.035f, 0.08f), 8, 4, new Basis(Vector3.Up, 0.3f), 0.5f);
-        k.Plain.Paint(new Color(0.46f, 0.15f, 0.13f)).Ellipsoid(new Vector3(0.03f, 0.05f, 0.01f), new Vector3(0.07f, 0.025f, 0.05f), 7, 3, new Basis(Vector3.Up, 0.5f), 0.5f);
-        k.Plain.Paint(new Color(0.88f, 0.84f, 0.76f)).Ellipsoid(new Vector3(-0.07f, 0.04f, -0.02f), new Vector3(0.03f, 0.012f, 0.05f), 6, 3, new Basis(Vector3.Up, 0.3f), 0.5f);
+        k.Plain.Paint(meat).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.12f, 0.035f, 0.08f), 8, 4, new Basis(Vector3.Up, 0.3f), 0.5f);
+        k.Plain.Paint(top).Ellipsoid(new Vector3(0.03f, 0.05f, 0.01f), new Vector3(0.07f, 0.025f, 0.05f), 7, 3, new Basis(Vector3.Up, 0.5f), 0.5f);
+        k.Plain.Paint(sinew).Ellipsoid(new Vector3(-0.07f, 0.04f, -0.02f), new Vector3(0.03f, 0.012f, 0.05f), 6, 3, new Basis(Vector3.Up, 0.3f), 0.5f);
+    }
+
+    // A round cake of rendered tallow, pale and waxy with a slightly sunk top, set on a
+    // green leaf as it was poured to cool.
+    static void Tallow(Kit k)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            float a = 0.5f + i * 2.6f;
+            k.Plant.Paint(new Color(0.36f, 0.48f, 0.22f), 0.9f + i * 0.1f).Blade(new Vector3(Mathf.Cos(a) * -0.07f, 0.004f, Mathf.Sin(a) * -0.07f), new Vector3(Mathf.Cos(a) * 0.09f, 0.004f, Mathf.Sin(a) * 0.09f), Vector3.Up, 0.075f, 0.002f);
+        }
+        k.Plain.Paint(new Color(0.93f, 0.88f, 0.72f)).Loft(new Vector3(0, 0.008f, 0), new Vector3(0, 0.045f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.055f, 0.055f), new(0.7f, 0.058f, 0.058f), new(1f, 0.05f, 0.05f),
+        }, 12, 0.4f);
+        k.Plain.Paint(new Color(0.97f, 0.93f, 0.8f)).Ellipsoid(new Vector3(0, 0.043f, 0), new Vector3(0.048f, 0.006f, 0.048f), 12, 2);
+    }
+
+    // A small heap of grog: fired clay crushed to grit, with a few larger sharp crumbs
+    // of potsherd on top, so it reads as broken pot rather than earth.
+    static void Grog(Kit k)
+    {
+        var fired = new Color(0.68f, 0.38f, 0.24f);
+        k.Plain.Paint(fired, 0.8f).Ellipsoid(new Vector3(0, 0.01f, 0), new Vector3(0.08f, 0.02f, 0.07f), 10, 3, null, 0.4f);
+        for (int i = 0; i < 12; i++)
+        {
+            float a = i * 2.4f, r = 0.015f + H(i, 90) * 0.05f;
+            var at = new Vector3(Mathf.Cos(a) * r, 0.022f + (0.065f - r) * 0.35f, Mathf.Sin(a) * r);
+            k.Plain.Paint(fired, 0.7f + H(i, 91) * 0.55f).Ellipsoid(at, new Vector3(0.022f, 0.01f, 0.016f) * (0.8f + H(i, 92) * 0.7f), 4, 2, new Basis(Vector3.Up, a));
+        }
     }
 
     // A cast antler: a curved beam with a few tines, held by its base.

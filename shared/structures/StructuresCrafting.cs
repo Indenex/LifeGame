@@ -75,7 +75,7 @@ namespace LifeGame.Shared
                 // Batch devices (crafting-23, D-195): load one and it works through a batch on its own.
             new StructureDef
             {
-                Kind = 20,
+                Kind = 21,
                 Shape = new StructureShape
                 {
                     Name = "Settling tub",
@@ -93,7 +93,7 @@ namespace LifeGame.Shared
             },
             new StructureDef
             {
-                Kind = 21,
+                Kind = 22,
                 Shape = new StructureShape
                 {
                     Name = "Crushing block",
@@ -110,7 +110,7 @@ namespace LifeGame.Shared
             },
             new StructureDef
             {
-                Kind = 22,
+                Kind = 23,
                 Shape = new StructureShape
                 {
                     Name = "Tempering trough",

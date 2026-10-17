@@ -23,5 +23,7 @@ namespace LifeGame.Shared
         Wave, Cheer, Dance, Bow,
         // More emotes (anim-19).
         Clap, Shrug, Point,
+        // Craft loop (anim-24): crushing with a stone held in both hands.
+        Pound,
     }
 }

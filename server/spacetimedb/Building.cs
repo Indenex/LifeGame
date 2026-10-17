@@ -27,8 +27,9 @@ public enum StructureKind
     ClayTrough,
     HenCoop,
     StoneHearth,
-    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. Provisionally 20, 21, 22
-    // (an enum cannot carry explicit values); renumbered to 21, 22, 23 once the sundial (20) is on main.
+    Sundial,
+    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. 21, 22, 23 (an enum cannot carry
+    // explicit values, so a kind's number is its position here: after HenCoop 18, StoneHearth 19, Sundial 20).
     SettlingTub,
     CrushingBlock,
     TemperingTrough,
@@ -138,7 +139,7 @@ public static partial class Module
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
-        yaw = MathF.IEEERemainder(yaw, MathF.Tau);
+        yaw = Structures.Shape(k).FixedYaw ? 0f : MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
 
