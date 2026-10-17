@@ -87,6 +87,8 @@ public partial class SurvivalClient : Node
                 deathMarker.Show(fell, player);
             };
         }
+        // Picked mushrooms on the ground, in the hand and as the icon: Modeling's pile (model-34).
+        ItemModels.MushroomItem = Item.Mushrooms;
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
