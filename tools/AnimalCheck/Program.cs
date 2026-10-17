@@ -99,6 +99,48 @@ Player Me() => conn.Db.Player.Identity.Find(me!.Value)!;
 Pump(() => conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId) is not null, 20, "our position");
 var here = conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId)!;
 
+// --- The animal tick stays cheap (animals-32) ---
+// The server counts the compute each reducer uses (wasmtime fuel) and serves it at /v1/metrics. Watch
+// the animal tick for a few seconds with this one character connected and fail if a tick costs far more
+// than it did when it was last trimmed (animals-31: about 100 M fuel with 5 players; this lone character
+// wakes fewer flocks). The ceiling is generous on purpose: it catches a change that makes the tick heavy
+// again, not a small drift. A server that does not serve the metrics skips the check and says so.
+using var metricsHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+(double Fuel, double Ticks)? TickMetrics()
+{
+    try
+    {
+        string text = metricsHttp.GetStringAsync(uri.TrimEnd('/') + "/v1/metrics").GetAwaiter().GetResult();
+        double fuel = -1, ticks = -1;
+        foreach (var line in text.Split('\n'))
+        {
+            if (!line.Contains("reducer=\"animal_tick\"")) continue;
+            double value = double.Parse(line[(line.LastIndexOf(' ') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+            if (line.StartsWith("reducer_wasmtime_fuel_used{")) fuel = value;
+            else if (line.StartsWith("spacetime_reducer_plus_query_duration_sec_count{")) ticks = value;
+        }
+        return fuel >= 0 && ticks >= 0 ? (fuel, ticks) : null;
+    }
+    catch (Exception e) when (e is HttpRequestException or TaskCanceledException or FormatException)
+    {
+        return null;
+    }
+}
+
+const double TickFuelCeiling = 300_000_000;
+var tick0 = TickMetrics();
+Settle(8000);
+var tick1 = TickMetrics();
+if (tick0 is { } m0 && tick1 is { } m1 && m1.Ticks - m0.Ticks >= 5)
+{
+    double perTick = (m1.Fuel - m0.Fuel) / (m1.Ticks - m0.Ticks);
+    Console.WriteLine($"    animal tick: {perTick / 1e6:F1} M fuel per tick over {m1.Ticks - m0.Ticks:F0} ticks");
+    if (perTick > TickFuelCeiling) Fail($"the animal tick uses {perTick / 1e6:F0} M fuel per tick, over the {TickFuelCeiling / 1e6:F0} M ceiling");
+    Ok($"the animal tick is cheap ({perTick / 1e6:F1} M fuel per tick, ceiling {TickFuelCeiling / 1e6:F0} M)");
+}
+else
+    Ok("the animal tick cost was not checked (the server serves no usable metrics, or fewer than 5 ticks ran)");
+
 // Calls a reducer that must be refused and returns the refusal text.
 string Refused(string what, Action call)
 {
