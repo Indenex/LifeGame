@@ -37,6 +37,8 @@ public enum StructureKind
     Chest,
     // House building: a straw bed (25), a rest spot by data (RestSpots.cs).
     Bed,
+    // Claims: a trading stall (26, claims-31), sold from while its owner is away (Stall.cs).
+    Stall,
 }
 
 // One material a structure's current stage still needs.
