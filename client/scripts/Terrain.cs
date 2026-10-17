@@ -136,6 +136,13 @@ public partial class Terrain : Node3D
         }
 
         PumpRegions();
+        // The far regions are rebuilt a few a frame after the chunks land, so the shot
+        // waits for them too, or the outermost trees would be missing from it.
+        if (shotWaiting && dirtyRegions.Count == 0 && LoadedShot is { } waited)
+        {
+            shotWaiting = false;
+            TakeLoadedShot(waited);
+        }
         // Chunks build on worker threads, nearest first (env-12); the main thread only
         // snapshots what they need and puts finished ones in place.
         if (dirty.Count == 0 && pending.Count == 0) return;
@@ -145,11 +152,12 @@ public partial class Terrain : Node3D
         {
             GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for; {inRegion.Count} far chunks drawn in {regions.Count} regions");
             loading = null;
-            if (LoadedShot is { } shot) TakeLoadedShot(shot);
+            if (LoadedShot != null) shotWaiting = true;
         }
     }
 
     System.Diagnostics.Stopwatch? loading;
+    bool shotWaiting;
 
     // --screenshot-when-loaded=path.png saves one frame once every chunk in view is in
     // place, then quits: for renders of the far view, where a fixed delay may fire
