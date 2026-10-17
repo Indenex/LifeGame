@@ -383,6 +383,36 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     Console.WriteLine("The mended axe chops again");
 }
 
+// Crafting-26: a spade (a log, a stone and cordage, carved with a cutting tool) digs
+// faster than a digging stick. A second dig half a stick-cooldown after the first lands
+// with the spade in the bag; it would be refused with the stick alone.
+{
+    Gather(Item.Stone, 1);
+    while (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    Gather(Item.Fiber, 2);
+    Craft("carve.spade", 0, Item.Spade);
+    var (sx, sz) = (World.CellOf(x) + 3, World.CellOf(z) + 3);
+    WalkTo(sx * World.CellSize, sz * World.CellSize);
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+    lastError = null;
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 1 || lastError != null, 5, "the first spade dig");
+    if (lastError != null) Fail($"first spade dig: {lastError}");
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f * 0.85f, null);
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 2 || lastError != null, 5, "the quick second dig");
+    if (lastError != null || (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) < 2)
+        Fail($"the spade did not dig faster than a stick ({lastError})");
+    Console.WriteLine("A spade digs faster than a stick");
+}
+
 // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
 // sticks and cordage, three arrows from sticks and fiber, both with a cutting tool.
 {

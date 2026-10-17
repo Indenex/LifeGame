@@ -181,6 +181,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "carve.spade", Name = "Carve a spade", Doing = "Carving a spade", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Log), new Ingredient(Item.Stone), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Spade,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,

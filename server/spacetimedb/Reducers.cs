@@ -183,14 +183,15 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
+        // A digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick.
+        var stickTool = BestDigger(ctx);
+        float toolSpeed = stickTool is { } held ? Items.Def((Item)held.Item).DigSpeed : 1f;
         // Skilled diggers work faster.
-        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
+        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros / toolSpeed * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        var stickTool = BestTool(ctx, ItemTags.Digging);
         bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
@@ -216,6 +217,21 @@ public static partial class Module
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
+    }
+
+    // The quickest digging tool that still works, then the better made.
+    static InventoryItem? BestDigger(ReducerContext ctx)
+    {
+        InventoryItem? best = null;
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        {
+            if (!Items.IsKnown(row.Item) || (Items.Def((Item)row.Item).Tags & ItemTags.Digging) == 0) continue;
+            if (Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear)) continue;
+            if (best is not { } b) { best = row; continue; }
+            float speed = Items.Def((Item)row.Item).DigSpeed, bestSpeed = Items.Def((Item)b.Item).DigSpeed;
+            if (speed > bestSpeed || (speed == bestSpeed && row.Quality > b.Quality)) best = row;
+        }
+        return best;
     }
 
     [SpacetimeDB.Reducer]
