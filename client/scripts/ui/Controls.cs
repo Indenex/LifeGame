@@ -86,6 +86,8 @@ public static class Controls
         new("build_mode", new[] { Key.B }, "Build", "{key} to lay out a shelter"),
         new("journal", new[] { Key.J }, "Journal", "{key} opens your journal"),
         new("claim_open", new[] { Key.K }, "Your claim", "{key} shows the land you claim"),
+        // The friends list (claims-32; Justin picked O, ui-81).
+        new("friends", new[] { Key.O }, "Friends"),
         new("chat", new[] { Key.Enter, Key.KpEnter }, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
         // The equipment panel (ui-10, D-074, D-094); its hint waits until you first carry clothes.
