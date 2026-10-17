@@ -1,7 +1,7 @@
 # bugfix-45: Server refuses trunks, boulders and lean-to sides (continues bugfix-34)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: in_review
 Branch: claude/bugfix-45
 PR: (not yet)
 
@@ -10,11 +10,11 @@ D-182: the server, not just the client, stops a step into a tree trunk, a boulde
 
 ## Progress log
 - 2026-10-17: restored the enforcement from bugfix-34's history (reverted ceffdf60 on the server part): `PlayerCollision.cs` has `ServerGround : ICellGround`, `Obstacles.StepBlocked` and `Structures.StepCrossesLeanTo`. Client `TerrainCollision` uses the shared `Obstacles.At` again. env-21's shore stones moved into `Obstacles.ShoreStones` (the early-return bound is now 0.334) so the client, server and bots use one number. SpawnCheck's trunk/boulder probe restored.
-- 2026-10-17: running all five tools locally (SpawnCheck, LoadTest, SocialTest, CraftCheck, BuildTest x2); results below once done.
+- 2026-10-17: all pass locally against the enforcing server: SpawnCheck (incl. trunk and boulder probes), LoadTest 5 bots 5 s, SocialTest, CraftCheck, BuildTest clay-hut and lean-to,basket,fence.
 
 ## Open questions / blockers
 - Landmarks (giant trees, outcrops) are not enforced on the server yet.
 - Unstuck (bugfix-44) should also avoid trunks: add `Obstacles.At` to its `StandingFree` once this lands.
 
 ## Next step
-Read the local tool results, push, open the PR, send the green sha to the PM.
+Wait for CI on the PR, then send the green sha to the PM.
