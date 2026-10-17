@@ -48,6 +48,7 @@ public static class Controls
         new("camera_drag", Array.Empty<Key>(), "Turn the view (hold and drag)", "Hold the right mouse button and drag to turn the view", Mouse: MouseButton.Right, Name: "Turn the view (hold and drag)"),
         // The jump (bugfix-25) reads the "jump" action.
         new("jump", new[] { Key.Space }, "Jump", "{key} to jump", OnRequest: true, Name: "Jump"),
+        new("bug_report", new[] { Key.F8 }, null, "{key} reports a bug", Name: "Report a bug", Fixed: true),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),
@@ -55,6 +56,8 @@ public static class Controls
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
         // anim-12: sit down, press again to lie down; walking gets you up (Animation's Avatar).
+        // ui-48 (D-323): hold for the emote wheel, let go on one; a tap leaves it open to click.
+        new("emote", new[] { Key.Q }, "Wave, cheer, dance or bow (hold, point, let go)", "Hold {key} for a wave, a cheer, a dance or a bow", OnRequest: true, Name: "Emotes (hold)"),
         new("rest", new[] { Key.H }, "Sit or lie down", "{key} to sit down. Press it again to lie down; walk off to get up", OnRequest: true),
         new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you. Hold it to keep digging"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
