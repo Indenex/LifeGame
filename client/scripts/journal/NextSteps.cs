@@ -59,6 +59,7 @@ public static class NextSteps
         ["clay.grog"] = "Broken pottery, crushed fine, is the best thing to work into new clay.",
         ["clay.temper_grit"] = "Clean clay alone cracks in the fire. It needs something worked into it.",
         ["clay.temper_grog"] = "Crushed sherds temper clay even better than grit.",
+        ["clay.trough"] = "A great basin of coiled clay, fired hard in a kiln, holds far more water than any pot.",
         ["clay.pinch_pot"] = "Tempered clay can be pinched into a small pot.",
         ["build.table"] = "A crafting table in your claim, of sticks, cord and a log, is where finer things are made.",
         ["build.spindle"] = "A spindle station in your claim is where fleece is spun into yarn and yarn woven into cloth.",
