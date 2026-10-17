@@ -2,7 +2,7 @@
 the baked AO, in the Golden Skull way: each plate in three tones (a lit centre, a mid
 and a shade band at its edge), a dark line in every seam, a pale bevel on the upper
 edges and a darker one on the lower, growth rings following each plate's outline,
-loose strokes along them, and the AO laid over the top.
+and the AO laid over the top. No grain or stroke noise (D-319).
 
     python3 tools/art/pebble_shell/paint.py <bake dir> <out dir>
 
@@ -61,7 +61,7 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), 
     """Shared plate painting. dist: m to the nearest seam; maxd: that plate's largest
     dist; direc: unit direction towards the seam (y up)."""
     f = dist / np.maximum(maxd, 1e-6)
-    wob = (value_noise(uvx * 60, uvy * 60, 3) - 0.5) * 0.08
+    wob = (value_noise(uvx * 16, uvy * 16, 3) - 0.5) * 0.06
     contrast = 0.45 if worn else 1.0
     centre = 0.62
     col = pal["mid"][None] * np.ones_like(dist)[:, None]
@@ -82,10 +82,7 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), 
         for k, at in enumerate(rings):
             line = 1 - smooth(0.0, 0.003, np.abs(dist - maxd * at - wob * 0.02))
             col = col * (1 - 0.09 * line)[:, None]
-    # Strokes along the rings: colour varies across them, little along them.
-    stroke = value_noise(dist * 900 + uvx * 3, uvy * 3 + region * 7.3, 5) - 0.5
-    col = col * (1 + stroke * (0.03 if worn else 0.045))[:, None]
-    # Each plate a touch different.
+    # No stroke grain (D-319: no pitting); smooth colour blocks only.
     # Each plate a touch lighter or darker, a little warmer or cooler.
     rng = np.random.default_rng(11)
     value, warm = rng.normal(0, 0.025, 64), rng.normal(0, 0.008, 64)

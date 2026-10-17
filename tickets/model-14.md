@@ -17,6 +17,8 @@ Replace Pebble's code-built shell, which Justin rejected in #594 ("awful"), with
   - Builds clean on main. The turntable render looks right (renders/model-14-shell-turntable.png).
 - Left on R&D's branch: its research report (docs/art-pipeline.md), its ticket, and Python caches.
 
+- 2026-10-17 08:45: D-319 (no pitting). Took R&D's paint.py without stroke grain and with soft lit-centre edges (art-rnd-1 ff728e92), and rebuilt the shell assets here with Blender 4.2.3 headless (tools/art/get-blender.sh installs it). The output is pixel-identical to R&D's rebuild, so the pipeline reproduces across containers. Render: renders/model-14-shell-smooth.png.
+
 ## Open questions / blockers
 - (none; wider Blender rollout waits on Justin per the PM)
 

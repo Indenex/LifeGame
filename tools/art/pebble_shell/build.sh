@@ -5,7 +5,9 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../.." && pwd)
+# tools/art/get-blender.sh installs it.
 blender=${BLENDER:-$HOME/tools/blender/blender-4.2.3-linux-x64/blender}
+[ -x "$blender" ] || { echo "Blender not found at $blender; run tools/art/get-blender.sh or set BLENDER" >&2; exit 1; }
 work=$(mktemp -d)
 "$blender" -b --factory-startup -P "$here/blender_build.py" -- "$work" 2>&1 | grep -E "baked|exported|Error" || true
 python3 -I "$here/paint.py" "$work" "$work/tex"
