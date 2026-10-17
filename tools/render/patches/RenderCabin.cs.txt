@@ -34,14 +34,14 @@ public static partial class Module
     }
 
     // A forage patch (kind 1 mushrooms, 2 roots) where owner SQL can't insert (Timestamp column);
-    // dug = true leaves it unripe for a day.
+    // dug = 1 leaves it unripe for a day.
     [SpacetimeDB.Reducer]
-    public static void SeedForage(ReducerContext ctx, float x, float z, byte kind, bool dug)
+    public static void SeedForage(ReducerContext ctx, float x, float z, byte kind, byte dug)
     {
         ctx.Db.ForageBush.Insert(new ForageBush
         {
             Id = 0, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
-            RipeAt = dug ? ctx.Timestamp + new TimeDuration(86400L * 1_000_000) : ctx.Timestamp, Kind = kind,
+            RipeAt = dug != 0 ? ctx.Timestamp + new TimeDuration(86400L * 1_000_000) : ctx.Timestamp, Kind = kind,
         });
     }
 
