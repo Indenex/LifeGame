@@ -269,6 +269,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
+    LeaveHut(hut); // both are still inside after the "standing inside" check; its walls pen them in
     a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
     b.Wants = new();
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
