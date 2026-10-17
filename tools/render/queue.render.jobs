@@ -11,6 +11,7 @@ ui70-before-cold env RENDER_SIZE=1280x720 tools/render/scene.sh ui-70-before-col
 ui70-ghost env RENDER_SIZE=1280x720 tools/render/render.sh ui-70-ghost 489c3c10 "--time-of-day=0.45 --screenshot-hud --screenshot-hotbar --render-slowstart=0.05,45 --screenshot-delay=4"
 env38-smoke tools/render/render.sh env-38-smoke 4d1f443e "--debug-position=-44,-20 --render-cam=5,1.6,0,4 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.45 --wind=0.15 --view-radius=3 --screenshot-delay=120"
 ui70-ghost2 env RENDER_SIZE=1280x720 tools/render/render.sh ui-70-hotbar 8338c6dc "--time-of-day=0.45 --screenshot-hud --screenshot-hotbar --render-slowstart=0.05,45 --screenshot-delay=4" "--time-of-day=0.45 --screenshot-hud --screenshot-hotbar --render-slowstart=0.05,45 --screenshot-delay=4 --cold"
+env38-smoke2 tools/render/render.sh env-38-smoke2 4d1f443e "--debug-position=-44,-20 --render-cam=7,2.2,0,0.5 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.45 --wind=0.15 --view-radius=3 --screenshot-delay=120"
 bf6566-fire-after env RENDER_PATCH=tools/render/patches/cabin.sh RENDER_SIZE=960x540 tools/render/scene.sh bugfix-65-66-fire-after eebde123 tools/render/scenes/bugfix-65-66-fire.txt
 bf6566-fire-before env RENDER_PATCH=tools/render/patches/cabin.sh RENDER_SIZE=960x540 tools/render/scene.sh bugfix-65-66-fire-before 4bd3f9dd tools/render/scenes/bugfix-65-66-fire.txt
 bf6566-wet-after env RENDER_PATCH=tools/render/patches/cabin.sh RENDER_SIZE=960x540 tools/render/scene.sh bugfix-65-66-wet-after eebde123 tools/render/scenes/bugfix-66-wet.txt
