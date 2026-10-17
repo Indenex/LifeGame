@@ -3,7 +3,7 @@ using Godot;
 namespace LifeGame;
 
 // Painted clouds in the sky (env-39, Justin: volumetric clouds). The sky shader marches a
-// few steps through a slab of cloud 160 to 230 m up, drawn at half resolution: soft
+// few steps through a slab of cloud 160 to 200 m up, drawn at half resolution: soft
 // Ghibli cumulus with flat bases and domed tops, lit in soft painted bands (warm white on
 // top and on the sun's side, a cool lavender grey underneath), warm at golden hour, grey
 // and heavy in rain. They are the same cloud field as the shadows on the ground

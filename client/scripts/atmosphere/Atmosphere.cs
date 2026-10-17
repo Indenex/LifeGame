@@ -28,6 +28,7 @@ public partial class Atmosphere : Node3D
     static readonly StringName NPlayerPosition = "player_position";
     static readonly StringName NViewCameraPosition = "view_camera_position";
     static readonly StringName NTopColor = "top_color";
+    static readonly StringName NHazeColor = "haze_color";
     static readonly StringName NHorizonColor = "horizon_color";
     static readonly StringName NGroundColor = "ground_color";
     static readonly StringName NSunColor = "sun_color";
@@ -302,6 +303,7 @@ public partial class Atmosphere : Node3D
 
         ApplyLight();
         RenderingServer.GlobalShaderParameterSet(NFogTint, env.FogLightColor);
+        sky.SetShaderParameter(NHazeColor, env.FogLightColor);
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
         RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
@@ -635,6 +637,10 @@ public partial class Atmosphere : Node3D
     {
         Code = """
             shader_type sky;
+            // The painted clouds need the half-resolution pass switched on. The scene's
+            // fog is kept off the sky (it washed the whole dome to cream) and laid on
+            // here only along the horizon, where it meets the fogged land.
+            render_mode use_half_res_pass, disable_fog;
 
             uniform vec3 top_color : source_color;
             uniform vec3 horizon_color : source_color;
@@ -671,6 +677,8 @@ public partial class Atmosphere : Node3D
             uniform float cloud_quality = 1.0;
             uniform vec3 cloud_cam = vec3(0.0);
             uniform float rain_heavy = 0.0;
+            // The distance haze's colour (Environment.FogLightColor).
+            uniform vec3 haze_color : source_color = vec3(0.64, 0.71, 0.77);
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -686,19 +694,19 @@ public partial class Atmosphere : Node3D
                 float puff = texture(clouds, (w + cloud_offset) * 0.037 + vec2(0.31, 0.17)).r;
                 // Only the heart of each shadow patch is cloud (its soft fringe is shade
                 // spreading on the ground), so a fair sky keeps blue between the clouds.
-                float edge = mix(0.68, 0.2, cover) + 0.06;
-                return clamp((n + (puff - 0.5) * 0.16 - edge) / 0.22, 0.0, 1.0);
+                float edge = mix(0.68, 0.2, cover) + 0.12;
+                return clamp((n + (puff - 0.5) * 0.16 - edge) / 0.18, 0.0, 1.0);
             }
 
             // Painted cumulus seen along d: a few steps through the slab of cloud, each
             // cloud a dome on a flat base, lit in soft bands. Colour and opacity.
             vec4 painted_clouds(vec3 d, float cover, float upwind) {
                 const float base = 160.0;
-                const float depth = 70.0;
+                const float depth = 40.0;
                 float dy = max(d.y, 0.035);
                 float t0 = max(base - cloud_cam.y, 1.0) / dy;
                 float t1 = min((base + depth - cloud_cam.y) / dy, t0 + 350.0);
-                int n = cloud_quality > 1.5 ? 9 : 5;
+                int n = cloud_quality > 1.5 ? 12 : 7;
                 float dt = (t1 - t0) / float(n);
                 vec2 toward_sun = normalize(sun_dir.xz + vec2(0.0001)) * 22.0;
                 float sun_up = smoothstep(-0.1, 0.2, sun_dir.y);
@@ -710,9 +718,11 @@ public partial class Atmosphere : Node3D
                 vec3 shade_col = mix(vec3(0.70, 0.72, 0.84), horizon_color, 0.25);
                 float bright = 0.18 + 0.82 * daylight;
                 vec4 acc = vec4(0.0);
-                for (int i = 0; i < 9; i++) {
+                // A per-pixel offset to the steps hides the slices between them.
+                float jit = hash(d * 517.0);
+                for (int i = 0; i < 12; i++) {
                     if (i >= n || acc.a > 0.97) break;
-                    vec3 p = cloud_cam + d * (t0 + (float(i) + 0.5) * dt);
+                    vec3 p = cloud_cam + d * (t0 + (float(i) + jit) * dt);
                     float f = cloud_field(p.xz, cover);
                     if (f <= 0.0) continue;
                     float top = depth * sqrt(f);
@@ -731,6 +741,8 @@ public partial class Atmosphere : Node3D
                     c = mix(c, c * vec3(0.55, 0.6, 0.68), storm * (1.0 - up));
                     // Thin at the wispy edges, solid in the heart.
                     float a = inside * smoothstep(0.0, 0.35, f) * (0.55 + 0.3 * heavy);
+                    // The same opacity through the slab whatever the step count.
+                    a = 1.0 - pow(1.0 - a, 5.0 / float(n));
                     acc.rgb += (1.0 - acc.a) * a * c;
                     acc.a += (1.0 - acc.a) * a;
                 }
@@ -858,6 +870,8 @@ public partial class Atmosphere : Node3D
                             col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
                         }
                     }
+                    // The land's distance haze, along the horizon only.
+                    col = mix(col, haze_color, (1.0 - smoothstep(-0.05, 0.25, d.y)) * 0.5);
                     // Pastel: a touch lighter and softer by day, a rosy-peach band along
                     // the horizon at dawn and dusk, and a gentler blue at night.
                     if (cosy > 0.0) {
