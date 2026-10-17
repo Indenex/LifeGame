@@ -1035,3 +1035,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-255 — 2026-10-17 — First player roster: Pebble, Kit, Capling and Bramble; Modeling builds the shared base plus Kit first (follows D-254)
 **Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling first built the shared base plus Kit (model-6). Update: for the new models Modeling builds the shared base plus Pebble and Bramble first; Kit and Capling are deferred.
 **Who:** Justin, picking the roster (relayed by the PM), and then "for the new models, just focus on pebble and bramble for now".
+
+## D-256 — 2026-10-17 — Grass: back to main's original blade grass, lightly stylised toward the references (overrides D-246's grass restyle details; follows D-242)
+**Decision:** The grass stays main's original blade grass, with shape, height, density and wind unchanged. Only a light stylise toward the references is applied: colour, tone bands and lit tips, perhaps a few flowers. The shorter, denser and clumped rework is dropped, which overrides the grass details of D-246. The screenshot rule in D-246 stands. Owner: Environment.
+**Who:** Justin ("for the grass, just go back to the old one, and try to stylize it a bit to match references. It was far better.")
