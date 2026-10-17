@@ -6,7 +6,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 ref=${1:-2cdbc1c}
-ticket=ui-13
+ticket=${TICKET:-ui-13}
 source "$here/lib.sh"
 
 (cd "$tree/tools/CraftCheck" && dotnet build -c Release) >>"$log" 2>&1 || { echo "CraftCheck build failed, see $log"; exit 1; }
@@ -46,5 +46,9 @@ key e; sleep 5; snap      # 3. too little fiber: amber line, Make greyed
 key Escape; sleep 2
 sql "INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, $cam, 3, 50, 10, 0)"
 sleep 4
-key e; sleep 5; snap      # 2. enough fiber: counts and Make
+for it in "1, 50, 4" "2, 50, 2" "6, 60, 1"; do sql "INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, $cam, ${it}, 0)"; done
+sleep 4
+key e; sleep 6; snap      # 2. enough fiber: counts and Make (Tools tab)
+key Tab; sleep 6; snap    # 4. next category (Cord and weaving)
+key Tab; sleep 6; snap    # 5. Hide and clothing
 cat "$botlog" >>"$log"

@@ -210,6 +210,12 @@ bool Step(string line)
             stroll = (x + d[0], z + d[1]);
             break;
         }
+        case "pos":
+        {
+            var sp = conn.Db.PlayerPos.PlayerId.Find(myId);
+            Console.WriteLine($"puppet: pos mine {x:F1},{z:F1} server {sp?.X:F1},{sp?.Z:F1}");
+            break;
+        }
         case "arrive":
             Pump(60, () => stroll == null);
             break;

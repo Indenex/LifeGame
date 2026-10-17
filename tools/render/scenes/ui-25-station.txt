@@ -1,0 +1,67 @@
+# ui-25 (#494): station panel with picture cards. A claim marker, a crafting table and a
+# spindle station are built; the camera (puppet) walks up and presses E on each.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --render-cam=4.5,2.2,20,0.6
+wait 35
+goto 0 70
+pos
+# loaded players walk slower than the puppet, so items are given after the walk
+give 1 40 50
+give 3 10 50
+give 8 12 50
+give 15 2 50
+give 2 4 50
+give 197 1 60
+give 6 1 60
+wait 4
+wait 6
+place 2 0 -2 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+place 9 2 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+place 11 -2 0 0
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 6
+stroll 1.6 0.4
+arrive
+wait 6
+snap
+keydown e
+wait 6
+keyup e
+burst 2 5
+mouse 400 430
+wait 5
+snap
+keydown Tab
+wait 6
+keyup Tab
+wait 5
+snap
