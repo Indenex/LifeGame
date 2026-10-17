@@ -708,15 +708,35 @@ sealed class Bot
 
         if (missing.Contains(Item.Clay) && missing.Count == 1)
         {
-            digCell ??= NearestClay();
+            if (digCell == null)
+            {
+                digCell = NearestClay();
+                digClay = CountOf(Item.Clay);
+                digSince.Restart();
+                Console.WriteLine($"  {name}: digging clay at cell ({digCell.Value.Item1}, {digCell.Value.Item2})");
+            }
             var (cx, cz) = digCell.Value;
+            // A dig the server refused, or a cell that gives no clay for 25 s: say why, leave that cell alone, pick another.
+            if (LastError != null && digging)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: dig at ({cx}, {cz}) refused: {LastError}");
+                badCells.Add((cx, cz)); digCell = null; digging = false; LastError = null;
+                return;
+            }
+            if (digSince.Elapsed.TotalSeconds > 25 && CountOf(Item.Clay) <= digClay)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: no clay from ({cx}, {cz}) in 25 s (at {X:F1}, {Z:F1}, target {cx * World.CellSize - 0.8f:F1}, {cz * World.CellSize:F1})");
+                badCells.Add((cx, cz)); digCell = null; digging = false;
+                return;
+            }
+            if (CountOf(Item.Clay) > digClay) { digClay = CountOf(Item.Clay); digSince.Restart(); }
             float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
             if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
             else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
-                else Conn.Reducers.Dig(cx, cz);
+                else { digging = true; LastError = null; Conn.Reducers.Dig(cx, cz); }
             }
             return;
         }
@@ -777,6 +797,10 @@ sealed class Bot
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
     bool noneLogged;
+    readonly HashSet<(int, int)> badCells = new();
+    bool digging;
+    uint digClay;
+    readonly Stopwatch digSince = Stopwatch.StartNew();
     int exploreStep;
     readonly Stopwatch noneFor = Stopwatch.StartNew();
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
@@ -810,7 +834,7 @@ sealed class Bot
             for (int x = x0 - r; x <= x0 + r; x++)
                 for (int z = z0 - r; z <= z0 + r; z++)
                     if (Math.Max(Math.Abs(x - x0), Math.Abs(z - z0)) == r && World.IsClay(x, z)
-                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z))
+                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z) && !badCells.Contains((x, z)))
                         return (x, z);
         throw new Exception("No clay nearby");
     }
