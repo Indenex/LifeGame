@@ -1,9 +1,9 @@
 # survival-24: Several characters per login
 Lane: Survival (server side); UX builds the menu
 Owner: Survival thread
-Status: in_review
+Status: done
 Branch: claude/survival-characters
-PR: (see STATUS)
+PR: #589 (merged)
 
 ## Goal
 Justin: "a character menu when logging in, and a way to delete/create new characters." One login can hold up to `Characters.MaxPerLogin` (3, raisable) characters, each with its own position, bag, skills, needs, claims, mats and town seat. No world wipe; every existing player becomes character #1 of their login.
@@ -30,4 +30,4 @@ Justin: "a character menu when logging in, and a way to delete/create new charac
 - Admin status is per character (WorldAdmin is keyed by the key).
 
 ## Next step
-Wait for CI (PM re-runs after the release), send the PM the green sha; ask Integration to add CharacterCheck and tools/check-ctx-sender.sh to CI; UX replaces Main.AtCharacterMenu with the menu.
+Done and merged; nothing further on this ticket.

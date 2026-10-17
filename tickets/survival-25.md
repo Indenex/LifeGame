@@ -1,9 +1,9 @@
 # survival-25: Roast recipes come from the food data
 Lane: Survival
 Owner: Survival thread
-Status: in_review
+Status: done
 Branch: claude/survival-roast-data
-PR: (see STATUS)
+PR: #630 (merged)
 
 ## Goal
 A new roast food is one `RoastDef` entry in `shared/Foods.cs` and nothing else (D-206): `Processes.List` builds every roast recipe from `Foods.Roasts` instead of one `Roast(Item.X)` line each. Nothing changes for players except that the roast recipes now sit together in the recipe lists, ahead of the pot dishes (broth, stew, tallow).
@@ -15,4 +15,4 @@ A new roast food is one `RoastDef` entry in `shared/Foods.cs` and nothing else (
 - None.
 
 ## Next step
-Wait for CI, then send the PM the green sha.
+Done and merged; nothing further on this ticket.

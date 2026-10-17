@@ -1,9 +1,9 @@
 # survival-23: Rest spots offer to set your waking place
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_review
+Status: done
 Branch: claude/survival-rest-spot
-PR: (to open; stacked on #546 for the SurvivalCheck cases)
+PR: #575 (merged)
 
 ## Goal
 Justin: "sleeping mats/beds, etc. should offer to set your respawn point." Before, laying a mat silently made it your waking place (House building's RespawnPointHook). Now:
@@ -27,4 +27,4 @@ Justin: "sleeping mats/beds, etc. should offer to set your respawn point." Befor
 - A bed that is a structure (not a laid item) needs only its `StructureKind` on a `RestSpotDef` and a G offer for it; the client offer is mat-only today.
 
 ## Next step
-Open PR, wait for CI, send the green sha to the PM (session_01CvoSQGRe3vDvDXWQu2qruU); tell House building (session_01DD9p6EhSc5pJ8CjNmDFTrG) and UX (session_01V6qgbNbvTwniqW946KACLr).
+Done and merged; nothing further on this ticket.
