@@ -124,6 +124,7 @@ public static partial class Module
         if (!Structures.Exists(k))
             throw new Exception("Unknown structure");
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.PlaceStructure, 0.4, "One moment, you are laying out too quickly");
         var pos = RequirePos(ctx, player);
         float dx = x - pos.X, dz = z - pos.Z;
         if (dx * dx + dz * dz > Structures.PlaceRange * Structures.PlaceRange)
@@ -175,7 +176,7 @@ public static partial class Module
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
         if (!HasClaimRights(ctx, claim, Me(ctx)))
-            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
+            throw new Exception(BanRefusal(ctx, claim, Me(ctx)) ?? $"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.
@@ -239,6 +240,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
+        var caller = RequirePlayer(ctx);
+        RequirePace(ctx, caller.PlayerId, Pace.Dismantle, 0.3, "One moment, you are taking things down too quickly");
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
         bool allowed = s.Owner == Me(ctx);
         if (!allowed) CanClearStructure(ctx, s, ref allowed);

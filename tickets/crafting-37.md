@@ -1,7 +1,7 @@
 # crafting-37: Only a carried item comes to hand
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-equipfix
 PR: (see below)
 

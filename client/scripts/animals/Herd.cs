@@ -26,6 +26,11 @@ public partial class Herd : Node3D
     public Func<bool> Blocked = () => false;
     // Which way the player faces, flat and unit length.
     public Func<Vector3> Facing = () => Vector3.Forward;
+    // Whether goods at a spot are open to me: no claim covers it, or I own it or belong to it (the
+    // Claims rule, so the "Take eggs" prompt shows only when the server would let me; the server still checks).
+    public Func<float, float, bool> ClaimGoodsOpenAt = (_, _) => true;
+    // Whether a standing claim covers a spot (hung leather is its maker's, or the claim's people's, never a passer-by's).
+    public Func<float, float, bool> ClaimStandingAt = (_, _) => false;
     double lastStrike, lastStrikeHint = -1000;
 
     public override void _Ready()
@@ -75,7 +80,14 @@ public partial class Herd : Node3D
         Strike.Register("animals.bow", OfferShot);
         var racks = new HideRacks();
         AddChild(racks);
+        racks.ClaimGoodsOpenAt = (x, z) => ClaimGoodsOpenAt(x, z);
+        racks.ClaimStandingAt = (x, z) => ClaimStandingAt(x, z);
         racks.Bind(conn, terrain);
+        var snares = new Snares();
+        AddChild(snares);
+        snares.ClaimGoodsOpenAt = (x, z) => ClaimGoodsOpenAt(x, z);
+        snares.ClaimStandingAt = (x, z) => ClaimStandingAt(x, z);
+        snares.Bind(conn, terrain);
     }
 
     const float BoltHintRange = 10f;
@@ -226,7 +238,7 @@ public partial class Herd : Node3D
         foreach (var a in conn.Db.Animal.Iter())
         {
             float d = DistanceTo(a, at);
-            if (d <= best && a.Eggs > 0 && AnimalDefs.Get((byte)a.Species).Egg != null)
+            if (d <= best && a.Eggs > 0 && AnimalDefs.Get((byte)a.Species).Egg != null && ClaimGoodsOpenAt(a.X, a.Z))
                 (nearest, best) = (a, d);
         }
         if (nearest == null) return null;

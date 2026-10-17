@@ -36,4 +36,12 @@ public static partial class Module
         if (row is null) ctx.Db.CallBucket.Insert(next);
         else ctx.Db.CallBucket.PlayerId.Update(next);
     }
+
+    // For player-facing reducers that look the caller up with Me(ctx) instead of RequirePlayer
+    // (trades, claims, towns, troughs, doors, the character menu). A caller with no player row
+    // yet (the character menu) is not metered; the transport still limits it.
+    static void MeterCall(ReducerContext ctx)
+    {
+        if (ctx.Db.Player.Identity.Find(Me(ctx)) is { } p) SpendCall(ctx, p.PlayerId);
+    }
 }

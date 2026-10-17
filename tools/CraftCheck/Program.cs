@@ -522,6 +522,17 @@ if (runStations)
         Console.WriteLine($"Axe not equipped: {lastError}");
         EquipTool(Item.StoneAxe);
 
+        // When the item in hand leaves the bag the hand empties (crafting-38): hanging the axe on the belt does it.
+        {
+            var axeRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt);
+            conn.Reducers.PutOnBelt(axeRow.Id, 255);
+            Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the hand to empty when the axe went on the belt");
+            Console.WriteLine("The hand empties when its item leaves the bag");
+            conn.Reducers.TakeOffBelt(axeRow.Id, 65535);
+            Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt), 5, "the axe back in the bag");
+            EquipTool(Item.StoneAxe);
+        }
+
         // Walking off ends a job in progress (crafting-31): start a chop, step 3 m away from the tree, and the job
         // stops with no log and no further progress.
         {

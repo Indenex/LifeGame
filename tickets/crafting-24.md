@@ -1,7 +1,7 @@
 # crafting-24: Boiled eggs and fletched arrows
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-eggs (stacked on Animals' claude/animals-hen-5gkntn, #454)
 PR: (open after #454 merges)
 
@@ -17,4 +17,4 @@ Justin's hen answers (2026-10-17): Q1 (a) a boiled egg, roasted on a fire like m
 - Modeling: look for Boiled egg / Burnt egg items if they need a model (sent).
 
 ## Next step
-When #454 is on main: merge main into crafting-eggs, rerun build, push, open the PR, send the PM the green sha.
+None. Merged to main; kept for history.

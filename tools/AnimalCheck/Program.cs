@@ -74,6 +74,8 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM claim_member",
                 "SELECT * FROM hide_rack",
+                "SELECT * FROM snare_state",
+                "SELECT * FROM world_item",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -98,6 +100,49 @@ Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 20, "pl
 Player Me() => conn.Db.Player.Identity.Find(me!.Value)!;
 Pump(() => conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId) is not null, 20, "our position");
 var here = conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId)!;
+
+// --- The animal tick stays cheap (animals-32) ---
+// The server counts the compute each reducer uses (wasmtime fuel) and serves it at /v1/metrics. Watch
+// the animal tick for a few seconds with this one character connected and fail if a tick costs far more
+// than it did when it was last trimmed. Measured with this lone character on the animals-31 build: 47 M
+// and 51 M fuel per tick in two runs; with the per-chunk lookups of that PR switched off, 110 M; before
+// it, about 3x the trimmed figure. Fuel counts compute, not time, so a slow CI machine does not move it.
+// The ceiling sits between: well above the run-to-run spread, below a half-lost optimisation. A server that does not serve the metrics skips the check and says so.
+using var metricsHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+(double Fuel, double Ticks)? TickMetrics()
+{
+    try
+    {
+        string text = metricsHttp.GetStringAsync(uri.TrimEnd('/') + "/v1/metrics").GetAwaiter().GetResult();
+        double fuel = -1, ticks = -1;
+        foreach (var line in text.Split('\n'))
+        {
+            if (!line.Contains("reducer=\"animal_tick\"")) continue;
+            double value = double.Parse(line[(line.LastIndexOf(' ') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+            if (line.StartsWith("reducer_wasmtime_fuel_used{")) fuel = value;
+            else if (line.StartsWith("spacetime_reducer_plus_query_duration_sec_count{")) ticks = value;
+        }
+        return fuel >= 0 && ticks >= 0 ? (fuel, ticks) : null;
+    }
+    catch (Exception e) when (e is HttpRequestException or TaskCanceledException or FormatException)
+    {
+        return null;
+    }
+}
+
+const double TickFuelCeiling = 90_000_000;
+var tick0 = TickMetrics();
+Settle(8000);
+var tick1 = TickMetrics();
+if (tick0 is { } m0 && tick1 is { } m1 && m1.Ticks - m0.Ticks >= 5)
+{
+    double perTick = (m1.Fuel - m0.Fuel) / (m1.Ticks - m0.Ticks);
+    Console.WriteLine($"    animal tick: {perTick / 1e6:F1} M fuel per tick over {m1.Ticks - m0.Ticks:F0} ticks");
+    if (perTick > TickFuelCeiling) Fail($"the animal tick uses {perTick / 1e6:F0} M fuel per tick, over the {TickFuelCeiling / 1e6:F0} M ceiling");
+    Ok($"the animal tick is cheap ({perTick / 1e6:F1} M fuel per tick, ceiling {TickFuelCeiling / 1e6:F0} M)");
+}
+else
+    Ok("the animal tick cost was not checked (the server serves no usable metrics, or fewer than 5 ticks ran)");
 
 // Calls a reducer that must be refused and returns the refusal text.
 string Refused(string what, Action call)
@@ -378,7 +423,7 @@ g.Conn = DbConnection.Builder()
             {
                 "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM animal", "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree", "SELECT * FROM structure", "SELECT * FROM structure_door",
-                "SELECT * FROM my_inventory", "SELECT * FROM claim", "SELECT * FROM hide_rack",
+                "SELECT * FROM my_inventory", "SELECT * FROM claim", "SELECT * FROM hide_rack", "SELECT * FROM snare_state", "SELECT * FROM world_item",
             });
     })
     .OnConnectError(e => Fail($"second character connect: {e.Message}"))
@@ -482,6 +527,75 @@ g.Conn.Reducers.TakeLeather(rackM.Id);
 Pump(() => GCount(Item.Leather) > leatherB || g.LastError != null, 10, "a member's leather");
 if (GCount(Item.Leather) <= leatherB) Fail($"a member could not take leather hung in the claim: {g.LastError}");
 Ok("a claim member takes leather hung in the claim");
+
+// --- Rabbit snares (animals-34) ---
+// A snare set inside A's claim: it takes a rabbit that comes within reach, keeps the catch for its owner
+// and the claim's people only, re-sets itself, and falls apart after its last catch.
+TrapDef snareDef = Traps.Find(Item.RabbitSnare)!;
+float snx = mark.X + 4f, snz = mark.Z + 3f;
+AWalkTo(snx - 1f, snz);
+Give(Item.RabbitSnare, 1, 60);
+Hold(7, Item.RabbitSnare);
+lastError = null;
+conn.Reducers.PlaceItem((ushort)Item.RabbitSnare, 60, 0u, snx, snz, 0f);
+Pump(() => lastError != null || conn.Db.SnareState.Iter().Any(), 10, "the snare to be set down");
+if (lastError != null) Fail($"setting the snare down: {lastError}");
+var snareRow = conn.Db.SnareState.Iter().First();
+Ok("a rabbit snare is set down and the server keeps a row for it");
+
+// Rabbits stand where they are placed (no flock): three on the snare make a catch within a few seconds.
+int RabbitsAtSnare() => conn.Db.Animal.Iter().Count(a => a.Species == AnimalSpecies.Rabbit && MathF.Abs(a.X - snx) < 2f && MathF.Abs(a.Z - snz) < 2f);
+void WaitForCatch()
+{
+    for (int i = 0; i < 3; i++) Spawn(AnimalSpecies.Rabbit, snx + 0.1f * i, snz);
+    int before = RabbitsAtSnare();
+    Pump(() => conn.Db.SnareState.ItemId.Find(snareRow.ItemId) is { Caught: not 0 }, 60, "the snare to catch a rabbit");
+    Pump(() => RabbitsAtSnare() < before, 10, "the caught rabbit to leave the field");
+    Settle(300);
+    if (RabbitsAtSnare() != before - 1) Fail($"a catch took {before - RabbitsAtSnare()} rabbits, expected 1");
+}
+WaitForCatch();
+Ok("a rabbit within reach is caught, and only one");
+
+// The catch is kept for the owner and the claim's people.
+conn.Reducers.RemoveClaimMember(gid);
+Pump(() => !conn.Db.ClaimMember.Iter().Any(), 10, "B to be taken off the claim");
+GWalkTo(snx, snz);
+string stranger = GRefused("a stranger taking the catch", () => g.Conn.Reducers.CollectSnare(snareRow.ItemId));
+if (!stranger.Contains("not yours")) Fail($"a non-member taking the catch was refused with \"{stranger}\"");
+string stolen = GRefused("a stranger lifting the snare", () => g.Conn.Reducers.PickUp(snareRow.ItemId));
+if (stolen.Length == 0) Fail("a non-member lifted a snare that holds a catch");
+Ok($"a non-member cannot take the catch or lift the snare ({stranger}; {stolen})");
+lastError = null;
+conn.Reducers.PickUp(snareRow.ItemId);
+Pump(() => lastError != null, 10, "lifting a snare that holds a catch to be refused");
+if (!lastError!.Contains("catch")) Fail($"the owner lifting a snare that holds a catch was refused with \"{lastError}\"");
+Ok("a snare holding a catch is not lifted, even by its owner, until the catch is taken");
+
+// A member takes it: the rabbit's meat and fur land beside the snare, and the snare re-sets itself.
+conn.Reducers.AddClaimMemberByName(gname);
+Pump(() => conn.Db.ClaimMember.Iter().Any(), 10, "B to rejoin the claim");
+uint meatBefore = (uint)conn.Db.WorldItem.Iter().Count(i => i.Item == (ushort)Item.RawRabbit);
+g.LastError = null;
+g.Conn.Reducers.CollectSnare(snareRow.ItemId);
+Pump(() => g.LastError != null || conn.Db.SnareState.ItemId.Find(snareRow.ItemId) is { Caught: 0 }, 10, "a member to take the catch");
+if (g.LastError != null) Fail($"a claim member could not take the catch: {g.LastError}");
+Pump(() => (uint)conn.Db.WorldItem.Iter().Count(i => i.Item == (ushort)Item.RawRabbit) > meatBefore, 10, "the rabbit's meat to appear");
+if (!conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.RabbitFur)) Fail("no rabbit fur beside the snare");
+if (Durability.Used(conn.Db.WorldItem.Id.Find(snareRow.ItemId)!.Wear) != 1) Fail("the snare did not count its first catch");
+Ok("a claim member takes the catch (meat and fur beside the snare); the snare re-sets itself and counts the catch");
+
+// It lasts a set number of catches, then falls apart.
+for (int n = 2; n <= snareDef.Catches; n++)
+{
+    WaitForCatch();
+    lastError = null;
+    conn.Reducers.CollectSnare(snareRow.ItemId);
+    Pump(() => lastError != null || conn.Db.SnareState.ItemId.Find(snareRow.ItemId) is not { Caught: not 0 }, 10, $"catch {n} to be taken");
+    if (lastError != null) Fail($"taking catch {n}: {lastError}");
+}
+Pump(() => conn.Db.WorldItem.Id.Find(snareRow.ItemId) == null && conn.Db.SnareState.ItemId.Find(snareRow.ItemId) == null, 10, "the snare to fall apart");
+Ok($"the snare falls apart after {snareDef.Catches} catches");
 g.Conn.Disconnect();
 
 Console.WriteLine("Animal check passed");

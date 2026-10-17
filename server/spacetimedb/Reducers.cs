@@ -70,6 +70,7 @@ public static partial class Module
         name = Names.Normalize(name);
         if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.ChangeName, 1.0, "One moment before you change your name again");
         RequireNameFree(ctx, name, player.PlayerId);
         ctx.Db.Player.Identity.Update(player with { Name = name });
         if (ctx.Db.Character.Key.Find(player.Identity) is { } character) ctx.Db.Character.Key.Update(character with { Name = name });
@@ -109,6 +110,7 @@ public static partial class Module
             float dist = MathF.Sqrt(dx * dx + dz * dz);
             if (dist > allowed)
             {
+                if (dist - allowed > SuspectMoveExcess) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveOverBudget);
                 x = fromX + dx / dist * allowed;
                 z = fromZ + dz / dist * allowed;
                 dist = allowed;
@@ -116,11 +118,14 @@ public static partial class Module
             var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
             if (bank is null) ctx.Db.MoveBank.Insert(left);
             else ctx.Db.MoveBank.PlayerId.Update(left);
+            (x, z) = LimitByStamina(ctx, player.PlayerId, fromX, fromZ, x, z);
         }
 
         // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).
         if (!flyingNow && PlayerStepBlocked(ctx, player.PlayerId, fromX, fromZ, x, z))
         {
+            // Honest players bump into things all the time; only a step that lands deep inside one counts.
+            if (!StandingFree(ctx, x, z, PlayerBody * 0.5f)) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveInsideObstacle);
             x = fromX;
             z = fromZ;
         }
@@ -199,6 +204,9 @@ public static partial class Module
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
+    // Lets a lane refuse a pick-up by throwing (Traps.cs: a snare holding a catch).
+    static partial void PickUpGuard(ReducerContext ctx, WorldItem item);
+
     [SpacetimeDB.Reducer]
     public static void PickUp(ReducerContext ctx, ulong itemId)
     {
@@ -206,6 +214,7 @@ public static partial class Module
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
         RequireClaimAccess(ctx, item.X, item.Z);
+        PickUpGuard(ctx, item);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
@@ -217,6 +226,7 @@ public static partial class Module
     public static void Drop(ReducerContext ctx, ushort item, byte quality)
     {
         var pos = RequirePos(ctx, RequirePlayer(ctx));
+        RequireRoomForItem(ctx, pos.ChunkX, pos.ChunkZ);
         var stack = FindStack(ctx, Me(ctx), (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
@@ -370,5 +380,6 @@ public static partial class Module
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         else
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - count });
+        ClearHandIfGone(ctx, stack.Owner, stack.Item);
     }
 }
