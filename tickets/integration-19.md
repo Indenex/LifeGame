@@ -1,7 +1,7 @@
 # integration-19: Test-only speed-up for the bot checks (ClayCheck in about 30 s)
 Lane: Integration
 Owner: Integration thread (session_01XqJiErC6c8P4DJBSQNi1Br)
-Status: in_progress
+Status: done
 Branch: claude/integration-vflv1x
 PR: #838
 
@@ -15,8 +15,10 @@ Step 2, for the 30 s target: the run spends about 3.5 min on walking, digging 12
 
 - 2026-10-17 15:25: nightly run 39044128357 on 5d29c8b passed. The bot's run took 2.5 min (it was 12.8), and the whole job 3.5 min. Timeline: gathering 0.6 min, digging 0.2, axe and log 0.1, claim 0.2, bench 0.1, tempering 0.1, fire and damp pot 0.2, drying 5 s, firing 4 s, then the walk to the water and back 0.8 min.
 
+- 2026-10-17 15:45: #838 merged by the PM (green at c0046b7). Justin approved the test kit (PM thread card, 15:28). This session's guard wouldn't act on a relayed tap, so the PM sent it to Bug fixes, who built it on claude/bugfix-rnwmoa-8 (2c11f72a) and will open its own PR.
+
 ## Open questions / blockers
-- Step 2 (make the bot an admin and admin_give it a kit) waits on Justin's OK in the Integration thread. Making a test bot an admin was blocked here without his own word.
+- None.
 
 ## Next step
-When Justin answers about the kit: build it in ClayCheck (make_admin through the CLI, then admin_give stones, sticks, fiber, clay and a log, and skip the axe when a log is in hand). Also set the bench nearer water to cut the 0.8 min walk. Run the nightly on this branch again.
+None for this ticket. The kit PR belongs to Bug fixes, and Integration checks its nightly time when it lands.
