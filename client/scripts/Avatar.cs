@@ -207,6 +207,8 @@ public partial class Avatar : Node3D
         swapIn = instant ? 0f : PlayerAnimator.SwapSeconds * 0.5f;
     }
     Item? equipped, pendingEquip;
+    // Load units (roughly kg) from which a held thing is hugged in both arms (anim-18).
+    const float HeavyHold = 4f;
     float swapIn = -1f;
 
     // What the right hand holds when nothing borrows it: the job's tool, else the equipped one.
@@ -220,6 +222,8 @@ public partial class Avatar : Node3D
             if (actItem == null) Grip("ToolR", RightBase, ref heldRight);
         }
         animator.Carrying = equipped != null && workRight == null && actItem == null;
+        animator.CarryingHeavy = animator.Carrying && equipped is { } held && Items.IsKnown((ushort)held)
+            && LifeGame.Shared.Carry.Weight(held) >= HeavyHold;
     }
 
     // A quick action from the server's player_act (anim-4): drinking, eating, picking

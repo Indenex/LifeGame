@@ -13,11 +13,17 @@ static class AudioHooks
         RoastSounds.Connect(conn);
         StorageSounds.Connect(conn);
         StructureSounds.Connect(conn);
+        PotSounds.Connect(conn);
+        EmoteSounds.Connect(conn);
+        LampSounds.Connect(conn);
     }
 
     public static void Tick(double dt)
     {
         ToolSounds.Tick(dt);
         RoastSounds.Tick(dt);
+        PotSounds.Tick(dt);
+        EmoteSounds.Tick(dt);
+        LampSounds.Tick(dt);
     }
 }

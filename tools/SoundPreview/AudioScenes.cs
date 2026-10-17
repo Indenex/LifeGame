@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store" };
+    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -30,6 +30,40 @@ static class AudioScenes
                 }
                 break;
             }
+            // Pot scene: a thin broth bubbling for 6 s, then a thick stew.
+            case "pot":
+            {
+                var prng = new Random((int)(a * 100));
+                for (double t0 = Math.Floor(a * 20) / 20; t0 < b; t0 += 0.05)
+                {
+                    if (t0 < a) continue;
+                    bool stew = t0 > 6;
+                    double r = (stew ? 0.9 : 1.8) * 0.05, roll = prng.NextDouble();
+                    if (prng.NextDouble() >= r) continue;
+                    mix.Play(stew ? (roll < 0.55 ? CueDefs.BubbleBig : roll < 0.85 ? CueDefs.BubbleSmall : CueDefs.BubblePop) : (roll < 0.6 ? CueDefs.BubbleSmall : roll < 0.9 ? CueDefs.BubblePop : CueDefs.BubbleBig));
+                }
+                break;
+            }
+            // Emote scene: wave at 1 s, cheer at 4 s, dance at 7 s, bow at 12 s (times as in EmoteSounds).
+            case "emote":
+                if (At(1.2)) mix.Play(CueDefs.EmoteSwish, 0.9f);
+                if (At(2.65)) mix.Play(CueDefs.EmoteSwish, 0.6f);
+                if (At(4.28)) mix.Play(CueDefs.EmoteClap);
+                if (At(4.6)) mix.Play(CueDefs.EmoteTap, 0.8f);
+                if (At(5.08)) mix.Play(CueDefs.EmoteClap);
+                if (At(5.4)) mix.Play(CueDefs.EmoteTap, 0.8f);
+                for (int i = 0; i < 7; i++)
+                    if (At(7.4 + 0.4 * i)) mix.Play(CueDefs.EmoteTap, i % 2 == 0 ? 1f : 0.65f);
+                if (At(12.15)) mix.Play(CueDefs.EmoteSwish, 0.7f);
+                if (At(13.25)) mix.Play(CueDefs.EmoteSwish, 0.8f);
+                break;
+            // Lamp scene: the wick catches (1 s), flutters and ticks, then the flame goes out (14 s).
+            case "lamp":
+                if (At(1)) mix.Play(CueDefs.LampLight);
+                foreach (double t in new[] { 3.0, 7.0, 10.0 }) if (At(t)) mix.Play(CueDefs.LampFlutter);
+                foreach (double t in new[] { 5.0, 9.0, 12.0 }) if (At(t)) mix.Play(CueDefs.LampTick);
+                if (At(14)) mix.Play(CueDefs.LampOut);
+                break;
             // Store scene: basket put and take, jar put and take, 1.5 s apart.
             case "store":
                 if (At(1)) mix.Play(CueDefs.BasketPut);

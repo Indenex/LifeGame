@@ -1,7 +1,7 @@
 # anim-17: Chibi doggy paddle
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-17 (from main)
 PR: #689
 

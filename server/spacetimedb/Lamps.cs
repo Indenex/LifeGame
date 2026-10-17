@@ -54,7 +54,7 @@ public static partial class Module
             throw new Exception("You have set down enough lamps already");
 
         byte quality = lamp.Quality;
-        uint mark = lamp.Wear;
+        uint mark = MarkFromStack(lamp.Wear, lamp.Maker);
         RemoveFromStack(ctx, lamp, 1);
         Take(ctx, Item.Tallow, 1);
         ctx.Db.Lamp.Insert(new Lamp
@@ -142,7 +142,7 @@ public static partial class Module
         if (left > 0) throw new Exception("It is burning. Bring tallow to keep it going");
         RequireClaimAccess(ctx, lamp.X, lamp.Z);
         ctx.Db.Lamp.Id.Delete(lamp.Id);
-        AddToInventory(ctx, Me(ctx), Item.ClayLamp, 1, lamp.Quality, lamp.Mark);
+        AddToInventory(ctx, Me(ctx), Item.ClayLamp, 1, lamp.Quality, lamp.Mark, MakerOfMark(lamp.Mark));
     }
 
     // A burning fire or a lit lamp close enough to light a lamp from.

@@ -59,6 +59,9 @@ public static partial class Module
         public float ThirstEaseLeft;
         [Default(0f)]
         public float ThirstEaseRate;
+        // How you woke after your last death (RestSpots.WokeAtEdge / WokeAtRestSpot / WokeBedGone), for the wake-up message.
+        [Default((byte)0)]
+        public byte WakeKind;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -156,7 +159,7 @@ public static partial class Module
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
-            AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear);
+            AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear, stack.Maker);
         }
         else
             Take(ctx, (Item)item, 1);
@@ -202,7 +205,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         RemoveFromStack(ctx, stack, 1);
-        AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear);
+        AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear, stack.Maker);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 
@@ -339,7 +342,7 @@ public static partial class Module
         }
 
         var (sx, sz) = WildernessEdge(ctx);
-        RespawnPointHook(ctx, player.PlayerId, ref sx, ref sz);
+        byte wakeKind = ChooseWake(ctx, player.PlayerId, ref sx, ref sz);
         var spawn = new PlayerPos
         {
             PlayerId = player.PlayerId,
@@ -371,6 +374,7 @@ public static partial class Module
             DiedAt = ctx.Timestamp,
             WokeX = sx,
             WokeZ = sz,
+            WakeKind = wakeKind,
         }, spawn, online: true));
         Log.Info($"{player.Name} died of {cause}");
     }
@@ -498,8 +502,6 @@ public static partial class Module
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
     // when weather arrives.
-    // House building implements this: a player with a sleeping mat laid out wakes on it.
-    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z);
 
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 

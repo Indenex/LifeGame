@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace LifeGame;
 
-// Ceramics: clay pieces, kilns, simmering pots, lamps and the clay news.
+// Ceramics: clay pieces, kilns, simmering pots, lamps, troughs, marks and the clay news.
 public static partial class Subscriptions
 {
     [SubscriptionQueries]
@@ -14,5 +14,8 @@ public static partial class Subscriptions
         $"SELECT * FROM lamp WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM trough_water",
+        // Maker's marks (ceramics-15): every player's glyph and colour, and the maker of set-down jars and troughs.
+        "SELECT * FROM player_mark",
+        "SELECT * FROM structure_mark",
     };
 }

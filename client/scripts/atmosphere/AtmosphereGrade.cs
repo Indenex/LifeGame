@@ -63,7 +63,7 @@ public partial class Atmosphere
             Offsets = new[] { 0f, 0.5f, 0.85f, 1f },
             Colors = new[]
             {
-                new Color(0.08f, 0.06f, 0.11f), new Color(0.53f, 0.52f, 0.50f),
+                new Color(0.06f, 0.045f, 0.09f), new Color(0.53f, 0.52f, 0.50f),
                 new Color(0.86f, 0.84f, 0.79f), new Color(0.97f, 0.95f, 0.90f),
             },
         },
@@ -134,7 +134,8 @@ public partial class Atmosphere
         // The Golden Skull packs are muted, but lighting already greys them in engine, so
         // saturation stays where it is; the curve's warm mids do the yellowing.
         // Cosy: flatter contrast and a gentle saturation lift on the plum-cream curve.
-        env.AdjustmentContrast = 1.08f + 0.06f * grade - 0.1f * soft;
+        // (Halved from 0.1 in atmosphere-37: with the lifted darks it read as milky haze.)
+        env.AdjustmentContrast = 1.08f + 0.06f * grade - 0.05f * soft;
         env.AdjustmentSaturation *= 1f + 0.12f * soft;
         env.AdjustmentColorCorrection = grade <= 0.5f ? null : soft > 0.5f ? (cosyCurve ??= CosyCurve()) : (curve ??= FadedCurve());
         if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)

@@ -92,6 +92,7 @@ public partial class UseKey : CanvasLayer
             hintLeft = 0f;
             var others = Use.Others(Player(), Facing(), offer);
             if (others.Count > 0) secondText = "also: " + others[0].Prompt;
+            else if (offer.Target is { } target && Use.MakerAt(target) is { } maker) secondText = $"made by {maker}";
         }
         else if (!Blocked())
         {
@@ -108,8 +109,8 @@ public partial class UseKey : CanvasLayer
         holdGlow = Mathf.MoveToward(holdGlow, HoldRepeat.Active ? 1f : 0f, dt * 5f);
         holdClock += dt;
         float pulse = holdGlow * (0.6f + 0.4f * Mathf.Sin(holdClock * 6f));
-        capStyle.BorderColor = new Color(Look.Cream, 0.8f).Lerp(new Color(1f, 0.82f, 0.5f, 1f), pulse);
-        capStyle.ShadowColor = new Color(0, 0, 0, 0.25f).Lerp(new Color(1f, 0.75f, 0.35f, 0.45f), pulse);
+        capStyle.BorderColor = CapEdge.Lerp(new Color(1f, 0.82f, 0.5f, 1f), pulse);
+        capStyle.ShadowColor = (WarmLook.On ? new Color(0.15f, 0.08f, 0.05f, 0.25f) : new Color(0, 0, 0, 0.25f)).Lerp(new Color(1f, 0.75f, 0.35f, 0.45f), pulse);
         capStyle.ShadowSize = 5 + (int)(4 * pulse);
 
         // Fade rather than pop, so walking past things stays calm.
@@ -159,6 +160,8 @@ public partial class UseKey : CanvasLayer
         GetViewport().SetInputAsHandled();
     }
 
+    static Color CapEdge => WarmLook.On ? new Color(WarmLook.Ink, 0.5f) : new Color(Look.Cream, 0.8f);
+
     // A small rounded key, like a keyboard cap.
     internal static Control KeyCap(string key, out Label label)
     {
@@ -183,6 +186,17 @@ public partial class UseKey : CanvasLayer
         style.SetBorderWidthAll(1);
         style.BorderWidthBottom = 3;
         style.SetCornerRadiusAll(6);
+        // On the warm look (ui-54) the cap is a little paper key with a brown letter, like the bar's buttons.
+        if (WarmLook.On)
+        {
+            style.BgColor = new Color(WarmLook.Paper, 0.92f);
+            style.BorderColor = CapEdge;
+            style.ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.25f);
+            style.SetCornerRadiusAll(8);
+            label.AddThemeColorOverride("font_color", WarmLook.Ink);
+            label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0));
+            label.AddThemeFontOverride("font", Ui.Font(800));
+        }
         cap.AddThemeStyleboxOverride("panel", style);
         cap.AddChild(label);
         return cap;

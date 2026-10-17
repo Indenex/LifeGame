@@ -11,12 +11,14 @@ namespace LifeGame;
 public sealed record PlayerFacts(
     uint Id, string Name, float Distance,
     string? Town, string[] Offices, (Glyph glyph, Color ink)? Mark,
-    bool AskedYou, bool Trading, bool MayInvite, string? InviteWhyNot);
+    bool AskedYou, bool Trading, bool MayInvite, string? InviteWhyNot,
+    bool GroupAskedYou = false, string? GroupWhyNot = null);
 
 // Right-click a player (ui-35, Justin: "make it so right clicking a person opens a menu to
 // invite them to group, trade, etc. just being near them and hitting E shouldn't do
 // anything"). A quick right click (CameraDrag.Clicked) on someone within Reach opens a
-// small menu beside the cursor: Trade, Whisper, Invite to town, Inspect, Invite to group.
+// small menu beside the cursor: Trade, Whisper, Invite to town, Inspect, Invite to group
+// (ui-38's group shell; Join their group while they're asking you).
 // Items you can't use now are greyed, with the reason on hover. The server checks every
 // action again (reach for trades, roster rights for invites). Esc or a click away closes it.
 public partial class PlayerMenu : CanvasLayer
@@ -29,6 +31,9 @@ public partial class PlayerMenu : CanvasLayer
     public Action<uint> AskTrade = _ => { };
     public Action<bool> AnswerTrade = _ => { };
     public Action<uint> InviteToTown = _ => { };
+    public Action<uint> InviteToGroup = _ => { };
+    // Says yes to the group invitation from this player.
+    public Action<uint> JoinGroup = _ => { };
     public Action<string> OpenChat = _ => { };
     // True while something else has the screen (a panel, placing, typing).
     public Func<bool> Blocked = () => false;
@@ -130,6 +135,8 @@ public partial class PlayerMenu : CanvasLayer
 
         if (f.AskedYou)
             Item("Accept trade", null, () => AnswerTrade(true));
+        if (f.GroupAskedYou)
+            Item("Join their group", null, () => JoinGroup(f.Id));
         Item("Trade",
             f.Trading ? "You're already trading"
             : f.Distance > Social.TradeReach ? $"Walk closer to trade (within {Social.TradeReach:0} m)"
@@ -142,7 +149,8 @@ public partial class PlayerMenu : CanvasLayer
             Item("Invite to town", f.MayInvite ? null : f.InviteWhyNot, () => InviteToTown(f.Id));
         Item(inspecting ? "Inspect  ▾" : "Inspect", null, () => { inspecting = !inspecting; Fill(); }, closes: false);
         if (inspecting) column.AddChild(Details(f));
-        Item("Invite to group", "Coming soon", () => { });
+        if (!f.GroupAskedYou)
+            Item("Invite to group", f.GroupWhyNot, () => InviteToGroup(f.Id));
 
         // Beside the cursor, kept on screen.
         frame.ResetSize();
@@ -250,7 +258,19 @@ public static class PlayerMenuFacts
 
         return new PlayerFacts(them, p.Name, d, town, offices, mark,
             AskedYou: incomingTradeFrom == them, Trading: conn.Db.MyTrade.Count > 0,
-            MayInvite: mayInvite, InviteWhyNot: whyNot);
+            MayInvite: mayInvite, InviteWhyNot: whyNot,
+            GroupAskedYou: conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == them && i.InviteeId == me),
+            GroupWhyNot: GroupWhyNot(conn, me, them, p.Name, d));
+    }
+
+    // Why you can't invite them to your group now, or null when you can (the server checks again).
+    static string? GroupWhyNot(DbConnection conn, uint me, uint them, string name, float distance)
+    {
+        if (conn.Db.MyGroup.Iter().Any(m => m.PlayerId == them)) return $"{name} is in your group";
+        if (conn.Db.MyGroup.Count >= Groups.MaxMembers) return $"Your group is full ({Groups.MaxMembers})";
+        if (conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == me && i.InviteeId == them)) return $"Waiting for {name} to answer";
+        if (distance > Groups.InviteReach) return "Walk closer to invite them";
+        return null;
     }
 
     // The other player under a screen point: their body or name tag, nearest first.

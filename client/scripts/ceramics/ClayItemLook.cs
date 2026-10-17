@@ -93,6 +93,8 @@ public static class ClayItemLook
             Item.UnfiredLamp => Pot(ClayForm.Lamp, ClayStage.Drying, false, null, glyph),
             Item.StorageJar => Jar(ClayStage.Fired, glyph),
             Item.UnfiredStorageJar => Jar(ClayStage.Drying, glyph),
+            Item.UnfiredClayTrough => Trough(ClayStage.Drying, glyph),
+            Item.ClayTrough => Trough(ClayStage.Fired, glyph),
             _ => null,
         };
         if (markKnown) MarkedMeshes[(item, decor)] = mesh;
@@ -118,8 +120,8 @@ public static class ClayItemLook
     }
 
     // A trough is kiln-fired too (ceramics-13).
-    static Mesh Trough(ClayStage stage) =>
-        Baked(PotMesh.For(ClayForm.Trough, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
+    static Mesh Trough(ClayStage stage, uint decor = 0) =>
+        Baked(PotMesh.For(ClayForm.Trough, 2), ClayLook.WithMark(ClayLook.For(stage, FireKind.Kiln, 0f, 2), decor, ClayForm.Trough, PotView.Size), PotView.Size);
 
     // Roof tiles are kiln-fired too.
     static Mesh Tile(ClayStage stage) =>

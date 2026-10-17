@@ -1,7 +1,7 @@
 # anim-14: Blinking and expressions (cutesy #16)
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-14 (on main since #613 and #644 merged)
 PR: #647
 
