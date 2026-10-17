@@ -1273,3 +1273,7 @@ Owner: Claims.
 ## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
 **Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
 **Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
+
+## D-314 — 2026-10-17 — UI look: "Warm paper windows"
+**Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
+**Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
