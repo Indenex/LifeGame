@@ -45,6 +45,9 @@ namespace LifeGame.Shared
         public bool Breeds = true;
         // Bleats like a sheep (Atmosphere's flock sound); deer have their own calls (Audio).
         public bool Bleats;
+        // Which voice set Audio plays for it ("sheep", "deer", "hen", "rabbit"): the key to switch on, not the species
+        // number or the model plan. A new species with an existing voice just names it.
+        public string Voice = "";
 
         // What butchering gives: meat (grown / young), a hide and an extra for grown animals.
         public Item Meat;
@@ -83,7 +86,7 @@ namespace LifeGame.Shared
                 Id = Sheep, Key = "animal.sheep", Name = "Sheep",
                 Walk = 1.0f, Trot = 1.7f, Run = 4.4f, Notice = 14f, CalmSpeed = World.SneakSpeed + 0.6f,
                 HomeRange = 12f, FleeAhead = 6f, WanderMin = 3f, WanderMax = 9f, WoodPref = 0f, Curious = true,
-                Shearable = true, Bleats = true,
+                Shearable = true, Bleats = true, Voice = "sheep",
                 Meat = Item.RawMutton, MeatGrown = 3, MeatYoung = 1, Hide = Item.SheepHide,
                 Model = "sheep",
                 // One flock at the edge of the clearing where players wake up, the rest further out.
@@ -97,7 +100,7 @@ namespace LifeGame.Shared
                 Id = Deer, Key = "animal.deer", Name = "Red deer",
                 Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
                 HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false,
-                Wary = 10f, RunFloor = 0.3f, RunHealthShare = 0.7f, RestBelowHealth = 45, BedsAtMidday = true,
+                Wary = 10f, RunFloor = 0.3f, RunHealthShare = 0.7f, RestBelowHealth = 45, Voice = "deer", BedsAtMidday = true,
                 Meat = Item.RawVenison, MeatGrown = 2, MeatYoung = 1, Hide = Item.DeerHide, Extra = Item.Antler,
                 Model = "deer", AntlerShare = 0.35f,
                 Herds = new[] { new AnimalHerdSpot(70f, 45f, 4, 22f), new AnimalHerdSpot(-60f, -75f, 3, 22f) },
@@ -109,7 +112,7 @@ namespace LifeGame.Shared
                 Id = Hen, Key = "animal.hen", Name = "Hen",
                 Walk = 0.7f, Trot = 1.3f, Run = 3.4f, Notice = 7f, CalmSpeed = 2.4f,
                 HomeRange = 7f, FleeAhead = 4f, WanderMin = 1f, WanderMax = 4f, WoodPref = 0f, Curious = true,
-                Meat = Item.RawChicken, MeatGrown = 1, MeatYoung = 1, Hide = null, Extra = Item.Feather,
+                Voice = "hen", Meat = Item.RawChicken, MeatGrown = 1, MeatYoung = 1, Hide = null, Extra = Item.Feather,
                 Egg = Item.Egg, EggDays = 1.5f, EggCap = 3, Roosts = true,
                 Model = "hen",
                 Herds = new[] { new AnimalHerdSpot(-8f, 7f, 4, 4f) },
@@ -121,7 +124,7 @@ namespace LifeGame.Shared
                 Id = Rabbit, Key = "animal.rabbit", Name = "Rabbit",
                 Walk = 0.8f, Trot = 2.0f, Run = 7.5f, Notice = 18f, CalmSpeed = 1.4f,
                 HomeRange = 9f, FleeAhead = 10f, WanderMin = 2f, WanderMax = 7f, WoodPref = 0.2f, Curious = false,
-                Wary = 6f, DamageTaken = 4f,
+                Wary = 6f, DamageTaken = 4f, Voice = "rabbit",
                 Meat = Item.RawRabbit, MeatGrown = 1, MeatYoung = 1, Hide = Item.RabbitFur,
                 Model = "rabbit",
                 Herds = new[] { new AnimalHerdSpot(18f, 14f, 4, 8f), new AnimalHerdSpot(-22f, -12f, 3, 10f), new AnimalHerdSpot(50f, -8f, 4, 12f) },
