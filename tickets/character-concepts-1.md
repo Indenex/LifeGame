@@ -1,9 +1,9 @@
 # character-concepts-1: Fast storyboard mockups of player character concepts
 Lane: Character concepts
 Owner: Character concepts thread (session_01DcRJuPGBWW1fHkAojcxvtc)
-Status: in_review
+Status: done
 Branch: claude/character-concepts
-PR: #419 (docs only)
+PR: #419 (merged), plus a follow-up docs PR for the narrowing
 
 ## Goal
 Fast 2D mockups of player character proposals for Justin to pick from, all on one shared base body and 16-bone rig at 1.35 m in game. No game code. Images and notes are in `docs/character-concepts/`.
@@ -15,6 +15,7 @@ Fast 2D mockups of player character proposals for Justin to pick from, all on on
 - 2026-10-17 01:30: round 4, the round-2 look slightly less cute (concepts-round4.md, out/r4-*), commit 8695330.
 - 2026-10-17 01:45: Justin picked roster 1 from round 4: Pebble, Kit, Capling, Bramble (round-4 cute level locked). Handoff pack for Modeling is in docs/character-concepts/roster-1/ (turnarounds, slot table, shell note). Opened docs-only PR #419.
 - 2026-10-17 01:40: Justin narrowed roster 1 to Pebble and Bramble, so Kit and Capling are deferred. The pack now covers only those two.
+- 2026-10-17 01:45: DONE. #419 merged at f4bc094 and the PM handed roster 1 to Modeling. A follow-up docs PR brings the Pebble-and-Bramble narrowing to main. The lane is finished unless Justin asks for more.
 
 ## Justin's feedback (verbatim)
 - On round 2, via the PM: "let's go for less cutesy. I also want the concepts to match closer to the reference art."
@@ -24,4 +25,4 @@ Fast 2D mockups of player character proposals for Justin to pick from, all on on
 - (none). Roster 1 is Pebble and Bramble.
 
 ## Next step
-The PM merges the docs-only PR. Modeling builds roster 1 from docs/character-concepts/roster-1/README.md.
+None. The lane is done; Modeling builds Pebble and Bramble from docs/character-concepts/roster-1/README.md.
