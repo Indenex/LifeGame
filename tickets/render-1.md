@@ -190,6 +190,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:08: ui-72 AFTER on #850 d63e2ab3 queued right after BEFORE (+ playermenu=hover).
 
+- 2026-10-17 16:05: Godot hung after saving the ui-70 ghost PNG (20 min lost). tools/render/watchdog.sh (run detached: `nohup tools/render/watchdog.sh > /tmp/render/wd.log &`) kills a render.sh Godot 90 s after its PNG exists.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
