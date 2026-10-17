@@ -135,12 +135,24 @@ public static partial class Module
         for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++)
             {
-                foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
-                    if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
-                        yield return (fire.X, fire.Z, 0f);
-                foreach (var kiln in ctx.Db.Kiln.ByChunk.Filter((cx + dx, cz + dz)))
-                    if (kiln.State == (byte)KilnState.Firing && kiln.FireFinish.MicrosecondsSinceUnixEpoch > now)
-                        yield return (kiln.X, kiln.Z, KilnWall);
+                if (!AnimalTickScope)
+                {
+                    foreach (var f in BurningInChunk(ctx, cx + dx, cz + dz, now)) yield return f;
+                    continue;
+                }
+                if (!AnimalScopedFires.TryGetValue((cx + dx, cz + dz), out var here))
+                    AnimalScopedFires[(cx + dx, cz + dz)] = here = BurningInChunk(ctx, cx + dx, cz + dz, now).ToList();
+                foreach (var f in here) yield return f;
             }
+    }
+
+    static System.Collections.Generic.IEnumerable<(float X, float Z, float Wall)> BurningInChunk(ReducerContext ctx, int cx, int cz, long now)
+    {
+        foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx, cz)))
+            if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                yield return (fire.X, fire.Z, 0f);
+        foreach (var kiln in ctx.Db.Kiln.ByChunk.Filter((cx, cz)))
+            if (kiln.State == (byte)KilnState.Firing && kiln.FireFinish.MicrosecondsSinceUnixEpoch > now)
+                yield return (kiln.X, kiln.Z, KilnWall);
     }
 }
