@@ -160,3 +160,4 @@ audio-1-options rm -f $HOME/.local/share/godot/app_userdata/LifeGame/settings.cf
 env-1 tools/render/scenes/env-1.sh 1ade969
 env-1-after tools/render/scenes/env-1-after.sh 0eaba8b
 tour-main tools/render/scenes/tour.sh origin/main
+giant33 tools/render/render.sh giant33 6f189479 "--debug-position=149,-54 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.2 --view-radius=3 --screenshot-delay=200" "--debug-position=149,-54 --camera-zoom=5 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.2 --view-radius=3 --screenshot-delay=200" "--debug-position=-73,-120 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.2 --view-radius=3 --screenshot-delay=200" "--debug-position=-73,-120 --camera-zoom=5 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.2 --view-radius=3 --screenshot-delay=200"
