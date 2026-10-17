@@ -157,6 +157,7 @@ public static class AvatarWork
     static void Start(Avatar avatar, string? processId, DbConnection? conn = null, ushort tool = 0)
     {
         avatar.Work = WorkMotions.For(processId);
+        avatar.WorkStanding = WorkMotions.Standing(processId);
         var (right, left) = HeldTools.For(processId, conn?.Db.MyInventory.Iter().Select(i => (i.Item, i.Quality)));
         if (tool != 0 && Items.IsKnown(tool)) right = (Item)tool;
         avatar.Hold(right, left);
