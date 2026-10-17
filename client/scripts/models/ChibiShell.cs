@@ -119,7 +119,10 @@ public static class ChibiShell
             float l = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
             float lit = 0.35 * smoothstep(0.06, 0.1, l) + 0.65 * smoothstep(0.42, 0.47, l);
             vec3 tone = mix(shade_tint, vec3(1.0), smoothstep(0.06, 0.1, l));
-            DIFFUSE_LIGHT += LIGHT_COLOR * tone * (0.2 + 0.6 * lit) / PI;
+            // A fire or lamp lights only what it reaches, as on the painted props; without
+            // this its full strength filled the whole figure from across its range (bugfix-66).
+            float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
+            DIFFUSE_LIGHT += LIGHT_COLOR * tone * (0.2 + 0.6 * lit) * reach / PI;
         }
         """;
 }

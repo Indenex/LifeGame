@@ -9,15 +9,21 @@ public partial class WetLook : Node3D
 {
     const string ShaderCode = @"
 shader_type spatial;
-render_mode blend_mix, depth_draw_never, cull_back, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, depth_draw_never, cull_back;
 uniform float wetness : hint_range(0.0, 1.0) = 0.0;
 void fragment() {
-    // Wet surfaces read darker and a little glossy, never mirror-like.
+    // Wet surfaces read darker with a soft painted sheen, never mirror-like.
     ALBEDO = vec3(0.02, 0.025, 0.03);
-    ROUGHNESS = 0.35;
-    SPECULAR = 0.35;
+    ROUGHNESS = 0.7;
+    SPECULAR = 0.1;
     float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
     ALPHA = wetness * (0.32 + 0.12 * rim);
+}
+void light() {
+    // A broad, faint sheen whose strength is capped: a glossy GGX highlight here caught
+    // the sun or a fire at some angles and blew the whole figure out (bugfix-66).
+    float h = clamp(dot(NORMAL, normalize(LIGHT + VIEW)), 0.0, 1.0);
+    SPECULAR_LIGHT += min(LIGHT_COLOR, vec3(1.0)) * ATTENUATION * smoothstep(0.8, 1.0, h) * 0.08;
 }";
 
     // How far the darkening goes at full soak, and how fast the look follows the
@@ -46,6 +52,8 @@ void fragment() {
 
         drip = new GpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Amount = 24,
             Lifetime = 0.7f,
             Emitting = false,

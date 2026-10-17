@@ -185,9 +185,9 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
-        c.Db.DeviceJob.OnInsert += (_, j) => RefreshDevice(j.StructureId);
-        c.Db.DeviceJob.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
-        c.Db.DeviceJob.OnDelete += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnInsert += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnDelete += (_, j) => RefreshDevice(j.StructureId);
         c.Db.DeviceOutput.OnInsert += (_, o) => RefreshDevice(o.StructureId);
         c.Db.DeviceOutput.OnUpdate += (_, _, o) => RefreshDevice(o.StructureId);
         c.Db.DeviceOutput.OnDelete += (_, o) => RefreshDevice(o.StructureId);
@@ -231,7 +231,7 @@ public partial class BuildingSystem : Node
     void ShowDevice(Structure s, StructureView v)
     {
         if (conn() is not { } db) return;
-        var job = db.Db.DeviceJob.StructureId.Find(s.Id);
+        var job = db.Db.DeviceStatus.StructureId.Find(s.Id);
         bool waiting = db.Db.DeviceOutput.Iter().Any(o => o.StructureId == s.Id);
         uint units = job?.Remaining ?? 0;
         int fill = waiting ? 3 : units == 0 ? 0 : units <= 3 ? 1 : units <= 7 ? 2 : 3;
@@ -713,6 +713,8 @@ public partial class BuildingSystem : Node
     {
         var particles = new CpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Emitting = true,
             OneShot = true,
             Amount = 18,

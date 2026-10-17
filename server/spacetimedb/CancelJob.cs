@@ -78,7 +78,7 @@ public static partial class Module
             job.Score = 0f;
             job.RoundEnd = new Timestamp(now + (long)(left * (Devices.UnattendedTime / Devices.AttendedTime)));
             job.Token += 1;
-            ctx.Db.DeviceJob.StructureId.Update(job);
+            SaveDeviceJob(ctx, job);
             ctx.Db.DeviceTimer.Insert(new DeviceTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(job.RoundEnd), StructureId = job.StructureId, Token = job.Token });
         }
     }

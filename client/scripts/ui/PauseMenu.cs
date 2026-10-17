@@ -104,6 +104,18 @@ public partial class PauseMenu : CanvasLayer
             GetTree().CreateTimer(1).Timeout += () => { Open(); ShowControls(); };
     }
 
+    // Main makes the menu its first child so every panel gets Esc before it does, which
+    // also meant every other key reached the lanes first: C, J, B or K opened panels
+    // behind the open menu (bugfix-38). Shortcut input comes after the GUI (the Controls
+    // page) but before any lane's unhandled input, so keys stop here while it's open.
+    // The menu's own rows take no GUI focus, so it reads their keys itself.
+    public override void _ShortcutInput(InputEvent e)
+    {
+        if (!IsOpen || e is not InputEventKey key || key.PhysicalKeycode == Key.Escape) return;
+        _UnhandledInput(e);
+        GetViewport().SetInputAsHandled();
+    }
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
