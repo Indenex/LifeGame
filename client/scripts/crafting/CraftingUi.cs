@@ -9,11 +9,12 @@ namespace LifeGame;
 
 // The crafting panel (C), the hands-on minigames for key steps, and the progress
 // bar while a job runs. Processes come from shared data, so new ones show up here
-// without UI changes.
+// without UI changes. The panel's cards are drawn by ui/CraftGrid.cs (ui-24): a twin of
+// the build menu with pictures, categories and search; this class keeps the rules.
 public partial class CraftingUi : CanvasLayer
 {
-    // True while a minigame wants the keyboard, so walking pauses.
-    public bool CapturesInput => minigame != null;
+    // True while a minigame or the search box wants the keyboard, so walking pauses.
+    public bool CapturesInput => minigame != null || grid.Typing;
     // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
     public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;
@@ -23,13 +24,9 @@ public partial class CraftingUi : CanvasLayer
 
     DbConnection? conn;
     readonly PanelContainer panel;
+    // Your roasts on fires nearby, above the cards.
     readonly VBoxContainer list = new();
-    // The list scrolls once it would run past the bottom of the screen (the clay tier is long).
-    readonly ScrollContainer scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-    readonly HBoxContainer tabs = new();
-    // Processes are grouped into tabs by tier, so the list stays short as tiers grow.
-    static readonly string[] TierNames = { "Bare hands", "Fire and stone", "Cord and haft", "Clay", "Tier 4", "Tier 5" };
-    int tier;
+    readonly CraftGrid grid = new();
     readonly PanelContainer progressPanel;
     readonly Label progressLabel = new();
     readonly ProgressBar progressBar = new() { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(260, 8) };
@@ -40,17 +37,23 @@ public partial class CraftingUi : CanvasLayer
     public CraftingUi()
     {
         Layer = 3; // above the HUD (Layer 2), so open panels cover prompts and rings
-        panel = Card(new Vector2(380, 0));
+        panel = Card(Vector2.Zero);
+        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
+        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
+        style.ContentMarginTop = style.ContentMarginBottom = 14;
+        style.ContentMarginLeft = style.ContentMarginRight = 18;
         var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 8);
+        box.AddThemeConstantOverride("separation", 10);
         box.AddChild(Text("Crafting", 20));
-        box.AddChild(Text("Click a process or press its number.  Tab switches tier.  C or Esc closes.", 13, 0.65f));
-        tabs.AddThemeConstantOverride("separation", 4);
-        box.AddChild(tabs);
-        list.AddThemeConstantOverride("separation", 6);
-        list.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        scroll.AddChild(list);
-        box.AddChild(scroll);
+        list.AddThemeConstantOverride("separation", 4);
+        box.AddChild(list);
+        grid.Recipes = () => HandCrafts;
+        grid.Missing = Missing;
+        grid.Have = Count;
+        grid.Make = Begin;
+        grid.HandsOn = HandsOn;
+        box.AddChild(grid);
+        box.AddChild(Text("Click one to make it, or press its number.  Tab switches category.  C or Esc closes.", 13, 0.65f));
         panel.AddChild(box);
         panel.Visible = false;
 
@@ -68,11 +71,10 @@ public partial class CraftingUi : CanvasLayer
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
-        // Pinned to the right edge; it grows leftward and downward to fit its rows.
-        panel.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
-        panel.GrowHorizontal = Control.GrowDirection.Begin;
-        panel.OffsetLeft = panel.OffsetRight = -24;
-        panel.OffsetTop = panel.OffsetBottom = -200;
+        // In the middle of the screen, like the build menu.
+        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
+        panel.GrowHorizontal = Control.GrowDirection.Both;
+        panel.GrowVertical = Control.GrowDirection.Both;
         root.AddChild(panel);
         progressPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
@@ -111,11 +113,13 @@ public partial class CraftingUi : CanvasLayer
         });
     }
 
-    // Opens the panel on a tier; used by --screenshot-craft.
+    // Opens the panel; used by --screenshot-craft (the number once picked a tier, now
+    // it steps that many categories along).
     public void Open(int onTier)
     {
-        tier = onTier;
         panel.Visible = true;
+        Refresh();
+        grid.NextCategory(onTier);
         Refresh();
     }
 
@@ -123,6 +127,7 @@ public partial class CraftingUi : CanvasLayer
     {
         if (minigame != null) return;
         panel.Visible = !panel.Visible;
+        if (!panel.Visible) grid.ClearSearch();
         Refresh();
     }
 
@@ -141,8 +146,10 @@ public partial class CraftingUi : CanvasLayer
         if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape })
         {
             panel.Visible = false;
+            grid.ClearSearch();
             GetViewport().SetInputAsHandled();
         }
+        else if (grid.Typing) return;
         else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Key0 })
         {
             TakeOffFire();
@@ -152,16 +159,13 @@ public partial class CraftingUi : CanvasLayer
             && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key9)
         {
             int index = (int)(k.PhysicalKeycode - Key.Key1);
-            var shown = InTier();
+            var shown = grid.Shown;
             if (index < shown.Count) Begin(shown[index]);
             GetViewport().SetInputAsHandled();
         }
         else if (panel.Visible && e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Tab } tabKey)
         {
-            var tiers = Tiers();
-            int at = Math.Max(0, tiers.IndexOf(tier));
-            tier = tiers[(at + (tabKey.ShiftPressed ? tiers.Count - 1 : 1)) % tiers.Count];
-            Refresh();
+            grid.NextCategory(tabKey.ShiftPressed ? -1 : 1);
             GetViewport().SetInputAsHandled();
         }
     }
@@ -170,12 +174,6 @@ public partial class CraftingUi : CanvasLayer
     {
         minigame?.Tick((float)delta);
         if (minigame is { Done: true } done) EndMinigame(done.Score);
-        if (panel.Visible)
-        {
-            // The panel's top sits 200 px above the middle; keep its foot clear of the HUD.
-            float room = Math.Max(160f, GetViewport().GetVisibleRect().Size.Y / 2 - 50);
-            scroll.CustomMinimumSize = new Vector2(0, Math.Min(list.GetCombinedMinimumSize().Y, room));
-        }
 
         // Roasts change from browning to ready to burnt while you watch.
         roastRefresh -= delta;
@@ -340,7 +338,7 @@ public partial class CraftingUi : CanvasLayer
 
     static string Article(string noun) => ("aeiou".Contains(noun[0]) ? "an " : "a ") + noun;
 
-    uint Count(Item item) =>
+    internal uint Count(Item item) =>
         conn?.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count) ?? 0;
 
     uint HammerCount() =>
@@ -372,30 +370,9 @@ public partial class CraftingUi : CanvasLayer
     // panel (D-098, ui-13 StationPanel).
     static IEnumerable<ProcessDef> HandCrafts => Processes.List.Where(p => p.Station == StationKind.None);
 
-    static List<int> Tiers() => HandCrafts.Select(p => p.Tier).Distinct().OrderBy(t => t).ToList();
-
-    List<ProcessDef> InTier() => HandCrafts.Where(p => p.Tier == tier).ToList();
-
     void Refresh()
     {
         if (!panel.Visible) return;
-        foreach (var child in tabs.GetChildren()) child.QueueFree();
-        foreach (int t in Tiers())
-        {
-            int ready = HandCrafts.Count(p => p.Tier == t && Missing(p) == null);
-            var tabButton = new Button
-            {
-                Text = ready > 0 ? $"{TierName(t)} ({ready})" : TierName(t),
-                ToggleMode = true,
-                ButtonPressed = t == tier,
-                FocusMode = Control.FocusModeEnum.None,
-            };
-            tabButton.AddThemeFontSizeOverride("font_size", 13);
-            int captured = t;
-            tabButton.Pressed += () => { tier = captured; Refresh(); };
-            tabs.AddChild(tabButton);
-        }
-
         foreach (var child in list.GetChildren()) child.QueueFree();
         foreach (var (roast, seconds) in MyRoasts())
         {
@@ -416,30 +393,7 @@ public partial class CraftingUi : CanvasLayer
             row.Pressed += TakeOffFire;
             list.AddChild(row);
         }
-        int n = 1;
-        foreach (var def in InTier())
-        {
-            string inputs = string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
-            if (def.NeedsTool != ItemTags.None) inputs += $", using {ToolName(def.NeedsTool)}";
-            if (def.Station != StationKind.None) inputs += $", at a {StationInfo.Name(def.Station)}";
-            string? missing = Missing(def);
-            bool ready = missing == null;
-            var button = new Button
-            {
-                Text = $"{n}.  {def.Name}\n      {inputs}  ·  {def.Seconds:0}s{HandsOn(def)}" + (missing != null ? $"\n      {missing}" : ""),
-                Alignment = HorizontalAlignment.Left,
-                Disabled = !ready,
-                Flat = true,
-                FocusMode = Control.FocusModeEnum.None,
-            };
-            button.AddThemeColorOverride("font_color", Look.Cream);
-            button.AddThemeColorOverride("font_disabled_color", new Color(Look.Cream, 0.35f));
-            button.AddThemeFontSizeOverride("font_size", 14);
-            var captured = def;
-            button.Pressed += () => Begin(captured);
-            list.AddChild(button);
-            n++;
-        }
+        grid.Refresh();
     }
 
     // Your roasts on fires nearby, with how long each has been cooking.
@@ -477,8 +431,6 @@ public partial class CraftingUi : CanvasLayer
         if (!Roasting.Done(seconds)) { Notice?.Invoke("It isn't cooked yet"); return; }
         conn.Reducers.TakeOffFire(roast.Id);
     }
-
-    static string TierName(int t) => t < TierNames.Length ? TierNames[t] : $"Tier {t}";
 
     // --- Job progress ----------------------------------------------------
 
