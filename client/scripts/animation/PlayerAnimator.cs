@@ -97,8 +97,48 @@ public sealed class PlayerAnimator
     // Already resting when first seen (a player who sat down before you arrived).
     public void SettleRest() => restStage = Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
 
+    // Settled on the ground, a sitter shifts into a fidget every 8 to 16 s and holds it
+    // a while (anim-15).
+    RestPoses.SitFidget sitFidget;
+    float sitFidgetW, sitFidgetFor, sitFidgetNext = 6f;
+
+    void SitFidgets(float dt)
+    {
+        bool settled = Rest == RestKind.Sit && restStage >= 1.99f;
+        if (!settled)
+        {
+            sitFidgetW = 0f;
+            sitFidget = RestPoses.SitFidget.None;
+            sitFidgetNext = 6f;
+            return;
+        }
+        if (sitFidget == RestPoses.SitFidget.None)
+        {
+            sitFidgetNext -= dt;
+            if (sitFidgetNext > 0f) return;
+            var (warmth, _) = Surroundings?.Invoke() ?? (0f, null);
+            int pick = (int)Mathf.PosMod(time * 5.1f + seed * 7f, 4f);
+            bool ground = Seat <= 0.05f;
+            sitFidget = warmth > 0.2f && pick < 2 ? RestPoses.SitFidget.Warm
+                : Atmosphere.Night > 0.5f && pick == 2 ? RestPoses.SitFidget.LookUp
+                : !ground ? (pick % 2 == 0 ? RestPoses.SitFidget.LookUp : RestPoses.SitFidget.Warm)
+                : pick % 2 == 0 ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
+            if (!ground && sitFidget == RestPoses.SitFidget.Warm && warmth <= 0.2f) sitFidget = RestPoses.SitFidget.LookUp;
+            sitFidgetFor = 0f;
+        }
+        sitFidgetFor += dt;
+        float hold = 7f + Mathf.PosMod(seed * 11f, 5f);
+        sitFidgetW = Mathf.Clamp(Mathf.Min(sitFidgetFor / 1.2f, (hold - sitFidgetFor) / 1.2f), 0f, 1f);
+        if (sitFidgetFor >= hold)
+        {
+            sitFidget = RestPoses.SitFidget.None;
+            sitFidgetNext = 8f + Mathf.PosMod(seed * 23f + time, 8f);
+        }
+    }
+
     void Resting(float dt)
     {
+        SitFidgets(dt);
         float target = RestTarget;
         restStage = Mathf.MoveToward(restStage, target, dt / RestStageSeconds);
         if (restStage <= 0f) return;
@@ -125,6 +165,7 @@ public sealed class PlayerAnimator
                 break;
             case 2:
                 RestPoses.Sit(p, rig, Rest == RestKind.Lie ? 0f : Seat, time + seed * 13f);
+                if (Rest == RestKind.Sit) RestPoses.Fidget(p, sitFidget, Mathf.SmoothStep(0f, 1f, sitFidgetW), time + seed * 13f);
                 break;
             default:
                 RestPoses.Lie(p, rig, time + seed * 13f, Asleep);
