@@ -5,10 +5,13 @@
 // bench, lights a fire beside them,
 // fires one while still damp (it must crack), lets the other dry, fires it, picks
 // the fired pot up and fills it with water. Then it crushes the sherds into grog
-// and tempers more clay with it. Takes about ten real minutes, because drying and
-// firing take real time. Exits non-zero on the first failure.
+// and tempers more clay with it. Exits non-zero on the first failure.
+// The plain run sets the server's test speed-up (set_test_speed, admin-only, 1 in every
+// player's world) to 60 through spacetimedb-cli as the database owner, so drying,
+// firing and crafting take seconds instead of minutes. --speed=N picks another factor
+// (1 for real times); the other modes keep real times unless given --speed.
 //
-// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [--speed=60]
 //        dotnet run -- <uri> <db> --token=path --goto=x,z   (walk that player somewhere and stop)
 //        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln blueprint, load and fire it;
 //        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
@@ -32,6 +35,10 @@ bool lampRun = args.Contains("--lamp");
 bool tileRun = args.Contains("--tile");
 bool tallowRun = Environment.GetEnvironmentVariable("CLAYCHECK_TALLOW") == "1";
 bool kilnRun = jarRun || args.Contains("--kiln");
+bool plainRun = !(potRun || lampRun || tileRun || kilnRun || tokenPath != null || goTo != null);
+float speed = float.Parse(args.FirstOrDefault(a => a.StartsWith("--speed="))?[8..] ?? (plainRun ? "60" : "1"),
+    System.Globalization.CultureInfo.InvariantCulture);
+if (speed != 1f) SetTestSpeed(speed);
 
 Identity? me = null;
 Fire fire = null!;
@@ -160,23 +167,26 @@ Craft("clay.temper_grit", 0, Item.TemperedClay);
 if (CountOf(Item.TemperedClay) != 4) Fail($"expected 4 tempered clay, have {CountOf(Item.TemperedClay)}");
 Log("STAGE clay-tempered");
 
-// Shape two pinch pots at the bench; they are set down beside it, on our side.
-AtBench();
-int piecesBefore = conn.Db.ClayPiece.Count;
-Craft("clay.pinch_pot", 0.9f, null);
-Craft("clay.pinch_pot", 0.9f, null);
-Pump(() => conn.Db.ClayPiece.Count >= piecesBefore + 2, 5, "two pots set down to dry");
-var pots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).ToList();
-var damp = pots[0];
-var good = pots[1];
-
-// A fire right beside the wet pots, off the bench, fed well enough for a firing.
-LightFireNear(pots.Average(p => p.X) + 1.3f, pots.Average(p => p.Z));
+// A fire beside the bench, off it, where the pots will be set down (just south of the
+// bench, on our side). It goes in first: sped up, a wet pot dries in seconds, so the
+// damp one is shaped and fired straight away.
+LightFireNear(bench.X + 1.3f, bench.Z + 1.3f);
 Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
-Log("STAGE pots-shaped-and-fire-lit");
 KeepFireGoing();
-Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate {good.DryRate * 480:F2}x");
-if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
+
+// Shape a pinch pot at the bench; it is set down beside it, on our side.
+ClayPiece ShapePot()
+{
+    AtBench();
+    int piecesBefore = conn.Db.ClayPiece.Count;
+    Craft("clay.pinch_pot", 0.9f, null);
+    Pump(() => conn.Db.ClayPiece.Count > piecesBefore, 5, "a pot set down to dry");
+    var pot = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).Last();
+    if (DistanceTo(pot.X, pot.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
+    return pot;
+}
+var damp = ShapePot();
+Log($"Wet pot at {damp.X:F1},{damp.Z:F1}; rate {damp.DryRate * ClayRules.BaseDrySeconds:F2}x");
 
 // Firing a damp pot is refused without confirmation, then cracks.
 WalkTo(damp.X, damp.Z, 1.2f);
@@ -188,6 +198,8 @@ lastError = null;
 conn.Reducers.TendClay(damp.Id, true);
 Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(damp.Id)?.Stage == (byte)ClayStage.Firing, 3, "the damp pot to go in the fire");
 if (lastError != null) Fail($"firing damp pot: {lastError}");
+var good = ShapePot();
+Log("STAGE pots-shaped-and-fire-lit");
 Log("STAGE wet-pots-and-damp-firing");
 
 // Wait for the other pot to dry, keeping the fire going.
@@ -1212,7 +1224,7 @@ void KeepFireGoing()
 {
     var f = conn.Db.Fire.Id.Find(fire.Id) ?? throw new Exception("fire went out");
     double left = (f.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1e6;
-    while (left < ClayRules.PitFireSeconds + 30)
+    while (left < ClayRules.PitFireSeconds / speed + 30)
     {
         if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 4);
         WalkTo(fire.X, fire.Z, 1.2f);
@@ -1316,6 +1328,24 @@ void Pump(Func<bool> until, float seconds, string? what)
         conn.FrameTick();
         Thread.Sleep(10);
     }
+}
+
+// The server's test-only speed-up, set as the database owner through the CLI (the bot
+// is not the owner). Runs from the temp folder: inside server/ the CLI reads spacetime.json.
+void SetTestSpeed(float factor)
+{
+    var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, "set_test_speed",
+        factor.ToString(System.Globalization.CultureInfo.InvariantCulture) })
+    {
+        WorkingDirectory = Path.GetTempPath(),
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+    };
+    using var p = Process.Start(info) ?? throw new Exception("could not start spacetimedb-cli");
+    string output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+    p.WaitForExit();
+    if (p.ExitCode != 0) Fail($"set_test_speed {factor}: {output}");
+    Log($"Test speed-up x{factor}");
 }
 
 static void Log(string message)

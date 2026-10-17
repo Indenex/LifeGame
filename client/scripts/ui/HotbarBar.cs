@@ -16,14 +16,14 @@ namespace LifeGame;
 // equips"); the slot in hand wears a gold ring. A click in the world uses what you hold:
 // eat, drink, put on, or set a made thing down; with a tool or weapon it is the strike as
 // before, and E still chops or digs with the tool in hand. A slot keeps its item while
-// you have none left, shown faded.
-// The row dims when nothing changes and brightens when you gain or use something; a
-// newly gained item's name floats up above its slot.
+// you have none left, shown as a grey ghost.
+// The row stays fully clear (ui-70, Justin: "highlight the item all the time"; it used to dim
+// to 45% when nothing changed); a newly gained item's name floats up above its slot.
 public partial class HotbarBar : Control
 {
     public const int Slots = IHotbarLink.Slots;
     public const float Slot = 54f;
-    const float IdleAlpha = 0.45f, IdleAfter = 6f, Gap = 12f;
+    const float IdleAlpha = 1f, IdleAfter = 6f, Gap = 12f;
 
     public IHotbarLink Link { get; private set; } = new MockHotbarLink();
     // True while something else has the keys (a panel, chat, building).
@@ -70,13 +70,15 @@ public partial class HotbarBar : Control
         name.Modulate = new Color(1, 1, 1, 0);
         AddChild(name);
         Attach(Link);
-        // --screenshot-hotbar: berries, a hand axe and a stone axe, with the stone axe in hand.
+        // --screenshot-hotbar: berries, a hand axe and a stone axe, with the stone axe in hand, and
+        // cordage you've run out of (its grey ghost, ui-70).
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-hotbar")) && Link is MockHotbarLink mock)
         {
             SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1), new InventoryEntry(Item.StoneAxe, "Stone axe", 1) });
             mock.Set(0, Item.Berries);
             mock.Set(1, Item.HandAxe);
             mock.Set(2, Item.StoneAxe);
+            mock.Set(3, Item.Cordage);
             Equip(2, Item.StoneAxe);
         }
     }
@@ -336,6 +338,9 @@ public partial class HotbarSlotView : PanelContainer
         MouseFilter = MouseFilterEnum.Ignore,
     };
     Label count = null!, key = null!;
+    Panel plate = null!;
+    TextureRect shadow = null!;
+    readonly ActiveRing ring = new() { Radius = HotbarBar.Slot / 2 + 5 };
     Item? item;
     float pop;
 
@@ -354,7 +359,9 @@ public partial class HotbarSlotView : PanelContainer
         picture.SetAnchorsPreset(LayoutPreset.FullRect);
         picture.OffsetLeft = picture.OffsetTop = 2;
         picture.OffsetRight = picture.OffsetBottom = -2;
+        (plate, shadow) = SlotLook.Behind(stack, picture, HotbarBar.Slot);
         stack.AddChild(picture);
+        stack.AddChild(ring);
 
         count = Hud.Text("", 13);
         count.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -377,15 +384,16 @@ public partial class HotbarSlotView : PanelContainer
     public void Show(Item? what, uint n, string label, string keyName, bool equipped = false)
     {
         item = what;
-        picture.Texture = what is { } i ? ItemIcon.For(i) : null;
-        // A slot whose item has run out keeps its picture, faded.
-        picture.Modulate = new Color(1, 1, 1, n > 0 ? 1f : 0.3f);
+        // In full colour on its plate; a slot whose item has run out keeps a grey ghost of it (ui-70).
+        SlotLook.Set(plate, shadow, picture, what is { } i ? ItemIcon.For(i) : null, n > 0);
+        ring.SetOn(equipped);
         count.Text = n > 1 ? n.ToString() : "";
         key.Text = keyName;
         if (WarmLook.On)
         {
             // Paper buttons (ui-45, D-313): cream discs with a soft brown rim and shadow; the slot
-            // in hand wears a butter-gold ring. An empty slot is paler.
+            // in hand wears a butter-gold ring, and the coral ActiveRing outside it (ui-70). An
+            // empty slot is paler.
             // ui-59: an empty slot is a slightly darker paper with a clear brown edge, so the bar
             // reads on bright grass.
             style.BgColor = equipped ? new Color(1f, 0.93f, 0.78f, 0.97f) : what == null ? new Color(WarmLook.Paper.Darkened(0.08f), 0.85f) : new Color(WarmLook.Paper, 0.95f);

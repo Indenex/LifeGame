@@ -48,7 +48,7 @@ public static partial class Module
         // Keep the newest few: older ones drop off so nobody can fill the table.
         var mine = ctx.Db.BugReport.Reporter.Filter(Me(ctx)).OrderBy(r => r.Id).ToList();
         for (int i = 0; i <= mine.Count - BugReportsPerPlayer; i++) ctx.Db.BugReport.Id.Delete(mine[i].Id);
-        ctx.Db.BugReport.Insert(new BugReport
+        var report = ctx.Db.BugReport.Insert(new BugReport
         {
             Reporter = Me(ctx),
             Open = true,
@@ -59,6 +59,7 @@ public static partial class Module
             Text = text,
         });
         Log.Info($"bug_report: {player.Name} ({player.PlayerId}): {summary}");
+        QueueBugReportForGitHub(ctx, report.Id);
     }
 
     // Admins clear a report once it is dealt with.

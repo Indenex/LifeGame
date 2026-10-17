@@ -39,6 +39,45 @@ public static partial class Module
         public uint Mark;
     }
 
+    // How good a piece of clay is (bugfix-56, hidden values). Private: the public ClayPiece row
+    // carries 0 in Quality, so other players can't read it off a pot drying in the open.
+    [SpacetimeDB.Table(Accessor = "ClayPieceQuality")]
+    public partial struct ClayPieceQuality
+    {
+        [PrimaryKey]
+        public ulong PieceId;
+        public byte Quality;
+    }
+
+    static ClayPiece InsertClayPiece(ReducerContext ctx, ClayPiece piece)
+    {
+        var put = ctx.Db.ClayPiece.Insert(piece with { Quality = 0 });
+        ctx.Db.ClayPieceQuality.Insert(new ClayPieceQuality { PieceId = put.Id, Quality = piece.Quality });
+        return put;
+    }
+
+    // Rows from before bugfix-56 still carry their quality in the public column.
+    static byte ClayQuality(ReducerContext ctx, ClayPiece piece) =>
+        ctx.Db.ClayPieceQuality.PieceId.Find(piece.Id)?.Quality ?? piece.Quality;
+
+    static void DeleteClayPiece(ReducerContext ctx, ulong pieceId)
+    {
+        ctx.Db.ClayPiece.Id.Delete(pieceId);
+        ctx.Db.ClayPieceQuality.PieceId.Delete(pieceId);
+    }
+
+    // Moves the quality of pieces set down before bugfix-56 into the private table. Called on
+    // connect; after the first pass every row reads 0 and this only scans.
+    static void EnsureClayQualityHidden(ReducerContext ctx)
+    {
+        foreach (var piece in ctx.Db.ClayPiece.Iter().Where(p => p.Quality != 0).ToList())
+        {
+            if (ctx.Db.ClayPieceQuality.PieceId.Find(piece.Id) is null)
+                ctx.Db.ClayPieceQuality.Insert(new ClayPieceQuality { PieceId = piece.Id, Quality = piece.Quality });
+            ctx.Db.ClayPiece.Id.Update(piece with { Quality = 0 });
+        }
+    }
+
     // Rechecks rain and fires around drying pieces.
     [SpacetimeDB.Table(Accessor = "ClayDryTimer", Scheduled = nameof(DryClay), ScheduledAt = nameof(ScheduledAt))]
     public partial struct ClayDryTimer
@@ -111,7 +150,7 @@ public static partial class Module
         }
         else if (!SpotFree(ctx, x, z))
             (x, z) = FreeSpot(ctx, job.X, job.Z, 0.45f, 0f);
-        ctx.Db.ClayPiece.Insert(new ClayPiece
+        InsertClayPiece(ctx, new ClayPiece
         {
             Id = 0,
             Form = (byte)form,
@@ -159,11 +198,12 @@ public static partial class Module
         if (ClayRules.TooWetToFire(moisture))
             throw new Exception($"Still {ClayRules.Describe(moisture)}. It turns pale when it is dry.");
 
-        ctx.Db.ClayPiece.Id.Delete(piece.Id);
+        byte quality = ClayQuality(ctx, piece);
+        DeleteClayPiece(ctx, piece.Id);
         if (form == ClayForm.Brick)
             AddToInventory(ctx, Me(ctx), Item.Brick, 1, Items.RawQuality);
         else
-            AddToInventory(ctx, Me(ctx), ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark, MakerOfMark(piece.Mark));
+            AddToInventory(ctx, Me(ctx), ClayRules.UnfiredItem(form), 1, quality, piece.Mark, MakerOfMark(piece.Mark));
     }
 
     // Sets every unfired pot you carry into a fire within reach, as many as fit.
@@ -198,7 +238,7 @@ public static partial class Module
             uint used = 0;
             while (used < stack.Count && FreeFireSlot(ctx, fire) is not null)
             {
-                var piece = ctx.Db.ClayPiece.Insert(new ClayPiece
+                var piece = InsertClayPiece(ctx, new ClayPiece
                 {
                     Id = 0,
                     Form = (byte)ClayRules.FormOfUnfired((Item)stack.Item)!.Value,
@@ -260,7 +300,7 @@ public static partial class Module
             float moisture = MoistureNow(ctx, piece);
             if (piece.Form == (byte)ClayForm.Brick && moisture <= 0f)
             {
-                ctx.Db.ClayPiece.Id.Delete(piece.Id);
+                DeleteClayPiece(ctx, piece.Id);
                 ctx.Db.WorldItem.Insert(new WorldItem
                 {
                     Id = 0, Item = (ushort)Item.Brick, Quality = Items.RawQuality,
@@ -285,12 +325,13 @@ public static partial class Module
     {
         RequireServer(ctx);
         if (ctx.Db.ClayPiece.Id.Find(timer.PieceId) is not { } piece) return;
-        ctx.Db.ClayPiece.Id.Delete(piece.Id);
+        byte quality = ClayQuality(ctx, piece);
+        DeleteClayPiece(ctx, piece.Id);
         var form = (ClayForm)piece.Form;
 
         bool steam = ClayRules.TooWetToFire(piece.FiredMoisture);
-        bool cracked = steam || ctx.Rng.NextDouble() < ClayRules.CrackChance(FireKind.Pit, piece.Quality);
-        OnProcessPerformed(ctx, piece.MadeBy, ClayRules.PitFireProcess, piece.Quality, cracked);
+        bool cracked = steam || ctx.Rng.NextDouble() < ClayRules.CrackChance(FireKind.Pit, quality);
+        OnProcessPerformed(ctx, piece.MadeBy, ClayRules.PitFireProcess, quality, cracked);
 
         if (cracked)
         {
@@ -302,7 +343,7 @@ public static partial class Module
         }
         else
         {
-            DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0, piece.Mark);
+            DropNear(ctx, piece, ClayRules.FiredItem(form), quality, 0, piece.Mark);
             News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} is fired, and whole. {{use}} picks it up.");
         }
     }
@@ -337,7 +378,7 @@ public static partial class Module
         var slot = FreeFireSlot(ctx, fire) ?? throw new Exception("That fire is full of pots already");
         float angle = slot * MathF.Tau / ClayRules.MaxPotsPerFire + 0.4f;
         float x = fire.X + MathF.Cos(angle) * ClayRules.FireRing, z = fire.Z + MathF.Sin(angle) * ClayRules.FireRing;
-        var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.PitFireSeconds * 1_000_000));
+        var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.PitFireSeconds / TestSpeed(ctx) * 1_000_000));
         ctx.Db.ClayPiece.Id.Update(piece with
         {
             Stage = (byte)ClayStage.Firing,
@@ -356,17 +397,20 @@ public static partial class Module
         ctx.Db.FiringTimer.Insert(new FiringTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), PieceId = piece.Id });
     }
 
+    // Fuel left is counted in firing time: a test speed-up (bot checks only) shortens the
+    // firing, so the same fuel lasts that many firings longer.
     static bool FireCanTakePot(ReducerContext ctx, Fire fire) => ClayRules.FireCanTakePot(
-        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f,
+        (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f * TestSpeed(ctx),
         FreeFireSlot(ctx, fire) is null ? ClayRules.MaxPotsPerFire : 0);
 
     // A pit firing needs a fire with fuel for the whole firing.
     static void RequireFuelForFiring(ReducerContext ctx, Fire fire)
     {
-        float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f;
+        float speed = TestSpeed(ctx);
+        float left = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - ctx.Timestamp.MicrosecondsSinceUnixEpoch) / 1_000_000f * speed;
         if (left < ClayRules.PitFireSeconds)
         {
-            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds);
+            int sticks = ClayRules.SticksForFiring(left, Items.Def(Item.Stick).FuelSeconds * speed);
             throw new Exception($"Feed the fire first: {sticks} more {(sticks == 1 ? "stick" : "sticks")} to last the {ClayRules.PitFireSeconds / 60f:0} minute firing");
         }
     }
@@ -413,7 +457,7 @@ public static partial class Module
     {
         float rain = 0f;
         RainAt(ctx, x, z, ref rain);
-        return ClayRules.DryRate(rain, WarmthAt(ctx, x, z));
+        return ClayRules.DryRate(rain, WarmthAt(ctx, x, z)) * TestSpeed(ctx);
     }
 
     // True when any ground within reach is under water, dug holes included.
