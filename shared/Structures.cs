@@ -8,6 +8,9 @@ namespace LifeGame.Shared
     public sealed class StructureShape
     {
         public string Name = "";
+        // May stand outside a claim (building-13, Justin): basic survival only. Everything else has
+        // to be built inside a claim the builder belongs to. Outside a claim, everything weathers fast.
+        public bool Wild;
         // Building size relative to the design size the model and the numbers below are written in
         // (building-14, Justin: houses felt too small). Applied once when the shapes are made, so
         // every footprint, clearance and doorway number is already the real, scaled size; the model
@@ -62,6 +65,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Lean-to",
+                Wild = true,
                 Scale = 1.25f,
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
@@ -79,6 +83,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Clay hut",
+                Wild = true,
                 Scale = 1.25f,
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
@@ -99,6 +104,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Claim marker",
+                Wild = true,
                 Category = "Claims",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
@@ -130,6 +136,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage basket",
+                Wild = true,
                 Category = "Storage",
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
@@ -170,6 +177,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Wild = true,
                 Category = "Storage",
                 Jar = true,
                 Round = true, Radius = 0.32f,
@@ -221,6 +229,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Crafting table",
+                Wild = true,
                 Category = "Crafting",
                 HalfWidth = 0.8f, HalfDepth = 0.45f,
                 Clearance = 1.0f,
@@ -237,6 +246,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
+                Wild = true,
                 Category = "Fire",
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
@@ -427,6 +437,9 @@ namespace LifeGame.Shared
         // a shape may still set its own WeatherAfter, but none does now.
         public const double WeatherAfterHours = 48, WeatherForHours = 6;
 
+        // Whether this kind may be built outside a claim (building-13).
+        public static bool IsWild(int kind) => Shape(kind).Wild;
+
         public static bool IsRoom(int kind) => Shape(kind).Room;
 
         // The real (scaled) wall numbers of a hut or a room-shaped home.
@@ -562,6 +575,31 @@ namespace LifeGame.Shared
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
                 return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidthFor(kind);
             }
+            return false;
+        }
+
+        // Whether a step crosses a lean-to's two sides or its back (the front is open).
+        // Other kinds have no such walls.
+        public static bool StepCrossesLeanTo(int kind, float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ)
+        {
+            var shape = Shape(kind);
+            if (shape.Round || shape.Fence || shape.Room || kind != 0) return false;
+            float wx = shape.HalfWidth, wz = shape.HalfDepth;
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            // The back wall at z = -wz.
+            if ((az > -wz) != (bz > -wz))
+            {
+                float x = ax + (bx - ax) * ((-wz - az) / (bz - az));
+                if (MathF.Abs(x) <= wx) return true;
+            }
+            // The two sides at x = +-wx.
+            foreach (float side in new[] { -wx, wx })
+                if ((ax > side) != (bx > side))
+                {
+                    float z = az + (bz - az) * ((side - ax) / (bx - ax));
+                    if (z >= -wz && z <= wz) return true;
+                }
             return false;
         }
 

@@ -16,3 +16,6 @@ A player whose client crashed, was killed or lost power never stays "Online" for
 
 ## Next step
 Open the PR, wait for CI, send the PM the green sha.
+
+## Follow-up (bugfix-33, 2026-10-17)
+The sweep marked check bots offline (they never heartbeat and sit idle for long stretches), so SocialTest failed intermittently with "Nobody is there" / no "struck down" line. Now only connections that have sent a Heartbeat are ever swept (the connect hooks clear the seen row, Heartbeat creates it), and disconnect clears it. The real client heartbeats at once on joining.
