@@ -146,6 +146,53 @@ public static class MaterialLook
         return square;
     }
 
+    // A pine (PropMeshes.PaintedPine, one unit tall) wearing the card pine's own
+    // painting: each point takes the colour the card shows at its height and at its
+    // distance from the trunk, so the card's lit edges, shade bands and outlines
+    // land on the matching tiers from every side. Lit in soft bands so it sits in
+    // the scene's light without fighting the painted shading.
+    public static ShaderMaterial CardPine(Texture2D card)
+    {
+        var material = new ShaderMaterial { Shader = new Shader { Code = CardPineCode } };
+        material.SetShaderParameter("card", card);
+        return material;
+    }
+
+    const string CardPineCode = """
+        shader_type spatial;
+        render_mode cull_disabled;
+        uniform sampler2D card : source_color, filter_linear_mipmap, repeat_disable;
+        // The card's trunk centre and the scale from tree units to card width.
+        uniform float centre = 0.5;
+        uniform float aspect = 1.914;
+        varying vec3 obj;
+        void vertex() { obj = VERTEX; }
+        void fragment() {
+            float r = length(obj.xz);
+            float v = clamp(1.0 - obj.y, 0.0, 1.0);
+            // Foliage never reaches below the card's lowest needles; the trunk
+            // takes the card's trunk.
+            bool trunk = r < 0.045 && obj.y < 0.2;
+            if (!trunk) v = min(v, 0.75);
+            // Right half of the card: the trunk at its centre, the tier tips at its edge.
+            vec4 c = vec4(0.0);
+            for (int i = 0; i < 8 && c.a < 0.95; i++) {
+                float rr = r * (1.0 - float(i) * 0.12);
+                c = textureLod(card, vec2(centre + (trunk ? 0.0 : rr * aspect), min(v, 0.97)), 0.0);
+            }
+            // A soft dark rim, like the card's ink line round each tier.
+            float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
+            ALBEDO = c.rgb * 0.8 * mix(1.0, 0.6, smoothstep(0.7, 0.92, rim));
+            ROUGHNESS = 0.95;
+            SPECULAR = 0.05;
+        }
+        void light() {
+            float l = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
+            float band = 0.34 + 0.22 * smoothstep(0.45, 0.55, l);
+            DIFFUSE_LIGHT += LIGHT_COLOR * band / PI;
+        }
+        """;
+
     // Which painted pattern stands in for one of today's materials, read from the
     // relief settings each surface family uses in Look and StructureModel.
     public static Pattern Classify(Material? material, out Color albedo)

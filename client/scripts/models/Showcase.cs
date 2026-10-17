@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted" or "crowd" or "pinetest")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -42,6 +42,7 @@ public partial class Showcase : Node3D
             else if (view == "materials") Materials();
             else if (view == "painted") PaintedScene();
             else if (view == "crowd") Crowd();
+            else if (view == "pinetest") PineTest();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -795,6 +796,25 @@ public partial class Showcase : Node3D
             }
             Repaint(child);
         }
+    }
+
+    // The artist's card pine beside the 3D pine painted from it (Justin: "85% the
+    // same"), then the 3D pine turned 90, 180 and 270 degrees.
+    void PineTest()
+    {
+        var image = Image.LoadFromFile(ProjectSettings.GlobalizePath("res://../docs/art-packs/golden-skull/foliage/Forest_big_tree_needle_04.png"));
+        image.GenerateMipmaps();
+        var card = ImageTexture.CreateFromImage(image);
+        const float tall = 6.5f;
+        var sprite = new Sprite3D { Texture = card, PixelSize = tall / card.GetHeight(), Billboard = BaseMaterial3D.BillboardModeEnum.FixedY, Shaded = true, DoubleSided = true, AlphaCut = SpriteBase3D.AlphaCutMode.Discard, Centered = false, Offset = new Vector2(-card.GetWidth() * 0.5f, 0), Position = new Vector3(-6f, 0, 0) };
+        AddChild(sprite);
+        var material = MaterialLook.CardPine(card);
+        for (int i = 0; i < 4; i++)
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = material, Position = new Vector3(-2f + i * 4f, 0, 0), Scale = Vector3.One * tall, Rotation = new Vector3(0, i * Mathf.Pi / 2, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(2f, 4.5f, 18f), new Vector3(2f, 3.0f, 0), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.

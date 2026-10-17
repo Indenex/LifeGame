@@ -190,6 +190,52 @@ public static class PropMeshes
         return Done(k);
     }
 
+    // A pine matched to the Golden Skull card pine (Forest_big_tree_needle_04), one
+    // unit tall (scale it to the tree's height): a bare trunk to a fifth of the
+    // height, then five tiers of long pointed fingers drooping out and down from a
+    // cone, the tiers at the heights and widths of the card's own. Its colours come
+    // from projecting the card's painting onto it (MaterialLook.CardPine).
+    public static Mesh PaintedPine => paintedPine ??= BuildPaintedPine();
+    static Mesh? paintedPine;
+
+    static ArrayMesh BuildPaintedPine()
+    {
+        var k = Kit();
+        k.Paint(Colors.White).Loft(Vector3.Zero, new Vector3(0, 0.45f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.034f, 0.034f), new(0.1f, 0.026f, 0.026f), new(1f, 0.018f, 0.018f),
+        }, 7, 0.2f);
+        // (bottom, apex, radius) of each tier, from the card's outline.
+        var tiers = new (float Bottom, float Apex, float R)[]
+        {
+            (0.19f, 0.44f, 0.2f), (0.3f, 0.6f, 0.245f), (0.5f, 0.75f, 0.19f), (0.69f, 0.89f, 0.13f), (0.83f, 1f, 0.07f),
+        };
+        for (int t = 0; t < tiers.Length; t++)
+        {
+            var (bottom, apex, r) = tiers[t];
+            k.Paint(Colors.White).Loft(new Vector3(0, bottom + 0.04f, 0), new Vector3(0, apex, 0), new MeshKit.Ring[]
+            {
+                new(0f, r * 0.72f, r * 0.72f), new(0.5f, r * 0.4f, r * 0.4f), new(1f, 0.004f, 0.004f),
+            }, 10, 0.1f);
+            int fingers = 18 - t * 3;
+            for (int i = 0; i < fingers; i++)
+            {
+                float a = (i + H(t * 31 + i, 7) * 0.5f) * Mathf.Tau / fingers + t * 0.9f;
+                var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                // Long fingers from high on the cone, drooping well below the tier's base.
+                float h = bottom + (apex - bottom) * (0.62f + H(t * 31 + i, 8) * 0.25f);
+                var root = new Vector3(0, h, 0) + dir * r * 0.18f;
+                // Each finger its own length and droop, and a little twist sideways, as
+                // the card's brush strokes are never even.
+                var sideways = new Vector3(dir.Z, 0, -dir.X) * (H(t * 31 + i, 11) - 0.5f) * r * 0.5f;
+                var tip = dir * r * (0.7f + H(t * 31 + i, 9) * 0.45f) + sideways + new Vector3(0, bottom - 0.03f - H(t * 31 + i, 10) * 0.08f, 0);
+                var normal = (Vector3.Up + dir * 0.9f).Normalized();
+                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.05f, 0.02f);
+            }
+        }
+        return Done(k);
+    }
+
     // A broadleaf crown of rounded leaf clumps, each with a jagged lower edge, for
     // the reference look's leafy trees. Sits on PropMeshes.Trunk (top at 2.8 m).
     public static Mesh LeafClumps => leafClumps ??= BuildLeafClumps();
