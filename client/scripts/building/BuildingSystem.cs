@@ -450,7 +450,9 @@ public partial class BuildingSystem : Node
         }
         c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
         Sfx.Play(Cue.Place);
-        StopPlacing();
+        // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
+        if (Input.IsKeyPressed(Key.Shift)) MakeGhost();
+        else StopPlacing();
     }
 
     // --- Frame loop -------------------------------------------------------
@@ -636,7 +638,7 @@ public partial class BuildingSystem : Node
         {
             var shape = Structures.Shape(placeKind);
             string name = shape.Name.ToLowerInvariant();
-            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Esc cancel";
+            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Shift keeps placing    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }
