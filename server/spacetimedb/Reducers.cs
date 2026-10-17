@@ -39,7 +39,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
-            MarkSeen(ctx, existing.PlayerId);
+            ForgetSeen(ctx, existing.PlayerId);
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
@@ -73,7 +73,6 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
-        MarkSeen(ctx, player.PlayerId);
         SurvivalConnected(ctx, player);
         EnsureHealth(ctx, player.PlayerId);
     }
@@ -84,6 +83,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
         {
             ctx.Db.Player.Identity.Update(player with { Online = false });
+            ForgetSeen(ctx, player.PlayerId);
             SurvivalDisconnected(ctx, player);
             StanceDisconnected(ctx, player);
         }
@@ -123,7 +123,8 @@ public static partial class Module
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
         // An admin who is flying (/fly, admin-1) is exempt from the walking pace; nobody else is.
-        if (!IsFlyingAdmin(ctx, player.PlayerId))
+        bool flyingNow = IsFlyingAdmin(ctx, player.PlayerId);
+        if (!flyingNow)
         {
             float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
             var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
@@ -139,6 +140,13 @@ public static partial class Module
             var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
             if (bank is null) ctx.Db.MoveBank.Insert(left);
             else ctx.Db.MoveBank.PlayerId.Update(left);
+        }
+
+        // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).
+        if (!flyingNow && PlayerStepBlocked(ctx, player.PlayerId, fromX, fromZ, x, z))
+        {
+            x = fromX;
+            z = fromZ;
         }
 
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
@@ -206,6 +214,7 @@ public static partial class Module
 
         if (stickTool is { } digger) WearTool(ctx, digger);
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 

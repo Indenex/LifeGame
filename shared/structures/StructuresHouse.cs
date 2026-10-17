@@ -25,6 +25,7 @@ namespace LifeGame.Shared
                     RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                     DoorwayZ = 1.8f,
                     Room = true,
+                    BrickWalls = true,
                     SmokeY = 3.3f,
                     Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
                     // Brick house: Footings, Brick walls, Rafters, Thatch
@@ -45,6 +46,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Raised hearth",
+                    Wild = true,
                     Category = "Fire",
                     Round = true, Radius = HearthRadius, Solid = true,
                     Clearance = 0.6f,
@@ -81,6 +83,34 @@ namespace LifeGame.Shared
                         new[] { (Item.Log, 16u) },
                         new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                         new[] { (Item.Fiber, 14u) },
+                    },
+                },
+            },
+                // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
+                // instead of thatch. Same room, door and shelter; claim-only like the brick house.
+            new StructureDef
+            {
+                Kind = 16,
+                Shape = new StructureShape
+                {
+                    Name = "Tiled house",
+                    Category = "Shelter",
+                    Scale = 1.25f,
+                    HalfWidth = 2.4f, HalfDepth = 2.0f,
+                    Clearance = 3.2f,
+                    RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                    DoorwayZ = 1.8f,
+                    Room = true,
+                    BrickWalls = true,
+                    TileRoof = true,
+                    SmokeY = 3.3f,
+                    Stages = new[] { "Footings", "Brick walls", "Rafters", "Roof tiles" },
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                        new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                        new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                        new[] { (Item.RoofTile, 12u) },
                     },
                 },
             },

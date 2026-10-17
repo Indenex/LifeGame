@@ -17,6 +17,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Lean-to",
+                    Wild = true,
                     Scale = 1.25f,
                     HalfWidth = 1.5f, HalfDepth = 1.25f,
                     Clearance = 1.9f,
@@ -38,6 +39,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Clay hut",
+                    Wild = true,
                     Scale = 1.25f,
                     Round = true, Radius = 1.9f,
                     Clearance = 2.2f,
@@ -82,6 +84,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Storage basket",
+                    Wild = true,
                     Category = "Storage",
                     Round = true, Radius = 0.35f,
                     Clearance = 0.6f,
@@ -103,6 +106,7 @@ namespace LifeGame.Shared
                 Shape = new StructureShape
                 {
                     Name = "Storage jar",
+                    Wild = true,
                     Category = "Storage",
                     Jar = true,
                     Round = true, Radius = 0.32f,
