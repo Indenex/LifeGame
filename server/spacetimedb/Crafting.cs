@@ -25,12 +25,26 @@ public static partial class Module
         // quality, so Ceramics can hand it back unchanged (ceramics-7). 0 for none.
         [Default((byte)0)]
         public byte VesselQuality;
+        // The tool in hand for the job (an item id, BestTool), 0 for none, so other players see
+        // the exact tool (Animation, anim-3).
+        [Default((ushort)0)]
+        public ushort Tool;
+        // That vessel's Wear number (its maker and slip) and Maker column, so the pot comes back as
+        // it went in (ceramics-7, crafting-25). 0 for none.
+        [Default(0u)]
+        public uint VesselWear;
+        [Default(0u)]
+        public uint VesselMaker;
+        // The average quality of what the job took, so ending it early (CancelJob) can return the
+        // inputs as they were. 0 for jobs started before this column existed.
+        [Default((byte)0)]
+        public byte InputQuality;
     }
 
     // Clients see only their own job, to show its progress.
     [SpacetimeDB.View(Accessor = "MyCraftJob", Public = true)]
     public static List<CraftJob> MyCraftJob(ViewContext ctx) =>
-        ctx.Db.CraftJob.Owner.Find(ctx.Sender) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
+        ctx.Db.CraftJob.Owner.Find(Me(ctx)) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
 
     [SpacetimeDB.Table(Accessor = "CraftTimer", Scheduled = nameof(FinishCraft), ScheduledAt = nameof(ScheduledAt))]
     public partial struct CraftTimer
@@ -59,6 +73,12 @@ public static partial class Module
         public Timestamp LitAt;
         // The fire is burning while the clock is before this.
         public Timestamp FuelUntil;
+        // The most seconds of fuel this fire can hold ahead of now, from the lighter's (and any
+        // better feeder's) Firecraft and a hearth's scale, the same cap FeedFire enforces.
+        // Clients read it for the smoke signal at 75% of the cap (Atmosphere). 0 on fires
+        // from before this column.
+        [Default(0f)]
+        public float FuelCapSeconds;
     }
 
     [SpacetimeDB.Table(Accessor = "FireTimer", Scheduled = nameof(BurnOutFires), ScheduledAt = nameof(ScheduledAt))]
@@ -92,28 +112,54 @@ public static partial class Module
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
     [SpacetimeDB.Reducer]
-    public static void StartCraft(ReducerContext ctx, string processId, float score)
+    public static void StartCraft(ReducerContext ctx, string processId, float score) =>
+        StartCraftCore(ctx, processId, score, null);
+
+    // Lights a fire where the player chose (crafting-28): the same craft as StartCraft with
+    // the spot named. Only fire processes take a spot; it must be within reach and clear
+    // ground by the same rules as the automatic spot (Hearths.cs ClearForFire).
+    [SpacetimeDB.Reducer]
+    public static void StartFireAt(ReducerContext ctx, string processId, float score, float x, float z)
+    {
+        if (!float.IsFinite(x) || !float.IsFinite(z)) throw new Exception("Not there");
+        StartCraftCore(ctx, processId, score, (x, z));
+    }
+
+    static void StartCraftCore(ReducerContext ctx, string processId, float score, (float X, float Z)? chosenSpot)
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var def = Processes.Find(processId) ?? throw new Exception("Unknown process");
-        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not null)
+        if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not null)
             throw new Exception("Your hands are busy");
         if (!float.IsFinite(score))
             throw new Exception("Invalid score");
         if (def.Minigame == Minigame.None)
             score = Processes.DefaultScore;
         score = Math.Clamp(score, 0f, 1f);
+        // The client reports how the minigame went; how far it is believed is CraftScore.cs.
+        score = TrustScore(ctx, player.PlayerId, def.Id, def.Minigame, score);
 
-        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is null)
-            throw new Exception("You need the right tool");
+        // Chopping is a world action: only the equipped tool does it (Equip.cs). Other recipes
+        // take the best tool carried, belt or bag (D-263).
+        InventoryItem? craftTool = null;
+        if (def.NeedsTool != ItemTags.None)
+        {
+            craftTool = def.Outcome == Outcome.Chop
+                ? EquippedToolOrThrow(ctx, def.NeedsTool, "an axe")
+                : BestTool(ctx, def.NeedsTool);
+            if (craftTool is null)
+                throw new Exception(NoToolMessage(ctx, def.NeedsTool, "You need the right tool"));
+        }
         // Station crafts are made at a finished station in a claim (Stations.cs).
         Structure? station = null;
         if (def.Station != StationKind.None)
             station = StationNear(ctx, def.Station, pos.X, pos.Z)
                 ?? throw new Exception($"You need to be at a {StationInfo.Name(def.Station)} in your claim");
         // Find the fire's spot before anything is used up, in case there is none.
-        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
+        if (chosenSpot is not null && def.Outcome != Outcome.Fire)
+            throw new Exception("Only a fire can be lit somewhere in particular");
+        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos, chosenSpot) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
@@ -130,8 +176,11 @@ public static partial class Module
         float inputQuality = 0f;
         uint taken = 0;
         byte vesselQuality = 0;
+        uint vesselWear = 0, vesselMaker = 0;
         foreach (var input in def.Consumes)
         {
+            // Which pot is about to go in, before it does (Ceramics): its maker and slip come back with it.
+            if (ClayRules.IsVessel(input.Item)) PeekVessel(ctx, input.Item, out vesselWear, out vesselMaker);
             float q = TakeFor(ctx, station, input.Item, input.Count);
             if (ClayRules.IsVessel(input.Item)) vesselQuality = (byte)Math.Round(q / input.Count);
             inputQuality += q;
@@ -161,20 +210,26 @@ public static partial class Module
             (fx, fz) = TreeToChop(ctx, pos.X, pos.Z);
         // A roast keeps its meat's quality until it comes off the fire.
         byte quality = def.Outcome == Outcome.Roast ? (byte)Math.Round(inputQuality) : Processes.Quality(inputQuality, score, cap);
+        if (def.QualityBonus > 0 && def.Outcome != Outcome.Roast) quality = (byte)Math.Min(cap, quality + def.QualityBonus);
         // Better work takes a little longer (D-113); fires and roasts keep their times.
         float seconds = def.Seconds;
         if (def.Outcome is not (Outcome.Fire or Outcome.Roast))
             seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
-        if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool
-            && Items.Def((Item)tool.Item).HasQuality)
-            seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
+        ushort toolUsed = 0;
+        if (craftTool is { } tool)
+        {
+            if (Items.Def((Item)tool.Item).HasQuality)
+                seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
+            toolUsed = tool.Item;
+            WearTool(ctx, tool);
+        }
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
         {
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
@@ -184,8 +239,12 @@ public static partial class Module
             X = fx,
             Z = fz,
             VesselQuality = vesselQuality,
+            VesselWear = vesselWear,
+            VesselMaker = vesselMaker,
+            Tool = toolUsed,
+            InputQuality = (byte)Math.Clamp((int)MathF.Round(inputQuality), 0, 255),
         });
-        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = Me(ctx) });
         OnCraftStarted(ctx, started);
     }
 
@@ -216,7 +275,11 @@ public static partial class Module
         else if (def.Outcome == Outcome.Chop)
             ChopTree(ctx, job, def);
         else
-            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
+        {
+            // What a hand makes carries its maker; raw material does not (crafting-25).
+            bool made = Items.Def(def.Makes).HasQuality;
+            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, made ? job.Quality : Items.RawQuality, maker: made ? job.PlayerId : 0u);
+        }
     }
 
     // Puts one burnable item on a fire within reach.
@@ -242,7 +305,9 @@ public static partial class Module
         if (from + fuel > cap)
             throw new Exception("The fire is burning as high as it will");
         Take(ctx, (Item)item, 1);
-        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel) });
+        float capSeconds = Fires.MaxSecondsFor(SkillRank(ctx, pos.PlayerId, "fire.hand_drill")) * scale;
+        ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel), FuelCapSeconds = MathF.Max(fire.FuelCapSeconds, capSeconds) });
+        NoteAct(ctx, pos.PlayerId, WorkMotion.Feed, (Item)item);
     }
 
     // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.
@@ -283,9 +348,17 @@ public static partial class Module
             for (int dz = -1; dz <= 1; dz++)
                 foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
                     if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
-                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z));
+                    {
+                        float radius = Fires.WarmthRadius;
+                        FireWarmthRadiusHook(ctx, fire.X, fire.Z, ref radius);
+                        warmth = Math.Max(warmth, Fires.WarmthFrom(fire.X, fire.Z, x, z, radius));
+                    }
         return warmth;
     }
+
+    // How far a fire's warmth reaches (default Fires.WarmthRadius). House building's
+    // stone-ringed hearth sets Fires.StoneRingWarmthRadius for a fire burning on it.
+    static partial void FireWarmthRadiusHook(ReducerContext ctx, float fireX, float fireZ, ref float radius);
 
     // Survival asks how warm a spot is through this hook (see Survival.cs).
     static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth) =>
@@ -306,6 +379,7 @@ public static partial class Module
             LitBy = playerId,
             LitAt = ctx.Timestamp,
             FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.StartSeconds * scale * 1_000_000)),
+            FuelCapSeconds = Fires.MaxSecondsFor(SkillRank(ctx, playerId, "fire.hand_drill")) * scale,
         });
         EnsureFireTimer(ctx);
     }
@@ -319,7 +393,7 @@ public static partial class Module
     static uint CountOf(ReducerContext ctx, Item item)
     {
         uint n = 0;
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)))
             n += row.Count;
         return n;
     }
@@ -327,7 +401,7 @@ public static partial class Module
     // Takes items, best quality first, and returns the summed quality taken.
     static float Take(ReducerContext ctx, Item item, uint count)
     {
-        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)).ToList();
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)).ToList();
         stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
         float sum = 0f;
         foreach (var stack in stacks)
@@ -341,13 +415,16 @@ public static partial class Module
         return sum;
     }
 
-    // The best carried item with all of these properties.
+    // The best carried item with all of these properties that still works. A spent tool
+    // is skipped (shared/Durability.cs); between equals the more worn one goes first.
     static InventoryItem? BestTool(ReducerContext ctx, ItemTags tags)
     {
         InventoryItem? best = null;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && (Items.Def((Item)row.Item).Tags & tags) == tags
-                && (best is null || row.Quality > best.Value.Quality))
+                && !(Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
+                && (best is null || row.Quality > best.Value.Quality
+                    || (row.Quality == best.Value.Quality && Durability.Used(row.Wear) > Durability.Used(best.Value.Wear))))
                 best = row;
         return best;
     }
@@ -356,7 +433,7 @@ public static partial class Module
     static bool HasSpareHammer(ReducerContext ctx, ProcessDef def)
     {
         uint hammers = 0;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && Items.Def((Item)row.Item).Tags.HasFlag(ItemTags.Hammer))
                 hammers += row.Count;
         foreach (var input in def.Consumes)

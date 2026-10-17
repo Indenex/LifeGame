@@ -76,7 +76,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var roast = ctx.Db.Roast.Id.Find(roastId) ?? throw new Exception("That is gone");
-        if (roast.Owner != ctx.Sender)
+        if (roast.Owner != Me(ctx))
             throw new Exception("That isn't yours");
         RequireReach(pos, roast.X, roast.Z);
         float seconds = SecondsBetween(roast.PutAt, ctx.Timestamp);
@@ -84,19 +84,19 @@ public static partial class Module
             throw new Exception("It isn't cooked yet");
         ctx.Db.Roast.Id.Delete(roast.Id);
         var (item, quality) = RoastResult(ctx, roast, seconds);
-        AddToInventory(ctx, ctx.Sender, item, 1, quality);
+        AddToInventory(ctx, Me(ctx), item, 1, quality);
     }
 
     static (Item item, byte quality) RoastResult(ReducerContext ctx, Roast roast, float seconds)
     {
         bool burnt = Roasting.Burnt(seconds);
         byte cap = 100;
-        bool venison = (Item)roast.Item == Item.RawVenison;
-        string process = venison ? "cook.venison" : "cook.meat";
+        var def = Foods.FindRoast((Item)roast.Item) ?? throw new Exception("That doesn't roast");
+        string process = def.Process;
         QualityCapFor(ctx, roast.PlayerId, process, ref cap);
         byte quality = burnt ? Items.RawQuality : Processes.Quality(roast.Quality, Roasting.Score(seconds), cap);
         OnProcessPerformed(ctx, roast.PlayerId, process, quality, burnt);
-        return burnt ? (venison ? Item.BurntVenison : Item.BurntMutton, Items.RawQuality) : (venison ? Item.CookedVenison : Item.CookedMutton, quality);
+        return burnt ? (def.Burnt, Items.RawQuality) : (def.Cooked, quality);
     }
 
     // When a fire burns out, whatever was on it drops beside it as it is: raw if

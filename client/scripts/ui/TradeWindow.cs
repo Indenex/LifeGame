@@ -7,7 +7,7 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Trading face to face (D-069). G on a player asks to trade (Claims' handler); they see
-// "Mara wants to trade" and press G to say yes or Esc to say no. The window shows both
+// "Mara wants to trade" and press E to say yes or Esc to say no. The window shows both
 // offers side by side, with what you carry below to add from. Each side accepts; any
 // change to either offer clears both accepts, and the window says so. Esc calls the
 // trade off; the server ends it when you walk apart, die or go offline.
@@ -118,7 +118,7 @@ public partial class TradeWindow : CanvasLayer
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is not InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape }) return;
+        if (!e.IsActionPressed("ui_cancel")) return;
         if (IsOpen || Link.Outgoing != null) Link.Cancel();
         else if (Link.Incoming != null) Link.Answer(false);
         else return;
@@ -144,6 +144,8 @@ public partial class TradeWindow : CanvasLayer
 
         accept = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
         accept.AddThemeFontSizeOverride("font_size", 17);
+        // The trade's one main action: coral on warm paper (ui-51).
+        WarmLook.MainButton(accept);
         accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted, t.Version); };
         box.AddChild(accept);
 
@@ -157,7 +159,7 @@ public partial class TradeWindow : CanvasLayer
         carryTitle.Modulate = new Color(1, 1, 1, 0.75f);
         box.AddChild(carryTitle);
         carryRow = new HFlowContainer { CustomMinimumSize = new Vector2(600, 0) };
-        carryRow.AddThemeConstantOverride("h_separation", 6);
+        carryRow.AddThemeConstantOverride("h_separation", 2);
         carryRow.AddThemeConstantOverride("v_separation", 6);
         box.AddChild(carryRow);
 
@@ -170,14 +172,7 @@ public partial class TradeWindow : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var panel = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
-        panel.GrowHorizontal = Control.GrowDirection.Both;
-        panel.GrowVertical = Control.GrowDirection.Both;
+        var panel = Ui.Window(box);
         return panel;
     }
 
@@ -299,8 +294,9 @@ public partial class TradeWindow : CanvasLayer
             FocusMode = Control.FocusModeEnum.None,
             Disabled = move == null,
         };
-        button.AddThemeFontSizeOverride("font_size", 15);
-        button.AddThemeConstantOverride("icon_max_width", 30);
+        // A touch smaller (ui-59), so what you carry fits one row on the warm look's rounder buttons.
+        button.AddThemeFontSizeOverride("font_size", 14);
+        button.AddThemeConstantOverride("icon_max_width", 26);
         button.AddThemeColorOverride("font_disabled_color", Look.Cream);
         if (move != null)
             button.Pressed += () => move(s, Input.IsKeyPressed(Key.Shift) ? s.Count : 1);

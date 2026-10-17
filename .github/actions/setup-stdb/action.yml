@@ -1,0 +1,34 @@
+name: Set up .NET and SpacetimeDB
+description: .NET 8, the NuGet cache, and the SpacetimeDB CLI (cached) on PATH. Shared by every Build job.
+inputs:
+  spacetime-version:
+    description: SpacetimeDB release to install
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v5
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: nuget-
+
+    - name: Cache SpacetimeDB
+      uses: actions/cache@v5
+      with:
+        path: ~/stdb
+        key: stdb-${{ inputs.spacetime-version }}
+
+    - name: Install SpacetimeDB
+      shell: bash
+      run: |
+        if [ ! -x "$HOME/stdb/spacetimedb-cli" ]; then
+          mkdir -p "$HOME/stdb"
+          curl -sSL "https://github.com/clockworklabs/SpacetimeDB/releases/download/v${{ inputs.spacetime-version }}/spacetime-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C "$HOME/stdb"
+        fi
+        echo "$HOME/stdb" >> "$GITHUB_PATH"

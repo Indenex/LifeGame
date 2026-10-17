@@ -24,6 +24,15 @@ When everything is current the button just says **Play**. **Update world only** 
 
 A build labelled as a world wipe (D-130) is never published without asking: the launcher shows "This update wipes the world" with **Keep my world** as the safe choice.
 
+## Two launchers: host and player (release-3)
+
+Each release carries two builds of this launcher:
+
+- **Host** (`LifeGameLauncher-Linux.zip` / `-Windows.zip`): installs, starts and updates SpacetimeDB and the world on this computer, then plays. This is the one above.
+- **Player** (`LifeGamePlayer-Linux.zip` / `-Windows.zip`): no server parts at all (no SpacetimeDB install, no world update, no wipe question). It keeps the game up to date and connects to a server address.
+
+The player launcher finds the address in this order: `--server=URL` on the command line, then the first line of `server.cfg` (in its `LifeGame` folder, or next to the launcher), then the address baked in at export from the repository variable `PLAYER_SERVER_URL` (Settings > Variables; an address, not a secret, never committed). With none, it says "No server address yet" and doesn't start the game. The window has a **Server address** box: a friend types the host's address once (`host:3000` is fine, `http://` is added), and the launcher saves it to `LifeGame/server.cfg`, so every later start is a double-click. Both builds update themselves from the release (the host from its section of `release.json`, the player from `launcher.player`), have their own shortcut name ("LifeGame" and "LifeGame (player)") and can sit side by side.
+
 ## Options
 
 Pass after `--`, e.g. `LifeGameLauncher.x86_64 -- --no-server --server=http://friend:3000` for a friend joining someone else's world (updates the game only). The full list is at the top of `launcher.gd`.
@@ -33,3 +42,15 @@ Pass after `--`, e.g. `LifeGameLauncher.x86_64 -- --no-server --server=http://fr
 - `launcher.gd` is the whole app (GDScript, Godot 4.6). Open `launcher/project.godot` in the Godot 4.6 .NET editor.
 - Export: `godot --headless --path launcher --export-release Linux out/LifeGameLauncher.x86_64` (and `Windows out/LifeGameLauncher.exe`). The .NET editor needs the .NET 8 SDK on PATH even though the launcher has no C#.
 - Test without GitHub: pack releases with `tools/release/make-release.sh`, serve them with `tools/release/fake-api.py <dir>`, then run the launcher with `-- --api=http://127.0.0.1:8765 --home=/tmp/lg --auto --no-play --quit` against a local `spacetime start`. Exit code 0 ok, 1 failed, 2 stopped at a world wipe.
+
+## What's new (release-9)
+
+Each release body lists player-facing patch notes between `<!-- notes -->` and `<!-- /notes -->` (also `notes` in `release.json`). They come from `tools/release/merged-prs.sh`: the `Player note: <one plain sentence>` line in a PR body, else the PR title without its ticket prefix. PRs labelled or titled scribe, docs, ticket-only or ci-only are left out. Both launchers show a scrollable "What's new" box when an update is ready and after it lands, listing every build between the installed one and the newest, newest first. The "What's new" button reopens it.
+
+## Resizable window (release-10)
+
+Both launchers open at 860x560 and can be resized (minimum 640x540, and never smaller than the layout needs). The buttons wrap onto a second line when narrow, the "What's new" box takes the spare height, and the buttons stay at the bottom. On screens with a display scale above 100% (Windows DPI scaling) the window and everything in it is scaled to match. The size and position are remembered in `LifeGame/window.json` and restored on the next start if the window would still be on a screen. `--window-size=WxH` opens at a given size without restoring or saving (for screenshots).
+
+## Look (release-11, D-314)
+
+Both launchers wear the "Warm paper windows" look: a cream paper panel on a warm table, 24 px round corners with a soft shadow, brown Nunito text (`launcher/fonts/Nunito.font.bin`, SIL OFL, loaded from raw bytes so it needs no import and is exported by the `fonts/*` include filter), a pastel sage main button and terracotta for warnings and the wipe question. The colours are the constants at the top of `launcher.gd`.

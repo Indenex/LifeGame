@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using Godot;
@@ -13,7 +14,8 @@ public static class ItemLook
     public static Mesh MeshFor(Item item)
     {
         if (Meshes.TryGetValue(item, out var mesh)) return mesh;
-        mesh = ItemModels.GroundMesh(item) ?? OldMeshFor(item);
+        // The painted look (Modeling's painted-6) for the meshes made elsewhere too.
+        mesh = ItemModels.GroundMesh(item) ?? PaintedItems.Paint(OldMeshFor(item), PaintedItems.FamilyOf(item));
         Meshes[item] = mesh;
         return mesh;
     }
@@ -46,15 +48,32 @@ public static class ItemLook
         };
     }
 
-    // "Fine stone flake", or just "Stick" for raw materials.
-    public static string Label(Item item, byte quality, uint count)
+    // "Fine stone flake", or just "Stick" for raw materials. A tool that is wearing out
+    // says so: "Rough stone axe (worn)".
+    public static string Label(Item item, byte quality, uint count, string condition = "")
     {
         if (!Items.All.TryGetValue(item, out var def)) return $"Item {(ushort)item}";
         string name = def.Count(count);
         if (!def.HasQuality) return name;
         string grade = Processes.Grade(quality);
-        return char.ToUpperInvariant(grade[0]) + grade[1..] + " " + name.ToLowerInvariant();
+        string label = char.ToUpperInvariant(grade[0]) + grade[1..] + " " + name.ToLowerInvariant();
+        return condition == "" ? label : $"{label} ({condition})";
     }
+
+    // "worn", "nearly spent" or "spent" for a tool that is wearing out, else "" (D-155).
+    public static string Condition(ushort item, byte quality, uint wear)
+    {
+        if (!Items.IsKnown(item)) return "";
+        if (Durability.Wears((Item)item)) return Durability.Condition(quality, wear);
+        // A pot with a maker's mark says who made it (ceramics-15), and slip says so too (ceramics-14).
+        // Main fills in the name lookup.
+        string made = Marks.Marked((Item)item) && Marks.Has(wear) ? $"made by {MakerName?.Invoke(Marks.Maker(wear)) ?? "someone"}" : "";
+        string slip = Slip.On((Item)item, wear) ? (Slip.Bands(wear) == 2 ? "two bands of slip" : "a band of slip") : "";
+        return made != "" && slip != "" ? $"{made}, {slip}" : made + slip;
+    }
+
+    // Looks up a player's name from the low 16 bits of their id (a maker's mark carries that much).
+    public static Func<uint, string?>? MakerName;
 
     // A long primitive laid on its side, like a stick dropped on the ground.
     static Mesh Lying(PrimitiveMesh source, Color color)

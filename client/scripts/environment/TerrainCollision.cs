@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 
@@ -30,49 +32,28 @@ public partial class Terrain
                 float d = Mathf.Sqrt(d2);
                 to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
             }
-        return CollideOutcrops(to, airHeight);
+        return CollideFeatures(to, airHeight);
     }
 
-    // Outcrop boulders spread several meters from their middle cell (env-5), so they
-    // are found by square rather than by the cells next to the walker.
-    readonly Dictionary<(int, int), List<(float X, float Z, float R)>> outcropStones = new();
-
-    Vector3 CollideOutcrops(Vector3 to, float airHeight)
+    // Features that block with stones (outcrops, env-5) spread several meters from their
+    // middle cell, so their stones come from shared/LandmarkBlocks.cs by square rather than
+    // by the cells next to the walker. The server reads the same circles (bugfix-49).
+    Vector3 CollideFeatures(Vector3 to, float airHeight)
     {
-        int size = Landmarks.OutcropSquare;
-        int sx0 = Landmarks.SquareOf(Mathf.FloorToInt(to.X - 8f), size), sx1 = Landmarks.SquareOf(Mathf.FloorToInt(to.X + 8f), size);
-        int sz0 = Landmarks.SquareOf(Mathf.FloorToInt(to.Z - 8f), size), sz1 = Landmarks.SquareOf(Mathf.FloorToInt(to.Z + 8f), size);
-        for (int sx = sx0; sx <= sx1; sx++)
-            for (int sz = sz0; sz <= sz1; sz++)
-                foreach (var (ox, oz, radius) in OutcropStones(sx, sz))
-                {
-                    if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
-                    float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
-                    if (d2 >= keep * keep) continue;
-                    if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
-                    float d = Mathf.Sqrt(d2);
-                    to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
-                }
+        foreach (var (ox, oz, radius) in LandmarkBlocks.Near(to.X, to.Z).ToList())
+        {
+            if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
+            float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
+            if (d2 >= keep * keep) continue;
+            if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
+            float d = Mathf.Sqrt(d2);
+            to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
+        }
         return to;
     }
 
-    // The blocking stones of the outcrop in a square, worked out once with the same
-    // seed the terrain draws them from.
-    List<(float X, float Z, float R)> OutcropStones(int sx, int sz)
-    {
-        if (outcropStones.TryGetValue((sx, sz), out var stones)) return stones;
-        stones = new();
-        if (Landmarks.OutcropIn(sx, sz, out int x, out int z))
-        {
-            var (fx, fz) = Trees.Trunk(x, z);
-            var built = new LandmarkProps.Lists();
-            LandmarkProps.Outcrop(x, z, new Vector3(fx, 0f, fz), (_, _) => 0f, built, new Color(0, 0, 0, 0));
-            stones.AddRange(built.Blocks);
-        }
-        if (outcropStones.Count > 256) outcropStones.Clear();
-        outcropStones[(sx, sz)] = stones;
-        return stones;
-    }
+    // How far a felled tree on a cell has grown back (0 to 1), or -1 (TreeFall sets it).
+    public Func<int, int, float>? FelledProgress;
 
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
     // stones, ferns and fallen trunks never block.
@@ -81,17 +62,20 @@ public partial class Terrain
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
         height = float.MaxValue; // trunks are never hopped
-        if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        if (depths.ContainsKey(World.CellKey(x, z))) return false;
+        // A felled tree's stump, then its regrowth, blocks by the shared rule (env-29).
+        if (FelledProgress?.Invoke(x, z) is float felled and >= 0f) return Obstacles.Regrowing(x, z, felled, out radius, out height);
+        if (Cleared?.Invoke(x, z) == true) return false;
         float top = TileHeight(x, z);
         if (top < Look.WaterLevel + 0.1f) return false;
-        // Landmarks (env-5): a giant tree's broad trunk; an outcrop's middle cell holds
-        // only its stones, which CollideOutcrops handles.
-        if (Landmarks.GiantOakAt(x, z))
+        // Features (env-5, env-10): a giant tree's broad trunk; an outcrop's middle cell
+        // holds only its stones, which CollideFeatures handles.
+        if (Features.At(x, z, FeatureGround.Dry) is { } feature)
         {
-            radius = TrunkRadius(LandmarkProps.GiantGirth(x, z));
+            if (feature.Block != FeatureBlock.Trunk) return false;
+            radius = TrunkRadius(LandmarkProps.For(feature).Girth?.Invoke(x, z) ?? 1f);
             return true;
         }
-        if (Landmarks.OutcropAt(x, z)) return false;
         float roll = Trees.Hash01(x, z, 11);
         float density = Forest.Density(x, z);
         float heath = Forest.Heath(x, z), wet = Forest.Wetland(x, z);
@@ -111,7 +95,7 @@ public partial class Terrain
         }
         bool shore = NearWater(x, z, top);
         float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
+        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? Obstacles.ShoreStones(x, z) : 0f);
         if (roll >= rock) return false;
         float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
         radius = RockRadius(scale * size);

@@ -74,6 +74,8 @@ var conn = DbConnection.Builder()
         c.SubscriptionBuilder()
             .OnApplied(ctx =>
             {
+                // A returning login waits at the character menu (survival-24): play its character.
+                if (ctx.Db.Player.Identity.Find(identity) is { Online: false }) c.Reducers.SelectCharacter(identity);
                 myId = ctx.Db.Player.Identity.Find(identity)!.PlayerId;
                 var pos = ctx.Db.PlayerPos.PlayerId.Find(myId)!;
                 x = pos.X; z = pos.Z;
@@ -240,7 +242,7 @@ bool Step(string line)
             string quality = n.Length > 2 ? n[2] : "50";
             var owner = me;
             if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]})\"");
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false)\"");
             Pump(1.0);
             break;
         }
@@ -317,7 +319,7 @@ bool Step(string line)
             var trade = conn.Db.MyTrade.Iter().OrderByDescending(t => t.Id).FirstOrDefault();
             if (trade == null) { Console.WriteLine("puppet: server said no open trade"); break; }
             if (verb == "trade-answer") conn.Reducers.AnswerTrade(trade.Id, rest == "yes");
-            else if (verb == "trade-accept") conn.Reducers.AcceptTrade(trade.Id, trade.Version);
+            else if (verb == "trade-accept") conn.Reducers.AcceptTrade(trade.Id, trade.Version, true);
             else if (verb == "trade-cancel") conn.Reducers.CancelTrade(trade.Id);
             else
             {

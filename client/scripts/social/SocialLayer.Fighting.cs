@@ -11,8 +11,6 @@ namespace LifeGame;
 // Being hurt shows as a soft red edge on the screen that fades as health returns.
 public partial class SocialLayer
 {
-    const float FlinchSeconds = 0.25f;
-
     readonly ColorRect hurtEdge = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     ShaderMaterial hurtMaterial = null!;
     float hurtShown;
@@ -43,7 +41,7 @@ void fragment() {
 
     void AttachFighting()
     {
-        conn!.Db.StrikeEvent.OnInsert += (_, e) => OnStrike(e);
+        // The struck player's flinch is a body pose now (Animation, anim-5 AvatarWork).
         Strike.Register("claims.player", OfferStrike);
     }
 
@@ -62,7 +60,7 @@ void fragment() {
             float d = to.Length();
             if (d > bestD || d < 0.01f || to / d is var dir && dir.Dot(facing) < 0.4f) continue;
             if (!FightingAllowedAt(p.X, p.Z)) continue;
-            if (conn.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h && h.GraceUntil.MicrosecondsSinceUnixEpoch > now) continue;
+            if (conn.Db.PlayerStanding.PlayerId.Find(p.PlayerId) is { } h && h.GraceUntil.MicrosecondsSinceUnixEpoch > now) continue;
             if (conn.Db.Player.PlayerId.Find(p.PlayerId) is not { Online: true }) continue;
             best = p;
             bestD = d;
@@ -75,18 +73,9 @@ void fragment() {
     bool FightingAllowedAt(float x, float z) =>
         !Social.InSpawnClearing(x, z) && (ClaimAt(x, z) is not { } c || c.AllowPvp);
 
-    // The struck player flinches on everyone's screen.
-    void OnStrike(StrikeEvent e)
-    {
-        if (avatarOf(e.VictimId) is not { } body) return;
-        var tween = body.CreateTween();
-        tween.TweenProperty(body, "scale", new Vector3(1.08f, 0.9f, 1.08f), FlinchSeconds * 0.35f).SetTrans(Tween.TransitionType.Sine);
-        tween.TweenProperty(body, "scale", Vector3.One, FlinchSeconds * 0.65f).SetTrans(Tween.TransitionType.Sine);
-    }
-
     float MyHealth()
     {
-        if (conn?.Db.PlayerHealth.PlayerId.Find(myId) is not { } h) return Social.MaxHealth;
+        if (conn?.Db.MyHealth.Iter().FirstOrDefault() is not { } h) return Social.MaxHealth;
         return Social.HealthAt(h.Health, h.AsOf.MicrosecondsSinceUnixEpoch, h.LastHitAt.MicrosecondsSinceUnixEpoch, NowMicros, h.Fed);
     }
 
@@ -115,7 +104,7 @@ void fragment() {
         foreach (var p in conn.Db.PlayerPos.Iter())
         {
             if (p.PlayerId == myId || avatarOf(p.PlayerId) is not Avatar avatar) continue;
-            bool marked = conn.Db.PlayerHealth.PlayerId.Find(p.PlayerId) is { } h && h.MarkedUntil.MicrosecondsSinceUnixEpoch > now;
+            bool marked = conn.Db.PlayerStanding.PlayerId.Find(p.PlayerId) is { } h && h.MarkedUntil.MicrosecondsSinceUnixEpoch > now;
             avatar.SetNameTint(marked ? MarkedName : Look.Cream);
         }
     }

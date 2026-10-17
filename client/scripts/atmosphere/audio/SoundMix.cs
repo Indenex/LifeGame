@@ -6,7 +6,7 @@ namespace LifeGame;
 public enum Ground { Grass, Earth, Water, Clay, Floor, Sand, Snow }
 
 // Short sounds for things that just happened to you (SoundMix.Cue, audio-3).
-public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump }
+public enum Cue { Pickup, Eat, Drink, SkillUp, Learn, FireLit, Place, Hit, Crit, Jump, BowDraw, BowShot, ArrowFlesh, ArrowWood, ArrowEarth }
 
 // What your hands are doing, for the work sounds (SoundMix.Working).
 public enum Work { None, Knap, Drill, Fibre, Lash, Clay, Rasp, Carve }
@@ -32,6 +32,8 @@ public sealed class SoundMix
     // The nearest campfires: how loud (0 to 1, from distance and how well it burns)
     // and where (pan -1 left to 1 right).
     public float Fire, FirePan;
+    // How well stoked the nearest fire is, 0 to 1: above about 0.75 it roars (deeper, louder, more pops).
+    public float FireStoke;
     // Open water nearby: how close and how much of it (0 none, 1 at the edge of a
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
@@ -45,6 +47,8 @@ public sealed class SoundMix
     // Snow lying on the ground, 0 to 1: the grass goes quiet under it.
     public float SnowCover;
     public bool MusicOn = true;
+    // The synthesized score. Off since audio-8: the game plays recorded music (MusicPlayer).
+    public bool SynthMusic;
     // The sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
     // player starts, is the mix as designed; see SliderGain. Effects are your
     // footsteps and everyone's work; ambience is weather, wildlife, sheep, fire and
@@ -150,7 +154,7 @@ public sealed class SoundMix
     {
         Daylight = Unit(Daylight); Rain = Unit(Rain); Wind = Unit(Wind); Wetness = Unit(Wetness); Cover = Unit(Cover);
         TimeOfDay = Fin(TimeOfDay, 0.5f); TimeOfDay -= MathF.Floor(TimeOfDay);
-        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan);
+        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan); FireStoke = Unit(FireStoke);
         Water = Unit(Water); WaterPan = Side(WaterPan); Stream = Unit(Stream); StreamPan = Side(StreamPan);
         Year = Fin(Year, 0.3f); SnowCover = Unit(SnowCover);
         MasterLevel = Unit(MasterLevel); MusicLevel = Unit(MusicLevel); EffectsLevel = Unit(EffectsLevel); AmbienceLevel = Unit(AmbienceLevel);
@@ -180,7 +184,15 @@ public sealed class SoundMix
     // Something that just happened to you: picked something up, ate, drank, got
     // better at a skill, learned something, a fire caught, set something down.
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+    public void Play(CueDef def, float gain = 1f, float pan = 0f) => cues.Trigger(def, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+
+    public void Play(Cue cue, float gain = 1f, float pan = 0f)
+    {
+        gain = Math.Clamp(Fin(gain), 0f, 4f);
+        pan = Side(pan);
+        // Cues that have been converted to data play from their CueDef.
+        if (CueDefs.ForCue(cue) is { } def) cues.Trigger(def, gain, pan);
+    }
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -291,7 +303,7 @@ public sealed class SoundMix
         wind.Render(outL, outR, count, winterWind, Rain, season.Cold);
         foliage.Render(outL, outR, count, winterWind, Rain, Foliage, wind.Gust, season.Leaves, season.Dry, SnowCover);
         thunder.Render(outL, outR, count);
-        fire.Render(outL, outR, count, Fire, FirePan, Rain);
+        fire.Render(outL, outR, count, Fire, FirePan, Rain, FireStoke);
         birds.Render(outL, outR, sendL, sendR, count, birdLevel * season.Birds * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), Math.Min(1f, chorus * season.Chorus));
         night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind), season.Insects);
         insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
@@ -356,7 +368,7 @@ public sealed class SoundMix
             right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
         if (!Finite(left, count) || !Finite(right, count)) { stage = "effects (steps, work, cues, others)"; throw new InvalidOperationException("non-finite mix before music"); }
-        music.Render(left, right, sendL, sendR, count, MusicOn, SliderGain(MusicLevel), night01);
+        music.Render(left, right, sendL, sendR, count, MusicOn && SynthMusic, SliderGain(MusicLevel), night01);
         if (!Finite(left, count) || !Finite(right, count)) { stage = "music"; throw new InvalidOperationException("non-finite after music"); }
         reverb.Process(sendL, sendR, left, right, count);
         stage = "reverb and master";
@@ -479,6 +491,12 @@ public sealed class SoundMix
     {
         pan = Side(pan);
         return left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    }
+
+    static float SmoothStep(float a, float b, float x)
+    {
+        float t = Math.Clamp((x - a) / (b - a), 0f, 1f);
+        return t * t * (3f - 2f * t);
     }
 
     static float Range(Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
@@ -783,8 +801,8 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         readonly List<Crack> cracks = new();
-        Lowpass roarL, roarR, flutter, hissLow;
-        float level, flutterTarget = 0.5f, hissLeft;
+        Lowpass roarL, roarR, flutter, hissLow, deepL, deepR;
+        float level, stoked, flutterTarget = 0.5f, hissLeft;
         int counter;
 
         sealed class Crack
@@ -800,30 +818,36 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Render(float[] l, float[] r, int n, float gain, float pan, float rain)
+        public void Render(float[] l, float[] r, int n, float gain, float pan, float rain, float stoke)
         {
             float dt = 1f / rate;
-            float levelCoef = Lowpass.Coef(1.5f, rate), roarCoef = Lowpass.Coef(260f, rate);
+            float levelCoef = Lowpass.Coef(1.5f, rate), roarCoef = Lowpass.Coef(260f, rate), deepCoef = Lowpass.Coef(120f, rate), stokeCoef = Lowpass.Coef(0.4f, rate);
             float flutterCoef = Lowpass.Coef(3f, rate), hissCoef = Lowpass.Coef(2500f, rate);
             if (gain < 0.001f && level < 0.001f && cracks.Count == 0) return;
             float pl = Pan(pan * 0.8f, true), pr = Pan(pan * 0.8f, false);
             for (int i = 0; i < n; i++)
             {
                 level += levelCoef * (gain - level);
+                // A well-stoked fire (FireStoke ramps in over 70 to 80% of its cap) swells slowly into a roar.
+                stoked += stokeCoef * (stoke - stoked);
                 if (counter-- <= 0)
                 {
                     counter = rate / 12;
                     flutterTarget = Math.Clamp(flutterTarget + noise.Next() * 0.4f, 0.1f, 1f);
                 }
                 float f = flutter.Process(flutterTarget, flutterCoef);
-                float roar = level * (0.4f + 0.6f * f) * 0.12f;
+                float roar = level * (0.4f + 0.6f * f) * 0.12f * (1f + 0.35f * stoked);
                 l[i] += roarL.Process(noise.Next(), roarCoef) * 3f * roar * pl;
                 r[i] += roarR.Process(noise.Next(), roarCoef) * 3f * roar * pr;
+                // The deep roar of a big fire: a low rumble that breathes with the flutter.
+                float deep = level * stoked * (0.5f + 0.5f * f) * 0.16f;
+                l[i] += deepL.Process(noise.Next(), deepCoef) * 3f * deep * pl;
+                r[i] += deepR.Process(noise.Next(), deepCoef) * 3f * deep * pr;
 
-                if (rng.NextDouble() < (5f + 40f * level * f) * level * dt)
+                if (rng.NextDouble() < (5f + 40f * level * f) * (1f + 0.9f * stoked) * level * dt)
                     cracks.Add(new Crack { Decay = Range(rng, 0.0015f, 0.006f), Amp = Range(rng, 0.1f, 0.35f) * level, Cutoff = Range(rng, 1500f, 4500f), Pan = pan * 0.8f + Range(rng, -0.15f, 0.15f) });
-                if (rng.NextDouble() < 0.4f * level * dt)
-                    cracks.Add(new Crack { Decay = Range(rng, 0.012f, 0.03f), Amp = Range(rng, 0.4f, 0.8f) * level, Cutoff = Range(rng, 500f, 1200f), Pan = pan * 0.8f });
+                if (rng.NextDouble() < (0.4f + 0.8f * stoked) * level * dt)
+                    cracks.Add(new Crack { Decay = Range(rng, 0.012f, 0.03f), Amp = Range(rng, 0.4f, 0.8f) * level * (1f + 0.05f * stoked), Cutoff = Range(rng, 500f, 1200f), Pan = pan * 0.8f });
 
                 // Rain on the embers: short sizzles.
                 if (hissLeft <= 0f && rng.NextDouble() < rain * 2f * level * dt) hissLeft = Range(rng, 0.1f, 0.35f);
@@ -1426,6 +1450,7 @@ public sealed class SoundMix
         // A landing sets both feet down at once: heavier (gain) and lower (pitch).
         public void Trigger(Ground ground, float wetness, float weight, float pitch, float pan, bool walking = false)
         {
+            CueStats.Count("footstep");
             if (walking) leftFoot = !leftFoot;
             if (active.Count > 6) active.RemoveAt(0);
             active.Add(new Step
@@ -1550,7 +1575,9 @@ public sealed class SoundMix
 
         sealed class Voice
         {
-            public Cue Cue;
+            public CueDef? Def;                 // a data cue (CueDefs) instead of a Cue enum one
+            public float[]? Phases;             // per layer, for tones
+            public Lowpass[]? Hp, Lp;           // per layer, for noise
             public float Age, Pitch, Phase, Phase2, Gain = 1f, Pan;
             public BandPass Band;
             public Lowpass Low;
@@ -1563,36 +1590,47 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Trigger(Cue cue, float gain = 1f, float pan = 0f)
+        // A cue defined as data: its layers are rendered by the generic voice below.
+        public void Trigger(CueDef def, float gain = 1f, float pan = 0f)
         {
+            CueStats.Count(def.Id);
             if (active.Count > 8) active.RemoveAt(0);
-            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f) });
+            active.Add(new Voice
+            {
+                Def = def, Pitch = Range(rng, 0.96f, 1.04f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f),
+                Phases = new float[def.Layers.Length], Hp = new Lowpass[def.Layers.Length], Lp = new Lowpass[def.Layers.Length],
+            });
         }
 
-        // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
-        // fundamental and its bright 3.9x partial with a soft mallet, then two quiet
-        // echoes so it hangs in the air a moment.
-        static readonly (float Freq, float At, float Gain)[] Title = { (587.33f, 0f, 1f), (880f, 0.16f, 0.8f) };
-        static readonly (float Freq, float At, float Gain)[] Discovery = { (783.99f, 0f, 0.55f) };
-
-        static float Marimba(float t, (float Freq, float At, float Gain)[] notes) =>
-            Bars(t, notes) + 0.22f * Bars(t - 0.23f, notes) + 0.1f * Bars(t - 0.47f, notes);
-
-        static float Bars(float t, (float Freq, float At, float Gain)[] notes)
+        // One sample of a data cue: every layer that has started, as a noise band or a gliding tone.
+        float DefSample(Voice v, float t, float x, float dt)
         {
             float sum = 0f;
-            foreach (var (freq, at, gain) in notes)
+            var layers = v.Def!.Layers;
+            for (int j = 0; j < layers.Length; j++)
             {
-                float u = t - at;
+                var l = layers[j];
+                float u = t - l.Start;
                 if (u < 0f) continue;
-                float body = MathF.Sin(MathF.Tau * freq * u) * MathF.Exp(-u * 3.2f);
-                float ring = 0.25f * MathF.Sin(MathF.Tau * freq * 3.9f * u) * MathF.Exp(-u * 14f);
-                sum += gain * Math.Min(1f, u / 0.004f) * (body + ring);
+                float env = Math.Min(1f, u / l.Rise) * MathF.Exp(-u / l.Decay);
+                if (env < 0.0005f) continue;
+                float src;
+                if (l.Source == Src.Noise)
+                {
+                    // Between the cutoffs: low-pass at Hi, then take away what is below Lo.
+                    float body = v.Lp![j].Process(x, Lowpass.Coef(l.Hi, rate));
+                    src = body - v.Hp![j].Process(body, Lowpass.Coef(l.Lo, rate));
+                }
+                else
+                {
+                    float f = l.Hi + (l.Lo - l.Hi) * MathF.Exp(-u / l.Decay);
+                    v.Phases![j] += MathF.Tau * f * v.Pitch * dt;
+                    src = MathF.Sin(v.Phases[j]);
+                }
+                sum += src * env * l.Gain;
             }
             return sum;
         }
-
-        static float Burst(float t, float start, float decay) => t < start ? 0f : MathF.Min(1f, (t - start) / 0.004f) * MathF.Exp(-(t - start) / decay);
 
         public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
         {
@@ -1601,93 +1639,14 @@ public sealed class SoundMix
             {
                 var v = active[k];
                 float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
-                float length = v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, _ => 0.4f };
+                float length = v.Def?.Length ?? 0.4f;
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
-                    switch (v.Cue)
+                    if (v.Def != null)
                     {
-                        case Cue.Pickup:
-                        {
-                            // Leaves and cloth brushing, then a soft knock in the bag.
-                            float rustle = v.Band.Process(x, 2800f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
-                            v.Phase += 2f * MathF.PI * 140f * v.Pitch * dt;
-                            s = rustle * 0.35f + MathF.Sin(v.Phase) * Burst(t, 0.07f, 0.03f) * 0.17f;
-                            break;
-                        }
-                        case Cue.Eat:
-                        {
-                            // Three bites, each a short crunchy burst.
-                            float bites = Burst(t, 0f, 0.035f) + 0.8f * Burst(t, 0.28f, 0.03f) + 0.65f * Burst(t, 0.55f, 0.03f);
-                            float grain = MathF.Abs(noise.Next()) > 0.6f ? 1f : 0.3f;
-                            s = v.Band.Process(x * grain, 1700f * v.Pitch, 0.8f, rate) * bites * 0.65f;
-                            break;
-                        }
-                        case Cue.Drink:
-                        {
-                            // Two gulps, each a short drop in pitch, over a little slosh.
-                            float g1 = Burst(t, 0.05f, 0.07f), g2 = Burst(t, 0.38f, 0.07f);
-                            float since = t < 0.38f ? t - 0.05f : t - 0.38f;
-                            v.Phase += 2f * MathF.PI * (260f - 500f * MathF.Max(0f, since)) * v.Pitch * dt;
-                            float slosh = v.Low.Process(x, Lowpass.Coef(900f, rate)) * Burst(t, 0f, 0.15f);
-                            s = MathF.Sin(v.Phase) * (g1 + g2) * 0.11f + slosh * 0.2f;
-                            break;
-                        }
-                        case Cue.FireLit:
-                        {
-                            // A soft whoosh as the flame takes, opening up as it grows.
-                            float open = Math.Min(1f, t / 0.35f);
-                            float w = v.Low.Process(x, Lowpass.Coef(300f + 2500f * open, rate));
-                            s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
-                            break;
-                        }
-                        case Cue.Place:
-                        {
-                            // Something set on the ground: a dull knock and a scuff.
-                            v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
-                            float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
-                            break;
-                        }
-                        case Cue.Hit:
-                        {
-                            // A blow landing: a dull thud dropping in pitch, a slap of cloth and flesh.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            float slap = v.Band.Process(x, 1100f * v.Pitch, 0.7f, rate) * Burst(t, 0f, 0.03f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.15f + slap * 0.225f;
-                            break;
-                        }
-                        case Cue.Crit:
-                        {
-                            // A sneak attack's bonus: the same thud, a sharp crack over it and a
-                            // short bright ring that says it was a good one.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            v.Phase2 += 2f * MathF.PI * 1480f * v.Pitch * dt;
-                            float crack = v.Band.Process(x, 3600f, 0.6f, rate) * Burst(t, 0f, 0.012f);
-                            float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
-                            send = ring * 0.024f;
-                            break;
-                        }
-                        case Cue.Jump:
-                        {
-                            // Pushing off: a quick scuff of the ground and cloth, and a small
-                            // lift of breath.
-                            float scuff = v.Band.Process(x, 1500f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
-                            float breath = v.Low.Process(x, Lowpass.Coef(2200f, rate)) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.25f));
-                            s = scuff * 0.3f + breath * 0.05f;
-                            break;
-                        }
-                        case Cue.Learn:
-                            // One faint wooden note, G5: something new in the journal.
-                            s = Marimba(t, Discovery) * 0.017f;
-                            send = s * 0.6f;
-                            break;
-                        case Cue.SkillUp:
-                            // D5 then A5 on a wooden bar, an open fifth: a skill earned a new title.
-                            s = Marimba(t, Title) * 0.027f;
-                            send = s * 0.6f;
-                            break;
+                        s = DefSample(v, t, x, dt);
+                        send = s * v.Def.Send;
                     }
                     s *= v.Gain;
                     send *= v.Gain;

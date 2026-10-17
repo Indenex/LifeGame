@@ -27,6 +27,31 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=lamp shows three lit clay lamps and a cold one, for judging the glow at night (ceramics-9).
     static bool ShowLamps => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=lamp");
 
+    // --ceramics-demo=trough[:fill] shows a set-down clay trough beside a clay hut, filled to
+    // `fill` (0 to 1, default 0.5), for the Render lane (ceramics-13).
+    static bool ShowTrough(out float fill)
+    {
+        fill = 0.5f;
+        var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--ceramics-demo=trough"));
+        if (arg == null) return false;
+        var colon = arg.IndexOf(':');
+        if (colon >= 0 && float.TryParse(arg[(colon + 1)..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var f))
+            fill = Mathf.Clamp(f, 0f, 1f);
+        return true;
+    }
+    // --ceramics-demo=marks shows kiln-fired coil pots with each of the twelve maker's marks
+    // facing the camera, for judging the glyphs (ceramics-15, rough prototype art).
+    const float SheetLift = 2.6f;
+    static bool ShowMarkSheet => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks-sheet");
+
+    // --ceramics-demo=slip shows fired pots and jars with a band or two of slip round the rim in
+    // different colours (back row), and the same pieces as they look lying on the ground or in the bag
+    // (front row); --ceramics-demo=slip-panel opens the slip window (ceramics-14).
+    static bool ShowSlip => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=slip");
+    static bool ShowSlipPanel => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=slip-panel");
+
+    static bool ShowMarks => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks");
+
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
         this.terrain = terrain;
@@ -35,6 +60,8 @@ public partial class CeramicsDemo : Node3D
 
     public override void _Ready()
     {
+        // Offline there is no player_mark table: give every maker a glyph and colour so marks show.
+        ClayLook.MarkLookup ??= maker => ((int)(maker * 7 % Marks.All.Count), MarkColour.ToColor(Marks.Presets[maker % Marks.Presets.Length]));
         AddChild(row);
         if (ShowKilns)
         {
@@ -54,13 +81,131 @@ public partial class CeramicsDemo : Node3D
             camera.MakeCurrent();
             return;
         }
+        if (ShowTrough(out var troughFill))
+        {
+            // Like a real building, clear the grass and trees on the cells it stands on (Terrain.Cleared).
+            var centre = anchor.Position + new Vector3(0, 0, -2.2f);
+            int x0 = Mathf.FloorToInt(centre.X - 4f), x1 = Mathf.CeilToInt(centre.X + 3f);
+            int z0 = Mathf.FloorToInt(centre.Z - 5f), z1 = Mathf.CeilToInt(centre.Z + 4.5f);
+            var before = terrain.Cleared;
+            terrain.Cleared = (cx, cz) => (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) || before?.Invoke(cx, cz) == true;
+            for (int cx = x0; cx <= x1; cx++)
+                for (int cz = z0; cz <= z1; cz++) terrain.Refresh(cx, cz);
+            var hut = new Node3D { Position = new Vector3(-1.5f, 0, -3.3f), Rotation = new Vector3(0, 0.3f, 0) };
+            foreach (var piece in StructureModel.Pieces(1).Where(p => p.Stage >= 0))
+                hut.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            row.AddChild(hut);
+            foreach (var piece in TroughModel.Pieces().Where(p => p.Stage >= 0))
+                row.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
+            var water = new TroughView { ShowLabel = true };
+            int capacity = Structures.TroughLitres(80);
+            water.Show(Mathf.RoundToInt(troughFill * capacity), capacity);
+            row.AddChild(water);
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowMarkSheet)
+        {
+            // All the glyphs flat on a clay slab, for judging the line art (rough, until Justin picks).
+            // _Process puts row children on the terrain plus their "lift", so the height is a lift.
+            var slab = new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(4.9f, 4.3f, 0.05f) },
+                MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, 3),
+                Position = new Vector3(0, 0, -0.04f),
+            };
+            slab.SetMeta("lift", SheetLift);
+            row.AddChild(slab);
+            var sheet = new MeshInstance3D
+            {
+                Mesh = new QuadMesh { Size = new Vector2(4.8f, 4.8f * MakerStamp.Rows / MakerStamp.Cols) },
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoTexture = MakerStamp.Atlas,
+                    AlbedoColor = new Color(Marks.Presets[1]),
+                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                },
+            };
+            sheet.SetMeta("lift", SheetLift);
+            row.AddChild(sheet);
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowMarks)
+        {
+            // Twelve sample marks across the groups, in the preset colours, facing the camera.
+            int[] slots = { 0, 3, 6, 10, 12, 17, 20, 22, 30, 34, 38, 44 };
+            for (int g = 0; g < slots.Length; g++)
+            {
+                ulong id = (ulong)(70 + g);
+                var plain = ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, id);
+                var form = g % 3 == 2 ? ClayForm.StorageJar : ClayForm.CoilPot;
+                row.AddChild(new MeshInstance3D
+                {
+                    Mesh = PotMesh.For(form, id),
+                    MaterialOverride = ClayLook.Stamped(plain, slots[g], new Color(Marks.Presets[g % Marks.Presets.Length]), form),
+                    // Turned so the stamp faces the camera, which looks along -Z.
+                    Position = new Vector3((g % 6 - 2.5f) * 0.7f, 0, -(g / 6) * 1.1f),
+                    Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
+                    Scale = Vector3.One * PotView.Size,
+                });
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowSlipPanel)
+        {
+            var picker = new SlipPicker();
+            AddChild(picker);
+            GetTree().CreateTimer(1.0).Timeout += () => picker.Open(ClayForm.CoilPot, 0, (_, _) => { });
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowSlip)
+        {
+            var looks = new (ClayForm form, Item item, uint rgb, int bands)[]
+            {
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[0], 1),
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[5], 2),
+                (ClayForm.PinchPot, Item.PinchPot, Marks.Presets[1], 1),
+                (ClayForm.StorageJar, Item.StorageJar, Marks.Presets[3], 2),
+                (ClayForm.CoilPot, Item.CoilPot, Marks.Presets[4], 1),
+                (ClayForm.PinchPot, Item.PinchPot, Marks.Presets[7], 2),
+            };
+            for (int g = 0; g < looks.Length; g++)
+            {
+                var (form, item, rgb, bands) = looks[g];
+                uint wear = Slip.With(Marks.Pack(1), rgb, bands);
+                float x = (g - (looks.Length - 1) / 2f) * 0.7f;
+                // Back row: the pot itself, on its node scale, as a placed piece is drawn.
+                var plain = ClayLook.For(ClayStage.Fired, form == ClayForm.StorageJar ? FireKind.Kiln : FireKind.Pit, 0f, (ulong)(60 + g));
+                row.AddChild(new MeshInstance3D
+                {
+                    Mesh = PotMesh.For(form, (ulong)(60 + g)),
+                    MaterialOverride = ClayLook.WithMark(plain, wear, form),
+                    Position = new Vector3(x, 0, -0.9f),
+                    Scale = Vector3.One * PotView.Size,
+                });
+                // Front row: the baked mesh a ground item or bag uses.
+                if (ClayItemLook.MarkedMesh(item, ClayItemLook.Decoration(item, wear)) is { } baked)
+                    row.AddChild(new MeshInstance3D { Mesh = baked, Position = new Vector3(x, 0, 0.7f) });
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
         if (ShowLamps)
         {
             for (int i = 0; i < 4; i++)
             {
                 var lamp = new LampView { Position = new Vector3((i - 1.5f) * 1.1f, 0, (i % 2) * 0.4f) };
                 row.AddChild(lamp);
-                lamp.Show((ulong)i + 40, i == 3 ? 0 : PotView.Now + 1800);
+                lamp.Show((ulong)i + 40, i == 3 ? 0 : PotView.Now + 1800, i < 3 ? Marks.Pack((uint)i + 1) : 0u);
             }
             AddChild(camera);
             camera.MakeCurrent();
@@ -142,7 +287,28 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
-        if (ShowLamps)
+        if (ShowMarkSheet)
+        {
+            // Straight on, centred on the slab, far enough back for all seven rows at this field of view.
+            camera.Position = at + new Vector3(0f, SheetLift + 0.4f, 7.4f);
+            camera.LookAt(at + new Vector3(0f, SheetLift, 0), Vector3.Up);
+            return;
+        }
+        if (ShowMarks)
+        {
+            // High enough to see over the front row to the back one.
+            camera.Position = at + new Vector3(0f, 2.3f, 4.6f);
+            camera.LookAt(at + new Vector3(0f, 0.2f, -0.5f), Vector3.Up);
+            return;
+        }
+        if (ShowSlip)
+        {
+            // High enough to see the back row over the front one.
+            camera.Position = at + new Vector3(0f, 1.9f, 4.4f);
+            camera.LookAt(at + new Vector3(0f, 0.25f, -0.2f), Vector3.Up);
+            return;
+        }
+        if (ShowLamps || ShowTrough(out _))
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
             camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);

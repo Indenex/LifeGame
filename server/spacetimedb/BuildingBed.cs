@@ -3,9 +3,9 @@ using SpacetimeDB;
 
 // Sleeping mats: a woven mat laid inside a finished hut or house you have a right
 // to (you placed it, helped build it, or belong to the claim it stands in). You
-// wake on your mat after dying. One mat per player; laying a new one rolls up the
+// wake on your mat if you chose it (survival-23). One mat per player; laying a new one rolls up the
 // old. If the mat's building is taken down or weathers away, the mat is left on
-// the ground and you wake at the wilderness edge again (Survival's default).
+// the ground. Whether you wake on it after dying is your choice (survival-23, RestSpots.cs).
 public static partial class Module
 {
     [SpacetimeDB.Table(Accessor = "SleepingMat", Public = true)]
@@ -39,7 +39,7 @@ public static partial class Module
         if (ctx.Db.SleepingMat.PlayerId.Find(player.PlayerId) is not null)
         {
             ctx.Db.SleepingMat.PlayerId.Delete(player.PlayerId);
-            AddToInventory(ctx, ctx.Sender, Item.SleepingMat, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.SleepingMat, 1, Items.RawQuality);
         }
         ctx.Db.SleepingMat.Insert(new SleepingMat { PlayerId = player.PlayerId, StructureId = s.Id, X = pos.X, Z = pos.Z, Yaw = pos.Heading });
         TouchStructure(ctx, s.Id);
@@ -54,14 +54,14 @@ public static partial class Module
         var mat = ctx.Db.SleepingMat.PlayerId.Find(player.PlayerId) ?? throw new Exception("You have no mat laid out");
         RequireReach(pos, mat.X, mat.Z);
         ctx.Db.SleepingMat.PlayerId.Delete(player.PlayerId);
-        AddToInventory(ctx, ctx.Sender, Item.SleepingMat, 1, Items.RawQuality);
+        AddToInventory(ctx, Me(ctx), Item.SleepingMat, 1, Items.RawQuality);
     }
 
     static bool MayLiveIn(ReducerContext ctx, Structure s)
     {
-        if (s.Owner == ctx.Sender) return true;
-        if (ctx.Db.StructureBuilder.StructureId.Filter(s.Id).Any(b => b.Builder == ctx.Sender)) return true;
-        return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
+        if (s.Owner == Me(ctx)) return true;
+        if (ctx.Db.StructureBuilder.StructureId.Filter(s.Id).Any(b => b.Builder == Me(ctx))) return true;
+        return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, Me(ctx));
     }
 
     // A building is gone: its mats are left lying where they were.
@@ -84,12 +84,13 @@ public static partial class Module
         }
     }
 
-    // Survival asks where a player wakes after dying: on their mat, while it and its building stand.
-    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z)
+    // Survival asks whether a player's laid-out rest spot (their mat) is still there (RestSpots.cs).
+    static partial void LaidRestSpotHook(ReducerContext ctx, uint playerId, RestSpotDef spot, ulong structureId, ref float x, ref float z, ref bool stands)
     {
-        if (ctx.Db.SleepingMat.PlayerId.Find(playerId) is not { } mat) return;
-        if (ctx.Db.Structure.Id.Find(mat.StructureId) is not { Complete: true }) return;
+        if (spot.Item != Item.SleepingMat) return;
+        if (ctx.Db.SleepingMat.PlayerId.Find(playerId) is not { } mat || mat.StructureId != structureId) return;
         x = mat.X;
         z = mat.Z;
+        stands = true;
     }
 }

@@ -64,8 +64,8 @@ public static partial class Module
     [SpacetimeDB.View(Accessor = "MyTrade", Public = true)]
     public static List<Trade> MyTrade(ViewContext ctx)
     {
-        var result = ctx.Db.Trade.A.Filter(ctx.Sender).ToList();
-        result.AddRange(ctx.Db.Trade.B.Filter(ctx.Sender));
+        var result = ctx.Db.Trade.A.Filter(Me(ctx)).ToList();
+        result.AddRange(ctx.Db.Trade.B.Filter(Me(ctx)));
         return result;
     }
 
@@ -73,8 +73,8 @@ public static partial class Module
     public static List<TradeItem> MyTradeItems(ViewContext ctx)
     {
         var result = new List<TradeItem>();
-        foreach (var trade in ctx.Db.Trade.A.Filter(ctx.Sender)) result.AddRange(ctx.Db.TradeItem.TradeId.Filter(trade.Id));
-        foreach (var trade in ctx.Db.Trade.B.Filter(ctx.Sender)) result.AddRange(ctx.Db.TradeItem.TradeId.Filter(trade.Id));
+        foreach (var trade in ctx.Db.Trade.A.Filter(Me(ctx))) result.AddRange(ctx.Db.TradeItem.TradeId.Filter(trade.Id));
+        foreach (var trade in ctx.Db.Trade.B.Filter(Me(ctx))) result.AddRange(ctx.Db.TradeItem.TradeId.Filter(trade.Id));
         return result;
     }
 
@@ -111,7 +111,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AnswerTrade(ReducerContext ctx, ulong tradeId, bool accept)
     {
-        if (ctx.Db.Trade.Id.Find(tradeId) is not { } trade || trade.B != ctx.Sender || trade.State != Social.TradeAsked)
+        MeterCall(ctx);
+        if (ctx.Db.Trade.Id.Find(tradeId) is not { } trade || trade.B != Me(ctx) || trade.State != Social.TradeAsked)
             throw new Exception("That trade is gone");
         if (accept) ctx.Db.Trade.Id.Update(trade with { State = Social.TradeOpen, StartedAt = ctx.Timestamp });
         else EndTrade(ctx, trade, "declined");
@@ -121,9 +122,10 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetTradeItem(ReducerContext ctx, ulong tradeId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         var trade = RequireOpenTrade(ctx, tradeId);
-        byte side = trade.A == ctx.Sender ? Social.SideA : Social.SideB;
-        uint held = FindStack(ctx, ctx.Sender, (Item)item, quality)?.Count ?? 0;
+        byte side = trade.A == Me(ctx) ? Social.SideA : Social.SideB;
+        uint held = CarriedCount(ctx, Me(ctx), (Item)item, quality);
         if (count > held) throw new Exception("You are not carrying that many");
 
         var mine = ctx.Db.TradeItem.TradeId.Filter(trade.Id).Where(i => i.Side == side).ToList();
@@ -152,16 +154,17 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AcceptTrade(ReducerContext ctx, ulong tradeId, uint version, bool accept)
     {
+        MeterCall(ctx);
         var trade = RequireOpenTrade(ctx, tradeId);
         if (!accept)
         {
-            ctx.Db.Trade.Id.Update(trade.A == ctx.Sender ? trade with { AAccepted = false } : trade with { BAccepted = false });
+            ctx.Db.Trade.Id.Update(trade.A == Me(ctx) ? trade with { AAccepted = false } : trade with { BAccepted = false });
             return;
         }
         if (version != trade.Version) throw new Exception("The offer changed; look again");
         var items = ctx.Db.TradeItem.TradeId.Filter(trade.Id).ToList();
         if (items.Count == 0) throw new Exception("Nothing to trade");
-        trade = trade.A == ctx.Sender ? trade with { AAccepted = true } : trade with { BAccepted = true };
+        trade = trade.A == Me(ctx) ? trade with { AAccepted = true } : trade with { BAccepted = true };
         if (!(trade.AAccepted && trade.BAccepted))
         {
             ctx.Db.Trade.Id.Update(trade);
@@ -173,14 +176,13 @@ public static partial class Module
         foreach (var it in items)
         {
             var owner = it.Side == Social.SideA ? trade.A : trade.B;
-            if ((FindStack(ctx, owner, (Item)it.Item, it.Quality)?.Count ?? 0) < it.Count)
+            if (CarriedCount(ctx, owner, (Item)it.Item, it.Quality) < it.Count)
                 throw new Exception($"{(it.Side == Social.SideA ? trade.AName : trade.BName)} no longer has {ItemWords(it.Item, it.Count)}");
         }
         foreach (var it in items)
         {
             var (from, to) = it.Side == Social.SideA ? (trade.A, trade.B) : (trade.B, trade.A);
-            RemoveFromStack(ctx, FindStack(ctx, from, (Item)it.Item, it.Quality)!.Value, it.Count);
-            AddToInventory(ctx, to, (Item)it.Item, it.Count, it.Quality);
+            MoveCarried(ctx, from, to, (Item)it.Item, it.Quality, it.Count);
         }
 
         // D-080: nothing is said to bystanders; the two traders get TradeEnded "done".
@@ -190,7 +192,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void CancelTrade(ReducerContext ctx, ulong tradeId)
     {
-        if (ctx.Db.Trade.Id.Find(tradeId) is { } trade && (trade.A == ctx.Sender || trade.B == ctx.Sender))
+        MeterCall(ctx);
+        if (ctx.Db.Trade.Id.Find(tradeId) is { } trade && (trade.A == Me(ctx) || trade.B == Me(ctx)))
             EndTrade(ctx, trade, "cancelled");
     }
 
@@ -220,7 +223,7 @@ public static partial class Module
     }
 
     static Trade RequireOpenTrade(ReducerContext ctx, ulong tradeId) =>
-        ctx.Db.Trade.Id.Find(tradeId) is { } t && (t.A == ctx.Sender || t.B == ctx.Sender) && t.State == Social.TradeOpen
+        ctx.Db.Trade.Id.Find(tradeId) is { } t && (t.A == Me(ctx) || t.B == Me(ctx)) && t.State == Social.TradeOpen
             ? t : throw new Exception("That trade is gone");
 
     static void EndTrade(ReducerContext ctx, Trade trade, string reason)

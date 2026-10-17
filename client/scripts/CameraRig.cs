@@ -6,12 +6,16 @@ namespace LifeGame;
 // degree steps. It eases after its target so nothing ever snaps.
 public partial class CameraRig : Node3D
 {
+    // Metres; one raisable constant.
+    public const float FarPlane = 1500f;
     public Vector3 Focus;
     public Camera3D Camera { get; } = new()
     {
         Fov = 45f,
         Near = 0.3f,
-        Far = 300f,
+        // Nothing is built or drawn beyond the view radius (at most 160 m) except sky, fog and water, so a long
+        // far plane costs nothing in geometry; it lets the smoke-signal columns (atmosphere) show from afar.
+        Far = FarPlane,
         // The far forest softens out of focus, which sells the depth.
         Attributes = new CameraAttributesPractical
         {
@@ -58,7 +62,7 @@ public partial class CameraRig : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        Position = Position.Lerp(Focus + Vector3.Up * 1.2f, 1f - Mathf.Exp(-6f * dt));
+        Position = Position.Lerp(Focus + Vector3.Up * 1.2f * PlayerModel.Height / 1.75f, 1f - Mathf.Exp(-6f * dt));
         yaw = Mathf.Lerp(yaw, yawTarget, 1f - Mathf.Exp(-TurnEase * dt));
         distance = Mathf.Lerp(distance, distanceTarget, 1f - Mathf.Exp(-6f * dt));
 

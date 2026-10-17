@@ -20,6 +20,8 @@ public static partial class Module
     const long CarcassKeepMicros = 1L * WorldTime.DayLengthSeconds * 1_000_000;
     // One strike per animal per this long (about a swing), so clicks don't stack.
     const long StrikeEveryMicros = 1_000_000;
+    // One swing per player per this long, on any animal (D-182: the server paces the action, not the client).
+    const long SwingEveryMicros = 500_000;
     // A struck animal leaps this far away at once, so the hunter has to give chase.
     const float StartleLeap = 1.4f;
 
@@ -52,9 +54,10 @@ public static partial class Module
         var animal = ctx.Db.Animal.Id.Find(animalId) ?? throw new Exception("It got away");
         var mind = ctx.Db.AnimalMind.AnimalId.Find(animalId) ?? throw new Exception("It got away");
 
-        var spear = BestTool(ctx, ItemTags.Piercing);
-        var blade = BestTool(ctx, ItemTags.Cutting);
-        if (spear == null && blade == null) throw new Exception("You need a spear or a blade to hunt with");
+        // Fighting is a world action: only the weapon in the equipped slot strikes (Equip.cs).
+        var spear = EquippedTool(ctx, ItemTags.Piercing);
+        var blade = EquippedTool(ctx, ItemTags.Cutting);
+        if (spear == null && blade == null) throw new Exception(NoWeaponMessage(ctx, "a spear or a blade"));
 
         // A spear reaches a little further; a running target gets some slack for
         // where the hunter saw it a moment ago.
@@ -63,6 +66,13 @@ public static partial class Module
 
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         if (now - mind.StruckAt < StrikeEveryMicros) return;
+        // A swing takes this long whichever animal it lands on, so no one strikes several animals at once.
+        var seen = ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId);
+        if (seen is { } swung)
+        {
+            if (now - swung.SwungAt < SwingEveryMicros) return;
+            ctx.Db.AnimalPlayerSeen.PlayerId.Update(swung with { SwungAt = now });
+        }
 
         // A spear takes two good strikes, a stone blade about three (a deer needs a few
         // more: 100 health). Every strike does its normal damage; a sneak attack (see
@@ -70,6 +80,8 @@ public static partial class Module
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Strike, (Item)(spear ?? blade)!.Value.Item);
+        WearTool(ctx, (spear ?? blade)!.Value);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
     }
 
@@ -107,6 +119,7 @@ public static partial class Module
     // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
     static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false, bool ranged = false)
     {
+        damage = (int)MathF.Ceiling(damage * Traits(animal.Species).DamageTaken);
         bool kills = damage >= mind.Health;
         ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills, Ranged = ranged });
         if (kills)
@@ -187,19 +200,21 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception("You need a blade to butcher with");
+        var tool = EquippedToolOrThrow(ctx, ItemTags.Cutting, "a blade");
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Butcher, (Item)tool.Item);
+        WearTool(ctx, tool);
 
         // What a carcass gives comes from its species' Def: a grown animal gives its cuts, its
         // hide and any extra (a deer's antler); a young one a single small cut.
         var def = AnimalDefs.Get((byte)carcass.Species);
         bool grown = carcass.Growth >= 80;
         for (int i = 0; i < (grown ? def.MeatGrown : def.MeatYoung); i++) DropNear(ctx, carcass, def.Meat, quality);
-        if (grown) DropNear(ctx, carcass, def.Hide, quality);
+        if (grown && def.Hide is { } hide) DropNear(ctx, carcass, hide, quality);
         if (grown && def.Extra is { } extra) DropNear(ctx, carcass, extra, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }

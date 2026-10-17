@@ -61,6 +61,12 @@ public static partial class Module
         public ushort Item;
         public byte Quality;
         public uint Count;
+        [Default(0u)]
+        public uint Wear;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // Owners and members see their claims' stashes; nobody else does.
@@ -68,9 +74,9 @@ public static partial class Module
     public static List<ClaimStash> MyClaimStash(ViewContext ctx)
     {
         var result = new List<ClaimStash>();
-        foreach (var claim in ctx.Db.Claim.Owner.Filter(ctx.Sender))
+        foreach (var claim in ctx.Db.Claim.Owner.Filter(Me(ctx)))
             result.AddRange(ctx.Db.ClaimStash.ClaimId.Filter(claim.Id));
-        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(ctx.Sender))
+        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(Me(ctx)))
             result.AddRange(ctx.Db.ClaimStash.ClaimId.Filter(membership.ClaimId));
         return result;
     }
@@ -99,7 +105,7 @@ public static partial class Module
     static void InitClaims(ReducerContext ctx)
     {
         if (ctx.Db.ClaimConfig.Id.Find(0) is null)
-            ctx.Db.ClaimConfig.Insert(new ClaimConfig { Id = 0, Admin = ctx.Sender, LifetimeSeconds = Social.DefaultClaimLifetimeSeconds });
+            ctx.Db.ClaimConfig.Insert(new ClaimConfig { Id = 0, Admin = Me(ctx), LifetimeSeconds = Social.DefaultClaimLifetimeSeconds });
         EnsureDecayTimer(ctx);
     }
 
@@ -136,9 +142,17 @@ public static partial class Module
     // House building asks this before placing or taking down a structure.
     static partial void CheckClaimAccess(ReducerContext ctx, float x, float z) => RequireClaimAccess(ctx, x, z);
 
-    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who)
+    // Builder rights on a claim: its owner, its members, and (claims-19) anyone who signed
+    // the same town roster as the claim. Building, digging, picking up, gates and the like.
+    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who) =>
+        !BannedFromClaim(ctx, claim, who) && (IsOwnerOrMember(ctx, claim, who) || IsTownmate(ctx, claim, who));
+
+    // The inner circle only: the owner and the members the owner added. Stashes, tending the
+    // marker and similar stay with them, not with the town.
+    public static bool IsOwnerOrMember(ReducerContext ctx, Claim claim, Identity who)
     {
         if (claim.Owner == who) return true;
+        if (BannedFromClaim(ctx, claim, who)) return false;
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id))
             if (m.Member == who) return true;
         return false;
@@ -149,9 +163,10 @@ public static partial class Module
     public static void RequireClaimAccess(ReducerContext ctx, float x, float z)
     {
         if (ClaimAt(ctx, x, z) is not { } claim) return;
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!HasClaimRights(ctx, claim, Me(ctx)))
             throw new Exception($"This land is claimed by {claim.OwnerName}");
-        TendByWork(ctx, claim);
+        // Working a neighbour's land under a town roster does not keep their claim standing.
+        if (IsOwnerOrMember(ctx, claim, Me(ctx))) TendByWork(ctx, claim);
     }
 
     // claims-5: owners and members keep their claim standing just by working on it.
@@ -192,9 +207,9 @@ public static partial class Module
             throw new Exception("This clearing is where newcomers wake up. Claim land further out");
 
         int owned = 0;
-        foreach (var mine in ctx.Db.Claim.Owner.Filter(ctx.Sender))
+        foreach (var mine in ctx.Db.Claim.Owner.Filter(Me(ctx)))
             if (IsStanding(ctx, mine)) owned++;
-        foreach (var site in ctx.Db.Structure.Owner.Filter(ctx.Sender))
+        foreach (var site in ctx.Db.Structure.Owner.Filter(Me(ctx)))
             if (site.Kind == StructureKind.ClaimMarker && !site.Complete) owned++;
         if (owned >= Social.MaxClaimsPerPlayer)
             throw new Exception("You already have a claim marker. Take it down first");
@@ -207,10 +222,10 @@ public static partial class Module
             {
                 foreach (var other in ctx.Db.Claim.ByChunk.Filter((cx + dx, cz + dz)))
                     if (IsStanding(ctx, other) && Closer(other.X - x, other.Z - z, minGap))
-                        throw new Exception($"Too close to {other.OwnerName}'s claim");
+                        throw new Exception($"Too close to {other.OwnerName}'s claim. Move {MoveAway(other.X - x, other.Z - z, minGap)} m further from their marker, or the edges just touch at {minGap:0} m");
                 foreach (var site in ctx.Db.Structure.ByChunk.Filter((cx + dx, cz + dz)))
                     if (site.Kind == StructureKind.ClaimMarker && !site.Complete && Closer(site.X - x, site.Z - z, minGap))
-                        throw new Exception("Too close to another claim marker being built");
+                        throw new Exception($"Too close to another claim marker being built. Move {MoveAway(site.X - x, site.Z - z, minGap)} m further away");
             }
     }
 
@@ -243,7 +258,7 @@ public static partial class Module
     // asks this when the caller isn't whoever laid the building out.
     static partial void CanClearStructure(ReducerContext ctx, Structure s, ref bool allowed)
     {
-        if (ClaimAt(ctx, s.X, s.Z) is { } claim && claim.Owner == ctx.Sender) allowed = true;
+        if (ClaimAt(ctx, s.X, s.Z) is { } claim && claim.Owner == Me(ctx)) allowed = true;
     }
 
     // Weathering (D-046): nothing inside a standing claim weathers. Building's
@@ -260,6 +275,10 @@ public static partial class Module
             RemoveClaim(ctx, claim);
     }
 
+    // How many whole metres further from the other marker a spot must go to be allowed.
+    static int MoveAway(float dx, float dz, float distance) =>
+        Math.Max(1, (int)MathF.Ceiling(distance - MathF.Sqrt(dx * dx + dz * dz)));
+
     static bool Closer(float dx, float dz, float distance) => dx * dx + dz * dz < distance * distance;
 
     // Owners and members keep a claim standing by visiting the marker.
@@ -268,19 +287,20 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!IsOwnerOrMember(ctx, claim, Me(ctx)))
             throw new Exception("Only the owner and members can tend this marker");
         RequireNearMarker(ctx, player, claim);
 
         var updated = claim with { TendedAt = ctx.Timestamp, ExpiresAt = After(ctx.Timestamp, ClaimLifetimeSeconds(ctx)) };
         // Keep the owner's name current if they renamed themselves.
-        if (claim.Owner == ctx.Sender) updated = updated with { OwnerName = player.Name };
+        if (claim.Owner == Me(ctx)) updated = updated with { OwnerName = player.Name };
         ctx.Db.Claim.Id.Update(updated);
     }
 
     [SpacetimeDB.Reducer]
     public static void SetClaimPvp(ReducerContext ctx, ulong claimId, bool allow)
     {
+        MeterCall(ctx);
         var claim = RequireOwnClaim(ctx, claimId);
         ctx.Db.Claim.Id.Update(claim with { AllowPvp = allow });
     }
@@ -288,6 +308,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AddClaimMember(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         var who = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
         AddMember(ctx, claim, who);
@@ -299,6 +320,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AddClaimMemberByName(ReducerContext ctx, string name)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         name = (name ?? "").Trim();
         if (name.Length == 0) throw new Exception("Type the name of whoever you want to add");
@@ -317,8 +339,8 @@ public static partial class Module
 
     static void AddMember(ReducerContext ctx, Claim claim, Player who)
     {
-        if (who.Identity == ctx.Sender) throw new Exception("You already own this claim");
-        if (HasClaimRights(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
+        if (who.Identity == Me(ctx)) throw new Exception("You already own this claim");
+        if (IsOwnerOrMember(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
         ctx.Db.ClaimMember.Insert(new ClaimMember { Id = 0, ClaimId = claim.Id, Member = who.Identity, PlayerId = who.PlayerId, Name = who.Name });
 
         // A calm line by the marker, and where the new member stands if that's elsewhere.
@@ -333,6 +355,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void RemoveClaimMember(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnStandingClaim(ctx);
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).ToList())
             if (m.PlayerId == playerId) ctx.Db.ClaimMember.Id.Delete(m.Id);
@@ -342,8 +365,9 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LeaveClaim(ReducerContext ctx, ulong claimId)
     {
+        MeterCall(ctx);
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claimId).ToList())
-            if (m.Member == ctx.Sender) ctx.Db.ClaimMember.Id.Delete(m.Id);
+            if (m.Member == Me(ctx)) ctx.Db.ClaimMember.Id.Delete(m.Id);
     }
 
     // Taking a marker down drops whatever was in the stash at its foot.
@@ -351,6 +375,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AbandonClaim(ReducerContext ctx, ulong claimId)
     {
+        MeterCall(ctx);
         var claim = RequireOwnClaim(ctx, claimId);
         RemoveClaim(ctx, claim);
     }
@@ -360,30 +385,49 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void StashItem(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         if (count == 0) throw new Exception("Nothing to leave");
         var claim = RequireStashAccess(ctx, claimId);
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
-        if (stack.Count < count) throw new Exception("You are not carrying that many");
-        RemoveFromStack(ctx, stack, count);
-        if (FindStash(ctx, claim.Id, item, quality) is { } row)
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + count });
-        else
-            ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = count });
+        uint carried = CarriedCount(ctx, Me(ctx), (Item)item, quality);
+        if (carried == 0) throw new Exception("You are not carrying that");
+        if (carried < count) throw new Exception("You are not carrying that many");
+        // The most worn go first, and each keeps its wear (shared/Durability.cs).
+        uint left = count;
+        while (left > 0 && FindStack(ctx, Me(ctx), (Item)item, quality) is { } stack)
+        {
+            uint n = Math.Min(left, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            if (FindStash(ctx, claim.Id, item, quality, stack.Wear, stack.Maker) is { } row)
+                ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + n });
+            else
+                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear, Maker = stack.Maker });
+            left -= n;
+        }
         LogStash(ctx, claim.Id, item, (int)count);
     }
 
     [SpacetimeDB.Reducer]
     public static void TakeFromStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint count)
     {
+        MeterCall(ctx);
         if (count == 0) throw new Exception("Nothing to take");
         var claim = RequireStashAccess(ctx, claimId);
-        var row = FindStash(ctx, claim.Id, item, quality) ?? throw new Exception("The stash has none of that");
-        if (row.Count < count) throw new Exception("The stash doesn't have that many");
-        if (row.Count == count)
-            ctx.Db.ClaimStash.Id.Delete(row.Id);
-        else
-            ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - count });
-        AddToInventory(ctx, ctx.Sender, (Item)item, count, quality);
+        uint held = 0;
+        foreach (var r in ctx.Db.ClaimStash.ByClaimItem.Filter((claim.Id, item)))
+            if (r.Quality == quality) held += r.Count;
+        if (held == 0) throw new Exception("The stash has none of that");
+        if (held < count) throw new Exception("The stash doesn't have that many");
+        uint left = count;
+        while (left > 0 && FindStash(ctx, claim.Id, item, quality) is { } row)
+        {
+            uint n = Math.Min(left, row.Count);
+            if (row.Count == n)
+                ctx.Db.ClaimStash.Id.Delete(row.Id);
+            else
+                ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - n });
+            AddToInventory(ctx, Me(ctx), (Item)item, n, quality, row.Wear, row.Maker);
+            left -= n;
+        }
         LogStash(ctx, claim.Id, item, -(int)count);
     }
 
@@ -392,8 +436,9 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetClaimLifetime(ReducerContext ctx, long seconds)
     {
+        MeterCall(ctx);
         var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
-        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        if (config.Admin != Me(ctx)) throw new Exception("Only the server admin can change this");
         if (seconds < 30) throw new Exception("At least 30 seconds");
         ctx.Db.ClaimConfig.Id.Update(config with { LifetimeSeconds = seconds });
         // Shorten standing claims too, so a playtest can see decay without re-tending.
@@ -427,7 +472,7 @@ public static partial class Module
                 float angle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
                 float r = 0.4f + (float)ctx.Rng.NextDouble() * 1.2f;
                 float x = claim.X + MathF.Cos(angle) * r, z = claim.Z + MathF.Sin(angle) * r;
-                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
+                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, Maker = row.Maker, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
             }
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         }
@@ -435,6 +480,7 @@ public static partial class Module
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         RemoveClaimName(ctx, claim.Id);
         RemoveStashLog(ctx, claim.Id);
+        TownDropClaim(ctx, claim);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
@@ -455,13 +501,13 @@ public static partial class Module
     static Claim RequireOwnClaim(ReducerContext ctx, ulong claimId)
     {
         var claim = ctx.Db.Claim.Id.Find(claimId) ?? throw new Exception("That marker is gone");
-        if (claim.Owner != ctx.Sender) throw new Exception("Only the owner can do that");
+        if (claim.Owner != Me(ctx)) throw new Exception("Only the owner can do that");
         return claim;
     }
 
     static Claim RequireOwnStandingClaim(ReducerContext ctx)
     {
-        foreach (var claim in ctx.Db.Claim.Owner.Filter(ctx.Sender))
+        foreach (var claim in ctx.Db.Claim.Owner.Filter(Me(ctx)))
             if (IsStanding(ctx, claim)) return claim;
         throw new Exception("You do not hold a claim");
     }
@@ -470,7 +516,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender)) throw new Exception("This stash is not yours to open");
+        if (!IsOwnerOrMember(ctx, claim, Me(ctx))) throw new Exception("This stash is not yours to open");
         RequireNearMarker(ctx, player, claim);
         return claim;
     }
@@ -483,10 +529,21 @@ public static partial class Module
             throw new Exception("Walk up to the marker first");
     }
 
+    // The stash row of this item and quality; the most worn first, as FindStack does.
     static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality)
     {
+        ClaimStash? found = null;
         foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
-            if (row.Quality == quality)
+            if (row.Quality == quality && (found is null || Durability.Used(row.Wear) > Durability.Used(found.Value.Wear)))
+                found = row;
+        return found;
+    }
+
+    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear, uint maker)
+    {
+        var key = new StackKey(item, quality, wear, maker);
+        foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
+            if (KeyOf(row) == key)
                 return row;
         return null;
     }

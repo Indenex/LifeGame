@@ -42,6 +42,64 @@ public static class ClayLook
         return m;
     }
 
+    readonly record struct DecoKey(ShaderMaterial Plain, int Form, int Slot, uint Ink, uint Slip, int Bands, float Scale);
+
+    static readonly Dictionary<DecoKey, ShaderMaterial> Decorations = new();
+
+    // Finds a maker's glyph (slot in the stamp atlas) and colour from their player id (low 16
+    // bits); Main fills this in from the player_mark table. Null when they have no mark.
+    public static System.Func<uint, (int slot, Color color)?>? MarkLookup;
+
+    // The same clay as `plain` with a maker's mark painted in (ceramics-15): the glyph's slot in the
+    // atlas and the stamp colour. The stamp sits at a height that suits the form.
+    public static ShaderMaterial Stamped(ShaderMaterial plain, int slot, Color color, ClayForm form) =>
+        Decorate(plain, form, slot, color, 0, 0);
+
+    // The same clay with a maker's mark (slot < 0 for none) and/or slip bands round the rim (bands 0
+    // for none; slip is a 0xRRGGBB colour), ceramics-14 and 15. Materials are shared by what they show.
+    // meshScale is how much the mesh was scaled before it was baked (ground and bag meshes are baked
+    // at PotView.Size); the shader measures heights in the pot's own units.
+    public static ShaderMaterial Decorate(ShaderMaterial plain, ClayForm form, int slot, Color ink, uint slip, int bands, float meshScale = 1f)
+    {
+        uint packed = ink.ToRgba32() >> 8;
+        var key = new DecoKey(plain, (int)form, slot, slot < 0 ? 0u : packed, bands > 0 ? slip : 0u, bands, meshScale);
+        if (Decorations.TryGetValue(key, out var m)) return m;
+        if (Decorations.Count > 300) Decorations.Clear();
+        m = new ShaderMaterial { Shader = Shader };
+        foreach (var name in new[] { "albedo", "wetness", "clouds", "broken", "seed", "glow" })
+            m.SetShaderParameter(name, plain.GetShaderParameter(name));
+        float height = PotMesh.Height(form);
+        m.SetShaderParameter("local_scale", meshScale);
+        if (slot >= 0)
+        {
+            m.SetShaderParameter("stamp_atlas", MakerStamp.Atlas);
+            m.SetShaderParameter("stamp_glyph", (float)slot);
+            m.SetShaderParameter("stamp_grid", new Vector2(MakerStamp.Cols, MakerStamp.Rows));
+            m.SetShaderParameter("stamp_color", ink);
+            m.SetShaderParameter("stamp_spot", new Vector2(height * 0.55f, Mathf.Min(0.075f, height * 0.3f)));
+        }
+        if (bands > 0)
+        {
+            m.SetShaderParameter("slip_bands", (float)bands);
+            m.SetShaderParameter("slip_color", MarkColour.ToColor(slip));
+            // The rim's height, and the width of a band.
+            m.SetShaderParameter("slip_rim", new Vector2(height, Mathf.Min(0.04f, height * 0.12f)));
+        }
+        Decorations[key] = m;
+        return m;
+    }
+
+    // The plain material, or one with the maker's mark and/or slip when the item row carries them.
+    public static ShaderMaterial WithMark(ShaderMaterial plain, uint wear, ClayForm form, float meshScale = 1f)
+    {
+        if (form == ClayForm.Brick) return plain;
+        (int slot, Color color)? mark = Marks.Has(wear) ? MarkLookup?.Invoke(Marks.Maker(wear)) : null;
+        bool slipped = Slip.Has(wear) && Slip.CanDecorate(form);
+        if (mark is null && !slipped) return plain;
+        return Decorate(plain, form, mark?.slot ?? -1, mark?.color ?? Colors.White,
+            slipped ? Slip.Color(wear) : 0u, slipped ? Slip.Bands(wear) : 0, meshScale);
+    }
+
     // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
     // through. t is how far the firing has got, 0 to 1.
     public static ShaderMaterial Firing(float t, ulong id)
@@ -63,6 +121,20 @@ public static class ClayLook
     }
 
     public static ShaderMaterial Water => water ??= MakeWater();
+
+    static ShaderMaterial? troughWater;
+
+    // Trough water (ceramics-13): the same painted pond surface as the lakes (Look.WaterSurface:
+    // calm, deep, with slow ripples and rain rings), but with the shallow tint set deep, since a
+    // trough is only a hand deep and the pond's pale shallows would read as a thin film.
+    public static ShaderMaterial TroughWater => troughWater ??= MakeTroughWater();
+
+    static ShaderMaterial MakeTroughWater()
+    {
+        var m = (ShaderMaterial)Look.WaterSurface.Duplicate();
+        m.SetShaderParameter("shallow_color", new Color(0.09f, 0.22f, 0.26f));
+        return m;
+    }
 
     static ShaderMaterial MakeWater()
     {
@@ -86,9 +158,14 @@ public static class ClayLook
         return m;
     }
 
+    // The painted light (painted-8, D-313/D-319): pots are lit in the same soft shade, mid and lit
+    // bands as every other painted thing (Painted.Light), with the shade leaning violet, the
+    // sky's rim light (Painted.Rim), a faint ink edge, and only a whisper of grain so the clay reads smooth and clean.
+    static string F(float v) => v.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
+
     static Shader Shader => shader ??= new Shader
     {
-        Code = """
+        Code = $$"""
             shader_type spatial;
             render_mode cull_back;
 
@@ -98,12 +175,31 @@ public static class ClayLook
             uniform float broken = 0.0;
             uniform float seed = 0.0;
             uniform float glow = 0.0;
+            // A maker's mark (ceramics-15): the glyph's cell in the stamp atlas, or -1 for none.
+            uniform sampler2D stamp_atlas : filter_linear;
+            uniform float stamp_glyph = -1.0;
+            uniform vec2 stamp_grid = vec2(8.0, 7.0);
+            uniform vec3 stamp_color : source_color = vec3(0.7, 0.4, 0.12);
+            uniform vec2 stamp_spot = vec2(0.095, 0.075); // height of the stamp's centre, and its half size
+            // Slip round the rim (ceramics-14): 0 for none, else one or two bands; the rim's height and a band's width.
+            uniform float local_scale = 1.0; // a baked mesh was scaled before the shader sees it
+            uniform float slip_bands = 0.0;
+            uniform vec3 slip_color : source_color = vec3(0.6, 0.4, 0.2);
+            uniform vec2 slip_rim = vec2(0.256, 0.03);
+            uniform vec3 shade_tint : source_color = vec3(0.74, 0.72, 0.9);
+            uniform float ink_edge = 0.5;
+            {{Painted.RimUniform}}
+            const float BAND_SOFT = {{F(Painted.Smooth.BandSoft)}};
+            const float BAND_BREAK = {{F(Painted.Smooth.BandBreak)}};
+            varying float dab;
 
             varying vec3 local_pos;
+            varying vec3 local_normal;
             varying float height;
 
             void vertex() {
-                local_pos = VERTEX;
+                local_pos = VERTEX / local_scale;
+                local_normal = NORMAL;
                 height = UV.y;
             }
 
@@ -137,10 +233,57 @@ public static class ClayLook
                 }
 
                 vec3 color = albedo.rgb;
-                // Fine grain from the temper, and finger marks.
+                // A whisper of grain from the temper, and soft finger marks (D-319: no speckle).
                 float grain = noise(p * 1.6);
-                color *= 0.95 + grain * 0.08;
-                color *= 0.96 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.08;
+                color *= 0.985 + grain * 0.025;
+                color *= 0.97 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.06;
+                // The broad brush drift that breaks the light bands a little.
+                dab = fbm(local_pos * 3.0 + vec3(seed));
+                // A touch lighter on top, darker underneath, as on the other painted things.
+                vec3 world_n = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+                color *= mix(0.94, 1.06, smoothstep(-0.6, 0.9, world_n.y));
+
+                // A maker's mark pressed into the outside of the pot, twice, on opposite sides, so
+                // one is usually in view: dark in the dent, with a thin lighter lip.
+                if (stamp_glyph >= 0.0 && dot(local_normal.xz, local_pos.xz) > 0.0) {
+                    float radius = max(length(local_pos.xz), 0.001);
+                    float angle = atan(local_pos.z, local_pos.x);
+                    for (int side = 0; side < 2; side++) {
+                        float centre = float(side) * 3.14159265;
+                        float da = angle - centre;
+                        da = atan(sin(da), cos(da));
+                        vec2 uv = vec2(-da * radius / stamp_spot.y, -(local_pos.y - stamp_spot.x) / stamp_spot.y) * 0.5 + 0.5;
+                        if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
+                            float col = mod(stamp_glyph, stamp_grid.x);
+                            float row = floor(stamp_glyph / stamp_grid.x);
+                            vec2 cell = vec2((col + uv.x) / stamp_grid.x, (row + uv.y) / stamp_grid.y);
+                            float ink = texture(stamp_atlas, cell).a;
+                            // A pale lip round the dent, like light catching it, so dark colours still read.
+                            vec2 step_uv = vec2(0.05, 0.05) / stamp_grid;
+                            float near = max(max(texture(stamp_atlas, cell + vec2(step_uv.x, 0.0)).a, texture(stamp_atlas, cell - vec2(step_uv.x, 0.0)).a),
+                                             max(texture(stamp_atlas, cell + vec2(0.0, step_uv.y)).a, texture(stamp_atlas, cell - vec2(0.0, step_uv.y)).a));
+                            float lip = clamp(near - ink, 0.0, 1.0);
+                            color = mix(color, color * 0.6 + vec3(0.42, 0.38, 0.32), lip * 0.7);
+                            // Painted in the maker's colour, a touch darker where it sits in the clay.
+                            color = mix(color, stamp_color * (0.92 + grain * 0.1), ink * 0.94);
+                        }
+                    }
+                }
+
+                // Bands of slip painted round the rim, a little uneven like a brush stroke: soft edges that
+                // wander, and faint streaks along the stroke.
+                if (slip_bands > 0.5) {
+                    float turn = atan(local_pos.z, local_pos.x);
+                    float wobble = (noise(vec3(turn * 2.5, seed, 1.0)) - 0.5) * 0.5 + (fbm(local_pos * 38.0 + vec3(seed)) - 0.5) * 0.3;
+                    float down = (slip_rim.x - local_pos.y) / slip_rim.y + wobble;
+                    float band = smoothstep(-0.12, 0.08, down) * (1.0 - smoothstep(0.92, 1.12, down));
+                    if (slip_bands > 1.5) {
+                        float low = (down - 1.9) / 0.8;
+                        band = max(band, smoothstep(-0.12, 0.08, low) * (1.0 - smoothstep(0.92, 1.12, low)));
+                    }
+                    float streak = 0.93 + 0.14 * noise(vec3(turn * 16.0, local_pos.y * 220.0, seed));
+                    color = mix(color, slip_color * streak, band * 0.95);
+                }
 
                 // Smoke clouds from an open fire: soft dark patches, heavier low down.
                 float cloud = smoothstep(0.38, 0.7, fbm(p * 0.25)) * clouds;
@@ -155,6 +298,9 @@ public static class ClayLook
                     color = mix(color, vec3(0.08, 0.06, 0.05), crack);
                 }
 
+                // A soft, faint ink line round the shape.
+                float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
+                color *= mix(1.0, 0.7, ink_edge * smoothstep(0.6, 0.95, rim));
                 ALBEDO = color;
                 // Wet clay glistens; dry and fired clay is matte.
                 ROUGHNESS = mix(0.95, 0.32, wetness);
@@ -166,6 +312,16 @@ public static class ClayLook
                     float heat = glow * flicker * mix(1.0, 0.35, height) * (0.6 + 0.4 * fbm(p * 0.5 + vec3(TIME * 0.3)));
                     EMISSION = vec3(1.0, 0.36, 0.08) * heat;
                 }
+            }
+
+            void light() {
+                float shade = 1.0;
+            {{Painted.Light}}
+            {{Painted.Rim}}
+                // Wet clay still glistens: a soft highlight that fades as it dries.
+                vec3 half_v = normalize(LIGHT + VIEW);
+                float shine = pow(clamp(dot(NORMAL, half_v), 0.0, 1.0), mix(8.0, 48.0, wetness));
+                SPECULAR_LIGHT += LIGHT_COLOR * shine * mix(0.04, 0.5, wetness) * ATTENUATION / PI;
             }
             """,
     };

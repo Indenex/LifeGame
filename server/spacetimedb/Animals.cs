@@ -7,6 +7,10 @@ public enum AnimalSpecies
     Sheep,
     // Red deer (animals-14): shy herds at the woodland edges.
     Deer,
+    // Hens (animals-19): a tame yard flock that lays eggs.
+    Hen,
+    // Wild rabbits (animals-22): small, quick and skittish, in warrens at the meadow edges.
+    Rabbit,
 }
 
 // What an animal is doing, so clients can pick the matching animation.
@@ -17,6 +21,8 @@ public enum AnimalState
     Idle,
     Walk,
     Run,
+    // Settled for the night (hens in or by their coop).
+    Roost,
 }
 
 // Animals think on the server a couple of times a second and only send a row when
@@ -33,6 +39,9 @@ public static partial class Module
     const float FlockWakeRange = (World.ViewRadiusChunks + 1) * World.ChunkSize * World.CellSize;
 
     // How each species moves, senses and what it drops lives in shared/Animals.cs (AnimalDefs).
+    // Water this deep (m) makes a moving player splash, and how scary the splash is up close (D-075: gentle).
+    const float WadeNoiseDepth = 0.05f, WadeSplashFear = 0.5f;
+
     static AnimalDef Traits(AnimalSpecies species) => AnimalDefs.Get((byte)species);
 
     // Anyone moving slower than this, sneakers included, never frightens a sheep.
@@ -60,6 +69,9 @@ public static partial class Module
         // How grown up the animal is: lambs are born at LambGrowth and reach 100.
         [Default((byte)100)]
         public byte Growth;
+        // Eggs a hen is holding, up to its Def's EggCap, for a player to collect.
+        [Default((byte)0)]
+        public byte Eggs;
     }
 
     // What each animal is thinking. Server only.
@@ -93,6 +105,9 @@ public static partial class Module
         // A lamb's mother, whom it trails until it is grown; 0 for none.
         [Default(0UL)]
         public ulong MotherId;
+        // When a hen's next egg started coming, or 0 for none yet.
+        [Default(0L)]
+        public long EggAt;
     }
 
     [SpacetimeDB.Table(Accessor = "Flock")]
@@ -131,6 +146,9 @@ public static partial class Module
         public long SneakReportAt;
         [Default(0L)]
         public long ShotAt;
+        // When this player last swung at an animal (Hunting.cs), so one player's swings are paced whichever animal they hit.
+        [Default(0L)]
+        public long SwungAt;
     }
 
     [SpacetimeDB.Table(Accessor = "AnimalTickTimer", Scheduled = nameof(AnimalTick), ScheduledAt = nameof(ScheduledAt))]
@@ -207,6 +225,8 @@ public static partial class Module
         public float X, Z, Vx, Vz, Speed, StillSeconds;
         public uint PlayerId;
         public bool Sneaking;
+        // Standing in water (wading or afloat): moving there splashes.
+        public bool InWater;
     }
 
     struct FlockMember
@@ -227,22 +247,39 @@ public static partial class Module
         // Snow on the ground (seasons, D-135): flocks bunch up, wander less and graze less.
         float huddle = Math.Clamp(SnowCover(ctx), 0f, 1f);
 
-        foreach (var flock in ctx.Db.Flock.Iter().ToList())
+        // Nothing in the tick builds or lights anything, so fires, kilns and structures can be read once
+        // per chunk and shared by every animal that asks (StructuresNear, BurningFiresNear).
+        AnimalTickScope = true;
+        try
         {
-            var members = ctx.Db.AnimalMind.FlockId.Filter(flock.FlockId)
-                .Select(m => ctx.Db.Animal.Id.Find(m.AnimalId) is { } body ? new FlockMember { Body = body, Mind = m } : (FlockMember?)null)
-                .Where(m => m != null)
-                .Select(m => m!.Value)
-                .OrderBy(m => m.Body.Id)
-                .ToList();
-            if (FlockRegrow(ctx, flock, members, now)) continue;
-            if (members.Count == 0) continue;
+            foreach (var flock in ctx.Db.Flock.Iter().ToList())
+            {
+                var members = ctx.Db.AnimalMind.FlockId.Filter(flock.FlockId)
+                    .Select(m => ctx.Db.Animal.Id.Find(m.AnimalId) is { } body ? new FlockMember { Body = body, Mind = m } : (FlockMember?)null)
+                    .Where(m => m != null)
+                    .Select(m => m!.Value)
+                    .OrderBy(m => m.Body.Id)
+                    .ToList();
+                if (FlockRegrow(ctx, flock, members, now)) continue;
+                if (members.Count == 0) continue;
 
-            float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
-            bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
-            if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
+                float cx = members.Average(m => m.Body.X), cz = members.Average(m => m.Body.Z);
+                bool awake = watchers.Any(w => AnimalDist(w.X, w.Z, cx, cz) < FlockWakeRange);
+                if (awake) AnimalThinkFlock(ctx, flock, members, watchers, huddle, now);
+            }
+        }
+        finally
+        {
+            AnimalTickScope = false;
+            AnimalScopedStructures.Clear();
+            AnimalScopedFires.Clear();
         }
     }
+
+    // True only while AnimalTick runs; the per-chunk lookups below are kept for that one tick.
+    static bool AnimalTickScope;
+    static readonly System.Collections.Generic.Dictionary<(int, int), List<Structure>> AnimalScopedStructures = new();
+    static readonly System.Collections.Generic.Dictionary<(int, int), List<(float X, float Z, float Wall)>> AnimalScopedFires = new();
 
     // Reads where online players are now, works out how fast they are moving, and
     // remembers this tick's positions for the next one.
@@ -258,7 +295,7 @@ public static partial class Module
             }
             if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) continue;
 
-            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null };
+            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null, InWater = Wading.Depth(World.BaseHeight(World.CellOf(pos.X), World.CellOf(pos.Z))) > WadeNoiseDepth };
             if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId) is { } seen)
             {
                 // Positions arrive in 100 ms batches, so a single sample is jittery;
@@ -305,9 +342,10 @@ public static partial class Module
                 AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, huddle, now);
             AnimalMove(ctx, ref body, ref mind, before, i);
             RegrowFleece(ref body, mind, now);
+            LayEggs(ref body, ref mind, now);
             AnimalGrowAndHeal(ref body, ref mind, now);
 
-            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece || body.Growth != was.Growth
+            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece || body.Growth != was.Growth || body.Eggs != was.Eggs
                 || MathF.Abs(body.Heading - was.Heading) > 0.01f)
             {
                 body.ChunkX = World.ChunkOf(body.X);
@@ -357,6 +395,9 @@ public static partial class Module
             float threat = Math.Clamp((closing - t.CalmSpeed) / 2f, 0f, 1f) * near;
             // Brushing past at full walk startles; a sneaking player can move among them.
             if (d < 2f && w.Speed > t.CalmSpeed) threat = MathF.Max(threat, 0.6f);
+            // Splashing through water carries: a player moving in it spooks animals out to their
+            // notice range, sneaking or not (standing still in the water is silent).
+            if (w.InWater && w.Speed > 0.3f) threat = MathF.Max(threat, WadeSplashFear * near);
             if (d < t.Wary && w.Speed > 0.3f) threat = MathF.Max(threat, 0.6f * (1f - d / t.Wary) + 0.2f);
             if (threat > 0f)
             {
@@ -430,6 +471,9 @@ public static partial class Module
             mind.StateUntil = now + AnimalMicros(4f, 11f, ctx);
             return;
         }
+
+        if (t.Roosts && RoostDecide(ctx, ref body, ref mind, flock, now)) return;
+        if (t.BedsAtMidday && MiddayBed(ctx, ref body, ref mind, now)) return;
 
         if (now < mind.StateUntil && !straggling) return;
 

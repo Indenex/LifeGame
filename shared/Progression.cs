@@ -5,6 +5,7 @@
 // is earned. Keep this file free of engine and SpacetimeDB types.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
@@ -26,6 +27,8 @@ namespace LifeGame.Shared
         ArcheryDamage,    // damage multiplier for arrows (Archery)
         ArcheryHitChance, // multiplier on the chance an arrow hits (Archery)
         ArcheryDrawTime,  // seconds between shots (Archery)
+        WadeSpeed,        // fraction of walking speed left at float depth (Swimming)
+        FloatSpeed,       // fraction of walking speed once afloat (Swimming)
     }
 
     // How an effect's value moves between its start and Master values.
@@ -73,13 +76,15 @@ namespace LifeGame.Shared
         public const float Pace = 1f;
 
         // Combat skills level slower (Justin): their pace is this fraction of the base Pace.
-        public const float CombatPaceFactor = 0.5f;
+        public const float SlowPaceFactor = 0.5f;
 
-        // Skills whose gains use CombatPaceFactor; every other skill uses the base Pace.
+        // Skills whose gains use SlowPaceFactor (combat skills and swimming); every other skill
+        // uses the base Pace.
         public static bool IsCombat(string specId) => specId == "stalking" || specId == "archery";
+        public static bool IsSlow(string specId) => IsCombat(specId) || specId == "swimming";
 
         public static float PaceFor(string? specId) =>
-            specId != null && IsCombat(specId) ? Pace * CombatPaceFactor : Pace;
+            specId != null && IsSlow(specId) ? Pace * SlowPaceFactor : Pace;
 
         // The top value (at Master) of every effect that is not already a named constant
         // elsewhere. Raising the game's ceiling later means changing one number here.
@@ -96,6 +101,8 @@ namespace LifeGame.Shared
             public const float ArcheryDamage = 1.6f;
             public const float ArcheryHitChance = 1f;
             public const float ArcheryDrawTime = 0.8f;
+            public const float WadeSpeed = 0.75f;
+            public const float FloatSpeed = 0.7f;
         }
 
         // 0 to 1 share of the full effect at progress p (rank / MaxRank).
@@ -142,8 +149,51 @@ namespace LifeGame.Shared
             // Animals' proposal for Archery (values go to Justin through the PM).
             new(EffectKind.ArcheryDamage, "Arrow damage", 0.44f, Ceiling.ArcheryDamage, "x", EffectShape.EvenInHits),
             new(EffectKind.ArcheryHitChance, "Arrow hit chance", 0.8f, Ceiling.ArcheryHitChance, "x"),
+            // Swimming (starts at today's wading numbers, D-075): a little less slow-down while
+            // wading and a faster float. Proposal for Justin via the PM.
+            new(EffectKind.WadeSpeed, "Wading speed", Wading.WadeFloor, Ceiling.WadeSpeed, "x"),
+            new(EffectKind.FloatSpeed, "Float speed", Wading.FloatSpeed, Ceiling.FloatSpeed, "x"),
             new(EffectKind.ArcheryDrawTime, "Draw time", 2f, Ceiling.ArcheryDrawTime, "s"),
         };
+
+
+        // Which effects each skill's rank changes, for the journal's skill tooltip. Crafting
+        // skills share the three general effects; the rest list their own.
+        static readonly EffectKind[] CraftEffects = { EffectKind.QualityCap, EffectKind.WorkTime, EffectKind.MinigameSteps };
+
+        public static IEnumerable<EffectKind> EffectsFor(string specId)
+        {
+            switch (specId)
+            {
+                case "endurance": return new[] { EffectKind.RunSeconds, EffectKind.RefillSeconds };
+                case "swimming": return new[] { EffectKind.WadeSpeed, EffectKind.FloatSpeed };
+                case "stalking": return new[] { EffectKind.SneakDistance, EffectKind.SneakCritChance, EffectKind.SneakCritBonus };
+                case "archery": return new[] { EffectKind.ArcheryDamage, EffectKind.ArcheryHitChance, EffectKind.ArcheryDrawTime };
+                case "earthwork": return CraftEffects.Concat(new[] { EffectKind.DugClayBonus, EffectKind.SecondLumpChance });
+                case "firecraft": return CraftEffects.Concat(new[] { EffectKind.FireSeconds });
+                default: return CraftEffects;
+            }
+        }
+
+        static string Format(EffectDef e, float v) => e.Unit switch
+        {
+            "x" => $"{v:0.##}x",
+            "chance" => $"{Math.Round(v * 100)}%",
+            "x damage" => $"+{Math.Round(v * 100)}% damage",
+            _ => v < 10f ? $"{v:0.#} {e.Unit}" : $"{Math.Round(v)} {e.Unit}",
+        };
+
+        // One line per effect: its name, the value now at this rank and the Master value.
+        public static string Describe(string specId, int rank)
+        {
+            var lines = new List<string>();
+            foreach (var kind in EffectsFor(specId))
+            {
+                var e = Get(kind);
+                lines.Add($"{e.Name}: {Format(e, Effect(kind, rank))} now, {Format(e, e.Hi)} at Master");
+            }
+            return string.Join("\n", lines);
+        }
 
         public static EffectDef Get(EffectKind kind)
         {

@@ -39,6 +39,14 @@ public partial class Sheep : Node3D
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
+    // How low a roosting animal sits (1 standing, 0.7 settled), eased in _Process.
+    float crouch = 1f, crouchTarget = 1f;
+    // Set by the herd: whether a finished hen coop stands over a spot, so roosting hens go inside it.
+    public static System.Func<float, float, bool>? InsideCoop;
+    // The hen figure (model-7): same bones, but its "legs" 2 and 3 are wings and its head pecks.
+    readonly bool hen;
+    // The rabbit figure (model-18): same bones; it hops, one hop per gait cycle.
+    readonly bool rabbit;
     Color woolColor;
     float wool = 1f, woolTarget = 1f;
     // Grown size (varies per sheep), and how grown up this one is (lambs are small).
@@ -67,11 +75,21 @@ public partial class Sheep : Node3D
         new(0.74f, 0.71f, 0.63f),
         new(0.34f, 0.27f, 0.22f),
     };
-    static readonly Dictionary<int, Material> WoolMaterials = new();
+    // Hens and rabbits get their own coat palettes (D-166: no two flocks look like clones); a model plan without
+    // one (the sheep) uses the fleece palette. Hens: mostly cream and white, some grey, brown and tan. Rabbits: wild browns.
+    static readonly Dictionary<string, Color[]> Palettes = new()
+    {
+        ["hen"] = new Color[]
+        {
+            new(0.80f, 0.77f, 0.70f), new(0.80f, 0.77f, 0.70f), new(0.70f, 0.66f, 0.58f),
+            new(0.52f, 0.50f, 0.48f), new(0.46f, 0.30f, 0.20f), new(0.62f, 0.45f, 0.28f),
+        },
+    };
+    static readonly Dictionary<(string, int), Material> WoolMaterials = new();
     static ArrayMesh? sheepMesh;
     // Red deer: coats from red-brown to grey-brown; the rump, belly and throat are pale.
     static readonly Color[] Coats = { new(0.47f, 0.30f, 0.19f), new(0.50f, 0.33f, 0.21f), new(0.42f, 0.32f, 0.24f) };
-    static readonly Dictionary<int, Material> CoatMaterials = new();
+    static readonly Dictionary<(string, int), Material> CoatMaterials = new();
     static ArrayMesh? deerMesh, stagMesh;
     // Skin, face and legs share one material; their colors ride in the vertices.
     static Material? plainMaterial;
@@ -86,7 +104,8 @@ public partial class Sheep : Node3D
         material.SetShaderParameter("detail_scale", 1.5f);
         material.SetShaderParameter("bump", 0.15f);
         material.SetShaderParameter("cavity", 0.08f);
-        return material;
+        // Painted (painted-4): one painted twin per fleece colour.
+        return PaintedAnimals.Wool(material);
     }
 
     // About a third of deer are antlered stags; Audio uses this too so the roar
@@ -99,25 +118,29 @@ public partial class Sheep : Node3D
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
         var def = AnimalDefs.Get((byte)species);
         bool deer = def.Model == "deer";
+        hen = def.Model == "hen";
+        rabbit = def.Model == "rabbit";
         // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
         if (deer) BuildDeerMeshes();
-        var headAt = deer ? DeerHeadAt : HeadAt;
-        var hips = deer ? DeerHips : Hips;
 
-        int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
-        if (!WoolMaterials.TryGetValue(color, out var wool))
-            WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
-        woolColor = Fleeces[color];
-        if (deer)
+        var palette = Palettes.GetValueOrDefault(def.Model, Fleeces);
+        int color = (int)(Terrain.Hash01((int)id, 11, 5) * palette.Length) % palette.Length;
+        if (!WoolMaterials.TryGetValue((def.Model, color), out var wool))
+            WoolMaterials[(def.Model, color)] = wool = WoolLook(palette[color]);
+        woolColor = palette[color];
+        if (deer || rabbit)
         {
-            // Coats vary a little, from red-brown to a greyer brown.
-            int coat = (int)(Terrain.Hash01((int)id, 17, 3) * Coats.Length) % Coats.Length;
-            if (!CoatMaterials.TryGetValue(coat, out wool))
-                CoatMaterials[coat] = wool = Look.Solid(Coats[coat]);
-            woolColor = Coats[coat];
+            // Coats vary a little: deer from red-brown to a greyer brown, rabbits among Modeling's wild agouti browns.
+            var coats = rabbit ? RabbitFigure.Coats : Coats;
+            int coat = (int)(Terrain.Hash01((int)id, 17, 3) * coats.Length) % coats.Length;
+            if (!CoatMaterials.TryGetValue((def.Model, coat), out wool))
+                CoatMaterials[(def.Model, coat)] = wool = PaintedAnimals.Coat(Look.Solid(coats[coat]));
+            woolColor = coats[coat];
         }
+
+        var (headAt, hips, figure) = Figure(def.Model, stag, wool);
 
         // A shorn sheep is a slim pink body; the fleece bone shrinks into it when
         // shorn and swells back out as the wool regrows.
@@ -135,7 +158,7 @@ public partial class Sheep : Node3D
         }
         skeleton.ResetBonePoses();
         AddChild(skeleton);
-        var mesh = new MeshInstance3D { Mesh = deer ? (stag ? stagMesh : deerMesh) : sheepMesh, Skeleton = new NodePath("..") };
+        var mesh = new MeshInstance3D { Mesh = figure, Skeleton = new NodePath("..") };
         mesh.SetSurfaceOverrideMaterial(0, wool);
         skeleton.AddChild(mesh);
 
@@ -143,6 +166,16 @@ public partial class Sheep : Node3D
         adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f + (stag ? 0.1f : 0f);
         Scale = Vector3.One * adultSize;
     }
+
+    // The figure each model plan (AnimalDef.Model) draws: where the head and the four leg bones sit, and the
+    // skinned mesh, all on the one bone layout (body, fleece, head, four legs). A new model plan is one arm here.
+    static (Vector3 HeadAt, Vector3[] Hips, ArrayMesh Mesh) Figure(string model, bool stag, Material coat) => model switch
+    {
+        "hen" => (HenFigure.HeadAt, HenFigure.Hips, HenFigure.Build(coat)),
+        "rabbit" => (RabbitFigure.HeadAt, RabbitFigure.Hips, RabbitFigure.Build(coat)),
+        "deer" => (DeerHeadAt, DeerHips, stag ? stagMesh! : deerMesh!),
+        _ => (HeadAt, Hips, sheepMesh!),
+    };
 
     // Lambs are born at 35 and grow to 100. A lamb is a little over half size.
     static float GrownFraction(byte growth) => Mathf.Lerp(0.55f, 1f, Mathf.Clamp((growth - 35) / 65f, 0f, 1f));
@@ -214,6 +247,10 @@ public partial class Sheep : Node3D
         // Just shorn: the fleece comes off in a soft burst of tufts.
         else if (woolTarget < wool - 0.5f) Tufts();
         state = a.State;
+        // A roosting animal settles low; one in its coop is out of sight.
+        bool roost = a.State == AnimalState.Roost;
+        crouchTarget = roost ? 0.7f : 1f;
+        Visible = !(roost && InsideCoop?.Invoke(a.X, a.Z) == true);
     }
 
     public override void _Process(double delta)
@@ -252,6 +289,8 @@ public partial class Sheep : Node3D
         if (hipHeight <= 0f) hipHeight = skeleton.GetBoneRest(FirstLegBone).Origin.Y;
         float leg = hipHeight * Scale.Y;
         float reach = 4f * leg * Mathf.Lerp(Mathf.Sin(0.45f * Mathf.Max(walk, 0.2f)), Mathf.Sin(0.7f) * 1.6f, run);
+        // A rabbit covers about 0.6 m in a hop, however small its legs.
+        if (rabbit) reach = 0.6f;
         gait += speed * dt * Mathf.Tau / Mathf.Max(reach, 0.05f);
 
         // Walking moves diagonal legs together; running bounds front pair, then back pair.
@@ -261,6 +300,22 @@ public partial class Sheep : Node3D
         Leg(1, new Vector3(Mathf.Lerp(-s, front, run), 0, 0));
         Leg(2, new Vector3(Mathf.Lerp(-s, back, run), 0, 0));
         Leg(3, new Vector3(Mathf.Lerp(s, back, run), 0, 0));
+        // The rabbit hops: front and hind pairs swing together, the body lifts and pitches (RabbitFigure.Hop).
+        var hop2 = rabbit ? RabbitFigure.Hop(gait, Mathf.Clamp(speed / 1.2f, 0f, 1f)) : (0f, 0f, 0f, 0f);
+        if (rabbit)
+        {
+            Leg(0, new Vector3(hop2.Item3, 0, 0));
+            Leg(1, new Vector3(hop2.Item3, 0, 0));
+            Leg(2, new Vector3(hop2.Item4, 0, 0));
+            Leg(3, new Vector3(hop2.Item4, 0, 0));
+        }
+        // A running hen flaps both wings out (left negative, right positive about Z), about 1.1 rad.
+        if (hen && run > 0f)
+        {
+            float flap = (0.7f + 0.4f * Mathf.Sin(time * 34f)) * run;
+            Leg(2, new Vector3(0, 0, -flap));
+            Leg(3, new Vector3(0, 0, flap));
+        }
 
         // A lamb at rest gives a little skip every so often.
         if (growthTarget < 0.95f && state != AnimalState.Run && speed < 0.4f && (frolic -= dt) <= 0f)
@@ -272,7 +327,7 @@ public partial class Sheep : Node3D
         // Startled hop, bouncing run, gentle bob while walking, slow breathing at rest.
         hop = Mathf.Min(hop + dt, HopSeconds);
         float hopLift = Mathf.Sin(Mathf.Pi * hop / HopSeconds) * 0.28f;
-        float bounce = Mathf.Abs(Mathf.Sin(gait)) * (0.025f * walk * (1f - run) + 0.12f * run);
+        float bounce = rabbit ? 0f : Mathf.Abs(Mathf.Sin(gait)) * (0.025f * walk * (1f - run) + 0.12f * run);
         float breathe = Mathf.Sin(time * 1.7f) * 0.006f * (1f - walk);
         // Lean into turns, more at speed.
         float lean = Mathf.Clamp(turnRate * speed * 0.05f, -0.22f, 0.22f);
@@ -290,8 +345,8 @@ public partial class Sheep : Node3D
             }
             if (flinch > (flinchCrit ? BuckleSeconds : FlinchSeconds)) flinch = -1f;
         }
-        Body(new Vector3(flinchAway.X * 0.07f * jerk, hopLift + bounce - 0.07f * buckle, flinchAway.Y * 0.07f * jerk),
-            new Vector3(-run * Mathf.Cos(gait) * 0.08f + flinchAway.Y * 0.18f * jerk - 0.22f * buckle, 0, -lean - flinchAway.X * 0.18f * jerk),
+        Body(new Vector3(flinchAway.X * 0.07f * jerk, hopLift + bounce + hop2.Item1 - 0.07f * buckle, flinchAway.Y * 0.07f * jerk),
+            new Vector3((rabbit ? hop2.Item2 : -run * Mathf.Cos(gait) * 0.08f) + flinchAway.Y * 0.18f * jerk - 0.22f * buckle, 0, -lean - flinchAway.X * 0.18f * jerk),
             new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
         // Hind legs fold under the rump in a crit's buckle.
         if (buckle > 0f)
@@ -304,7 +359,8 @@ public partial class Sheep : Node3D
         {
             // Every so often a grazing sheep looks up to chew and glance around.
             bool lookUp = Mathf.Sin(time * 0.31f) > 0.82f;
-            targetPitch = lookUp ? 0.05f : 0.95f + Mathf.Sin(time * 7f) * 0.05f;
+            // A hen pecks in quick jabs, down about 1.2 rad; a sheep nibbles.
+            targetPitch = lookUp ? 0.05f : hen ? 1.2f * Mathf.Max(0f, Mathf.Sin(time * 7f + seed)) : 0.95f + Mathf.Sin(time * 7f) * 0.05f;
             if (lookUp) targetYaw = Mathf.Sin(time * 0.7f) * 0.5f;
         }
         else if (state == AnimalState.Run)
@@ -327,7 +383,8 @@ public partial class Sheep : Node3D
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
         Fleece(Mathf.Lerp(0.6f, 1f, wool));
         growth = Mathf.Lerp(growth, growthTarget, 1f - Mathf.Exp(-0.5f * dt));
-        Scale = Vector3.One * adultSize * growth;
+        crouch = Mathf.Lerp(crouch, crouchTarget, 1f - Mathf.Exp(-3f * dt));
+        Scale = new Vector3(1f, crouch, 1f) * adultSize * growth;
     }
 
     void Lie(float dt, float time)
@@ -371,7 +428,8 @@ public partial class Sheep : Node3D
 
     void Leg(int i, Vector3 euler) => skeleton.SetBonePoseRotation(FirstLegBone + i, Quaternion.FromEuler(euler));
 
-    void Fleece(float scale) => skeleton.SetBonePoseScale(FleeceBone, Vector3.One * scale);
+    // A hen's "fleece" bone holds its tail, so it stays full size.
+    void Fleece(float scale) => skeleton.SetBonePoseScale(FleeceBone, Vector3.One * (hen || rabbit ? 1f : scale));
 
     void Tufts()
     {
@@ -401,7 +459,7 @@ public partial class Sheep : Node3D
     static void BuildMeshes()
     {
         if (sheepMesh != null) return;
-        plainMaterial = Look.Solid(Colors.White);
+        plainMaterial = PaintedAnimals.Skin;
         // The Modeling lane's sheep in the chosen style (model-2): same bones and
         // surfaces as below, so everything else here works unchanged.
         sheepMesh = SheepFigure.Build(SheepFigure.Variant, plainMaterial).Mesh;
@@ -463,7 +521,7 @@ public partial class Sheep : Node3D
     static void BuildDeerMeshes()
     {
         if (deerMesh != null) return;
-        plainMaterial ??= Look.Solid(Colors.White);
+        plainMaterial ??= PaintedAnimals.Skin;
         deerMesh = DeerFigure.Build(false, plainMaterial);
         stagMesh = DeerFigure.Build(true, plainMaterial);
     }

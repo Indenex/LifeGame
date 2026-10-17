@@ -42,6 +42,11 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
+                "SELECT * FROM craft_work",
+                "SELECT * FROM device_job",
+                "SELECT * FROM device_output",
+                "SELECT * FROM player_equip",
+                "SELECT * FROM my_skills",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -51,200 +56,717 @@ conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
-// Needs for every process once, with a spare stone to strike with.
-Gather(Item.Stick, 5);
-Gather(Item.Stone, 3);
-Gather(Item.Fiber, 10);
+// Every run begins from the same place (bugfix-31): new players wake at a random spot in the
+// spawn clearing, so walk to the origin first, at a pace the server accepts.
+var walker = new BotWalker(conn, myId, "Crafting check", "bot", ms => Pump(() => false, ms / 1000f, null), Fail);
+WalkTo(0f, 0f, 0.1f);
 
-Craft("gather.tinder", 0, Item.Tinder);
-Craft("cord.twist", 0, Item.Cordage);
-Craft("cord.twist", 0, Item.Cordage);
-Craft("knap.flake", 0.95f, Item.Flake);
-Craft("knap.hand_axe", 0.95f, Item.HandAxe);
-Craft("lash.spear", 0, Item.Spear);
-Craft("lash.stone_axe", 0, Item.StoneAxe);
+// CRAFTCHECK_PART splits the check in two for CI: "tools" (the tier 0 to 2 crafts, digging, fires, chopping)
+// and "stations" (claim, tables, placing, tool wear and repair). Unset runs both, as before.
+string part = Environment.GetEnvironmentVariable("CRAFTCHECK_PART") ?? "";
+bool runTools = part is "" or "tools", runStations = part is "" or "stations";
 
-// Crafting-2 tools: a knife and a digging stick (the basket is made at a table, below).
-Gather(Item.Stick, 5);
-Gather(Item.Stone, 3);
-Gather(Item.Fiber, 13);
-Craft("knap.flake", 0.95f, Item.Flake);
-Craft("cord.twist", 0, Item.Cordage);
-Craft("haft.knife", 0, Item.StoneKnife);
-Craft("carve.digging_stick", 0, Item.DiggingStick);
-
-// A digging stick reaches one level below bare hands, where the clay is finer.
-var (clayX, clayZ) = Enumerable.Range(1, 40)
-    .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
-    .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
-    .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
-        && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
-WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
-for (int dig = 0; dig <= World.MaxDigDepth; dig++)
+if (runTools)
 {
-    uint clayBefore = CountOf(Item.Clay);
+    // Needs for every process once, with a spare stone to strike with.
+    Gather(Item.Stick, 5);
+    Gather(Item.Stone, 3);
+    Gather(Item.Fiber, 10);
+
+    Craft("gather.tinder", 0, Item.Tinder);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+
+    // A perfect score with no minigame behind it is capped (CraftScore.cs, crafting-36); a played one is not.
+    {
+        Gather(Item.Stone, 3);
+        List<byte> FlakeQualities() => conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Flake).SelectMany(r => Enumerable.Repeat(r.Quality, (int)r.Count)).ToList();
+        byte NewFlake(Action make)
+        {
+            var before = FlakeQualities();
+            make();
+            Pump(() => FlakeQualities().Count > before.Count, 8, "a flake");
+            var after = FlakeQualities();
+            foreach (var q in before) after.Remove(q);
+            return after.Single();
+        }
+        byte quick = NewFlake(() =>
+        {
+            lastError = null;
+            conn.Reducers.StartCraft("knap.flake", 1f);   // no BeginMinigame: nobody played it
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a quick flake to start");
+            if (lastError != null) Fail($"quick flake: {lastError}");
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 10, "the quick flake to finish");
+        });
+        byte played = NewFlake(() =>
+        {
+            PlayMinigame("knap.flake");
+            conn.Reducers.StartCraft("knap.flake", 1f);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a played flake to start");
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 10, "the played flake to finish");
+        });
+        if (quick >= played) Fail($"a perfect score with no minigame behind it was not capped (quick quality {quick}, played {played})");
+        Console.WriteLine($"A score with no play behind it is capped: quality {quick} against {played} when played");
+    }
+
+    Craft("lash.spear", 0, Item.Spear);
+    Craft("lash.stone_axe", 0, Item.StoneAxe);
+
+    // Crafting-2 tools: a knife and a digging stick (the basket is made at a table, below).
+    Gather(Item.Stick, 5);
+    Gather(Item.Stone, 3);
+    Gather(Item.Fiber, 13);
+    Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("haft.knife", 0, Item.StoneKnife);
+    Craft("carve.digging_stick", 0, Item.DiggingStick);
+
+    // A digging stick reaches one level below bare hands, where the clay is finer.
+    var (clayX, clayZ) = Enumerable.Range(1, 40)
+        .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+        .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+        .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
+            && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
+    WalkTo(clayX * World.CellSize, clayZ * World.CellSize);
+    EquipTool(Item.DiggingStick);
+    for (int dig = 0; dig <= World.MaxDigDepth; dig++)
+    {
+        uint clayBefore = CountOf(Item.Clay);
+        lastError = null;
+        conn.Reducers.Dig(clayX, clayZ);
+        Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging");
+        if (lastError != null) Fail($"dig {dig + 1}: {lastError}");
+        Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+    }
+    var deepClay = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Clay).Max(r => r.Quality);
+    if (deepClay < 80) Fail($"the deepest clay came up at quality {deepClay}");
     lastError = null;
     conn.Reducers.Dig(clayX, clayZ);
-    Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging");
-    if (lastError != null) Fail($"dig {dig + 1}: {lastError}");
-    Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
-}
-var deepClay = conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Clay).Max(r => r.Quality);
-if (deepClay < 80) Fail($"the deepest clay came up at quality {deepClay}");
-lastError = null;
-conn.Reducers.Dig(clayX, clayZ);
-Pump(() => lastError != null, 3, "a dig past the stick's reach to be refused");
-Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay quality {deepClay}); below that: {lastError}");
+    Pump(() => lastError != null, 3, "a dig past the stick's reach to be refused");
+    Console.WriteLine($"Digging stick reached level {World.MaxDigDepth + 1} (clay quality {deepClay}); below that: {lastError}");
 
-Gather(Item.Stick, 2);
-WalkTo(fireX, fireZ);
-int firesBefore = conn.Db.Fire.Count;
-FireCraft("fire.hand_drill", 1f);
-Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
-var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
-Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
-OffRocks(fire);
+    Gather(Item.Stick, 2);
+    WalkTo(fireX, fireZ);
+    int firesBefore = conn.Db.Fire.Count;
+    FireCraft("fire.hand_drill", 1f);
+    Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
+    var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
+    Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+    if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
+    OffRocks(fire);
 
-// A failed drill loses its inputs and lights nothing.
-Gather(Item.Fiber, 2);
-Gather(Item.Stick, 3);
-Craft("gather.tinder", 0, Item.Tinder);
-int firesNow = conn.Db.Fire.Count;
-FireCraft("fire.hand_drill", 0.1f);
-Pump(() => false, 1, null);
-if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
-if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
-Console.WriteLine("Failed drill lit nothing and used up its tinder");
-
-// Crafting-3: a bow drill lights a fire on a score that fails a hand drill.
-Gather(Item.Fiber, 5);
-Gather(Item.Stick, 4);
-Craft("cord.twist", 0, Item.Cordage);
-Craft("lash.bow_drill", 0, Item.BowDrill);
-Craft("gather.tinder", 0, Item.Tinder);
-int firesBeforeBow = conn.Db.Fire.Count;
-FireCraft("fire.bow_drill", 0.25f);
-Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
-if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
-Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
-foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
-Gather(Item.Stick, 1);
-
-// A fire burns no higher than the cap (D-090): once it is full, feeding is refused and the stick is
-// kept. The cap grows with Firecraft (the shared progression curve), so a freshly lit fire may still
-// have room for a stick; top it up first instead of assuming rank 0.
-var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
-WalkTo(bowFire.X, bowFire.Z);
-for (int top = 0; top < 12; top++)
-{
-    long fuelNow = conn.Db.Fire.Id.Find(bowFire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+    // Lighting a fire where the player chose (crafting-28): a spot out of reach, and a process
+    // that is not a fire, are refused before anything is used up.
     lastError = null;
-    conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
-    Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
-    if (lastError == "The fire is burning as high as it will") break;
-    if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
+    conn.Reducers.StartFireAt("fire.hand_drill", 1f, x + 300f, z);
+    Pump(() => lastError != null, 5, "a fire out of reach to be refused");
+    if (lastError?.Contains("out of reach") != true) Fail($"a fire far away: {lastError}");
+    lastError = null;
+    conn.Reducers.StartFireAt("cord.twist", 0f, x, z);
+    Pump(() => lastError != null, 5, "a spot for a non-fire to be refused");
+    if (lastError?.Contains("Only a fire") != true) Fail($"a spot for cord.twist: {lastError}");
+    Console.WriteLine($"Choosing a spot: {lastError}");
+
+    // A failed drill loses its inputs and lights nothing.
+    Gather(Item.Fiber, 2);
+    Gather(Item.Stick, 3);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesNow = conn.Db.Fire.Count;
+    FireCraft("fire.hand_drill", 0.1f);
+    Pump(() => false, 1, null);
+    if (conn.Db.Fire.Count != firesNow) Fail("a failed drill still lit a fire");
+    if (CountOf(Item.Tinder) != 0) Fail("a failed drill kept its tinder");
+    Console.WriteLine("Failed drill lit nothing and used up its tinder");
+
+    // Crafting-3: a bow drill lights a fire on a score that fails a hand drill.
+    Gather(Item.Fiber, 5);
+    Gather(Item.Stick, 4);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("lash.bow_drill", 0, Item.BowDrill);
+    Craft("gather.tinder", 0, Item.Tinder);
+    int firesBeforeBow = conn.Db.Fire.Count;
+    FireCraft("fire.bow_drill", 0.25f);
+    Pump(() => conn.Db.Fire.Count > firesBeforeBow, 5, "a bow-drill fire to be lit");
+    if (CountOf(Item.BowDrill) != 1) Fail("the bow drill was used up");
+    Console.WriteLine("Bow drill lit a fire at score 0.25 and was kept");
+    foreach (var f in conn.Db.Fire.Iter()) OffRocks(f);
     Gather(Item.Stick, 1);
+
+    // A fire burns no higher than the cap (D-090): once it is full, feeding is refused and the stick is
+    // kept. The cap grows with Firecraft (the shared progression curve), so a freshly lit fire may still
+    // have room for a stick; top it up first instead of assuming rank 0.
+    var bowFire = conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
     WalkTo(bowFire.X, bowFire.Z);
-}
-RefusedFeed(bowFire, Item.Stick);
+    for (int top = 0; top < 12; top++)
+    {
+        long fuelNow = conn.Db.Fire.Id.Find(bowFire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+        lastError = null;
+        conn.Reducers.FeedFire(bowFire.Id, (ushort)Item.Stick);
+        Pump(() => lastError != null || conn.Db.Fire.Id.Find(bowFire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelNow, 5, "the bow-drill fire to take a stick or refuse it");
+        if (lastError == "The fire is burning as high as it will") break;
+        if (lastError != null) Fail($"topping up the bow-drill fire: {lastError}");
+        Gather(Item.Stick, 1);
+        WalkTo(bowFire.X, bowFire.Z);
+    }
+    RefusedFeed(bowFire, Item.Stick);
 
-// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
-// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
-WalkTo(fire.X, fire.Z);
-float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
-float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
-Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
-long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
-lastError = null;
-conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
-Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
-if (lastError != null) Fail($"feeding the fire: {lastError}");
-Console.WriteLine("Fed the fire a stick");
+    // Chopping: the stone axe takes logs from the nearest standing tree until it falls.
+    var (treeX, treeZ) = NearestTree();
+    var trunk = Trees.Trunk(treeX, treeZ);
+    WalkTo(trunk.X, trunk.Z);
+    int chops = Trees.Felling ? Trees.LogsPerTree : 1;
+    for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
+    if (Trees.Felling)
+    {
+        // The server chops the nearest standing tree in reach of where the bot stands, which is not always the one
+        // walked to, so look for any felled tree close by.
+        bool FelledNear() => conn.Db.ChoppedTree.Iter().Any(t => t.Felled && Math.Abs(t.CellX * World.CellSize - x) < 6f && Math.Abs(t.CellZ * World.CellSize - z) < 6f);
+        Pump(FelledNear, 3, $"a tree to fall near ({x:F1}, {z:F1}) (walked to the tree at {treeX}, {treeZ})");
+        Console.WriteLine($"Felled a tree near the bot after {chops} logs");
+    }
+    WalkTo(bowFire.X, bowFire.Z);
+    RefusedFeed(bowFire, Item.Log);
 
-// Chopping: the stone axe takes logs from the nearest standing tree until it falls.
-var (treeX, treeZ) = NearestTree();
-var trunk = Trees.Trunk(treeX, treeZ);
-WalkTo(trunk.X, trunk.Z);
-int chops = Trees.Felling ? Trees.LogsPerTree : 1;
-for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
-if (Trees.Felling)
-{
-    Pump(() => conn.Db.ChoppedTree.CellKey.Find(World.CellKey(treeX, treeZ)) is { Felled: true }, 3, "the tree to fall");
-    Console.WriteLine($"Felled the tree at {treeX}, {treeZ} after {chops} logs");
-}
-WalkTo(bowFire.X, bowFire.Z);
-RefusedFeed(bowFire, Item.Log);
-
-// Crafting-15: stations (D-098, D-112). A basket is woven at a crafting table, which
-// stands inside a claim, and part of its fiber comes from the claim's stash.
-lastError = null;
-conn.Reducers.StartCraft("weave.basket", 0);
-Pump(() => lastError != null, 5, "a basket away from a table to be refused");
-Console.WriteLine($"Basket with no table: {lastError}");
-lastError = null;
-conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
-Pump(() => lastError != null, 5, "a table outside a claim to be refused");
-if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
-Console.WriteLine($"Table outside a claim: {lastError}");
-Gather(Item.Fiber, 6);
-Craft("cord.twist", 0, Item.Cordage);
-Craft("cord.twist", 0, Item.Cordage);
-Gather(Item.Stick, 11);
-Gather(Item.Fiber, 12);
-if (CountOf(Item.Log) < 1) Fail("no log left for the table");
-
-// Claim land out past the spawn clearing, then build the table inside it.
-float claimDist = Social.SpawnClearRadius + Social.ClaimRadius + 5f;
-float ang = MathF.Atan2(z, x);
-WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist);
-var marker = BuildHere(StructureKind.ClaimMarker);
-Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
-var claim = conn.Db.Claim.Iter().First(c => c.StructureId == marker.Id);
-Console.WriteLine($"Claimed land at ({claim.X:F0}, {claim.Z:F0})");
-var table = BuildHere(StructureKind.CraftingTable);
-Console.WriteLine($"Built a crafting table at ({table.X:F1}, {table.Z:F1})");
-WalkTo(table.X, table.Z);
-
-// Stash all but 6 fiber; the basket needs 10, so 4 must come from the stash.
-WalkTo(marker.X, marker.Z);
-while (CountOf(Item.Fiber) > 6)
-{
-    var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
-    uint had = CountOf(Item.Fiber);
+    // The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
+    // Firecraft only raises the cap, so the rank-0 cap is a safe bound. By here the fire has had the bow drill, the
+    // chopping and the refused logs to burn down, so this rarely waits (it used to stand still for a minute; integration-10).
+    WalkTo(fire.X, fire.Z);
+    float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+    float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
+    Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
+    long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
     lastError = null;
-    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality, 1);
-    Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
-    if (lastError != null) Fail($"stashing fiber: {lastError}");
+    conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
+    Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
+    if (lastError != null) Fail($"feeding the fire: {lastError}");
+    Console.WriteLine("Fed the fire a stick");
+
 }
-uint StashFiber() => conn.Db.MyClaimStash.Iter().Where(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.Fiber).Aggregate(0u, (n, r) => n + r.Count);
-uint stashed = StashFiber();
-WalkTo(table.X, table.Z);
-Craft("weave.basket", 0, Item.Basket);
-Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
-Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
+
+if (part == "stations")
+{
+    // Part two starts from nothing: it makes the tools the stations and repairs need, and one log.
+    // Just what these need (a spare stone to strike with, a flake to cut with): a heavy bag walks slowly.
+    Gather(Item.Stick, 2);
+    Gather(Item.Stone, 4);
+    Gather(Item.Fiber, 3);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+    Craft("lash.stone_axe", 0, Item.StoneAxe);
+    Craft("knap.flake", 0.95f, Item.Flake);
+    Craft("carve.digging_stick", 0, Item.DiggingStick);
+    var (stX, stZ) = NearestTree();
+    var stTrunk = Trees.Trunk(stX, stZ);
+    WalkTo(stTrunk.X, stTrunk.Z);
+    Craft("chop.log", 0, Item.Log);
+}
+
+if (runStations)
+{
+    // Crafting-15: stations (D-098, D-112). A basket is woven at a crafting table, which
+    // stands inside a claim, and part of its fiber comes from the claim's stash.
+    lastError = null;
+    conn.Reducers.StartCraft("weave.basket", 0);
+    Pump(() => lastError != null, 5, "a basket away from a table to be refused");
+    Console.WriteLine($"Basket with no table: {lastError}");
+    lastError = null;
+    // Only basic survival buildings stand outside a claim (building-13): a station that isn't the table is refused.
+    conn.Reducers.PlaceStructure(StructureKind.SpindleStation, x + 2f, z, 0f);
+    Pump(() => lastError != null, 5, "a spindle station outside a claim to be refused");
+    if (lastError?.Contains("inside your claim") != true) Fail($"a spindle station outside a claim: {lastError}");
+    Console.WriteLine($"Spindle station outside a claim: {lastError}");
+    Gather(Item.Fiber, 6);
+    Craft("cord.twist", 0, Item.Cordage);
+    Craft("cord.twist", 0, Item.Cordage);
+    Gather(Item.Stick, 11);
+    Gather(Item.Fiber, 12);
+    if (CountOf(Item.Log) < 1) Fail("no log left for the table");
+
+    // Claim land out past the spawn clearing, then build the table inside it.
+    float claimDist = Social.SpawnClearRadius + Social.ClaimRadius + 5f;
+    float ang = MathF.Atan2(z, x);
+    WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist);
+    var marker = BuildHere(StructureKind.ClaimMarker);
+    Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
+    var claim = conn.Db.Claim.Iter().First(c => c.StructureId == marker.Id);
+    Console.WriteLine($"Claimed land at ({claim.X:F0}, {claim.Z:F0})");
+    var table = BuildHere(StructureKind.CraftingTable);
+    Console.WriteLine($"Built a crafting table at ({table.X:F1}, {table.Z:F1})");
+    WalkTo(table.X, table.Z);
+
+    // Stash all but 6 fiber; the basket needs 10, so 4 must come from the stash.
+    WalkTo(marker.X, marker.Z);
+    while (CountOf(Item.Fiber) > 6)
+    {
+        var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
+        uint had = CountOf(Item.Fiber);
+        lastError = null;
+        conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality, 1);
+        Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
+        if (lastError != null) Fail($"stashing fiber: {lastError}");
+    }
+    uint StashFiber() => conn.Db.MyClaimStash.Iter().Where(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.Fiber).Aggregate(0u, (n, r) => n + r.Count);
+    uint stashed = StashFiber();
+    WalkTo(table.X, table.Z);
+    Craft("weave.basket", 0, Item.Basket);
+    Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
+    Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
+
+    // Crafting-21: a made thing is set down where the player chooses. The basket just woven
+    // is placeable; a stick is not; the spot has to be within reach.
+    {
+        Gather(Item.Stick, 1);
+        WalkTo(table.X, table.Z);
+        var basket = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Basket);
+        var stickRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Stick);
+        lastError = null;
+        conn.Reducers.PlaceItem(stickRow.Item, stickRow.Quality, stickRow.Wear, x + 1f, z, 0f);
+        Pump(() => lastError != null, 5, "placing a stick to be refused");
+        if (lastError != "That can't be set down") Fail($"placing a stick: {lastError}");
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 30f, z, 0f);
+        Pump(() => lastError != null, 5, "placing out of reach to be refused");
+        Console.WriteLine($"Placing out of reach: {lastError}");
+
+        // Setting a thing down is a click on the item in hand (crafting-29): refused until it is held.
+        conn.Reducers.EquipSlot(255);
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 1.8f, z, 0f);
+        Pump(() => lastError != null, 5, "placing a basket that is not in hand to be refused");
+        if (lastError?.Contains("hand") != true) Fail($"placing a basket not held: {lastError}");
+        Console.WriteLine($"Basket not in hand: {lastError}");
+        EquipTool(Item.Basket);
+
+        bool placedOk = false;
+        for (int k = 0; k < 12 && !placedOk; k++)
+        {
+            float a = k * MathF.Tau / 12, px = x + MathF.Cos(a) * 1.8f, pz = z + MathF.Sin(a) * 1.8f;
+            int before = conn.Db.WorldItem.Count;
+            lastError = null;
+            conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, px, pz, 1.25f);
+            Pump(() => lastError != null || conn.Db.WorldItem.Count > before, 5, "the basket to be placed");
+            if (lastError == null) placedOk = true;
+            else if (!lastError.Contains("steep") && !lastError.Contains("way") && !lastError.Contains("water")) Fail($"placing the basket: {lastError}");
+        }
+        if (!placedOk) Fail("no spot beside the table took a basket");
+        var placed = conn.Db.WorldItem.Iter().First(w => w.Item == (ushort)Item.Basket && w.Placed);
+        if (MathF.Abs(placed.Yaw - 1.25f) > 0.001f) Fail($"the placed basket lost its turn ({placed.Yaw})");
+        if (CountOf(Item.Basket) != 0) Fail("the basket stayed in the bag");
+        WalkTo(placed.X, placed.Z);
+        conn.Reducers.PickUp(placed.Id);
+        Pump(() => CountOf(Item.Basket) == 1, 5, "the placed basket to be picked back up");
+        Console.WriteLine($"Placed the basket at ({placed.X:F1}, {placed.Z:F1}) turned {placed.Yaw:F2} and picked it up again");
+    }
+
+    // Crafting-19: tool wear and repair (D-155). The server counts each use as one use of
+    // the tool's life; the admin raises that so a single use spends a tool.
+    {
+        // A repair table, built like the crafting table: 4 sticks, 2 cordage, a log and 2 stones.
+        Gather(Item.Stick, 6);
+        Gather(Item.Stone, 3);
+        Gather(Item.Fiber, 12);
+        while (CountOf(Item.Cordage) < 3) Craft("cord.twist", 0, null);
+        if (CountOf(Item.Log) < 1)
+        {
+            var (lx, lz) = NearestTree();
+            var tr = Trees.Trunk(lx, lz);
+            WalkTo(tr.X, tr.Z);
+            Craft("chop.log", 0, Item.Log);
+            WalkTo(table.X, table.Z);
+        }
+        WalkTo(table.X, table.Z);
+        var repairTable = BuildHere(StructureKind.RepairTable);
+        Console.WriteLine($"Built a repair table at ({repairTable.X:F1}, {repairTable.Z:F1})");
+
+        WalkTo(repairTable.X, repairTable.Z);
+
+        // One use spends the axe.
+        AdminCall("set_tool_wear_step", "1000");
+        var (wx, wz) = NearestTree();
+        var wtrunk = Trees.Trunk(wx, wz);
+        WalkTo(wtrunk.X, wtrunk.Z);
+        Craft("chop.log", 0, Item.Log);
+        var spentAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        if (!Durability.IsSpent(spentAxe.Quality, spentAxe.Wear)) Fail($"one hard use did not spend the axe (wear {spentAxe.Wear})");
+        Console.WriteLine($"The axe is {Durability.Condition(spentAxe.Quality, spentAxe.Wear)} after one use");
+        lastError = null;
+        conn.Reducers.StartCraft("chop.log", 0);
+        Pump(() => lastError != null, 5, "a spent axe to be refused");
+        if (lastError?.Contains("spent") != true) Fail($"chopping with a spent axe: {lastError}");
+        Console.WriteLine($"Spent axe: {lastError}");
+
+        // Away from the table, mending is refused.
+        if (MathF.Sqrt((x - repairTable.X) * (x - repairTable.X) + (z - repairTable.Z) * (z - repairTable.Z)) > 8f)
+        {
+            lastError = null;
+            conn.Reducers.RepairTool(spentAxe.Item, spentAxe.Quality, spentAxe.Wear);
+            Pump(() => lastError != null, 5, "mending away from the table to be refused");
+            if (lastError?.Contains("repair table") != true) Fail($"mending away from the table: {lastError}");
+            Console.WriteLine($"Mending away from the table: {lastError}");
+        }
+
+        // Wear travels with the tool into the claim's stash and back.
+        WalkTo(marker.X, marker.Z);
+        lastError = null;
+        conn.Reducers.StashItem(claim.Id, spentAxe.Item, spentAxe.Quality, 1);
+        Pump(() => lastError != null || CountOf(Item.StoneAxe) == 0, 5, "the axe into the stash");
+        if (lastError != null) Fail($"stashing the axe: {lastError}");
+        var stashedAxe = conn.Db.MyClaimStash.Iter().First(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.StoneAxe);
+        if (stashedAxe.Wear != spentAxe.Wear) Fail($"the stash lost the axe's wear ({spentAxe.Wear} -> {stashedAxe.Wear})");
+        conn.Reducers.TakeFromStash(claim.Id, stashedAxe.Item, stashedAxe.Quality, 1);
+        Pump(() => CountOf(Item.StoneAxe) == 1, 5, "the axe back out of the stash");
+        var backAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        if (backAxe.Wear != spentAxe.Wear) Fail($"the axe came back with different wear ({spentAxe.Wear} -> {backAxe.Wear})");
+        // The maker (crafting-25): made by this player, kept through the stash; raw things have none.
+        if (spentAxe.Maker != myId) Fail($"the axe's maker is {spentAxe.Maker}, not {myId}");
+        if (stashedAxe.Maker != myId || backAxe.Maker != myId) Fail("the axe lost its maker in the stash");
+        if (conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Log).Any(r => r.Maker != 0)) Fail("a chopped log has a maker");
+        Console.WriteLine($"The axe is made by player {myId} and kept that through the stash");
+        Console.WriteLine("The axe kept its wear through the stash");
+
+        // Spend the digging stick too, then show a spent stick no longer reaches the deeper level.
+        var stick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+        var (dx, dz) = (World.CellOf(x) + 1, World.CellOf(z) + 1);
+        WalkTo(dx * World.CellSize, dz * World.CellSize);
+        EquipTool(Item.DiggingStick);
+        for (int dig = 0; dig <= World.MaxDigDepth; dig++)
+        {
+            lastError = null;
+            conn.Reducers.Dig(dx, dz);
+            Pump(() => lastError != null || (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(dx, dz))?.Depth ?? 0) > dig, 5, "a dig");
+            if (lastError != null && dig < World.MaxDigDepth) Fail($"dig {dig + 1}: {lastError}");
+            Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+        }
+        var spentStick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+        if (!Durability.IsSpent(spentStick.Quality, spentStick.Wear)) Fail("the digging stick did not wear out");
+        lastError = null;
+        conn.Reducers.Dig(dx, dz);
+        Pump(() => lastError != null, 5, "a spent stick to be left out of a deep dig");
+        if (lastError != "Too deep to dig by hand") Fail($"a deep dig with a spent stick: {lastError}");
+        Console.WriteLine($"Spent digging stick: {lastError}");
+
+        // Mend both at the table. The axe takes a length of cordage; the stick just a cutting tool.
+        AdminCall("set_tool_wear_step", "1");
+        WalkTo(repairTable.X, repairTable.Z);
+        uint cordageBefore = CountOf(Item.Cordage);
+        lastError = null;
+        var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        // Hang the spent axe on the tools belt first: mending keeps it there.
+        conn.Reducers.PutOnBelt(oldAxe.Id, 255);
+        Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.OnBelt), 5, "the axe onto the belt");
+        oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        int toolmakingBefore = conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points);
+        conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
+        Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
+        if (lastError != null) Fail($"mending the axe: {lastError}");
+        var mendedAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        if (!mendedAxe.OnBelt) Fail("the mended axe fell off the belt into the bag");
+        if (mendedAxe.Maker != myId) Fail("the mended axe lost its maker");
+        byte expectQ = Durability.RepairedQuality(oldAxe.Quality, oldAxe.Wear);
+        if (Durability.IsSpent(mendedAxe.Quality, mendedAxe.Wear) || Durability.Used(mendedAxe.Wear) != 0) Fail("the mended axe still shows wear");
+        if (mendedAxe.Quality != expectQ || mendedAxe.Quality > oldAxe.Quality) Fail($"mended axe quality {mendedAxe.Quality}, expected {expectQ} (was {oldAxe.Quality})");
+        if (Durability.Origin(mendedAxe.Wear) != oldAxe.Quality) Fail($"the mended axe forgot its original quality ({Durability.Origin(mendedAxe.Wear)} vs {oldAxe.Quality})");
+        if (CountOf(Item.Cordage) != cordageBefore - 1) Fail($"mending the axe took {cordageBefore - CountOf(Item.Cordage)} cordage, not 1");
+        Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
+        Pump(() => conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points) > toolmakingBefore, 5, "mending to train Toolmaking");
+        Console.WriteLine("Mending trained Toolmaking");
+        // A belt tool is storage only (crafting-29): take it back into the bag to use it.
+        conn.Reducers.TakeOffBelt(mendedAxe.Id, 65535);
+        Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt), 5, "the axe off the belt");
+
+        uint cordageNow = CountOf(Item.Cordage);
+        lastError = null;
+        conn.Reducers.RepairTool(spentStick.Item, spentStick.Quality, spentStick.Wear);
+        Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.DiggingStick && r.Wear != spentStick.Wear), 5, "the digging stick to be mended");
+        if (lastError != null) Fail($"mending the digging stick: {lastError}");
+        if (CountOf(Item.Cordage) != cordageNow) Fail("sharpening a digging stick used cordage");
+        Console.WriteLine("Sharpened the digging stick (no materials)");
+
+        // As good as it can be, and the mended axe chops again.
+        var freshStick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+        lastError = null;
+        conn.Reducers.RepairTool(freshStick.Item, freshStick.Quality, freshStick.Wear);
+        Pump(() => lastError != null, 5, "mending a fresh stick to be refused");
+        var (cx2, cz2) = NearestTree();
+        var ctrunk = Trees.Trunk(cx2, cz2);
+        WalkTo(ctrunk.X, ctrunk.Z);
+        Craft("chop.log", 0, Item.Log);
+        Console.WriteLine("The mended axe chops again");
+
+        // World tool actions need the tool equipped (crafting-29): put the axe away and a chop is refused.
+        conn.Reducers.EquipSlot(9);
+        Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the axe to be put away");
+
+        // A slot holding an item the player does not carry puts nothing in hand (what other players see is real).
+        conn.Reducers.SetHotbarSlot(8, (ushort)Item.Bow);
+        Pump(() => false, 0.5f, null);
+        if (CountOf(Item.Bow) == 0)
+        {
+            conn.Reducers.EquipSlot(8);
+            Pump(() => false, 1f, null);
+            if (conn.Db.PlayerEquip.Owner.Find(me!.Value) is not null) Fail("equipping a slot whose item is not carried put something in hand");
+            Console.WriteLine("A slot with an item that is not carried equips nothing");
+        }
+        conn.Reducers.SetHotbarSlot(8, 0);
+        lastError = null;
+        conn.Reducers.StartCraft("chop.log", 0);
+        Pump(() => lastError != null, 5, "a chop without the axe equipped to be refused");
+        if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
+        Console.WriteLine($"Axe not equipped: {lastError}");
+        EquipTool(Item.StoneAxe);
+
+        // When the item in hand leaves the bag the hand empties (crafting-38): hanging the axe on the belt does it.
+        {
+            var axeRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt);
+            conn.Reducers.PutOnBelt(axeRow.Id, 255);
+            Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the hand to empty when the axe went on the belt");
+            Console.WriteLine("The hand empties when its item leaves the bag");
+            conn.Reducers.TakeOffBelt(axeRow.Id, 65535);
+            Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && !r.OnBelt), 5, "the axe back in the bag");
+            EquipTool(Item.StoneAxe);
+        }
+
+        // Walking off ends a job in progress (crafting-31): start a chop, step 3 m away from the tree, and the job
+        // stops with no log and no further progress.
+        {
+            var (tx0, tz0) = NearestTree();
+            var trunk0 = Trees.Trunk(tx0, tz0);
+            WalkTo(trunk0.X, trunk0.Z);
+            uint logsBefore = CountOf(Item.Log);
+            lastError = null;
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
+            if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            // The server chops the nearest standing tree in reach, which can be another than the one walked to:
+            // measure the walk against the tree the job really has.
+            var chopJob = conn.Db.MyCraftJob.Iter().First();
+            trunk0 = (chopJob.X, chopJob.Z);
+            // Walk off along a line the ground leaves free (no boulder, trunk, water or steep cell on it), in
+            // steps, reading where the server really has us: a raw line into an obstacle would leave the player
+            // in reach and the check would time out for the wrong reason.
+            (float X, float Z) ServerAt() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } sp ? (sp.X, sp.Z) : (x, z);
+            float Away((float X, float Z) at) => MathF.Sqrt((at.X - trunk0.X) * (at.X - trunk0.X) + (at.Z - trunk0.Z) * (at.Z - trunk0.Z));
+            float startX = x, startZ = z;
+            (float X, float Z) goal = (startX, startZ);
+            for (int k = 0; k < 12; k++)
+            {
+                float dirAng = k * MathF.Tau / 12f;
+                var cand = (X: startX + MathF.Cos(dirAng) * 4f, Z: startZ + MathF.Sin(dirAng) * 4f);
+                if (Away(cand) < Away((startX, startZ)) + 2.5f) continue;     // must lead away from the tree
+                var stand = ground.Stand(cand.X, cand.Z);
+                if (MathF.Abs(stand.X - cand.X) > 0.05f || MathF.Abs(stand.Z - cand.Z) > 0.05f) continue;
+                if (ground.Route(startX, startZ, cand.X, cand.Z).Count > 2) continue;   // a detour: not a straight, free line
+                goal = cand;
+                break;
+            }
+            if (goal == (startX, startZ)) Fail($"no free line away from the tree at ({trunk0.X:F1}, {trunk0.Z:F1}) from ({startX:F1}, {startZ:F1}): {ground.Describe(startX, startZ)}");
+            for (int step = 1; step <= 10 && conn.Db.MyCraftJob.Count > 0; step++)
+            {
+                float f = MathF.Min(1f, step * 0.5f / 4f);
+                x = startX + (goal.X - startX) * f;
+                z = startZ + (goal.Z - startZ) * f;
+                conn.Reducers.Move(x, z, 0f);
+                Pump(() => false, 0.25f, null);
+            }
+            if (conn.Db.MyCraftJob.Count > 0)
+            {
+                var at = ServerAt();
+                Console.WriteLine($"Walk-away: bot ({x:F1}, {z:F1}), server ({at.X:F1}, {at.Z:F1}), tree ({trunk0.X:F1}, {trunk0.Z:F1}), {Away(at):F1} m from it, goal ({goal.X:F1}, {goal.Z:F1})");
+            }
+            {
+                var at = ServerAt();
+                Pump(() => conn.Db.MyCraftJob.Count == 0, 5, $"the chop to stop when the player walked off (server has the bot at ({at.X:F1}, {at.Z:F1}), {Away(at):F1} m from the tree at ({trunk0.X:F1}, {trunk0.Z:F1}); started from ({startX:F1}, {startZ:F1}))");
+            }
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a chop the player walked away from still gave a log");
+            if (conn.Db.CraftWork.PlayerId.Find(myId) != null) Fail("the work row stayed after the player walked away");
+            Console.WriteLine("Walking away stopped the chop");
+            // Cancelling by hand stops it too, and putting the axe away mid-chop.
+            WalkTo(trunk0.X, trunk0.Z);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a second chop to start");
+            conn.Reducers.EquipSlot(9);
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the axe was put away");
+            EquipTool(Item.StoneAxe);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a third chop to start");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop on CancelCraft");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a cancelled chop still gave a log");
+            Console.WriteLine("Putting the axe away and CancelCraft stopped a chop");
+
+            // A craft that took inputs gives them back when it is stopped (crafting-34), none of its output made.
+            Gather(Item.Fiber, 3);
+            uint fiberBefore = CountOf(Item.Fiber), cordageBeforeCancel = CountOf(Item.Cordage);
+            lastError = null;
+            conn.Reducers.StartCraft("cord.twist", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a cordage twist to start");
+            if (lastError != null) Fail($"twisting cordage for the refund check: {lastError}");
+            Pump(() => CountOf(Item.Fiber) < fiberBefore, 5, "the fiber to be taken");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0 && CountOf(Item.Fiber) == fiberBefore, 5, "the fiber to come back");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Cordage) != cordageBeforeCancel) Fail("a stopped twist still made cordage");
+            Console.WriteLine("Stopping a craft returned its inputs and made nothing");
+        }
+    }
+
+    // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
+    // sticks and cordage, three arrows from sticks and fiber, both with a cutting tool.
+    {
+        Gather(Item.Stick, 5);
+        Gather(Item.Fiber, 8);
+        while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+        Craft("lash.bow", 0, Item.Bow);
+        uint arrowsBefore = CountOf(Item.Arrow);
+        Craft("carve.arrows", 0, Item.Arrow);
+        if (CountOf(Item.Arrow) != arrowsBefore + 3) Fail($"one arrow craft made {CountOf(Item.Arrow) - arrowsBefore} arrows, not 3");
+        Console.WriteLine("Made a bow and three arrows");
+    }
+
+    // Crafting-26: a spade (a log, a stone and cordage, carved with a cutting tool) digs
+// faster than a digging stick. A second dig half a stick-cooldown after the first lands
+// with the spade in the bag; it would be refused with the stick alone.
+{
+    Gather(Item.Stone, 1);
+    Gather(Item.Fiber, 3);
+    while (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    Craft("carve.spade", 0, Item.Spade);
+    var (sx, sz) = (World.CellOf(x) + 3, World.CellOf(z) + 3);
+    WalkTo(sx * World.CellSize, sz * World.CellSize);
+    EquipTool(Item.Spade);
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+    lastError = null;
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 1 || lastError != null, 5, "the first spade dig");
+    if (lastError != null) Fail($"first spade dig: {lastError}");
+    Pump(() => false, World.DigCooldownMicros / 1_000_000f * 0.85f, null);
+    conn.Reducers.Dig(sx, sz);
+    Pump(() => (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) >= 2 || lastError != null, 5, "the quick second dig");
+    if (lastError != null || (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(sx, sz))?.Depth ?? 0) < 2)
+        Fail($"the spade did not dig faster than a stick ({lastError})");
+    Console.WriteLine("A spade digs faster than a stick");
+}
+
+    // Crafting-23: a batch device (D-195, D-209). A settling tub cleans a loaded batch of clay
+// on its own; a process with no minigame by hand is a plain queue.
+{
+    // The two parts run apart in CI, so this part digs its own clay (by hand, a few cells if need be).
+    for (int attempt = 0; CountOf(Item.Clay) < 12 && attempt < 6; attempt++)
+    {
+        var (dcx, dcz) = Enumerable.Range(1 + attempt * 3, 40)
+            .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+            .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+            .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
+                && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
+        WalkTo(dcx * World.CellSize, dcz * World.CellSize);
+        for (int dig = 0; dig < World.MaxDigDepth && CountOf(Item.Clay) < 12; dig++)
+        {
+            uint clayBefore = CountOf(Item.Clay);
+            lastError = null;
+            conn.Reducers.Dig(dcx, dcz);
+            Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging for the tub");
+            if (lastError != null) break;
+            Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+        }
+    }
+    if (CountOf(Item.Clay) < 12) Fail($"only {CountOf(Item.Clay)} clay for the tub check");
+    Gather(Item.Stick, 6);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    WalkTo(table.X, table.Z);
+    var tub = BuildHere(StructureKind.SettlingTub);
+    Console.WriteLine($"Built a settling tub at ({tub.X:F1}, {tub.Z:F1})");
+    WalkTo(tub.X, tub.Z);
+
+    uint CleanClay() => conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.CleanClay).Aggregate(0u, (n, r) => n + r.Count);
+    DeviceOutput[] Waiting() => conn.Db.DeviceOutput.Iter().Where(o => o.StructureId == tub.Id).ToArray();
+
+    // A tub that is not loaded has nothing to collect; one tub does only its own process.
+    lastError = null;
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => lastError != null, 5, "collecting from an empty tub to be refused");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.grit", 1);
+    Pump(() => lastError != null, 5, "the wrong process to be refused");
+    Console.WriteLine($"Empty tub: {lastError}");
+
+    // Clean clay has no minigame by hand, so the tub is a plain queue (D-209): the same
+    // output as by hand, loaded and left, and nothing to play.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => lastError != null, 5, "loading a working tub to be refused");
+    lastError = null;
+    conn.Reducers.WorkDevice(tub.Id, 1f);
+    Pump(() => lastError != null, 5, "working a plain queue to be refused");
+    Console.WriteLine($"Working a plain queue: {lastError}");
+    Pump(() => Waiting().Length > 0, 40, "the first unit to finish");
+    var one = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the first clay to be collected");
+    if (one.Count != 1 || one.Quality != Items.RawQuality) Fail($"one unit made {one.Count} at quality {one.Quality}, not 1 at {Items.RawQuality}");
+    // What a device makes carries the loader's mark, like the same thing made by hand (crafting-25).
+    if (one.Maker != myId || !conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.CleanClay && r.Maker == myId))
+        Fail($"the tub's clean clay lost its maker (output maker {one.Maker}, expected {myId})");
+
+    // Five units in a batch: five come out, at the by-hand quality, with no bonus.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
+    Pump(() => Waiting().Length > 0, 60, "the batch to finish");
+    var batch = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 + batch.Count, 5, "the batch to be collected");
+    if (batch.Count != 5 || batch.Quality != Items.RawQuality) Fail($"five units made {batch.Count} at quality {batch.Quality}, not 5 at {Items.RawQuality}");
+    Console.WriteLine($"Plain batch: {batch.Count} clean clay at quality {batch.Quality}, same as by hand");
+}
+
+    
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
-// and put some in this player's inventory (the identity is printed) to check it.
-if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
-{
-    Console.WriteLine($"Waiting for raw mutton in the inventory of {me}");
-    Pump(() => CountOf(Item.RawMutton) > 0, 60, "raw mutton");
-    Craft("cook.meat", 0, null);
-    Pump(() => conn.Db.Roast.Iter().Any(r => r.Owner == me), 3, "the roast to go on the fire");
-    var roast = conn.Db.Roast.Iter().First(r => r.Owner == me);
-    lastError = null;
-    conn.Reducers.TakeOffFire(roast.Id);
-    Pump(() => lastError != null, 3, "taking it off too early to be refused");
-    Console.WriteLine($"Too early: {lastError}");
-    Pump(() => false, Roasting.BestSeconds, null);
-    lastError = null;
-    conn.Reducers.TakeOffFire(roast.Id);
-    Pump(() => lastError != null || CountOf(Item.CookedMutton) > 0, 5, "roast mutton");
-    if (lastError != null) Fail($"taking the roast off: {lastError}");
-    Console.WriteLine($"Roasted mutton (quality {conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CookedMutton).Quality})");
+    // and put some in this player's inventory (the identity is printed) to check it.
+    if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
+    {
+        Console.WriteLine($"Waiting for raw mutton in the inventory of {me}");
+        Pump(() => CountOf(Item.RawMutton) > 0, 60, "raw mutton");
+        Craft("cook.meat", 0, null);
+        Pump(() => conn.Db.Roast.Iter().Any(r => r.Owner == me), 3, "the roast to go on the fire");
+        var roast = conn.Db.Roast.Iter().First(r => r.Owner == me);
+        lastError = null;
+        conn.Reducers.TakeOffFire(roast.Id);
+        Pump(() => lastError != null, 3, "taking it off too early to be refused");
+        Console.WriteLine($"Too early: {lastError}");
+        Pump(() => false, Roasting.BestSeconds, null);
+        lastError = null;
+        conn.Reducers.TakeOffFire(roast.Id);
+        Pump(() => lastError != null || CountOf(Item.CookedMutton) > 0, 5, "roast mutton");
+        if (lastError != null) Fail($"taking the roast off: {lastError}");
+        Console.WriteLine($"Roasted mutton (quality {conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CookedMutton).Quality})");
+    }
+
 }
 
 Console.WriteLine("Inventory:");
@@ -254,23 +776,49 @@ Console.WriteLine("Crafting check passed");
 conn.Disconnect();
 return 0;
 
+// Opens the minigame a process has and waits as long as a person needs, like the client does, so the server
+// believes the score that follows (CraftScore.cs).
+void PlayMinigame(string processId)
+{
+    if (Processes.Find(processId) is not { Minigame: not Minigame.None } def) return;
+    conn.Reducers.BeginMinigame(processId);
+    Pump(() => false, MinigamePlay.MinSeconds(def.Minigame) + 0.3f, null);
+}
+
 // Lights a fire (or tries to). The server sets a fire only on clear, level ground
 // near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
 // when it finds none here, step a few metres along and try again.
+// Lights a fire on a spot the shared ground rules accept (FireGround) and clear of other fires,
+// nearest first; if the server still refuses one, the next candidate is tried.
 void FireCraft(string processId, float score)
 {
-    for (int attempt = 0; ; attempt++)
+    var fires = conn.Db.Fire.Iter().ToList();
+    var spots = new List<(float X, float Z)>();
+    for (int ring = 0; ring <= 6; ring++)
     {
+        float r = 1.2f + ring * 0.35f;
+        int steps = ring == 0 ? 1 : 16;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps;
+            float sx = x + MathF.Sin(a) * r, sz = z + MathF.Cos(a) * r;
+            if (!FireGround.Clear(sx, sz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0)) continue;
+            if (fires.Any(f => MathF.Sqrt((f.X - sx) * (f.X - sx) + (f.Z - sz) * (f.Z - sz)) < Fires.Spacing)) continue;
+            spots.Add((sx, sz));
+        }
+    }
+    int tries = 0;
+    foreach (var spot in spots.Take(12))
+    {
+        tries++;
         lastError = null;
-        conn.Reducers.StartCraft(processId, score);
+        PlayMinigame(processId);
+        conn.Reducers.StartFireAt(processId, score, spot.X, spot.Z);
         Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
         if (lastError == null) break;
-        if (!lastError.Contains("clear, level ground") || attempt >= 8)
-            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
-        float a = attempt * MathF.PI / 4f;
-        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
-        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+        if (!lastError.Contains("clear, level ground") && !lastError.Contains("too close")) Fail($"{processId} at ({spot.X:F1}, {spot.Z:F1}): {lastError}");
     }
+    if (lastError != null || conn.Db.MyCraftJob.Count == 0) Fail($"{processId}: no fire spot accepted near ({x:F1}, {z:F1}) after {tries} tries: {lastError}");
     var def = Processes.Find(processId)!;
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
 }
@@ -316,14 +864,33 @@ Structure BuildHere(StructureKind kind)
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
 
+// World tool actions need the tool on the bar and equipped (crafting-29): put it on slot 9 and equip that.
+void EquipTool(Item item)
+{
+    const byte slot = 9;
+    conn.Reducers.SetHotbarSlot(slot, (ushort)item);
+    if (conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }) return;
+    conn.Reducers.EquipSlot(slot);
+    Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is { Slot: slot }, 5, "the tool to be equipped");
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipTool(Item.StoneAxe);
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
+    PlayMinigame(processId);
     conn.Reducers.StartCraft(processId, score);
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
+    // Other players see the tool in hand (CraftWork.Tool, for Animation): it is the one a tool craft used.
+    if (def.NeedsTool != ItemTags.None)
+    {
+        Pump(() => conn.Db.CraftWork.PlayerId.Find(myId) != null || conn.Db.MyCraftJob.Count == 0, 3, null);
+        if (conn.Db.CraftWork.PlayerId.Find(myId) is { Tool: 0 })
+            Fail($"{processId} needs a tool but its work row names none");
+    }
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
@@ -401,39 +968,18 @@ void Gather(Item item, uint want)
     }
 }
 
-// Walks at a safe pace until within reach of a spot.
-void WalkTo(float tx, float tz)
-{
-    while (true)
-    {
-        float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d < 1.5f) break;
-        float step = Math.Min(d - 1f, 0.5f);
-        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
-        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
-        {
-            x += dx / d * step;
-            z += dz / d * step;
-        }
-        conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-        Pump(() => false, 0.1f, null);
-    }
-    for (var settle = Stopwatch.StartNew(); ; )
-    {
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
-        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
-        conn.Reducers.Move(x, z, 0f);
-        Pump(() => false, 0.1f, null);
-    }
-}
+// Walks at a safe pace until within reach of a spot (the shared walk: routes, stall detection, last-resort reposition).
+void WalkTo(float tx, float tz, float near = 1.5f) => walker.To(ref x, ref z, tx, tz, near);
 
 void Pump(Func<bool> until, float seconds, string? what)
 {
+    // A wait for something (what != null) ends the moment it happens, so it can afford 3x the time a quick
+    // runner needs; a slow shared runner then does not fail the check. A plain sleep (what == null) is as asked.
+    float limit = what != null ? seconds * 3f : seconds;
     var sw = Stopwatch.StartNew();
     while (!until())
     {
-        if (sw.Elapsed.TotalSeconds > seconds)
+        if (sw.Elapsed.TotalSeconds > limit)
         {
             if (what != null) Fail($"timed out waiting for {what}");
             return;
@@ -441,6 +987,22 @@ void Pump(Func<bool> until, float seconds, string? what)
         conn.FrameTick();
         Thread.Sleep(10);
     }
+}
+
+// Runs a reducer as the database owner through the CLI (the bot is not the owner).
+void AdminCall(string reducer, string arg)
+{
+    var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, reducer, arg })
+    {
+        WorkingDirectory = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server"),
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+    };
+    using var p = Process.Start(info) ?? throw new Exception("could not start spacetimedb-cli");
+    string err = p.StandardError.ReadToEnd();
+    p.WaitForExit();
+    if (p.ExitCode != 0) Fail($"{reducer} {arg}: {err}");
+    Pump(() => false, 0.5f, null);
 }
 
 static void Fail(string message)

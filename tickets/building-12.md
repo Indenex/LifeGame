@@ -1,8 +1,8 @@
 # building-12: StructureDef conversion (docs/CONTENT.md, Justin)
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: todo
-Branch: (new, off origin/main after #271 and #272 merge)
+Status: in_review
+Branch: claude/house-building-8ueqz2-structdef
 PR: (not yet)
 
 ## Goal
@@ -16,9 +16,15 @@ Content is data on shared bases (docs/CONTENT.md). The Structure row says: paral
 
 ## Progress log
 - 2026-10-16: ticket opened from Integration's message (Justin's architecture rule). Not started: building-10 (#271) and building-11 (#272) are at the merge gate for the wipe release, so the conversion waits until they land rather than rewriting shared lists under them. Plan sent to the PM as options.
+- 2026-10-16: step 1 done. Each `StructureShape` now carries `Costs` next to `Stages`; `Structures.StageCosts` is derived from the shapes (`Array.ConvertAll`) and throws at start-up if a shape's stages and costs differ in length, so server and client callers are unchanged. Checked the 51 cost entries are identical to main's by script. Local: server and client build, bindings regen, upgrade-check vs origin/main passes, BuildTest (all modes) passes in 325 s. docs/CONTENT.md Structure row updated. Next kinds (Tiled house for ceramics-10, PottersBench-style stations) add one shape entry with its costs, no second list.
+- 2026-10-17: step 2 (branch `claude/house-building-8ueqz2-model`, stacked on #439's main base): `StructureShape.Model` (string id: LeanTo, ClayHut, ClaimMarker, Kiln, Basket, Jar) and `.Hut` replace every kind number in `StructureModel`, `StageProcess`, `StepCrossesWalls`, `StepCrossesLeanTo`. No behaviour change; server and client build, BuildTest passes locally (402 s). docs/CONTENT.md Structure row updated.
+- 2026-10-17: step 3 (branch `claude/house-building-8ueqz2-step3`): the last `StructureKind.ClayHut` / `.LeanTo` / `.ClaimMarker` comparisons in House building's files (BuildingSystem.cs, Building.cs, BuildingFence.cs, PlayerCollision.cs) now read the shape (`Hut`, `Model`). No behaviour change; builds clean, full local BuildTest passes (582 s). Left alone because other lanes own them: Claims.cs and Town.cs (ClaimMarker), Kiln.cs and CeramicsView.cs (Kiln).
 
 ## Open questions / blockers
 - PM: confirm order and that step 1 may start once #271/#272 are merged.
 
 ## Next step
-After #271 and #272 are merged to main: new branch off origin/main, do step 1 (fold StageCosts into StructureShape), run tools/upgrade-check.sh origin/main, BuildTest (all modes), LoadTest, SpawnCheck; open the PR.
+Step 2 PR: wait for CI and send the PM the green sha; then step 3 (client `StructureView` / `BuildingSystem` leftovers, if any remain).
+
+(older:)
+Wait for CI on the step-1 PR, send the PM the green sha. Then step 2: a `ModelId` on StructureShape so StructureModel.Pieces looks models up by id (the kind switch with magic numbers goes away), as its own PR off main.

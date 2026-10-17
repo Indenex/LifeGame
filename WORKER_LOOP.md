@@ -18,7 +18,7 @@ Repeat until the ticket's goal is met:
 3. At every checkpoint:
    - **[WRITE]** commit and push
    - **[WRITE]** add a progress-log line and update `Next step` in the ticket
-4. When something visible changes or a milestone lands, don't render it yourself: send a render request to the Render lane (D-059). The request names your ticket, branch and pushed commit sha, what to show and from where (place, time of day, what the player does), and a 2 to 3 line summary of what changed in plain words. **[WRITE]** add `Render requested <sha>` to the ticket's progress log. The Render lane captures images to /mnt/project-files/screenshots/ and sends them with your summary to the PM, who presents them to Justin. Justin reads one chat, the PM thread (D-034). Keep your own thread's status checklist current; post replies there only when Justin writes to you there. Don't wait for the render before opening or merging your PR (D-142), except for crucial look-and-feel choices (D-154): build only a rough prototype, send 2 to 4 written descriptions (plus renders if quick) to the PM right away, and work on other things until Justin picks.
+4. When something visible changes or a milestone lands, don't render it yourself: send a render request to the Render lane (D-059). Send render requests to the Render session listed in STATUS.md. The request names your ticket, branch and pushed commit sha, what to show and from where (place, time of day, what the player does), and a 2 to 3 line summary of what changed in plain words. **[WRITE]** add `Render requested <sha>` to the ticket's progress log. The Render lane captures images to /mnt/project-files/screenshots/ and sends them with your summary to the PM, who presents them to Justin. Justin reads one chat, the PM thread (D-034). Keep your own thread's status checklist current; post replies there only when Justin writes to you there. Don't wait for the render before opening or merging your PR (D-142), except for crucial look-and-feel choices (D-154): build only a rough prototype, send 2 to 4 written descriptions (plus renders if quick) to the PM right away, and work on other things until Justin picks.
 5. An idea, a design question for Justin, or anything outside your lane: send it to the PM as 2 to 4 concrete options, recommended first, each with a one-line trade-off (D-059), **[WRITE]** add it under the ticket's `Open questions`, and keep working on a stated default. If it truly blocks you, set the ticket to `blocked` with exactly what you need.
 6. When the PM relays a decision: **[WRITE]** note it in the ticket. The PM records it in `DECISIONS.md`.
 
@@ -28,6 +28,11 @@ Repeat until the ticket's goal is met:
 2. **[WRITE]** record the CI run link in the ticket, and set `Next step` to wait for it.
 3. When it finishes: **[WRITE]** update the ticket. Green: open or update the PR, set `in_review`, and ask the PM for the merge. Red: note the failing step in the ticket first, then fix. Never sit idle while a PR waits: send the PM the green head sha (the PM merges, D-119), then start your next ticket right away, stacked on your branch if needed.
 4. Never idle (D-145): when your ticket is done or waiting, pick your next item from the milestones or the design docs, start it, and tell the PM.
+5. Any random or flaky test failure gets an owner within the hour (Integration or Bug fixes); test bots use fixed seeds; never just re-run and move on (D-248).
+5a. **Every PR body carries a `Player note:` line** (the template has it): one plain sentence a player would notice, or `Player note: none`. It becomes the patch note of the build the PR ships in; `none` and the `ci-only`, `scribe`, `docs` and `ticket-only` labels keep a PR out of the patch notes.
+5b. **Merging is a queue (docs/MERGE_QUEUE.md).** Send the PM the green sha as before; the PM adds the PR to GitHub's merge queue, which builds batches of 3 to 5 PRs, runs the checks once on the combined state and lands them in one push (one Build and one Release). A PR that fails in the queue is removed and comes back to you: fix it and tell the PM again. Nothing merges straight into `main` any more.
+5c. **Stacked PRs follow workflow changes.** A pull-request run uses the workflow files of the merge of the PR with its base. If your PR is stacked on another unmerged branch, it keeps running that branch's old `.github/workflows/` files. After any workflow change lands on `main`, merge `main` into the base branch (and into every PR stacked on it) before sending a sha.
+6. Don't push to a PR after reporting it green unless the PM asks; put ticket edits in your next code push (D-248).
 
 ## 3. Session-end checklist
 
@@ -43,6 +48,7 @@ Repeat until the ticket's goal is met:
 3. Save images as /mnt/project-files/screenshots/<ticket>-<short sha>-<n>.png.
 4. Send the PM: requester's summary, the image paths, and anything that looked wrong. Never judge design; report what you saw.
 5. If the build or run fails, tell the requesting lane and the PM what failed; don't fix their code.
+6. Justin does not read lane threads (D-246): images go to the PM, who sends Justin every screenshot and render directly.
 
 ## PM loop
 

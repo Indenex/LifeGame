@@ -50,6 +50,40 @@ public static class HumanFigure
 
     public static readonly Style[] All = { Carved, Soft, Natural };
 
+    // How one person differs from the next within a style: skin tone, hair colour,
+    // haircut and a beard. Indexes into the palettes below, so it fits in a key.
+    // Race (model-6) picks the chibi figure when PlayerModel.Chibi is on; Skin,
+    // Hair, Cut and Beard are then that race's option slots (shared/Looks.cs).
+    public readonly record struct Appearance(int Skin, int Hair, int Cut, bool Beard, int Race = 0)
+    {
+        // Everyone's look before variety: today's skin and hair, the locks cut.
+        public static readonly Appearance Default = new(1, 0, 0, false);
+
+        // A stable look for a player from their player id, the same on every client.
+        public static Appearance For(uint playerId)
+        {
+            var d = LifeGame.Shared.Looks.Default(playerId);
+            return From(d.Skin, d.Hair, d.Cut, d.Beard);
+        }
+
+        // The look a player chose, as stored on the server.
+        public static Appearance From(byte skin, byte hair, byte cut, byte beard, byte race = 0) => new(skin, hair, cut, beard != 0, race);
+
+        public override string ToString() => $"{Skin}{Hair}{Cut}{(Beard ? 1 : 0)}";
+    }
+
+    // Muted, sun-browned tones that sit with the world's palette.
+    public static readonly Color[] Skins =
+    {
+        new(0.93f, 0.76f, 0.62f), new(0.88f, 0.68f, 0.52f), new(0.78f, 0.57f, 0.42f), new(0.62f, 0.44f, 0.31f), new(0.47f, 0.32f, 0.23f),
+    };
+    public static readonly Color[] Hairs =
+    {
+        new(0.30f, 0.20f, 0.14f), new(0.15f, 0.12f, 0.10f), new(0.46f, 0.25f, 0.15f), new(0.62f, 0.49f, 0.31f), new(0.55f, 0.53f, 0.49f),
+    };
+    // Locks round the crown, cropped short, long to the shoulders, tied back in a knot.
+    public static readonly int Cuts = LifeGame.Shared.Looks.CutNames.Length;
+
     public sealed class Built
     {
         public Style Style = null!;
@@ -70,9 +104,14 @@ public static class HumanFigure
     static readonly Color Eye = new(0.10f, 0.08f, 0.07f);
     static readonly Color Cord = new(0.45f, 0.34f, 0.18f);
 
-    public static Built Build(Style s)
+    public static Built Build(Style s) => Build(s, Appearance.Default);
+
+    public static Built Build(Style s, Appearance look)
     {
-        if (Cache.TryGetValue(s.Key, out var done)) return done;
+        string key = s.Key + look;
+        if (Cache.TryGetValue(key, out var done)) return done;
+        var skin = Skins[look.Skin % Skins.Length];
+        var hairColor = Hairs[look.Hair % Hairs.Length];
         material ??= Look.Solid(Colors.White);
 
         const float H = 1.75f;
@@ -93,14 +132,14 @@ public static class HumanFigure
         float pelvisW = s.HipX + 0.065f;
 
         // Torso in two parts, so the chest can bend over the hips.
-        k.Bone(HumanRig.Hips).Paint(Look.Skin);
+        k.Bone(HumanRig.Hips).Paint(skin);
         k.Loft(new Vector3(0, hipY - 0.1f, 0), new Vector3(0, waistY + 0.03f, 0), new MeshKit.Ring[]
         {
             new(0f, pelvisW * 0.8f, 0.09f * b),
             new(0.3f, pelvisW, 0.112f * b),
             new(1f, s.ShoulderX * 0.7f, 0.1f * b, 0.004f),
         }, s.TorsoSides, 0.4f);
-        k.Bone(HumanRig.Spine).Paint(Look.Skin);
+        k.Bone(HumanRig.Spine).Paint(skin);
         k.Loft(new Vector3(0, waistY - 0.02f, 0), new Vector3(0, neckY + 0.01f, 0), new MeshKit.Ring[]
         {
             new(0f, s.ShoulderX * 0.7f, 0.1f * b, 0.004f),
@@ -111,7 +150,7 @@ public static class HumanFigure
         }, s.TorsoSides, 0.3f);
 
         // Neck and head.
-        k.Bone(HumanRig.Neck).Paint(Look.Skin);
+        k.Bone(HumanRig.Neck).Paint(skin);
         k.Loft(new Vector3(0, neckY - 0.03f, -0.005f), new Vector3(0, chin + 0.04f, 0.0f), new MeshKit.Ring[]
         {
             new(0f, 0.05f * b, 0.05f * b),
@@ -135,28 +174,57 @@ public static class HumanFigure
         {
             k.Ellipsoid(new Vector3(0, chin + hh * 0.52f, 0), new Vector3(hh * 0.40f, hh * 0.52f, hh * 0.46f), s.HeadSegments, s.HeadRings);
             // Jaw and cheeks, a little forward of the skull.
-            k.Paint(Look.Skin, 0.97f).Ellipsoid(new Vector3(0, chin + hh * 0.24f, hh * 0.05f), new Vector3(hh * 0.31f, hh * 0.25f, hh * 0.36f), s.HeadSegments, s.HeadRings);
+            k.Paint(skin, 0.97f).Ellipsoid(new Vector3(0, chin + hh * 0.24f, hh * 0.05f), new Vector3(hh * 0.31f, hh * 0.25f, hh * 0.36f), s.HeadSegments, s.HeadRings);
         }
-        k.Paint(Look.Skin, 0.95f).Ellipsoid(new Vector3(0, chin + hh * 0.42f, hh * 0.45f), new Vector3(hh * 0.065f, hh * 0.1f, hh * 0.08f), s.Flat ? 4 : 8, s.Flat ? 3 : 5);
+        k.Paint(skin, 0.95f).Ellipsoid(new Vector3(0, chin + hh * 0.42f, hh * 0.45f), new Vector3(hh * 0.065f, hh * 0.1f, hh * 0.08f), s.Flat ? 4 : 8, s.Flat ? 3 : 5);
         if (s.Brow)
-            k.Paint(Look.Skin, 0.93f).Ellipsoid(new Vector3(0, chin + hh * 0.64f, hh * 0.35f), new Vector3(hh * 0.3f, hh * 0.065f, hh * 0.1f), s.Flat ? 6 : 12, s.Flat ? 3 : 5);
+            k.Paint(skin, 0.93f).Ellipsoid(new Vector3(0, chin + hh * 0.64f, hh * 0.35f), new Vector3(hh * 0.3f, hh * 0.065f, hh * 0.1f), s.Flat ? 6 : 12, s.Flat ? 3 : 5);
         if (s.Ears)
             for (int side = -1; side <= 1; side += 2)
-                k.Paint(Look.Skin, 0.92f).Ellipsoid(new Vector3(side * hh * 0.4f, chin + hh * 0.5f, -hh * 0.02f), new Vector3(hh * 0.05f, hh * 0.12f, hh * 0.08f), 8, 5);
+                k.Paint(skin, 0.92f).Ellipsoid(new Vector3(side * hh * 0.4f, chin + hh * 0.5f, -hh * 0.02f), new Vector3(hh * 0.05f, hh * 0.12f, hh * 0.08f), 8, 5);
         for (int side = -1; side <= 1; side += 2)
             k.Paint(Eye).Ellipsoid(new Vector3(side * hh * 0.16f, chin + hh * 0.55f, hh * (s.Flat ? 0.37f : 0.405f)), new Vector3(hh * 0.055f, hh * 0.065f, hh * 0.03f) * s.EyeSize, s.Flat ? 5 : 8, s.Flat ? 3 : 5);
 
-        // Hair: a cap set high and back so the face shows, a lock at the nape, and
-        // in some styles chunky locks round the crown.
-        k.Paint(Look.Hair).Ellipsoid(new Vector3(0, chin + hh * 0.78f, -hh * 0.06f), new Vector3(hh * 0.45f, hh * 0.36f, hh * 0.5f), s.HeadSegments, s.HeadRings);
-        k.Paint(Look.Hair, 0.92f).Ellipsoid(new Vector3(0, chin + hh * 0.5f, -hh * 0.3f), new Vector3(hh * 0.36f, hh * 0.32f, hh * 0.2f), s.HeadSegments, s.HeadRings);
-        for (int i = 0; i < s.HairLocks; i++)
+        // Hair: a cap set high and back so the face shows, then the cut.
+        int cut = look.Cut % Cuts;
+        k.Paint(hairColor).Ellipsoid(new Vector3(0, chin + hh * (cut == 1 ? 0.8f : 0.78f), -hh * 0.06f), new Vector3(hh * 0.45f, hh * (cut == 1 ? 0.32f : 0.36f), hh * 0.5f), s.HeadSegments, s.HeadRings);
+        if (cut != 1)
+            k.Paint(hairColor, 0.92f).Ellipsoid(new Vector3(0, chin + hh * 0.5f, -hh * 0.3f), new Vector3(hh * 0.36f, hh * 0.32f, hh * 0.2f), s.HeadSegments, s.HeadRings);
+        if (cut == 0)
+            for (int i = 0; i < s.HairLocks; i++)
+            {
+                float a = Mathf.DegToRad(-105f + 210f * i / Mathf.Max(1, s.HairLocks - 1)) + Mathf.Pi;
+                var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                var at = new Vector3(0, chin + hh * (0.66f + MeshKit.Hash(i, 3) * 0.1f), -hh * 0.06f) + dir * hh * 0.4f;
+                var tilt = MeshKit.Aim((dir + Vector3.Down * 0.8f).Normalized());
+                k.Paint(hairColor, 0.9f + MeshKit.Hash(i, 4) * 0.12f).Ellipsoid(at, new Vector3(hh * 0.12f, hh * 0.11f, hh * 0.2f), s.Flat ? 5 : 8, s.Flat ? 3 : 5, tilt);
+            }
+        else if (cut == 2)
         {
-            float a = Mathf.DegToRad(-105f + 210f * i / Mathf.Max(1, s.HairLocks - 1)) + Mathf.Pi;
-            var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-            var at = new Vector3(0, chin + hh * (0.66f + MeshKit.Hash(i, 3) * 0.1f), -hh * 0.06f) + dir * hh * 0.4f;
-            var tilt = MeshKit.Aim((dir + Vector3.Down * 0.8f).Normalized());
-            k.Paint(Look.Hair, 0.9f + MeshKit.Hash(i, 4) * 0.12f).Ellipsoid(at, new Vector3(hh * 0.12f, hh * 0.11f, hh * 0.2f), s.Flat ? 5 : 8, s.Flat ? 3 : 5, tilt);
+            // Long: a fall of hair down the back to the shoulders, and a lock each side.
+            k.Paint(hairColor, 0.94f).Loft(new Vector3(0, chin + hh * 0.7f, -hh * 0.3f), new Vector3(0, neckY - hh * 0.35f, -hh * 0.3f), new MeshKit.Ring[]
+            {
+                new(0f, hh * 0.36f, hh * 0.16f), new(0.5f, hh * 0.4f, hh * 0.13f, -hh * 0.03f), new(1f, hh * 0.3f, hh * 0.08f, -hh * 0.06f),
+            }, s.Flat ? 6 : 10, 0.4f);
+            for (int side = -1; side <= 1; side += 2)
+                k.Paint(hairColor, 0.88f).Loft(new Vector3(side * hh * 0.36f, chin + hh * 0.66f, -hh * 0.05f), new Vector3(side * hh * 0.33f, chin + hh * 0.05f, -hh * 0.12f), new MeshKit.Ring[]
+                {
+                    new(0f, hh * 0.08f, hh * 0.1f), new(1f, hh * 0.05f, hh * 0.07f),
+                }, s.Flat ? 5 : 8, 0.6f);
+        }
+        else if (cut == 3)
+        {
+            // Tied back: a knot at the back of the head, bound with cord.
+            var knot = new Vector3(0, chin + hh * 0.72f, -hh * 0.5f);
+            k.Paint(hairColor, 0.9f).Ellipsoid(knot, new Vector3(hh * 0.16f, hh * 0.15f, hh * 0.14f), s.Flat ? 6 : 10, s.Flat ? 4 : 6);
+            k.Paint(Cord).Ellipsoid(knot + new Vector3(0, 0, hh * 0.09f), new Vector3(hh * 0.12f, hh * 0.12f, hh * 0.03f), s.Flat ? 6 : 10, 3);
+        }
+        if (look.Beard)
+        {
+            // A short beard along the jaw and over the chin, mouth left clear.
+            k.Paint(hairColor, 0.95f).Ellipsoid(new Vector3(0, chin + hh * 0.12f, hh * 0.18f), new Vector3(hh * 0.27f, hh * 0.17f, hh * 0.22f), s.Flat ? 7 : 12, s.Flat ? 4 : 7, null, 0.8f);
+            for (int side = -1; side <= 1; side += 2)
+                k.Paint(hairColor, 0.92f).Ellipsoid(new Vector3(side * hh * 0.28f, chin + hh * 0.3f, hh * 0.05f), new Vector3(hh * 0.07f, hh * 0.16f, hh * 0.15f), s.Flat ? 5 : 8, s.Flat ? 3 : 5);
         }
 
         // Arms.
@@ -164,7 +232,7 @@ public static class HumanFigure
         {
             int u = side == 0 ? HumanRig.ShoulderL : HumanRig.ShoulderR;
             Vector3 sh = j.At[u], el = j.At[u + 1], wr = j.At[u + 2];
-            k.Bone(u).Paint(Look.Skin);
+            k.Bone(u).Paint(skin);
             k.Ellipsoid(sh + new Vector3(-Mathf.Sign(sh.X) * 0.02f, -0.035f, 0), new Vector3(0.062f, 0.07f, 0.064f) * b, s.LimbSides, s.Flat ? 4 : 6);
             k.Loft(sh, el, new MeshKit.Ring[] { new(0f, 0.058f * b, 0.062f * b), new(0.5f, 0.053f * b, 0.056f * b), new(1f, 0.043f * b, 0.046f * b) }, s.LimbSides);
             k.Bone(u + 1);
@@ -194,7 +262,7 @@ public static class HumanFigure
         {
             int t = side == 0 ? HumanRig.HipL : HumanRig.HipR;
             Vector3 hip = j.At[t], knee = j.At[t + 1], ankle = j.At[t + 2];
-            k.Bone(t).Paint(Look.Skin);
+            k.Bone(t).Paint(skin);
             k.Loft(hip + Vector3.Up * 0.05f, knee, new MeshKit.Ring[] { new(0f, 0.085f * b, 0.092f * b), new(0.5f, 0.075f * b, 0.08f * b, 0.005f), new(1f, 0.054f * b, 0.057f * b) }, s.LimbSides);
             k.Bone(t + 1);
             k.Ellipsoid(knee, new Vector3(0.052f, 0.058f, 0.055f) * b, s.LimbSides, s.Flat ? 4 : 6);
@@ -252,17 +320,19 @@ public static class HumanFigure
             Style = s, Mesh = mesh, LeafWrap = wrap, Joints = j, Triangles = tris + k.Triangles, GripDrop = hh * 0.6f * 0.45f,
             HeadHeight = hh, HipY = hipY, WaistY = waistY, ShoulderY = shoulderY, NeckY = neckY, PelvisWidth = pelvisW,
         };
-        Cache[s.Key] = done;
+        Cache[key] = done;
         return done;
     }
 
     // A ready figure: a skeleton with the mesh bound to it. Pose it through the
     // skeleton's bone poses (HumanRig indices).
-    public static Skeleton3D Create(Style s)
+    public static Skeleton3D Create(Style s) => Create(s, Appearance.Default);
+
+    public static Skeleton3D Create(Style s, Appearance look)
     {
-        var built = Build(s);
+        var built = Build(s, look);
         var skeleton = HumanRig.Skeleton(built.Joints);
-        skeleton.AddChild(new MeshInstance3D { Mesh = built.Mesh, Skeleton = new NodePath("..") });
+        skeleton.AddChild(new MeshInstance3D { Name = "Body", Mesh = built.Mesh, Skeleton = new NodePath("..") });
         skeleton.AddChild(new MeshInstance3D { Name = PlayerModel.SlotNode(PlayerModel.Body), Mesh = built.LeafWrap, Skeleton = new NodePath("..") });
         return skeleton;
     }

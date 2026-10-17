@@ -1,7 +1,7 @@
 # crafting-16: Craft times by tier, work and quality (D-113)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-craft-times
 PR: #192
 
@@ -23,4 +23,4 @@ time = Base × QualityTimeScale × DurationScale(rank) × (1 − ToolSpeedup)
 - The sleeping mat (House building), hides (Animals) and clay (Ceramics) times change too, under the same formula. Lanes told.
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha.
+None. Merged to main; kept for history.

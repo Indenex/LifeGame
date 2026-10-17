@@ -86,6 +86,7 @@ public partial class BuildingSystem : Node
         Hud.Style(prompt, 16, 1f);
         prompt.HorizontalAlignment = HorizontalAlignment.Center;
         promptPanel = Hud.Panel(prompt, Vector2.Zero);
+        WarmLook.HudChip(promptPanel);
         promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         promptPanel.GrowHorizontal = Control.GrowDirection.Both;
         promptPanel.GrowVertical = Control.GrowDirection.Begin;
@@ -184,6 +185,12 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
+        c.Db.DeviceJob.OnInsert += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceJob.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceJob.OnDelete += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceOutput.OnInsert += (_, o) => RefreshDevice(o.StructureId);
+        c.Db.DeviceOutput.OnUpdate += (_, _, o) => RefreshDevice(o.StructureId);
+        c.Db.DeviceOutput.OnDelete += (_, o) => RefreshDevice(o.StructureId);
         BindUse(c);
     }
 
@@ -197,6 +204,7 @@ public partial class BuildingSystem : Node
         {
             v = new StructureView((int)s.Kind)
             {
+                StructureId = s.Id,
                 Position = new Vector3(s.X, terrain.HeightAt(s.X, s.Z), s.Z),
                 Rotation = new Vector3(0, s.Yaw, 0),
             };
@@ -206,14 +214,34 @@ public partial class BuildingSystem : Node
             ApplyExtras(s, v);
         }
 
+        if (s.Complete && Structures.Shape((int)s.Kind).Station is StationKind.ClayTub or StationKind.CrushBlock or StationKind.TemperTrough)
+            ShowDevice(s, v);
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
         // A finished claim marker is drawn by client/scripts/social, which weathers it.
-        v.Visible = !(s.Complete && s.Kind == StructureKind.ClaimMarker);
+        v.Visible = !(s.Complete && Structures.Shape((int)s.Kind).Model == "ClaimMarker");
         if (appeared > 0 && (existed || fresh))
-            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || s.Kind == StructureKind.ClayHut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
+            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || Structures.Shape((int)s.Kind).Hut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
 
         if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
             hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
+    }
+
+    // How full a batch device looks: 0 idle, 1 for 1 to 3 units, 2 for 4 to 7, 3 for 8 to 10
+    // or output waiting; working while a job runs.
+    void ShowDevice(Structure s, StructureView v)
+    {
+        if (conn() is not { } db) return;
+        var job = db.Db.DeviceJob.StructureId.Find(s.Id);
+        bool waiting = db.Db.DeviceOutput.Iter().Any(o => o.StructureId == s.Id);
+        uint units = job?.Remaining ?? 0;
+        int fill = waiting ? 3 : units == 0 ? 0 : units <= 3 ? 1 : units <= 7 ? 2 : 3;
+        v.SetDevice(fill, job != null);
+    }
+
+    void RefreshDevice(ulong structureId)
+    {
+        if (rows.TryGetValue(structureId, out var s) && views.TryGetValue(structureId, out var v) && s.Complete)
+            Upsert(s, fresh: false);
     }
 
     void Remove(Structure s)
@@ -244,10 +272,10 @@ public partial class BuildingSystem : Node
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
             {
-                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f)) continue;
+                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f + ShapeOf(s).ClearExtra)) continue;
                 long key = World.CellKey(x, z);
                 if (on) cleared.Add(key);
-                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f))) cleared.Remove(key);
+                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f + ShapeOf(o).ClearExtra))) cleared.Remove(key);
                 terrain.Refresh(x, z);
             }
     }
@@ -284,13 +312,14 @@ public partial class BuildingSystem : Node
                 to = HouseWalls(s, from, to);
                 continue;
             }
-            if (s.Kind == StructureKind.LeanTo)
+            if (shape.Model == "LeanTo")
             {
                 to = LeanToWalls(s, shape, from, to);
                 continue;
             }
-            if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
-            const float wall = 1.7f, half = 0.32f, door = 0.42f;
+            if (!shape.Hut || (!s.Complete && s.Stage < 1)) continue;
+            float wall = Structures.HutWallRadiusFor((int)s.Kind);
+            const float half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
             float r = Mathf.Sqrt(lx * lx + lz * lz);
             if (Mathf.Abs(r - wall) > half || r < 0.01f) continue;
@@ -335,8 +364,8 @@ public partial class BuildingSystem : Node
     // A brick house's four straight walls, open at the doorway unless the door is shut.
     Vector3 HouseWalls(Structure s, Vector3 from, Vector3 to)
     {
-        const float half = 0.3f, door = 0.48f;
-        float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        const float half = 0.3f;
+        float wx = Structures.HouseWallXFor((int)s.Kind), wz = Structures.HouseWallZFor((int)s.Kind), door = Structures.HouseDoorHalfWidthFor((int)s.Kind);
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
         var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
         // Side walls at x = ±wx.
@@ -385,13 +414,13 @@ public partial class BuildingSystem : Node
         }
         else if (e.IsActionPressed("build_next"))
         {
-            placeKind = (placeKind + 1) % Structures.Shapes.Length;
+            placeKind = Structures.Kinds[(System.Array.IndexOf(Structures.Kinds, placeKind) + 1) % Structures.Kinds.Length];
             MakeGhost();
             GetViewport().SetInputAsHandled();
         }
         else if (e.IsActionPressed("build_rotate"))
         {
-            ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
+            if (!Structures.Shape(placeKind).FixedYaw) ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
             GetViewport().SetInputAsHandled();
         }
         else if (e is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
@@ -399,6 +428,14 @@ public partial class BuildingSystem : Node
             Place();
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    // Starts placing a particular kind (the picture build menu, ui-20); B still starts with the last one.
+    public void StartPlacing(int kind)
+    {
+        if (!Structures.Exists(kind)) return;
+        placeKind = kind;
+        StartPlacing();
     }
 
     void StartPlacing()
@@ -411,7 +448,7 @@ public partial class BuildingSystem : Node
         placing = true;
         ghostPlaced = false;
         // Face the open side toward the camera, so you look into what you build.
-        ghostYawTarget = ghostYaw = Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
+        ghostYawTarget = ghostYaw = Structures.Shape(placeKind).FixedYaw ? 0f : Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
         MakeGhost();
     }
 
@@ -439,9 +476,11 @@ public partial class BuildingSystem : Node
             hud.Note(placeProblem);
             return;
         }
-        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
+        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, Structures.Shape(placeKind).FixedYaw ? 0f : ghostYawTarget);
         Sfx.Play(Cue.Place);
-        StopPlacing();
+        // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
+        if (Input.IsKeyPressed(Key.Shift)) MakeGhost();
+        else StopPlacing();
     }
 
     // --- Frame loop -------------------------------------------------------
@@ -452,7 +491,47 @@ public partial class BuildingSystem : Node
         if (placing) UpdateGhost(dt);
         UpdateUse();
         UpdateWeathering(dt);
+        UpdateSeeThrough(dt);
         UpdatePrompt();
+    }
+
+    // Finished shelters cut away while the player is inside or behind them (D-168): roof gone
+    // from inside, camera-side walls faded, far walls solid.
+    void UpdateSeeThrough(float dt)
+    {
+        var camera = me.GetViewport()?.GetCamera3D();
+        foreach (var s in rows.Values)
+        {
+            if (!views.TryGetValue(s.Id, out var v)) continue;
+            var shape = ShapeOf(s);
+            bool inside = false, hides = false;
+            if (s.Complete && shape.RainCover > 0f && camera != null
+                && new Vector2(s.X - me.Position.X, s.Z - me.Position.Z).LengthSquared() < 25f * 25f)
+            {
+                inside = Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, me.Position.X, me.Position.Z, -0.2f);
+                hides = inside || Look.HidesPlayer(Footprint(s, shape, v.Position.Y), camera.GlobalPosition, me.Position);
+            }
+            if (hides || v.Fading) v.UpdateSeeThrough(inside, hides, camera?.GlobalPosition ?? Vector3.Zero, dt);
+        }
+    }
+
+    // How far the structure is cut away for the player right now, 0 solid to 1 fully clear
+    // (0 for a structure with no view). Doorway glows and the like fade with it.
+    public float SeeThroughOf(ulong structureId) => views.TryGetValue(structureId, out var v) ? v.SeeThroughAmount : 0f;
+
+    // The world-space box a shelter fills, roof included, for the see-through test.
+    static Aabb Footprint(Structure s, StructureShape shape, float ground)
+    {
+        float height = 3.7f * shape.Scale, eave = 0.5f * shape.Scale; // up to the ridge cap, and out past the eaves (homes are 1.25x, building-14)
+        float hx = (shape.Round ? shape.Radius : shape.HalfWidth) + eave, hz = (shape.Round ? shape.Radius : shape.HalfDepth) + eave;
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        foreach (var (lx, lz) in new[] { (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
+        {
+            var (wx, wz) = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, lz);
+            minX = Mathf.Min(minX, wx); maxX = Mathf.Max(maxX, wx);
+            minZ = Mathf.Min(minZ, wz); maxZ = Mathf.Max(maxZ, wz);
+        }
+        return new Aabb(new Vector3(minX, ground - 0.5f, minZ), new Vector3(maxX - minX, height + 0.5f, maxZ - minZ));
     }
 
     void UpdateGhost(float dt)
@@ -530,8 +609,15 @@ public partial class BuildingSystem : Node
         if (Structures.IsIndoor(placeKind) && !rows.Values.Any(s => s.Complete && Structures.IsHome((int)s.Kind)
                 && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, at.X, at.Z, -Structures.HearthWallGap)))
             return "A hearth goes inside a finished hut or house";
+        // Only basic survival buildings stand outside a claim (building-13); the server checks the same.
+        if (!Structures.IsWild(placeKind) && !MayBar(at.X, at.Z))
+            return $"A {Structures.Shape(placeKind).Name.ToLowerInvariant()} has to stand inside your claim";
         return Structures.GroundProblem(placeKind, at.X, at.Z, yaw, terrain.HeightAt);
     }
+
+    // True when this kind can't be laid out where the player stands because it needs a claim
+    // the player belongs to (the build menu greys it with "Needs a claim").
+    public bool NeedsClaimHere(int kind) => !Structures.IsWild(kind) && !MayBar(me.Position.X, me.Position.Z);
 
     // Where the mouse points on the ground, found by stepping along the camera ray.
     Vector3? PointUnderMouse()
@@ -580,7 +666,7 @@ public partial class BuildingSystem : Node
         {
             var shape = Structures.Shape(placeKind);
             string name = shape.Name.ToLowerInvariant();
-            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Esc cancel";
+            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Shift keeps placing    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }
@@ -608,13 +694,13 @@ public partial class BuildingSystem : Node
 
     // What each stage takes, in order: "4 sticks, then 3 plant fiber, then ...".
     static string StageList(int kind) =>
-        string.Join(", then ", Structures.StageCosts[kind].Select(stage =>
+        string.Join(", then ", Structures.Costs(kind).Select(stage =>
             string.Join(" and ", stage.Select(c => $"{c.Count} {ItemName((ushort)c.Item, c.Count)}"))));
 
     static string ItemName(ushort item, uint count) =>
         Items.IsKnown(item) ? Items.Def((Item)item).Count(count).ToLowerInvariant() : "something";
 
-    SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
+    SpacetimeDB.Identity? MyIdentity() => Me.Key(conn());
 
     void Puff(Vector3 at, Color color)
     {

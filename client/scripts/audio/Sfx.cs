@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace LifeGame;
@@ -31,10 +32,70 @@ public static class Sfx
 
     public static void Play(Cue cue) => scape?.Play(cue);
 
+    // A cue defined as data (CueDefs).
+    public static void Play(CueDef def) => scape?.Play(def);
+    public static void Play(CueDef def, float gain) => scape?.Play(def, gain);
+
+    // An animal's voice at `where`, heard out to `hearing` metres, quieter with distance (power 1.4,
+    // like the deer), from its side. `loudness` is the animal's own level, 1 for a normal cry.
+    public static void PlayAnimal(CueDef def, Vector3 where, float hearing, float loudness = 1f)
+    {
+        var offset = new Vector3(where.X - listener.X, 0, where.Z - listener.Z);
+        float distance = offset.Length();
+        if (distance >= hearing) return;
+        float gain = loudness * Mathf.Pow(1f - distance / hearing, 1.4f);
+        if (gain < 0.01f) return;
+        float pan = distance < 0.5f ? 0f : Mathf.Clamp(offset.Normalized().Dot(new Vector3(right.X, 0, right.Z).Normalized()), -1f, 1f) * 0.8f;
+        scape?.Play(def, gain, pan);
+    }
+
+    // Something hitting the water at `where`: strength 0 (a drop) to 1 (a big body); you (within
+    // 1.5 m of the listener) at full volume, others from their side. Atmosphere calls this for
+    // the player's own entry; anything else that splashes (a thrown stone, an animal, another
+    // player) can call it too.
+    public static void Splash(Vector3 where, float strength)
+    {
+        float s = Mathf.Clamp(strength, 0f, 1f);
+        float gain = 0.3f + 0.9f * s;
+        if (new Vector3(where.X - listener.X, 0, where.Z - listener.Z).LengthSquared() < 1.5f * 1.5f) scape?.Play(CueDefs.SplashIn, gain);
+        else if (Place(where, out float g, out float pan)) scape?.Play(CueDefs.SplashIn, gain * g, pan);
+    }
+
+    // The same for something that happens at `where`: you (within 1.5 m of the listener) at full
+    // volume, others from their side, quieter with distance.
+    public static void PlayBy(CueDef def, Vector3 where)
+    {
+        if (new Vector3(where.X - listener.X, 0, where.Z - listener.Z).LengthSquared() < 1.5f * 1.5f) Play(def);
+        else if (Place(where, out float gain, out float pan)) scape?.Play(def, gain, pan);
+    }
+
     // A cue that happens somewhere in the world.
     public static void PlayAt(Cue cue, Vector3 worldPosition)
     {
         if (Place(worldPosition, out float gain, out float pan)) scape?.Play(cue, gain, pan);
+    }
+
+    // A blow landing on an animal at `target`, struck from `attacker`. Yours (you are within a
+    // couple of metres of where it came from) plays at full volume; someone else's plays
+    // from where it happened, quieter with distance.
+    public static void PlayHit(Cue cue, Vector3 target, Vector3 attacker)
+    {
+        var offset = new Vector3(attacker.X - listener.X, 0, attacker.Z - listener.Z);
+        if (offset.LengthSquared() < 2.5f * 2.5f) Play(cue);
+        else PlayAt(cue, target);
+    }
+
+    // A bow shot from `from` to `to`: the twang and whoosh now, `impact` after `delay` seconds
+    // (the arrow's flight). Your own shot (you are within a couple of metres of `from`) is full
+    // volume; someone else's comes from where it happened, quieter with distance.
+    public static void PlayShot(Vector3 from, Vector3 to, Cue impact, float delay, SceneTree tree)
+    {
+        bool mine = new Vector3(from.X - listener.X, 0, from.Z - listener.Z).LengthSquared() < 2.5f * 2.5f;
+        if (mine) Play(Cue.BowShot); else PlayAt(Cue.BowShot, from);
+        tree.CreateTimer(Math.Max(0.02f, delay)).Timeout += () =>
+        {
+            if (mine) Play(impact); else PlayAt(impact, to);
+        };
     }
 
     // Touching down after a jump: strength 0 (a hop) to 1 (a long fall), and the ground underfoot.

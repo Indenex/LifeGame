@@ -59,6 +59,9 @@ public static partial class Module
         public float ThirstEaseLeft;
         [Default(0f)]
         public float ThirstEaseRate;
+        // How you woke after your last death (RestSpots.WokeAtEdge / WokeAtRestSpot / WokeBedGone), for the wake-up message.
+        [Default((byte)0)]
+        public byte WakeKind;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -74,7 +77,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyVitals", Public = true)]
     public static List<Vitals> MyVitals(ViewContext ctx) =>
-        ctx.Db.Vitals.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.Vitals.Owner.Filter(Me(ctx)).ToList();
 
     // Berry bushes. A bush is ripe from RipeAt on, so regrowth needs no timer.
     [SpacetimeDB.Table(Accessor = "ForageBush", Public = true)]
@@ -156,7 +159,7 @@ public static partial class Module
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
-            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+            AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear, stack.Maker);
         }
         else
             Take(ctx, (Item)item, 1);
@@ -168,6 +171,7 @@ public static partial class Module
                 ? ctx.Timestamp.MicrosecondsSinceUnixEpoch + Stamina.WellFedMicros
                 : v.WellFedUntil,
         });
+        NoteAct(ctx, player.PlayerId, WorkMotion.Eat, (Item)item);
     }
 
     [SpacetimeDB.Reducer]
@@ -183,6 +187,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + Needs.SipWater) });
+        NoteAct(ctx, player.PlayerId, WorkMotion.Drink);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -200,7 +205,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         RemoveFromStack(ctx, stack, 1);
-        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+        AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear, stack.Maker);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 
@@ -211,6 +216,11 @@ public static partial class Module
         [PrimaryKey]
         public uint PlayerId;
         public Timestamp At;
+        // Where they were at that report (D-182): the next one must come from a different place.
+        [Default(0f)]
+        public float X;
+        [Default(0f)]
+        public float Z;
     }
 
     // The client ran for Stamina.RunPerUse seconds: train Endurance. Reports closer
@@ -221,7 +231,17 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var last = ctx.Db.RunReport.PlayerId.Find(player.PlayerId);
         if (last is { } r && SecondsBetween(r.At, ctx.Timestamp) < Stamina.RunPerUse * 0.9f) return;
-        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp };
+        // The server can't see a run, but it can see a player who stands still and reports one
+        // (D-182): they must have moved just now and be well away from where they last reported.
+        var pos = RequirePos(ctx, player);
+        var state = ctx.Db.PlayerState.PlayerId.Find(player.PlayerId);
+        if (state is not { } st || SecondsBetween(st.LastMoveAt, ctx.Timestamp) > Stamina.RunReportMoveWindow) return;
+        if (last is { } l)
+        {
+            float dx = pos.X - l.X, dz = pos.Z - l.Z;
+            if (dx * dx + dz * dz < Stamina.RunReportMinMeters * Stamina.RunReportMinMeters) return;
+        }
+        var row = new RunReport { PlayerId = player.PlayerId, At = ctx.Timestamp, X = pos.X, Z = pos.Z };
         if (last is null) ctx.Db.RunReport.Insert(row);
         else ctx.Db.RunReport.PlayerId.Update(row);
         OnProcessPerformed(ctx, player.PlayerId, Stamina.RunProcess, Items.RawQuality, false);
@@ -236,12 +256,17 @@ public static partial class Module
         float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
         if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
             throw new Exception("Out of reach");
+        bool hazel = Needs.IsHazelBush(bush.Id);
+        if (hazel && !Needs.HazelnutsRipe(SeasonNow(ctx).Season))
+            throw new Exception("The hazelnuts are not ripe until autumn");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
-            throw new Exception("No ripe berries yet");
+            throw new Exception(hazel ? "No ripe hazelnuts yet" : "No ripe berries yet");
         var state = RequireCooldown(ctx, player);
 
+        var yield = hazel ? Item.Hazelnuts : Item.Berries;
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
+        AddToInventory(ctx, Me(ctx), yield, hazel ? (uint)Needs.HazelnutsPerPick : 3, Items.RawQuality);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -265,6 +290,7 @@ public static partial class Module
                 continue;
             }
 
+            NoteSwimming(ctx, player, pos);
             var next = WithSurroundings(ctx, now, pos, online: true);
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
@@ -291,6 +317,16 @@ public static partial class Module
 
     // --- Death -------------------------------------------------------------
 
+    // For tests (survival-29): an admin ends their own character's life, so the waking place can be checked
+    // without waiting for hunger or a fight. Admins only, like AdminGive.
+    [SpacetimeDB.Reducer]
+    public static void AdminDie(ReducerContext ctx)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can do that");
+        var player = RequirePlayer(ctx);
+        Die(ctx, player, RequireVitals(ctx, player), RequirePos(ctx, player), "an admin's test");
+    }
+
     // Everything carried falls where the player died. They wake naked at the edge
     // of the wilderness; what they know stays with them.
     static void Die(ReducerContext ctx, Player player, Vitals v, PlayerPos pos, string cause)
@@ -308,6 +344,8 @@ public static partial class Module
                     Id = 0,
                     Item = stack.Item,
                     Quality = stack.Quality,
+                    Wear = stack.Wear,
+                    Maker = stack.Maker,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),
@@ -316,9 +354,11 @@ public static partial class Module
             }
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         }
+        // Nothing is left to hold.
+        if (ctx.Db.PlayerEquip.Owner.Find(player.Identity) != null) ctx.Db.PlayerEquip.Owner.Delete(player.Identity);
 
         var (sx, sz) = WildernessEdge(ctx);
-        RespawnPointHook(ctx, player.PlayerId, ref sx, ref sz);
+        byte wakeKind = ChooseWake(ctx, player.PlayerId, ref sx, ref sz);
         var spawn = new PlayerPos
         {
             PlayerId = player.PlayerId,
@@ -350,6 +390,7 @@ public static partial class Module
             DiedAt = ctx.Timestamp,
             WokeX = sx,
             WokeZ = sz,
+            WakeKind = wakeKind,
         }, spawn, online: true));
         Log.Info($"{player.Name} died of {cause}");
     }
@@ -477,8 +518,6 @@ public static partial class Module
     // Shelter: House building implements this with its ShelterAt. Warmth (0 open
     // sky .. 1 fully sheltered) scales down the cold drain; rain cover is for
     // when weather arrives.
-    // House building implements this: a player with a sleeping mat laid out wakes on it.
-    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z);
 
     static partial void ShelterAtHook(ReducerContext ctx, float x, float z, ref float rainCover, ref float warmth);
 
@@ -489,7 +528,7 @@ public static partial class Module
     // Any stack of an item the sender carries, whatever its quality.
     static InventoryItem? AnyStack(ReducerContext ctx, Item item)
     {
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)))
             return row;
         return null;
     }
@@ -580,7 +619,7 @@ public static partial class Module
     // speed check by this, matching the client's slowdown.
     static float CarryWalkFactor(ReducerContext ctx, Identity owner)
     {
-        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Select(i => ((Item)i.Item, i.Count)));
+        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Where(i => !i.OnBelt).Select(i => ((Item)i.Item, i.Count)));
         return Carry.WalkFactor(load, limit);
     }
 }

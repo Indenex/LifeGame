@@ -13,6 +13,8 @@ public partial class ClaimPanel : CanvasLayer
 {
     public DbConnection? Conn;
     public Func<uint> MyId = () => 0;
+    // claims-19: opens the Town panel (SocialLayer.Town).
+    public Action? OpenTown;
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
     // True while the owner is typing a name, so Main stops walking.
@@ -40,15 +42,16 @@ public partial class ClaimPanel : CanvasLayer
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
 
+        // The shared window look (ui/Ui.cs, ui-25), docked to the right.
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.10f, 0.11f, 0.09f, 0.72f),
+            BgColor = Ui.Frame,
             ContentMarginLeft = 22,
             ContentMarginRight = 22,
             ContentMarginTop = 16,
             ContentMarginBottom = 18,
         };
-        style.SetCornerRadiusAll(16);
+        style.SetCornerRadiusAll(Ui.Corner);
         box.AddThemeStyleboxOverride("panel", style);
         box.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         box.GrowHorizontal = Control.GrowDirection.Begin;
@@ -185,19 +188,23 @@ public partial class ClaimPanel : CanvasLayer
             {
                 Kind = "stash", Width = 5, Empty = "Empty",
                 Source = () => Conn != null && Claim is { } c
-                    ? Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == c.Id).Select(s => new BagStack((Item)s.Item, s.Quality, s.Count))
+                    ? Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == c.Id).Select(s => new BagStack((Item)s.Item, s.Quality, s.Count, 0, -1, Marks.MakerOf((Item)s.Item, s.Wear)))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "bag",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+                // A click takes one back into the bag, Shift+click the whole stack (as baskets do).
+                Clicked = (s, all) => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             };
             stashBag = new BagGrid
             {
                 Kind = "bag", Width = 5, Empty = "Nothing",
                 Source = () => Conn != null
-                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, 0, -1, Marks.MakerOf((Item)i.Item, i.Wear)))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "stash",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+                // A click stores one in the stash, Shift+click the whole stack.
+                Clicked = (s, all) => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             };
             foreach (var (title, grid) in new[] { ("In the stash", stashGrid), ("You carry", stashBag) })
             {
@@ -278,7 +285,7 @@ public partial class ClaimPanel : CanvasLayer
         if (stash.Count == 0) content.AddChild(Note("Empty. Anything you leave here is safe from outsiders."));
         foreach (var s in stash)
         {
-            var row = Row($"{Name(s.Item, s.Quality)}  {s.Count}");
+            var row = Row($"{Name(s.Item, s.Quality, s.Wear)}  {s.Count}");
             row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality, 1)));
             content.AddChild(row);
         }
@@ -300,11 +307,12 @@ public partial class ClaimPanel : CanvasLayer
             row.AddThemeConstantOverride("h_separation", 6);
             row.AddThemeConstantOverride("v_separation", 6);
             foreach (var item in carried)
-                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
+                row.AddChild(Small($"Leave {Name(item.Item, item.Quality, item.Wear).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
             content.AddChild(row);
         }
 
         content.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
+        if (OpenTown != null) content.AddChild(Button("Town", OpenTown));
         if (owner)
             content.AddChild(Button(confirmAbandon ? "Really take the marker down?" : "Take the marker down", () =>
             {
@@ -322,11 +330,12 @@ public partial class ClaimPanel : CanvasLayer
     }
 
     // "Hand axe (fine)" for made things, just "Stick" for raw materials.
-    static string Name(ushort item, byte quality)
+    static string Name(ushort item, byte quality, uint wear = 0)
     {
         if (!Items.IsKnown(item)) return "Something";
         var def = Items.Def((Item)item);
-        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
+        string worn = ItemLook.Condition(item, quality, wear);
+        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()}{(worn == "" ? "" : ", " + worn)})" : def.Name;
     }
 
     // "just now", "4 min ago", "2 h ago", "3 days ago".

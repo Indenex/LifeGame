@@ -10,20 +10,21 @@ namespace LifeGame;
 // thatched gable roof. +Z is the door side.
 public static partial class StructureModel
 {
-    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.62f;
+    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.78f; // 1.78 x 1.25 = 2.2 m clear (building-14)
     const float HouseEaveZ = Structures.HouseWallZ + 0.5f, HouseEaveX = Structures.HouseWallX + 0.45f;
     static ShaderMaterial? brick;
-    static ShaderMaterial Brick => brick ??= Look.Solid(new Color(0.74f, 0.5f, 0.36f));
+    static ShaderMaterial Brick => brick ??= Painted(Look.Solid(new Color(0.74f, 0.5f, 0.36f)), PaintedStructures.Family.Clay);
 
     // The doorway's two jambs and height, for hanging the door.
     public static (Vector3 a, Vector3 b, float height) HouseDoor =>
         (new Vector3(HouseDoorHalf - 0.03f, 0, Structures.HouseWallZ - 0.06f), new Vector3(-HouseDoorHalf + 0.03f, 0, Structures.HouseWallZ - 0.06f), HouseDoorTop - 0.06f);
 
-    static List<Piece> BrickHouse()
+    static List<Piece> BrickHouse(int kind)
     {
         var list = new List<Piece>();
-        var shape = Structures.Shape(5);
-        float hw = shape.HalfWidth, hd = shape.HalfDepth, wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        var shape = Structures.Shape(kind);
+        // The shape's numbers are the real, scaled ones; this model is drawn at design size and scaled by the view.
+        float hw = shape.HalfWidth / shape.Scale, hd = shape.HalfDepth / shape.Scale, wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
         Site(list, new[] { new Vector3(-hw, 0, hd), new Vector3(hw, 0, hd), new Vector3(hw, 0, -hd), new Vector3(-hw, 0, -hd) });
 
         // Footings: a course of fieldstones under each wall, the door posts, and a hearth ring.
@@ -66,15 +67,16 @@ public static partial class StructureModel
                 Add(list, 1, Wood, Stick(new Vector3(-HouseDoorHalf - 0.3f, HouseDoorTop + 0.04f, wz + 0.02f), new Vector3(HouseDoorHalf + 0.3f, HouseDoorTop + 0.05f, wz + 0.02f), 0.09f));
         }
 
-        HouseRoof(list, t, Clay);
+        HouseRoof(list, t, Clay, shape.TileRoof ? Tile : Thatch);
         return list;
     }
 
     // Rafters with gable ends over the room's side walls (stage 2), then thatch in rows
     // from the eaves up on both slopes and a bundled ridge cap (stage 3). Shared by the
     // mud-brick house (clay gables) and the log cabin (log gables).
-    static void HouseRoof(List<Piece> list, float t, Material gable)
+    static void HouseRoof(List<Piece> list, float t, Material gable, Material? roof = null)
     {
+        roof ??= Thatch;
         float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
         // Rafters: a ridge pole, pairs of rafters down to the eaves, gable ends.
         float slope = (HouseRidge - HouseWallTop) / wz;
@@ -99,10 +101,10 @@ public static partial class StructureModel
             for (int r = 0; r < rows; r++)
             {
                 float t0 = r / (float)rows - 0.04f, t1 = (r + 1) / (float)rows + 0.1f;
-                Add(list, 3, Thatch, ThatchRow(low.Lerp(high, Math.Max(0, t0)), low.Lerp(high, Math.Min(1.04f, t1)), HouseEaveX * 2 + 0.2f, 0.12f + r * 0.012f, r + (side > 0 ? 0 : 10)));
+                Add(list, 3, roof, ThatchRow(low.Lerp(high, Math.Max(0, t0)), low.Lerp(high, Math.Min(1.04f, t1)), HouseEaveX * 2 + 0.2f, 0.12f + r * 0.012f, r + (side > 0 ? 0 : 10)));
             }
         }
-        Add(list, 3, Thatch, Wrap(new Vector3(0, HouseRidge + 0.2f, 0), Vector3.Right, 0.15f, HouseEaveX * 2 + 0.25f, lumpy: true));
+        Add(list, 3, roof, Wrap(new Vector3(0, HouseRidge + 0.2f, 0), Vector3.Right, 0.15f, HouseEaveX * 2 + 0.25f, lumpy: true));
     }
 
     // A low course of fieldstones from a to b.

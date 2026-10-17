@@ -30,8 +30,15 @@ public partial class BuildingSystem
             root.AddChild(mesh);
             mats[m.PlayerId] = mesh;
         }
-        mesh.Position = new Vector3(m.X, terrain.HeightAt(m.X, m.Z) + 0.01f, m.Z);
         mesh.Rotation = new Vector3(0, m.Yaw, 0);
+        // The ground is drawn as triangles, which can stand a few centimetres above the smooth height under
+        // the middle of the mat (it is 1.75 m long, over several cells): lie on the highest point along it
+        // so no end sinks into the ground and the mat looks like it vanished (bugfix-40).
+        float top = terrain.HeightAt(m.X, m.Z);
+        var along = new Vector3(Mathf.Sin(m.Yaw), 0, Mathf.Cos(m.Yaw));
+        for (float t = -0.9f; t <= 0.9f; t += 0.45f)
+            top = Mathf.Max(top, terrain.HeightAt(m.X + along.X * t, m.Z + along.Z * t));
+        mesh.Position = new Vector3(m.X, top + 0.03f, m.Z);
     }
 
     // Shows a mat without a server, for the showcase.
@@ -39,7 +46,7 @@ public partial class BuildingSystem
         ShowMat(new SleepingMat(player, 0, x, z, yaw));
 
     uint MyPlayerId(DbConnection c) =>
-        c.Identity is { } id && c.Db.Player.Identity.Find(id) is { } p ? p.PlayerId : 0;
+        Me.Key(c) is { } id && c.Db.Player.Identity.Find(id) is { } p ? p.PlayerId : 0;
 
     void RegisterMatUse(DbConnection c)
     {

@@ -130,6 +130,7 @@ public static partial class Module
         EnsureWorldClock(ctx);
         var clock = ctx.Db.WorldClock.Id.Find(0)!.Value;
         ctx.Db.WorldClock.Id.Update(clock with { ServerNow = ctx.Timestamp });
+        SweepSignalFires(ctx);
 
         var w = ctx.Db.Weather.Id.Find(0)!.Value;
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch >= w.NextChangeAt.MicrosecondsSinceUnixEpoch)
@@ -184,7 +185,7 @@ public static partial class Module
     // Who may change the time from the game. The publisher (the claims admin) can
     // always; they add a player with `spacetime call <db> make_admin '"Name"'`,
     // since a game client signs in with its own identity, not the publisher's.
-    [SpacetimeDB.Table(Accessor = "WorldAdmin", Public = true)]
+    [SpacetimeDB.Table(Accessor = "WorldAdmin")] // private (admin-1): clients read only their own row through my_admin
     public partial struct WorldAdmin
     {
         [PrimaryKey]
@@ -192,7 +193,7 @@ public static partial class Module
     }
 
     static bool IsWorldAdmin(ReducerContext ctx) =>
-        ctx.Db.ClaimConfig.Id.Find(0)?.Admin == ctx.Sender || ctx.Db.WorldAdmin.Identity.Find(ctx.Sender) is not null;
+        ctx.Db.ClaimConfig.Id.Find(0)?.Admin == Me(ctx) || ctx.Db.WorldAdmin.Identity.Find(Me(ctx)) is not null;
 
     [SpacetimeDB.Reducer]
     public static void MakeAdmin(ReducerContext ctx, string playerName)

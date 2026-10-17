@@ -955,3 +955,382 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
 **Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
 **Who:** Justin (shared the images; relayed by the PM, no direct quote).
+
+## D-236 — 2026-10-17 — Bought art packs from Golden Skull Art; Dofus is a second style reference (follows D-234, D-235)
+**Decision:** Justin bought Golden Skull Art's (Max Heyder) 2D Isometric Foliage Pack and Isometric Starter Pack, with a commercial licence and his stated permission to host them in the public repo temporarily. They are in `docs/art-packs/golden-skull/` (#378). Dofus is now a second style reference alongside `docs/art-reference`.
+**Who:** Justin ("Our other inspiration is a game called Dofus. Beautiful, hand crafted artwork, scenery, etc. It's a similar 2d but 3d engine type thing.")
+
+## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
+**Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
+**Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")
+
+## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
+**Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
+**Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
+
+## D-239 — 2026-10-17 — Clay pipes and drains: trough only for now (follows D-238)
+**Decision:** For ceramics-13, Justin picked "Trough only": a fired clay trough filled by hand, with no pipe network for now. The network design (stream to cistern, roof gutters) stays on file in `tickets/ceramics-13.md` for later.
+**Who:** Justin, picking "Trough only" (relayed by the PM; no direct quote).
+
+## D-240 — 2026-10-17 — The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D (extends D-234, D-235, D-236)
+**Decision:** The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D, using whatever technique works, with pack sprites only where they fit. Nothing is copied literally unless it fits, but the overall art theme and direction should be very similar to that work and to Dofus. A unique way of getting the hand-painted style in 3D is fine; Dofus does it and Octopath is similar. Every look image shown to Justin is paired side by side with its reference. The art lanes (Modeling, Environment, Atmosphere) are already on Opus.
+**Who:** Justin ("so far the images I've seen from the environment worker are NOTHING like the reference images/packs I gave you." "Nothing literal unless it fits, but the overall art theme and direction, even though it's '3d' should be VERY similar to his work and Dofus. If it has to come up with a unique way to get the hand painted style in 3d, that's fine, and i know it's perfectly do-able. Dofus does it, Octopath is similar, etc. Maybe it needs to be switched to an opus worker if it isnt already.")
+
+## D-241 — 2026-10-17 — Music direction: cute, whimsical and relaxing, in the spirit of Dofus (audio-8)
+**Decision:** The music is cute, whimsical and relaxing in the spirit of Dofus, with a basic main theme in the mood of Grynpyret's "Kites" (original melody, nothing copied) and a lullaby-like song about naps. The goal is to be very cutesy and relaxing in general, and less Valheim-like. Owner: Audio, ticket audio-8; Audio prototypes clips for Justin's pick before converting.
+**Who:** Justin ("I want some music similar to Dofus, and a basic theme similar to Grynpyret's song Kites, and A song about naps. The goal is to be very cutesy and relaxing in general, less valheim-y music.")
+
+## D-242 — 2026-10-17 — Keep the old dense, wind-swept blade grass and restyle it to the new hand-painted look (extends D-240)
+**Decision:** The previous dense, wind-swept blade grass comes back and is restyled to the new hand-painted look (pack palette, tone bands). Sprite-card tufts are not the grass; flowers and mushrooms are only sparse accents. This answers the painted-ground prototype. Owner: Environment.
+**Who:** Justin ("the modeler/environment's grass is HORRIBLE, I want the old grass back, and make it match the new style, it was really good before")
+
+## D-243 — 2026-10-17 — Music comes from Justin, made with Suno; Audio builds a data-driven player (revises D-241)
+**Decision:** The music will be provided by Justin, made with Suno, instead of being synthesized or composed by Audio. Audio builds a data-driven player for recorded tracks, mood-tagged and cross-faded. This revises D-241: the direction there (cute, whimsical, relaxing, Dofus-like) still guides Justin's tracks. Owner: Audio.
+**Who:** Justin ("These all sound super generic and crappy", on the synthesized music tasters)
+
+## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
+**Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
+**Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).
+
+## D-246 — 2026-10-17 — Restyled grass is a little shorter and denser; the PM sends Justin every screenshot directly (follows D-242)
+**Decision:** (1) The restyled grass is slightly shorter and denser, with no big bare patches. (2) The PM sends Justin every screenshot and render directly. Lanes route images to the PM (or Render to the PM) and never expect Justin to read lane threads. A one-line note to the same effect is added to the Render lane section of `WORKER_LOOP.md`.
+**Who:** Justin ("The grass I saw was better... I want the grass to be a little shorter, and denser, no patch giant open spots" and "I also need you to be sending me screenshots. I dont want to go to its chat.")
+
+## D-247 — 2026-10-17 — New Character concepts lane: 10 fast character mockups (Opus)
+**Decision:** A new Character concepts lane (Opus) makes about 10 fast character model proposals: shorter models, cutesy, maybe even creature-type characters. They are quick mockups, basically storyboarding, with a lineup for Justin, who picks 1 to 3 to develop. This follows D-154: no player model style is built past a rough prototype until Justin picks.
+**Who:** Justin ("can you make a new worker that can create like..10 different new character model proposals? I want shorter models, cutesy, maybe even some kind of creature type things? I want FAST mockups though, dont spend all day on them. This is basically storyboarding, and use opus.")
+
+## D-248 — 2026-10-17 — Speed up merges, CI, builds and releases: all four measures approved
+**Decision:** To speed up merges, CI, builds and releases, Justin approved all four of: (1) a GitHub merge queue plus auto-merge (integration-8); (2) splitting the hot shared files into per-lane files with fixed ids (integration-9); (3) smarter, parallel CI with path filters, parallel server tests and caching (integration-10); (4) a flaky-test rule. The flaky-test rule and a no-push-after-green rule are added to Section 2 of `WORKER_LOOP.md`. Owner: Integration.
+**Who:** Justin (asked how to speed these up and approved all four options; relayed by the PM, no direct quote).
+
+## D-249 — 2026-10-17 — Character concepts round 2: 10 more, with multiple themes on one shared skeleton and base body (follows D-247)
+**Decision:** After seeing the 10 round-1 concepts (Kit, Capling, Bramble, Clover, Pip, Mossle, Puddle, Sprout, Dumpling, Hearthling), Justin wants another 10. Multiple player themes or races are welcome, built on one shared skeleton and base body with swappable parts (ears, tails, hats, heads, colours), so animation and modelling are shared and modelling work is minimised. Round 2 is 10 more concepts on a shared base. Owner: Character concepts.
+**Who:** Justin ("give me another 10. Multiple character models/themes would be nice too I think. I do want a shared model/skeleton etc. though as much as possible to minimize modeling work etc.")
+
+## D-250 — 2026-10-17 — New player characters: chibi proportions at about 1.3 to 1.4 m tall (follows D-247, D-249)
+**Decision:** New player characters keep cute, big-head chibi proportions but are about 1.3 to 1.4 m tall in game, so the 1.75 m-built world (stations, doors, tools, camera) still works with small tweaks. Justin chose this over shrinking the world or truly tiny characters.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-251 — 2026-10-17 — StructureKind ids get explicit values with lane ranges (integration-9)
+**Decision:** `StructureKind` ids get explicit values with lane ranges: House building 100+, Crafting stations 200+, Animals 300+, Claims 400+. Existing kinds keep their values. Owner: Integration (integration-9).
+**Who:** PM technical decision.
+
+## D-252 — 2026-10-17 — Merge queue CI design: doc-only PRs skip their steps; world-wipe PRs are merged by hand (#403)
+**Decision:** In the merge queue's CI design (#403), doc-only PRs run the three checks but skip their steps. World-wipe PRs are merged by hand, outside the queue.
+**Who:** PM technical decision.
+
+## D-253 — 2026-10-17 — Trees stay 3D, restyled to read about 85% like the painted card pines (follows D-240)
+**Decision:** Trees stay 3D (scalloped pines), restyled to read about 85% like the artist's painted card pines: silhouette, colour bands, outline and painted strokes. Modeling iterates with side-by-side renders against the card pines.
+**Who:** Justin ("Can you make the 3d ones look more like the painted card pines? Like, 85% the same or something?")
+
+## D-254 — 2026-10-17 — Characters, look: back to round 2's animal and humanoid concepts, slightly less cute (revises D-249, D-250)
+**Decision:** Round 3 (realistic, about 4 heads tall) was rejected. The direction is now round 2's animal and humanoid concepts, slightly less cute: head at 85% size (about 2.8 heads tall), still chibi, 1.35 m tall on the shared 16-bone base (D-249, D-250). The first roster is still to be picked. Owner: Character concepts.
+**Who:** Justin ("this new version is even worse. Go back to the old animal/humanoid look, just slightly less cute, chibiish is fine.")
+
+## D-255 — 2026-10-17 — First player roster: Pebble, Kit, Capling and Bramble; Modeling builds the shared base plus Kit first (follows D-254)
+**Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling first built the shared base plus Kit (model-6). Update: for the new models Modeling builds the shared base plus Pebble and Bramble first; Kit and Capling are deferred.
+**Who:** Justin, picking the roster (relayed by the PM), and then "for the new models, just focus on pebble and bramble for now".
+
+## D-256 — 2026-10-17 — Grass: back to main's original blade grass, lightly stylised toward the references (overrides D-246's grass restyle details; follows D-242)
+**Decision:** The grass stays main's original blade grass, with shape, height, density and wind unchanged. Only a light stylise toward the references is applied: colour, tone bands and lit tips, perhaps a few flowers. The shorter, denser and clumped rework is dropped, which overrides the grass details of D-246. The screenshot rule in D-246 stands. Owner: Environment.
+**Who:** Justin ("for the grass, just go back to the old one, and try to stylize it a bit to match references. It was far better.")
+
+## D-257 — 2026-10-17 — The atmosphere-25 lighting grade becomes the default look (follows D-234)
+**Decision:** The atmosphere-25 lighting grade becomes the default look (option a). Owner: Atmosphere.
+**Who:** Justin, picking option a (relayed by the PM; no direct quote).
+
+## D-258 — 2026-10-17 — Neighbours share building rights through a town roster everyone signs
+**Decision:** Neighbours share building rights through a town roster that everyone signs. Owner: Claims.
+**Who:** Justin, picking "Add neighbors together via a roster everyone signs".
+
+## D-259 — 2026-10-17 — The next animal is the hen
+**Decision:** The next animal is the hen: a tame flock that lays eggs, with low upkeep (D-148). Owner: Animals.
+**Who:** Justin, picking the hen (relayed by the PM; no direct quote).
+
+## D-260 — 2026-10-17 — Tool repair trains Toolmaking; wading and floating train a new Swimming skill
+**Decision:** Repairing a tool trains Toolmaking. Wading and floating train a new Swimming skill. This follows the one shared progression formula (D-175).
+**Who:** Justin, picking "Both, but make wading train swimming".
+
+## D-261 — 2026-10-17 — Pines: fuller, closer to the painted texture, with random sides, widths and heights (follows D-253)
+**Decision:** The 3D pine, at about 80% of the painted card pines, is a step in the right direction. It should be fuller and match the texture even more. Pines also need random sides, widths, heights and so on for variety (D-166). Owner: Modeling.
+**Who:** Justin ("fuller and match the texture even more, but this is a step in the right direction. We also need random sides, widths, heights, etc for some variety.")
+
+## D-262 — 2026-10-17 — Antler stays a plain material for now
+**Decision:** Antler stays a plain material. There is no soft hammer or flaker made from it for now.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-263 — 2026-10-17 — Tools in the doll's Tools section count as carried (refines D-219, D-223)
+**Decision:** Tools in the doll's Tools section count as carried, so recipes, trades, stashing and death can take them. The Tools section is just a weightless home: no bag space and no weight, as in D-219 and D-223.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-264 — 2026-10-17 — Swimming skill effects stay small (follows D-260)
+**Decision:** The Swimming skill's effects stay small. At max rank, wade speed rises from 0.60 to 0.75 and float speed from 0.50 to 0.70. The gain is front-loaded and the skill levels at a slow pace, using the one shared progression formula (D-175). The ids are `swim.wade` and `swim.float`.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
+**Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
+**Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
+**Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
+
+## D-267 — 2026-10-17 — Eggs cook into a boiled egg (follows D-259)
+**Decision:** Eggs cook into a boiled egg.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-268 — 2026-10-17 — Feathers fletch better arrows; plain arrows still work (follows D-259)
+**Decision:** Feathers fletch better arrows. Plain arrows still work.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-269 — 2026-10-17 — Hens roost in their coop at night and come out at dawn (follows D-259, D-265)
+**Decision:** Hens roost in their coop at night and come out at dawn.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-270 — 2026-10-17 — Other players in water get ripples and splashes, but no wet legs
+**Decision:** Other players in water get ripples and splashes, but no wet legs.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
+**Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
+**Who:** PM default (Justin not yet asked).
+
+## D-272 — 2026-10-17 — Maker's mark: players pick from a glyph panel with a colour picker; inspecting an item shows its maker (refines D-266)
+**Decision:** Players pick their maker's mark from a panel with many glyphs (fantasy, scientific and more) and a colour picker. Inspecting any made item tells you who made it. Owner: Ceramics.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-273 — 2026-10-17 — Atmosphere builds morning frost next
+**Decision:** Atmosphere builds morning frost next (atmosphere-28).
+**Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
+
+## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
+**Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
+**Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
+
+## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
+**Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
+**Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-285 — 2026-10-17 — Pines keep the darker noon look, more lit colour at low sun, tidier bottom ring
+**Decision:** Pines keep the darker noon look (D-282) but let more lit colour through at low sun. The bottom ring of boughs is made more uniform.
+**Who:** Justin: "clean up the bottom ring of leaves and make them more uniform, some are all over the place" (relayed by the PM).
+
+## D-286 — 2026-10-17 — A buildable stone-ringed hearth warms winter nights
+**Decision:** Survival's 2-hour building-session check found hunger and thirst gentle; winter nights in the open are the only friction (a warm-up is needed about every 7 minutes). The fix is a buildable stone-ringed hearth that warms out to about 8 m. House building builds it and Survival sets the numbers. No change to need drain.
+**Who:** Justin, picking the stone-ringed hearth as the fix (relayed by the PM; no direct quote).
+
+## D-287 — 2026-10-17 — A well-fuelled fire puts up a smoke-signal column
+**Decision:** From a playtester idea Justin wants: a fire above 75% fuel puts up a thick, tall smoke column that is visible from far away, like a smoke signal. It is 3D/volumetric and painted. Owner: Atmosphere, who builds it after the water.
+**Who:** Justin, wanting the playtester's idea (relayed by the PM; no direct quote).
+
+## D-288 — 2026-10-17 — Crafting hovers show the recipe chain only for discovered steps
+**Decision:** Crafting hovers show the full recipe chain only for steps already in the player's journal. Undiscovered steps get a nudge naming a place or material to try.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-289 — 2026-10-17 — "Coil pot" is displayed as "Clay pot"
+**Decision:** "Coil pot" is renamed "Clay pot" in display names only. Ids are unchanged.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
+**Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-291 — 2026-10-17 — Morning frost only in autumn, lighter rime
+**Decision:** Morning frost appears only in autumn. It appears randomly by local temperature, deterministic per seed, day and spot, and it is a lighter rime, as at 864924de. The heavy snow look Justin likes is kept for winter ground snow.
+**Who:** Justin, choosing autumn-only lighter rime and keeping the heavy snow look for winter (relayed by the PM; no direct quote).
+
+## D-292 — 2026-10-17 — Top priority: roll out the painted look and textures on everything
+**Decision:** The top priority is rolling out the painted look and textures on everything: ground, trees, rocks, plants, props, animals, structures and items. Order: trees (#544) first, then terrain (Environment) and props (Modeling), then animals, structures and items. Work goes in small PRs per family.
+**Who:** Justin, setting the painted look as top priority (relayed by the PM; no direct quote).
+
+## D-293 — 2026-10-17 — "I'm stuck" command for everyone
+**Decision:** An "I'm stuck" command in the Esc menu and as `/stuck`, for everyone including bots. It moves the player to the nearest free spot within about 12 m, then their claim, then spawn, with a 60 s cooldown, decided on the server (bugfix-44). Test bots use it as their last resort (integration-12).
+**Who:** Justin, asking for the stuck command (relayed by the PM; no direct quote).
+
+## D-294 — 2026-10-17 — The launcher shows patch notes for each release
+**Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
+**Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
+
+## D-295 — 2026-10-17 — Town office powers
+**Decision:** Town office powers. Marshal: timed ban from the town's claims. Gatekeeper: opens or bars town gates for everyone. Scribe: keeps a town log only (the Mayor posts announcements). Elder: breaks tied votes. Treasurer: no power until there is a treasury.
+**Who:** Justin, picking the powers (relayed by the PM; no direct quote).
+
+## D-296 — 2026-10-17 — CI on main builds and releases fast; full checks run on PRs
+**Decision:** CI on pushes to main only builds the module and clients and runs the Upgrade check, then releases. The full gameplay checks run on every PR before merge, and draft PRs get a quick build only.
+**Who:** Justin: "Yes" (to the PM's proposal). Earlier he said: "Merge A is done -> Build -> release as fast as possible."
+
+## D-297 — 2026-10-17 — Players choose their name at character creation
+**Decision:** Players choose their name at character creation (ui-31). Names are 2 to 20 characters and unique, checked by the server.
+**Who:** Justin, asking for name choice at creation (relayed by the PM; no direct quote).
+
+## D-298 — 2026-10-17 — Unity comparison spike, lighting only
+**Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
+**Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
+
+## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
+**Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
+**Who:** Justin: "Every slot equips".
+
+## D-308 — 2026-10-17 — Frost "in between": silvered grass tips, white-edged rocks and leaves
+**Decision:** Frost sits "in between": grass tips clearly silvered, rocks and leaf tops white-edged, never snow-like (#597).
+**Who:** Justin, choosing the in-between frost look (relayed by the PM; no direct quote).
+
+## D-309 — 2026-10-17 — Character menu as a "Cutesy page"
+**Decision:** The character menu is a "Cutesy page": pastel paper, polaroid or sticker frames, chibis bobbing, doodles (ui-39).
+**Who:** Justin, choosing the Cutesy page (relayed by the PM; no direct quote).
+
+## D-310 — 2026-10-17 — No move to Unity; work on Godot shadows
+**Decision:** No move to Unity. The spike's conclusion is accepted. "Shadows might be nice", so Godot shadow quality work goes ahead (atmos-shadows-1). Merged meshes come via env-24.
+**Who:** Justin: "Shadows might be nice" (relayed by the PM).
+
+## D-311 — 2026-10-17 — Pot slip decoration is a banded rim with a free colour picker
+**Decision:** Pot slip decoration is a banded rim (one or two bands), with colours from a free picker in the mark's allowed range (ceramics-14).
+**Who:** Justin, choosing the banded rim (relayed by the PM; no direct quote).
+
+## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
+**Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
+**Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
+
+## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
+**Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
+**Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
+
+## D-314 — 2026-10-17 — UI look: "Warm paper windows"
+**Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
+**Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
+
+## D-315 — 2026-10-17 — Cutesy extras picked
+**Decision:** Cutesy extras picked, with owners:
+- #1 soft rim light (Modeling, with Atmosphere).
+- #8 soft bloom and light leaks, and #10 gentle vignette (Atmosphere, each with a toggle).
+- #12 ambient life: butterflies, fireflies, pollen, falling leaves, snow (Environment).
+- #15 idle fidgets, #16 blinking and expressions, and #17 hop and squish movement (Animation).
+- #18 bouncy UI with reduce-motion (UX).
+
+Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
+**Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
+
+## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
+**Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
+**Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
+
+## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
+**Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
+**Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).
+
+## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
+**Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
+**Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
+
+## D-323 — 2026-10-17 — Autopilot while Justin sleeps
+**Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
+**Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
+
+PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
+1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
+2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
+3. Shadow quality defaults to Medium: 4096, 4 cascades, 50 m, about today's cost. The other levels, Low and High, are in Options. High would be crisper but costs about 60% more shadow draw calls. (PM default while Justin asleep; revisit)
+4. Butterflies (env-30, #656) are slightly larger than life, about a 34 cm wingspan, so they read at the default zoom. The alternatives were life-size at 18 cm (barely visible) and storybook at 50 cm. Ambient life gets an Options setting: Off, Some or Full, default Full. (PM default while Justin asleep; revisit)
+5. Town bans stay keyed per character, not per login. A banned player can make a new character, but it starts with nothing, and the Marshal can ban again. Not chosen: a hidden per-login ban on the server, which is stricter but means one bad character locks out the player's other characters. (PM default while Justin asleep; revisit)
+6. The next new world feature kind is the fallen giant (env-33): a huge mossy fallen trunk across a glade, varied per seed, no new models. Also offered: standing stones, a mushroom fairy ring (needs models), a hilltop cairn. (PM default while Justin asleep; revisit)
+7. Next animal after hens is the wild rabbit (options were rabbit, goat, boar or duck). (PM default while Justin asleep; revisit)
+8. Survival's next item is wild food variety, smallest form: hazelnuts from about one in three existing bushes, autumn only, 3 per bush at 0.08 food each (just below berries); nothing to tend. It beat: cosy rest effects (contradicts Justin's "just a pose"), a client-only 25% nudge line, and a full seasonal set of hazelnuts, mushrooms and roots (needs new models and placement). (PM default while Justin asleep; revisit)
+9. House building's next structure is a wooden chest: 24 stacks (a basket holds 12), 3 logs + 1 cordage per stage, two stages, claim-only, on the shared storage base. It beat: a smoking rack (needs a spoilage rule), a straw bed (overlaps rest spots) and a well (needs water rules). (PM default while Justin asleep; revisit)
+10. Claim protections for animal goods: eggs from hens inside a claim are claim-members-only (open outside claims); leather drying on a hide rack can be taken only by its maker or claim members; butchering a carcass inside a claim stays open to anyone for now. Alternatives were: eggs open to all, or owner-only everywhere; hide racks open to all; butchering members-only. (PM default while Justin asleep; revisit)
+11. New Options > Graphics > UI size slider (Auto, 80 to 200%). The default for new players is Auto: designed size up to 1080p, scaling up on taller windows (about 133% at 1440p, 200% at 4K). Alternatives were a fixed 100%, or Auto capped at 150%. (PM default while Justin asleep; revisit)
+12. Bag tooltips describe what an item does in words (for example "Eat: a snack", "Burns for about 2 min"), not exact numbers. Alternatives were exact numbers (+12% food), or words with numbers shown while Shift is held. (PM default while Justin asleep; revisit)

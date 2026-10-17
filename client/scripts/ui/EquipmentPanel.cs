@@ -26,7 +26,7 @@ public partial class EquipmentPanel : CanvasLayer
     public readonly BagGrid Bag = new();
     // The tools section of the doll (Justin): tools here work by themselves, take no
     // bag space and add no weight. Shown once the server keeps it (Bag.Link.Arranges).
-    public const int ToolSlots = 6;
+    public const int ToolSlots = LifeGame.Shared.Bag.BeltSlots;
     readonly BagGrid belt = new() { Kind = "belt", Width = 3, Empty = "" };
     Control beltSection = null!;
     Button sort = null!;
@@ -65,6 +65,7 @@ public partial class EquipmentPanel : CanvasLayer
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
+        Panels.Centre(this, Close);
 
         // --screenshot-equip opens the panel with the first wearable on and the rest to
         // hand; =feet picks the feet slot.
@@ -82,6 +83,7 @@ public partial class EquipmentPanel : CanvasLayer
 
     public void Open()
     {
+        Panels.Opening(this);
         panel.Visible = true;
         shown = "";
         Refresh();
@@ -96,12 +98,17 @@ public partial class EquipmentPanel : CanvasLayer
         if (e is not InputEventKey { Pressed: true, Echo: false }) return;
         if (IsOpen && (e.IsActionPressed(NEquipment) || e.IsActionPressed("ui_cancel")))
             Close();
+        // I opens the bag over any other centre window, which closes (D-283). Only typing in a
+        // text box you can see (chat, a search box, a name) or the Esc menu keeps the key; a box
+        // that kept focus after its panel hid must not swallow I (Justin: "the bag won't open").
         else if (!IsOpen && live && InputMap.HasAction(NEquipment) && e.IsActionPressed(NEquipment)
-                 && !Panels.Open() && GetViewport().GuiGetFocusOwner() == null)
+                 && !PauseMenu.IsOpen && !Typing())
             Open();
         else return;
         GetViewport().SetInputAsHandled();
     }
+
+    bool Typing() => GetViewport().GuiGetFocusOwner() is { } f && f.IsVisibleInTree() && f is LineEdit or TextEdit;
 
     public override void _Process(double delta)
     {
@@ -200,14 +207,7 @@ public partial class EquipmentPanel : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
     }
 
@@ -218,7 +218,7 @@ public partial class EquipmentPanel : CanvasLayer
         belt.Positioned = () => true;
         belt.Capacity = () => ToolSlots;
         belt.Source = () => Bag.Link.Belt();
-        belt.Accepts = d => d["from"].AsString() == "bag" && Items.UseOf((Item)d["item"].AsInt32()) == UseAction.Tool;
+        belt.Accepts = d => d["from"].AsString() == "bag" && LifeGame.Shared.Bag.BeltOk((Item)d["item"].AsInt32());
         belt.ReceiveAt = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
         belt.Arrange = (d, cell) => Bag.Link.ToBelt((ulong)d["id"].AsInt64(), cell);
         Bag.Positioned = () => Bag.Link.Arranges;
@@ -267,6 +267,14 @@ public partial class EquipmentPanel : CanvasLayer
         };
         style.SetBorderWidthAll(chosen ? 2 : 1);
         style.SetCornerRadiusAll((int)(SlotSize / 2) - 2);
+        // Warm paper (ui-58): a paper circle, a shade darker when something is worn, with an
+        // ink ring and a coral ring on the chosen slot. Set here so it never flashes dark.
+        if (WarmLook.On)
+        {
+            style.BgColor = WarmLook.Paper.Darkened(filled ? 0.12f : 0.06f);
+            style.BorderColor = chosen ? WarmLook.Coral : new Color(WarmLook.Ink, 0.35f);
+            style.SetBorderWidthAll(chosen ? 3 : 2);
+        }
         return style;
     }
 
@@ -288,7 +296,8 @@ public partial class EquipmentPanel : CanvasLayer
             var style = SlotStyle(slot == selected, on != null);
             foreach (var state in new[] { "normal", "hover", "pressed", "focus" })
                 button.AddThemeStyleboxOverride(state, style);
-            button.AddThemeColorOverride("font_color", new Color(Look.Cream, 0.55f));
+            button.AddThemeColorOverride("font_color", WarmLook.On ? new Color(WarmLook.Ink, 0.6f) : new Color(Look.Cream, 0.55f));
+            WarmLook.KeepColours(button);
         }
 
         var worn = Link.Worn(selected);
@@ -339,10 +348,12 @@ public partial class EquipmentFigure : Control
 
     public override void _Draw()
     {
-        var fill = new Color(Look.Cream, 0.13f);
-        var edge = new Color(Look.Cream, 0.32f);
+        // On warm paper the figure is a soft brown ink outline (ui-51); cream would vanish.
+        var fill = WarmLook.On ? new Color(WarmLook.Ink, 0.05f) : new Color(Look.Cream, 0.13f);
+        var edge = WarmLook.On ? new Color(WarmLook.Ink, 0.45f) : new Color(Look.Cream, 0.32f);
+        width = WarmLook.On ? 2 : 1;
         DrawCircle(new Vector2(110, 46), 26, fill);
-        DrawArc(new Vector2(110, 46), 26, 0, Mathf.Tau, 48, edge, 1.5f, true);
+        DrawArc(new Vector2(110, 46), 26, 0, Mathf.Tau, 48, edge, width + 0.5f, true);
         Part(new Rect2(96, 70, 28, 14), 4, fill, edge);    // neck
         Part(new Rect2(66, 84, 88, 128), 22, fill, edge);  // body
         Part(new Rect2(38, 92, 24, 118), 12, fill, edge);  // arms
@@ -351,10 +362,12 @@ public partial class EquipmentFigure : Control
         Part(new Rect2(114, 206, 32, 118), 14, fill, edge);
     }
 
+    int width = 1;
+
     void Part(Rect2 rect, int radius, Color fill, Color edge)
     {
         var style = new StyleBoxFlat { BgColor = fill, BorderColor = edge, AntiAliasing = true };
-        style.SetBorderWidthAll(1);
+        style.SetBorderWidthAll(width);
         style.SetCornerRadiusAll(radius);
         DrawStyleBox(style, rect);
     }

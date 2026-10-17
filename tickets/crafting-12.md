@@ -1,7 +1,7 @@
 # crafting-12: Craft start and end hooks for other players' work sounds
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-work-hooks
 PR: #97
 
@@ -15,4 +15,4 @@ D-072: other players' craft work is audible, about 60% quieter than your own. `C
 - If atmosphere-12 (WorkSounds.cs 9965c81, carries the same two declarations) merges first, merge main here and delete the declarations from Crafting.cs, keeping the two calls.
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha.
+None. Merged to main; kept for history.

@@ -29,11 +29,13 @@ using LifeGame;
 
 // Soak test (audio-hotfix-1): hours of game time of random weather, seasons and events
 // through the mix, checking every block stays finite and nothing throws.
+//   dotnet run -c Release -- --music-test (the recorded-music director's rules, with fake tracks)
 //   dotnet run -c Release -- --edges      (every setting at its limits; must report no faults)
 //   dotnet run -c Release -- --soak=6 [--seed=1] [--fuzz] [--inject]    (6 game hours)
 // --fuzz hands the mix NaN, infinite and out-of-range inputs; --inject makes bad blocks and
 // exceptions on purpose to prove the mix recovers.
 if (args.Contains("--edges")) Environment.Exit(Soak.Edges());
+if (args.Contains("--music-test")) Environment.Exit(MusicTest.Run());
 if (args.FirstOrDefault(a => a.StartsWith("--soak=")) is { } soakArg)
 {
     double hours = double.Parse(soakArg[7..], System.Globalization.CultureInfo.InvariantCulture);
@@ -68,6 +70,7 @@ foreach (var scene in scenes)
         "rain" or "storm" or "crack" or "stormroof" => (0.6f, 1f, 0.9f, 1f, 0.45f),
         "dusk" => (0.35f, 0f, 0.3f, 0.2f, 0.76f),
         "fire" => (0f, 0f, 0.2f, 0.1f, 0.9f),
+        "firestoked" => (0f, 0f, 0.2f, 0.1f, 0.9f),
         "firerain" => (0.1f, 0.4f, 0.4f, 0.7f, 0.85f),
         "night" => (0f, 0f, 0.25f, 0.1f, 0.95f),
         "dawn" => (0.55f, 0f, 0.15f, 0.3f, 0.27f),
@@ -124,7 +127,8 @@ foreach (var scene in scenes)
         mix.Wetness += (wet - mix.Wetness) * k;
         mix.Cover = parts[0] is "roof" or "hut" or "stormroof" ? 1f : 0f;
         mix.TimeOfDay += (time - mix.TimeOfDay) * k;
-        mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
+        mix.Fire = parts[0] is "fire" or "firerain" or "firestoked" ? 0.85f : 0f;
+    mix.FireStoke = parts[0] == "firestoked" ? 1f : 0f;
         mix.FirePan = -0.3f;
         double t = done / (double)rate;
         // Ponds lie a little to the left; walking up to one, it grows from nothing.
@@ -136,7 +140,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && !AudioScenes.Owns(parts[0]) && parts[0] != "doors" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -173,6 +177,70 @@ foreach (var scene in scenes)
             if (At(7)) mix.Play(Cue.Jump);
             if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
             if (At(10)) mix.Step(Ground.Grass, 0f);
+        }
+        // Water scene: wading ankle, knee and waist deep, a splash in (small, big), a paddle stroke, a lap.
+        if (parts[0] == "water")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.WadeShallow);
+            if (At(2.5)) mix.Play(CueDefs.WadeKnee);
+            if (At(4)) mix.Play(CueDefs.WadeDeep);
+            if (At(6)) mix.Play(CueDefs.SplashIn, 0.5f);
+            if (At(8)) mix.Play(CueDefs.SplashIn, 1.2f);
+            if (At(10)) mix.Play(CueDefs.Paddle);
+            if (At(12)) mix.Play(CueDefs.Lap);
+            if (At(14)) mix.Play(CueDefs.Drip);
+        }
+        // Hens scene: pecks, a cluck, a run of clucks, a squawk with a flap, a roosting murmur.
+        if (parts[0] == "hens")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.HenPeck);
+            if (At(1.7)) mix.Play(CueDefs.HenPeck);
+            if (At(3)) mix.Play(CueDefs.HenCluck);
+            if (At(5)) mix.Play(CueDefs.HenClucks);
+            if (At(7.5)) mix.Play(CueDefs.HenSquawk);
+            if (At(10)) mix.Play(CueDefs.HenRoost);
+            if (At(12.5)) mix.Play(CueDefs.HenLay);
+        }
+        // Tools scene: three chops, a creak and the crash, a stick dig and a hand dig.
+        if (parts[0] == "tools")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.ChopThunk);
+            if (At(2.2)) mix.Play(CueDefs.ChopThunk);
+            if (At(3.4)) mix.Play(CueDefs.ChopThunk);
+            if (At(5)) mix.Play(CueDefs.TreeCreak);
+            if (At(5)) mix.Play(CueDefs.TreeRush);
+            if (At(6.6)) mix.Play(CueDefs.TreeImpact);
+            if (At(10)) mix.Play(CueDefs.DigStick);
+            if (At(11.5)) mix.Play(CueDefs.DigSpade);
+            if (At(12.5)) mix.Play(CueDefs.DirtThrow);
+            if (At(14)) mix.Play(CueDefs.DigHands);
+        }
+        AudioScenes.Render(parts[0], mix, done, n, rate);
+        // Doors scene: open, shut, bar, unbar.
+        if (parts[0] == "doors")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.DoorOpen);
+            if (At(3)) mix.Play(CueDefs.DoorShut);
+            if (At(5)) mix.Play(CueDefs.DoorBar);
+            if (At(7)) mix.Play(CueDefs.DoorUnbar);
+        }
+        // Acts scene: drink, eat, pluck, pick up, 4 s apart.
+        if (parts[0] == "acts")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.Drink);
+            if (At(5)) mix.Play(CueDefs.Eat);
+            if (At(8)) mix.Play(CueDefs.Pluck);
+            if (At(10)) mix.Play(CueDefs.PickUp);
         }
         // Crack scene: close strikes, then a far one, in a storm.
         if (parts[0] == "crack")

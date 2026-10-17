@@ -23,9 +23,8 @@ namespace LifeGame.Shared
             // The water is a flat plane, so a stream runs in a valley: within about
             // 26 m of its line the hills sink toward a floor just above the water,
             // then a channel about 6 m wide slopes gently down to a bed below it.
-            // The bed stays shallow enough to wade (the client turns players back
-            // below WaterLevel - 0.3), so a stream never walls anyone in; ponds
-            // are deeper and are walked round.
+            // Water can be walked into (Wading): shallow beds are waded, and anything
+            // deeper than Wading.FloatDepth is floated over, so no water walls anyone in.
             float meters = RiverDistance(x, z);
             float valley = 1f - SmoothStep(4f, 26f, meters);
             // The channel narrows and widens along its length, so the banks never run
@@ -47,6 +46,21 @@ namespace LifeGame.Shared
             // The spawn clearing is a dry, gentle rise.
             float keep = SmoothStep(18f, 32f, MathF.Sqrt(x * x + z * z));
             return h * keep + (0.1f + hills * 0.3f) * (1f - keep);
+        }
+
+        // Whether cell (x, z) holds water, for anything that needs it on the server and
+        // the client alike (clay pipes' sources, filling pots). `depth` is how many
+        // DigSteps the cell has been dug (0 if never). All water is one flat plane, so
+        // `surface` is always World.WaterLevel; `flowing` tells a stream from a pond.
+        public static bool WaterAt(int x, int z, short depth, out float surface, out bool flowing)
+        {
+            surface = World.WaterLevel;
+            flowing = false;
+            if (World.BaseHeight(x, z) - depth * World.DigStep >= World.WaterLevel) return false;
+            // A stream's water reaches up to about 10 m from its line where the channel is
+            // widest; a pond within 12 m of a stream counts as part of it.
+            flowing = RiverDistance(x, z) < 12f;
+            return true;
         }
 
         // Meters from the nearest stream's center line, for telling stream water from

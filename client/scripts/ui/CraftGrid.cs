@@ -1,0 +1,377 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using LifeGame.Shared;
+
+namespace LifeGame;
+
+// The crafting menu's pictures (ui-24; Justin: "better crafting menu with pictures"), a
+// twin of the build menu: category tabs and a search box along the top, then a grid of
+// cards. Each card shows what it makes, the inputs as small pictures with have/need
+// (amber where you carry too little), the tool it wants and whether it is hands-on;
+// a card you can't make yet is greyed and says why when you point at it. Clicking a
+// card makes one. CraftingUi owns the rules (Missing, Begin) and hands them in, so this
+// file only draws. Recipes come from shared Processes, so a new one shows up here
+// with its picture and category without UI code (D-206).
+public partial class CraftGrid : VBoxContainer
+{
+    public Func<IEnumerable<ProcessDef>> Recipes = () => Enumerable.Empty<ProcessDef>();
+    public Func<ProcessDef, string?> Missing = _ => null;
+    public Func<Item, uint> Have = _ => 0;
+    public Action<ProcessDef> Make = _ => { };
+    // The short note on a hands-on step ("hands-on", or "by heart" for a Master).
+    public Func<ProcessDef, string> HandsOn = _ => "";
+
+    const int Picture = 64;
+    public const int Columns = 4;
+
+    readonly HBoxContainer tabs = new();
+    readonly LineEdit search = new() { PlaceholderText = "Search", ClearButtonEnabled = true, CustomMinimumSize = new Vector2(180, 0) };
+    readonly GridContainer grid = new() { Columns = Columns };
+    readonly ScrollContainer scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+    string category = "";
+
+    // Tabs in this order; a category not listed comes after, so a new one still shows.
+    static readonly string[] Preferred = { "Tools", "Fire and food", "Cord and weaving", "Clay", "Hide and clothing", "Other" };
+
+    // Which tab a recipe sits under, from what it makes and its process family.
+    public static string CategoryOf(ProcessDef p)
+    {
+        string family = p.Id.Split('.')[0];
+        var made = Items.IsKnown((ushort)p.Makes) && p.Outcome != Outcome.Fire ? Items.Def(p.Makes) : null;
+        if (p.Outcome is Outcome.Fire or Outcome.Roast || family is "fire" or "cook"
+            || made?.Use is UseAction.Eat or UseAction.Drink) return "Fire and food";
+        if (family == "clay") return "Clay";
+        if (family is "hide" or "sew" || made?.Use == UseAction.Wear || (made != null && Clothing.Find((ushort)made.Id) != null)) return "Hide and clothing";
+        if (family is "cord" or "weave" or "gather" or "spin") return "Cord and weaving";
+        if (made is { Wears: true } || made?.Use == UseAction.Tool || family is "knap" or "haft" or "lash" or "carve" or "chop") return "Tools";
+        return "Other";
+    }
+
+    // Hold to repeat (D-283 follow-up; Justin's hold-to-repeat ask): the recipe whose card is
+    // held down, in any grid. CraftingUi starts it again each time a job of it finishes, while
+    // the mouse stays down, it still needs no hands-on step, and there is enough for another.
+    public static ProcessDef? Held { get; private set; }
+
+    public override void _Input(InputEvent e)
+    {
+        if (Held != null && e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false }) Held = null;
+    }
+
+    public static void StopHolding() => Held = null;
+
+    // The cards in the order they are shown; number keys 1 to 9 pick from these.
+    public List<ProcessDef> Shown { get; private set; } = new();
+
+    public override void _Ready()
+    {
+        AddThemeConstantOverride("separation", 10);
+        var top = new HBoxContainer();
+        top.AddThemeConstantOverride("separation", 12);
+        tabs.AddThemeConstantOverride("separation", 6);
+        tabs.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        top.AddChild(tabs);
+        search.AddThemeFontSizeOverride("font_size", 14);
+        search.TextChanged += _ => Refresh();
+        search.FocusEntered += () => Focused = this;
+        search.FocusExited += () => { if (Focused == this) Focused = null; };
+        top.AddChild(search);
+        AddChild(top);
+        grid.AddThemeConstantOverride("h_separation", 10);
+        grid.AddThemeConstantOverride("v_separation", 10);
+        scroll.AddChild(grid);
+        AddChild(scroll);
+    }
+
+    // The search box holds the keyboard while you type in it; Focused is whichever grid's
+    // box has it (the C menu's or a station's), so walking can pause for either.
+    public bool Typing => search.HasFocus();
+    public static CraftGrid? Focused { get; private set; }
+
+    // Screenshots (--screenshot-craft): --screenshot-craft-search=axe types into the search
+    // box, and --screenshot-craft-hover pins the first can't-make card's hover text beside it,
+    // since a still can't point the mouse.
+    public void Preview()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--screenshot-craft-search="))
+            {
+                search.Text = arg["--screenshot-craft-search=".Length..];
+                Refresh();
+            }
+        // --screenshot-craft-hover pins the first can't-make card's hover, since a still can't point.
+        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover")))
+            GetTree().CreateTimer(1.0).Timeout += () => pinned = Shown.FindIndex(p => Missing(p) != null);
+    }
+
+    // The hover for a card: drawn by us beside the card, not Godot's tooltip at the mouse,
+    // so it never covers the card's own text or the panel's footer (Render B). One panel on
+    // a layer above every window, shown for whichever card the mouse is over each frame.
+    static CanvasLayer? tipLayer;
+    static PanelContainer? tip;
+    static Label? tipText;
+    static Control? tipFor;
+    int pinned = -1;
+
+    public override void _Process(double delta)
+    {
+        Control? over = null;
+        if (IsVisibleInTree())
+        {
+            if (pinned >= 0) over = grid.GetChildOrNull<Control>(pinned);
+            else if (GetViewport().GuiGetHoveredControl() is { } hovered)
+                for (Node? n = hovered; n != null && n != this; n = n.GetParent())
+                    if (n.GetParent() == grid && n is Control c) { over = c; break; }
+        }
+        if (over != null && over.HasMeta("tip")) ShowTip(over);
+        // Only this grid's own card's tip is ours to hide (the C menu and a station share it).
+        else if (tip != null && tipFor != null && (!IsInstanceValid(tipFor) || !tipFor.IsInsideTree() || grid.IsAncestorOf(tipFor)))
+        {
+            tip.Visible = false;
+            tipFor = null;
+        }
+    }
+
+    void ShowTip(Control card)
+    {
+        if (tip == null)
+        {
+            tipLayer = new CanvasLayer { Layer = 20 };
+            GetTree().Root.AddChild(tipLayer);
+            tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.96f), BorderColor = new Color(Look.Cream, 0.3f) };
+            style.SetBorderWidthAll(1);
+            style.SetCornerRadiusAll(6);
+            style.ContentMarginLeft = style.ContentMarginRight = 10;
+            style.ContentMarginTop = style.ContentMarginBottom = 6;
+            tip.AddThemeStyleboxOverride("panel", style);
+            tipText = Hud.Text("", 14);
+            tip.AddChild(tipText);
+            tipLayer.AddChild(tip);
+        }
+        string text = card.GetMeta("tip").AsString();
+        if (tipFor == card && tipText!.Text == text && tip.Visible) return;
+        tipFor = card;
+        tipText!.Text = text;
+        tip.ResetSize();
+        tip.Visible = true;
+        // Beside the card at its top: right of it, or left near the screen's edge; kept on screen.
+        var rect = card.GetGlobalRect();
+        var size = tip.GetCombinedMinimumSize();
+        var screen = GetViewportRect().Size;
+        bool right = rect.End.X + 8 + size.X < screen.X;
+        float x = right ? rect.End.X + 8 : Mathf.Max(4, rect.Position.X - 8 - size.X);
+        float y = Mathf.Clamp(rect.Position.Y, 4, Mathf.Max(4, screen.Y - size.Y - 4));
+        tip.Position = new Vector2(x, y);
+    }
+
+
+    public void ClearSearch()
+    {
+        search.Text = "";
+        search.ReleaseFocus();
+    }
+
+    List<string> Categories() => Preferred
+        .Concat(Recipes().Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)))
+        .Where(c => Recipes().Any(p => CategoryOf(p) == c)).ToList();
+
+    // Tab (and Shift+Tab) step through the categories.
+    public void NextCategory(int step)
+    {
+        var all = Categories();
+        if (all.Count == 0) return;
+        int at = Math.Max(0, all.IndexOf(category));
+        category = all[(at + step + all.Count) % all.Count];
+        Refresh();
+    }
+
+    public void Refresh()
+    {
+        if (!IsInsideTree()) return;
+        var all = Categories();
+        if (!all.Contains(category)) category = all.FirstOrDefault(c => Recipes().Any(p => CategoryOf(p) == c && Missing(p) == null)) ?? all.FirstOrDefault() ?? "";
+        string query = search.Text.Trim();
+
+        // One category needs no tabs (a station's few recipes).
+        tabs.Visible = all.Count > 1;
+        foreach (var child in tabs.GetChildren()) { tabs.RemoveChild(child); child.QueueFree(); }
+        foreach (var c in all)
+        {
+            int ready = Recipes().Count(p => CategoryOf(p) == c && Missing(p) == null);
+            bool on = c == category && query == "";
+            var tab = new Button { Text = ready > 0 ? $"{c} ({ready})" : c, Flat = !on, FocusMode = FocusModeEnum.None };
+            tab.AddThemeFontSizeOverride("font_size", 15);
+            tab.Modulate = new Color(1, 1, 1, on ? 1f : 0.65f);
+            string chosen = c;
+            tab.Pressed += () => { category = chosen; ClearSearch(); Refresh(); };
+            tabs.AddChild(tab);
+        }
+
+        // A search looks through every category; otherwise the chosen tab, makeable ones first.
+        Shown = (query == ""
+                ? Recipes().Where(p => CategoryOf(p) == category)
+                : Recipes().Where(p => Matches(p, query)))
+            .OrderBy(p => Missing(p) == null ? 0 : 1).ThenBy(p => p.Tier).ToList();
+        foreach (var child in grid.GetChildren()) { grid.RemoveChild(child); child.QueueFree(); }
+        for (int i = 0; i < Shown.Count; i++) grid.AddChild(Card(Shown[i], i));
+        if (Shown.Count == 0)
+        {
+            var none = Hud.Text(query == "" ? "Nothing here yet" : $"Nothing called \"{query}\"", 14);
+            none.Modulate = new Color(1, 1, 1, 0.6f);
+            grid.AddChild(none);
+        }
+
+        // Up to three whole rows of cards before it scrolls, never cut through a row and never
+        // past the bottom of the screen (the title, tabs, hint and the hotbar take about 280 px).
+        int rows = (int)Mathf.Ceil(Math.Max(1, Shown.Count) / (float)Columns);
+        float row = Math.Max(CardHeight, grid.GetChildOrNull<Control>(0)?.GetCombinedMinimumSize().Y ?? 0) + 10;
+        int fit = Math.Max(1, (int)((GetViewportRect().Size.Y - 280f + 10f) / row));
+        int showing = Math.Min(rows, Math.Min(3, fit));
+        // Room for the scroll bar beside the cards when there are more rows than show.
+        float bar = rows > showing ? 14f : 0f;
+        scroll.CustomMinimumSize = new Vector2(grid.GetCombinedMinimumSize().X + bar, showing * row - 10);
+    }
+
+    static bool Matches(ProcessDef p, string query) =>
+        p.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || (Items.IsKnown((ushort)p.Makes) && Items.Def(p.Makes).Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+        || p.Consumes.Any(i => Items.Def(i.Item).Name.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+    const float CardWidth = 168, CardHeight = 152;
+
+    Control Card(ProcessDef def, int index)
+    {
+        string? missing = Missing(def);
+        bool ready = missing == null;
+        // A Card keeps its width and grows taller to fit; inputs wrap inside it (ui-33).
+        var card = new Card(CardWidth, CardHeight);
+        // Can't make it yet: faded, but on warm paper not so far that the picture is lost (ui-51).
+        card.Modulate = new Color(1, 1, 1, ready ? 1f : WarmLook.On ? 0.7f : 0.45f);
+        card.SetMeta("tip", Describe(def, missing));
+        // Acts on the press, so holding it down can repeat (Held).
+        card.ActionMode = BaseButton.ActionModeEnum.Press;
+        card.Pressed += () => { Held = def; Make(def); };
+
+        var column = card.Column;
+
+        // The result's picture, with the number key in the corner for the first nine.
+        var picture = new Control { CustomMinimumSize = new Vector2(Picture, Picture), MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
+        // A fire gets a drawn flame; a recipe that sets something down without naming an item
+        // shows its first input.
+        picture.AddChild(def.Outcome == Outcome.Fire
+            ? new FlameIcon { CustomMinimumSize = new Vector2(Picture, Picture), MouseFilter = MouseFilterEnum.Ignore }
+            : Icon(Items.IsKnown((ushort)def.Makes) ? def.Makes : def.Consumes.Select(i => i.Item).FirstOrDefault(), Picture));
+        if (def.MakesCount > 1) picture.AddChild(Corner($"×{def.MakesCount}", LayoutPreset.BottomRight));
+        column.AddChild(picture);
+        if (index < 9)
+        {
+            var key = Hud.Text((index + 1).ToString(), 12);
+            key.Modulate = new Color(1, 1, 1, 0.45f);
+            key.MouseFilter = MouseFilterEnum.Ignore;
+            key.Position = new Vector2(8, 4);
+            card.AddChild(key);
+        }
+
+        column.AddChild(card.Line(def.Name, 14));
+
+        // Inputs as pictures with have/need, then the tool and the hands-on mark.
+        var needs = card.Wrap();
+        foreach (var input in def.Consumes)
+        {
+            // Icon and count kept together, so a wrap never splits them.
+            var pair = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            pair.AddThemeConstantOverride("separation", 2);
+            pair.AddChild(Icon(input.Item, 20));
+            uint have = Have(input.Item), need = Need(def, input);
+            var n = Hud.Text($"{Math.Min(have, 99)}/{need}", 12);
+            if (have < need) n.Modulate = new Color(1f, 0.75f, 0.45f);
+            n.MouseFilter = MouseFilterEnum.Ignore;
+            pair.AddChild(n);
+            needs.AddChild(pair);
+        }
+        if (def.NeedsTool != ItemTags.None && ToolFor(def.NeedsTool) is { } tool)
+        {
+            var toolIcon = Icon(tool, 20);
+            // The tool is held, not used up: drawn in a ring.
+            var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+            var ringStyle = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = new Color(Look.Cream, 0.5f) };
+            ringStyle.SetBorderWidthAll(1);
+            ringStyle.SetCornerRadiusAll(12);
+            ring.AddThemeStyleboxOverride("panel", ringStyle);
+            ring.AddChild(toolIcon);
+            needs.AddChild(ring);
+        }
+        column.AddChild(needs);
+        string note = HandsOn(def).Trim(' ', '·');
+        if (note != "")
+        {
+            var hands = card.Line(note.Split('.')[0], 11);
+            hands.Modulate = new Color(1f, 0.85f, 0.6f, 0.8f);
+            hands.MouseFilter = MouseFilterEnum.Ignore;
+            column.AddChild(hands);
+        }
+        return card;
+    }
+
+    // How many of an input the recipe really needs on hand: knapping strikes stone on stone,
+    // so a hammer-stone input needs one more to strike with (CraftingUi.Missing says the same).
+    static uint Need(ProcessDef def, Ingredient input) =>
+        input.Count + (def.NeedsTool.HasFlag(ItemTags.Hammer) && Items.Def(input.Item).Tags.HasFlag(ItemTags.Hammer) ? 1u : 0u);
+
+    static string Describe(ProcessDef def, string? missing)
+    {
+        var lines = new List<string> { def.Name };
+        lines.Add("Takes " + string.Join(", ", def.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"))
+            + (def.NeedsTool != ItemTags.None ? $", using {CraftingUi.ToolName(def.NeedsTool)}" : "") + $"  ·  about {def.Seconds:0}s");
+        if (missing != null) lines.Add(missing);
+        return string.Join("\n", lines);
+    }
+
+    // The simplest item that would do as a tool, for its picture.
+    static Item? ToolFor(ItemTags tags) => Items.All.Values.Where(d => (d.Tags & tags) == tags)
+        .OrderBy(d => Processes.List.FirstOrDefault(p => p.Makes == d.Id)?.Tier ?? 0).Select(d => (Item?)d.Id).FirstOrDefault();
+
+    static TextureRect Icon(Item item, int size) => new()
+    {
+        Texture = ItemIcon.For(item),
+        CustomMinimumSize = new Vector2(size, size),
+        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+        MouseFilter = MouseFilterEnum.Ignore,
+    };
+
+    static Label Corner(string text, LayoutPreset where)
+    {
+        var l = Hud.Text(text, 12);
+        l.SetAnchorsPreset(where);
+        l.GrowHorizontal = GrowDirection.Begin;
+        l.GrowVertical = GrowDirection.Begin;
+        l.MouseFilter = MouseFilterEnum.Ignore;
+        return l;
+    }
+}
+
+// A small flame for recipes that make a fire rather than an item.
+public partial class FlameIcon : Control
+{
+    public override void _Draw()
+    {
+        var c = Size / 2;
+        float r = Mathf.Min(Size.X, Size.Y) * 0.36f;
+        Vector2[] Flame(float scale, float lean) => Enumerable.Range(0, 24).Select(i =>
+        {
+            float t = i / 23f * Mathf.Tau;
+            // A teardrop: round at the foot, drawn up to a point.
+            float x = Mathf.Sin(t) * r * scale * (0.55f + 0.45f * Mathf.Cos(t * 0.5f) * Mathf.Cos(t * 0.5f));
+            float y = -Mathf.Cos(t) * r * scale * 1.25f;
+            return c + new Vector2(x + lean * (y < 0 ? -y / r : 0), y + r * 0.35f);
+        }).ToArray();
+        DrawColoredPolygon(Flame(1f, 0.08f), new Color(0.86f, 0.42f, 0.16f));
+        DrawColoredPolygon(Flame(0.62f, 0.04f), new Color(0.98f, 0.76f, 0.32f));
+        // Two crossed sticks under it.
+        DrawLine(c + new Vector2(-r * 0.9f, r * 1.05f), c + new Vector2(r * 0.9f, r * 0.75f), Look.Bark, 4f, true);
+        DrawLine(c + new Vector2(-r * 0.9f, r * 0.75f), c + new Vector2(r * 0.9f, r * 1.05f), Look.Bark, 4f, true);
+    }
+}

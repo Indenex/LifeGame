@@ -1,0 +1,243 @@
+// Building kinds: House building. New kinds: 100 and up.
+// One StructureDef per kind: its fixed id (never renumbered or reused) and its StructureShape
+// (footprint, rules, stage names and what each stage takes). Shared by the server module and the
+// client; keep this file free of engine and SpacetimeDB types. To add a kind, add a def here and
+// list it in StructureKind (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
+using System.Collections.Generic;
+
+namespace LifeGame.Shared
+{
+    public static partial class Structures
+    {
+        static IEnumerable<StructureDef> HouseDefs() => new[]
+        {
+                // A mud-brick house: a bigger room with a hearth. A fire lit inside warms
+                // the whole room, and it weathers slower than wattle and daub.
+            new StructureDef
+            {
+                Kind = 5,
+                Shape = new StructureShape
+                {
+                    Name = "Mud-brick house",
+                    Scale = 1.25f,
+                    HalfWidth = 2.4f, HalfDepth = 2.0f,
+                    Clearance = 3.2f,
+                    RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                    DoorwayZ = 1.8f,
+                    Room = true,
+                    BrickWalls = true,
+                    SmokeY = 3.3f,
+                    Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
+                    // Brick house: Footings, Brick walls, Rafters, Thatch
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                        new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                        new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                        new[] { (Item.Fiber, 14u) },
+                    },
+                },
+            },
+                // A raised hearth inside a hut or house: a ring of stones with a clay surround.
+                // A fire on it burns longer per stick and warms a whole hut (building-9, D-132).
+            new StructureDef
+            {
+                Kind = 10,
+                Shape = new StructureShape
+                {
+                    Name = "Raised hearth",
+                    Wild = true,
+                    Category = "Fire",
+                    Round = true, Radius = HearthRadius, Solid = true,
+                    Clearance = 0.6f,
+                    Indoor = true,
+                    Hearth = true,
+                    Stages = new[] { "Stone ring", "Clay surround" },
+                    // Raised hearth: Stone ring, Clay surround
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 4u) },
+                        new[] { (Item.Daub, 3u) },
+                    },
+                },
+            },
+                // A log cabin (building-10, D-151): the forest's way to the same home as the
+                // mud-brick house, with the same room, shelter and weathering, built of logs.
+            new StructureDef
+            {
+                Kind = 14,
+                Shape = new StructureShape
+                {
+                    Name = "Log cabin",
+                    Scale = 1.25f,
+                    HalfWidth = 2.4f, HalfDepth = 2.0f,
+                    Clearance = 3.2f,
+                    RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                    DoorwayZ = 1.8f,
+                    Room = true,
+                    SmokeY = 3.3f,
+                    Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
+                    // Log cabin: Sill, Log walls, Rafters, Thatch (D-151)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 4u), (Item.Log, 4u) },
+                        new[] { (Item.Log, 16u) },
+                        new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                        new[] { (Item.Fiber, 14u) },
+                    },
+                },
+            },
+                // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
+                // instead of thatch. Same room, door and shelter; claim-only like the brick house.
+            new StructureDef
+            {
+                Kind = 16,
+                Shape = new StructureShape
+                {
+                    Name = "Tiled house",
+                    Category = "Shelter",
+                    Scale = 1.25f,
+                    HalfWidth = 2.4f, HalfDepth = 2.0f,
+                    Clearance = 3.2f,
+                    RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                    DoorwayZ = 1.8f,
+                    Room = true,
+                    BrickWalls = true,
+                    TileRoof = true,
+                    SmokeY = 3.3f,
+                    Stages = new[] { "Footings", "Brick walls", "Rafters", "Roof tiles" },
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                        new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                        new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                        new[] { (Item.RoofTile, 12u) },
+                    },
+                },
+            },
+                // A hen coop (building-16, Justin: claim-only, hens roost in it at night): a small shed on legs
+                // with a pop-hole and ramp at the front. Animals walk to Entry and settle at Roost.
+            new StructureDef
+            {
+                // 18: its StructureKind position, after ClayTrough = 17 (a SpacetimeDB enum takes no explicit values).
+                Kind = 18,
+                Shape = new StructureShape
+                {
+                    Name = "Hen coop",
+                    Model = "Coop",
+                    Category = "Animals",
+                    HalfWidth = 0.9f, HalfDepth = 0.7f,
+                    Clearance = 1.5f,
+                    RainCover = 1f, Warmth = 0.2f,
+                    Entry = (0f, 1.5f), Roost = (0f, -0.1f),
+                    Stages = new[] { "Frame", "Wattle walls", "Thatch roof" },
+                    // Hen coop: Frame, Wattle walls, Thatch roof (a little less than a lean-to, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 5u) },
+                        new[] { (Item.Stick, 4u), (Item.Fiber, 4u) },
+                        new[] { (Item.Fiber, 6u) },
+                    },
+                },
+            },
+                // A stone-ringed hearth (D-286, Justin): an outdoor hearth builders can work beside through winter
+                // nights. A fire lit on it warms out to Fires.StoneRingWarmthRadius instead of the campfire's 5 m,
+                // and burns longer like the raised hearth. Wild like the campfire; modest stone cost.
+            new StructureDef
+            {
+                // 19: its StructureKind position, after HenCoop = 18 (a SpacetimeDB enum takes no explicit values).
+                Kind = 19,
+                Shape = new StructureShape
+                {
+                    Name = "Stone-ringed hearth",
+                    Model = "StoneHearth",
+                    Wild = true,
+                    Category = "Fire",
+                    Round = true, Radius = 0.55f, Solid = true,
+                    Clearance = 0.7f,
+                    Hearth = true,
+                    // Survival's constant (9 m, so a winter-night builder is warm out to about 8 m); Justin tunes it there.
+                    HeatRadius = Fires.StoneRingWarmthRadius,
+                    Stages = new[] { "Ring stones", "Kerb" },
+                    // Stone-ringed hearth: Ring stones, Kerb
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 5u) },
+                        new[] { (Item.Stone, 3u) },
+                    },
+                },
+            },
+                // A sundial (building-19, Justin): a flat stone and a stick. Everyone in its claim, and its
+                // town, sees the time of day on their screen while it stands. Claim-only: it only counts there.
+            new StructureDef
+            {
+                // 20: its StructureKind position for now (the plan is 23 once the devices 20-22 land; the
+                // startup check will catch a mismatch).
+                Kind = 20,
+                Shape = new StructureShape
+                {
+                    Name = "Sundial",
+                    Model = "Sundial",
+                    Category = "Crafting",
+                    Sundial = true,
+                    FixedYaw = true,
+                    Round = true, Radius = 0.4f, Solid = true,
+                    Clearance = 0.8f,
+                    Stages = new[] { "Plinth", "Dial" },
+                    // Sundial: Plinth, Dial (a flat stone and a stick for the gnomon, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 3u) },
+                        new[] { (Item.Stone, 1u), (Item.Stick, 1u) },
+                    },
+                },
+            },
+                // A wooden chest (building-22): a lidded box of split boards, twice a basket's room. Claim-only like the
+                // rest of the made things; any kind with stacks opens like the basket (BuildingStorage.cs).
+            new StructureDef
+            {
+                // 24: its StructureKind position, after Crafting's devices 21 to 23 (a SpacetimeDB enum takes no explicit values).
+                Kind = 24,
+                Shape = new StructureShape
+                {
+                    Name = "Wooden chest",
+                    Model = "Chest",
+                    Category = "Storage",
+                    Round = true, Radius = 0.45f, Solid = true,
+                    Clearance = 0.9f,
+                    StoreStacks = ChestStacks,
+                    Stages = new[] { "Frame", "Boards and lid" },
+                    // Wooden chest: Frame, Boards and lid
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                    },
+                },
+            },
+                // A straw bed (building-23): a pole frame and a straw tick, wide enough for two. A sturdier rest spot than
+                // the woven mat and nothing more (resting is just a pose, Justin): same waking-place and lie-down rules,
+                // by data (RestSpots.cs). Claim-only.
+            new StructureDef
+            {
+                // 25: its StructureKind position, after Chest = 24 (a SpacetimeDB enum takes no explicit values).
+                Kind = 25,
+                Shape = new StructureShape
+                {
+                    Name = "Straw bed",
+                    Model = "Bed",
+                    Category = "Shelter",
+                    HalfWidth = 0.65f, HalfDepth = 1.0f,
+                    Clearance = 1.4f,
+                    Stages = new[] { "Frame", "Straw tick" },
+                    // Straw bed: Frame, Straw tick (more than the mat's 8 fiber, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 8u), (Item.Cordage, 2u) },
+                        new[] { (Item.Fiber, 12u) },
+                    },
+                },
+            },
+        };
+    }
+}

@@ -48,7 +48,7 @@ public static partial class Module
     }
 
     [SpacetimeDB.View(Accessor = "MyChat", Public = true)]
-    public static List<ChatHeard> MyChat(ViewContext ctx) => ctx.Db.ChatHeard.ByRecipient.Filter(ctx.Sender).ToList();
+    public static List<ChatHeard> MyChat(ViewContext ctx) => ctx.Db.ChatHeard.ByRecipient.Filter(Me(ctx)).ToList();
 
     // Stores one row per online player (the speaker included) within range of (x, z).
     static void Deliver(ReducerContext ctx, uint senderId, string senderName, string text, float x, float z, float range)
@@ -112,7 +112,7 @@ public static partial class Module
     public static void SendChat(ReducerContext ctx, string text)
     {
         InitChat(ctx);
-        text = text.Trim();
+        text = Social.StripControl(text).Trim();
         if (text.Length == 0) return;
         if (text.Length > Social.ChatMaxLength) text = text[..Social.ChatMaxLength];
         // claims-6: "/me" on its own says nothing; "/ME waves" is stored as "/me waves".
@@ -140,6 +140,13 @@ public static partial class Module
         if (state is null) ctx.Db.ChatState.Insert(next);
         else ctx.Db.ChatState.PlayerId.Update(next);
 
+        // ui-38: "/g hi" goes to your group only, wherever they are (Groups.cs).
+        if (Groups.IsGroupLine(text))
+        {
+            string body = Groups.GroupBody(text);
+            if (body.Length > 0) SayToGroup(ctx, player, "/g " + body);
+            return;
+        }
         Deliver(ctx, player.PlayerId, player.Name, text, pos.X, pos.Z, Social.RangeOf(Social.VoiceOf(text)));
     }
 

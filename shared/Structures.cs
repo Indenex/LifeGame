@@ -2,12 +2,24 @@
 // placement checks, "am I inside?" and what each stage costs agree on both sides.
 // Keep this file free of engine and SpacetimeDB types.
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
     public sealed class StructureShape
     {
         public string Name = "";
+        // May stand outside a claim (building-13, Justin): basic survival only. Everything else has
+        // to be built inside a claim the builder belongs to. Outside a claim, everything weathers fast.
+        public bool Wild;
+        // Building size relative to the design size the model and the numbers below are written in
+        // (building-14, Justin: houses felt too small). Applied once when the shapes are made, so
+        // every footprint, clearance and doorway number is already the real, scaled size; the model
+        // is drawn at the design size and scaled by this at the view. 1 for everything but homes.
+        public float Scale = 1f;
+        // Where the build menu files it: Shelter, Storage, Crafting, Fire, "Fences and gates" or Claims (ui-20).
+        public string Category = "Shelter";
         // Footprint in the structure's own frame: +Z is the open front or door.
         public bool Round;
         public float HalfWidth, HalfDepth, Radius;
@@ -32,271 +44,95 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // A sundial: a standing one tells the time of day to everyone in its claim and town (building-19).
+        public bool Sundial;
+        // Always laid out facing world north (yaw 0), whatever way the player turns the ghost: a sundial's marks
+        // only read true that way.
+        public bool FixedYaw;
+        // A fire lit within reach goes onto it and its fuel burns longer (the raised and stone-ringed hearths).
+        public bool Hearth;
+        // How far a fire on this hearth warms, in meters; 0 means the plain fire's Fires.WarmthRadius.
+        public float HeatRadius;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
-        public bool Kiln, Jar;
+        public bool Kiln, Jar, Trough;
+        // Extra metres of ground cleared of grass and trees round the footprint, beyond the usual
+        // margin: a low basin needs room so tall grass doesn't hide its rim (ceramics-13).
+        public float ClearExtra;
+        // A round walled hut: walls on a circle of HutWallRadius with a doorway on +Z (the clay hut).
+        public bool Hut;
+        // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
+        public string Model = "";
+        // For a structure animals use (the hen coop): where they walk to go in, and where they settle
+        // inside, as offsets in the structure's own frame (+Z is its front). Scaled with the shape.
+        public (float X, float Z) Entry, Roost;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
         // mud-brick house and the log cabin share the walls, door and fire-warms-the-room rule.
         public bool Room;
+        // Sun-dried brick walls (a Daub-work stage) and, if TileRoof, a roof of fired clay tiles, not thatch.
+        public bool BrickWalls, TileRoof;
         public string[] Stages = Array.Empty<string>();
+        // What each stage takes, in the same order as Stages (the server builds each stage's needs from
+        // this; the client shows it before you lay out). Fiber stands in for thatch; the hut's walls are daub.
+        public (Item Item, uint Count)[][] Costs = Array.Empty<(Item Item, uint Count)[]>();
     }
 
-    public static class Structures
+    // One building kind: its fixed id and its shape (which also carries the stage costs).
+    public sealed class StructureDef
     {
-        // Indexed by StructureKind; append new kinds at the end, in the same order.
-        public static readonly StructureShape[] Shapes =
-        {
-            new StructureShape
-            {
-                Name = "Lean-to",
-                HalfWidth = 1.5f, HalfDepth = 1.25f,
-                Clearance = 1.9f,
-                RainCover = 0.6f, Warmth = 0.2f,
-                Stages = new[] { "Frame", "Lashing", "Ribs", "Thatch" },
-            },
-            new StructureShape
-            {
-                Name = "Clay hut",
-                Round = true, Radius = 1.9f,
-                Clearance = 2.2f,
-                RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
-                DoorwayZ = 1.7f,
-                SmokeY = 2.9f,
-                Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
-            },
-            // A land claim's marker post (Claims.cs makes the claim when it is finished).
-            new StructureShape
-            {
-                Name = "Claim marker",
-                Round = true, Radius = 0.5f,
-                Clearance = 1.2f,
-                Solid = true,
-                Stages = new[] { "Marker post" },
-            },
-            new StructureShape
-            {
-                // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
-                Kiln = true,
-                Name = "Updraft kiln",
-                Round = true, Radius = 0.85f,
-                Clearance = 1.2f,
-                Solid = true,
-                Stages = new[] { "Base", "Dome" },
-            },
-            new StructureShape
-            {
-                Name = "Storage basket",
-                Round = true, Radius = 0.35f,
-                Clearance = 0.6f,
-                Solid = true,
-                StoreStacks = BasketStacks,
-                Stages = new[] { "Weave" },
-            },
-            // A mud-brick house: a bigger room with a hearth. A fire lit inside warms
-            // the whole room, and it weathers slower than wattle and daub.
-            new StructureShape
-            {
-                Name = "Mud-brick house",
-                HalfWidth = 2.4f, HalfDepth = 2.0f,
-                Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
-                DoorwayZ = 1.8f,
-                Room = true,
-                SmokeY = 3.3f,
-                Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
-            },
-            // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
-            // Outside a claim it weathers like everything else.
-            new StructureShape
-            {
-                Name = "Storage jar",
-                Jar = true,
-                Round = true, Radius = 0.32f,
-                Clearance = 0.6f,
-                Solid = true,
-                // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
-                StoreStacks = JarStacksMax,
-                Stages = new[] { "Set the jar" },
-            },
-            // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
-            // sheep and mark out a yard (building-8).
-            new StructureShape
-            {
-                Name = "Fence",
-                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
-                Clearance = 0.25f,
-                Fence = true,
-                Stages = new[] { "Posts", "Rails" },
-            },
-            // A fence length with a woven hurdle gate in it that opens and bars like a door.
-            new StructureShape
-            {
-                Name = "Gate",
-                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
-                Clearance = 0.25f,
-                Fence = true, Gate = true,
-                Stages = new[] { "Posts", "Gate" },
-            },
-            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
-            new StructureShape
-            {
-                Name = "Crafting table",
-                HalfWidth = 0.8f, HalfDepth = 0.45f,
-                Clearance = 1.0f,
-                Station = StationKind.Table,
-                Stages = new[] { "Table" },
-            },
-            // A raised hearth inside a hut or house: a ring of stones with a clay surround.
-            // A fire on it burns longer per stick and warms a whole hut (building-9, D-132).
-            new StructureShape
-            {
-                Name = "Raised hearth",
-                Round = true, Radius = HearthRadius, Solid = true,
-                Clearance = 0.6f,
-                Indoor = true,
-                Stages = new[] { "Stone ring", "Clay surround" },
-            },
-            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
-            new StructureShape
-            {
-                Name = "Spindle station",
-                HalfWidth = 0.6f, HalfDepth = 0.4f,
-                Clearance = 1.0f,
-                Station = StationKind.Spindle,
-                Stages = new[] { "Distaff stand" },
-            },
-            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
-            new StructureShape
-            {
-                Name = "Leather drying rack",
-                HalfWidth = 1.2f, HalfDepth = 0.35f,
-                Clearance = 1.0f,
-                Station = StationKind.DryingRack,
-                Stages = new[] { "Posts and bar" },
-            },
-            // Ceramics' potter's bench (ceramics-8, D-112): pots are shaped at it, inside a claim.
-            new StructureShape
-            {
-                Name = "Potter's bench",
-                // Modeling's bench (wedging stone, stool, pots) is about 1.3 x 1.0 m, +Z where the potter sits.
-                HalfWidth = 0.65f, HalfDepth = 0.5f,
-                Clearance = 1.0f,
-                Station = StationKind.PottersBench,
-                Stages = new[] { "Bench" },
-            },
-            // A log cabin (building-10, D-151): the forest's way to the same home as the
-            // mud-brick house, with the same room, shelter and weathering, built of logs.
-            new StructureShape
-            {
-                Name = "Log cabin",
-                HalfWidth = 2.4f, HalfDepth = 2.0f,
-                Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
-                DoorwayZ = 1.8f,
-                Room = true,
-                SmokeY = 3.3f,
-                Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
-            },
-        };
+        public int Kind;
+        public StructureShape Shape = new();
+    }
 
-        // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
-        // for thatch; the hut's walls are daub (clean clay mixed with fiber, from Ceramics).
-        // The server builds each stage's needs from this; the client shows it before you lay out.
-        public static readonly (Item Item, uint Count)[][][] StageCosts =
+    public static partial class Structures
+    {
+        // Every kind, keyed by its fixed id. The defs live in one file per lane (shared/structures/);
+        // an id is never renumbered or reused, and a duplicate, or a shape whose stages and costs don't
+        // line up, fails the first time this class loads. A kind's id is its StructureKind enum ordinal
+        // (the SpacetimeDB module rejects explicit enum values), so new kinds are appended to the enum
+        // and the def says the next number; there are no per-lane id ranges.
+        static readonly Dictionary<int, StructureDef> defs = BuildDefs();
+        // Every registered kind, in id order.
+        public static readonly int[] Kinds = defs.Keys.OrderBy(k => k).ToArray();
+
+        static Dictionary<int, StructureDef> BuildDefs()
         {
-            // Lean-to: Frame, Lashing, Ribs, Thatch
-            new[]
+            var all = new Dictionary<int, StructureDef>();
+            foreach (var def in CoreDefs().Concat(HouseDefs()).Concat(CraftingDefs()).Concat(AnimalsDefs()).Concat(ClaimsDefs()).Concat(CeramicsDefs()))
             {
-                new[] { (Item.Stick, 4u) },
-                new[] { (Item.Fiber, 3u) },
-                new[] { (Item.Stick, 6u) },
-                new[] { (Item.Fiber, 8u) },
-            },
-            // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
-            new[]
-            {
-                new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
-                new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
-                new[] { (Item.Daub, 12u) },
-                new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
-            },
-            // Claim marker: one stage, costs set by Claims in shared/Social.cs
-            new[]
-            {
-                new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
-            },
-            // Updraft kiln (Ceramics): Base, Dome
-            new[]
-            {
-                new[] { (Item.Brick, 4u) },
-                new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
-            },
-            // Storage basket: Weave
-            new[]
-            {
-                new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
-            },
-            // Brick house: Footings, Brick walls, Rafters, Thatch
-            new[]
-            {
-                new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
-                new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
-                new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
-                new[] { (Item.Fiber, 14u) },
-            },
-            // Storage jar (Ceramics): set down one kiln-fired jar
-            new[]
-            {
-                new[] { (Item.StorageJar, 1u) },
-            },
-            // Fence: Posts, Rails
-            new[]
-            {
-                new[] { (Item.Stick, 2u) },
-                new[] { (Item.Stick, 2u), (Item.Fiber, 1u) },
-            },
-            // Gate: Posts, Gate (a hurdle like a hut door)
-            new[]
-            {
-                new[] { (Item.Stick, 2u) },
-                new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
-            },
-            // Crafting table (D-112): Table
-            new[]
-            {
-                new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
-            },
-            // Raised hearth: Stone ring, Clay surround
-            new[]
-            {
-                new[] { (Item.Stone, 4u) },
-                new[] { (Item.Daub, 3u) },
-            },
-            // Spindle station: your drop spindle becomes part of it (D-137)
-            new[]
-            {
-                new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
-            },
-            // Leather drying rack
-            new[]
-            {
-                new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
-            },
-            // Potter's bench (Ceramics, D-127): a split log on two stones
-            new[]
-            {
-                new[] { (Item.Log, 1u), (Item.Stone, 2u) },
-            },
-            // Log cabin: Sill, Log walls, Rafters, Thatch (D-151)
-            new[]
-            {
-                new[] { (Item.Stone, 4u), (Item.Log, 4u) },
-                new[] { (Item.Log, 16u) },
-                new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
-                new[] { (Item.Fiber, 14u) },
-            },
-        };
+                if (!all.TryAdd(def.Kind, def))
+                    throw new InvalidOperationException($"Structure kind {def.Kind} is defined twice");
+                if (def.Shape.Costs.Length != def.Shape.Stages.Length)
+                    throw new InvalidOperationException($"{def.Shape.Name}: {def.Shape.Stages.Length} stages but {def.Shape.Costs.Length} costs");
+                Scale(def.Shape);
+            }
+            return all;
+        }
+
+        public static bool Exists(int kind) => defs.ContainsKey(kind);
+
+        // What each stage takes, in order: the server builds each stage's needs from this and the
+        // client shows it before you lay out. Fiber stands in for thatch; the hut's walls are daub.
+        public static (Item Item, uint Count)[][] Costs(int kind) => defs[kind].Shape.Costs;
+
+
+        // Multiplies a shape's lengths by its Scale, once, so nothing else has to know about it.
+        static void Scale(StructureShape shape)
+        {
+            float k = shape.Scale;
+            if (k == 1f) return;
+            shape.HalfWidth *= k;
+            shape.HalfDepth *= k;
+            shape.Radius *= k;
+            shape.Clearance *= k;
+            shape.DoorwayZ *= k;
+            shape.SmokeY *= k;
+            shape.Entry = (shape.Entry.X * k, shape.Entry.Z * k);
+            shape.Roost = (shape.Roost.X * k, shape.Roost.Z * k);
+        }
+
+        public static float ScaleOf(int kind) => Shape(kind).Scale;
 
         // How far from the player a footprint may be laid out.
         public const float PlaceRange = 6f;
@@ -306,6 +142,16 @@ namespace LifeGame.Shared
         public const int MaxOpenSites = 3;
         // A builder may work on a structure from this far outside its footprint.
         public const float WorkReach = 2.2f;
+
+        // Litres a trough holds: its own quality sets the size, quicker at first then
+        // slowly (D-075), as a jar's stacks do.
+        public static int TroughLitres(byte quality)
+        {
+            float t = Math.Clamp((int)quality, 1, 100) / 100f;
+            float curve = 1f - (1f - t) * (1f - t);
+            return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
+        }
+
         // Standing water; matches the client's Look.WaterLevel.
         public const float WaterLevel = -1.0f;
 
@@ -317,6 +163,8 @@ namespace LifeGame.Shared
         public const int DoorSticks = 4, DoorFiber = 2;
         // Stacks a storage basket holds.
         public const int BasketStacks = 12;
+        // A wooden chest holds twice a basket (start low, grow slowly, D-075); one raisable constant (D-197).
+        public const int ChestStacks = 24;
         // Stacks a storage jar holds (ceramics-6, D-093): 4 for a poor jar up to 8 for
         // a fine one. The first 15% of quality gives 40% of the gain, so an early,
         // better-made jar is quickly worth it; then it climbs slowly (D-075).
@@ -339,7 +187,16 @@ namespace LifeGame.Shared
         // a shape may still set its own WeatherAfter, but none does now.
         public const double WeatherAfterHours = 48, WeatherForHours = 6;
 
+        // Whether this kind may be built outside a claim (building-13).
+        public static bool IsWild(int kind) => Shape(kind).Wild;
+
         public static bool IsRoom(int kind) => Shape(kind).Room;
+
+        // The real (scaled) wall numbers of a hut or a room-shaped home.
+        public static float HouseWallXFor(int kind) => HouseWallX * ScaleOf(kind);
+        public static float HouseWallZFor(int kind) => HouseWallZ * ScaleOf(kind);
+        public static float HutWallRadiusFor(int kind) => HutWallRadius * ScaleOf(kind);
+        public static float HouseDoorHalfWidthFor(int kind) => HouseDoorHalfWidth * ScaleOf(kind);
 
         // Whether a finished building of this kind takes a door, and where its doorway is.
         public static bool HasDoorway(int kind) => Shape(kind).DoorwayZ > 0;
@@ -364,6 +221,7 @@ namespace LifeGame.Shared
 
         public static bool IsFence(int kind) => Shape(kind).Fence;
         public static bool IsIndoor(int kind) => Shape(kind).Indoor;
+        public static bool IsHearth(int kind) => Shape(kind).Hearth;
         // Huts and houses (the kinds with a doorway): where indoor things like a hearth may go.
         public static bool IsHome(int kind) => HasDoorway(kind);
         public static bool IsGate(int kind) => Shape(kind).Gate;
@@ -371,25 +229,36 @@ namespace LifeGame.Shared
         public static string StageProcess(int kind, int stage) => kind switch
         {
             // Lean-to: frame, lashing and ribs are all framing; thatch is roofing.
-            0 => stage >= 3 ? RoofProcess : FrameProcess,
+            _ when Shape(kind).Model == "LeanTo" => stage >= 3 ? RoofProcess : FrameProcess,
             _ when Shape(kind).Kiln => ClayRules.KilnProcess,
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
-            2 => Social.MarkProcess,
-            4 => WeaveProcess,
-            // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
-            5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
+            _ when Shape(kind).Model == "Basket" => WeaveProcess,
+            // Wooden chest: the frame and the boards and lid are all carpentry, which the journal files as framing.
+            _ when Shape(kind).Model == "Chest" => FrameProcess,
+            // Straw bed: the frame is framing, the straw tick is weaving.
+            _ when Shape(kind).Model == "Bed" => stage == 0 ? FrameProcess : WeaveProcess,
+            // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
+            _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
+            // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
+            _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
             _ when Shape(kind).Room => stage >= 3 ? RoofProcess : FrameProcess,
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
             // Hearth: laying the stone ring is framing; the clay surround is daub work.
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
+            // A stone-ringed hearth: ring and kerb are both stone laid up like a frame.
+            _ when Shape(kind).Hearth => FrameProcess,
+            // A sundial: plinth and dial are both cut and set stone.
+            _ when Shape(kind).Sundial => FrameProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             // Each crafting station reports its own id, so the journal knows it is built.
             _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
-        public static StructureShape Shape(int kind) => Shapes[Math.Clamp(kind, 0, Shapes.Length - 1)];
+        // An unknown kind reads as the first one, as before.
+        public static StructureShape Shape(int kind) => (defs.TryGetValue(kind, out var def) ? def : defs[0]).Shape;
 
         // A world point in the structure's own frame (yaw in radians about +Y).
         public static (float x, float z) ToLocal(float sx, float sz, float yaw, float px, float pz)
@@ -451,9 +320,9 @@ namespace LifeGame.Shared
         {
             var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
             var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
-            if (kind == 1)
+            if (Shape(kind).Hut)
             {
-                float r2 = HutWallRadius * HutWallRadius;
+                float wall = HutWallRadiusFor(kind), r2 = wall * wall;
                 if (ax * ax + az * az < r2 == bx * bx + bz * bz < r2) return false;
                 // Through the doorway: the crossing is within the doorway's angle around +Z.
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
@@ -461,12 +330,38 @@ namespace LifeGame.Shared
             }
             if (Shape(kind).Room)
             {
-                bool inA = MathF.Abs(ax) < HouseWallX && MathF.Abs(az) < HouseWallZ;
-                bool inB = MathF.Abs(bx) < HouseWallX && MathF.Abs(bz) < HouseWallZ;
+                float wx = HouseWallXFor(kind), wz = HouseWallZFor(kind);
+                bool inA = MathF.Abs(ax) < wx && MathF.Abs(az) < wz;
+                bool inB = MathF.Abs(bx) < wx && MathF.Abs(bz) < wz;
                 if (inA == inB) return false;
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
-                return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidth;
+                return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidthFor(kind);
             }
+            return false;
+        }
+
+        // Whether a step crosses a lean-to's two sides or its back (the front is open).
+        // Other kinds have no such walls.
+        public static bool StepCrossesLeanTo(int kind, float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ)
+        {
+            var shape = Shape(kind);
+            if (shape.Round || shape.Fence || shape.Room || shape.Model != "LeanTo") return false;
+            float wx = shape.HalfWidth, wz = shape.HalfDepth;
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            // The back wall at z = -wz.
+            if ((az > -wz) != (bz > -wz))
+            {
+                float x = ax + (bx - ax) * ((-wz - az) / (bz - az));
+                if (MathF.Abs(x) <= wx) return true;
+            }
+            // The two sides at x = +-wx.
+            foreach (float side in new[] { -wx, wx })
+                if ((ax > side) != (bx > side))
+                {
+                    float z = az + (bz - az) * ((side - ax) / (bx - ax));
+                    if (z >= -wz && z <= wz) return true;
+                }
             return false;
         }
 

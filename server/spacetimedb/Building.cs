@@ -1,7 +1,8 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// Order matches Structures.Shapes in shared/Structures.cs; append new kinds at the end.
+// Each value's position is the kind's id in shared/structures/ (its StructureDef); append only, never reorder,
+// renumber or reuse one. Init checks that the registered defs match this list exactly.
 [SpacetimeDB.Type]
 public enum StructureKind
 {
@@ -21,6 +22,21 @@ public enum StructureKind
     DryingRack,
     PottersBench,
     LogCabin,
+    RepairTable,
+    TiledHouse,
+    ClayTrough,
+    HenCoop,
+    StoneHearth,
+    Sundial,
+    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. 21, 22, 23 (an enum cannot carry
+    // explicit values, so a kind's number is its position here: after HenCoop 18, StoneHearth 19, Sundial 20).
+    SettlingTub,
+    CrushingBlock,
+    TemperingTrough,
+    // House building: a wooden chest, after Crafting's devices (24; the enum position is the kind number).
+    Chest,
+    // House building: a straw bed (25), a rest spot by data (RestSpots.cs).
+    Bed,
 }
 
 // One material a structure's current stage still needs.
@@ -96,7 +112,7 @@ public static partial class Module
     }
 
     // What each stage takes, by kind and stage: shared/Structures.cs, so the client can show it.
-    static (Item Item, uint Count)[][][] StageCosts => Structures.StageCosts;
+    static (Item Item, uint Count)[][] StageCosts(int kind) => Structures.Costs(kind);
 
     // Lays out a footprint. The structure exists from here on, at stage 0 with nothing added.
     [SpacetimeDB.Reducer]
@@ -105,15 +121,16 @@ public static partial class Module
         if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(yaw))
             throw new Exception("Invalid position");
         int k = (int)kind;
-        if (k < 0 || k >= StageCosts.Length || k >= Structures.Shapes.Length)
+        if (!Structures.Exists(k))
             throw new Exception("Unknown structure");
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.PlaceStructure, 0.4, "One moment, you are laying out too quickly");
         var pos = RequirePos(ctx, player);
         float dx = x - pos.X, dz = z - pos.Z;
         if (dx * dx + dz * dz > Structures.PlaceRange * Structures.PlaceRange)
             throw new Exception("Too far away to lay out");
 
-        int open = ctx.Db.Structure.Owner.Filter(ctx.Sender).Count(s => !s.Complete);
+        int open = ctx.Db.Structure.Owner.Filter(Me(ctx)).Count(s => !s.Complete);
         if (open >= Structures.MaxOpenSites)
             throw new Exception("Finish one of your building sites first");
 
@@ -123,10 +140,11 @@ public static partial class Module
 
         if (Structures.IsIndoor(k) && HomeAround(ctx, x, z, Structures.HearthWallGap) is null)
             throw new Exception("A hearth goes inside a finished hut or house");
+        CheckClaimOnly(ctx, k, x, z);
         CheckClaimAccess(ctx, x, z);
         CheckStructureSite(ctx, kind, x, z);
         CheckStationSite(ctx, kind, x, z);
-        yaw = MathF.IEEERemainder(yaw, MathF.Tau);
+        yaw = Structures.Shape(k).FixedYaw ? 0f : MathF.IEEERemainder(yaw, MathF.Tau);
         if (Structures.GroundProblem(k, x, z, yaw, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
 
@@ -139,7 +157,7 @@ public static partial class Module
             Yaw = yaw,
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             Stage = 0,
             Needs = NeedsFor(k, 0),
             Complete = false,
@@ -147,6 +165,18 @@ public static partial class Module
             PlacedAt = ctx.Timestamp,
         });
         TouchStructure(ctx, placed.Id);
+    }
+
+    // Only basic survival buildings may stand outside a claim (building-13, Justin): anything else
+    // has to be inside a claim the builder belongs to, so cities grow where players cooperate.
+    static void CheckClaimOnly(ReducerContext ctx, int kind, float x, float z)
+    {
+        if (Structures.IsWild(kind)) return;
+        string what = Structures.Shape(kind).Name.ToLowerInvariant();
+        if (ClaimAt(ctx, x, z) is not { } claim)
+            throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
+        if (!HasClaimRights(ctx, claim, Me(ctx)))
+            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.
@@ -175,7 +205,12 @@ public static partial class Module
                 .Select(n => $"{n.Need - n.Have} {Items.Def((Item)n.Item).Count(n.Need - n.Have).ToLowerInvariant()}")));
 
         var need = s.Needs[slot];
+        // A jar or trough being set down keeps who made it (Ceramics, StructureMarks.cs).
+        bool marked = Marks.Marked((Item)need.Item);
+        uint markWear = 0, markMaker = 0;
+        if (marked) PeekVessel(ctx, (Item)need.Item, out markWear, out markMaker);
         float quality = Take(ctx, (Item)need.Item, 1);
+        if (marked) RememberStructureMark(ctx, s.Id, MarkFromStack(markWear, markMaker));
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
         var p = ProgressOf(ctx, s.Id);
@@ -205,8 +240,10 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
+        var caller = RequirePlayer(ctx);
+        RequirePace(ctx, caller.PlayerId, Pace.Dismantle, 0.3, "One moment, you are taking things down too quickly");
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
-        bool allowed = s.Owner == ctx.Sender;
+        bool allowed = s.Owner == Me(ctx);
         if (!allowed) CanClearStructure(ctx, s, ref allowed);
         if (!allowed)
             throw new Exception("Only whoever laid it out, or the land's owner, can take it down");
@@ -216,7 +253,7 @@ public static partial class Module
             throw new Exception("Out of reach");
 
         var refund = new List<Item>();
-        var costs = StageCosts[(int)s.Kind];
+        var costs = StageCosts((int)s.Kind);
         for (int stage = 0; stage < s.Stage && stage < costs.Length; stage++)
             foreach (var (item, count) in costs[stage])
                 for (uint i = 0; i < count; i++) refund.Add(item);
@@ -293,7 +330,7 @@ public static partial class Module
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (shape.Room && FireInside(ctx, s)) warmth = 1f;
-            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
+            if (shape.Hut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }
@@ -317,12 +354,22 @@ public static partial class Module
         int cx = World.ChunkOf(x), cz = World.ChunkOf(z);
         for (int i = cx - 1; i <= cx + 1; i++)
             for (int j = cz - 1; j <= cz + 1; j++)
-                foreach (var s in ctx.Db.Structure.ByChunk.Filter((i, j)))
-                    yield return s;
+            {
+                if (!AnimalTickScope)
+                {
+                    foreach (var s in ctx.Db.Structure.ByChunk.Filter((i, j)))
+                        yield return s;
+                    continue;
+                }
+                // During the animal tick every animal asks about the same few chunks: read each once.
+                if (!AnimalScopedStructures.TryGetValue((i, j), out var here))
+                    AnimalScopedStructures[(i, j)] = here = ctx.Db.Structure.ByChunk.Filter((i, j)).ToList();
+                foreach (var s in here) yield return s;
+            }
     }
 
     static List<MaterialNeed> NeedsFor(int kind, int stage) =>
-        StageCosts[kind][stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
+        StageCosts(kind)[stage].Select(c => new MaterialNeed { Item = (ushort)c.Item, Have = 0, Need = c.Count }).ToList();
 
     // A stage is done: everyone who helped with it practices that building skill,
     // and the work's quality (materials, capped by each builder's skill) is folded in.
@@ -342,7 +389,7 @@ public static partial class Module
         byte stageQuality = p.StageHelpers.Count > 0 ? (byte)Math.Clamp(MathF.Round(sum / p.StageHelpers.Count), 1, 100) : Items.RawQuality;
         byte overall = (byte)Math.Clamp(MathF.Round((p.Quality * s.Stage + stageQuality) / (float)(s.Stage + 1)), 1, 100);
 
-        int stages = StageCosts[(int)s.Kind].Length;
+        int stages = StageCosts((int)s.Kind).Length;
         byte next = (byte)(s.Stage + 1);
         p = p with { Quality = overall, StageQualitySum = 0, StageItems = 0, StageHelpers = new List<uint>() };
         return next >= stages
@@ -371,12 +418,12 @@ public static partial class Module
     static bool RecordBuilder(ReducerContext ctx, ulong structureId)
     {
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId))
-            if (row.Builder == ctx.Sender)
+            if (row.Builder == Me(ctx))
             {
                 ctx.Db.StructureBuilder.Id.Update(row with { Added = row.Added + 1 });
                 return false;
             }
-        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = ctx.Sender, Added = 1 });
+        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = Me(ctx), Added = 1 });
         return true;
     }
 }

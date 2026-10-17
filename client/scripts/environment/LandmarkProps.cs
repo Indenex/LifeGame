@@ -5,20 +5,19 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Builds the landmarks that shared/Landmarks.cs places (env-5): huge old trees,
-// rock outcrops and stream fords. Justin asked that no two look like copies of one
+// Builds the world features that shared/Features.cs places (env-5, env-10): huge old
+// trees, rock outcrops and stream fords, one builder per FeatureDef.Model. Justin asked that no two look like copies of one
 // another, so everything about each one comes from its own seed: the kind, size,
 // proportions, lean, layout, the stones and limbs lying around it, moss and wear.
 public static class LandmarkProps
 {
     // Instance lists Terrain fills for its MultiMeshes: transform, color, custom data.
     // Props with several shape variants (Modeling's PropMeshes) go into one batch per
-    // mesh and material. Blocks are the stones that stop a walker, for collision.
+    // mesh and material. The stones that stop a walker are LandmarkBlocks (shared).
     public sealed class Lists
     {
         public readonly List<(Transform3D, Color, Color)> Trunks = new(), Leafy = new(), Pines = new();
         public readonly Dictionary<(Mesh, Material), List<(Transform3D, Color, Color)>> Batches = new();
-        public readonly List<(float X, float Z, float R)> Blocks = new();
 
         public void Put(Mesh mesh, Material material, (Transform3D, Color, Color) item)
         {
@@ -27,6 +26,24 @@ public static class LandmarkProps
         }
     }
 
+    // Builds a feature standing on cell (x, z) at its trunk point `at`; heightAt gives
+    // the ground under anything it lays round about.
+    public delegate void Builder(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom);
+
+    // A feature's look: its builder, and for one that blocks with a trunk, how broad
+    // the trunk is as a multiple of an ordinary tree's.
+    public sealed record Prop(Builder Build, Func<int, int, float>? Girth = null);
+
+    static readonly Dictionary<string, Prop> Props = new()
+    {
+        ["landmark.giant_tree"] = new(GiantTree, GiantGirth),
+        ["landmark.outcrop"] = new(Outcrop),
+        ["landmark.ford"] = new(Ford),
+        ["landmark.fallen_giant"] = new(FallenGiant),
+    };
+
+    public static Prop For(FeatureDef feature) => Props[feature.Model];
+
     static int Pick(int x, int z, uint salt, int count) => Math.Min((int)(H(x, z, salt) * count), count - 1);
 
     static float H(int x, int z, uint salt) => Terrain.Hash01(x, z, 1000u + salt);
@@ -34,7 +51,7 @@ public static class LandmarkProps
 
     // How broad a giant tree's trunk is, as a multiple of an ordinary tree (collision
     // reads it too).
-    public static float GiantGirth(int x, int z) => Range(x, z, 2, 2.4f, 3.6f);
+    public static float GiantGirth(int x, int z) => Landmarks.GiantGirth(x, z);
 
     // A huge old tree standing alone in a glade: most are oaks with a broad,
     // lumpy crown of several lobes; some are ancient pines. Each has its own girth,
@@ -87,55 +104,68 @@ public static class LandmarkProps
             float a = H(x, z, 96) * Mathf.Tau, r = Range(x, z, 97, 3f, 6f);
             float px = at.X + Mathf.Cos(a) * r, pz = at.Z + Mathf.Sin(a) * r;
             var lying = new Basis(Vector3.Up, H(x, z, 98) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 99, 0.6f, 1.0f));
-            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(lying, new Vector3(px, heightAt(px, pz), pz)), Look.Bark.Darkened(0.2f), custom));
         }
+    }
+
+    // A huge old trunk lying across a glade (env-33): one of Modeling's giant logs (model-19),
+    // straight or broken in two, each with its own root plate torn up. Each has its
+    // own length, girth, direction and lie on the slope, its own rot (from fresh bark to
+    // a soft, moss-green hulk), ferns crowding along its sides and the odd stone.
+    public static void FallenGiant(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
+    {
+        int variant = Pick(x, z, 500, PropMeshes.FallenGiantLogVariants);
+        // Its direction, length and girth come from shared/LandmarkBlocks.cs, which the server's
+        // collision reads too (bugfix-49).
+        var shape = LandmarkBlocks.FallenGiantOf(x, z);
+        float yaw = shape.Yaw, length = shape.Length, girth = shape.Girth;
+        float rot = H(x, z, 504);
+        // Modeling's log lies along x, about 3 m long and 0.4 m thick at scale 1.
+        var axis = new Vector3(shape.AxisX, 0f, shape.AxisZ);
+        float half = shape.Half;
+        float h0 = heightAt(at.X - axis.X * half, at.Z - axis.Z * half), h1 = heightAt(at.X + axis.X * half, at.Z + axis.Z * half);
+        float pitch = Mathf.Atan2(h1 - h0, 2f * half);
+        var basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, pitch)
+            * Basis.FromScale(new Vector3(length, girth * Range(x, z, 505, 0.85f, 1.05f), girth));
+        var middle = new Vector3(at.X, (h0 + h1) * 0.5f - 0.12f * girth - 0.1f * rot, at.Z);
+        // Modeling's giant log paints its own bark, earth and moss, so the tint only darkens it a
+        // little, more on an old rotten one.
+        var tint = PropMeshes.GiantTint.Darkened(Range(x, z, 506, 0f, 0.12f) + rot * 0.08f);
+        into.Put(PropMeshes.FallenGiantLog(variant), Painted.Bark, (new Transform3D(basis, middle), tint, custom));
+
+        // It blocks the way along its whole length (LandmarkBlocks.Circles).
+        float radius = shape.Radius;
+
+        // Ferns crowd along its sides, more on an old rotten one.
+        var side = new Vector3(-axis.Z, 0f, axis.X);
+        int ferns = 4 + (int)(H(x, z, 510) * (4f + 5f * rot));
+        for (int k = 0; k < ferns; k++)
+        {
+            float t = Range(x, z, 520 + (uint)k, -0.9f, 0.9f) * half;
+            float off = (H(x, z, 540 + (uint)k) < 0.5f ? -1f : 1f) * (radius + Range(x, z, 560 + (uint)k, 0.2f, 1.1f));
+            var p = at + axis * t + side * off;
+            var fern = new Basis(Vector3.Up, H(x, z, 580 + (uint)k) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 600 + (uint)k, 1.6f, 2.6f));
+            into.Put(Undergrowth.FernOf(Pick(x + k, z, 625, Undergrowth.FernVariants)), Look.Grass, (new Transform3D(fern, p with { Y = heightAt(p.X, p.Z) }),
+                Look.Leaf.Lerp(Look.LeafLight, Range(x, z, 620 + (uint)k, 0f, 0.4f)), custom));
+        }
+
+        // A stone or two by one end.
+        foreach (var p in LandmarkBlocks.FallenGiantStones(x, z, at.X, at.Z))
+            Rock(p.SeedX, p.SeedZ, new Vector3(p.X, heightAt(p.X, p.Z), p.Z), p.Size, into, custom);
     }
 
     // A rock outcrop on the heath, in one of three kinds: a rounded cluster, a
     // ridge of stones running one way, or one great tilted slab with rubble.
     public static void Outcrop(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
-        int kind = (int)(H(x, z, 200) * 3f);
-        float dir = H(x, z, 201) * Mathf.Tau;
-        int count = kind switch { 0 => 4 + (int)(H(x, z, 202) * 4f), 1 => 3 + (int)(H(x, z, 202) * 4f), _ => 1 };
-        for (int k = 0; k < count; k++)
+        // Where each stone lies and how big it is comes from shared/LandmarkBlocks.cs, which the
+        // server's collision reads too (bugfix-49).
+        foreach (var p in LandmarkBlocks.Outcrop(x, z, at.X, at.Z))
         {
-            Vector3 offset;
-            float size;
-            if (kind == 1)
-            {
-                // A ridge: stones strung along a line, biggest in the middle.
-                float t = count == 1 ? 0f : k / (float)(count - 1) - 0.5f;
-                float along = t * Range(x, z, 203, 5f, 9f);
-                offset = new Vector3(Mathf.Cos(dir), 0, Mathf.Sin(dir)) * along + new Vector3(-Mathf.Sin(dir), 0, Mathf.Cos(dir)) * Range(x, z, 210 + (uint)k, -0.8f, 0.8f);
-                size = Range(x, z, 220 + (uint)k, 1.2f, 2.2f) * (1.3f - Mathf.Abs(t));
-            }
-            else
-            {
-                float a = k * Mathf.Tau / Math.Max(count, 1) + H(x, z, 230 + (uint)k) * 0.9f;
-                float r = k == 0 ? 0f : Range(x, z, 240 + (uint)k, 1.0f, 2.8f);
-                offset = new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r);
-                size = kind == 2 ? Range(x, z, 250, 3.0f, 4.0f) : k == 0 ? Range(x, z, 251, 2.2f, 3.2f) : Range(x, z, 260 + (uint)k, 1.1f, 2.3f);
-            }
-            float px = at.X + offset.X, pz = at.Z + offset.Z;
-            // The heart of a cluster and every slab is one of Modeling's layered
-            // outcrop shapes; the rest are boulders.
-            if (kind == 2 || (kind == 0 && k == 0))
-                Formation(x * 17 + k, z * 13, new Vector3(px, heightAt(px, pz), pz), size / 2.6f, into, custom, tipped: kind == 2);
-            else
-                Rock(x * 17 + k, z * 13, new Vector3(px, heightAt(px, pz), pz), size, into, custom);
-        }
-        if (kind == 2)
-        {
-            // Rubble broken off the slab.
-            int rubble = 2 + (int)(H(x, z, 270) * 4f);
-            for (int k = 0; k < rubble; k++)
-            {
-                float a = H(x, z, 271 + (uint)k) * Mathf.Tau, r = Range(x, z, 280 + (uint)k, 2.2f, 4f);
-                float px = at.X + Mathf.Cos(a) * r, pz = at.Z + Mathf.Sin(a) * r;
-                Rock(x * 7 + k, z * 5 + k, new Vector3(px, heightAt(px, pz), pz), Range(x, z, 290 + (uint)k, 0.3f, 0.9f), into, custom);
-            }
+            var pos = new Vector3(p.X, heightAt(p.X, p.Z), p.Z);
+            if (p.Kind == LandmarkBlocks.PieceKind.Formation) Formation(p.SeedX, p.SeedZ, pos, p.Size, into, custom, p.Tipped);
+            else Rock(p.SeedX, p.SeedZ, pos, p.Size, into, custom);
         }
     }
 
@@ -143,15 +173,14 @@ public static class LandmarkProps
     // colour, some of them mossy.
     static void Rock(int x, int z, Vector3 at, float size, Lists into, Color custom)
     {
-        var stretch = new Vector3(Range(x, z, 300, 0.7f, 1.35f), Range(x, z, 301, 0.55f, 1.2f), Range(x, z, 302, 0.7f, 1.35f));
+        var (sx, sy, sz) = LandmarkBlocks.RockStretch(x, z);
+        var stretch = new Vector3(sx, sy, sz);
         float tiltDir = H(x, z, 303) * Mathf.Tau, tilt = Range(x, z, 304, 0f, 0.3f);
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 305) * Mathf.Tau)
             * Basis.FromScale(stretch * size);
-        var color = Look.Rock.Darkened(Range(x, z, 306, 0f, 0.15f)).Lerp(Look.Moss, H(x, z, 307) < 0.4f ? Range(x, z, 308, 0.1f, 0.35f) : 0f);
-        into.Put(PropMeshes.Rock(Pick(x, z, 309, PropMeshes.RockVariants)), Look.RockSurface,
+        var color = Look.WorldRock.Darkened(Range(x, z, 306, 0f, 0.15f)).Lerp(Look.Moss, H(x, z, 307) < 0.4f ? Range(x, z, 308, 0.1f, 0.35f) : 0f);
+        into.Put(PropMeshes.Rock(Pick(x, z, 309, PropMeshes.RockVariants)), Painted.Rock,
             (new Transform3D(basis, at with { Y = at.Y - 0.18f * size * stretch.Y }), color, custom with { B = 1f }));
-        float radius = 0.4f * size * Mathf.Max(stretch.X, stretch.Z);
-        if (radius >= 0.2f) into.Blocks.Add((at.X, at.Z, radius));
     }
 
     // One layered rock formation (one of Modeling's six outcrop shapes, about 2.6 m
@@ -159,21 +188,22 @@ public static class LandmarkProps
     // lean up on one edge like a slab.
     static void Formation(int x, int z, Vector3 at, float scale, Lists into, Color custom, bool tipped)
     {
-        var stretch = new Vector3(Range(x, z, 310, 0.85f, 1.2f), Range(x, z, 311, 0.8f, 1.25f), Range(x, z, 312, 0.85f, 1.2f));
+        var (sx, sy, sz) = LandmarkBlocks.FormationStretch(x, z);
+        var stretch = new Vector3(sx, sy, sz);
         float tiltDir = H(x, z, 313) * Mathf.Tau, tilt = tipped ? Range(x, z, 314, 0.15f, 0.3f) : Range(x, z, 314, 0f, 0.1f);
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 315) * Mathf.Tau)
             * Basis.FromScale(stretch * scale);
-        var color = Look.Rock.Darkened(Range(x, z, 316, 0f, 0.12f));
-        into.Put(PropMeshes.Outcrop(Pick(x, z, 317, PropMeshes.OutcropVariants)), Look.RockSurface,
+        var color = Look.WorldRock.Darkened(Range(x, z, 316, 0f, 0.12f));
+        into.Put(PropMeshes.Outcrop(Pick(x, z, 317, PropMeshes.OutcropVariants)), Painted.Rock,
             (new Transform3D(basis, at with { Y = at.Y - 0.1f * scale }), color, custom with { B = 1f }));
-        into.Blocks.Add((at.X, at.Z, 1.25f * scale * Mathf.Max(stretch.X, stretch.Z)));
     }
 
     // Stepping stones across a stream, or on some crossings a fallen trunk laid
     // over the water instead. Stones vary in size and flatness, and a few are
     // missing, so each ford is its own.
-    public static void Ford(int x, int z, float top, Lists into, Color custom)
+    public static void Ford(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
+        float top = at.Y;
         int row = FloorDiv(z + 13, 40);
         if (Terrain.Hash01(row, 0, 1400u) < 0.3f)
         {
@@ -181,7 +211,7 @@ public static class LandmarkProps
             if (Land.StreamDistance(x, z) > Land.StreamDistance(x - 1, z) || Land.StreamDistance(x, z) > Land.StreamDistance(x + 1, z)) return;
             // Modeling's fallen log lies along x, centred on its origin, about 3 m long.
             var across = new Basis(Vector3.Up, Range(row, 1, 401, -0.25f, 0.25f)) * Basis.FromScale(new Vector3(Range(row, 1, 402, 1.7f, 2.1f), 1f, 1f));
-            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(across, new Vector3(x, World.WaterLevel - 0.05f, z + 0.3f)), Look.Bark.Darkened(0.18f), custom));
             return;
         }
@@ -190,8 +220,8 @@ public static class LandmarkProps
         var stretch = new Vector3(Range(x, z, 411, 1.5f, 2.7f), Range(x, z, 412, 1.0f, 1.6f), Range(x, z, 413, 1.5f, 2.7f));
         var basis = new Basis(Vector3.Up, H(x, z, 414) * Mathf.Tau) * Basis.FromScale(stretch);
         var pos = new Vector3(x + Range(x, z, 415, -0.25f, 0.25f), top, z + Range(x, z, 416, -0.3f, 0.3f));
-        var color = Look.Rock.Lightened(Range(x, z, 417, 0f, 0.08f)).Lerp(Look.Moss, H(x, z, 418) < 0.3f ? 0.25f : 0f);
-        into.Put(PropMeshes.RiverStone(Pick(x, z, 419, PropMeshes.RiverStoneVariants)), Look.RockSurface, (new Transform3D(basis, pos), color, custom with { B = 1f }));
+        var color = Look.WorldRock.Lightened(Range(x, z, 417, 0f, 0.08f)).Lerp(Look.Moss, H(x, z, 418) < 0.3f ? 0.25f : 0f);
+        into.Put(PropMeshes.RiverStone(Pick(x, z, 419, PropMeshes.RiverStoneVariants)), Painted.Rock, (new Transform3D(basis, pos), color, custom with { B = 1f }));
     }
 
     static int FloorDiv(int a, int b) => a >= 0 ? a / b : (a - b + 1) / b;

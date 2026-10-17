@@ -8,6 +8,12 @@ public static partial class Module
     [SpacetimeDB.Reducer(ReducerKind.Init)]
     public static void Init(ReducerContext ctx)
     {
+        // A mis-appended structure kind fails the first publish (CI load test) instead of breaking a world.
+        var enumKinds = Enum.GetValues<StructureKind>().Select(k => (int)k).OrderBy(k => k);
+        if (!enumKinds.SequenceEqual(Structures.Kinds))
+            throw new InvalidOperationException(
+                "StructureKind enum and the StructureDefs in shared/structures/ disagree: enum "
+                + string.Join(",", enumKinds) + " defs " + string.Join(",", Structures.Kinds));
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -36,65 +42,38 @@ public static partial class Module
         EnsureWorldClock(ctx);
         EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
-        if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
+        BackfillCharacter(ctx, ctx.Sender);
+        // A login with no character yet gets its first, named for now; it picks a real name
+        // and look at the creator. A login with characters waits at the menu, unless its
+        // character is still in the world from a connection that was lost.
+        if (!ctx.Db.Character.Login.Filter(ctx.Sender).Any())
         {
-            ctx.Db.Player.Identity.Update(existing with { Online = true });
-            if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
-                ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
-            SurvivalConnected(ctx, existing with { Online = true });
-            EnsureHealth(ctx, existing.PlayerId);
-            return;
+            var first = MakeCharacter(ctx, ctx.Sender, ctx.Sender, $"Wanderer-{ctx.Rng.Next(1000, 10000)}");
+            SetActive(ctx, ctx.Sender, first.Identity);
+            EnterWorld(ctx, first);
         }
-
-        var player = ctx.Db.Player.Insert(new Player
-        {
-            Identity = ctx.Sender,
-            PlayerId = 0,
-            Name = $"Wanderer-{ctx.Rng.Next(1000, 10000)}",
-            Online = true,
-        });
-
-        // New players wake up naked near the middle of the seeded area.
-        float x = (float)(ctx.Rng.NextDouble() * 16 - 8);
-        float z = (float)(ctx.Rng.NextDouble() * 16 - 8);
-        ctx.Db.PlayerPos.Insert(new PlayerPos
-        {
-            PlayerId = player.PlayerId,
-            X = x,
-            Z = z,
-            Heading = 0,
-            ChunkX = (short)World.ChunkOf(x),
-            ChunkZ = (short)World.ChunkOf(z),
-        });
-        ctx.Db.PlayerState.Insert(new PlayerState
-        {
-            PlayerId = player.PlayerId,
-            LastMoveAt = ctx.Timestamp,
-            LastActionAt = ctx.Timestamp,
-        });
-        SurvivalConnected(ctx, player);
-        EnsureHealth(ctx, player.PlayerId);
+        else if (ActivePlayer(ctx, ctx.Sender) is { Online: true } resumed)
+            EnterWorld(ctx, resumed);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]
     public static void PlayerDisconnected(ReducerContext ctx)
     {
-        if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
-        {
-            ctx.Db.Player.Identity.Update(player with { Online = false });
-            SurvivalDisconnected(ctx, player);
-            StanceDisconnected(ctx, player);
-        }
+        if (ActivePlayer(ctx, ctx.Sender) is { } player) LeaveWorld(ctx, player);
     }
 
     [SpacetimeDB.Reducer]
     public static void SetName(ReducerContext ctx, string name)
     {
-        name = name.Trim();
-        if (name.Length < 1 || name.Length > 24)
-            throw new Exception("Name must be 1 to 24 characters");
+        // The picker at first join and /name later (ui-31). The rules are shared (Names), so
+        // the picker's field says the same thing before asking; the reason is the error.
+        name = Names.Normalize(name);
+        if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.ChangeName, 1.0, "One moment before you change your name again");
+        RequireNameFree(ctx, name, player.PlayerId);
         ctx.Db.Player.Identity.Update(player with { Name = name });
+        if (ctx.Db.Character.Key.Find(player.Identity) is { } character) ctx.Db.Character.Key.Update(character with { Name = name });
     }
 
     // How much walking a player has banked (World.MoveAllowance). Private.
@@ -114,26 +93,44 @@ public static partial class Module
     {
         if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(heading))
             throw new Exception("Invalid position");
-        var player = RequirePlayer(ctx);
+        var player = RequirePlayerUnmetered(ctx);
         var state = ctx.Db.PlayerState.PlayerId.Find(player.PlayerId) ?? throw new Exception("No state");
         var pending = ctx.Db.MoveInput.PlayerId.Find(player.PlayerId);
         var pos = RequirePos(ctx, player);
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
-        float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
-        var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
-        float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
-        float dx = x - fromX, dz = z - fromZ;
-        float dist = MathF.Sqrt(dx * dx + dz * dz);
-        if (dist > allowed)
+        // An admin who is flying (/fly, admin-1) is exempt from the walking pace; nobody else is.
+        bool flyingNow = IsFlyingAdmin(ctx, player.PlayerId);
+        if (!flyingNow)
         {
-            x = fromX + dx / dist * allowed;
-            z = fromZ + dz / dist * allowed;
-            dist = allowed;
+            float speed = World.MaxSpeed * CarryWalkFactor(ctx, Me(ctx));
+            var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
+            float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
+            float dx = x - fromX, dz = z - fromZ;
+            float dist = MathF.Sqrt(dx * dx + dz * dz);
+            if (dist > allowed)
+            {
+                if (dist - allowed > SuspectMoveExcess) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveOverBudget);
+                x = fromX + dx / dist * allowed;
+                z = fromZ + dz / dist * allowed;
+                dist = allowed;
+            }
+            var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
+            if (bank is null) ctx.Db.MoveBank.Insert(left);
+            else ctx.Db.MoveBank.PlayerId.Update(left);
         }
-        var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
-        if (bank is null) ctx.Db.MoveBank.Insert(left);
-        else ctx.Db.MoveBank.PlayerId.Update(left);
+
+        // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).
+        if (!flyingNow && PlayerStepBlocked(ctx, player.PlayerId, fromX, fromZ, x, z))
+        {
+            // Honest players bump into things all the time; only a step that lands deep inside one counts.
+            if (!StandingFree(ctx, x, z, PlayerBody * 0.5f)) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveInsideObstacle);
+            x = fromX;
+            z = fromZ;
+        }
+
+        // Stepping off gets a sitting or lying player up (Resting.cs).
+        if ((x - fromX) * (x - fromX) + (z - fromZ) * (z - fromZ) > 0.02f * 0.02f) StopResting(ctx, player.PlayerId);
 
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
@@ -159,6 +156,7 @@ public static partial class Module
                 ChunkZ = (short)World.ChunkOf(input.Z),
             });
             ctx.Db.MoveInput.PlayerId.Delete(input.PlayerId);
+            if (ctx.Db.Player.PlayerId.Find(input.PlayerId) is { } mover) CheckJobReach(ctx, mover, input.X, input.Z);
         }
     }
 
@@ -169,14 +167,16 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
+        // The equipped digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick (Equip.cs).
+        var stickTool = EquippedTool(ctx, ItemTags.Digging);
+        float toolSpeed = stickTool is { } held ? Items.Def((Item)held.Item).DigSpeed : 1f;
         // Skilled diggers work faster.
-        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
+        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros / toolSpeed * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
@@ -197,7 +197,9 @@ public static partial class Module
         if (World.IsClay(cellX, cellZ))
             GiveDugClay(ctx, player, depth);
 
+        if (stickTool is { } digger) WearTool(ctx, digger);
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -210,15 +212,17 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
+        AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
+        NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
 
     [SpacetimeDB.Reducer]
     public static void Drop(ReducerContext ctx, ushort item, byte quality)
     {
         var pos = RequirePos(ctx, RequirePlayer(ctx));
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
+        RequireRoomForItem(ctx, pos.ChunkX, pos.ChunkZ);
+        var stack = FindStack(ctx, Me(ctx), (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
         var dropped = ctx.Db.WorldItem.Insert(new WorldItem
@@ -226,6 +230,8 @@ public static partial class Module
             Id = 0,
             Item = item,
             Quality = quality,
+            Wear = stack.Wear,
+            Maker = stack.Maker,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -239,6 +245,7 @@ public static partial class Module
     public static void RespawnItems(ReducerContext ctx, RespawnTimer timer)
     {
         RequireServer(ctx);
+        SweepPresence(ctx);
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -283,8 +290,17 @@ public static partial class Module
         if (!ctx.SenderAuth.IsInternal) throw new Exception("Only the server runs this");
     }
 
-    static Player RequirePlayer(ReducerContext ctx) =>
-        ctx.Db.Player.Identity.Find(ctx.Sender) ?? throw new Exception("No player for this connection");
+    // The character the caller is playing; refused at the character menu (not in the world).
+    static Player RequirePlayer(ReducerContext ctx)
+    {
+        var p = RequirePlayerUnmetered(ctx);
+        SpendCall(ctx, p.PlayerId);
+        return p;
+    }
+
+    // Move (its own distance budget) and Heartbeat (a timer) skip the call bucket (RateLimit.cs).
+    static Player RequirePlayerUnmetered(ReducerContext ctx) =>
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { Online: true } p ? p : throw new Exception("No player for this connection");
 
     static PlayerPos RequirePos(ReducerContext ctx, Player player) =>
         ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) ?? throw new Exception("No position");
@@ -308,21 +324,50 @@ public static partial class Module
     static float SecondsBetween(Timestamp a, Timestamp b) =>
         (b.MicrosecondsSinceUnixEpoch - a.MicrosecondsSinceUnixEpoch) / 1_000_000f;
 
+    // The stack of this item and quality to move or use. Tools of the same quality can
+    // differ in wear (shared/Durability.cs); the most worn goes first, so a player
+    // never loses their best tool by dropping, storing or trading "a stone axe".
     static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
+        InventoryItem? found = null;
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
-            if (row.Quality == quality)
+            if (row.Quality == quality && (found is null || Durability.Used(row.Wear) > Durability.Used(found.Value.Wear)))
+                found = row;
+        return found;
+    }
+
+    static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality, uint wear)
+    {
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality && row.Wear == wear)
                 return row;
         return null;
     }
 
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality)
+    // How many of an item and quality are carried, whatever their wear.
+    static uint CarriedCount(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
-        if (FindStack(ctx, owner, item, quality) is { } stack)
-            ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count + count });
-        else
-            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count });
+        uint n = 0;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality) n += row.Count;
+        return n;
     }
+
+    // Moves carried items from one player to another, the most worn first, wear and all.
+    static void MoveCarried(ReducerContext ctx, Identity from, Identity to, Item item, byte quality, uint count)
+    {
+        while (count > 0 && FindStack(ctx, from, item, quality) is { } stack)
+        {
+            uint n = Math.Min(count, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            AddToInventory(ctx, to, item, n, quality, stack.Wear, stack.Maker);
+            count -= n;
+        }
+    }
+
+    // Into the bag: onto a matching bag stack, never onto the tools belt (Inventory.cs, ui-18).
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0, uint maker = 0) =>
+        AddToBag(ctx, owner, item, count, quality, wear, maker);
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)
     {
@@ -330,5 +375,6 @@ public static partial class Module
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         else
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - count });
+        ClearHandIfGone(ctx, stack.Owner, stack.Item);
     }
 }

@@ -77,9 +77,15 @@ Subscribe(Subscriptions.Area(AreaAround(start.X, start.Z)), 20, "area around spa
 
 // Walk west until the old origin area (3 chunks either side of chunk 0) is far behind.
 float targetX = -(World.ViewRadiusChunks + 2) * World.ChunkSize * World.CellSize, x = start.X, z = start.Z;
-while (x > targetX)
+// Round trunks, boulders and landmarks, which the server refuses to be walked into (bugfix-34, 48):
+// where a step makes no headway, drift sideways a little, as a player steering round would.
+var westGround = new BotGround(conn);
+for (int guard = 0; x > targetX && guard < 2000; guard++)
 {
-    x = MathF.Max(targetX, x - 0.5f);
+    float wantX = MathF.Max(targetX, x - 0.5f);
+    var (nx, nz) = westGround.Slide(x, z, wantX, z);
+    if (nx > x - 0.05f) nz = z + 0.4f; // head-on and held: go round
+    (x, z) = westGround.Slide(x, z, nx, nz);
     conn.Reducers.Move(x, z, -MathF.PI / 2);
     Pump(100);
 }
@@ -108,6 +114,10 @@ Subscribe(Subscriptions.Self, 20, "own player subscribed after reconnect");
 var back = MyPos();
 Check(back != null && MathF.Abs(back.X - far.X) < 1.5f && MathF.Abs(back.Z - far.Z) < 1.5f,
     $"own position is where we logged off ({back?.X:F1}, {back?.Z:F1})");
+// A login that already has a character waits at the character menu (survival-24): play it.
+Check(!Me.InWorld(conn), "a returning login starts at the character menu");
+conn.Reducers.SelectCharacter(Me.Key(conn)!.Value);
+WaitFor(() => Me.InWorld(conn), 10, "the returning character in the world");
 Subscribe(Subscriptions.Area(AreaAround(back!.X, back.Z)), 20, "area around the saved position subscribed");
 Check(conn.Db.PlayerPos.Iter().Any(p => p.PlayerId == back.PlayerId), "the area includes us too");
 Check(conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, "logging off stood us up again");
@@ -117,9 +127,202 @@ conn.Reducers.SetSneaking(false);
 WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "standing up clears it");
 
 // Walking still works from there.
-float stepX = back.X + 3;
-for (int i = 0; i < 10; i++) { conn.Reducers.Move(back.X + 0.3f * (i + 1), back.Z, MathF.PI / 2); Pump(100); }
-WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after reconnecting");
+// The server refuses steps into trunks and boulders (bugfix-34), so the walk slides round them, as
+// the game's client does; where the saved spot is random, a straight line east may meet one.
+{
+    var walkGround = new BotGround(conn);
+    float wx = back.X, wz = back.Z;
+    for (int i = 0; i < 10; i++)
+    {
+        (wx, wz) = walkGround.Slide(wx, wz, wx + 0.3f, wz);
+        conn.Reducers.Move(wx, wz, MathF.PI / 2);
+        Pump(100);
+    }
+    WaitFor(() => MyPos() is { } p && MathF.Sqrt((p.X - back.X) * (p.X - back.X) + (p.Z - back.Z) * (p.Z - back.Z)) > 1.5f, 10, "can walk on after reconnecting");
+}
+
+// Water is walkable (bugfix-32): find a pond or stream with dry ground on both sides, walk across
+// it at the wading pace and come out the other side.
+{
+    (int x0, int x1, int z)? crossing = null;
+    int bx = (int)MathF.Round(back.X), bz = (int)MathF.Round(back.Z);
+    for (int dz = 0; dz < 400 && crossing == null; dz++)
+        foreach (int cz in new[] { bz + dz, bz - dz })
+            for (int cx = bx - 80; cx < bx + 80 && crossing == null; cx++)
+            {
+                if (World.BaseHeight(cx, cz) < World.WaterLevel || World.BaseHeight(cx + 1, cz) >= World.WaterLevel) continue;
+                // cx is the last dry cell; follow the water east until the bank rises out of it again.
+                int wet = 0, deep = 0;
+                while (World.BaseHeight(cx + 1 + wet, cz) < World.WaterLevel && wet < 60) { if (World.BaseHeight(cx + 1 + wet, cz) < World.WaterLevel - 0.3f) deep++; wet++; }
+                if (wet >= 6 && deep >= 3 && wet < 60) crossing = (cx, cx + 1 + wet, cz);
+            }
+    Check(crossing != null, "found water to cross near the player");
+    var (wx0, wx1, wz) = crossing!.Value;
+    float sx = wx0 - 2, ex = wx1 + 2;
+    float cxw = MyPos()!.X, czw = MyPos()!.Z;
+    // Walking itself is tested here and nowhere else (integration-12): this walker is strict, so a stall
+    // fails the check instead of repositioning the bot as the other tools' walkers would.
+    var walker = new BotWalker(conn, myId, "Spawn check", "bot", Pump, msg => { Check(false, msg); }, strict: true);
+    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f, stand: true);
+    WalkTo(sx, wz);
+    WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
+    Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");
+    WalkTo(ex, wz);
+    Check(MyPos() is { } far2 && far2.X >= ex - 1f, $"crossed the water from x={wx0} to x={wx1} and came out the other side");
+
+    // Wading trains Swimming (swim-1): the server counts the time spent moving in water and
+    // journals swim.wade (or swim.float over deep water) every Wading.WaterPerUse seconds.
+    Subscribe(new[] { "SELECT * FROM my_journal" }, 20, "journal subscribed");
+    bool Swam() => conn.Db.MyJournal.Iter().Any(j => j.ProcessId == Wading.WadeProcess || j.ProcessId == Wading.FloatProcess);
+    for (int lap = 0; lap < 12 && !Swam(); lap++)
+    {
+        WalkTo(wx0 + 2, wz);
+        WalkTo(wx1 - 2, wz);
+    }
+    WaitFor(Swam, 10, "time spent wading is journalled as swim.wade or swim.float");
+}
+
+// The atmosphere subscription (clock, weather, seasons) must apply: one private or unknown table in it
+// fails the whole thing and no client ever sees the time or season change (bugfix-39).
+Subscribe(Subscriptions.Atmosphere, 20, "the clock, weather and season subscription applies");
+Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the world clock and season clock arrive");
+
+// The server refuses steps into trunks and boulders (bugfix-34), however the client behaves.
+{
+    var ground = new BotGround(conn);
+    float px = MyPos()!.X, pz = MyPos()!.Z;
+    void Walk(float tx, float tz)
+    {
+        for (int guard = 0; guard < 2000; guard++)
+        {
+            float dx = tx - px, dz = tz - pz, d = MathF.Sqrt(dx * dx + dz * dz);
+            if (d < 0.1f) break;
+            var seen = MyPos()!;
+            if (MathF.Abs(seen.X - px) + MathF.Abs(seen.Z - pz) < 0.8f)
+            {
+                float step = MathF.Min(d, 0.3f);
+                float qx = px, qz = pz;
+                px += dx / d * step; pz += dz / d * step;
+                (px, pz) = ground.Slide(qx, qz, px, pz);
+            }
+            conn.Reducers.Move(px, pz, MathF.Atan2(dx, dz));
+            Pump(100);
+        }
+        WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - px) + MathF.Abs(p.Z - pz) < 1.0f, 15, "server has us there");
+    }
+    void Probe(bool wantTrunk, string what, Func<int, int, bool>? only = null, int maxRing = 60)
+    {
+        float ox = 0, oz = 0, r = 0;
+        bool found = false;
+        int bx = World.CellOf(px), bz = World.CellOf(pz);
+        for (int ring = 3; ring < maxRing && !found; ring++)
+            for (int x = bx - ring; x <= bx + ring && !found; x++)
+                for (int z = bz - ring; z <= bz + ring && !found; z++)
+                {
+                    if (Math.Max(Math.Abs(x - bx), Math.Abs(z - bz)) != ring || (only != null && !only(x, z))) continue;
+                    if (!Obstacles.At(ground, x, z, out ox, out oz, out r, out float h) || (h == float.MaxValue) != wantTrunk) continue;
+                    // Room to come at it from the west without meeting anything else.
+                    float sx = ox - r - 1.2f;
+                    found = !Obstacles.StepBlocked(ground, 0.4f, sx, oz, ox - r - 0.5f, oz, 0f) && Obstacles.PushOut(ground, 0.4f, sx, oz, 0f) == (sx, oz);
+                }
+        Check(found, $"found a {what} near the player");
+        float start = ox - r - 1.2f;
+        Walk(start, oz);
+        // Push straight at its middle in small steps: the server must keep us outside its edge.
+        for (int i = 0; i < 12; i++)
+        {
+            px = MathF.Min(px + 0.2f, ox);
+            conn.Reducers.Move(px, oz, MathF.PI / 2);
+            Pump(120);
+        }
+        Pump(400);
+        var at = MyPos()!;
+        float dist = MathF.Sqrt((at.X - ox) * (at.X - ox) + (at.Z - oz) * (at.Z - oz));
+        Check(dist >= r + 0.2f, $"the server kept us out of the {what} ({dist:F2} m from its middle, radius {r:F2})");
+        px = at.X; pz = at.Z;
+    }
+    Probe(true, "tree trunk");
+    // A giant oak's broad trunk (bugfix-48): a landmark, so it is found by its feature cell.
+    Probe(true, "giant oak", (x, z) => Features.At(x, z, FeatureGround.Dry) is { Block: FeatureBlock.Trunk }, 200);
+    Probe(false, "boulder");
+    // A landmark's stones are found by square (bugfix-49): the server must hold an outcrop's stones and
+    // a fallen giant's trunk and stones too. Walking to one is slow, so probe the nearest of either kind.
+    {
+        (float X, float Z, float R, float D)? best = null;
+        foreach (var feature in Features.All.Where(f => f.Block == FeatureBlock.Stones))
+        {
+            int sx0 = Landmarks.SquareOf(World.CellOf(px), feature.Square), sz0 = Landmarks.SquareOf(World.CellOf(pz), feature.Square);
+            for (int sx = sx0 - 6; sx <= sx0 + 6; sx++)
+                for (int sz = sz0 - 6; sz <= sz0 + 6; sz++)
+                {
+                    if (!feature.In(sx, sz, out int cx, out int cz)) continue;
+                    foreach (var (cxs, czs, cr) in LandmarkBlocks.Circles(feature, cx, cz))
+                    {
+                        float lane = cxs - cr - 1.2f;
+                        float d = MathF.Sqrt((cxs - px) * (cxs - px) + (czs - pz) * (czs - pz));
+                        if (cr < 0.5f || (best != null && d >= best.Value.D) || Obstacles.StepBlocked(ground, 0.4f, lane, czs, cxs - cr - 0.5f, czs, 0f)
+                            || Obstacles.PushOut(ground, 0.4f, lane, czs, 0f) != (lane, czs)) continue;
+                        best = (cxs, czs, cr, d);
+                    }
+                }
+        }
+        Check(best != null, "found a landmark stone near the player");
+        var (ox, oz, r, _) = best!.Value;
+        Walk(ox - r - 1.2f, oz);
+        for (int i = 0; i < 12; i++)
+        {
+            px = MathF.Min(px + 0.2f, ox);
+            conn.Reducers.Move(px, oz, MathF.PI / 2);
+            Pump(120);
+        }
+        Pump(400);
+        var at = MyPos()!;
+        float dist = MathF.Sqrt((at.X - ox) * (at.X - ox) + (at.Z - oz) * (at.Z - oz));
+        Check(dist >= r + 0.2f, $"the server kept us out of a landmark stone ({dist:F2} m from its middle, radius {r:F2})");
+        px = at.X; pz = at.Z;
+    }
+}
+
+// "I'm stuck" puts the player on ground clear of trunks and boulders too (bugfix-47): we stand right
+// beside a boulder after the probe above.
+{
+    var ground = new BotGround(conn);
+    var before = MyPos()!;
+    conn.Reducers.Unstuck();
+    WaitFor(() => MyPos() is { } p && (p.X != before.X || p.Z != before.Z), 10, "the server moved us on unstuck");
+    var to = MyPos()!;
+    Check(Obstacles.PushOut(ground, 0.4f, to.X, to.Z, 0f) == (to.X, to.Z), $"unstuck left us clear of trunks and boulders ({to.X:F1}, {to.Z:F1})");
+}
+
+// A client that hammers a reducer is slowed down (bugfix-50, audit item 9): the bucket holds a burst
+// and refills at a steady rate, refused calls cost nothing, and play carries on afterwards.
+{
+    int slowed = 0;
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("Slow down")) slowed++; }
+    conn.OnUnhandledReducerError += OnError;
+    for (int i = 0; i < 300; i++) conn.Reducers.SetSneaking(i % 2 == 0);
+    Pump(2500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(slowed >= 100, $"hammering a reducer 300 times was slowed down ({slowed} refused)");
+    Pump(3000);
+    conn.Reducers.SetSneaking(false);
+    WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "and play carries on once the bucket has refilled");
+}
+
+// Heavy reducers are paced on top of the bucket (bugfix-51): a second name change straight after the
+// first is refused with a friendly message, and goes through once a moment has passed.
+{
+    var refused = new List<string>();
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("One moment")) refused.Add(e.Message); }
+    conn.OnUnhandledReducerError += OnError;
+    conn.Reducers.SetName("Pacer");
+    conn.Reducers.SetName("Pacertwo");
+    Pump(1500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(refused.Count == 1, $"a second name change straight away was paced ({refused.Count} refused)");
+    conn.Reducers.SetName("Pacerthree");
+    WaitFor(() => conn.Db.Player.PlayerId.Find(myId) is { } me && me.Name == "Pacerthree", 10, "and a name change after a moment goes through");
+}
 
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();

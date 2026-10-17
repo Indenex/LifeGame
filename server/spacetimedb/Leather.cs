@@ -151,13 +151,16 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var rack = ctx.Db.HideRack.Id.Find(rackId) ?? throw new Exception("That rack is gone");
         RequireReach(RequirePos(ctx, player), rack.X, rack.Z);
+        // The leather is its maker's, or the claim's members' (the Claims lane's builder rights), not a passer-by's.
+        if (rack.MadeBy != player.PlayerId && !(ClaimAt(ctx, rack.X, rack.Z) is { } claim && IsOwnerOrMember(ctx, claim, Me(ctx))))
+            throw new Exception("That leather is still drying for whoever hung it");
         if (HideMoisture(rack, ctx.Timestamp.MicrosecondsSinceUnixEpoch) > 0f)
             throw new Exception("The hide is still damp. Leave it to dry");
-        AddToInventory(ctx, ctx.Sender, Item.Leather, 1, rack.Quality);
+        AddToInventory(ctx, Me(ctx), Item.Leather, 1, rack.Quality);
         OnProcessPerformed(ctx, player.PlayerId, "hide.dry", rack.Quality, false);
         ctx.Db.HideRack.Id.Delete(rackId);
         // An old A-frame rack comes apart; the sticks are worth keeping, the cord is
         // worn through. A station's bar stays up for the next hide.
-        if (rack.StationId == 0) AddToInventory(ctx, ctx.Sender, Item.Stick, 2, Items.RawQuality);
+        if (rack.StationId == 0) AddToInventory(ctx, Me(ctx), Item.Stick, 2, Items.RawQuality);
     }
 }

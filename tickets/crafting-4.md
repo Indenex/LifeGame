@@ -1,7 +1,7 @@
 # crafting-4: CI upkeep (Node 24 actions, pinned runner)
 Lane: Crafting (integration owner)
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-ci-upkeep
 PR: (not yet)
 
@@ -16,4 +16,4 @@ CI stops warning that actions run on deprecated Node 20, and won't silently move
 - (none)
 
 ## Next step
-Push, open the PR, and check the run shows no Node 20 annotation and the caches still hit.
+None. Merged to main; kept for history.

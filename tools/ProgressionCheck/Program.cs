@@ -29,7 +29,23 @@ if (Skills.QualityCap(0) != 35 || Skills.QualityCap(100) != 100) failures++;
 if (Skills.SpecFor(Skills.Kill)?.Id != "stalking" || Skills.SpecFor(Skills.Sneak)?.Id != "stalking") { Console.WriteLine("FAIL: stalking mapping"); failures++; }
 Console.WriteLine($"First gain: general {Skills.Gain(0, false, "toolmaking")}, stalking {Skills.Gain(0, false, "stalking")}, archery {Skills.Gain(0, false, "archery")} points");
 if (Skills.Gain(0, false, "archery") >= Skills.Gain(0, false, "toolmaking")) { Console.WriteLine("FAIL: combat not slower"); failures++; }
+if (Skills.Gain(0, false, "swimming") >= Skills.Gain(0, false, "toolmaking")) { Console.WriteLine("FAIL: swimming not slow"); failures++; }
 if (Progression.Pace != 1f) Console.WriteLine($"Pace {Progression.Pace}: first gain {Skills.Gain(0, false)} points");
+if (Skills.SpecFor(Wading.WadeProcess)?.Id != "swimming" || Skills.SpecFor(Wading.FloatProcess)?.Id != "swimming" || Skills.SpecFor(Skills.Repair)?.Id != "toolmaking" || Skills.SpecFor(Skills.Run)?.Id != "endurance") { Console.WriteLine("FAIL: swimming/repair mapping"); failures++; }
+if (Wading.SpeedFactor(0.4f) != Wading.SpeedFactor(0.4f, 0) || Wading.SpeedFactor(2f, 100) <= Wading.SpeedFactor(2f, 0)) { Console.WriteLine("FAIL: wading rank effect"); failures++; }
+if (Skills.Watchable(Wading.WadeProcess) || Skills.Watchable(Wading.FloatProcess) || !Skills.Watchable("knap.flake")) { Console.WriteLine("FAIL: swim ids watchable"); failures++; }
 if (Skills.SpecFor(Skills.Shoot)?.Id != "archery") { Console.WriteLine("FAIL: archery mapping"); failures++; }
 Console.WriteLine(failures == 0 ? "OK" : $"{failures} failure(s)");
+// Skill tooltips: every skill lists at least one effect, and every effect is listed by some skill.
+var listed = new HashSet<EffectKind>();
+foreach (var spec in Skills.Specializations)
+{
+    var text = Progression.Describe(spec.Id, 15);
+    Console.WriteLine($"\n{spec.Name} at rank 15:\n{text}");
+    if (text.Length == 0) { Console.WriteLine("  FAIL: no effects listed"); failures++; }
+    foreach (var k in Progression.EffectsFor(spec.Id)) listed.Add(k);
+}
+foreach (var e in Progression.Effects)
+    if (!listed.Contains(e.Kind)) { Console.WriteLine($"FAIL: no skill tooltip lists {e.Name}"); failures++; }
+
 return failures == 0 ? 0 : 1;

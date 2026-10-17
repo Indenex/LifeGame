@@ -20,26 +20,46 @@ public partial class GroundItems : Node3D
         public readonly List<Transform3D> Places = new();
     }
 
-    readonly Dictionary<(Item, int, int), Batch> batches = new();
+    readonly Dictionary<(Item, int, int, int), Batch> batches = new();
     readonly Dictionary<ulong, Batch> batchOf = new();
     readonly Dictionary<ulong, int> slotOf = new();
 
     public bool Has(ulong id) => batchOf.ContainsKey(id);
 
-    public void Add(ulong id, Item item, Transform3D place)
+    // A maker's mark was added or changed (ceramics-15): the batches of marked pots redraw with the
+    // new stamp, so older pots follow the change as the design says.
+    public override void _EnterTree() => ClayItemLook.MarksChanged += RestyleMarked;
+
+    public override void _ExitTree() => ClayItemLook.MarksChanged -= RestyleMarked;
+
+    void RestyleMarked()
+    {
+        foreach (var (key, batch) in batches)
+            if (key.Item4 != 0 && ClayItemLook.MarkedMesh(key.Item1, (uint)key.Item4) is { } marked)
+                batch.Mesh.Mesh = PaintedItems.Paint(marked, PaintedItems.Family.Clay);
+    }
+
+    // `mark` is the row's Wear number: for pots it is the maker's mark (shared/Marks.cs), drawn as
+    // a stamp, and slip round the rim (shared/Slip.cs); pots that look different are drawn in separate batches.
+    public void Add(ulong id, Item item, Transform3D place, uint mark = 0)
     {
         if (batchOf.ContainsKey(id)) return;
         int px = Mathf.FloorToInt(place.Origin.X / PatchMeters), pz = Mathf.FloorToInt(place.Origin.Z / PatchMeters);
-        if (!batches.TryGetValue((item, px, pz), out var batch))
+        int variant = (int)ClayItemLook.Decoration(item, mark);
+        if (!batches.TryGetValue((item, px, pz, variant), out var batch))
         {
             batch = new Batch
             {
-                Mesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = ItemLook.MeshFor(item) },
+                Mesh = new MultiMesh
+                {
+                    TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                    Mesh = (variant != 0 && ClayItemLook.MarkedMesh(item, (uint)variant) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
+                },
                 // Unused slots collapse to a point inside the patch, so they draw
                 // nothing and don't stretch the batch's bounds.
                 Hidden = new Transform3D(new Basis(Vector3.Zero, Vector3.Zero, Vector3.Zero), place.Origin),
             };
-            batches[(item, px, pz)] = batch;
+            batches[(item, px, pz, variant)] = batch;
             AddChild(new MultiMeshInstance3D { Multimesh = batch.Mesh });
         }
 

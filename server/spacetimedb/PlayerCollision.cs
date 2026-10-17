@@ -1,0 +1,79 @@
+using LifeGame.Shared;
+using SpacetimeDB;
+
+// Walls bind a hacked client too (bugfix-27, bugfix-24 item 2, D-182). Move asks whether
+// a step goes through something solid and keeps the player where they were if it does.
+// It reuses the rules animals already follow (StructureBlocksStep) and adds what
+// only players do: hop low fences (a jump row says when), not claim fences they don't
+// belong to, and bump round things. The client slides
+// along these; the server just refuses the step, and is slightly more forgiving (a
+// smaller body) so an honest client is never pushed back.
+public static partial class Module
+{
+    const float PlayerBody = 0.25f;
+
+    static float PlayerAirHeight(ReducerContext ctx, uint playerId) =>
+        ctx.Db.PlayerJump.PlayerId.Find(playerId) is { } jump
+            ? Jumping.AirHeightWithGrace(SecondsBetween(jump.At, ctx.Timestamp))
+            : 0f;
+
+    static bool PlayerStepBlocked(ReducerContext ctx, uint playerId, float fromX, float fromZ, float toX, float toZ)
+    {
+        float air = PlayerAirHeight(ctx, playerId);
+        foreach (var s in StructuresNear(ctx, toX, toZ))
+        {
+            int kind = (int)s.Kind;
+            var shape = Structures.Shape(kind);
+            if (shape.Fence)
+            {
+                if (!s.Complete) continue;
+                if (shape.Gate && !DoorClosed(ctx, s.Id)) continue;
+                if (!Structures.StepCrossesFence(s.X, s.Z, s.Yaw, fromX, fromZ, toX, toZ, PlayerBody)) continue;
+                // A low fence can be hopped, but not one that stands in a claim you don't belong to.
+                if (Jumping.Clears(Jumping.FenceTop(shape.Gate), air)
+                    && (ClaimAt(ctx, s.X, s.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx))))
+                    continue;
+                return true;
+            }
+            if (shape.Solid && shape.Round && (s.Complete || s.Stage >= 1))
+            {
+                float keep = shape.Radius + PlayerBody;
+                float to = Dist(toX, toZ, s.X, s.Z);
+                if (to < keep && to < Dist(fromX, fromZ, s.X, s.Z)) return true;
+                continue;
+            }
+            bool walls = Structures.Shape(kind).Hut ? s.Complete || s.Stage >= 1 : Structures.IsRoom(kind) && (s.Complete || s.Stage >= 2);
+            if (walls && Structures.StepCrossesWalls(kind, s.X, s.Z, s.Yaw, DoorClosed(ctx, s.Id), fromX, fromZ, toX, toZ)) return true;
+            // A lean-to's two sides and back, from the moment it is laid out, as on the client.
+            if (s.Kind == StructureKind.LeanTo
+                && Structures.StepCrossesLeanTo(kind, s.X, s.Z, s.Yaw, fromX, fromZ, toX, toZ)) return true;
+        }
+
+        // Tree trunks and boulders (shared/Obstacles.cs, the rule the client slides along). Landmarks
+        // (giant trees, outcrops) are not enforced yet.
+        if (Obstacles.StepBlocked(new ServerGround(ctx), PlayerBody, fromX, fromZ, toX, toZ, air)) return true;
+        return false;
+    }
+
+    // The ground as the shared obstacle rule asks about it: dug cells, and cells where a tree was
+    // felled or a building stands (both clear what grew there), as the client sees them.
+    sealed class ServerGround : ICellGround
+    {
+        readonly ReducerContext ctx;
+        public ServerGround(ReducerContext ctx) => this.ctx = ctx;
+
+        public float TileHeight(int x, int z) =>
+            World.Height(x, z, ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) is { } edit ? edit.Depth : (short)0);
+
+        public bool Dug(int x, int z) => ctx.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) != null;
+
+        // How far a felled tree's cell has grown back (env-29): its stump and young regrowth block.
+        public float FelledProgress(int x, int z) =>
+            ctx.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true } row
+                ? (float)Math.Clamp(SecondsBetween(row.LastChop, ctx.Timestamp) / Trees.RegrowSeconds, 0.0, 1.0)
+                : -1f;
+
+        public bool Cleared(int x, int z) =>
+            ctx.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true } || UnderStructure(ctx, x, z);
+    }
+}

@@ -15,6 +15,7 @@ public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
+    readonly RestSpotView restSpots = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -53,6 +54,7 @@ public partial class SurvivalClient : Node
     public static IEnumerable<string> Queries(string range) => new[]
     {
         "SELECT * FROM my_vitals",
+        "SELECT * FROM my_respawn_point",
         "SELECT * FROM drenched",
         $"SELECT * FROM forage_bush WHERE {range}",
     };
@@ -64,6 +66,7 @@ public partial class SurvivalClient : Node
         this.player = player;
         this.hud = hud;
         wetLook = WetLook.On(player);
+        restSpots.Setup(world, terrain, player, hud);
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -72,6 +75,7 @@ public partial class SurvivalClient : Node
         Bind("eat", Key.X);
         AddChild(needsHud);
         AddChild(staminaBar);
+        AddChild(restSpots);
         RegisterUse();
     }
 
@@ -84,8 +88,8 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
-                    Target: new Vector3(bush.X, 0, bush.Z))
+                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                    Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
         Use.Register(new UseHandler
@@ -93,7 +97,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => { conn.Reducers.Drink(); Sfx.Play(Cue.Drink); })
+                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink(), Again: Use.HoldInterval)
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
@@ -103,7 +107,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
+                ? new UseOffer("Drink from what you carry", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -111,6 +115,7 @@ public partial class SurvivalClient : Node
     public void Attach(DbConnection connection)
     {
         conn = connection;
+        restSpots.Attach(connection);
         conn.Db.MyVitals.OnInsert += (_, v) => OnVitals(v);
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
         conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
@@ -144,7 +149,7 @@ public partial class SurvivalClient : Node
         vitals = v;
         if (deathsSeen != uint.MaxValue && v.Deaths > deathsSeen)
         {
-            needsHud.ShowDeath(v.LastDeath);
+            needsHud.ShowDeath(v.LastDeath, v.WakeKind);
             // Wake at the edge of the wilderness. Main follows the player from here.
             player.Position = new Vector3(v.WokeX, terrain.HeightAt(v.WokeX, v.WokeZ), v.WokeZ);
             warnedCold = warnedFood = warnedWater = false;
@@ -183,6 +188,7 @@ public partial class SurvivalClient : Node
         if (ripenTimer <= 0 && conn != null)
         {
             ripenTimer = 1f;
+            UpdateSeason();
             foreach (var b in conn.Db.ForageBush.Iter())
                 if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
         }
@@ -285,7 +291,8 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         float load = 0f;
         bool basket = false;
-        foreach (var i in conn.Db.MyInventory.Iter())
+        // Tools on the doll's tools section add no weight (ui-18).
+        foreach (var i in conn.Db.MyInventory.Iter().Where(i => !i.OnBelt))
         {
             load += Carry.Weight((Item)i.Item) * i.Count;
             if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;
@@ -306,7 +313,7 @@ public partial class SurvivalClient : Node
         if (e.IsActionPressed("eat"))
         {
             var carried = conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => (Item)i.Item);
-            if (Needs.BestFood(Current().food, carried) is { } food) { conn.Reducers.Eat((ushort)food); Sfx.Play(Cue.Eat); }
+            if (Needs.BestFood(Current().food, carried) is { } food) conn.Reducers.Eat((ushort)food);
             else if (Carrying(Item.RawMutton)) hud.Note("Raw mutton needs cooking first");
             else hud.Note("You have nothing to eat");
         }
@@ -359,7 +366,17 @@ public partial class SurvivalClient : Node
         return false;
     }
 
-    static bool IsRipe(ForageBush b) => NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch;
+    // A hazel bush (survival-30) is ripe only in autumn, whatever its timer says; refreshed with the bushes.
+    Season season = Season.Spring;
+
+    void UpdateSeason()
+    {
+        if (conn?.Db.SeasonClock.Id.Find(0) is { } clock && conn.Db.WorldClock.Id.Find(0) is { } day)
+            season = Seasons.SeasonOf(Seasons.YearFraction(NowMicros, clock.YearStart.MicrosecondsSinceUnixEpoch, (int)day.DayLengthSeconds, clock.DaysPerSeason));
+    }
+
+    bool IsRipe(ForageBush b) =>
+        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && (!Needs.IsHazelBush(b.Id) || Needs.HazelnutsRipe(season));
 
     // --- World objects -----------------------------------------------------
 
