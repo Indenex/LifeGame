@@ -1031,3 +1031,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-254 — 2026-10-17 — Characters, look: back to round 2's animal and humanoid concepts, slightly less cute (revises D-249, D-250)
 **Decision:** Round 3 (realistic, about 4 heads tall) was rejected. The direction is now round 2's animal and humanoid concepts, slightly less cute: head at 85% size (about 2.8 heads tall), still chibi, 1.35 m tall on the shared 16-bone base (D-249, D-250). The first roster is still to be picked. Owner: Character concepts.
 **Who:** Justin ("this new version is even worse. Go back to the old animal/humanoid look, just slightly less cute, chibiish is fine.")
+
+## D-255 — 2026-10-17 — First player roster: Pebble, Kit, Capling and Bramble; Modeling builds the shared base plus Kit first (follows D-254)
+**Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling builds the shared base plus Kit first (model-6).
+**Who:** Justin, picking the roster (relayed by the PM; no direct quote).
