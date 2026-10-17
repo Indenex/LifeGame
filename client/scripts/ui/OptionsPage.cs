@@ -179,6 +179,16 @@ public partial class OptionsPage : Control
         });
         reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(reflections);
+        // Painted clouds in the sky (AtmosphereClouds, env-39): flat, painted or high.
+        Button clouds = null!;
+        clouds = ControlsPage.TextButton(CloudsText(), () =>
+        {
+            Atmosphere.CloudQuality = (Atmosphere.CloudQuality + 1) % 3;
+            Settings.Set("graphics", "clouds", Atmosphere.CloudQuality);
+            clouds.Text = CloudsText();
+        });
+        clouds.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(clouds);
         // Sun shadow quality (SunShadows): Low for slower PCs.
         shadows = ControlsPage.TextButton(ShadowsText(), () =>
         {
@@ -213,6 +223,7 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string CloudsText() => $"Clouds: {new[] { "Flat", "Painted", "High" }[Atmosphere.CloudQuality]}";
     static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
     static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
