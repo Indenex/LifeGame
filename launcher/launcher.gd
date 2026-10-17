@@ -40,8 +40,11 @@ extends Control
 #   --screenshot=PATH    save the window to PATH once the launcher is idle, then quit
 #   --no-shortcut        don't create the desktop and menu shortcuts
 #   --no-self-update     never replace the launcher itself
+#   --window-size=WxH    open at this size and neither restore nor remember the window (tests)
 
 const WIPE_MARK := "<!-- world-wipe -->"
+const BASE_SIZE := Vector2i(860, 560)  # the window's first size, before DPI scaling
+const MIN_SIZE := Vector2i(640, 540)   # never smaller than this (and never smaller than the layout needs)
 const NOTES_OPEN := "<!-- notes -->"      # the release body lists the patch notes between these
 const NOTES_CLOSE := "<!-- /notes -->"
 
@@ -64,6 +67,8 @@ var manage_server := true
 var notes_box: TextEdit      # "What's new": the patch notes of the builds you are about to get / just got
 var whats_new_button: Button
 var whats_new_from := -1    # build the last update started from; -1 = use the installed build
+var spacer: Control            # takes the room the What's new box doesn't
+var window_timer: Timer       # saves the window after it stops moving
 var address_edit: LineEdit   # player build: where friends type the host's address
 var player := false        # the player build: no server parts, joins a server address
 
@@ -95,6 +100,7 @@ signal wipe_answered(go: bool)
 
 func _ready() -> void:
 	_parse_args()
+	_setup_window()
 	_build_ui()
 	_load_state()
 	if FileAccess.file_exists("res://version.txt"):
@@ -112,9 +118,82 @@ func _ready() -> void:
 		else:
 			await _update_and_play()
 		if opts.has("quit"):
+			_save_window()
 			get_tree().quit(exit_code)
 	if opts.has("screenshot"):
 		await _screenshot(opts["screenshot"])
+
+# --- The window -------------------------------------------------------------------
+
+# Resizable, with a minimum that follows the layout, sharp on high-DPI screens, and back where
+# it was last time (LifeGame/window.json: x, y, w, h in screen pixels).
+func _setup_window() -> void:
+	var win := get_window()
+	var scale := 1.0
+	if not opts.has("window-size"):
+		scale = maxf(1.0, DisplayServer.screen_get_scale(win.current_screen))
+	win.content_scale_factor = scale
+	win.min_size = Vector2i(Vector2(MIN_SIZE) * scale)
+	win.wrap_controls = true   # the window can't be made smaller than the buttons and boxes need
+	var size := Vector2i(Vector2(BASE_SIZE) * scale)
+	var pos := Vector2i.ZERO
+	var has_pos := false
+	if opts.has("window-size"):
+		var wh: PackedStringArray = str(opts["window-size"]).split("x")
+		if wh.size() == 2 and wh[0].is_valid_int() and wh[1].is_valid_int():
+			size = Vector2i(wh[0].to_int(), wh[1].to_int())
+	else:
+		var saved := _read_window()
+		if not saved.is_empty():
+			size = saved.size
+			pos = saved.pos
+			has_pos = saved.has_pos
+	var usable := DisplayServer.screen_get_usable_rect(win.current_screen)
+	if usable.size.x > 0:
+		size = Vector2i(mini(size.x, usable.size.x), mini(size.y, usable.size.y))
+	win.size = size.max(win.min_size)
+	if has_pos and _on_a_screen(Rect2i(pos, win.size)):
+		win.position = pos
+	if not opts.has("window-size"):
+		window_timer = Timer.new()
+		window_timer.one_shot = true
+		window_timer.wait_time = 0.6
+		window_timer.timeout.connect(_save_window)
+		add_child(window_timer)
+		win.size_changed.connect(func(): window_timer.start())
+
+func _read_window() -> Dictionary:
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.READ)
+	if not f:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	if not (d is Dictionary) or not (d.has("w") and d.has("h")):
+		return {}
+	return {"size": Vector2i(int(d.w), int(d.h)), "pos": Vector2i(int(d.get("x", 0)), int(d.get("y", 0))), "has_pos": d.has("x") and d.has("y")}
+
+# True when most of the title bar of a window at this rect is on some screen.
+func _on_a_screen(r: Rect2i) -> bool:
+	var bar := Rect2i(r.position, Vector2i(r.size.x, 40))
+	for i in DisplayServer.get_screen_count():
+		var area := Rect2i(DisplayServer.screen_get_position(i), DisplayServer.screen_get_size(i))
+		var hit := area.intersection(bar)
+		if hit.size.x >= 120 and hit.size.y >= 20:
+			return true
+	return false
+
+func _save_window() -> void:
+	if opts.has("window-size"):
+		return
+	var win := get_window()
+	if win.mode != Window.MODE_WINDOWED:
+		return
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"x": win.position.x, "y": win.position.y, "w": win.size.x, "h": win.size.y}))
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_save_window()
 
 # --- Options and state ------------------------------------------------------------
 
@@ -240,7 +319,7 @@ func _build_ui() -> void:
 	versions.add_child(game_label)
 	versions.add_child(world_label)
 
-	var spacer := Control.new()
+	spacer = Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(spacer)
 
@@ -269,7 +348,8 @@ func _build_ui() -> void:
 	notes_box.editable = false
 	notes_box.visible = false
 	notes_box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	notes_box.custom_minimum_size = Vector2(0, 150)
+	notes_box.custom_minimum_size = Vector2(0, 90)
+	notes_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	notes_box.add_theme_font_size_override("font_size", 15)
 	notes_box.add_theme_color_override("font_readonly_color", CREAM)
 	notes_box.add_theme_stylebox_override("normal", _notes_style())
@@ -298,8 +378,10 @@ func _build_ui() -> void:
 	log_box.add_theme_font_size_override("font_size", 12)
 	col.add_child(log_box)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	# A flow, so the buttons wrap onto a second line when the window is narrow.
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 10)
+	row.add_theme_constant_override("v_separation", 8)
 	col.add_child(row)
 	main_button = _button("Update and play", true)
 	main_button.pressed.connect(_on_main)
@@ -310,9 +392,6 @@ func _build_ui() -> void:
 	world_button = _button("Update world only", false)
 	world_button.pressed.connect(_on_world_only)
 	row.add_child(world_button)
-	var fill_space := Control.new()
-	fill_space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(fill_space)
 	refresh_button = _button("Refresh", false)
 	refresh_button.tooltip_text = "Check for a newer build again"
 	refresh_button.pressed.connect(_on_refresh)
@@ -561,6 +640,7 @@ func _show_whats_new(on: bool) -> void:
 		_log("What's new:\n" + notes_box.text)
 		notes_box.scroll_vertical = 0
 	notes_box.visible = on and notes_box.text != ""
+	spacer.visible = not notes_box.visible
 
 func _toggle_whats_new() -> void:
 	_show_whats_new(not notes_box.visible)
@@ -978,6 +1058,7 @@ func _play() -> void:
 	_set_status("Have a good evening in the woods.")
 	# Leave the launcher up longer after an update, so the patch notes can be read.
 	await get_tree().create_timer(10.0 if notes_box.visible and not opts.has("auto") else 1.5).timeout
+	_save_window()
 	get_tree().quit()
 
 func _screenshot(path: String) -> void:
