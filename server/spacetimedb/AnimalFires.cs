@@ -40,21 +40,53 @@ public static partial class Module
     // Terrain.CollideVegetation; saplings are client-only and ignored.
     const float AnimalBody = 0.3f, TrunkRadius = 0.35f;
 
+    // What stands on a cell before anyone fells or digs it: a boulder and a tree trunk, from noise that
+    // never changes. Working them out for the nine cells round every animal step was close to half of
+    // an animal tick, so each cell is worked out once and kept. Only the live part (felled or dug) is
+    // asked of the tables, in AnimalStepIntoObstacle.
+    readonly struct AnimalCellSolid
+    {
+        public readonly bool Rock, Tree;
+        public readonly float RockX, RockZ, RockR, TreeX, TreeZ;
+
+        public AnimalCellSolid(int i, int j)
+        {
+            Rock = Rocks.LiesAt(i, j);
+            (RockX, RockZ) = Rock ? Rocks.Center(i, j) : (0f, 0f);
+            RockR = Rock ? Rocks.Radius(i, j) : 0f;
+            Tree = Trees.GrowsAt(i, j);
+            (TreeX, TreeZ) = Tree ? Trees.Trunk(i, j) : (0f, 0f);
+        }
+    }
+
+    // Animals roam a small part of the world, so this stays small; it is emptied if it ever grows large.
+    static readonly System.Collections.Generic.Dictionary<long, AnimalCellSolid> AnimalCellSolids = new();
+    const int AnimalCellSolidsMax = 100_000;
+
+    static AnimalCellSolid AnimalCellSolidAt(int i, int j)
+    {
+        long key = World.CellKey(i, j);
+        if (AnimalCellSolids.TryGetValue(key, out var solid)) return solid;
+        if (AnimalCellSolids.Count >= AnimalCellSolidsMax) AnimalCellSolids.Clear();
+        return AnimalCellSolids[key] = new AnimalCellSolid(i, j);
+    }
+
     static bool AnimalStepIntoObstacle(ReducerContext ctx, float fromX, float fromZ, float toX, float toZ)
     {
         int cx = (int)MathF.Round(toX), cz = (int)MathF.Round(toZ);
         for (int i = cx - 1; i <= cx + 1; i++)
             for (int j = cz - 1; j <= cz + 1; j++)
             {
+                var cell = AnimalCellSolidAt(i, j);
                 float ox, oz, r;
-                if (Rocks.LiesAt(i, j) && TreeStands(ctx, i, j))
+                if (cell.Rock && TreeStands(ctx, i, j))
                 {
-                    (ox, oz) = Rocks.Center(i, j);
-                    r = Rocks.Radius(i, j) + AnimalBody;
+                    (ox, oz) = (cell.RockX, cell.RockZ);
+                    r = cell.RockR + AnimalBody;
                 }
-                else if (Trees.GrowsAt(i, j) && TreeStands(ctx, i, j))
+                else if (cell.Tree && TreeStands(ctx, i, j))
                 {
-                    (ox, oz) = Trees.Trunk(i, j);
+                    (ox, oz) = (cell.TreeX, cell.TreeZ);
                     r = TrunkRadius + AnimalBody;
                 }
                 else continue;
@@ -103,12 +135,24 @@ public static partial class Module
         for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++)
             {
-                foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx + dx, cz + dz)))
-                    if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
-                        yield return (fire.X, fire.Z, 0f);
-                foreach (var kiln in ctx.Db.Kiln.ByChunk.Filter((cx + dx, cz + dz)))
-                    if (kiln.State == (byte)KilnState.Firing && kiln.FireFinish.MicrosecondsSinceUnixEpoch > now)
-                        yield return (kiln.X, kiln.Z, KilnWall);
+                if (!AnimalTickScope)
+                {
+                    foreach (var f in BurningInChunk(ctx, cx + dx, cz + dz, now)) yield return f;
+                    continue;
+                }
+                if (!AnimalScopedFires.TryGetValue((cx + dx, cz + dz), out var here))
+                    AnimalScopedFires[(cx + dx, cz + dz)] = here = BurningInChunk(ctx, cx + dx, cz + dz, now).ToList();
+                foreach (var f in here) yield return f;
             }
+    }
+
+    static System.Collections.Generic.IEnumerable<(float X, float Z, float Wall)> BurningInChunk(ReducerContext ctx, int cx, int cz, long now)
+    {
+        foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx, cz)))
+            if (fire.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                yield return (fire.X, fire.Z, 0f);
+        foreach (var kiln in ctx.Db.Kiln.ByChunk.Filter((cx, cz)))
+            if (kiln.State == (byte)KilnState.Firing && kiln.FireFinish.MicrosecondsSinceUnixEpoch > now)
+                yield return (kiln.X, kiln.Z, KilnWall);
     }
 }

@@ -1,7 +1,7 @@
 # crafting-1: Crafting core, first playable
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-core
 PR: https://github.com/Indenex/LifeGame/pull/4
 
@@ -22,4 +22,4 @@ Data-driven materials and processes (materials with properties and state, timed 
 - Integration after merges: FireWarmthAt (Survival PR #5) and RequireClaimAccess (Claims PR #8) get wired by whichever PR merges second.
 
 ## Next step
-Wait for CI on the latest push to PR #4; when green, ask the PM for the merge.
+None. Merged to main; kept for history.

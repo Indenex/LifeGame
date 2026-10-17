@@ -59,15 +59,17 @@ public static partial class Module
         if (Skills.SkipsMinigame(SkillRank(ctx, playerId, processId)) && score <= Skills.MasterScore + 0.001f) return score;
 
         // A minigame counts once: the record is used up by the score that follows it.
-        bool played = false;
+        bool played = false, opened = false;
         if (ctx.Db.MinigameStart.PlayerId.Find(playerId) is { } start)
         {
+            opened = true;
             ctx.Db.MinigameStart.PlayerId.Delete(playerId);
             played = start.ProcessId == processId && SecondsBetween(start.At, ctx.Timestamp) >= MinigamePlay.MinSeconds(kind);
         }
         if (!played)
         {
             if (score > QuickScoreCap) NoteSuspicion(ctx, playerId, Suspect.QuickScore);
+            if (score > QuickScoreCap) Log.Info($"score capped: player {playerId} {processId} sent {score:F2} with no believable play ({(opened ? "too fast" : "no minigame opened")})");
             score = Math.Min(score, QuickScoreCap);
         }
 
@@ -80,6 +82,7 @@ public static partial class Module
         if (perfect > StreakFree)
         {
             NoteSuspicion(ctx, playerId, Suspect.PerfectStreak);
+            Log.Info($"score softened: player {playerId} {processId} perfect streak {perfect}");
             score = Math.Min(score, StreakFloor + (1f - StreakFloor) * MathF.Pow(StreakDecay, perfect - StreakFree));
         }
         return score;

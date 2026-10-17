@@ -402,7 +402,9 @@ public partial class HotbarSlotView : PanelContainer
             style.BgColor = equipped ? new Color(0.20f, 0.16f, 0.08f, 0.78f) : new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
             style.ShadowColor = equipped ? new Color(InHand, 0.35f) : new Color(0, 0, 0, 0.25f);
         }
-        TooltipText = equipped ? $"{label} (in hand)" : label;
+        // The name, then what it's for in a few words, as in the bag (ui-64).
+        string name = equipped ? $"{label} (in hand)" : label;
+        TooltipText = what is { } held ? string.Join("\n", ItemUses.Lines(held).Prepend(name)) : name;
     }
 
     // On paper the count is brown ink; the key sits outside the disc, so it keeps its soft

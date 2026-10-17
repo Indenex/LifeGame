@@ -1,7 +1,7 @@
 # crafting-20: Reserve item ids for the bow and arrow
 Lane: Crafting
 Owner: Crafting thread (Sonnet, D-159)
-Status: in_progress
+Status: done
 Branch: crafting-bow-ids (ids, merged #266); crafting-bow (powers and recipes); crafting-bow-hook (the shot hook, stacked on Animals' #355 and #267)
 PR: #266 merged; hook PR after #267 and #355
 
@@ -19,4 +19,4 @@ Animals' bow and arrow (animals-15) needs item ids from the Crafting range (1 to
 - Animals owns the bow and arrow recipes and the hunting use (their Processes/ItemDef changes go in their branch). The bow will probably want to wear like other hand tools: when they add it, add Item.Bow to Durability.Wears in shared/Durability.cs (arrows are used up, so they don't wear).
 
 ## Next step
-When #266 and #267 are on main and Animals' bow branch has merged: merge main into crafting-bow, write BowShotHook in CraftingBow.cs (best working bow, one arrow, wear the bow), add Item.Bow to Durability.Wears, open the PR.
+None. Merged to main; kept for history.

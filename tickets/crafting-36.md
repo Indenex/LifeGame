@@ -1,7 +1,7 @@
 # crafting-36: Believable minigame scores and abandoned device rounds (D-182)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-trust
 PR: (see below)
 

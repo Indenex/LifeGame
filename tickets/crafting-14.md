@@ -1,7 +1,7 @@
 # crafting-14: Full fires refuse fuel; longer fires that grow with Firecraft; cold hearths stay in claims
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-fire-cap (stacked on crafting-cold-hearth, PR #92)
 PR: #122
 
@@ -31,4 +31,4 @@ D-090 (amends D-054), from Justin via the PM on 2026-10-16:
 - (none)
 
 ## Next step
-Wait for CI on #122; when #92 merges, merge main in and send the PM the green sha.
+None. Merged to main; kept for history.
