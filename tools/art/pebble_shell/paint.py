@@ -82,9 +82,7 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), 
         for k, at in enumerate(rings):
             line = 1 - smooth(0.0, 0.003, np.abs(dist - maxd * at - wob * 0.02))
             col = col * (1 - 0.09 * line)[:, None]
-    # Strokes along the rings: colour varies across them, little along them.
     # No stroke grain (D-319: no pitting); smooth colour blocks only.
-    # Each plate a touch different.
     # Each plate a touch lighter or darker, a little warmer or cooler.
     rng = np.random.default_rng(11)
     value, warm = rng.normal(0, 0.025, 64), rng.normal(0, 0.008, 64)
