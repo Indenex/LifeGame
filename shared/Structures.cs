@@ -236,6 +236,8 @@ namespace LifeGame.Shared
             _ when Shape(kind).Model == "Basket" => WeaveProcess,
             // Wooden chest: the frame and the boards and lid are all carpentry, which the journal files as framing.
             _ when Shape(kind).Model == "Chest" => FrameProcess,
+            // Straw bed: the frame is framing, the straw tick is weaving.
+            _ when Shape(kind).Model == "Bed" => stage == 0 ? FrameProcess : WeaveProcess,
             // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
             _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.

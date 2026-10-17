@@ -23,6 +23,8 @@ namespace LifeGame.Shared
         public static readonly IReadOnlyList<RestSpotDef> All = new[]
         {
             new RestSpotDef { Id = 1, Name = "sleeping mat", Item = Shared.Item.SleepingMat },
+            // House building's straw bed (building-23): a built structure, kind 25. A rest spot only (no rest bonus).
+            new RestSpotDef { Id = 2, Name = "straw bed", StructureKind = 25 },
         };
 
         static readonly Dictionary<ushort, RestSpotDef> ById = All.ToDictionary(r => r.Id);
