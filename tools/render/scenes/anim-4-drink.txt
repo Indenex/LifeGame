@@ -1,0 +1,16 @@
+# anim-4 (PR #382): drinking at the pond bank (G at water). The player is moved to the
+# bank by SQL; 24 fps movie, close side view.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.1 --debug-position=30,76 --render-cam=3,0.6,90,0.3
+sql UPDATE player_pos SET x = 30.0, z = 76.0, chunk_x = 1, chunk_z = 4
+frames 360
+mark drink-start
+key g
+frames +60
+key g
+frames +36
+key g
+frames +60
+mark drink-end
+frames +12

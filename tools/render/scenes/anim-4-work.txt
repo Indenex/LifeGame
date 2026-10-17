@@ -1,0 +1,24 @@
+# anim-4 (PR #382): work with tools in hand and the blend between crafts. 24 fps movie,
+# 3/4 front at 2.5 m, as anim-1-work.
+client-as-puppet
+client-movie 24
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,0.5,35,0.1
+frames 330
+give 3 200 50
+give 2 60 50
+give 4 80 50
+give 1 40 50
+give 5 20 50
+give 10 2 60
+give 15 6 50
+frames +30
+mark knap-start
+craftloop knap.flake +72
+mark knap-end
+frames +12
+mark blend-start
+craftloop gather.tinder +36
+craftloop knap.flake +36
+craftloop cord.twist +36
+mark blend-end
+frames +24
