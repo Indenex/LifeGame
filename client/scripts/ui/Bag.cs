@@ -10,7 +10,7 @@ namespace LifeGame;
 // One stack in the bag panel: what it is, how good, how many (ui-18). Id is its row
 // (a basket's item row, or the bag's own row once the bag keeps an order), Slot its
 // place in the bag or on the tools belt, -1 for none.
-public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1)
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -47,7 +47,8 @@ public sealed class MockBagLink : IBagLink
             (Item.Stick, 0, 8), (Item.Stone, 0, 3), (Item.Fiber, 0, 12), (Item.Flake, 60, 2),
             (Item.HandAxe, 72, 1), (Item.Berries, 0, 5), (Item.Clay, 0, 4), (Item.CoilPotOfWater, 55, 1),
         };
-        for (int i = 0; i < bag.Length; i++) rows.Add((new BagStack(bag[i].Item1, bag[i].Item2, bag[i].Item3, (ulong)i + 1, i), false));
+        for (int i = 0; i < bag.Length; i++)
+            rows.Add((new BagStack(bag[i].Item1, bag[i].Item2, bag[i].Item3, (ulong)i + 1, i, bag[i].Item1 == Item.HandAxe ? 7u : 0u), false));
         rows.Add((new BagStack(Item.StoneKnife, 65, 1, 99, 0), true));
     }
 
@@ -93,12 +94,13 @@ public sealed class ServerBagLink : IBagLink
     public ServerBagLink(DbConnection conn) => this.conn = conn;
 
     // The bag's rows in their places, and the tools on the doll (ui-18, server/spacetimedb/Inventory.cs).
+    // Each row is one stack; pots carry their maker in Wear (Ceramics), shown as "Made by" (ui-23).
     public IEnumerable<BagStack> Carried() => Rows(belt: false);
     public IEnumerable<BagStack> Belt() => Rows(belt: true);
 
     IEnumerable<BagStack> Rows(bool belt) => conn.Db.MyInventory.Iter()
         .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
-        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot));
+        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear)));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
@@ -116,6 +118,8 @@ public sealed class ServerBagLink : IBagLink
 public partial class BagGrid : GridContainer
 {
     public const float Slot = 50f;
+    // Who made what, for the inspect tooltip (ui-23); Main sets it.
+    public static IMarkLink? Makers;
     public IBagLink Link = new MockBagLink(false);
     // What the grid shows: the bag by default, or a store (a basket, the claim stash).
     public Func<IEnumerable<BagStack>>? Source;
@@ -289,6 +293,30 @@ public partial class BagSlotView : PanelContainer
             Grid.Use(Stack.Item);
             AcceptEvent();
         }
+    }
+
+    // Hovering a made thing names its maker and shows their mark (ui-23, Justin: "if an
+    // item is inspected, it tells you who made it").
+    public override GodotObject? _MakeCustomTooltip(string forText)
+    {
+        if (Stack == null) return null;
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 4);
+        box.AddChild(Hud.Text(Stack.Label, 14));
+        if (Stack.Maker != 0 && BagGrid.Makers?.Maker(Stack.Maker) is { } who)
+        {
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 6);
+            var mark = new MarkView { CustomMinimumSize = new Vector2(22, 22), Width = 1.6f };
+            mark.Show(BagGrid.Makers.Find(who.Glyph), who.Color.Lightened(0.25f));
+            row.AddChild(mark);
+            var by = Hud.Text($"Made by {who.Name}", 13);
+            by.Modulate = new Color(1, 1, 1, 0.8f);
+            row.AddChild(by);
+            box.AddChild(row);
+        }
+        var panel = Hud.Panel(box, Vector2.Zero);
+        return panel;
     }
 
     public override bool _CanDropData(Vector2 atPosition, Variant data) => Grid.CanTake(data, Cell);
