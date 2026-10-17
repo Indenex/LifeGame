@@ -33,7 +33,33 @@ public partial class StructureView : Node3D
         // Homes are drawn at their design size and scaled up here (building-14); the shape's numbers are already scaled.
         baseScale = LifeGame.Shared.Structures.ScaleOf(kind);
         Scale = Vector3.One * baseScale;
-        foreach (var piece in StructureModel.Pieces(kind))
+        Populate(StructureModel.Pieces(kind));
+    }
+
+    // A batch device's mesh shows how full it is and whether it is working (crafting-23);
+    // a change rebuilds its pieces, which only ever happens on a finished device.
+    public void SetDevice(int fill, bool working)
+    {
+        if (ghost != null || (fill, working) == device) return;
+        device = (fill, working);
+        foreach (var (_, holder, _) in pieces) holder.QueueFree();
+        pieces.Clear();
+        solid.Clear();
+        var list = LifeGame.Shared.Structures.Shape(Kind).Station switch
+        {
+            LifeGame.Shared.StationKind.ClayTub => StationMeshes.SettlingTub(fill, working),
+            LifeGame.Shared.StationKind.CrushBlock => StationMeshes.CrushingBlock(fill, working),
+            LifeGame.Shared.StationKind.TemperTrough => StationMeshes.TemperingTrough(fill, working),
+            _ => StructureModel.Pieces(Kind),
+        };
+        Populate(list);
+    }
+
+    (int fill, bool working) device = (-1, false);
+
+    void Populate(IEnumerable<StructureModel.Piece> source)
+    {
+        foreach (var piece in source)
         {
             var holder = new Node3D { Position = piece.Anchor, Visible = false };
             var mesh = new MeshInstance3D

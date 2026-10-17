@@ -171,7 +171,7 @@ public partial class Showcase : Node3D
     {
         var items = new[]
         {
-            Item.StoneAxe, Item.StoneKnife, Item.Stone, Item.HandAxe, (Item)18, Item.Spear, Item.Cordage,
+            Item.StoneAxe, Item.StoneKnife, Item.Stone, Item.HandAxe, Item.Spade, Item.Spear, Item.Cordage,
             Item.Waterskin, Item.PinchPot, Item.StorageJar, Item.Egg, Item.Berries, Item.CookedMutton, Item.SheepHide,
         };
         const int columns = 7;

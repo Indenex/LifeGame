@@ -198,7 +198,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Animal.OnUpdate += (_, was, a) =>
         {
             HearAnimal(a);
-            if (a.Eggs > was.Eggs && AnimalDefs.Get((byte)a.Species).Model == "hen") Hens.Laid(a.X, a.Z);
+            if (a.Eggs > was.Eggs && AnimalDefs.Get((byte)a.Species).Voice == "hen") Hens.Laid(a.X, a.Z);
         };
         conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); Hens.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).

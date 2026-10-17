@@ -109,6 +109,7 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.PlayerEquip.OnDelete += (_, row) => { if (row.Owner == conn.Identity) CancelJob(); };
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
+        DeviceUse.Register(conn, this);
         Mending.Register(conn);
         Knows = id => conn.Db.MyJournal.Iter().Any(e => e.ProcessId == id);
         // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
@@ -331,7 +332,13 @@ public partial class CraftingUi : CanvasLayer
             panel.Visible = true;
             Refresh();
         }
-        if (score is { } s) Send(def, s);
+        var device = deviceDone;
+        deviceDone = null;
+        if (score is { } s)
+        {
+            if (device != null) device(s);
+            else Send(def, s);
+        }
         else fireSpot = null;
     }
 

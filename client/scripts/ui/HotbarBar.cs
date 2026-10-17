@@ -386,8 +386,10 @@ public partial class HotbarSlotView : PanelContainer
         {
             // Paper buttons (ui-45, D-313): cream discs with a soft brown rim and shadow; the slot
             // in hand wears a butter-gold ring. An empty slot is paler.
-            style.BgColor = equipped ? new Color(1f, 0.93f, 0.78f, 0.97f) : new Color(WarmLook.Paper, what == null ? 0.55f : 0.92f);
-            style.BorderColor = equipped ? WarmLook.Butter.Darkened(0.12f) : new Color(WarmLook.Ink, what == null ? 0.18f : 0.32f);
+            // ui-59: an empty slot is a slightly darker paper with a clear brown edge, so the bar
+            // reads on bright grass.
+            style.BgColor = equipped ? new Color(1f, 0.93f, 0.78f, 0.97f) : what == null ? new Color(WarmLook.Paper.Darkened(0.08f), 0.85f) : new Color(WarmLook.Paper, 0.95f);
+            style.BorderColor = equipped ? WarmLook.Butter.Darkened(0.12f) : new Color(WarmLook.Ink, what == null ? 0.45f : 0.5f);
             style.SetBorderWidthAll(equipped ? 3 : 2);
             style.ShadowColor = equipped ? new Color(WarmLook.Butter, 0.55f) : new Color(0.20f, 0.10f, 0.05f, 0.30f);
             style.ShadowSize = equipped ? 9 : 6;

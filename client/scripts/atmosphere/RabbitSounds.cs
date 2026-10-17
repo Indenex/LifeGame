@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
 
 // Wild rabbits heard (audio-32), for Animals' D-323: a foot-thump alarm when a rabbit bolts, a
 // small squeak when one is hurt, and quiet rustling while one grazes close by. Keys on the
-// species, not the model (the rabbit's model is "sheep" until Modeling's figure lands), and has
-// no bleat. Reads the public animal table and the AnimalHit event in its own subscription.
+// voice id (AnimalDef.Voice), not the model, and has no bleat. Reads the public animal table and
+// the AnimalHit event in its own subscription.
 static class RabbitSounds
 {
-    const byte RabbitSpecies = 3;        // AnimalSpecies.Rabbit (shared/Animals.cs)
     const float ThumpHearing = 30f;      // metres
     const float SqueakHearing = 25f;
     const float RustleHearing = 7f;
@@ -41,7 +41,7 @@ static class RabbitSounds
 
     static void Seen(Animal a, bool announce)
     {
-        if ((byte)a.Species != RabbitSpecies) return;
+        if (AnimalDefs.Get((byte)a.Species).Voice != "rabbit") return;
         if (!rabbits.TryGetValue(a.Id, out var r))
             rabbits[a.Id] = r = new Rabbit { State = a.State, NextRustle = now + 1 + random.NextDouble() * 3 };
         r.Where = new Vector3(a.X, 0.1f, a.Z);

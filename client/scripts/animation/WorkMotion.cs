@@ -4,14 +4,16 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // What the hands are doing while a craft job runs (the WorkMotion enum is in shared/).
-// Small crafts kneel on the right knee with the left foot planted and loop their own arm
-// motion; Station stands working at a waist-high station (crafting table, spindle,
-// drying rack: D-098). Hands hold nothing.
+// Hand motions loop their own arm motion, worked kneeling on the right knee with the left
+// foot planted, or standing at a station's top (crafting table, spindle, drying rack:
+// D-098). Station and Chop have their own full-body poses. What the hands hold comes from
+// HeldTools. Quick actions and emotes are further down.
 
 public static class WorkMotions
 {
     // A process names its motion on its Def (ProcessDef.Motion). Older entries leave it
-    // unset and get a guess from their id prefix; new families fall back to Gather.
+    // unset and get a guess from their id prefix; new families fall back to Gather. A
+    // station process with a Motion does that motion standing at the station (Standing).
     public static WorkMotion For(string? processId)
     {
         if (string.IsNullOrEmpty(processId)) return WorkMotion.None;
@@ -19,8 +21,6 @@ public static class WorkMotions
         if (def is { Motion: not WorkMotion.None }) return def.Motion;
         if (def is { Station: not StationKind.None }) return WorkMotion.Station;
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
-        if (processId == "hide.scrape") return WorkMotion.Scrape;
-        if (processId == "hide.stretch") return WorkMotion.Wrap;
         string family = processId.Split('.')[0];
         return family switch
         {
@@ -36,8 +36,13 @@ public static class WorkMotions
         };
     }
 
-    // Writes the whole working pose into p; t is seconds since the work began.
-    public static void Pose(Pose p, WorkMotion work, float t, float legLength)
+    // Whether the process is worked standing at a waist-high station (anim-26).
+    public static bool Standing(string? processId) =>
+        !string.IsNullOrEmpty(processId) && Processes.Find(processId) is { Station: not StationKind.None };
+
+    // Writes the whole working pose into p; t is seconds since the work began. Hand
+    // motions are worked kneeling at the ground, or standing at a station's top.
+    public static void Pose(Pose p, WorkMotion work, float t, float legLength, bool standing = false)
     {
         p.Clear();
         if (work == WorkMotion.Station)
@@ -50,7 +55,8 @@ public static class WorkMotions
             Chop(p, t);
             return;
         }
-        Kneel(p, legLength);
+        if (standing) StandAt(p, t);
+        else Kneel(p, legLength);
         p[Joint.Neck].X = 0.15f;
         p[Joint.ShoulderL].Z = 0.12f;
         p[Joint.ShoulderR].Z = -0.12f;
@@ -166,7 +172,8 @@ public static class WorkMotions
                 break;
             }
         }
-        p[Joint.Spine].X = lean;
+        // At a station the work is at waist height, so the back bends less.
+        p[Joint.Spine].X = standing ? 0.15f + 0.4f * lean : lean;
         // Breathing goes on underneath.
         p[Joint.Spine].X += 0.01f * Mathf.Sin(t * 1.65f);
     }
@@ -199,12 +206,9 @@ public static class WorkMotions
     // levers, a spade is stepped into, levered and the dirt thrown aside.
     public enum DigStyle : byte { Hands, Stick, Spade }
 
-    // The spade is Crafting's (id appended when it lands); found by name so this needs
-    // no change then. Any other digging tool is used like a stick.
-    static readonly Item? SpadeItem = System.Enum.TryParse<Item>("Spade", out var spade) ? spade : null;
-
+    // Any digging tool but the spade is used like a stick.
     public static DigStyle DigStyleOf(Item? tool) =>
-        tool is not { } t ? DigStyle.Hands : t == SpadeItem ? DigStyle.Spade : DigStyle.Stick;
+        tool is not { } t ? DigStyle.Hands : t == Item.Spade ? DigStyle.Spade : DigStyle.Stick;
 
     // The variant of an action its item picks: a strike's style, a dig's style.
     public static byte VariantOf(WorkMotion m, Item? item) => m switch
@@ -249,7 +253,6 @@ public static class WorkMotions
     // loopTo, two moments with the same pose (hands back at the water, at the side).
     public static (float loopAt, float loopTo) ActLoop(WorkMotion m, byte variant) => m switch
     {
-        WorkMotion.Dig => (ActSeconds(m, variant), 0f),
         WorkMotion.Drink => (2.3f, 0.3f),
         WorkMotion.Eat => (1.15f, 0.15f),
         WorkMotion.Pluck => (0.85f, 0f),
@@ -259,8 +262,7 @@ public static class WorkMotions
     };
 
     // When the tool meets its work, for chips, dirt and thunks to land on the frame
-    // (Avatar.Impact): seconds into a quick action, or the point in a craft loop's cycle
-    // (0 to 1) with how many cycles it plays a second. A negative time means no impact.
+    // (Avatar.Impact): seconds into a quick action. A negative time means no impact.
     public static float ActImpact(WorkMotion m, byte variant) => m switch
     {
         WorkMotion.Strike => 0.21f,
@@ -276,6 +278,8 @@ public static class WorkMotions
 
     const float PoundRate = 1.2f;
 
+    // Craft loops: how many cycles play a second, and the point in the cycle (0 to 1)
+    // where the tool bites. A negative point means no impact.
     public static (float rate, float phase) WorkImpact(WorkMotion m) => m switch
     {
         WorkMotion.Chop => (ChopRate, ChopHit),
@@ -294,7 +298,8 @@ public static class WorkMotions
 
     // Whether the legs take part. A pick-up bends only the back and arms (with a slight
     // knee dip), so it plays over walking; the others stop when you walk off.
-    // Strikes, shots, feeding a fire and flinching are upper-body too.
+    // Strikes, shots, feeding a fire, flinching and the hand emotes (wave, clap, shrug,
+    // point) are upper-body too.
     public static bool ActUsesLegs(WorkMotion m) =>
         m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch or WorkMotion.Wave
             or WorkMotion.Clap or WorkMotion.Shrug or WorkMotion.Point);
@@ -615,7 +620,18 @@ public static class WorkMotions
     // the weight shifting a little with the work.
     static void Station(Pose p, float t)
     {
-        float work = Mathf.Sin(t * 2.6f), sway = Mathf.Sin(t * 0.9f);
+        float work = Mathf.Sin(t * 2.6f);
+        StandAt(p, t);
+        p[Joint.Spine] = new Vector3(0.3f + 0.01f * Mathf.Sin(t * 1.65f), 0.05f * work, 0);
+        p[Joint.Neck].X = 0.2f;
+        Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
+        Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
+    }
+
+    // Standing at a station: knees soft, weight shifting slowly from foot to foot.
+    static void StandAt(Pose p, float t)
+    {
+        float sway = Mathf.Sin(t * 0.9f);
         p.HipsOffset = new Vector3(0.015f * sway, -0.02f, 0);
         p[Joint.HipL] = new Vector3(-0.08f, 0, -0.02f * sway);
         p[Joint.HipR] = new Vector3(-0.08f, 0, -0.02f * sway);
@@ -623,10 +639,6 @@ public static class WorkMotions
         p[Joint.KneeR].X = 0.14f;
         p[Joint.FootL].X = -0.06f;
         p[Joint.FootR].X = -0.06f;
-        p[Joint.Spine] = new Vector3(0.3f + 0.01f * Mathf.Sin(t * 1.65f), 0.05f * work, 0);
-        p[Joint.Neck].X = 0.2f;
-        Arm(p, true, -0.55f + 0.12f * work, -0.12f, -0.95f - 0.15f * work);
-        Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
     }
 
     // Chop cycles a second, and where in the cycle the axe bites.

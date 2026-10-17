@@ -220,27 +220,31 @@ public static class ItemModels
         Item.ScrapedHide => (k => RolledHide(k, false), true),
         Item.Leather => (Leather, true),
         Item.SleepingMat => (SleepingMat, true),
-        // Clothing (D-074), by number until the items reach main.
+        // Clothing (D-074).
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
-        // Bow and arrow (Crafting's ids, PR #266; animals-15), by number until on main.
-        (Item)16 => (Bow, false),
-        (Item)17 => (Arrow, false),
-        // Red deer (animals-14), by number until the items reach main.
-        (Item)202 => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
+        // Bow and arrow (Crafting's ids, PR #266; animals-15).
+        Item.Bow => (Bow, false),
+        Item.Arrow => (Arrow, false),
+        // Red deer (animals-14).
+        Item.RawVenison => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
         // Roast and burnt venison (model-20's icon pass: they had no model and drew as a plain blob).
         // Tallow and grog (model-20's icon pass: their stand-in shapes read as plain blobs).
         Item.Tallow => (Tallow, true),
         Item.Daub => (Daub, true),
-        Item.Grog => (Grog, true),
+        Item.Grog => (k => Crumbs(k, new Color(0.68f, 0.38f, 0.24f)), true),
+        // Clay-working items (model-25's icon pass: plain stand-in blobs before).
+        Item.Grit => (k => Crumbs(k, Look.Rock.Lightened(0.2f)), true),
+        Item.CleanClay => (k => ClayLoaf(k, ClayLook.Wet.Lightened(0.1f), false), true),
+        Item.TemperedClay => (k => ClayLoaf(k, ClayLook.Wet.Lightened(0.16f), true), true),
         Item.CookedVenison => (k => Venison(k, new Color(0.45f, 0.24f, 0.11f), new Color(0.58f, 0.34f, 0.16f), new Color(0.72f, 0.52f, 0.28f)), true),
         Item.BurntVenison => (k => Venison(k, new Color(0.1f, 0.08f, 0.07f), new Color(0.17f, 0.12f, 0.09f), new Color(0.3f, 0.26f, 0.21f)), true),
-        (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
-        (Item)204 => (AntlerItem, false),
-        // Wool (animals-8), by number until the items reach main.
-        (Item)197 => (DropSpindle, false),
-        (Item)198 => (Yarn, true),
-        (Item)199 => (WoolCloth, true),
+        Item.DeerHide => (k => RolledHide(k, true, DeerCoat), true),
+        Item.Antler => (AntlerItem, false),
+        // Wool (animals-8).
+        Item.DropSpindle => (DropSpindle, false),
+        Item.Yarn => (Yarn, true),
+        Item.WoolCloth => (WoolCloth, true),
         // The hen (animals-19, model-7): eggs, a feather and chicken legs.
         Item.Egg => (k => Egg(k, EggShell, false), true),
         Item.Feather => (Feather, true),
@@ -250,11 +254,11 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
-        // Rabbit (animals-22), by number until the items reach main: raw, roast and burnt, and its fur.
-        (Item)214 => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
-        (Item)215 => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
-        (Item)216 => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
-        (Item)217 => (RabbitFur, true),
+        // Rabbit (animals-22): raw, roast and burnt, and its fur.
+        Item.RawRabbit => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
+        Item.CookedRabbit => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
+        Item.BurntRabbit => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        Item.RabbitFur => (RabbitFur, true),
         // Spade (Crafting's crafting-shovel).
         Item.Spade => (Spade, false),
         // Waterskins (survival-20).
@@ -752,17 +756,40 @@ public static class ItemModels
         k.Plain.Paint(new Color(0.97f, 0.93f, 0.8f)).Ellipsoid(new Vector3(0, 0.043f, 0), new Vector3(0.048f, 0.006f, 0.048f), 12, 2);
     }
 
-    // A small heap of grog: fired clay crushed to grit, with a few larger sharp crumbs
-    // of potsherd on top, so it reads as broken pot rather than earth.
-    static void Grog(Kit k)
+    // A small heap of crushed stuff (grog, grit): a low bed of fine crumbs with a dozen
+    // larger sharp crumbs on top, lighter and darker by turns, so it reads as broken
+    // and ground rather than earth.
+    static void Crumbs(Kit k, Color tone)
     {
-        var fired = new Color(0.68f, 0.38f, 0.24f);
-        k.Plain.Paint(fired, 0.8f).Ellipsoid(new Vector3(0, 0.01f, 0), new Vector3(0.08f, 0.02f, 0.07f), 10, 3, null, 0.4f);
+        k.Plain.Paint(tone, 0.8f).Ellipsoid(new Vector3(0, 0.01f, 0), new Vector3(0.08f, 0.02f, 0.07f), 10, 3, null, 0.4f);
         for (int i = 0; i < 12; i++)
         {
             float a = i * 2.4f, r = 0.015f + H(i, 90) * 0.05f;
             var at = new Vector3(Mathf.Cos(a) * r, 0.022f + (0.065f - r) * 0.35f, Mathf.Sin(a) * r);
-            k.Plain.Paint(fired, 0.7f + H(i, 91) * 0.55f).Ellipsoid(at, new Vector3(0.022f, 0.01f, 0.016f) * (0.8f + H(i, 92) * 0.7f), 4, 2, new Basis(Vector3.Up, a));
+            k.Plain.Paint(tone, 0.7f + H(i, 91) * 0.55f).Ellipsoid(at, new Vector3(0.022f, 0.01f, 0.016f) * (0.8f + H(i, 92) * 0.7f), 4, 2, new Basis(Vector3.Up, a));
+        }
+    }
+
+    // A wedged loaf of prepared clay, smooth and slightly glossy, cut flat across one end
+    // and pressed with a thumb on top; tempered clay shows fine pale grit in the cut face
+    // and on its skin.
+    static void ClayLoaf(Kit k, Color clay, bool tempered)
+    {
+        k.Plain.Paint(clay).Ellipsoid(new Vector3(0, 0.035f, 0), new Vector3(0.09f, 0.04f, 0.06f), 12, 6, null, 0.5f);
+        // The cut end: a flat, slightly paler face.
+        k.Plain.Paint(clay.Lightened(0.08f)).Ellipsoid(new Vector3(0.085f, 0.033f, 0), new Vector3(0.006f, 0.032f, 0.05f), 10, 2);
+        // A thumb press on top.
+        k.Plain.Paint(clay.Darkened(0.12f)).Ellipsoid(new Vector3(-0.02f, 0.072f, 0.008f), new Vector3(0.016f, 0.004f, 0.013f), 8, 2);
+        if (!tempered) return;
+        for (int i = 0; i < 18; i++)
+        {
+            float a = i * 2.4f;
+            // On the cut face, or on the skin: a point on the loaf's upper surface.
+            var dir = new Vector3(Mathf.Cos(a) * (0.4f + H(i, 95) * 0.6f), 0.3f + H(i, 96) * 0.7f, Mathf.Sin(a) * (0.4f + H(i, 97) * 0.6f)).Normalized();
+            var at = i < 5
+                ? new Vector3(0.092f, 0.015f + H(i, 93) * 0.04f, (H(i, 94) - 0.5f) * 0.08f)
+                : new Vector3(0, 0.035f, 0) + dir * new Vector3(0.09f, 0.04f, 0.06f);
+            k.Plain.Paint(new Color(0.9f, 0.88f, 0.82f), 0.9f + H(i, 98) * 0.15f).Ellipsoid(at, Vector3.One * 0.006f, 4, 2);
         }
     }
 
@@ -816,7 +843,7 @@ public static class ItemModels
             k.Plain.Paint(Crack).Ellipsoid(new Vector3(0.015f, -0.32f, 0.15f), new Vector3(0.016f, 0.016f, 0.03f), 6, 3);
             LooseEnd(k, new Vector3(0, -0.3f, 0.06f), w);
         },
-        [(Item)16] = (k, w) =>
+        [Item.Bow] = (k, w) =>
         {
             LooseEnd(k, new Vector3(0, 0.55f, -0.12f), w);
             if (w > 1) CrackLine(k, new Vector3(0.02f, 0.2f, -0.01f), new Vector3(0.02f, 0.38f, -0.03f));

@@ -196,8 +196,8 @@ namespace LifeGame.Shared
                 // rest of the made things; any kind with stacks opens like the basket (BuildingStorage.cs).
             new StructureDef
             {
-                // 21 for now: its StructureKind position, after Sundial = 20 (Crafting's devices take 21 to 23, so renumber at merge).
-                Kind = 21,
+                // 24: its StructureKind position, after Crafting's devices 21 to 23 (a SpacetimeDB enum takes no explicit values).
+                Kind = 24,
                 Shape = new StructureShape
                 {
                     Name = "Wooden chest",
