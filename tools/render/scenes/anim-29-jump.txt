@@ -1,0 +1,17 @@
+# anim-29: jumps, side view (yaw 90), one standing, one walking (w). Chibi. Run on claude/anim-jump-windup and on main; composite side by side.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.4,0.9,90,0.5
+frames 48
+mark jump-start
+frames +12
+key space
+frames +36
+keydown w
+frames +18
+key space
+frames +36
+keyup w
+frames +12
+mark jump-end
+frames +12
