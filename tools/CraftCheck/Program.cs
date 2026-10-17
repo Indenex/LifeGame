@@ -505,20 +505,36 @@ return 0;
 // Lights a fire (or tries to). The server sets a fire only on clear, level ground
 // near the crafter, away from other fires, hearths, boulders and trunks (Hearths.cs);
 // when it finds none here, step a few metres along and try again.
+// Lights a fire on a spot the shared ground rules accept (FireGround) and clear of other fires,
+// nearest first; if the server still refuses one, the next candidate is tried.
 void FireCraft(string processId, float score)
 {
-    for (int attempt = 0; ; attempt++)
+    var fires = conn.Db.Fire.Iter().ToList();
+    var spots = new List<(float X, float Z)>();
+    for (int ring = 0; ring <= 6; ring++)
     {
+        float r = 1.2f + ring * 0.35f;
+        int steps = ring == 0 ? 1 : 16;
+        for (int k = 0; k < steps; k++)
+        {
+            float a = k * MathF.Tau / steps;
+            float sx = x + MathF.Sin(a) * r, sz = z + MathF.Cos(a) * r;
+            if (!FireGround.Clear(sx, sz, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0)) continue;
+            if (fires.Any(f => MathF.Sqrt((f.X - sx) * (f.X - sx) + (f.Z - sz) * (f.Z - sz)) < Fires.Spacing)) continue;
+            spots.Add((sx, sz));
+        }
+    }
+    int tries = 0;
+    foreach (var spot in spots.Take(12))
+    {
+        tries++;
         lastError = null;
-        conn.Reducers.StartCraft(processId, score);
+        conn.Reducers.StartFireAt(processId, score, spot.X, spot.Z);
         Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
         if (lastError == null) break;
-        if (!lastError.Contains("clear, level ground") || attempt >= 8)
-            Fail($"{processId} at ({x:F1}, {z:F1}), try {attempt + 1}: {lastError}");
-        float a = attempt * MathF.PI / 4f;
-        Console.WriteLine($"No ground for a fire at ({x:F1}, {z:F1}); stepping along");
-        WalkTo(x + MathF.Cos(a) * 4f, z + MathF.Sin(a) * 4f);
+        if (!lastError.Contains("clear, level ground") && !lastError.Contains("too close")) Fail($"{processId} at ({spot.X:F1}, {spot.Z:F1}): {lastError}");
     }
+    if (lastError != null || conn.Db.MyCraftJob.Count == 0) Fail($"{processId}: no fire spot accepted near ({x:F1}, {z:F1}) after {tries} tries: {lastError}");
     var def = Processes.Find(processId)!;
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
 }

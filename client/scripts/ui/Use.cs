@@ -81,6 +81,47 @@ public static class Use
         return best;
     }
 
+    // The other things G could do right now, best first (everything Best passed over), so the prompt can
+    // show a second line ("also: Chop tree") when two things compete, as loot and a tree do.
+    public static List<UseOffer> Others(Vector3 at, Vector3 facing, UseOffer? best)
+    {
+        var ranked = new List<(UseOffer Offer, int Tier, int Priority)>();
+        foreach (var handler in handlers.Values)
+            if (handler.Find(at) is { } offer && !ReferenceEquals(offer, best) && (best == null || offer.Prompt != best.Prompt))
+                ranked.Add((offer, Tier(offer, at, facing), handler.Priority));
+        ranked.Sort((x, y) =>
+        {
+            int c = y.Tier.CompareTo(x.Tier);
+            if (c == 0) c = y.Priority.CompareTo(x.Priority);
+            return c != 0 ? c : x.Offer.Distance.CompareTo(y.Offer.Distance);
+        });
+        return ranked.ConvertAll(r => r.Offer);
+    }
+
+    // Hints: a quiet line for when G has nothing to do but there is something to learn ("Equip an axe to
+    // chop"). A handler returns the text or null. The dispatcher shows each text now and then, not every
+    // time you look: at most once per HintEvery seconds, for HintShown seconds.
+    static readonly Dictionary<string, Func<Vector3, string?>> hints = new();
+    static readonly Dictionary<string, double> hintNextAt = new();
+    public const float HintEvery = 30f, HintShown = 4f;
+
+    public static void RegisterHint(string id, Func<Vector3, string?> find) => hints[id] = find;
+
+    public static void UnregisterHint(string id) => hints.Remove(id);
+
+    // The hint to show now, or null. `now` is seconds on any steady clock.
+    public static string? Hint(Vector3 at, double now)
+    {
+        foreach (var find in hints.Values)
+        {
+            if (find(at) is not { } text) continue;
+            if (hintNextAt.TryGetValue(text, out double next) && now < next) continue;
+            hintNextAt[text] = now + HintEvery;
+            return text;
+        }
+        return null;
+    }
+
     static int Tier(UseOffer offer, Vector3 at, Vector3 facing)
     {
         if (offer.Target is not { } target || facing == Vector3.Zero) return 1;

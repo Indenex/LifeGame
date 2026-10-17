@@ -30,6 +30,23 @@ public static class Ui
 
     public static Label Title(string text) => Hud.Text(text, TitleSize);
 
+    // Nunito (SIL OFL, client/assets/fonts; D-313 "cutesy, relaxing"): the rounded, friendly
+    // face for the warm look, at a weight from 200 (light) to 1000 (black). Falls back to the
+    // default font if the file is missing.
+    static FontFile? nunito;
+    static bool triedNunito;
+    public static Font Font(int weight = 600)
+    {
+        if (!triedNunito)
+        {
+            triedNunito = true;
+            if (ResourceLoader.Exists("res://assets/fonts/Nunito.ttf")) nunito = GD.Load<FontFile>("res://assets/fonts/Nunito.ttf");
+        }
+        var face = new FontVariation { BaseFont = nunito ?? ThemeDB.FallbackFont };
+        face.VariationOpentype = new Godot.Collections.Dictionary { { TextServerManager.GetPrimaryInterface().NameToTag("wght"), weight } };
+        return face;
+    }
+
     // The one filled button in a window: the thing to do there (Done, Send). Dimmed when disabled.
     public static Button MainButton(string text, Action pressed)
     {
