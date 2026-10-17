@@ -999,3 +999,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-246 — 2026-10-17 — Restyled grass is a little shorter and denser; the PM sends Justin every screenshot directly (follows D-242)
 **Decision:** (1) The restyled grass is slightly shorter and denser, with no big bare patches. (2) The PM sends Justin every screenshot and render directly. Lanes route images to the PM (or Render to the PM) and never expect Justin to read lane threads. A one-line note to the same effect is added to the Render lane section of `WORKER_LOOP.md`.
 **Who:** Justin ("The grass I saw was better... I want the grass to be a little shorter, and denser, no patch giant open spots" and "I also need you to be sending me screenshots. I dont want to go to its chat.")
+
+## D-247 — 2026-10-17 — New Character concepts lane: 10 fast character mockups (Opus)
+**Decision:** A new Character concepts lane (Opus) makes about 10 fast character model proposals: shorter models, cutesy, maybe even creature-type characters. They are quick mockups, basically storyboarding, with a lineup for Justin, who picks 1 to 3 to develop. This follows D-154: no player model style is built past a rough prototype until Justin picks.
+**Who:** Justin ("can you make a new worker that can create like..10 different new character model proposals? I want shorter models, cutesy, maybe even some kind of creature type things? I want FAST mockups though, dont spend all day on them. This is basically storyboarding, and use opus.")
