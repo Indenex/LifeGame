@@ -188,13 +188,16 @@ public partial class Avatar : Node3D
     public void Hold(Item? right, Item? left)
     {
         (workRight, workLeft) = (right, left);
-        if (actItem == null)
-        {
-            Grip("ToolR", RightBase, ref heldRight);
-            Grip("ToolL", left, ref heldLeft);
-        }
+        if (actItem == null) RestoreHands();
     }
     Item? heldRight, heldLeft, workRight, workLeft;
+
+    // Hands back to the job's (or equipped) items once nothing borrows them.
+    void RestoreHands()
+    {
+        Grip("ToolR", RightBase, ref heldRight);
+        Grip("ToolL", workLeft, ref heldLeft);
+    }
 
     // The tool this player has equipped from the hotbar (crafting-29 PlayerEquip), carried
     // in the right hand when no job or quick action needs the hand. Changing it plays a
@@ -235,11 +238,7 @@ public partial class Avatar : Node3D
     {
         animator.Act(motion, WorkMotions.VariantOf(motion, item));
         // An empty-handed action (a flinch) gives back whatever the last one borrowed.
-        if (item == null && actItem != null)
-        {
-            Grip("ToolR", RightBase, ref heldRight);
-            Grip("ToolL", workLeft, ref heldLeft);
-        }
+        if (item == null && actItem != null) RestoreHands();
         actItem = item;
         actMotion = motion;
     }
@@ -253,8 +252,7 @@ public partial class Avatar : Node3D
         if (left <= 0f || actItem == null)
         {
             actItem = null;
-            Grip("ToolR", RightBase, ref heldRight);
-            Grip("ToolL", workLeft, ref heldLeft);
+            RestoreHands();
             return;
         }
         float t = length - left;
