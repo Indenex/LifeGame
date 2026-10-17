@@ -38,6 +38,8 @@ public static class Recipes
         ["build.rack"] = "{build_mode} to lay out a leather drying rack in your claim, then add its materials with {use}.",
         ["claim.mark"] = "{build_mode} to lay out a claim marker away from the clearing, then add sticks and fiber with {use}.",
         ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",
+        [Skills.Wade] = "Walk into a pond or stream and keep going. Time in the water builds Swimming.",
+        [Skills.Repair] = "Stand at a repair table in your claim and mend a worn tool with {use}.",
         [Skills.Run] = "Hold {run} to run. Running far builds Endurance; slow down to get your breath back.",
         [Skills.DryHide] = "Leave a stretched hide on its rack until it dries, then take the leather with {use}.",
     };
