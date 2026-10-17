@@ -684,8 +684,10 @@ public partial class Atmosphere : Node3D
             float cloud_field(vec2 w, float cover) {
                 float n = texture(clouds, (w + cloud_offset) * 0.01).r;
                 float puff = texture(clouds, (w + cloud_offset) * 0.037 + vec2(0.31, 0.17)).r;
-                float edge = mix(0.68, 0.2, cover);
-                return clamp((n + (puff - 0.5) * 0.16 - edge + 0.03) / 0.3, 0.0, 1.0);
+                // Only the heart of each shadow patch is cloud (its soft fringe is shade
+                // spreading on the ground), so a fair sky keeps blue between the clouds.
+                float edge = mix(0.68, 0.2, cover) + 0.06;
+                return clamp((n + (puff - 0.5) * 0.16 - edge) / 0.22, 0.0, 1.0);
             }
 
             // Painted cumulus seen along d: a few steps through the slab of cloud, each
@@ -695,7 +697,7 @@ public partial class Atmosphere : Node3D
                 const float depth = 70.0;
                 float dy = max(d.y, 0.035);
                 float t0 = max(base - cloud_cam.y, 1.0) / dy;
-                float t1 = min((base + depth - cloud_cam.y) / dy, t0 + 700.0);
+                float t1 = min((base + depth - cloud_cam.y) / dy, t0 + 350.0);
                 int n = cloud_quality > 1.5 ? 9 : 5;
                 float dt = (t1 - t0) / float(n);
                 vec2 toward_sun = normalize(sun_dir.xz + vec2(0.0001)) * 22.0;
@@ -727,7 +729,8 @@ public partial class Atmosphere : Node3D
                     float heavy = max(rain_heavy, front_rain * upwind);
                     c = mix(c, vec3(dot(c, vec3(0.33))) * 0.7, heavy * 0.8) * (1.0 - 0.35 * heavy * (1.0 - up));
                     c = mix(c, c * vec3(0.55, 0.6, 0.68), storm * (1.0 - up));
-                    float a = inside * (0.6 + 0.25 * heavy);
+                    // Thin at the wispy edges, solid in the heart.
+                    float a = inside * smoothstep(0.0, 0.35, f) * (0.55 + 0.3 * heavy);
                     acc.rgb += (1.0 - acc.a) * a * c;
                     acc.a += (1.0 - acc.a) * a;
                 }

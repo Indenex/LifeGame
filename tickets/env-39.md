@@ -39,6 +39,8 @@ quality setting. Stills at noon, golden hour and rain through Render.
 
 - 2026-10-17 15:55: CI on 4d1f443e green (14/14), https://github.com/Indenex/LifeGame/actions/runs/39045459794; green sha sent to the PM.
 
+- 2026-10-17 16:15: Render's smoke frame at noon, cover 0.45 showed a solid cream sky: any cloud at all along a ray counted as cloud, so slanting rays through the slab nearly always hit one. Clouds are now only the heart of each shadow patch, with thin edges and a shorter march, so a fair sky keeps blue gaps.
+
 ## Open questions / blockers
 - (none)
 
