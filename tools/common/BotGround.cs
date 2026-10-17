@@ -2,6 +2,7 @@
 // boulders, so a bot that walks straight lines wedges on them. A bot slides along the edge with
 // the same shared rule (Obstacles) the game client uses. Linked into each tool with
 // <Compile Include="../common/*.cs" LinkBase="Common" />.
+using System;
 using System.Collections.Generic;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
@@ -37,7 +38,7 @@ public sealed class BotGround : ICellGround
     }
 
     // Whether a step from one point to another crosses a fence, shut gate, wall, lean-to side or round solid.
-    bool BuildingBlocks(float fx, float fz, float tx, float tz, float body)
+    bool BuildingBlocks(float fx, float fz, float tx, float tz, float body, float margin = 0f)
     {
         foreach (var (kind, _, sx, sz, yaw, complete, stage, closed) in buildings)
         {
@@ -47,7 +48,7 @@ public sealed class BotGround : ICellGround
             if (shape.Fence)
             {
                 if (!complete || (shape.Gate && !closed)) continue;
-                if (Structures.StepCrossesFence(sx, sz, yaw, fx, fz, tx, tz, body)) return true;
+                if (Crosses(margin, fx, fz, tx, tz, (a, b, c, d) => Structures.StepCrossesFence(sx, sz, yaw, a, b, c, d, body))) return true;
                 continue;
             }
             if (shape.Solid && shape.Round && (complete || stage >= 1))
@@ -58,10 +59,20 @@ public sealed class BotGround : ICellGround
                 continue;
             }
             bool walls = kind == StructureKind.ClayHut ? complete || stage >= 1 : Structures.IsRoom(k) && (complete || stage >= 2);
-            if (walls && Structures.StepCrossesWalls(k, sx, sz, yaw, closed, fx, fz, tx, tz)) return true;
-            if (kind == StructureKind.LeanTo && Structures.StepCrossesLeanTo(k, sx, sz, yaw, fx, fz, tx, tz)) return true;
+            if (walls && Crosses(margin, fx, fz, tx, tz, (a, b, c, d) => Structures.StepCrossesWalls(k, sx, sz, yaw, closed, a, b, c, d))) return true;
+            if (kind == StructureKind.LeanTo && Crosses(margin, fx, fz, tx, tz, (a, b, c, d) => Structures.StepCrossesLeanTo(k, sx, sz, yaw, a, b, c, d))) return true;
         }
         return false;
+    }
+
+    // A wall test with room to spare: the step is also tried shifted a little to each side, which keeps
+    // routes off the corners and edges of walls (margin 0 is the plain crossing test the server makes).
+    static bool Crosses(float margin, float fx, float fz, float tx, float tz, Func<float, float, float, float, bool> crossing)
+    {
+        if (crossing(fx, fz, tx, tz)) return true;
+        if (margin <= 0f) return false;
+        return crossing(fx + margin, fz, tx + margin, tz) || crossing(fx - margin, fz, tx - margin, tz)
+            || crossing(fx, fz + margin, tx, tz + margin) || crossing(fx, fz - margin, tx, tz - margin);
     }
 
     // Whether a point is inside the body of a tree trunk, boulder or round solid building.
@@ -97,7 +108,8 @@ public sealed class BotGround : ICellGround
     {
         Refresh();
         (x, z) = Push(x, z, BotBody);
-        return BuildingBlocks(fromX, fromZ, x, z, 0.3f) ? (fromX, fromZ) : (x, z);
+        // The same body as the push above, so sliding along a solid is never mistaken for walking into it.
+        return BuildingBlocks(fromX, fromZ, x, z, BotBody - 0.01f) ? (fromX, fromZ) : (x, z);
     }
 
     // A route round trunks and boulders (grid A* over the same shared rule): the waypoints to walk
@@ -109,6 +121,9 @@ public sealed class BotGround : ICellGround
     // A bot's body when it slides: just wider than the server's (0.25), so the server never refuses it,
     // yet narrow enough to reach a target that sits by a trunk.
     const float BotBody = 0.27f;
+
+    // How far routes keep from the ends and edges of walls and fences.
+    const float WallMargin = 0.3f;
 
     public List<(float X, float Z)> Route(float fx, float fz, float tx, float tz)
     {
@@ -151,7 +166,7 @@ public sealed class BotGround : ICellGround
                     if (n != goal && Blocked(ni, nj)) continue;
                     var (ax, az) = At(ci, cj);
                     var (bx, bz) = At(ni, nj);
-                    if (BuildingBlocks(ax, az, bx, bz, 0.35f)) continue;
+                    if (BuildingBlocks(ax, az, bx, bz, 0.35f, n == goal || cur == sj * w + si ? 0f : WallMargin)) continue;
                     float step = cost[cur] + (di != 0 && dj != 0 ? 1.4142f : 1f);
                     if (cost.TryGetValue(n, out float old) && old <= step) continue;
                     cost[n] = step;
@@ -196,8 +211,23 @@ public sealed class BotGround : ICellGround
             float px = ax + dx * i / steps, pz = az + dz * i / steps;
             var (qx, qz) = Push(px, pz, Clear);
             if (qx != px || qz != pz) return false;
-            if (BuildingBlocks(ax + dx * (i - 1) / steps, az + dz * (i - 1) / steps, px, pz, 0.35f)) return false;
+            if (BuildingBlocks(ax + dx * (i - 1) / steps, az + dz * (i - 1) / steps, px, pz, 0.35f, i == steps || i == 1 ? 0f : WallMargin)) return false;
         }
         return true;
+    }
+
+    // What stands within 3 m of a point, for failure messages.
+    public string Describe(float x, float z)
+    {
+        Refresh();
+        var found = new List<string>();
+        for (int ix = (int)x - 3; ix <= (int)x + 3; ix++)
+            for (int iz = (int)z - 3; iz <= (int)z + 3; iz++)
+                if (Obstacles.At(this, ix, iz, out float ox, out float oz, out float r, out float h))
+                    found.Add($"{(h == float.MaxValue ? "trunk" : "rock")}@({ox:F1},{oz:F1}) r{r:F2}");
+        foreach (var b in buildings)
+            if (MathF.Abs(b.X - x) < 5 && MathF.Abs(b.Z - z) < 5)
+                found.Add($"{b.Kind}@({b.X:F1},{b.Z:F1}) yaw{b.Yaw:F1} complete={b.Complete} stage={b.Stage}");
+        return string.Join("; ", found);
     }
 }

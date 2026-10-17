@@ -89,10 +89,24 @@ void ExpectError(Tester t, Action call, string contains, string what)
 void Walk(Tester t, float x, float z)
 {
     (x, z) = t.Stand(x, z);
-    // Round trunks and boulders by a route first (bugfix-34).
     var route = t.Route(x, z);
-    for (int i = 0; i < route.Count - 1; i++) Pump(() => t.StepToward(route[i].X, route[i].Z), 60, $"{t.Name} walking");
-    Pump(() => t.StepToward(x, z), 60, $"{t.Name} walking");
+    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1}) in {route.Count} legs: {string.Join(" ", route.Select(r => $"({r.X:F1},{r.Z:F1})"))}");
+    for (int i = 0; i < route.Count; i++)
+    {
+        var (lx, lz) = i == route.Count - 1 ? (x, z) : route[i];
+        var sw = Stopwatch.StartNew();
+        while (!t.StepToward(lx, lz))
+        {
+            if (sw.Elapsed.TotalSeconds > 60)
+            {
+                var seen = t.Conn.Db.PlayerPos.PlayerId.Find(t.PlayerId);
+                Console.WriteLine($"FAIL  {t.Name} stuck on leg {i + 1}/{route.Count} to ({lx:F1}, {lz:F1}): bot ({t.X:F1}, {t.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}) (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})\n  near: {t.Describe()}");
+                Environment.Exit(1);
+            }
+            foreach (var u in all) u.Tick();
+            Thread.Sleep(5);
+        }
+    }
 }
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
@@ -551,6 +565,8 @@ sealed class Tester
 
     // One 10 Hz step toward a point; true once the server has us close enough.
     BotGround? ground;
+
+    public string Describe() => (ground ??= new BotGround(Conn)).Describe(X, Z);
 
     public (float X, float Z) Stand(float tx, float tz) => (ground ??= new BotGround(Conn)).Stand(tx, tz);
 
