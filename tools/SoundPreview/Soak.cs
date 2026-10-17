@@ -87,7 +87,7 @@ static class Soak
                     g = new[] { -1f, 4f, 100f, float.NaN, float.PositiveInfinity, -0f }[rng.Next(6)];
                 try
                 {
-                    switch (rng.Next(12))
+                    switch (rng.Next(13))
                     {
                         case 0: mix.Step(grounds[rng.Next(grounds.Length)], mix.Wetness); break;
                         case 1: mix.Land(grounds[rng.Next(grounds.Length)], (float)rng.NextDouble(), g, pan); break;
@@ -100,6 +100,7 @@ static class Soak
                         case 8: mix.OtherWorking((uint)rng.Next(1, 6), works[rng.Next(works.Length)]); break;
                         case 9: mix.OtherWorkDone((uint)rng.Next(1, 6), works[rng.Next(works.Length)], rng.Next(2) == 0); break;
                         case 10: mix.OtherPlace((uint)rng.Next(1, 6), g * 0.4f, pan); break;
+                        case 11: mix.Play(new[] { CueDefs.Drink, CueDefs.Eat, CueDefs.Pluck, CueDefs.PickUp }[rng.Next(4)], g, pan); break;
                         default: mix.MusicOn = rng.Next(4) != 0; break;
                     }
                 }
