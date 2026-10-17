@@ -14,15 +14,13 @@ Short gameplay clips (5-15 s, 12 fps movie, 960x540) requested by lanes or the P
 - Lessons: default scene timeout (1800 s) killed the first run; the project viewport is 1600x900 so scene.sh now overrides it; ffmpeg needed -nostdin in the mark loop; the puppet's `give` needs the 8-column inventory_item and `walkto bush` needs forage_bush subscribed (both fixed here). `--debug-position` pins the player every frame (no walking); to place the player use `sql UPDATE player_pos SET x=..` (the client snaps to the server if >3 m off). The camera sits at (sin a, cos a)*dist from the player with a = 45 + render-cam yaw; w walks (-x,-z), s (+x,+z). Ponds on main are <= 0.4 m deep (no swimming); the pond near (30,76) starts at z about 78 (x 26-42).
 - Check frames before sending (ffmpeg tile into a PNG and look).
 
-## Queue (PM order 2026-10-17 07:35; the rest was dropped by the PM)
-1. water BEFORE on main 2d9e6e27 (AFTER done: renders/water-after-d02f740-water-after.mp4); both go to the PM and Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN)
-2. hold-repeat dig check (PR #495 0f4ecc5d): "one dig then Still working, no repeat" may be a real bug; reshoot cleanly, if it reproduces tell the PM and Crafting (session_01N9APthjRDfjknUvCweqzzN)
-3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation (session_019roNRWQBPw4ozNLDhzseig)
-4. anim-12 sit/lie + anim-13 idle fidgets and hop in one clip (build claude/anim-15 head 41b33212, which includes anim-12 and 13): scenes/anim-12-13-rest-idle.txt; copy Animation
-4b. anim-15 (PR #633 claude/anim-15 41b33212): light a fire, stand 2-3 m away facing away, press H: turns to face the fire and sits; film ~40 s for fidgets; optional 30 s sitting in the open at night. Same build as 4.
-4c. After 4, unless the PM moves them up: anim-14 faces (PR #647 claude/anim-14 19a43ec2: close-up 3/4 chibi face, idle blink 10 s, eat (X key), lie down H twice sleepy/closed eyes, 2nd player waving), anim-16 emotes (PR #653 claude/anim-16 0e60316a: Emote(24 wave) 25 cheer 26 dance 27 bow, 3.5 s apart, side and 3/4)
-5. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
-Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past. Scenes for some exist in tools/render/scenes if they come back.
+## Queue (PM order 2026-10-17 08:27; the rest was dropped by the PM)
+Done and sent to the PM: water before/after #517 (renders/water-before-2d9e6e2-*, water-after-d02f740-*), hold E at the spawn berry bush (hold-bush-0f4ecc5-bush).
+1. hold-repeat dig check (PR #495 0f4ecc5d): "one dig then Still working, no repeat" may be a real bug; reshoot cleanly, if it reproduces tell the PM and Crafting (session_01N9APthjRDfjknUvCweqzzN)
+2. Animation's three clips from ONE build, branch claude/anim-render (e76b914c, anim-12 to 16 merged; render-only, never push to it): anim-render-b (emotes 24-27 + eat, for Justin's morning), anim-render-c (fire sit, lie, stand), anim-render-a (idle fidgets, walk hop, jumps). Scenes in tools/render/scenes/anim-render-*.txt. Send to the PM and copy Animation (session_019roNRWQBPw4ozNLDhzseig)
+3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation
+4. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
+Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past, anim-14 face close-up (anim-render-b shows faces 3/4). env-30 ambient life went to Render A. Scenes for dropped items exist in tools/render/scenes.
 
 ## Progress log
 - 2026-10-17 03:45: took over from Render A; scenes already existed (tools/render/scenes), never rendered.
