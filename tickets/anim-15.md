@@ -1,7 +1,7 @@
 # anim-15: Sitting life
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-15 (on main since #613 merged)
 PR: #633
 
