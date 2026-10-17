@@ -1296,3 +1296,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
 **Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
 **Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
