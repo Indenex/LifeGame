@@ -74,6 +74,8 @@ var conn = DbConnection.Builder()
         c.SubscriptionBuilder()
             .OnApplied(ctx =>
             {
+                // A returning login waits at the character menu (survival-24): play its character.
+                if (ctx.Db.Player.Identity.Find(identity) is { Online: false }) c.Reducers.SelectCharacter(identity);
                 myId = ctx.Db.Player.Identity.Find(identity)!.PlayerId;
                 var pos = ctx.Db.PlayerPos.PlayerId.Find(myId)!;
                 x = pos.X; z = pos.Z;

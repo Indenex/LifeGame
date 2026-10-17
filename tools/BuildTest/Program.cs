@@ -609,7 +609,11 @@ sealed class Bot
     {
         Conn.Disconnect();
         pump(500);
+        Ready = false;
         Conn = Connect();
+        // A login that already has a character waits at the character menu (survival-24): play it.
+        for (int i = 0; i < 400 && !Ready; i++) pump(50);
+        if (Conn.Identity is { } login) Conn.Reducers.SelectCharacter(login);
     }
 
     public uint CountOf(Item item) => Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
