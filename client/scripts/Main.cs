@@ -584,6 +584,8 @@ public partial class Main : Node3D
         if (conn != null && spawned)
         {
             Subscribe(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
+            heartbeatTimer -= dt;
+            if (heartbeatTimer <= 0f) { heartbeatTimer = 20f; conn.Reducers.Heartbeat(); }
             sendTimer -= dt;
             if (sendTimer <= 0f)
             {
@@ -596,6 +598,8 @@ public partial class Main : Node3D
             }
         }
     }
+
+    float heartbeatTimer; // tells the server we're still here (see Presence.cs)
 
     void Walk(float dt)
     {

@@ -39,6 +39,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
+            MarkSeen(ctx, existing.PlayerId);
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
@@ -72,6 +73,7 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
+        MarkSeen(ctx, player.PlayerId);
         SurvivalConnected(ctx, player);
         EnsureHealth(ctx, player.PlayerId);
     }
@@ -240,6 +242,7 @@ public static partial class Module
     public static void RespawnItems(ReducerContext ctx, RespawnTimer timer)
     {
         RequireServer(ctx);
+        SweepPresence(ctx);
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
