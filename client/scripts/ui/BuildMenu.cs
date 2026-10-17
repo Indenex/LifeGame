@@ -153,7 +153,7 @@ public partial class BuildMenu : CanvasLayer
         // A Card keeps its width and grows taller to fit; the costs wrap inside it (ui-33).
         var tile = new Card(Thumb + 24, Thumb + 76);
         tile.Pressed += () => { Close(); Place(kind); };
-        tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
+        tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : WarmLook.On ? 0.7f : 0.45f);
         tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
             : afford ? "" : Shortfall(costs);
 
