@@ -84,12 +84,15 @@ public partial class CraftGrid : VBoxContainer
                 search.Text = arg["--screenshot-craft-search=".Length..];
                 Refresh();
             }
-        if (!OS.GetCmdlineUserArgs().Contains("--screenshot-craft-hover")) return;
-        GetTree().CreateTimer(0.5).Timeout += () =>
+        if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover"))) return;
+        GetTree().CreateTimer(1.0).Timeout += () =>
         {
             int i = Shown.FindIndex(p => Missing(p) != null);
-            if (i < 0 || grid.GetChild(i) is not Control card) return;
-            var tip = new PanelContainer { TopLevel = true, MouseFilter = MouseFilterEnum.Ignore };
+            if (i < 0 || grid.GetChildOrNull<Control>(i) is not { } card) return;
+            // On a layer of its own above the panel, where a real tooltip would draw.
+            var layer = new CanvasLayer { Layer = 20 };
+            GetTree().Root.AddChild(layer);
+            var tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
             var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.95f), BorderColor = new Color(Look.Cream, 0.3f) };
             style.SetBorderWidthAll(1);
             style.SetCornerRadiusAll(6);
@@ -97,8 +100,8 @@ public partial class CraftGrid : VBoxContainer
             style.ContentMarginTop = style.ContentMarginBottom = 6;
             tip.AddThemeStyleboxOverride("panel", style);
             tip.AddChild(Hud.Text(card.TooltipText, 14));
-            AddChild(tip);
-            tip.GlobalPosition = card.GlobalPosition + new Vector2(card.Size.X * 0.6f, card.Size.Y * 0.7f);
+            layer.AddChild(tip);
+            tip.Position = card.GetGlobalRect().Position + new Vector2(card.Size.X * 0.6f, card.Size.Y * 0.7f);
         };
     }
 
@@ -156,10 +159,15 @@ public partial class CraftGrid : VBoxContainer
             grid.AddChild(none);
         }
 
-        // Up to three rows of cards before it scrolls, never past the bottom of the screen.
-        float rows = Mathf.Ceil(Math.Max(1, Shown.Count) / (float)Columns);
-        float room = Math.Max(200f, GetViewportRect().Size.Y - 330f);
-        scroll.CustomMinimumSize = new Vector2(grid.GetCombinedMinimumSize().X, Math.Min(Math.Min(rows, 3.3f) * (CardHeight + 10), room));
+        // Up to three whole rows of cards before it scrolls, never cut through a row and never
+        // past the bottom of the screen (the title, tabs, hint and the hotbar take about 280 px).
+        int rows = (int)Mathf.Ceil(Math.Max(1, Shown.Count) / (float)Columns);
+        float row = Math.Max(CardHeight, grid.GetChildOrNull<Control>(0)?.GetCombinedMinimumSize().Y ?? 0) + 10;
+        int fit = Math.Max(1, (int)((GetViewportRect().Size.Y - 280f + 10f) / row));
+        int showing = Math.Min(rows, Math.Min(3, fit));
+        // Room for the scroll bar beside the cards when there are more rows than show.
+        float bar = rows > showing ? 14f : 0f;
+        scroll.CustomMinimumSize = new Vector2(grid.GetCombinedMinimumSize().X + bar, showing * row - 10);
     }
 
     static bool Matches(ProcessDef p, string query) =>
