@@ -65,7 +65,11 @@ public static partial class Module
             ctx.Db.MinigameStart.PlayerId.Delete(playerId);
             played = start.ProcessId == processId && SecondsBetween(start.At, ctx.Timestamp) >= MinigamePlay.MinSeconds(kind);
         }
-        if (!played) score = Math.Min(score, QuickScoreCap);
+        if (!played)
+        {
+            if (score > QuickScoreCap) NoteSuspicion(ctx, playerId, Suspect.QuickScore);
+            score = Math.Min(score, QuickScoreCap);
+        }
 
         // Perfect streaks (judged on what was sent) settle toward a high-but-not-full score.
         uint perfect = ctx.Db.ScoreStreak.PlayerId.Find(playerId)?.Perfect ?? 0;
@@ -74,7 +78,10 @@ public static partial class Module
         if (ctx.Db.ScoreStreak.PlayerId.Find(playerId) is null) ctx.Db.ScoreStreak.Insert(streak);
         else ctx.Db.ScoreStreak.PlayerId.Update(streak);
         if (perfect > StreakFree)
+        {
+            NoteSuspicion(ctx, playerId, Suspect.PerfectStreak);
             score = Math.Min(score, StreakFloor + (1f - StreakFloor) * MathF.Pow(StreakDecay, perfect - StreakFree));
+        }
         return score;
     }
 }

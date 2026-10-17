@@ -109,6 +109,7 @@ public static partial class Module
             float dist = MathF.Sqrt(dx * dx + dz * dz);
             if (dist > allowed)
             {
+                if (dist - allowed > SuspectMoveExcess) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveOverBudget);
                 x = fromX + dx / dist * allowed;
                 z = fromZ + dz / dist * allowed;
                 dist = allowed;
@@ -121,6 +122,7 @@ public static partial class Module
         // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).
         if (!flyingNow && PlayerStepBlocked(ctx, player.PlayerId, fromX, fromZ, x, z))
         {
+            NoteSuspicion(ctx, player.PlayerId, Suspect.MoveBlocked);
             x = fromX;
             z = fromZ;
         }
