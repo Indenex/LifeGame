@@ -88,6 +88,8 @@ public partial class Atmosphere : Node3D
     public Func<Vector3, bool>? Sheltered;
 
     readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
+    // Each fire's most fuel in seconds (Fire.FuelCapSeconds), for the smoke signal.
+    readonly System.Collections.Generic.Dictionary<ulong, float> fireCaps = new();
     Vector2 cloudOffset;
     // Which way the wind blows (x, z), shared with shaders as wind_dir. Fixed for now;
     // the clouds drift with it.
@@ -201,9 +203,9 @@ public partial class Atmosphere : Node3D
         // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
         conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
-        conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
-        conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
-        conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
+        conn.Db.Fire.OnInsert += (_, f) => (fires[f.Id], fireCaps[f.Id]) = ((f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch), f.FuelCapSeconds);
+        conn.Db.Fire.OnUpdate += (_, _, f) => (fires[f.Id], fireCaps[f.Id]) = ((f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch), f.FuelCapSeconds);
+        conn.Db.Fire.OnDelete += (_, f) => { fires.Remove(f.Id); fireCaps.Remove(f.Id); };
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(Subscriptions.Atmosphere);

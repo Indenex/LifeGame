@@ -36,7 +36,7 @@ public static partial class Module
         var keep = new HashSet<ulong>();
         foreach (var fire in ctx.Db.Fire.Iter())
         {
-            long until = fire.FuelUntil.MicrosecondsSinceUnixEpoch - (long)(SignalShare * FireCapSeconds(ctx, fire) * 1_000_000);
+            long until = fire.FuelUntil.MicrosecondsSinceUnixEpoch - (long)(SignalShare * FireCapSeconds(fire) * 1_000_000);
             if (until <= now || FireIndoors(ctx, fire)) continue;
             keep.Add(fire.Id);
             var row = new SignalFire { FireId = fire.Id, X = fire.X, Z = fire.Z, Until = new Timestamp(until) };
@@ -52,14 +52,9 @@ public static partial class Module
         foreach (var id in gone) ctx.Db.SignalFire.FireId.Delete(id);
     }
 
-    // The most fuel this fire can hold, in seconds, hearth included. Until Crafting
-    // keeps each fire's own cap (the lighter's Firecraft), the Master cap stands in.
-    static float FireCapSeconds(ReducerContext ctx, Fire fire)
-    {
-        float scale = 1f;
-        FireFuelScaleHook(ctx, fire.X, fire.Z, ref scale);
-        return Fires.MasterMaxSeconds * scale;
-    }
+    // The most fuel this fire can hold, in seconds, hearth included: Crafting keeps it
+    // per fire (the lighter's cap, or a feeder's if higher). 0 marks a fire from before.
+    static float FireCapSeconds(Fire fire) => fire.FuelCapSeconds > 0f ? fire.FuelCapSeconds : Fires.MaxSeconds;
 
     // Whether the fire sits inside a finished home (a building with a doorway).
     static bool FireIndoors(ReducerContext ctx, Fire fire)

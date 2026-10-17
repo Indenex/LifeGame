@@ -1,7 +1,7 @@
 # atmosphere-32: Smoke signal from a stoked fire
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-32-smoke-signal
 PR: #524 (merged); far signals #533
 
@@ -21,9 +21,11 @@ From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I
 
 - 2026-10-17 04:48: #524 merged (green sha d64d487a, CI run 39003198556). Near columns are live. #533 carries the far signals.
 
+- 2026-10-17 05:50: #531 merged; main merged in. Server FireCapSeconds and client FireMost now read Fire.FuelCapSeconds (0 → Fires.MaxSeconds), with no hearth multiply of my own. #533 is out of draft. Server and client build with 0 errors.
+
 ## Open questions / blockers
 - Design (for Justin via PM): the threshold is 75% of the Master cap (40 min). A new player's fire tops out at 20 min (50%), so only a mid-rank Firecraft player can raise a signal. Options: (a, recommended for now, as built) keep 75% of the Master cap, so a signal is something you grow into; (b) 75% of the lighter's own cap, which needs the server to publish the cap or rank. Also, a hearth fed from nearby baskets (D-149) stays near its cap, so a well-stocked home of a ranked player would signal all the time.
 - The camera far plane is 300 m and depth fog (0.006) thins the far column past about 200 m; neither is this lane's file.
 
 ## Next step
-When #531 is on main: merge main into claude/atmosphere-32b-signal-server, and make server FireCapSeconds and client FireMost read FuelCapSeconds (0 → Fires.MaxSeconds) without the hearth multiply. Then build both, take #533 out of draft and send the sha to Integration and the PM.
+Wait for #533 CI and send the PM the green sha. When #527 lands, move the signal_fire query into Subscriptions.Atmosphere.cs if Integration asks.

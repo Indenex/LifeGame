@@ -223,10 +223,10 @@ public partial class Atmosphere
         }
     }
 
-    // The most fuel this fire can hold before any hearth bonus: the cap of whoever lit
-    // it, so anyone can signal by filling their own fire (Justin). Until Crafting
-    // publishes that cap on the fire row, the Master cap stands in.
-    static float FireMost((float X, float Z, long FuelUntil) fire) => Fires.MasterMaxSeconds;
+    // The most fuel this fire can hold (Crafting's FuelCapSeconds: the lighter's cap,
+    // or a feeder's if higher, hearth bonus included), so anyone can signal by filling
+    // their own fire (Justin). 0 marks a fire from before the cap was kept.
+    float FireMost(ulong id) => fireCaps.TryGetValue(id, out var cap) && cap > 0f ? cap : Fires.MaxSeconds;
 
     // The stoked fires near the player, nearest first, a few at most.
     void FindSignals(Vector3 focus)
@@ -240,19 +240,15 @@ public partial class Atmosphere
             float dist = new Vector2(f.X - focus.X, f.Z - focus.Z).Length();
             if (dist > SignalReach) continue;
             // Only fires out in the open signal (Justin): none from inside a home.
-            // A fire on an outdoor raised hearth holds half as much again
-            // (HearthFuelScale), so it counts as stoked against that larger most.
-            float most = FireMost(f);
+            float most = FireMost(id);
             bool indoors = false;
             if (homesConn != null)
                 foreach (var s in homesConn.Db.Structure.Iter())
-                {
-                    if (!s.Complete) continue;
-                    if (Structures.IsIndoor((int)s.Kind) && new Vector2(s.X - f.X, s.Z - f.Z).Length() <= Structures.HearthRadius)
-                        most *= Structures.HearthFuelScale;
-                    else if (Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
+                    if (s.Complete && Structures.HasDoorway((int)s.Kind) && Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, f.X, f.Z))
+                    {
                         indoors = true;
-                }
+                        break;
+                    }
             if (indoors) continue;
             float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
             if (signal < 0.01f) continue;
