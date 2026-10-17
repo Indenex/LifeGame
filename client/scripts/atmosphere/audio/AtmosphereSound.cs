@@ -203,4 +203,24 @@ public partial class Atmosphere
         if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
         Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
     }
+
+    // How much each fire can hold ahead of now (its lighter's Firecraft and a hearth's scale, set by
+    // the server on the fire row: FuelCapSeconds), so a well-stoked fire is judged against its own cap.
+    readonly System.Collections.Generic.Dictionary<ulong, float> fireCaps = new();
+
+    void HearFireCaps(DbConnection conn)
+    {
+        conn.Db.Fire.OnInsert += (_, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnUpdate += (_, _, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnDelete += (_, f) => fireCaps.Remove(f.Id);
+    }
+
+    // 0 to 1: how stoked a fire is, rising from 70% to 80% of its own cap (the same ramp as the
+    // smoke signal, so the roar and the plume come together). Fires from before the column
+    // (cap 0) are judged against the Master cap.
+    float Stoke(ulong id, float left)
+    {
+        float cap = fireCaps.TryGetValue(id, out var c) && c > 0f ? c : Fires.MasterMaxSeconds;
+        return Mathf.SmoothStep(0.70f, 0.80f, left / cap);
+    }
 }
