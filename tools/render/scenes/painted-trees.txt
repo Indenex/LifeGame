@@ -1,18 +1,18 @@
-# model-10 (#544): walk through the painted-tree forest, view distance Far (the default). EXTRA = time of day option.
+# model-10 (#544): walk from the spawn clearing into and through the painted-tree forest, default view distance (Far).
+# EXTRA = time of day option. w walks (-x,-z). Watch for pops at about 40 m where near and far tree versions switch.
 client-as-puppet
 client-movie 12
-client EXTRA --cloud=0.2 --wind=0.2 --debug-position=-25,-25 --render-cam=5,1.8,35,1.4
-sql UPDATE player_pos SET x = -25.0, z = -25.0, chunk_x = -2, chunk_z = -2
+client EXTRA --cloud=0.2 --wind=0.2 --render-cam=5,1.8,35,1.4
 frames 72
 mark trees-start
 keydown w
-frames +96
+frames +120
 keyup w
 keydown a
 frames +36
 keyup a
 keydown w
-frames +48
+frames +60
 keyup w
 mark trees-end
 frames +12
