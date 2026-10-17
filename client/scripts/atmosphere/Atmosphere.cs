@@ -117,6 +117,7 @@ public partial class Atmosphere : Node3D
         AddChild(fireflies);
         AddChild(mist);
         AddChild(leaves);
+        AddChild(new Painterly());
         ReadyWater();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
