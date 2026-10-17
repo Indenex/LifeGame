@@ -17,10 +17,11 @@ His picks: allowed outside a claim: lean-to, clay hut, campfire and hearth, craf
   - Tests: BuildTest raises a claim (claim marker, B made a member for gathering and building, taken out again for the "B is a stranger" door and gate checks) before building fence, gate, brick house and log cabin, and checks a brick house is refused outside a claim. CraftCheck now expects a spindle station (not the crafting table) to be refused outside a claim. SocialTest unchanged (lean-to only). ClayCheck (Ceramics') places a kiln outside a claim and needs a claim raised first; told Ceramics.
   - Local: server and client build; BuildTest default (344 s), CraftCheck and SocialTest pass; log-cabin run below.
 - 2026-10-17: Claims' claims-15 (#345) landed the same weathering (48 h, gone 6 h later, per-shape overrides gone, clay pieces and racks swept) while this was in review; merged main and kept their text. The only weathering change left here is none: this PR is the claim-only rule (Wild flag, server refusal, table on open ground, client message, tests).
+- 2026-10-17: #362 and #432 merged. Build menu hookup (branch `claude/house-building-8ueqz2-menu`): `BuildMenu.NeedsClaim` (Main sets it to `building.NeedsClaimHere`) dims the tile, adds a "Needs a claim" line and tooltip. Still clickable, since the ghost can be moved into a claim from the edge. Client builds; not seen in Godot yet (render request to follow).
 
 ## Open questions / blockers
 - (none: the 48 h / 6 h numbers are Claims' claims-15 and match Justin's words.)
 - Claims (ruins-on-lapse code): lapsed claims drop the claim; buildings left standing then weather by this clock. Nothing for Claims to change unless they want different numbers.
 
 ## Next step
-Wait for CI on the building-13 PR and send the PM the green sha; then building-12 step 2 (ModelId) and the Tiled house for Ceramics.
+Wait for CI on the build-menu PR and send the PM the green sha; then building-12 step 2 (ModelId) and the Tiled house for Ceramics.
