@@ -378,6 +378,15 @@ public partial class Showcase : Node3D
             "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, "D" => MaterialLook.Variant.D, _ => MaterialLook.Variant.A,
         };
         string time = args.GetValueOrDefault("time", "golden");
+        // With --time-of-day the game's own Atmosphere drives sun, sky, fog and grade
+        // (its args: --time-of-day, --cloud, --wind, --grade); otherwise a stand-in.
+        bool atmosphere = args.ContainsKey("time-of-day");
+        if (atmosphere)
+        {
+            float tod = float.Parse(args["time-of-day"], System.Globalization.CultureInfo.InvariantCulture);
+            time = tod > 0.85f || tod < 0.2f ? "night" : "atmosphere";
+            AddChild(new Atmosphere());
+        }
         bool now = variant == MaterialLook.Variant.Current;
         bool d = variant == MaterialLook.Variant.D;
 
@@ -455,6 +464,7 @@ public partial class Showcase : Node3D
         // Light for the time of day.
         foreach (var child in GetChildren())
         {
+            if (atmosphere) break;
             if (child is DirectionalLight3D sun)
             {
                 if (time == "golden")
@@ -499,9 +509,10 @@ public partial class Showcase : Node3D
             // A campfire between the player and the cabin.
             var fire = new Vector3(0.6f, 0, 0.4f);
             AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = fire });
-            var flame = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(1f, 0.55f, 0.18f), EmissionEnabled = true, Emission = new Color(1f, 0.5f, 0.15f), EmissionEnergyMultiplier = 3f };
+            // As FireView lights a campfire at night.
+            var flame = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(1f, 0.55f, 0.18f), EmissionEnabled = true, Emission = new Color(1f, 0.45f, 0.12f), EmissionEnergyMultiplier = 6f };
             AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.16f, Height = 0.5f, RadialSegments = 8, Rings = 4 }, MaterialOverride = flame, Position = fire + new Vector3(0, 0.25f, 0) });
-            AddChild(new OmniLight3D { Position = fire + new Vector3(0, 0.7f, 0), LightColor = new Color(1f, 0.62f, 0.3f), LightEnergy = 4f, OmniRange = 10f, OmniAttenuation = 1.4f, ShadowEnabled = true });
+            AddChild(new OmniLight3D { Position = fire + new Vector3(0, 0.7f, 0), LightColor = new Color(1f, 0.58f, 0.24f), LightEnergy = 2.6f, OmniRange = 14f, OmniAttenuation = 1.15f, ShadowEnabled = true });
         }
 
         var camera = new Camera3D { Fov = 42f, Current = true };
