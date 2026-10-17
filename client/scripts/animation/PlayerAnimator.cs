@@ -122,7 +122,7 @@ public sealed class PlayerAnimator
             sitFidget = warmth > 0.2f && pick < 2 ? RestPoses.SitFidget.Warm
                 : Atmosphere.Night > 0.5f && pick == 2 ? RestPoses.SitFidget.LookUp
                 : !ground ? (pick % 2 == 0 ? RestPoses.SitFidget.LookUp : RestPoses.SitFidget.Warm)
-                : pick % 2 == 0 ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
+                : pick % 2 == 0 || Shell ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
             if (!ground && sitFidget == RestPoses.SitFidget.Warm && warmth <= 0.2f) sitFidget = RestPoses.SitFidget.LookUp;
             sitFidgetFor = 0f;
         }
@@ -210,6 +210,8 @@ public sealed class PlayerAnimator
 
     // A side-to-side rock of the hips over each foot in the walk, 0 to 1 (Pebble's waddle).
     public float Waddle;
+    // A shell on the back: poses that put the arms behind the body are left out.
+    public bool Shell;
 
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
     float Bounce => rig.HipHeight < 0.6f ? 1f : 0.15f;
@@ -651,8 +653,12 @@ public sealed class PlayerAnimator
         // Arms swing against the legs and bend more at the front of the swing.
         float armAmp = Mathf.Lerp(Mathf.Lerp(0.3f, 0.55f, g), 0.8f, r);
         float elbow = Mathf.Lerp(Mathf.Lerp(0.22f, 1.2f, g), 1.5f, r);
-        p[Joint.ShoulderL] = new Vector3(armAmp * s, 0, 0.1f);
-        p[Joint.ShoulderR] = new Vector3(-armAmp * s, 0, -0.1f);
+        // Behind the body a shell is in the way: the arms swing back less and a little wider.
+        float backL = armAmp * s, backR = -armAmp * s;
+        if (Shell) (backL, backR) = (Mathf.Min(backL, 0.25f), Mathf.Min(backR, 0.25f));
+        float wide = Shell ? 0.18f : 0.1f;
+        p[Joint.ShoulderL] = new Vector3(backL, 0, wide);
+        p[Joint.ShoulderR] = new Vector3(backR, 0, -wide);
         p[Joint.ElbowL].X = -elbow - 0.35f * Mathf.Max(-s, 0f);
         p[Joint.ElbowR].X = -elbow - 0.35f * Mathf.Max(s, 0f);
         p[Joint.HandL] = new Vector3(-0.1f, 0, 0.06f);
