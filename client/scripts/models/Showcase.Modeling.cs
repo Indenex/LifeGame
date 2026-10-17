@@ -192,4 +192,25 @@ public partial class Showcase
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(-0.3f, 1.45f, 2.9f), new Vector3(-0.3f, 0.4f, -0.2f), Vector3.Up);
     }
+    // Woodland mushrooms (model-34): the four patch variants ripe (back row) and picked
+    // (front row), and the picked item lying beside, with a rabbit for scale.
+    [ShowcaseView("mushrooms")]
+    void MushroomView()
+    {
+        for (int v = 0; v < Mushrooms.Variants; v++)
+        {
+            float x = (v - 1.5f) * 0.5f;
+            AddChild(new MeshInstance3D { Mesh = Mushrooms.Patch(v), Position = new Vector3(x, 0, -0.3f), Rotation = new Vector3(0, v * 1.3f, 0) });
+            AddChild(new MeshInstance3D { Mesh = Mushrooms.Picked(v), Position = new Vector3(x, 0, 0.25f), Rotation = new Vector3(0, v * 1.3f, 0) });
+        }
+        AddChild(new MeshInstance3D { Mesh = Mushrooms.Pile, Position = new Vector3(1.15f, 0, 0.05f), Rotation = new Vector3(0, 0.6f, 0) });
+        var rabbit = RabbitFigure.Create(PaintedAnimals.Coat(Look.Solid(RabbitFigure.Coats[0])));
+        rabbit.Position = new Vector3(-1.25f, 0, 0);
+        rabbit.Rotation = new Vector3(0, 1.2f, 0);
+        AddChild(rabbit);
+        var camera = new Camera3D { Fov = 34f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("near")) camera.LookAtFromPosition(new Vector3(-0.5f, 0.35f, 0.75f), new Vector3(-0.5f, 0.04f, -0.15f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0, 1.3f, 2.4f), new Vector3(0, 0.05f, 0), Vector3.Up);
+    }
 }
