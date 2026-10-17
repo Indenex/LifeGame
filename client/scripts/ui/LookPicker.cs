@@ -6,12 +6,14 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Choosing how you look (ui-21, D-233): skin tone, hair colour, haircut and beard, with
-// your figure turning slowly beside the choices. It opens by itself a moment after you
-// first join, when the server has no look for you yet, and again from Options ("Your
-// look"). Done sends SetLook (Modeling's player_look, model-3); the server checks it
-// with Looks.Valid, and every client redraws you from the row. Esc keeps the look you
-// had. Main sets Conn and MyId.
+// Choosing how you look (ui-21, D-233; races ui-22, D-249/D-255): a row of races on top,
+// then one row per choice of the chosen race (colour swatches or words), with your
+// figure turning slowly beside them. The rows come from Looks.Races, so a new race or
+// choice needs no code here, only its colours below. It opens by itself a moment after
+// you first join, when the server has no look for you yet, and again from Options
+// ("Your look"). Done sends SetRaceLook (Modeling's player_look, model-6); the server
+// checks it with Looks.Valid, and every client redraws you from the row. Esc keeps the
+// look you had. Main sets Conn and MyId.
 public partial class LookPicker : CanvasLayer
 {
     public Func<DbConnection?> Conn = () => null;
@@ -25,9 +27,14 @@ public partial class LookPicker : CanvasLayer
     Label title = null!;
     SubViewport view = null!;
     Skeleton3D? figure;
-    HumanFigure.Appearance look = HumanFigure.Appearance.Default;
-    readonly Button[] skins = new Button[Looks.Skins], hairs = new Button[Looks.Hairs];
-    readonly Button[] cuts = new Button[Looks.CutNames.Length], beards = new Button[Looks.BeardNames.Length];
+    // The chosen race and its option bytes, in player_look's slot order.
+    int race;
+    readonly int[] values = new int[Looks.OptionSlots];
+    readonly Button[] races = new Button[Looks.Races.Length];
+    VBoxContainer options = null!;
+    // One row of buttons per option of the shown race.
+    Button[][] rows = Array.Empty<Button[]>();
+    int rowsFor = -1;
     float spin, firstSeen = -1f;
     bool asked;
 
@@ -47,12 +54,15 @@ public partial class LookPicker : CanvasLayer
     {
         // Start from the look you have now: your chosen row, or the one the game gave you.
         uint id = MyId();
-        look = Conn()?.Db.PlayerLook.PlayerId.Find(id) is { } row
+        var look = Conn()?.Db.PlayerLook.PlayerId.Find(id) is { } row
             ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard, row.Race)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
+        race = look.Race < Looks.Races.Length ? look.Race : 0;
+        values[0] = look.Skin; values[1] = look.Hair; values[2] = look.Cut; values[3] = look.Beard ? 1 : 0;
+        Fit();
         title.Text = first ? "Choose how you look" : "Your look";
         panel.Visible = true;
-        Show(look);
+        Show();
     }
 
     public void Close() => panel.Visible = false;
@@ -86,9 +96,31 @@ public partial class LookPicker : CanvasLayer
 
     void Done()
     {
-        Conn()?.Reducers.SetLook((byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0));
+        Conn()?.Reducers.SetRaceLook((byte)race, (byte)values[0], (byte)values[1], (byte)values[2], (byte)values[3]);
         Close();
     }
+
+    // Keeps every option byte one the race has; a slot it doesn't use is 0 (as Looks.Valid wants).
+    void Fit()
+    {
+        var opts = Looks.Races[race].Options;
+        for (int i = 0; i < values.Length; i++)
+            values[i] = i < opts.Length ? Math.Clamp(values[i], 0, opts[i].Count - 1) : 0;
+    }
+
+    HumanFigure.Appearance Appearance => new(values[0], values[1], values[2], values[3] != 0, race);
+
+    // The colours of a colour option; Modeling keeps them with the figure (ChibiFigure).
+    // A race added to Looks.Races gets a line here; until then its swatches are shades of grey.
+    static Color[] Colours(int race, int option) => (Looks.Races[race].Name, option) switch
+    {
+        ("Bramble", 0) => ChibiFigure.Skins,
+        ("Bramble", 1) => ChibiFigure.Hairs,
+        ("Pebble", 0) => ChibiFigure.PebbleSkins,
+        ("Pebble", 1) => ChibiFigure.Shells,
+        _ => Enumerable.Range(0, Looks.Races[race].Options[option].Count)
+            .Select(i => new Color(0.3f + 0.12f * i, 0.3f + 0.12f * i, 0.3f + 0.12f * i)).ToArray(),
+    };
 
     // --- Layout ------------------------------------------------------------
 
@@ -108,9 +140,10 @@ public partial class LookPicker : CanvasLayer
         view = new SubViewport { OwnWorld3D = true, TransparentBg = true, Msaa3D = Viewport.Msaa.Msaa4X, Size = new Vector2I(240, 360) };
         frame.AddChild(view);
         columns.AddChild(frame);
-        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 1.05f, 4.4f) };
+        // Framed for the 1.35 m race figures.
+        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 0.82f, 3.5f) };
         view.AddChild(camera);
-        camera.LookAt(new Vector3(0, 0.92f, 0), Vector3.Up);
+        camera.LookAt(new Vector3(0, 0.68f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-35, 30, 0), LightEnergy = 1.1f });
         view.AddChild(new WorldEnvironment
         {
@@ -126,10 +159,12 @@ public partial class LookPicker : CanvasLayer
         var choices = new VBoxContainer { CustomMinimumSize = new Vector2(300, 0) };
         choices.AddThemeConstantOverride("separation", 10);
         columns.AddChild(choices);
-        choices.AddChild(Swatches("Skin", HumanFigure.Skins, skins, i => look = look with { Skin = i }));
-        choices.AddChild(Swatches("Hair", HumanFigure.Hairs, hairs, i => look = look with { Hair = i }));
-        choices.AddChild(Words("Cut", Looks.CutNames, cuts, i => look = look with { Cut = i }));
-        choices.AddChild(Words("Beard", Looks.BeardNames, beards, i => look = look with { Beard = i != 0 }));
+        // The races, as words along the top; the rows below follow the one chosen.
+        if (Looks.Races.Length > 1)
+            choices.AddChild(Words("Race", Looks.Races.Select(r => r.Name).ToArray(), races, i => { race = i; Fit(); }));
+        options = new VBoxContainer();
+        options.AddThemeConstantOverride("separation", 10);
+        choices.AddChild(options);
         choices.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         var done = ControlsPage.TextButton("Done", Done);
         done.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
@@ -161,7 +196,7 @@ public partial class LookPicker : CanvasLayer
         {
             int at = i;
             var b = new Button { CustomMinimumSize = new Vector2(34, 34), FocusMode = Control.FocusModeEnum.None };
-            b.Pressed += () => { pick(at); Show(look); };
+            b.Pressed += () => { pick(at); Show(); };
             b.SetMeta("colour", colours[i]);
             into[i] = b;
             row.AddChild(b);
@@ -182,7 +217,7 @@ public partial class LookPicker : CanvasLayer
             int at = i;
             var b = new Button { Text = words[i], FocusMode = Control.FocusModeEnum.None };
             b.AddThemeFontSizeOverride("font_size", 15);
-            b.Pressed += () => { pick(at); Show(look); };
+            b.Pressed += () => { pick(at); Show(); };
             into[i] = b;
             row.AddChild(b);
         }
@@ -199,19 +234,38 @@ public partial class LookPicker : CanvasLayer
 
     // --- Contents ----------------------------------------------------------
 
-    void Show(HumanFigure.Appearance a)
+    void Show()
     {
-        if (figure == null)
-        {
-            figure = PlayerModel.Build(a);
-            view.AddChild(figure);
-        }
-        else PlayerModel.SetLook(figure, a);
+        var a = Appearance;
+        // The picker always shows the race figures (D-249), whichever body the world uses yet.
+        if (figure != null) { view.RemoveChild(figure); figure.QueueFree(); }
+        figure = ChibiFigure.Create(PlayerModel.ChibiLook(a));
+        view.AddChild(figure);
 
-        for (int i = 0; i < skins.Length; i++) Ring(skins[i], i == a.Skin);
-        for (int i = 0; i < hairs.Length; i++) Ring(hairs[i], i == a.Hair);
-        for (int i = 0; i < cuts.Length; i++) Chosen(cuts[i], i == a.Cut);
-        for (int i = 0; i < beards.Length; i++) Chosen(beards[i], i == (a.Beard ? 1 : 0));
+        if (rowsFor != race) Rebuild();
+        for (int i = 0; i < races.Length; i++) if (races[i] != null) Chosen(races[i], i == race);
+        var opts = Looks.Races[race].Options;
+        for (int o = 0; o < rows.Length; o++)
+            for (int i = 0; i < rows[o].Length; i++)
+                if (opts[o].Names == null) Ring(rows[o][i], i == values[o]);
+                else Chosen(rows[o][i], i == values[o]);
+    }
+
+    // One row per option of the chosen race: swatches for colours, words for parts.
+    void Rebuild()
+    {
+        foreach (var child in options.GetChildren()) { options.RemoveChild(child); child.QueueFree(); }
+        var opts = Looks.Races[race].Options;
+        rows = new Button[opts.Length][];
+        for (int o = 0; o < opts.Length; o++)
+        {
+            int slot = o;
+            rows[o] = new Button[opts[o].Count];
+            options.AddChild(opts[o].Names is { } names
+                ? Words(opts[o].Name, names, rows[o], i => values[slot] = i)
+                : Swatches(opts[o].Name, Colours(race, o), rows[o], i => values[slot] = i));
+        }
+        rowsFor = race;
     }
 
     // A swatch: its colour in a round, with a bright ring when chosen.
