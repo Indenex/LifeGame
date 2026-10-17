@@ -126,6 +126,7 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyFrost();
         ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
@@ -331,6 +332,7 @@ public partial class Atmosphere : Node3D
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
         UpdateWaterSurface(dt, focus);
+        UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
