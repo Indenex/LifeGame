@@ -2,8 +2,8 @@
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm), Opus helper
 Status: in_review
-Branch: claude/painted-4-animals (stacked on claude/painted-1-rocks)
-PR: (not opened yet)
+Branch: claude/painted-4-animals (includes painted-1 until #554 lands)
+PR: #560
 
 ## Goal
 Part of the painted rollout (painted-1 rocks ... -6 items): sheep, deer and hens on Painted's shader, so fleece, coats, faces and legs get the stepped light bands, violet shade and soft ink edge. Wool reads soft (low crevice, gentle dabs); the per-sheep fleece tint and per-deer coat still work (one painted twin per source colour). Bone layouts and public APIs unchanged.
