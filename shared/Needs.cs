@@ -41,6 +41,15 @@ namespace LifeGame.Shared
         public const float MushroomWater = 0.01f;
         public const long MushroomRegrowMicros = 12L * 60 * 1_000_000;
         public const int MushroomsPerChunk = 1;
+        // Wild roots (survival-36, a lane default): open meadow, dug with a digging tool, the
+        // one wild food that lasts through winter. A bit more filling than a mushroom for
+        // the tool and the effort; a dug patch comes back slowly.
+        public const float RootFood = 0.09f;
+        public const float RootWater = 0.01f;
+        public const long RootRegrowMicros = 20L * 60 * 1_000_000;
+        public const int RootsPerChunk = 1;
+        // No standing tree within this many cells of a root patch: roots want open ground.
+        public const int RootOpenRadius = 3;
         // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;

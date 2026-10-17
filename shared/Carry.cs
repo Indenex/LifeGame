@@ -65,6 +65,7 @@ namespace LifeGame.Shared
             [Item.Berries] = 0.1f,
             [Item.Hazelnuts] = 0.05f,
             [Item.Mushrooms] = 0.05f,
+            [Item.WildRoots] = 0.1f,
             [Basket] = 0.5f,
         };
 

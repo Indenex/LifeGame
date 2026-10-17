@@ -20,6 +20,9 @@ namespace LifeGame.Shared
         public string NotReady = "";
         // How far its edge reaches from its center, so reach is measured to what you touch.
         public float Radius;
+        // A tool it needs equipped (none when 0), and what the server says without one.
+        public ItemTags Tool;
+        public string NoTool = "";
 
         public bool InSeason(Season season) => Seasons == null || Array.IndexOf(Seasons, season) >= 0;
     }
@@ -27,7 +30,7 @@ namespace LifeGame.Shared
     public static class Forages
     {
         // Stored kinds (ForageBush.Kind). Append only.
-        public const byte BerryBushKind = 0, MushroomKind = 1;
+        public const byte BerryBushKind = 0, MushroomKind = 1, RootKind = 2;
 
         public static readonly ForageDef Berries = new()
         {
@@ -53,13 +56,22 @@ namespace LifeGame.Shared
             Radius = 0.25f,
         };
 
-        static readonly ForageDef[] ByKind = { Berries, Mushrooms };
+        // Wild roots (survival-36, a lane default): leafy tufts in open meadow, dug up with
+        // a digging tool in any season, so winter is not foodless.
+        public static readonly ForageDef Roots = new()
+        {
+            Kind = RootKind, Yield = Item.WildRoots, PerPick = 2, RegrowMicros = Needs.RootRegrowMicros,
+            Prompt = "Dig up roots", NotReady = "Nothing left to dig here yet", Radius = 0.3f,
+            Tool = ItemTags.Digging, NoTool = "You need a digging stick to dig up roots",
+        };
+
+        static readonly ForageDef[] ByKind = { Berries, Mushrooms, Roots };
 
         // What a forage spot is: its stored kind, and for a bush whether it is a hazel.
         public static ForageDef Of(byte kind, ulong id) =>
             kind == BerryBushKind ? (Needs.IsHazelBush(id) ? Hazel : Berries)
             : kind < ByKind.Length ? ByKind[kind] : Berries;
 
-        public static IReadOnlyList<ForageDef> All => new[] { Berries, Hazel, Mushrooms };
+        public static IReadOnlyList<ForageDef> All => new[] { Berries, Hazel, Mushrooms, Roots };
     }
 }
