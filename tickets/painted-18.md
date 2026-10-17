@@ -11,6 +11,8 @@ Environment found pale rocks read pink-lilac at every hour, not only at golden h
 ## Progress log
 - 2026-10-17 14:10: changed and rendered; local build 0 errors.
 
+- 2026-10-17 14:20: world renders at noon (--time-of-day=0.5), main left and this branch right: renders/painted-18-noon-world.png and painted-18-noon-rock.png (the big rock's shaded side goes from violet to a soft grey). Also renders/painted-17-golden-rock-main-802-neutral.png for Justin: the big rock at 0.72 on main before #802, with #802, and with the shade forced neutral (no further change, so the leftover golden-hour pink is light and base colour). CI on 097b7f19 green: https://github.com/Indenex/LifeGame/actions/runs/39039050895
+
 ## Open questions / blockers
 - A look change Justin may notice (the cards' violet shade). Options sent to the PM: softened (this PR, recommended), keep the deep violet, or a plain warm grey.
 
