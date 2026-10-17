@@ -483,6 +483,10 @@ if (runStations)
             conn.Reducers.StartCraft("chop.log", 0);
             Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
             if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            // The server chops the nearest standing tree in reach, which can be another than the one walked to:
+            // measure the walk against the tree the job really has.
+            var chopJob = conn.Db.MyCraftJob.Iter().First();
+            trunk0 = (chopJob.X, chopJob.Z);
             // Walk off along a line the ground leaves free (no boulder, trunk, water or steep cell on it), in
             // steps, reading where the server really has us: a raw line into an obstacle would leave the player
             // in reach and the check would time out for the wrong reason.
