@@ -23,7 +23,7 @@ public static class NextSteps
         [Skills.Run] = "Hold {run} to run. The more you run, the farther you can go.",
         [Wading.WadeProcess] = "Shallow water slows you, but a patient wader gets across.",
         [Wading.FloatProcess] = "Where the water is deep, you can let it carry you across.",
-        [Skills.Repair] = "A tool gone soft in the hand is made good again at a table with a length of cord.",
+        [Skills.Repair] = "A tool worn thin is not lost. A repair table and a little cord will mend it.",
         [Skills.Berries] = "Some bushes carry ripe berries. Food for the road.",
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
         ["gather.tinder"] = "Fire needs something fine and dry to catch. Plant fiber can be shredded.",
