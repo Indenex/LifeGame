@@ -6,7 +6,7 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// Trading face to face (D-069). G on a player asks to trade (Claims' handler); they see
+// Trading face to face (D-069). Trade in the right-click player menu asks (ui-35); they see
 // "Mara wants to trade" and press E to say yes or Esc to say no. The window shows both
 // offers side by side, with what you carry below to add from. Each side accepts; any
 // change to either offer clears both accepts, and the window says so. Esc calls the
@@ -56,7 +56,7 @@ public partial class TradeWindow : CanvasLayer
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
 
-        // "Mara wants to trade", just above the G prompt, while someone waits on you.
+        // "Mara wants to trade", just above the Use prompt, while someone waits on you.
         asked = new Label { HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(asked, 16, 0.92f);
         asked.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
@@ -96,7 +96,7 @@ public partial class TradeWindow : CanvasLayer
         mock.Hold = true;
     }
 
-    // Someone waits on you: G says yes, whatever you face. Its target is where you stand,
+    // Someone waits on you: Use says yes, whatever you face. Its target is where you stand,
     // so it counts as in front of you and beats nearby bushes and fires.
     UseOffer? FindUse(Vector3 at) => !IsOpen && Link.Incoming is { } who
         ? new UseOffer($"Trade with {who.name}", 0f, () => Link.Answer(true), Target: at)
@@ -159,7 +159,7 @@ public partial class TradeWindow : CanvasLayer
         carryTitle.Modulate = new Color(1, 1, 1, 0.75f);
         box.AddChild(carryTitle);
         carryRow = new HFlowContainer { CustomMinimumSize = new Vector2(600, 0) };
-        carryRow.AddThemeConstantOverride("h_separation", 2);
+        carryRow.AddThemeConstantOverride("h_separation", 6);
         carryRow.AddThemeConstantOverride("v_separation", 6);
         box.AddChild(carryRow);
 
@@ -198,6 +198,13 @@ public partial class TradeWindow : CanvasLayer
         };
         style.SetCornerRadiusAll(10);
         style.SetBorderWidthAll(2);
+        if (WarmLook.On)
+        {
+            // A sheet a shade darker than the window; Mark turns it sage when that side accepts (ui-76).
+            style.BgColor = WarmLook.Paper.Darkened(0.05f);
+            style.SetCornerRadiusAll(16);
+            WarmLook.KeepColours(box);
+        }
         box.AddThemeStyleboxOverride("panel", style);
         box.AddChild(col);
         return box;
@@ -232,7 +239,9 @@ public partial class TradeWindow : CanvasLayer
         Mark(mineBox, mineState, trade.MineAccepted, "You accept", "You haven't accepted");
         Mark(theirsBox, theirsState, trade.TheirsAccepted, $"{trade.Partner} accepts", $"{trade.Partner} hasn't accepted");
         accept.Text = trade.MineAccepted ? $"Accepted, waiting for {trade.Partner} (click to take it back)" : "Accept this trade";
-        accept.Modulate = trade.MineAccepted ? Agreed : Colors.White;
+        // On paper the button itself turns sage once you accept; a green tint over coral read as mud (ui-76).
+        if (WarmLook.On) WarmLook.MainButton(accept, trade.MineAccepted ? WarmLook.Sage.Darkened(0.12f) : null);
+        else accept.Modulate = trade.MineAccepted ? Agreed : Colors.White;
 
         // What you could still add: what you carry less what you already offer.
         var left = carried.Select(s => s with { Count = s.Count - Offered(trade, s) })
@@ -265,7 +274,12 @@ public partial class TradeWindow : CanvasLayer
     static void Mark(PanelContainer box, Label state, bool accepted, string yes, string no)
     {
         var style = (StyleBoxFlat)box.GetThemeStylebox("panel");
-        style.BorderColor = accepted ? Agreed : new Color(Look.Cream, 0.18f);
+        if (WarmLook.On)
+        {
+            style.BgColor = accepted ? WarmLook.Sage.Lerp(WarmLook.Paper, 0.72f) : WarmLook.Paper.Darkened(0.05f);
+            style.BorderColor = accepted ? WarmLook.Sage.Darkened(0.25f) : new Color(WarmLook.Ink, 0.18f);
+        }
+        else style.BorderColor = accepted ? Agreed : new Color(Look.Cream, 0.18f);
         state.Text = accepted ? "✓ " + yes : no;
         state.AddThemeColorOverride("font_color", accepted ? Agreed : new Color(Look.Cream, 0.55f));
     }
@@ -290,10 +304,20 @@ public partial class TradeWindow : CanvasLayer
         {
             Text = Words(s),
             Icon = ItemIcon.For(s.Item),
-            Flat = true,
+            // What you can click sits on a small chip, so it reads as something to pick up (ui-76);
+            // the other side's offer is just shown.
+            Flat = move == null,
             FocusMode = Control.FocusModeEnum.None,
             Disabled = move == null,
         };
+        if (move != null)
+            foreach (var (state, a) in new[] { ("normal", 0.08f), ("hover", 0.2f), ("pressed", 0.3f) })
+            {
+                // Faint cream chips on the dark look; WarmLook makes them paper buttons on warm.
+                var chip = new StyleBoxFlat { BgColor = new Color(Look.Cream, a), ContentMarginLeft = 8, ContentMarginRight = 10, ContentMarginTop = 3, ContentMarginBottom = 3 };
+                chip.SetCornerRadiusAll(14);
+                button.AddThemeStyleboxOverride(state, chip);
+            }
         // A touch smaller (ui-59), so what you carry fits one row on the warm look's rounder buttons.
         button.AddThemeFontSizeOverride("font_size", 14);
         button.AddThemeConstantOverride("icon_max_width", 26);
