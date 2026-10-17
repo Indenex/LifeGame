@@ -84,6 +84,9 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
+// A returning login waits at the character menu (survival-24): play its character.
+if (conn.Db.Player.Identity.Find(me!.Value) is { Online: false }) conn.Reducers.SelectCharacter(me!.Value);
+Pump(() => conn.Db.Player.Identity.Find(me!.Value) is { Online: true }, 10, "the character in the world");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
 var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;

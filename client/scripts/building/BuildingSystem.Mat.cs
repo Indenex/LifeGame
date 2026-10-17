@@ -46,7 +46,7 @@ public partial class BuildingSystem
         ShowMat(new SleepingMat(player, 0, x, z, yaw));
 
     uint MyPlayerId(DbConnection c) =>
-        c.Identity is { } id && c.Db.Player.Identity.Find(id) is { } p ? p.PlayerId : 0;
+        Me.Key(c) is { } id && c.Db.Player.Identity.Find(id) is { } p ? p.PlayerId : 0;
 
     void RegisterMatUse(DbConnection c)
     {

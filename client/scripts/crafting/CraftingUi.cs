@@ -503,7 +503,7 @@ public partial class CraftingUi : CanvasLayer
     (Roast? roast, float seconds) OldestDoneRoast()
     {
         (Roast? roast, float seconds) best = (null, 0f);
-        if (conn?.Identity is not { } me) return best;
+        if (Me.Key(conn) is not { } me) return best;
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
         foreach (var r in conn.Db.Roast.Iter())
         {
@@ -516,7 +516,7 @@ public partial class CraftingUi : CanvasLayer
 
     IEnumerable<(Roast roast, float seconds)> MyRoasts()
     {
-        if (conn?.Identity is not { } me) return Enumerable.Empty<(Roast, float)>();
+        if (Me.Key(conn) is not { } me) return Enumerable.Empty<(Roast, float)>();
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
         return conn.Db.Roast.Iter().Where(r => r.Owner == me)
             .Select(r => (r, (now - r.PutAt.MicrosecondsSinceUnixEpoch) / 1_000_000f))

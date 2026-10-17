@@ -20,7 +20,7 @@ public static partial class Module
     public static void CancelCraft(ReducerContext ctx)
     {
         RequirePlayer(ctx);
-        CancelJob(ctx, ctx.Sender);
+        CancelJob(ctx, Me(ctx));
     }
 
     // Ends a job now: removes its timer, returns what it took, and tells the work hooks.
@@ -53,8 +53,8 @@ public static partial class Module
     // After the hand changes (EquipSlot, SyncEquip): a chop needs the axe still in hand.
     static void CheckJobTool(ReducerContext ctx)
     {
-        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not { } job) return;
+        if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not { } job) return;
         if (Processes.Find(job.ProcessId) is not { Outcome: Outcome.Chop } def) return;
-        if (EquippedTool(ctx, def.NeedsTool) is null) CancelJob(ctx, ctx.Sender);
+        if (EquippedTool(ctx, def.NeedsTool) is null) CancelJob(ctx, Me(ctx));
     }
 }

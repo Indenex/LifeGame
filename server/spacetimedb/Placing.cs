@@ -20,7 +20,7 @@ public static partial class Module
         RequireClaimAccess(ctx, x, z);
 
         RequireHeld(ctx, item);
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality, wear) ?? throw new Exception("You are not carrying that");
+        var stack = FindStack(ctx, Me(ctx), (Item)item, quality, wear) ?? throw new Exception("You are not carrying that");
         if (Placement.Check((Item)item, x, z, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
         int cx = World.CellOf(x), cz = World.CellOf(z);
