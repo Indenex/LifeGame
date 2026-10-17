@@ -26,9 +26,12 @@ setting (D-145 next item, option (b) sent to the PM):
 - 2026-10-17 14:35: birds, Audio events, dragonflies scaled to 0.3 committed (wrap-up). Builds
   locally. NOT yet seen in a render: two renders at the pond (-36,-16 and -46,-22) did not
   show them clearly (tree in the way / timed out). Nearest water to spawn: (-39,-18).
+- 2026-10-17 14:40: a debug run at (-46,-22) with --life=1 logged all 6 dragonflies spawned
+  over water (~0.6 m above the surface) and moving between spots, so the logic works; they
+  are small at the default zoom, so take the clip close (camera-zoom about -2 to 1).
 
 ## Open questions / blockers
 - (none waiting on Justin.) Audio waits for the branch to land to build its sounds.
 
 ## Next step
-Render at the pond with --life=1 (e.g. `--debug-position=-44,-20 --camera-zoom=2 --time-of-day=0.5`) to confirm dragonflies show (add a temporary GD.Print of the visible count if not); then open the PR, send Audio the sha, request a Render clip (pond by day; a flock at dusk with --life=1, which spawns flocks 20x as often), and send the green sha to the PM.
+Render at the pond with --life=1 (e.g. `--debug-position=-44,-20 --camera-zoom=2 --time-of-day=0.5`) for a still where they read clearly (logic already confirmed); then open the PR, send Audio the sha, request a Render clip (pond by day; a flock at dusk with --life=1, which spawns flocks 20x as often), and send the green sha to the PM.
