@@ -1173,6 +1173,11 @@ sealed class Bot
             if (!axeEquipped) { Conn.Reducers.EquipSlot(9); axeEquipped = true; }
         }
         uint before = CountOf(def.Makes);
+        if (def.Minigame != Minigame.None)
+        {
+            Conn.Reducers.BeginMinigame(processId);
+            System.Threading.Thread.Sleep((int)((MinigamePlay.MinSeconds(def.Minigame) + 0.3f) * 1000));
+        }
         Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);
         bool seen = false;

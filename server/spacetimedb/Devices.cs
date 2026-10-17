@@ -29,6 +29,9 @@ public static partial class Module
         public byte Cap;
         // Identifies the round's timer, so a round that was sped up ignores its old timer.
         public uint Token;
+        // Who is working the round (the attended speed-up holds only while they stay), 0 for none.
+        [Default(0u)]
+        public uint WorkerId;
     }
 
     [SpacetimeDB.Table(Accessor = "DeviceTimer", Scheduled = nameof(FinishDeviceRound), ScheduledAt = nameof(ScheduledAt))]
@@ -139,6 +142,7 @@ public static partial class Module
         seconds = Devices.UnitSeconds(Math.Max(seconds, 0.5f), false, Devices.Plain(def)) * units;
         job.RoundUnits = units;
         job.Attended = false;
+        job.WorkerId = 0;
         job.Score = 0f;
         job.Token += 1;
         job.RoundStart = ctx.Timestamp;
@@ -156,7 +160,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
-        RequireDevice(ctx, structureId, pos);
+        var device = RequireDevice(ctx, structureId, pos);
         var job = ctx.Db.DeviceJob.StructureId.Find(structureId) ?? throw new Exception("There is nothing to work");
         if (Processes.Find(job.ProcessId) is { } running && Devices.Plain(running))
             throw new Exception("It just runs. There's nothing to do but leave it");
@@ -166,7 +170,8 @@ public static partial class Module
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         long left = Math.Max(0, job.RoundEnd.MicrosecondsSinceUnixEpoch - now);
         job.Attended = true;
-        job.Score = Math.Clamp(score, 0f, 1f);
+        job.WorkerId = player.PlayerId;
+        job.Score = TrustScore(ctx, player.PlayerId, job.ProcessId, Devices.MinigameOf(Structures.Shape((int)device.Kind).Station), score);
         job.RoundEnd = new Timestamp(now + (long)(left * (Devices.AttendedTime / Devices.UnattendedTime)));
         job.Token += 1;
         ctx.Db.DeviceJob.StructureId.Update(job);
