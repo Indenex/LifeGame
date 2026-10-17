@@ -142,6 +142,7 @@ public partial class Main : Node3D
         equipment.Bag.Use = hud.Hotbar.UseItem;
         equipment.Bag.TakeOff = slot => equipment.Link.TakeOff(slot);
         equipment.Bag.ClearHotbar = i => hud.Hotbar.Link.Set(i, null);
+        equipment.Bag.InHand = () => hud.Hotbar.Held;
         equipment.Bag.OverPanel = at => equipment.Covers(at) || hud.Hotbar.RowRect.HasPoint(at);
         equipment.Bag.PlaceOrDrop = (item, quality) =>
         {
