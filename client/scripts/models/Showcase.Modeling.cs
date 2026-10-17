@@ -235,4 +235,25 @@ public partial class Showcase
         if (args.ContainsKey("near")) camera.LookAtFromPosition(new Vector3(-0.6f, 0.45f, 0.9f), new Vector3(-0.6f, 0.15f, -0.2f), Vector3.Up);
         else camera.LookAtFromPosition(new Vector3(0, 1.4f, 2.7f), new Vector3(0, 0.15f, 0), Vector3.Up);
     }
+
+    // The trading stall (model-36): frame, counter and the finished stall under its awning,
+    // left to right, with the player between the counter and the finished stall for scale.
+    [ShowcaseView("stall")]
+    void StallView()
+    {
+        var pieces = StallModel.Pieces();
+        for (int c = 0; c < 3; c++)
+            foreach (var piece in pieces)
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-4.4f + c * 2.6f, 0, -c * 0.6f), Rotation = new Vector3(0, 0.45f, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(0.05f, 0, 0.35f);
+        figure.Rotation = new Vector3(0, 0.3f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 38f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("near")) camera.LookAtFromPosition(new Vector3(2.6f, 1.8f, 2.4f), new Vector3(0.8f, 0.9f, -1.2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(-1.2f, 2.8f, 6.8f), new Vector3(-1.4f, 0.9f, -0.6f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
 }
