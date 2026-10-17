@@ -56,6 +56,21 @@ var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
+// Every run begins from the same place (bugfix-31): new players wake at a random spot in the
+// spawn clearing, so walk to the origin first, at a pace the server accepts.
+for (var go = Stopwatch.StartNew(); go.Elapsed.TotalSeconds < 60; )
+{
+    float dx = -x, dz = -z, d = MathF.Sqrt(dx * dx + dz * dz);
+    if (d < 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } at && MathF.Abs(at.X - x) + MathF.Abs(at.Z - z) < 0.1f) break;
+    if (d >= 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen0 && MathF.Abs(seen0.X - x) + MathF.Abs(seen0.Z - z) < 1.5f)
+    {
+        float step = Math.Min(d, 0.5f);
+        x += dx / d * step; z += dz / d * step;
+    }
+    conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
+    Pump(() => false, 0.1f, null);
+}
+
 // CRAFTCHECK_PART splits the check in two for CI: "tools" (the tier 0 to 2 crafts, digging, fires, chopping)
 // and "stations" (claim, tables, placing, tool wear and repair). Unset runs both, as before.
 string part = Environment.GetEnvironmentVariable("CRAFTCHECK_PART") ?? "";

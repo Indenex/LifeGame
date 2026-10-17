@@ -110,6 +110,9 @@ void Walk(Tester t, float x, float z)
 }
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+Walk(a, 0f, 0f);
+Walk(b, 1f, 0f);
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
 
 // A gathers what a marker needs.
