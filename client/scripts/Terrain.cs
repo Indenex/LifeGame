@@ -325,6 +325,12 @@ public partial class Terrain : Node3D
         var flowers = new List<(Transform3D, Color, Color)>();
         var bushes = new List<(Transform3D, Color, Color)>();
         var landmarks = new LandmarkProps.Lists();
+        var painted = new Dictionary<(bool Pine, int Variant), List<(Transform3D, Color, Color)>>();
+        for (int v = 0; v < PaintedTrees.Variants; v++)
+        {
+            painted[(true, v)] = new();
+            painted[(false, v)] = new();
+        }
 
         int n = World.ChunkSize;
         for (int i = 0; i < n; i++)
@@ -404,17 +410,17 @@ public partial class Terrain : Node3D
                     {
                         // The odd tree on the heath is a broad old oak.
                         var broad = at.ScaledLocal(new Vector3(1.35f, 1.15f, 1.35f));
-                        trunks.Add((broad, Look.Bark.Darkened(0.05f), custom));
-                        leafy.Add((broad, Look.Leaf.Lerp(Look.LeafWarm, Hash01(x, z, 19) * 0.25f), custom with { A = SeasonBroadleaf }));
+                        painted[(false, Variant(x, z, 30, PaintedTrees.Variants))].Add((broad, Colors.White.Darkened(0.05f + Hash01(x, z, 19) * 0.08f), custom with { A = SeasonBroadleaf }));
                     }
                     else
                     {
-                        trunks.Add((at, Look.Bark, custom));
+                        // Modeling's painted trees (model-10): a pine or a broadleaf, trunk and
+                        // all, one of a few seeded shapes, each a shade lighter or darker.
+                        var shade = Colors.White.Darkened(Hash01(x, z, 18) * 0.1f);
                         if (Hash01(x, z, 16) < 0.4f)
-                            pines.Add((at, Look.Pine.Lightened(Hash01(x, z, 17) * 0.1f), custom));
+                            painted[(true, Variant(x, z, 31, PaintedTrees.Variants))].Add((at, shade, custom));
                         else
-                            leafy.Add((at, Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 18) * 0.35f)
-                                .Lerp(Look.LeafWarm, Mathf.Max(0f, Hash01(x, z, 19) - 0.85f) * 2f), custom with { A = SeasonBroadleaf }));
+                            painted[(false, Variant(x, z, 30, PaintedTrees.Variants))].Add((at, shade, custom with { A = SeasonBroadleaf }));
                     }
                 }
                 else if (roll < rock)
@@ -507,6 +513,13 @@ public partial class Terrain : Node3D
         data.Add(trunkMesh!, trunks, Look.TreeBark);
         data.Add(leafyMesh!, leafy, Look.TreeFoliage);
         data.Add(pineMesh!, pines, Look.TreeFoliage);
+        // Painted trees in full near the camera and as a lighter far version beyond.
+        foreach (var ((pine, v), items) in painted)
+        {
+            var material = pine ? PaintedTrees.PineMaterial : PaintedTrees.BroadleafMaterial;
+            data.Add(pine ? PaintedTrees.Pine(v, false) : PaintedTrees.Broadleaf(v, false), items, material, range: (0f, PaintedTrees.NearRange));
+            data.Add(pine ? PaintedTrees.Pine(v, true) : PaintedTrees.Broadleaf(v, true), items, material, range: (PaintedTrees.NearRange, 0f));
+        }
         foreach (var ((mesh, material), items) in landmarks.Batches)
             data.Add(mesh, items, material, castShadow: material != Look.Grass);
         if (tufts != null) data.Add(tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
@@ -532,7 +545,7 @@ public partial class Terrain : Node3D
     // other bushes, rocks) never changes.
     internal const float SeasonBroadleaf = 1f, SeasonFlower = 2f, SeasonHeather = 3f;
 
-    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true)
+    static void AddMulti(Node3D root, Mesh mesh, List<(Transform3D, Color, Color)> items, Material material, bool castShadow = true, (float Begin, float End) range = default)
     {
         if (items.Count == 0) return;
         bool custom = items.Exists(item => item.Item3.R > 0f || item.Item3.A > 0f);
@@ -555,6 +568,9 @@ public partial class Terrain : Node3D
             Multimesh = mm,
             MaterialOverride = material,
             CastShadow = castShadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+            // A near or far version of a batch shows only within its range of the camera.
+            VisibilityRangeBegin = range.Begin, VisibilityRangeEnd = range.End,
+            VisibilityRangeBeginMargin = range.Begin > 0f ? 4f : 0f, VisibilityRangeEndMargin = range.End > 0f ? 4f : 0f,
         });
         // Trees in the way of the camera fade; their ghost draws them see-through.
         // Ghosts sit under one node per chunk so ShowGhosts can switch them off
@@ -566,7 +582,7 @@ public partial class Terrain : Node3D
                 ghosts = new Node3D { Name = GhostsName, Visible = false };
                 root.AddChild(ghosts);
             }
-            ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            ghosts.AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = ghost, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, VisibilityRangeBegin = range.Begin, VisibilityRangeEnd = range.End });
         }
     }
 

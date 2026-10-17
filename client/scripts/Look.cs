@@ -127,7 +127,7 @@ public static class Look
     // The ghost to draw alongside a see-through material, if it has one.
     public static ShaderMaterial? GhostOf(Material material) =>
         material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
-        material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
+        material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : PaintedTrees.GhostOf(material);
 
     // A see-through copy of any painted surface for a building to fade by hand: set its
     // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
@@ -135,7 +135,7 @@ public static class Look
 
     static ShaderMaterial Ghost(ShaderMaterial source) => Ghost(source, GhostShader);
 
-    static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
+    internal static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
     {
         var ghost = new ShaderMaterial { Shader = shader };
         foreach (var uniform in source.Shader.GetShaderUniformList())
@@ -348,7 +348,7 @@ public static class Look
         .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
-    const string PaintedCode = """
+    internal const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
 
@@ -812,7 +812,7 @@ public static class Look
         """;
 
     // Puts the weather uniforms right after the shader's render mode line.
-    static Shader MakeShader(string code)
+    internal static Shader MakeShader(string code)
     {
         EnsureWeatherGlobals();
         int split = code.IndexOf('\n', code.IndexOf("render_mode")) + 1;
