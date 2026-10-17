@@ -181,6 +181,63 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0f, 0.05f, 0.18f, 20f, 1000f, 0.004f),
     });
 
+    // --- Water (audio-12): wading, splashing and floating. Louder and lower the deeper it is.
+
+    // Wade, ankle deep (under 0.3 m): a light splash and a few drops.
+    public static readonly CueDef WadeShallow = new("water.wade.shallow", 0.4f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.08f, 0.25f, 700f, 4000f, 0.006f),
+        new CueLayer(Src.Noise, 0.03f, 0.06f, 0.08f, 2500f, 7000f, 0.004f),
+        new CueLayer(Src.Tone, 0.02f, 0.05f, 0.05f, 350f, 900f, 0.004f),
+    });
+
+    // Wade, knee deep (0.3 to 0.65 m): a heavier slosh with a swirl behind it.
+    public static readonly CueDef WadeKnee = new("water.wade.knee", 0.65f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.16f, 0.3f, 200f, 2500f, 0.015f),
+        new CueLayer(Src.Noise, 0.08f, 0.2f, 0.2f, 100f, 900f, 0.08f),
+        new CueLayer(Src.Noise, 0.2f, 0.07f, 0.06f, 2500f, 6500f, 0.004f),
+    });
+
+    // Wade, waist deep (over 0.65 m): a slow, deep push through the water.
+    public static readonly CueDef WadeDeep = new("water.wade.deep", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.25f, 0.35f, 80f, 1500f, 0.03f),
+        new CueLayer(Src.Noise, 0.1f, 0.3f, 0.25f, 60f, 600f, 0.12f),
+        new CueLayer(Src.Tone, 0.25f, 0.08f, 0.04f, 200f, 120f, 0.01f),
+    });
+
+    // Splash in: something (or you) hits the water: a crack of spray, a low whump and a sheet of drops.
+    public static readonly CueDef SplashIn = new("water.splash", 1.0f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.14f, 0.27f, 300f, 5000f, 0.004f),
+        new CueLayer(Src.Tone, 0f, 0.12f, 0.12f, 140f, 70f, 0.006f),
+        new CueLayer(Src.Noise, 0.1f, 0.25f, 0.07f, 2000f, 7000f, 0.05f),
+        new CueLayer(Src.Noise, 0.3f, 0.1f, 0.036f, 2500f, 7000f, 0.02f),
+    }, Send: 0.1f);
+
+    // Climb out: the water running off, a few drips.
+    public static readonly CueDef Drip = new("water.drip", 0.7f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.15f, 0.12f, 300f, 2200f, 0.03f),
+        new CueLayer(Src.Noise, 0.2f, 0.04f, 0.05f, 2500f, 7000f, 0.003f),
+        new CueLayer(Src.Tone, 0.22f, 0.04f, 0.03f, 500f, 1200f, 0.003f),
+    });
+
+    // Paddle: one soft stroke while afloat and moving, a swish and a trickle off the hand.
+    public static readonly CueDef Paddle = new("water.paddle", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.25f, 0.13f, 300f, 2200f, 0.12f),
+        new CueLayer(Src.Noise, 0.35f, 0.15f, 0.05f, 1500f, 5000f, 0.05f),
+        new CueLayer(Src.Tone, 0.4f, 0.08f, 0.04f, 200f, 130f, 0.01f),
+    });
+
+    // Float: afloat and still, the water lapping softly at you.
+    public static readonly CueDef Lap = new("water.lap", 1.4f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.5f, 0.06f, 100f, 900f, 0.4f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,
