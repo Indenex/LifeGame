@@ -120,7 +120,7 @@ public static partial class Module
         if (dx * dx + dz * dz > Structures.PlaceRange * Structures.PlaceRange)
             throw new Exception("Too far away to lay out");
 
-        int open = ctx.Db.Structure.Owner.Filter(ctx.Sender).Count(s => !s.Complete);
+        int open = ctx.Db.Structure.Owner.Filter(Me(ctx)).Count(s => !s.Complete);
         if (open >= Structures.MaxOpenSites)
             throw new Exception("Finish one of your building sites first");
 
@@ -147,7 +147,7 @@ public static partial class Module
             Yaw = yaw,
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             Stage = 0,
             Needs = NeedsFor(k, 0),
             Complete = false,
@@ -165,7 +165,7 @@ public static partial class Module
         string what = Structures.Shape(kind).Name.ToLowerInvariant();
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!HasClaimRights(ctx, claim, Me(ctx)))
             throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
@@ -226,7 +226,7 @@ public static partial class Module
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
-        bool allowed = s.Owner == ctx.Sender;
+        bool allowed = s.Owner == Me(ctx);
         if (!allowed) CanClearStructure(ctx, s, ref allowed);
         if (!allowed)
             throw new Exception("Only whoever laid it out, or the land's owner, can take it down");
@@ -391,12 +391,12 @@ public static partial class Module
     static bool RecordBuilder(ReducerContext ctx, ulong structureId)
     {
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId))
-            if (row.Builder == ctx.Sender)
+            if (row.Builder == Me(ctx))
             {
                 ctx.Db.StructureBuilder.Id.Update(row with { Added = row.Added + 1 });
                 return false;
             }
-        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = ctx.Sender, Added = 1 });
+        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = Me(ctx), Added = 1 });
         return true;
     }
 }

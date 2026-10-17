@@ -30,8 +30,8 @@ public static partial class Module
                     return;
                 }
         }
-        foreach (var claim in ctx.Db.Claim.Owner.Filter(ctx.Sender)) Consider(claim);
-        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(ctx.Sender))
+        foreach (var claim in ctx.Db.Claim.Owner.Filter(Me(ctx))) Consider(claim);
+        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(Me(ctx)))
             if (ctx.Db.Claim.Id.Find(membership.ClaimId) is { } claim) Consider(claim);
         return covered;
     }

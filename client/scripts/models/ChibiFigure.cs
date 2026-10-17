@@ -3,6 +3,10 @@ using Godot;
 
 namespace LifeGame;
 
+// The chibi's face states (model-15), for Animation: PlayerModel.SetFace shows one.
+// Append-only: the byte is the order of ChibiFigure.FaceNames.
+public enum Face : byte { Open, Closed, Happy, Sleepy }
+
 // The player roster's shared chibi base (model-6, D-249/D-250/D-254): one body about
 // 1.35 m tall and 2.8 heads high on HumanRig's 16 bones, so every race walks, works
 // and jumps with Animation's poses. A race swaps parts on the same base, after the
@@ -44,13 +48,15 @@ public static class ChibiFigure
     // The roster-1 colour keys.
     static readonly Color Tunic = new(0.44f, 0.56f, 0.31f), Trousers = new(0.42f, 0.35f, 0.30f), BrambleBoot = new(0.48f, 0.31f, 0.20f), Strap = new(0.55f, 0.37f, 0.24f);
     public static readonly Color[] PebbleSkins = { new(0.66f, 0.76f, 0.48f), new(0.62f, 0.72f, 0.5f), new(0.74f, 0.74f, 0.52f) };
-    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.5f, 0.42f, 0.36f), new(0.6f, 0.5f, 0.3f) };
+    // Pebble's shell colours (D-313 palette): caramel (the one ChibiShell's texture is
+    // painted in), honey and sage-olive.
+    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.6f, 0.5f, 0.29f), new(0.41f, 0.43f, 0.27f) };
     static readonly Color ShellRim = new(0.79f, 0.64f, 0.42f), BellyPlate = new(0.91f, 0.85f, 0.63f), PebbleFeet = new(0.56f, 0.66f, 0.40f);
     static readonly Color Petal = new(0.96f, 0.94f, 0.89f), PetalHeart = new(0.95f, 0.81f, 0.35f);
 
     public static HumanFigure.Built Build(Look look)
     {
-        string key = look.ToString() + Painted;
+        string key = look.ToString() + Painted + ChibiShell.Enabled;
         if (Cache.TryGetValue(key, out var done)) return done;
         var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
         bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
@@ -102,7 +108,8 @@ public static class ChibiFigure
                 new Vector3(-0.16f, shoulderY + 0.02f, 0.07f), new Vector3(-0.05f, waistY + 0.12f, 0.19f), new Vector3(0.1f, waistY - 0.04f, 0.2f), new Vector3(0.19f, hipY - 0.02f, 0.1f),
             }, 0.018f, 5);
         }
-        if (pebble)
+        // The authored shell (ChibiShell) replaces the built belly plate and shell.
+        if (pebble && !ChibiShell.Enabled)
         {
             // The belly plate: a pale shield on the front with painted seam lines.
             k.Bone(HumanRig.Spine).Paint(BellyPlate).Ellipsoid(new Vector3(0, waistY - 0.02f, 0.15f), new Vector3(0.14f, 0.19f, 0.06f), 14, 8);
@@ -194,14 +201,10 @@ public static class ChibiFigure
                     k.Paint(second, 0.92f + MeshKit.Hash(i, 3) * 0.1f).Ellipsoid(at, new Vector3(hh * 0.13f, hh * 0.1f, hh * 0.1f), 8, 5);
                 }
         }
-        // Eyes: big, dark and set wide, each with a catch-light; brows; cheeks.
+        // Rosy cheeks, shared by every face. The eyes and mouth are separate small
+        // meshes on the Head bone (Faces), so they can be switched (model-15).
         for (int side = -1; side <= 1; side += 2)
-        {
-            var eye = headC + new Vector3(side * hh * 0.2f, hh * 0.02f, faceZ * 0.93f);
-            k.Paint(Eye).Ellipsoid(eye, new Vector3(hh * 0.07f, hh * 0.085f, hh * 0.035f), 10, 6);
-            k.Paint(new Color(0.97f, 0.96f, 0.92f)).Ellipsoid(eye + new Vector3(hh * 0.02f, hh * 0.03f, hh * 0.025f), new Vector3(hh * 0.022f, hh * 0.022f, hh * 0.01f), 6, 3);
             k.Paint(body.Lerp(new Color(0.9f, 0.45f, 0.4f), 0.4f)).Ellipsoid(headC + new Vector3(side * hh * 0.3f, -hh * 0.12f, faceZ * 0.8f), new Vector3(hh * 0.07f, hh * 0.04f, hh * 0.02f), 8, 3);
-        }
 
         // Short arms with round mitten hands.
         for (int side = 0; side < 2; side++)
@@ -277,6 +280,163 @@ public static class ChibiFigure
         };
         Cache[key] = done;
         return done;
+    }
+
+    // The face set (model-15): four small meshes in the Head bone's own frame, one
+    // shown at a time under a BoneAttachment3D on Head ("FaceAttach"), in Face
+    // order. PlayerModel.SetFace flips between them. Built per race and skin, since
+    // the lids are a darker skin tone and Kit's mouth sits on its muzzle.
+    public const string FaceAttach = "FaceAttach";
+    public static readonly string[] FaceNames = { "Face_Open", "Face_Closed", "Face_Happy", "Face_Sleepy" };
+    public static readonly StringName FaceMeta = "face";
+    static readonly Dictionary<string, ArrayMesh[]> FaceCache = new();
+    static readonly Color Mouth = new(0.32f, 0.13f, 0.12f), Tongue = new(0.9f, 0.52f, 0.52f), CatchLight = new(0.97f, 0.96f, 0.92f);
+
+    public static ArrayMesh[] Faces(Look look)
+    {
+        string key = $"{(int)look.Race}:{look.Main}:{Painted}";
+        if (FaceCache.TryGetValue(key, out var done)) return done;
+        var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
+        bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble;
+        var body = kit ? Furs[look.Main % Furs.Length] : pebble ? PebbleSkins[look.Main % PebbleSkins.Length] : Skins[look.Main % Skins.Length];
+        // Lids: a darker, warmer shade of the skin, soft rather than ink-black.
+        var lid = body.Lerp(new Color(0.22f, 0.11f, 0.09f), 0.72f);
+        // The same head as Build: its centre and radii, and the Head joint, so the
+        // parts are written in the Head bone's frame.
+        float hh = Height / Heads, chin = Height - hh;
+        var headC = new Vector3(0, chin + hh * 0.5f, 0.01f);
+        var headR = new Vector3(hh * 0.54f, hh * 0.5f, hh * 0.48f);
+        var headJoint = new Vector3(0, chin + 0.02f, 0);
+        float faceZ = hh * 0.47f;
+        // Where the mouth goes: the face below the nose, or Kit's muzzle.
+        var mouthC = kit ? headC + new Vector3(0, -hh * 0.14f, faceZ * 0.85f) : headC;
+        var mouthR = kit ? new Vector3(hh * 0.22f, hh * 0.15f, hh * 0.18f) : headR;
+        float mouthY = kit ? -hh * 0.075f : -hh * 0.165f;
+        float ey = hh * 0.02f;
+        float line = hh * 0.024f;
+
+        var meshes = new ArrayMesh[4];
+        for (int f = 0; f < 4; f++)
+        {
+            var k = new MeshKit(false) { Skinned = false, Xform = new Transform3D(Basis.Identity, -headJoint) };
+            for (int side = -1; side <= 1; side += 2)
+            {
+                float ex = side * hh * 0.2f;
+                switch ((Face)f)
+                {
+                    case Face.Open:
+                        // Today's eyes: big, dark and set wide, each with a catch-light.
+                        var eye = headC + new Vector3(ex, ey, faceZ * 0.93f);
+                        k.Paint(Eye).Ellipsoid(eye, new Vector3(hh * 0.07f, hh * 0.085f, hh * 0.035f), 10, 6);
+                        k.Paint(CatchLight).Ellipsoid(eye + new Vector3(hh * 0.02f, hh * 0.03f, hh * 0.025f), new Vector3(hh * 0.022f, hh * 0.022f, hh * 0.01f), 6, 3);
+                        break;
+                    case Face.Closed:
+                        // A blink: a soft lid line curving down, a little below the eye's middle.
+                        k.Paint(lid);
+                        Stroke(k, headC, headR, t => new Vector2(ex + t * hh * 0.075f, ey - hh * 0.02f - hh * 0.03f * (1f - t * t)), line);
+                        break;
+                    case Face.Happy:
+                        // ^ ^ : arcs curving up, in the eye colour.
+                        k.Paint(Eye);
+                        Stroke(k, headC, headR, t => new Vector2(ex + t * hh * 0.07f, ey - hh * 0.025f + hh * 0.05f * (1f - t * t)), line * 1.1f);
+                        break;
+                    case Face.Sleepy:
+                        // Half-closed: the lower half of the eye under a flat, heavy lid
+                        // line that droops a touch at the outer corner.
+                        k.Paint(Eye);
+                        float top = ey - hh * 0.012f;
+                        Fan(k, headC, headR, new Vector2(ex, top - hh * 0.02f), t => new Vector2(ex + Mathf.Cos(t * Mathf.Tau) * hh * 0.066f, top + Mathf.Min(0f, Mathf.Sin(t * Mathf.Tau)) * hh * 0.06f), hh * 0.01f);
+                        k.Paint(lid);
+                        int s = side;
+                        Stroke(k, headC, headR, t => new Vector2(ex + t * hh * 0.082f, top + hh * 0.004f - hh * 0.014f * Mathf.Max(0f, t * s) * Mathf.Max(0f, t * s)), line);
+                        break;
+                }
+            }
+            if ((Face)f == Face.Happy)
+            {
+                // A small open smile: a soft D, flat on top, with a hint of tongue.
+                float w = hh * 0.075f, d = hh * 0.062f;
+                k.Paint(Mouth);
+                Fan(k, mouthC, mouthR, new Vector2(0, mouthY - d * 0.35f), t => D(t, mouthY, w, d), hh * 0.008f);
+                k.Paint(Tongue);
+                Fan(k, mouthC, mouthR, new Vector2(0, mouthY - d * 0.68f), t => new Vector2(Mathf.Cos(t * Mathf.Tau) * w * 0.5f, mouthY - d * 0.68f + Mathf.Sin(t * Mathf.Tau) * d * 0.2f), hh * 0.011f);
+            }
+            else if ((Face)f == Face.Sleepy)
+            {
+                // A small "o", as if mid-yawn.
+                k.Paint(Mouth);
+                Fan(k, mouthC, mouthR, new Vector2(0, mouthY), t => new Vector2(Mathf.Cos(t * Mathf.Tau) * hh * 0.026f, mouthY + Mathf.Sin(t * Mathf.Tau) * hh * 0.032f), hh * 0.008f);
+            }
+            var mesh = new ArrayMesh();
+            k.Commit(mesh, material);
+            meshes[f] = mesh;
+        }
+        FaceCache[key] = meshes;
+        return meshes;
+    }
+
+    // A point on the front of an ellipsoid (centre c, radii r) at (x, y) from its
+    // centre, lifted along the surface normal, so face parts sit just proud of it.
+    static (Vector3 at, Vector3 normal) OnFront(Vector3 c, Vector3 r, Vector2 xy, float lift)
+    {
+        float u = 1f - xy.X * xy.X / (r.X * r.X) - xy.Y * xy.Y / (r.Y * r.Y);
+        float z = r.Z * Mathf.Sqrt(Mathf.Max(u, 0.02f));
+        var n = new Vector3(xy.X / (r.X * r.X), xy.Y / (r.Y * r.Y), z / (r.Z * r.Z)).Normalized();
+        return (c + new Vector3(xy.X, xy.Y, z) + n * lift, n);
+    }
+
+    // A painted line along the face, t from -1 to 1: thickest in the middle and
+    // tapering to soft round ends, like a brush stroke.
+    static void Stroke(MeshKit k, Vector3 c, Vector3 r, System.Func<float, Vector2> at, float radius)
+    {
+        const int n = 6;
+        for (int half = -1; half <= 1; half += 2)
+        {
+            var path = new Vector3[n + 1];
+            for (int i = 0; i <= n; i++) path[i] = OnFront(c, r, at(half * i / (float)n), radius * 0.6f).at;
+            k.Tube(path, radius, 6, radius * 0.55f);
+            k.Ellipsoid(path[n], Vector3.One * radius * 0.55f, 6, 3);
+        }
+    }
+
+    // A flat patch on the face: a fan from centre out to the outline at(t), t from 0 to 1.
+    static void Fan(MeshKit k, Vector3 c, Vector3 r, Vector2 centre, System.Func<float, Vector2> at, float lift, int n = 20)
+    {
+        var (mid, mn) = OnFront(c, r, centre, lift);
+        var (prev, pn) = OnFront(c, r, at(0f), lift);
+        for (int i = 1; i <= n; i++)
+        {
+            var (p, nn) = OnFront(c, r, at(i / (float)n), lift);
+            k.Tri(mid, prev, p, mn, pn, nn);
+            (prev, pn) = (p, nn);
+        }
+    }
+
+    // The smile's outline: a flat top edge, then a half-ellipse below, once round
+    // as t runs from 0 to 1.
+    static Vector2 D(float t, float top, float w, float d)
+    {
+        if (t < 0.25f) return new Vector2(Mathf.Lerp(-w, w, t / 0.25f), top);
+        float a = (t - 0.25f) / 0.75f * Mathf.Pi;
+        return new Vector2(Mathf.Cos(a) * w, top - Mathf.Sin(a) * d);
+    }
+
+    // Gives a figure the face set for a look: the attachment and its four parts the
+    // first time, then only new meshes, so the face shown stays.
+    public static void DressFace(Skeleton3D figure, Look look)
+    {
+        var faces = Faces(look);
+        var attach = figure.GetNodeOrNull<BoneAttachment3D>(FaceAttach);
+        if (attach == null)
+        {
+            attach = new BoneAttachment3D { Name = FaceAttach, BoneName = HumanRig.Names[HumanRig.Head] };
+            for (int i = 0; i < FaceNames.Length; i++)
+                attach.AddChild(new MeshInstance3D { Name = FaceNames[i], Visible = i == 0, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            figure.AddChild(attach);
+            figure.SetMeta(FaceMeta, (int)Face.Open);
+        }
+        for (int i = 0; i < FaceNames.Length; i++)
+            attach.GetChild<MeshInstance3D>(i).Mesh = faces[i];
     }
 
     // Clothes cut to the chibi (D-074 items on the model-6 body): the wool tunic and
@@ -362,13 +522,16 @@ public static class ChibiFigure
         return mesh;
     }
 
-    // A ready figure: the skeleton with the body bound, and the starting wrap or scarf.
+    // A ready figure: the skeleton with the body bound, the starting wrap or scarf,
+    // and the face set showing Face.Open.
     public static Skeleton3D Create(Look look)
     {
         var built = Build(look);
         var skeleton = HumanRig.Skeleton(built.Joints);
         skeleton.AddChild(new MeshInstance3D { Name = "Body", Mesh = built.Mesh, Skeleton = new NodePath("..") });
         skeleton.AddChild(new MeshInstance3D { Name = PlayerModel.SlotNode(PlayerModel.Body), Mesh = built.LeafWrap, Skeleton = new NodePath("..") });
+        ChibiShell.Sync(skeleton, look);
+        DressFace(skeleton, look);
         return skeleton;
     }
 }

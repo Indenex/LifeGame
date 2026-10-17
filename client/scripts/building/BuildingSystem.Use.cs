@@ -145,7 +145,7 @@ public partial class BuildingSystem
                         ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
                 // Whoever hung it, or a member of the claim it stands in, may bar it, as the server's CanLock (bugfix-15).
-                bool mine = door.HungBy == c.Identity || MayBar(s.X, s.Z);
+                bool mine = door.HungBy == Me.Key(c) || MayBar(s.X, s.Z);
                 // Shift+G bars and unbars; members of the claim can too, the server decides.
                 Action act = () =>
                 {
@@ -212,7 +212,7 @@ public partial class BuildingSystem
                 ? Structures.StoreStacksFor((int)r.Kind, conn()?.Db.StructureProgress.StructureId.Find(id)?.Quality ?? Items.RawQuality)
                 : 0,
             Source = () => conn() is { } c && openBasket is { } id
-                ? c.Db.BasketItem.Iter().Where(b => b.StructureId == id).Select(b => new BagStack((Item)b.Item, b.Quality, b.Count, b.Id))
+                ? c.Db.BasketItem.Iter().Where(b => b.StructureId == id).Select(b => new BagStack((Item)b.Item, b.Quality, b.Count, b.Id, -1, b.Maker != 0 ? b.Maker : Marks.MakerOf((Item)b.Item, b.Wear)))
                 : Enumerable.Empty<BagStack>(),
             Clicked = (s, all) => conn()?.Reducers.BasketTake(s.Id, all ? s.Count : 1),
             Accepts = d => d["from"].AsString() == "bag",
@@ -222,7 +222,7 @@ public partial class BuildingSystem
         {
             Kind = "bag", Width = 5, Empty = "Nothing",
             Source = () => conn() is { } c
-                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, 0, -1, i.Maker != 0 ? i.Maker : Marks.MakerOf((Item)i.Item, i.Wear)))
                 : Enumerable.Empty<BagStack>(),
             Clicked = (s, all) => { if (openBasket is { } id) conn()?.Reducers.BasketPut(id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             Accepts = d => d["from"].AsString() == "basket",

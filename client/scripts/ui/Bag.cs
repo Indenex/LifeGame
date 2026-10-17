@@ -10,7 +10,7 @@ namespace LifeGame;
 // One stack in the bag panel: what it is, how good, how many (ui-18). Id is its row
 // (a basket's item row, or the bag's own row once the bag keeps an order), Slot its
 // place in the bag or on the tools belt, -1 for none.
-public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0)
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0, uint Decor = 0)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -94,13 +94,16 @@ public sealed class ServerBagLink : IBagLink
     public ServerBagLink(DbConnection conn) => this.conn = conn;
 
     // The bag's rows in their places, and the tools on the doll (ui-18, server/spacetimedb/Inventory.cs).
-    // Each row is one stack; pots carry their maker in Wear (Ceramics), shown as "Made by" (ui-23).
+    // Each row is one stack; made things carry their maker (crafting-25's Maker, or a pot's mark
+    // in Wear), shown as "Made by" (ui-23, ui-52).
     public IEnumerable<BagStack> Carried() => Rows(belt: false);
     public IEnumerable<BagStack> Belt() => Rows(belt: true);
 
     IEnumerable<BagStack> Rows(bool belt) => conn.Db.MyInventory.Iter()
         .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
-        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear)));
+        // The maker: the row's own Maker (crafting-25), else a clay pot's mark in Wear (ceramics-15).
+        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, i.Maker != 0 ? i.Maker : Marks.MakerOf((Item)i.Item, i.Wear),
+            ClayItemLook.Decoration((Item)i.Item, i.Wear)));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
@@ -258,7 +261,7 @@ public partial class BagSlotView : PanelContainer
         AddChild(stack);
         var picture = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -307,9 +310,12 @@ public partial class BagSlotView : PanelContainer
         {
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 6);
-            var mark = new MarkView { CustomMinimumSize = new Vector2(22, 22), Width = 1.6f };
-            mark.Show(BagGrid.Makers.Find(who.Glyph), who.Color.Lightened(0.25f));
-            row.AddChild(mark);
+            if (who.HasMark)
+            {
+                var mark = new MarkView { CustomMinimumSize = new Vector2(22, 22), Width = 1.6f };
+                mark.Show(BagGrid.Makers.Find(who.Glyph), who.Color.Lightened(0.25f));
+                row.AddChild(mark);
+            }
             var by = Hud.Text($"Made by {who.Name}", 13);
             by.Modulate = new Color(1, 1, 1, 0.8f);
             row.AddChild(by);
@@ -333,7 +339,7 @@ public partial class BagSlotView : PanelContainer
         if (Stack == null) return default;
         var preview = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             Size = new Vector2(BagGrid.Slot, BagGrid.Slot),

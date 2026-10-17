@@ -56,11 +56,12 @@ public partial class LampView : Node3D
         AddChild(label);
     }
 
-    public void Show(ulong id, double burnsUntil)
+    // `mark` is the lamp's maker (shared/Marks.cs), drawn as a stamp like the ones on a pot; 0 for none.
+    public void Show(ulong id, double burnsUntil, uint mark = 0)
     {
         this.burnsUntil = burnsUntil;
         body.Mesh = PotMesh.For(ClayForm.Lamp, id);
-        body.MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, id);
+        body.MaterialOverride = ClayLook.WithMark(ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, id), mark, ClayForm.Lamp);
         float top = PotMesh.Height(ClayForm.Lamp) * PotView.Size;
         // The wick sits at the rim, on the spout side.
         flame.Position = new Vector3(0.11f, top + 0.02f, 0);

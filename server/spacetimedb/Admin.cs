@@ -10,7 +10,7 @@ public static partial class Module
     // A client reads only its own row of the private admin list, to know whether to show the panel.
     [SpacetimeDB.View(Accessor = "MyAdmin", Public = true)]
     public static List<WorldAdmin> MyAdmin(ViewContext ctx) =>
-        ctx.Db.WorldAdmin.Identity.Find(ctx.Sender) is { } me ? new List<WorldAdmin> { me } : new List<WorldAdmin>();
+        ctx.Db.WorldAdmin.Identity.Find(Me(ctx)) is { } me ? new List<WorldAdmin> { me } : new List<WorldAdmin>();
 
     [SpacetimeDB.Reducer]
     public static void AdminGive(ReducerContext ctx, ushort item, uint count, byte quality)
@@ -22,8 +22,8 @@ public static partial class Module
         var def = Items.Def((Item)item);
         // Raw materials always come at a flat quality; made things at the quality asked, 1 to 100.
         byte made = def.HasQuality ? Math.Clamp(quality, (byte)1, (byte)100) : Items.RawQuality;
-        AddToInventory(ctx, ctx.Sender, (Item)item, count, made);
-        Log.Info($"admin_give: {ctx.Sender} gave themselves {count} x {def.Name} (quality {made})");
+        AddToInventory(ctx, Me(ctx), (Item)item, count, made);
+        Log.Info($"admin_give: {Me(ctx)} gave themselves {count} x {def.Name} (quality {made})");
     }
 
     // Admins who are flying (/fly). Private: only the server reads it.
@@ -42,7 +42,7 @@ public static partial class Module
         bool now = ctx.Db.AdminFlyer.PlayerId.Find(player.PlayerId) is not null;
         if (on && !now) ctx.Db.AdminFlyer.Insert(new AdminFlyer { PlayerId = player.PlayerId });
         else if (!on && now) ctx.Db.AdminFlyer.PlayerId.Delete(player.PlayerId);
-        Log.Info($"admin_fly: {ctx.Sender} {(on ? "took off" : "landed")}");
+        Log.Info($"admin_fly: {Me(ctx)} {(on ? "took off" : "landed")}");
     }
 
     // A flying admin; checked again as an admin each time, so losing admin ends the exemption.

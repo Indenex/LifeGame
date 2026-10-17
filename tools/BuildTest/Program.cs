@@ -25,6 +25,8 @@ var clock = Stopwatch.StartNew();
 (float x, float z)? claimAt = null;
 bool bIsMember = false;
 
+const float Module_UnstuckRadius = 12.5f;
+
 void Pump(int ms)
 {
     var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms);
@@ -126,6 +128,7 @@ if (Wants("clay-hut"))
         });
     HangDoor(hut);
     LayMat(hut);
+    UnstuckInHut(hut);
     BuildHearth(hut);
 }
 if (Wants("basket"))
@@ -441,6 +444,11 @@ void UseGate(ulong gate)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(gate);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    // A member of the claim bars and unbars its gate too (claims-21: owner, members and the town's Gatekeeper).
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "B, a member, barred the gate");
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "and unbarred it");
     StrangerB();
     a.Conn.Reducers.ToggleLock(gate);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");
@@ -583,6 +591,41 @@ void LayMat(ulong hut)
     WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
 }
 
+// A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
+// puts A on free ground within its search radius; a second try inside the cooldown is refused (bugfix-44).
+void UnstuckInHut(ulong hut)
+{
+    Console.WriteLine("--- Unstuck");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var from = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    Check(Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, from.X, from.Z), "A stands inside the hut");
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId) is { } p && (p.X != from.X || p.Z != from.Z) || a.LastError != null, 10, "the server answered unstuck");
+    Check(a.LastError == null, $"unstuck was allowed ({a.LastError ?? "-"})");
+    var to = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    float moved = MathF.Sqrt((to.X - from.X) * (to.X - from.X) + (to.Z - from.Z) * (to.Z - from.Z));
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, to.X, to.Z), $"A now stands outside the hut ({to.X:F1}, {to.Z:F1})");
+    Check(moved <= Module_UnstuckRadius, $"A moved {moved:F1} m, within the search radius");
+    a.X = to.X; a.Z = to.Z;
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.LastError != null, 10, "a second unstuck inside the cooldown is answered");
+    Check(a.LastError!.Contains("again in"), $"the second try is refused for the cooldown ({a.LastError})");
+
+    // B stands on free ground in the yard: unstuck still helps, moving B at least 1.5 m (and within the radius).
+    var bFrom = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, bFrom.X, bFrom.Z, 0.25f), "B stands on free ground");
+    b.LastError = null;
+    b.Conn.Reducers.Unstuck();
+    WaitFor(() => b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId) is { } p && (p.X != bFrom.X || p.Z != bFrom.Z) || b.LastError != null, 10, "the server answered B's unstuck");
+    Check(b.LastError == null, $"unstuck from free ground was allowed ({b.LastError ?? "-"})");
+    var bTo = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    float bMoved = MathF.Sqrt((bTo.X - bFrom.X) * (bTo.X - bFrom.X) + (bTo.Z - bFrom.Z) * (bTo.Z - bFrom.Z));
+    Check(bMoved >= 1.4f && bMoved <= Module_UnstuckRadius, $"B was nudged {bMoved:F1} m");
+    b.X = bTo.X; b.Z = bTo.Z;
+}
+
 // A puts sticks in the basket; B takes one out.
 void StoreInBasket(ulong basket)
 {
@@ -688,7 +731,11 @@ sealed class Bot
     {
         Conn.Disconnect();
         pump(500);
+        Ready = false;
         Conn = Connect();
+        // A login that already has a character waits at the character menu (survival-24): play it.
+        for (int i = 0; i < 400 && !Ready; i++) pump(50);
+        if (Conn.Identity is { } login) Conn.Reducers.SelectCharacter(login);
     }
 
     public uint CountOf(Item item) => Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
@@ -736,7 +783,17 @@ sealed class Bot
             item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
             gatherTargets[name] = targetItem;
-            if (item == null) return;
+            if (item == null)
+            {
+                // Nothing left in the world to pick up: say so once, so a timeout reads as scarcity, not a stall.
+                if (!noneLogged)
+                {
+                    noneLogged = true;
+                    Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                }
+                return;
+            }
+            noneLogged = false;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -751,6 +808,7 @@ sealed class Bot
     // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
+    bool noneLogged;
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;

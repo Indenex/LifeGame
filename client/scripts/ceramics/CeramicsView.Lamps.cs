@@ -30,7 +30,7 @@ public partial class CeramicsView
             world.AddChild(view);
         }
         view.Position = new Vector3(l.X, heightAt(l.X, l.Z), l.Z);
-        view.Show(l.Id, Seconds(l.BurnsUntil));
+        view.Show(l.Id, Seconds(l.BurnsUntil), l.Mark);
     }
 
     // Carrying a lamp and tallow, near a flame: set one down a step ahead.
