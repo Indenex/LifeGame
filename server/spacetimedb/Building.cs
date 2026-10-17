@@ -176,7 +176,7 @@ public static partial class Module
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
         if (!HasClaimRights(ctx, claim, Me(ctx)))
-            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
+            throw new Exception(BanRefusal(ctx, claim, Me(ctx)) ?? $"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // Adds one carried item the current stage still needs. Anyone in reach can help.
