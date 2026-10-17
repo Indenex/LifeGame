@@ -161,6 +161,7 @@ public partial class Main : Node3D
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
+        crafting.PlayerAt = () => me.Position;
         AddChild(station);
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;

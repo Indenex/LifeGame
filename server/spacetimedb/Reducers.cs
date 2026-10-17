@@ -187,6 +187,7 @@ public static partial class Module
                 ChunkZ = (short)World.ChunkOf(input.Z),
             });
             ctx.Db.MoveInput.PlayerId.Delete(input.PlayerId);
+            if (ctx.Db.Player.PlayerId.Find(input.PlayerId) is { } mover) CheckJobReach(ctx, mover, input.X, input.Z);
         }
     }
 
