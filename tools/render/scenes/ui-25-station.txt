@@ -9,7 +9,8 @@ pos
 give 1 40 50
 give 3 10 50
 give 8 12 50
-give 15 2 50
+give 3 4 50
+give 15 6 50
 give 2 4 50
 give 197 1 60
 give 6 1 60
@@ -49,7 +50,7 @@ build
 build
 build
 wait 6
-stroll 1.6 0.4
+stroll 3.6 0.6
 arrive
 wait 6
 snap
