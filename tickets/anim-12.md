@@ -25,7 +25,7 @@ Players can sit on the ground and lie down, and everyone sees it. The H key sits
 
 ## Open questions / blockers
 - Survival: should resting do anything for gameplay (faster recovery, sleeping to pass the night)? Default: purely a pose. Who owns the sleep-at-a-mat button (default: their mat dialog calls Rest(2) and sets SpotId)?
-- UX: a Controls row for "rest" (default key H, "Sit or lie down").
+- UX: Controls row for "rest" (H) is in #601 (ui-40); the Avatar fallback bind stays harmless alongside it.
 
 ## Next step
 Wait for CI on #600 and send the PM the green sha; fix anything the Render C clip shows.
