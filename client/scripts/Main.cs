@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -136,6 +137,10 @@ public partial class Main : Node3D
         station.Crafting = crafting;
         station.Me = () => me.Position;
         AddChild(station);
+        // Choosing how you look (ui-21): opens by itself at first join, and from Options.
+        lookPicker.Conn = () => conn;
+        lookPicker.MyId = () => myId;
+        AddChild(lookPicker);
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
@@ -143,7 +148,8 @@ public partial class Main : Node3D
             || trade.IsOpen
             || equipment.IsOpen
             || station.IsOpen
-            || buildMenu.IsOpen;
+            || buildMenu.IsOpen
+            || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));

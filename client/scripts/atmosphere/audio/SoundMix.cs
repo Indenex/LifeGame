@@ -45,6 +45,8 @@ public sealed class SoundMix
     // Snow lying on the ground, 0 to 1: the grass goes quiet under it.
     public float SnowCover;
     public bool MusicOn = true;
+    // The synthesized score. Off since audio-8: the game plays recorded music (MusicPlayer).
+    public bool SynthMusic;
     // The sound sliders (Options page, D-097), each 0 to 1. 0.5, where every new
     // player starts, is the mix as designed; see SliderGain. Effects are your
     // footsteps and everyone's work; ambience is weather, wildlife, sheep, fire and
@@ -356,7 +358,7 @@ public sealed class SoundMix
             right[i] += stepR[i] * stepGain + workR[i] * workGain;
         }
         if (!Finite(left, count) || !Finite(right, count)) { stage = "effects (steps, work, cues, others)"; throw new InvalidOperationException("non-finite mix before music"); }
-        music.Render(left, right, sendL, sendR, count, MusicOn, SliderGain(MusicLevel), night01);
+        music.Render(left, right, sendL, sendR, count, MusicOn && SynthMusic, SliderGain(MusicLevel), night01);
         if (!Finite(left, count) || !Finite(right, count)) { stage = "music"; throw new InvalidOperationException("non-finite after music"); }
         reverb.Process(sendL, sendR, left, right, count);
         stage = "reverb and master";

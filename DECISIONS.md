@@ -991,3 +991,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
 **Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
 **Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).
+
+## D-246 — 2026-10-17 — Restyled grass is a little shorter and denser; the PM sends Justin every screenshot directly (follows D-242)
+**Decision:** (1) The restyled grass is slightly shorter and denser, with no big bare patches. (2) The PM sends Justin every screenshot and render directly. Lanes route images to the PM (or Render to the PM) and never expect Justin to read lane threads. A one-line note to the same effect is added to the Render lane section of `WORKER_LOOP.md`.
+**Who:** Justin ("The grass I saw was better... I want the grass to be a little shorter, and denser, no patch giant open spots" and "I also need you to be sending me screenshots. I dont want to go to its chat.")
