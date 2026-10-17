@@ -207,12 +207,35 @@ public partial class CraftingUi : CanvasLayer
     // Starts a process from outside the panel, such as G next to a tree.
     public void Start(ProcessDef def) => Begin(def);
 
+    // Fires go where you choose (Justin; crafting-28's StartFireAt, ui-30): before a fire
+    // process runs, Placing shows a ring at the cursor within reach and a click picks the
+    // spot. Main sets PickSpot to Placing.PickSpot; without it the server picks, as before.
+    public Action<string, float, Action<float, float>>? PickSpot;
+    (float x, float z)? fireSpot;
+    const float FireMinDistance = 0.8f;
+
+    // Sends the craft: a fire goes to the chosen spot (the server checks it), anything else as before.
+    void Send(ProcessDef def, float score)
+    {
+        if (conn == null) return;
+        if (def.Outcome == Outcome.Fire && fireSpot is { } at) conn.Reducers.StartFireAt(def.Id, score, at.x, at.z);
+        else conn.Reducers.StartCraft(def.Id, score);
+        fireSpot = null;
+    }
+
     void Begin(ProcessDef def)
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
         if (job != null) { Notice?.Invoke("Your hands are busy"); return; }
         // The notice gives the first thing missing; the card's hover lists them all.
         if (Missing(def) is { } missing) { Notice?.Invoke(missing.Split('\n')[0]); return; }
+        if (def.Outcome == Outcome.Fire && fireSpot == null && PickSpot != null)
+        {
+            // Out of the way while the spot is picked; the minigame follows the click.
+            panel.Visible = false;
+            PickSpot("Where should the fire go?", FireMinDistance, (x, z) => { fireSpot = (x, z); Begin(def); });
+            return;
+        }
 
         // The panel stays open after a craft, so pressing the same number repeats
         // it; it only steps aside while a minigame is played.
@@ -221,7 +244,7 @@ public partial class CraftingUi : CanvasLayer
         if (def.Minigame != Minigame.None) SkipMinigame(def, ref skipped);
         if (skipped is { } sure)
         {
-            conn.Reducers.StartCraft(def.Id, sure);
+            Send(def, sure);
             return;
         }
         minigame = def.Minigame switch
@@ -234,7 +257,7 @@ public partial class CraftingUi : CanvasLayer
         if (minigame == null) AnimalsMinigameFor(def, ref minigame);
         if (minigame == null)
         {
-            conn.Reducers.StartCraft(def.Id, Processes.DefaultScore);
+            Send(def, Processes.DefaultScore);
             return;
         }
         reopenAfterMinigame = panel.Visible;
@@ -287,7 +310,8 @@ public partial class CraftingUi : CanvasLayer
             panel.Visible = true;
             Refresh();
         }
-        if (score is { } s && conn != null) conn.Reducers.StartCraft(def.Id, s);
+        if (score is { } s) Send(def, s);
+        else fireSpot = null;
     }
 
     // What is missing to run a process, and where to get it, or null when

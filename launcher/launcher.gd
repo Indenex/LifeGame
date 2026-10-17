@@ -742,14 +742,24 @@ func _fetch(rel: Dictionary, names: Array, from: float, to: float) -> Dictionary
 	var dir := home.path_join("downloads").path_join(rel.tag)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var manifest_path := dir.path_join("release.json")
-	if not rel.assets.has("release.json") or not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+	if not rel.assets.has("release.json"):
+		_set_status("Build %d has no file list." % rel.build, "It may still be publishing. Try Refresh in a minute.", WARN)
+		return {}
+	if not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+		_set_status("Download failed.", "Check the internet connection and try again.", WARN)
 		return {}
 	var manifest = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
-	if not manifest is Dictionary:
+	var sums := {}
+	if manifest is Dictionary:
+		var srv = manifest.get("server", {})
+		var cli = manifest.get("client", {})
+		for e in [srv, cli.get("linux", {}), cli.get("windows", {})]:
+			if e is Dictionary and e.has("file") and e.has("sha256"):
+				sums[e.file] = e.sha256
+	if sums.size() < 3:
+		DirAccess.remove_absolute(manifest_path)
+		_set_status("Build %d has a damaged file list." % rel.build, "Try Refresh in a minute; it will download fresh.", WARN)
 		return {}
-	var sums := {manifest.server.file: manifest.server.sha256,
-		manifest.client.linux.file: manifest.client.linux.sha256,
-		manifest.client.windows.file: manifest.client.windows.sha256}
 	var out := {}
 	var step: float = (to - from) / max(names.size(), 1)
 	for i in names.size():
