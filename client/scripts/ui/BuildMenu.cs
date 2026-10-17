@@ -24,11 +24,11 @@ public partial class BuildMenu : CanvasLayer
     // (Main sets it from House building's NeedsClaimHere).
     public Func<int, bool> NeedsClaim = _ => false;
 
-    const int Thumb = 112;
+    const int Thumb = 112, Columns = 4, Gap = 12;
     public bool IsOpen => panel.Visible;
 
     Control panel = null!;
-    HBoxContainer tabs = null!;
+    HFlowContainer tabs = null!;
     GridContainer grid = null!;
     string category = "";
     readonly Dictionary<int, Texture2D> pictures = new();
@@ -56,8 +56,13 @@ public partial class BuildMenu : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
         Panels.Centre(this, Close);
-        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-buildmenu")))
+        // --screenshot-buildmenu opens the first tab; =Walls (any tab's name) opens that one.
+        foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--screenshot-buildmenu")))
+        {
+            string wanted = arg.Split('=').ElementAtOrDefault(1) ?? "";
+            category = Order.FirstOrDefault(c => c.Equals(wanted, System.StringComparison.OrdinalIgnoreCase)) ?? "";
             GetTree().CreateTimer(1.5).Timeout += Open;
+        }
     }
 
     public void Open()
@@ -93,13 +98,21 @@ public partial class BuildMenu : CanvasLayer
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         box.AddChild(Hud.Text("Build", 20));
-        tabs = new HBoxContainer();
-        tabs.AddThemeConstantOverride("separation", 6);
+        // Four card widths across, always (ui-33): tabs wrap onto a second row rather than
+        // widening the panel, and a tall tab scrolls instead of running off the screen.
+        float across = Columns * (Thumb + 24) + (Columns - 1) * Gap;
+        tabs = new HFlowContainer { CustomMinimumSize = new Vector2(across, 0) };
+        tabs.AddThemeConstantOverride("h_separation", 6);
+        tabs.AddThemeConstantOverride("v_separation", 4);
         box.AddChild(tabs);
-        grid = new GridContainer { Columns = 4 };
-        grid.AddThemeConstantOverride("h_separation", 12);
-        grid.AddThemeConstantOverride("v_separation", 12);
-        box.AddChild(grid);
+        grid = new GridContainer { Columns = Columns };
+        grid.AddThemeConstantOverride("h_separation", Gap);
+        grid.AddThemeConstantOverride("v_separation", Gap);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(across, 0) };
+        scroll.AddChild(grid);
+        grid.MinimumSizeChanged += () =>
+            scroll.CustomMinimumSize = new Vector2(across, Mathf.Min(grid.GetCombinedMinimumSize().Y, GetViewport().GetVisibleRect().Size.Y * 0.6f));
+        box.AddChild(scroll);
         var hint = Hud.Text("Click one to lay it out    B or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
@@ -129,26 +142,13 @@ public partial class BuildMenu : CanvasLayer
         var costs = Costs(kind);
         bool afford = costs.All(c => Carried(c.item) >= c.count);
         bool claimless = NeedsClaim(kind);
-        var tile = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(Thumb + 24, Thumb + 76 + (claimless ? 18 : 0)) };
-        var style = new StyleBoxFlat { BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f), BorderColor = new Color(Look.Cream, 0.22f) };
-        style.SetBorderWidthAll(1);
-        style.SetCornerRadiusAll(10);
-        var hover = (StyleBoxFlat)style.Duplicate();
-        hover.BorderColor = new Color(Look.Cream, 0.6f);
-        tile.AddThemeStyleboxOverride("normal", style);
-        tile.AddThemeStyleboxOverride("hover", hover);
-        tile.AddThemeStyleboxOverride("pressed", hover);
+        // A Card keeps its width and grows taller to fit; the costs wrap inside it (ui-33).
+        var tile = new Card(Thumb + 24, Thumb + 76);
         tile.Pressed += () => { Close(); Place(kind); };
         tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
         tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
             : afford ? "" : Shortfall(costs);
 
-        var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        column.OffsetLeft = column.OffsetTop = 8;
-        column.OffsetRight = column.OffsetBottom = -8;
-        column.AddThemeConstantOverride("separation", 4);
-        tile.AddChild(column);
         var picture = new TextureRect
         {
             Texture = pictures.GetValueOrDefault(kind),
@@ -157,40 +157,37 @@ public partial class BuildMenu : CanvasLayer
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+            ClipContents = true,
         };
-        column.AddChild(picture);
-        var name = Hud.Text(Structures.Shape(kind).Name, 14);
-        name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.MouseFilter = Control.MouseFilterEnum.Ignore;
-        column.AddChild(name);
-        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
-        row.AddThemeConstantOverride("separation", 6);
+        tile.Column.AddChild(picture);
+        tile.Column.AddChild(tile.Line(Structures.Shape(kind).Name, 14));
+        var row = tile.Wrap();
         foreach (var (item, count) in costs)
         {
-            var icon = new TextureRect
+            // Icon and number kept together, so a wrap never splits them.
+            var pair = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+            pair.AddThemeConstantOverride("separation", 2);
+            pair.AddChild(new TextureRect
             {
                 Texture = ItemIcon.For(item),
                 CustomMinimumSize = new Vector2(20, 20),
                 ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
                 MouseFilter = Control.MouseFilterEnum.Ignore,
-                TooltipText = Items.All.TryGetValue(item, out var def) ? def.Count(count) : "",
-            };
-            row.AddChild(icon);
+            });
             var n = Hud.Text(count.ToString(), 12);
             // Amber where you carry too little of this one.
             if (Carried(item) < count) n.Modulate = new Color(1f, 0.75f, 0.45f);
             n.MouseFilter = Control.MouseFilterEnum.Ignore;
-            row.AddChild(n);
+            pair.AddChild(n);
+            row.AddChild(pair);
         }
-        column.AddChild(row);
+        tile.Column.AddChild(row);
         if (claimless)
         {
-            var note = Hud.Text("Needs a claim", 12);
-            note.HorizontalAlignment = HorizontalAlignment.Center;
+            var note = tile.Line("Needs a claim", 12);
             note.Modulate = new Color(1f, 0.75f, 0.45f);
-            note.MouseFilter = Control.MouseFilterEnum.Ignore;
-            column.AddChild(note);
+            tile.Column.AddChild(note);
         }
         return tile;
     }
