@@ -19,11 +19,11 @@ give 18 1 60
 act SetHotbarSlot 0 18
 frames +12
 mark spade-start
-key 1
+act EquipSlot 0
 frames +30
-key f
+act Dig cellx cellz
 frames +60
-key f
+act Dig cellx cellz
 frames +60
 mark spade-end
 frames +12

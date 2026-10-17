@@ -11,25 +11,23 @@ act SetHotbarSlot 1 9
 frames +24
 mark equip-swap-start
 frames +12
-key 1
+act EquipSlot 0
 frames +30
 keydown w
 frames +60
 keyup w
 frames +24
-key 2
+act EquipSlot 1
 frames +36
-key 2
+act EquipSlot 1
 frames +36
 mark equip-swap-end
 sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
 frames +60
 face 90
-key 1
+act EquipSlot 0
 frames +24
 mark equip-chop-start
-keydown e
-frames +96
-keyup e
+craftloop chop.log +96
 mark equip-chop-end
 frames +12
