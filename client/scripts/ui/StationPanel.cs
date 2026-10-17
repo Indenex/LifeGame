@@ -90,8 +90,8 @@ public partial class StationPanel : CanvasLayer
     public override void _UnhandledInput(InputEvent e)
     {
         if (!IsOpen) return;
-        if (grid.Typing && e is not InputEventKey { PhysicalKeycode: Key.Escape }) return;
-        if (e.IsActionPressed(NUse) || e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape })
+        if (grid.Typing && !e.IsActionPressed("ui_cancel")) return;
+        if (e.IsActionPressed(NUse) || e.IsActionPressed("ui_cancel"))
         {
             Close();
             GetViewport().SetInputAsHandled();

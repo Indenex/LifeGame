@@ -7,7 +7,7 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Trading face to face (D-069). G on a player asks to trade (Claims' handler); they see
-// "Mara wants to trade" and press G to say yes or Esc to say no. The window shows both
+// "Mara wants to trade" and press E to say yes or Esc to say no. The window shows both
 // offers side by side, with what you carry below to add from. Each side accepts; any
 // change to either offer clears both accepts, and the window says so. Esc calls the
 // trade off; the server ends it when you walk apart, die or go offline.
@@ -118,7 +118,7 @@ public partial class TradeWindow : CanvasLayer
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is not InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Escape }) return;
+        if (!e.IsActionPressed("ui_cancel")) return;
         if (IsOpen || Link.Outgoing != null) Link.Cancel();
         else if (Link.Incoming != null) Link.Answer(false);
         else return;
