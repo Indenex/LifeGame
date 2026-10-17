@@ -7,8 +7,10 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Warm homes at night (atmosphere-19, Justin's pick): a hut or house with a fire
-// burning inside glows from its doorway, warm light spilling onto the ground in
-// front, faint at the cracks when the door is shut, and smoke rises from its roof.
+// burning inside spills warm light from its doorway onto the ground in front, faint
+// when the door is shut, and smoke rises from its roof. The light alone does it: the
+// flat glowing card that once stood in the doorway read as a lit panel, not an
+// opening (bugfix-60), and the fire inside already shows through the door.
 // Open campfires send up a thinner thread of smoke. All of it is strongest at night
 // and fades as the fire burns down, so a camp reads as lived-in from afar.
 // Everything comes from public rows (fire, structure, structure_door); House
@@ -21,22 +23,12 @@ public partial class Atmosphere
     DbConnection? homesConn;
     float homesIn;
     readonly OmniLight3D[] doorLights = new OmniLight3D[HomeSlots];
-    readonly MeshInstance3D[] doorGlows = new MeshInstance3D[HomeSlots];
     readonly CpuParticles3D[] smokes = new CpuParticles3D[SmokeSlots];
-    readonly StandardMaterial3D doorGlowMaterial = new()
-    {
-        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-        BlendMode = BaseMaterial3D.BlendModeEnum.Add,
-        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled,
-        AlbedoColor = new Color(1f, 0.6f, 0.28f, 0f),
-    };
     readonly List<(Vector3 Door, float Yaw, bool Shut, float Strength, Vector3 Roof, float Dist, ulong Id, bool Chimney)> homes = new();
 
     // How see-through a building is now, 0 solid to 1 faded out of the camera's way
     // (House building's BuildingSystem.SeeThroughOf; Main wires it). A faded home's
-    // doorway glow fades with it, so the light doesn't hang in the air; its smoke stays.
+    // doorway light fades with it, so the light doesn't hang in the air; its smoke stays.
     public Func<ulong, float>? SeeThrough;
     readonly List<(Vector3 At, float Strength, float Dist)> openFires = new();
 
@@ -52,15 +44,7 @@ public partial class Atmosphere
                 ShadowEnabled = false,
                 Visible = false,
             };
-            doorGlows[i] = new MeshInstance3D
-            {
-                Mesh = new QuadMesh { Size = new Vector2(1.1f, 1.7f) },
-                MaterialOverride = doorGlowMaterial,
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-                Visible = false,
-            };
             AddChild(doorLights[i]);
-            AddChild(doorGlows[i]);
         }
         for (int i = 0; i < SmokeSlots; i++)
         {
@@ -137,19 +121,13 @@ public partial class Atmosphere
         {
             bool on = i < homes.Count;
             doorLights[i].Visible = on;
-            doorGlows[i].Visible = on;
             if (!on) continue;
             var h = homes[i];
             float solid = 1f - Mathf.Clamp(SeeThrough?.Invoke(h.Id) ?? 0f, 0f, 1f);
             float s = h.Strength * glow * (h.Shut ? 0.25f : 1f) * solid;
             doorLights[i].GlobalPosition = h.Door + new Vector3(0f, 0.9f, 0f);
             doorLights[i].LightEnergy = 1.4f * s * flicker;
-            doorGlows[i].GlobalPosition = h.Door + new Vector3(0f, 0.85f, 0f);
-            doorGlows[i].GlobalRotation = new Vector3(0f, h.Yaw, 0f);
-            // Each doorway fades with its own fire, and nearly vanishes behind a shut door.
-            doorGlows[i].Transparency = 1f - Mathf.Clamp(h.Strength * (h.Shut ? 0.2f : 1f) * solid, 0f, 1f);
         }
-        doorGlowMaterial.AlbedoColor = new Color(1f, 0.6f, 0.28f, 0.55f * glow * flicker);
 
         // Smoke: roofs first, then open fires, nearest first, a few at most. Lit by
         // the air around it, so it is pale by day and dim blue-grey at night.
