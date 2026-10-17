@@ -230,6 +230,16 @@ bool Step(string line)
             Console.WriteLine($"puppet: sh: {sp.StandardOutput.ReadToEnd()}{sp.StandardError.ReadToEnd()}");
             break;
         }
+        case "warp":
+        {
+            // Move myself on the server (owner SQL) and here, e.g. off the waking clearing to claim land.
+            var w = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(t => float.Parse(t, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            x = w[0]; z = w[1];
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            Run("spacetimedb-cli", $"sql --server {uri} {db} \"UPDATE player_pos SET x = {x.ToString("F2", inv)}, z = {z.ToString("F2", inv)}, chunk_x = {(int)MathF.Floor(x / 16f)}, chunk_z = {(int)MathF.Floor(z / 16f)} WHERE player_id = {myId}\"");
+            Pump(1.0);
+            break;
+        }
         case "pos":
         {
             var sp = conn.Db.PlayerPos.PlayerId.Find(myId);

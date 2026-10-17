@@ -162,6 +162,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:06: env-31 ground before (--ground=old) / after on 8288687b, noon and 0.7, at spawn meadow (-6,-10), deer-trail path edge (-22,-38), stream bank (-44,-20); Justin's pick, after env-35, before ui-69.
 
+- 2026-10-17 15:10: bugfix-58 claim rings (#835, Justin's request, jumps the queue): after 3166cf99, before main 5064a254. New render-tree patch tools/render/patches/ghost.sh pins the build ghost at /tmp/render-ghost; puppet gained `warp x z`; scene scenes/bugfix-58-rings.txt.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

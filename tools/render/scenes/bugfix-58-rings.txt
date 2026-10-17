@@ -1,0 +1,30 @@
+# bugfix-58 (#835) claim rings while laying out a claim marker. Run with
+#   RENDER_PATCH=tools/render/patches/ghost.sh (the ghost sits where /tmp/render-ghost says)
+# Puppet B raises a claim at (82,-40) (claim radius 20, so claims touch 40 m apart). The camera
+# player A stands at (40,-40) laying out a marker: ghost at (45.5,-40) overlaps B's claim (red),
+# then at (42.05,-40) the edges just touch (green). Before = main (no rings, only the ghost tint).
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --render-cam=26,30,0,0
+sh rm -f /tmp/render-ghost
+name B
+find
+wait 35
+warp 80 -40
+sql UPDATE player_pos SET x = 40.0, z = -40.0, chunk_x = 2, chunk_z = -3 WHERE player_id = {target}
+wait 10
+give 1 8 50
+give 3 4 50
+place 2 2 0 0
+build
+build
+build
+build
+build
+build
+wait 8
+sh echo 45.5,-40 > /tmp/render-ghost
+wait 25
+burst 3 2
+sh echo 42.05,-40 > /tmp/render-ghost
+wait 15
+burst 3 2
+sh rm -f /tmp/render-ghost
