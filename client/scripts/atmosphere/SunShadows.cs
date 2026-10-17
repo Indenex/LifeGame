@@ -24,7 +24,7 @@ public partial class SunShadows : Node
 
     public static Level Setting
     {
-        get => (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
+        get => Override ?? (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
         set
         {
             Settings.Set("graphics", "shadows", (int)value);
@@ -33,6 +33,17 @@ public partial class SunShadows : Node
     }
 
     static event Action? Changed;
+
+    // --shadows=low|medium|high on the command line wins over the saved setting (renders, benchmarks).
+    static readonly Level? Override = ReadOverride();
+
+    static Level? ReadOverride()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--shadows=") && Enum.TryParse<Level>(arg["--shadows=".Length..], true, out var level))
+                return level;
+        return null;
+    }
 
     // What each level costs: shadow atlas size (px, shared by the cascades), cascade
     // count, reach (m) and Godot's soft-shadow filter.
