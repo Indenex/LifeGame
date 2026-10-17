@@ -632,7 +632,15 @@ void WalkTo(float tx, float tz)
     for (var settle = Stopwatch.StartNew(); ; )
     {
         if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
-        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
+        if (settle.Elapsed.TotalSeconds > 15)
+        {
+            // Say where everyone is and what is near, so a blocked or too-slow walk can be told apart.
+            var at = conn.Db.PlayerPos.PlayerId.Find(myId);
+            var near = string.Join(", ", conn.Db.Structure.Iter()
+                .Select(st => $"{st.Kind}#{st.Id} d={MathF.Sqrt((st.X - x) * (st.X - x) + (st.Z - z) * (st.Z - z)):F1}")
+                .OrderBy(t => t).Take(6));
+            Fail($"timed out waiting for position to settle (target {x:F1},{z:F1}; server {at?.X:F1},{at?.Z:F1}; last error {lastError ?? "none"}; structures: {near})");
+        }
         conn.Reducers.Move(x, z, 0f);
         Pump(() => false, 0.1f, null);
     }
