@@ -659,8 +659,15 @@ public static class Look
             // glint of sun on wet surfaces.
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
-                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                // A low sun wraps further round, as on painted props (Painted.Light), so
+                // flat ground and grass stay warm and readable at golden hour instead of
+                // going dark under a sun 10 degrees up (atmosphere-40). Noon is unchanged.
+                float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
+                float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
+                float wrap = mix(0.3, 0.6, low_sun);
+                float wrapped = clamp((dot(NORMAL, LIGHT) + wrap) / (1.0 + wrap), 0.0, 1.0);
+                float lit = mix(wrapped * wrapped, wrapped, 0.5 * low_sun);
+                DIFFUSE_LIGHT += LIGHT_COLOR * lit * ATTENUATION * sky / PI;
                 if (wet > 0.01) {
                     vec3 half_dir = normalize(LIGHT + VIEW);
                     float glint = pow(max(dot(NORMAL, half_dir), 0.0), 24.0) * wet * 0.06;
@@ -761,8 +768,15 @@ public static class Look
 
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
-                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                // A low sun wraps further round, as on painted props (Painted.Light), so
+                // flat ground and grass stay warm and readable at golden hour instead of
+                // going dark under a sun 10 degrees up (atmosphere-40). Noon is unchanged.
+                float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
+                float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
+                float wrap = mix(0.3, 0.6, low_sun);
+                float wrapped = clamp((dot(NORMAL, LIGHT) + wrap) / (1.0 + wrap), 0.0, 1.0);
+                float lit = mix(wrapped * wrapped, wrapped, 0.5 * low_sun);
+                DIFFUSE_LIGHT += LIGHT_COLOR * lit * ATTENUATION * sky / PI;
             }
             """);
 

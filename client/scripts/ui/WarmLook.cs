@@ -20,7 +20,7 @@ public partial class WarmLook : Node
 
     const string Mark = "warm_window";
     static readonly string[] ColourKeys = { "font_color", "font_hover_color", "font_pressed_color", "font_disabled_color", "font_placeholder_color", "font_uneditable_color" };
-    static readonly string[] BoxKeys = { "panel", "normal", "hover", "pressed", "disabled", "focus", "read_only" };
+    static readonly string[] BoxKeys = { "panel", "normal", "hover", "pressed", "disabled", "focus", "read_only", "background", "fill" };
 
     readonly List<Control> windows = new();
     float scan;
@@ -286,19 +286,21 @@ public partial class WarmLook : Node
         {
             if (!c.HasThemeStyleboxOverride(key) || c.GetThemeStylebox(key) is not StyleBoxFlat flat) continue;
             if (flat.HasMeta("warm")) continue;
-            var warm = Restyle(flat);
+            // Bars keep their thin corners.
+            var warm = Restyle(flat, round: key is not ("background" or "fill"));
             warm.SetMeta("warm", true);
             c.AddThemeStyleboxOverride(key, warm);
         }
         // Pictures and swatches keep their own colours; a faded modulate keeps its fade.
     }
 
-    static StyleBoxFlat Restyle(StyleBoxFlat old)
+    static StyleBoxFlat Restyle(StyleBoxFlat old, bool round = true)
     {
         var s = (StyleBoxFlat)old.Duplicate();
         s.BgColor = Recolour(old.BgColor, ground: true);
         s.BorderColor = Recolour(old.BorderColor);
         if (old.ShadowSize > 0) s.ShadowColor = new Color(0.25f, 0.12f, 0.08f, Mathf.Min(old.ShadowColor.A, 0.18f));
+        if (!round) return s;
         // Rounder, friendlier corners.
         s.CornerRadiusTopLeft = Mathf.Max(old.CornerRadiusTopLeft, 10);
         s.CornerRadiusTopRight = Mathf.Max(old.CornerRadiusTopRight, 10);

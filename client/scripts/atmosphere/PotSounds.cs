@@ -9,6 +9,7 @@ namespace LifeGame;
 // Pots of broth and stew simmering by fires, heard (audio-19): soft bubbles rising and popping.
 // Broth is thin and busy, small bubbles and pops; stew is thick and slow, with big gloops. A pot
 // that is done goes on bubbling, only gentler. Knows the pots from the public simmer_pot table.
+[AudioSounds]
 static class PotSounds
 {
     const float Hearing = 14f;   // metres

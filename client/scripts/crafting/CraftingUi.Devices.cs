@@ -23,6 +23,7 @@ public partial class CraftingUi
         reopenAfterMinigame = panel.Visible;
         panel.Visible = false;
         AddChild(minigame.Root);
+        conn.Reducers.BeginMinigame(process.Id);
         MinigameSound(stand, true);
     }
 }

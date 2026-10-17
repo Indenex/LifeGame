@@ -1245,6 +1245,12 @@ void Craft(string processId, float score, Item? expect)
     if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipAxe();
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
+    if (Processes.Find(processId) is { Minigame: not Minigame.None } mg)
+    {
+        // Open the minigame and play it for as long as a person needs, so the server believes the score.
+        conn.Reducers.BeginMinigame(processId);
+        Pump(() => false, MinigamePlay.MinSeconds(mg.Minigame) + 0.3f, null);
+    }
     conn.Reducers.StartCraft(processId, score);
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");

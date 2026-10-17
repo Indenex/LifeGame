@@ -9,6 +9,7 @@ namespace LifeGame;
 // Meat roasting over a fire, heard (audio-21): a soft sizzle with now and then a spit of fat.
 // Browning meat sizzles busily; ready meat settles to a steady sizzle with the odd drip; meat
 // left until it chars spits and crackles more. Reads the public roast table, close range only.
+[AudioSounds]
 static class RoastSounds
 {
     const float Hearing = 9f;   // metres
