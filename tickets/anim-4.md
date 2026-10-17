@@ -1,9 +1,9 @@
 # anim-4: Drink, eat, pluck, pick up, and seamless transitions
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_progress
+Status: done
 Branch: claude/anim-4
-PR: (to open)
+PR: #382 (merged)
 
 ## Goal
 Justin (via the PM, 2026-10-17, high priority): "when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly".
@@ -30,4 +30,4 @@ Done means:
 - Render clips requested; Render moved to session_015S96hNrEu92FrCoNZqZZjs.
 
 ## Next step
-Open the PR, get CI green and send the sha to the PM; send the Render request for clips of each action.
+Done (#382 merged). Follow-ups live in later anim tickets.

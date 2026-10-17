@@ -243,6 +243,7 @@ public static partial class Module
             throw new Exception("The fire is burning as high as it will");
         Take(ctx, (Item)item, 1);
         ctx.Db.Fire.Id.Update(fire with { FuelUntil = new Timestamp(from + fuel) });
+        NoteAct(ctx, pos.PlayerId, WorkMotion.Feed, (Item)item);
     }
 
     // Fires that have burned out leave a cold hearth; old cold hearths are cleared away.

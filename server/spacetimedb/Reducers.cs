@@ -198,6 +198,7 @@ public static partial class Module
             GiveDugClay(ctx, player, depth);
 
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, BestTool(ctx, ItemTags.Digging) is { } digger ? (Item)digger.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
