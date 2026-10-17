@@ -504,9 +504,10 @@ public static class Look
                 }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 // Past where the grass tufts fade, the bare ground takes on the
-                // carpet's colour, so far meadows read as grass (Environment).
+                // carpet's colour, so far meadows read as grass (Environment); not
+                // where snow lies, which would clip to flat white.
                 if (ground_lift_ok > 0.5)
-                    ALBEDO = clamp(ALBEDO * mix(vec3(1.0), ground_far_lift, smoothstep(30.0, 48.0, distance(world_pos.xz, player_position.xz))), 0.0, 1.0);
+                    ALBEDO = clamp(ALBEDO * mix(vec3(1.0), ground_far_lift, smoothstep(30.0, 48.0, distance(world_pos.xz, player_position.xz)) * (1.0 - snow)), 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
                 vec3 dpdx = dFdx(VERTEX), dpdy = dFdy(VERTEX);

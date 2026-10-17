@@ -98,7 +98,7 @@ public static class PaintedGround
                 float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621u + v) - 0.5f) / grid;
                 float angle = H(gx, gz, 622u + v) * Mathf.Pi;
                 float height = 0.2f + H(gx, gz, 623u + v) * 0.22f;
-                float half = 0.032f + H(gx, gz, 624u + v) * 0.022f;
+                float half = 0.045f + H(gx, gz, 624u + v) * 0.028f;
                 var side = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * half;
                 var lean = new Vector3(H(gx, gz, 625u + v) - 0.5f, 0, H(gx, gz, 626u + v) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627u + v) * 0.16f);
                 var shade = Colors.White.Darkened(H(gx, gz, 628u + v) * 0.32f);
@@ -296,6 +296,9 @@ public static class PaintedGround
                 VERTEX *= 1.0 - smoothstep(0.65 * fade_far, fade_far, away);
             }
             VERTEX.y *= 1.0 - 0.75 * snow_cover;
+            // The carpet rises and dips gently in patches a few metres across.
+            vec2 at = MODEL_MATRIX[3].xz;
+            VERTEX.y *= 0.88 + 0.22 * sin(at.x * 0.41 + sin(at.y * 0.23) * 2.0) * sin(at.y * 0.37 + sin(at.x * 0.19) * 2.0);
             if (INSTANCE_CUSTOM.x > 0.0) {
                 float k = smoothstep(0.0, 1.6, world_seconds - INSTANCE_CUSTOM.x);
                 float height = INSTANCE_CUSTOM.y > 0.0 ? 1.0 - k : k;
@@ -322,9 +325,9 @@ public static class PaintedGround
         void fragment() {
             // The base matches the ground between the blades (PaintedGround.Ground), so a
             // patch without a tuft never shows as a square.
-            vec3 base = tint * vec3(0.52, 0.54, 0.62);
-            vec3 lit = mix(tint * vec3(1.15, 1.1, 0.9), pow(vec3(0.78, 0.76, 0.44), vec3(2.2)), 0.4 + 0.2 * patch);
-            float low = 0.26 + 0.1 * patch, high = 0.68 + 0.12 * patch;
+            vec3 base = tint * vec3(0.42, 0.44, 0.56);
+            vec3 lit = mix(tint * vec3(1.2, 1.15, 0.95), pow(vec3(0.86, 0.84, 0.54), vec3(2.2)), 0.45 + 0.2 * patch);
+            float low = 0.3 + 0.1 * patch, high = 0.66 + 0.12 * patch;
             vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
             color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));
             color += vec3(0.04, 0.04, 0.01) * gust * step(high, tip);
