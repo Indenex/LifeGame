@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
@@ -97,6 +98,9 @@ public partial class Main : Node3D
         HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
         hud.Hotbar.PlaceRequested += placing.StartItem;
         AddChild(placing);
+        // The maker's mark (ui-23): chosen from Options, shown on made things' tooltips.
+        BagGrid.Makers = markPicker.Link;
+        AddChild(markPicker);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
@@ -163,6 +167,7 @@ public partial class Main : Node3D
             || equipment.IsOpen
             || station.IsOpen
             || buildMenu.IsOpen
+            || markPicker.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
