@@ -15,8 +15,10 @@ Showcase view `snare` (and `--side`). Renders: renders/model-33-snare.png, model
 ## Progress log
 - 2026-10-17 14:45: built; Make split into Recipe + Assemble (keepOrigin for the placed snare). Local build 0 errors.
 
+- 2026-10-17 14:35: 8b2ec1b4 green and mergeable, CI https://github.com/Indenex/LifeGame/actions/runs/39041104853 (the red "Server module" on 77b5c627 is a cancelled superseded run). Green sha sent to the PM for Animals; still for Justin is renders/model-33-snare.png.
+
 ## Open questions / blockers
-- (none)
+- Waiting on the PM to merge. Animals then sets `ItemModels.SnareItem` to their item 218 and places SnareSet / SnareSprungWith (their files).
 
 ## Next step
-Wait for CI, then send the green sha to the PM for Animals.
+Watch PR #818: if main moves and it conflicts, merge main into claude/model-33-rabbit-snare, build (0 errors), push, and send the new green sha to the PM. Answer any feedback from Animals on the snare's scale or the sprung pose.
