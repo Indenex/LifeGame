@@ -1229,3 +1229,7 @@ Owner: Claims.
 ## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
 **Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
 **Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
