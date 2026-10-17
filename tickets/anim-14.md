@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
 Branch: claude/anim-14 (stacked on claude/anim-13, #613, with Modeling's claude/model-15-faces merged in)
-PR: (not yet)
+PR: #647
 
 ## Goal
 The chibi blinks, looks happy while eating, waving or swaying by a fire, and looks sleepy when lying down, yawning or standing idle late at night. Asleep (lying), its eyes are closed. Other players see it because the face is worked out on each client from public state (acts, rest, gestures, Atmosphere.Night); nothing new goes over the network.
@@ -21,4 +21,4 @@ The chibi blinks, looks happy while eating, waving or swaying by a fire, and loo
 - Merges after Modeling's faces PR and #613.
 
 ## Next step
-Open the PR (base claude/anim-13) and request a Render C clip of blink, eat, wave and lie down.
+Wait for #600, #613 and #644 to merge (retarget in turn), then send the PM the green sha. Render C clip requested.
