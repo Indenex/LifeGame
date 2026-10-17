@@ -44,6 +44,10 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+a.WalkTo(0f, 0f, 0.3f, Pump);
+b.WalkTo(1f, 0f, 0.3f, Pump);
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
 foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin })
 {
