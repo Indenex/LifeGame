@@ -39,9 +39,16 @@ public static partial class Module
     // belt) and still works; null when nothing fitting is equipped.
     static InventoryItem? EquippedTool(ReducerContext ctx, ItemTags tags)
     {
+        if (EquippedStack(ctx) is not { } stack) return null;
+        return (Items.Def((Item)stack.Item).Tags & tags) == tags ? stack : null;
+    }
+
+    // Whatever working item is in the equipped slot and in the bag (a bow has no tag, so the
+    // bow shot reads it here).
+    static InventoryItem? EquippedStack(ReducerContext ctx)
+    {
         if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return null;
         if (SlotAt(ctx, equip.Slot) is not { } slot || !Items.IsKnown(slot.Item)) return null;
-        if ((Items.Def((Item)slot.Item).Tags & tags) != tags) return null;
         InventoryItem? best = null;
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
         {
@@ -50,6 +57,17 @@ public static partial class Module
             if (best is null || row.Quality > best.Value.Quality) best = row;
         }
         return best;
+    }
+
+    // Why a hunting strike or a bow shot has no weapon: a spent one equipped, or none equipped.
+    static string NoWeaponMessage(ReducerContext ctx, string what)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
+            && Items.IsKnown(slot.Item) && Durability.Wears((Item)slot.Item))
+            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+                if (!row.OnBelt && Durability.IsSpent(row.Quality, row.Wear))
+                    return $"Your {Items.Def((Item)slot.Item).Name.ToLowerInvariant()} is spent. Mend it at a repair table.";
+        return $"Put {what} on your bar and equip it";
     }
 
     // The same, or the reason there is none, for the player's message.

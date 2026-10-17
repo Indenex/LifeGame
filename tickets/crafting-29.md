@@ -22,7 +22,8 @@ Coordinate the interaction priority part with Integration (session_015g3pLB5eJ4q
   - Client: client/scripts/crafting/Equipped.cs (Item, Has), Woodcutting offers a chop only when Equipped.Has(Chopping), subscription player_equip WHERE owner = :sender.
   - Bots: CraftCheck (EquipTool helper, chop and both dig loops, new assertion that a chop with the axe unequipped is refused), ClayCheck (EquipAxe for chop and butcher), BuildTest (bot equips the axe on first chop).
   - Messages sent: PM (design, the ui-18 belt conflict, scope), UX (slot-select key, highlight, API), Integration (E priority, second prompt line, soft hint).
-- Not yet run: CraftCheck/ClayCheck/BuildTest/upgrade check (CI hold; local CraftCheck is blocked by the bot-walk problem until bugfix-34).
+- 2026-10-17 (later): Justin answered via the PM: belt = storage only (belt tools count for crafting recipes, not for world use); spear and bow are included. Combat done in this PR: StrikeAnimal takes the equipped spear or blade (Equip.cs NoWeaponMessage), BowShotHook takes the equipped bow (arrows from the bag). ClayCheck equips before strikes. Upgrade check passes locally (additive table). Release is out; CI is free.
+- Not run locally: CraftCheck/ClayCheck/BuildTest (the bot-walk problem); CI is the check.
 
 ## Open questions / blockers
 - PM: does a tool on the tools belt count when it is also on the bar? (recommended: no.) Do melee strikes and the bow need equipping? (recommended: not in this PR.)
