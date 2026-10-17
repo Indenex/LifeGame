@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-12-smooth
-PR: (opening)
+PR: #642
 
 ## Goal
 Justin on the painted structures and items: "The textures of those is awful, the weird pitted look is not cutesy." D-319 asks that every painted family be smooth and clean, in the D-313 cutesy style:
