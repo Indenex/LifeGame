@@ -31,7 +31,7 @@ def c(*rgb):
 
 # The palette, after the Golden Skull tiles: warm browns, ochre lights, shade leaning
 # violet, seams nearly black-brown.
-PLATE = dict(lit=c(0.66, 0.5, 0.31), mid=c(0.49, 0.36, 0.23), shade=c(0.34, 0.24, 0.18), seam=c(0.17, 0.11, 0.12), bevel=c(0.8, 0.67, 0.47))
+PLATE = dict(lit=c(0.63, 0.5, 0.33), mid=c(0.47, 0.35, 0.24), shade=c(0.34, 0.24, 0.18), seam=c(0.17, 0.11, 0.12), bevel=c(0.8, 0.67, 0.47))
 MARG = dict(lit=c(0.74, 0.6, 0.39), mid=c(0.6, 0.46, 0.29), shade=c(0.42, 0.3, 0.21), seam=c(0.17, 0.11, 0.12), bevel=c(0.86, 0.75, 0.55))
 PLAS = dict(lit=c(0.96, 0.9, 0.7), mid=c(0.9, 0.82, 0.58), shade=c(0.75, 0.63, 0.43), seam=c(0.5, 0.38, 0.27), bevel=c(1.0, 0.96, 0.82))
 INNER = c(0.3, 0.21, 0.17)
@@ -56,7 +56,7 @@ def value_noise(x, y, seed):
     return (a * (1 - fx) + b * fx) * (1 - fy) + (cc * (1 - fx) + d * fx) * fy
 
 
-def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.3, 0.46, 0.62, 0.78)):
+def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.3, 0.46, 0.62, 0.78), cen=None):
     """Shared plate painting. dist: m to the nearest seam; maxd: that plate's largest
     dist; direc: unit direction towards the seam (y up)."""
     f = dist / np.maximum(maxd, 1e-6)
@@ -65,7 +65,9 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.3, 0.4
     centre = 0.62
     col = pal["mid"][None] * np.ones_like(dist)[:, None]
     # Three tones with crisp painted edges: shade band at the edge, lit centre.
-    col = col + (pal["lit"] - pal["mid"])[None] * (smooth(centre - 0.02, centre + 0.02, f + wob) * contrast)[:, None]
+    # The lit centre is rounder than the plate: away from the seams and near the middle.
+    litf = f if cen is None else np.minimum(f, 1.15 - cen)
+    col = col + (pal["lit"] - pal["mid"])[None] * (smooth(centre - 0.02, centre + 0.02, litf + wob) * contrast)[:, None]
     col = col + (pal["shade"] - pal["mid"])[None] * ((1 - smooth(0.13, 0.17, f + wob * 0.5)) * contrast)[:, None]
     # Bevel: the upper edge of each plate catches the light, the lower edge falls in shade.
     up = direc[:, 1]
@@ -118,13 +120,13 @@ def main(bake_dir, out_dir):
         for s in range(0, len(th), 20000):
             rho[s:s + 20000] = geom.rho_from_arc(a[idx][s:s + 20000], th[s:s + 20000])
         # Paint a little past the rim, so filtering at the edge stays shell coloured.
-        region, dist, direc, _ = geom.scutes(np.minimum(rho, 1.0), th)
+        region, dist, direc, cen = geom.scutes(np.minimum(rho, 1.0), th)
         maxd = np.zeros(64)
         np.maximum.at(maxd, region, np.where(rho <= 1, dist, 0))
         marg = region >= 13
         col = np.empty((len(th), 3))
         for sel, pal in ((~marg, PLATE), (marg, MARG)):
-            col[sel] = paint_plates(pal, dist[sel], maxd[region[sel]], direc[sel], region[sel], worn, uvx[idx][sel], uvy[idx][sel])
+            col[sel] = paint_plates(pal, dist[sel], maxd[region[sel]], direc[sel], region[sel], worn, uvx[idx][sel], uvy[idx][sel], cen=cen[sel] if pal is PLATE else None)
         # Painted light: the top of the dome a touch warmer and lighter.
         col = col * (1 + 0.07 * (1 - np.minimum(rho, 1) ** 2))[:, None]
         # The AO over everything, then the rim's underside a little darker.

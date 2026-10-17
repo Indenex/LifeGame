@@ -732,9 +732,13 @@ public partial class Showcase : Node3D
         // --built-shell draws Pebble with ChibiFigure's built shell instead of the authored one.
         ChibiShell.Enabled = !args.ContainsKey("built-shell");
         var yaws = new[] { 25f, -35f, -95f, -125f, 145f };
+        // --variants: the same view of five looks instead (Pebble: the three shell
+        // colours with scutes, then two worn smooth).
+        bool variants = args.ContainsKey("variants");
         for (int i = 0; i < yaws.Length; i++)
         {
-            var figure = ChibiFigure.Create(look);
+            var figure = ChibiFigure.Create(variants ? look with { Second = i % 3, Style = i < 3 ? 1 : 0 } : look);
+            if (variants) yaws[i] = -95f;
             figure.Position = new Vector3((i - 2) * 0.95f, 0, 0);
             figure.Rotation = new Vector3(0, Mathf.DegToRad(yaws[i]), 0);
             AddChild(figure);
