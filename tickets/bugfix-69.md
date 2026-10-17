@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_review
 Branch: claude/bugfix-rnwmoa-11
-PR: (opening)
+PR: #863
 
 ## Goal
 "Load, spawn and social checks" failed on #862 (job 117450636001) in SurvivalCheck: "an honest run, rest, run
@@ -14,6 +14,7 @@ slow-down from the server's stamina bar would show on every lane, so the check s
 
 ## Progress log
 - 2026-10-17 17:05: fix written; no local dotnet here, CI is the compile check.
+- 2026-10-17 17:10: #862's re-run failed the next step instead ("the bot got stuck while winded, 28.6 m in 20 s"); the winded step now retries on a new lane the same way (a too-high result, the cap failing, still fails at once).
 
 ## Open questions / blockers
 - (none)
