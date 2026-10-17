@@ -1,7 +1,7 @@
 # bugfix-66 (#845): a soaked Pebble in low sun, the camera behind and low, orbiting slowly (30 deg/s)
 # so three stills bring the sun into view; before, the wet sheen glared white. Wetness is set by owner SQL.
 client-as-puppet
-client --time-of-day=0.72 --rain=0 --cloud=0.1 --wind=0.1 --season=0.25 --render-cam=3,0.9,0,1.3,30
+client --time-of-day=0.72 --rain=0 --cloud=0.1 --wind=0.1 --season=0.25 --render-cam=4.5,1.7,0,0.9,15
 wait 35
 act SetRaceLook 1 1 1 0 0
 warp -6 -6
