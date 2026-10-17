@@ -9,8 +9,8 @@ namespace LifeGame;
 public static class HeldTools
 {
     // Your own tool is the one the server works with (Crafting's BestTool: the best
-    // quality item carrying every needed tag). Other players' inventories are hidden,
-    // so they show the plainest item with those tags (a stone, a flake, a stone axe).
+    // quality item carrying every needed tag). Other players show the tool craft_work
+    // names (AvatarWork); without one, the plainest item with those tags.
     public static (Item? right, Item? left) For(string? processId, IEnumerable<(ushort item, byte quality)>? inventory)
     {
         if (string.IsNullOrEmpty(processId) || Processes.Find(processId) is not { } def) return (null, null);
