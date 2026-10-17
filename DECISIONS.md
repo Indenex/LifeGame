@@ -1079,3 +1079,23 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
 **Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
 **Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
+
+## D-267 — 2026-10-17 — Eggs cook into a boiled egg (follows D-259)
+**Decision:** Eggs cook into a boiled egg.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-268 — 2026-10-17 — Feathers fletch better arrows; plain arrows still work (follows D-259)
+**Decision:** Feathers fletch better arrows. Plain arrows still work.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-269 — 2026-10-17 — Hens roost in their coop at night and come out at dawn (follows D-259, D-265)
+**Decision:** Hens roost in their coop at night and come out at dawn.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-270 — 2026-10-17 — Other players in water get ripples and splashes, but no wet legs
+**Decision:** Other players in water get ripples and splashes, but no wet legs.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
+**Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
+**Who:** PM default (Justin not yet asked).
