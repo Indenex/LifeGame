@@ -2,6 +2,8 @@
 // placement checks, "am I inside?" and what each stage costs agree on both sides.
 // Keep this file free of engine and SpacetimeDB types.
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
@@ -64,371 +66,58 @@ namespace LifeGame.Shared
         public (Item Item, uint Count)[][] Costs = Array.Empty<(Item Item, uint Count)[]>();
     }
 
-    public static class Structures
+    // One building kind: its fixed id and its shape (which also carries the stage costs).
+    public sealed class StructureDef
     {
-        // Indexed by StructureKind; append new kinds at the end, in the same order.
-        public static readonly StructureShape[] Shapes = Scaled(new StructureShape[]
-        {
-            new StructureShape
-            {
-                Name = "Lean-to",
-                Model = "LeanTo",
-                Wild = true,
-                Scale = 1.25f,
-                HalfWidth = 1.5f, HalfDepth = 1.25f,
-                Clearance = 1.9f,
-                RainCover = 0.6f, Warmth = 0.2f,
-                Stages = new[] { "Frame", "Lashing", "Ribs", "Thatch" },
-                // Lean-to: Frame, Lashing, Ribs, Thatch
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 4u) },
-                    new[] { (Item.Fiber, 3u) },
-                    new[] { (Item.Stick, 6u) },
-                    new[] { (Item.Fiber, 8u) },
-                },
-            },
-            new StructureShape
-            {
-                Name = "Clay hut",
-                Model = "ClayHut",
-                Hut = true,
-                Wild = true,
-                Scale = 1.25f,
-                Round = true, Radius = 1.9f,
-                Clearance = 2.2f,
-                RainCover = 0.9f, Warmth = 0.4f, ShutWarmth = 0.5f,
-                DoorwayZ = 1.7f,
-                SmokeY = 2.9f,
-                Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
-                // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
-                    new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
-                    new[] { (Item.Daub, 12u) },
-                    new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
-                },
-            },
-            // A land claim's marker post (Claims.cs makes the claim when it is finished).
-            new StructureShape
-            {
-                Name = "Claim marker",
-                Model = "ClaimMarker",
-                Wild = true,
-                Category = "Claims",
-                Round = true, Radius = 0.5f,
-                Clearance = 1.2f,
-                Solid = true,
-                Stages = new[] { "Marker post" },
-                // Claim marker: one stage, costs set by Claims in shared/Social.cs
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, Social.MarkerSticks), (Item.Fiber, Social.MarkerFiber) },
-                },
-            },
-            new StructureShape
-            {
-                // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
-                Kiln = true,
-                Name = "Updraft kiln",
-                Model = "Kiln",
-                Category = "Crafting",
-                Round = true, Radius = 0.85f,
-                Clearance = 1.2f,
-                Solid = true,
-                Stages = new[] { "Base", "Dome" },
-                // Updraft kiln (Ceramics): Base, Dome
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Brick, 4u) },
-                    new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
-                },
-            },
-            new StructureShape
-            {
-                Name = "Storage basket",
-                Model = "Basket",
-                Wild = true,
-                Category = "Storage",
-                Round = true, Radius = 0.35f,
-                Clearance = 0.6f,
-                Solid = true,
-                StoreStacks = BasketStacks,
-                Stages = new[] { "Weave" },
-                // Storage basket: Weave
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
-                },
-            },
-            // A mud-brick house: a bigger room with a hearth. A fire lit inside warms
-            // the whole room, and it weathers slower than wattle and daub.
-            new StructureShape
-            {
-                Name = "Mud-brick house",
-                Scale = 1.25f,
-                HalfWidth = 2.4f, HalfDepth = 2.0f,
-                Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
-                DoorwayZ = 1.8f,
-                Room = true,
-                BrickWalls = true,
-                SmokeY = 3.3f,
-                Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
-                // Brick house: Footings, Brick walls, Rafters, Thatch
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
-                    new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
-                    new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
-                    new[] { (Item.Fiber, 14u) },
-                },
-            },
-            // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
-            // Outside a claim it weathers like everything else.
-            new StructureShape
-            {
-                Name = "Storage jar",
-                Model = "Jar",
-                Wild = true,
-                Category = "Storage",
-                Jar = true,
-                Round = true, Radius = 0.32f,
-                Clearance = 0.6f,
-                Solid = true,
-                // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
-                StoreStacks = JarStacksMax,
-                Stages = new[] { "Set the jar" },
-                // Storage jar (Ceramics): set down one kiln-fired jar
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.StorageJar, 1u) },
-                },
-            },
-            // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
-            // sheep and mark out a yard (building-8).
-            new StructureShape
-            {
-                Name = "Fence",
-                Category = "Fences and gates",
-                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
-                Clearance = 0.25f,
-                Fence = true,
-                Stages = new[] { "Posts", "Rails" },
-                // Fence: Posts, Rails
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 2u) },
-                    new[] { (Item.Stick, 2u), (Item.Fiber, 1u) },
-                },
-            },
-            // A fence length with a woven hurdle gate in it that opens and bars like a door.
-            new StructureShape
-            {
-                Name = "Gate",
-                Category = "Fences and gates",
-                HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
-                Clearance = 0.25f,
-                Fence = true, Gate = true,
-                Stages = new[] { "Posts", "Gate" },
-                // Gate: Posts, Gate (a hurdle like a hut door)
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 2u) },
-                    new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
-                },
-            },
-            // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
-            new StructureShape
-            {
-                Name = "Crafting table",
-                Scale = 1.25f,
-                Wild = true,
-                Category = "Crafting",
-                HalfWidth = 0.8f, HalfDepth = 0.45f,
-                Clearance = 1.0f,
-                Station = StationKind.Table,
-                Stages = new[] { "Table" },
-                // Crafting table (D-112): Table
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
-                },
-            },
-            // A raised hearth inside a hut or house: a ring of stones with a clay surround.
-            // A fire on it burns longer per stick and warms a whole hut (building-9, D-132).
-            new StructureShape
-            {
-                Name = "Raised hearth",
-                Wild = true,
-                Category = "Fire",
-                Round = true, Radius = HearthRadius, Solid = true,
-                Clearance = 0.6f,
-                Indoor = true,
-                Stages = new[] { "Stone ring", "Clay surround" },
-                // Raised hearth: Stone ring, Clay surround
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stone, 4u) },
-                    new[] { (Item.Daub, 3u) },
-                },
-            },
-            // Spindle station (Animals, D-098): a distaff stand with a stool and a weaving frame.
-            new StructureShape
-            {
-                Name = "Spindle station",
-                Category = "Crafting",
-                HalfWidth = 0.6f, HalfDepth = 0.4f,
-                Clearance = 1.0f,
-                Station = StationKind.Spindle,
-                Stages = new[] { "Distaff stand" },
-                // Spindle station: your drop spindle becomes part of it (D-137)
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.DropSpindle, 1u), (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Stone, 1u) },
-                },
-            },
-            // Leather drying rack (Animals, D-098): forked posts and a bar for up to three hides.
-            new StructureShape
-            {
-                Name = "Leather drying rack",
-                Category = "Crafting",
-                HalfWidth = 1.2f, HalfDepth = 0.35f,
-                Clearance = 1.0f,
-                Station = StationKind.DryingRack,
-                Stages = new[] { "Posts and bar" },
-                // Leather drying rack
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 6u), (Item.Cordage, 2u) },
-                },
-            },
-            // Ceramics' potter's bench (ceramics-8, D-112): pots are shaped at it, inside a claim.
-            new StructureShape
-            {
-                Name = "Potter's bench",
-                Category = "Crafting",
-                // Modeling's bench (wedging stone, stool, pots) is about 1.3 x 1.0 m, +Z where the potter sits.
-                HalfWidth = 0.65f, HalfDepth = 0.5f,
-                Clearance = 1.0f,
-                Station = StationKind.PottersBench,
-                Stages = new[] { "Bench" },
-                // Potter's bench (Ceramics, D-127): a split log on two stones
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Log, 1u), (Item.Stone, 2u) },
-                },
-            },
-            // A log cabin (building-10, D-151): the forest's way to the same home as the
-            // mud-brick house, with the same room, shelter and weathering, built of logs.
-            new StructureShape
-            {
-                Name = "Log cabin",
-                Scale = 1.25f,
-                HalfWidth = 2.4f, HalfDepth = 2.0f,
-                Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
-                DoorwayZ = 1.8f,
-                Room = true,
-                SmokeY = 3.3f,
-                Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
-                // Log cabin: Sill, Log walls, Rafters, Thatch (D-151)
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stone, 4u), (Item.Log, 4u) },
-                    new[] { (Item.Log, 16u) },
-                    new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
-                    new[] { (Item.Fiber, 14u) },
-                },
-            },
-            // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
-            new StructureShape
-            {
-                Name = "Repair table",
-                Scale = 1.25f,
-                Category = "Crafting",
-                HalfWidth = 0.8f, HalfDepth = 0.45f,
-                Clearance = 1.0f,
-                Station = StationKind.Repair,
-                Stages = new[] { "Table" },
-                // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
-                },
-            },
-            // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
-            // instead of thatch. Same room, door and shelter; claim-only like the brick house.
-            new StructureShape
-            {
-                Name = "Tiled house",
-                Category = "Shelter",
-                Scale = 1.25f,
-                HalfWidth = 2.4f, HalfDepth = 2.0f,
-                Clearance = 3.2f,
-                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
-                DoorwayZ = 1.8f,
-                Room = true,
-                BrickWalls = true,
-                TileRoof = true,
-                SmokeY = 3.3f,
-                Stages = new[] { "Footings", "Brick walls", "Rafters", "Roof tiles" },
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
-                    new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
-                    new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
-                    new[] { (Item.RoofTile, 12u) },
-                },
-            },
-            // Ceramics' clay trough (ceramics-13): a kiln-fired basin set down and filled by hand.
-            new StructureShape
-            {
-                Name = "Clay trough",
-                Category = "Storage",
-                Trough = true,
-                Model = "Trough",
-                ClearExtra = 0.3f,
-                Round = true, Radius = 0.4f,
-                Clearance = 0.7f,
-                Solid = true,
-                Stages = new[] { "Set the trough" },
-                // Clay trough (Ceramics): set down one kiln-fired trough
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.ClayTrough, 1u) },
-                },
-            },
-        });
+        public int Kind;
+        public StructureShape Shape = new();
+    }
 
-        // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
-        static StructureShape[] Scaled(StructureShape[] shapes)
+    public static partial class Structures
+    {
+        // Every kind, keyed by its fixed id. The defs live in one file per lane (shared/structures/);
+        // an id is never renumbered or reused, and a duplicate, or a shape whose stages and costs don't
+        // line up, fails the first time this class loads. Id ranges: 0-99 the original kinds, House
+        // building 100+, Crafting stations 200+, Animals 300+, Claims 400+ (PM, integration-9).
+        static readonly Dictionary<int, StructureDef> defs = BuildDefs();
+        // Every registered kind, in id order.
+        public static readonly int[] Kinds = defs.Keys.OrderBy(k => k).ToArray();
+
+        static Dictionary<int, StructureDef> BuildDefs()
         {
-            foreach (var shape in shapes)
+            var all = new Dictionary<int, StructureDef>();
+            foreach (var def in CoreDefs().Concat(HouseDefs()).Concat(CraftingDefs()).Concat(AnimalsDefs()).Concat(ClaimsDefs()).Concat(CeramicsDefs()))
             {
-                float k = shape.Scale;
-                if (k == 1f) continue;
-                shape.HalfWidth *= k;
-                shape.HalfDepth *= k;
-                shape.Radius *= k;
-                shape.Clearance *= k;
-                shape.DoorwayZ *= k;
-                shape.SmokeY *= k;
+                if (!all.TryAdd(def.Kind, def))
+                    throw new InvalidOperationException($"Structure kind {def.Kind} is defined twice");
+                if (def.Shape.Costs.Length != def.Shape.Stages.Length)
+                    throw new InvalidOperationException($"{def.Shape.Name}: {def.Shape.Stages.Length} stages but {def.Shape.Costs.Length} costs");
+                Scale(def.Shape);
             }
-            return shapes;
+            return all;
+        }
+
+        public static bool Exists(int kind) => defs.ContainsKey(kind);
+
+        // What each stage takes, in order: the server builds each stage's needs from this and the
+        // client shows it before you lay out. Fiber stands in for thatch; the hut's walls are daub.
+        public static (Item Item, uint Count)[][] Costs(int kind) => defs[kind].Shape.Costs;
+
+
+        // Multiplies a shape's lengths by its Scale, once, so nothing else has to know about it.
+        static void Scale(StructureShape shape)
+        {
+            float k = shape.Scale;
+            if (k == 1f) return;
+            shape.HalfWidth *= k;
+            shape.HalfDepth *= k;
+            shape.Radius *= k;
+            shape.Clearance *= k;
+            shape.DoorwayZ *= k;
+            shape.SmokeY *= k;
         }
 
         public static float ScaleOf(int kind) => Shape(kind).Scale;
-
-        // What each stage takes, by kind and stage, indexed like Shapes. Fiber stands in
-        // for thatch; the hut's walls are daub (clean clay mixed with fiber, from Ceramics).
-        // The server builds each stage's needs from this; the client shows it before you lay out.
-        // Derived from the shapes, so there is one list to extend; a shape whose stages and costs
-        // don't line up fails here at start-up, not at the first build.
-        public static readonly (Item Item, uint Count)[][][] StageCosts = Array.ConvertAll(Shapes, shape =>
-            shape.Costs.Length == shape.Stages.Length ? shape.Costs
-            : throw new InvalidOperationException($"{shape.Name}: {shape.Stages.Length} stages but {shape.Costs.Length} costs"));
 
         // How far from the player a footprint may be laid out.
         public const float PlaceRange = 6f;
@@ -438,6 +127,16 @@ namespace LifeGame.Shared
         public const int MaxOpenSites = 3;
         // A builder may work on a structure from this far outside its footprint.
         public const float WorkReach = 2.2f;
+
+        // Litres a trough holds: its own quality sets the size, quicker at first then
+        // slowly (D-075), as a jar's stacks do.
+        public static int TroughLitres(byte quality)
+        {
+            float t = Math.Clamp((int)quality, 1, 100) / 100f;
+            float curve = 1f - (1f - t) * (1f - t);
+            return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
+        }
+
         // Standing water; matches the client's Look.WaterLevel.
         public const float WaterLevel = -1.0f;
 
@@ -453,15 +152,6 @@ namespace LifeGame.Shared
         // a fine one. The first 15% of quality gives 40% of the gain, so an early,
         // better-made jar is quickly worth it; then it climbs slowly (D-075).
         public const int JarStacksMin = 4, JarStacksMax = 8;
-
-        // Litres a trough holds: its own quality sets the size, quicker at first then
-        // slowly (D-075), as a jar's stacks do.
-        public static int TroughLitres(byte quality)
-        {
-            float t = Math.Clamp((int)quality, 1, 100) / 100f;
-            float curve = 1f - (1f - t) * (1f - t);
-            return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
-        }
 
         public static int JarStacks(byte quality)
         {
@@ -539,7 +229,8 @@ namespace LifeGame.Shared
             _ => stage switch { 0 => FrameProcess, 1 => WattleProcess, 2 => DaubProcess, _ => RoofProcess },
         };
 
-        public static StructureShape Shape(int kind) => Shapes[Math.Clamp(kind, 0, Shapes.Length - 1)];
+        // An unknown kind reads as the first one, as before.
+        public static StructureShape Shape(int kind) => (defs.TryGetValue(kind, out var def) ? def : defs[0]).Shape;
 
         // A world point in the structure's own frame (yaw in radians about +Y).
         public static (float x, float z) ToLocal(float sx, float sz, float yaw, float px, float pz)

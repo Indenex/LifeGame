@@ -29,6 +29,7 @@ public partial class PotView : Node3D
         NoDepthTest = true,
     };
     ulong id;
+    uint mark;
     ClayForm form;
     ClayStage stage;
     FireKind fire;
@@ -79,9 +80,10 @@ void fragment() {
         return m;
     }
 
-    public void Show(ulong potId, ClayForm potForm, ClayStage potStage, FireKind potFire, float potMoisture, double since, float dryRate, bool full = false)
+    public void Show(ulong potId, ClayForm potForm, ClayStage potStage, FireKind potFire, float potMoisture, double since, float dryRate, bool full = false, uint potMark = 0)
     {
         id = potId;
+        mark = potMark;
         form = potForm;
         stage = potStage;
         fire = potFire;
@@ -147,7 +149,8 @@ void fragment() {
         if (s != lastStep)
         {
             lastStep = s;
-            body.MaterialOverride = ClayLook.For(stage, fire, now, id);
+            var plain = ClayLook.For(stage, fire, now, id);
+            body.MaterialOverride = ClayLook.WithMark(plain, mark, form);
         }
         if (label.Visible && stage == ClayStage.Drying)
         {

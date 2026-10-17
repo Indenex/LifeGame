@@ -59,6 +59,7 @@ var stdb_server := "local"
 var server_url := "http://127.0.0.1:3000"
 var db := "lifegame"
 var manage_server := true
+var address_edit: LineEdit   # player build: where friends type the host's address
 var player := false        # the player build: no server parts, joins a server address
 
 var state := {"client_build": 0, "server_build": 0, "shortcut": 0}
@@ -148,7 +149,7 @@ func _server_address() -> String:
 	if not player:
 		return server_url
 	var exe_dir := OS.get_executable_path().get_base_dir()
-	for path in [exe_dir.path_join("server.cfg"), home.path_join("server.cfg"), "res://server.txt"]:
+	for path in [home.path_join("server.cfg"), exe_dir.path_join("server.cfg"), "res://server.txt"]:
 		if FileAccess.file_exists(path):
 			var line := FileAccess.get_file_as_string(path).strip_edges().get_slice("\n", 0).strip_edges()
 			if line != "" and not line.begins_with("#"):
@@ -246,6 +247,18 @@ func _build_ui() -> void:
 	detail_label = _small("", MUTED)
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(detail_label)
+
+	if player and not opts.has("server"):
+		var addr_row := HBoxContainer.new()
+		addr_row.add_theme_constant_override("separation", 10)
+		col.add_child(addr_row)
+		addr_row.add_child(_small("Server address", MUTED))
+		address_edit = LineEdit.new()
+		address_edit.placeholder_text = "e.g. http://203.0.113.5:3000 (ask the host)"
+		address_edit.text = server_url
+		address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		address_edit.text_submitted.connect(func(_t): _on_main())
+		addr_row.add_child(address_edit)
 
 	bar = ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 8)
@@ -839,6 +852,21 @@ func _remove_tree(path: String) -> void:
 		_remove_tree(path.path_join(sub))
 	DirAccess.remove_absolute(path)
 
+# The player's address box: remember what was typed in server.cfg in the launcher's folder, so
+# the next start is a double-click. A bare "host:3000" gets http:// in front.
+func _take_address() -> void:
+	var a := address_edit.text.strip_edges()
+	if a == "":
+		return
+	if not a.contains("://"):
+		a = "http://" + a
+	server_url = a
+	address_edit.text = a
+	var f := FileAccess.open(home.path_join("server.cfg"), FileAccess.WRITE)
+	if f:
+		f.store_string(a + "\n")
+	world_label.text = "Server: " + a
+
 func _play() -> void:
 	var exe := _game_exe()
 	if not _client_ok(home.path_join("game")):
@@ -848,8 +876,12 @@ func _play() -> void:
 		if latest.is_empty() or not await _update(true, false) or not _client_ok(home.path_join("game")):
 			_set_status("The game isn't installed yet.", "Press Update and play when you're online.", WARN)
 			return
+	if player and address_edit:
+		_take_address()
 	if player and server_url == "":
-		_set_status("No server address yet.", "Ask the host for it, then put it in server.cfg next to the launcher.", WARN)
+		_set_status("No server address yet.", "Ask the host for it and type it in the Server address box.", WARN)
+		if address_edit:
+			address_edit.grab_focus()
 		return
 	if manage_server:
 		_set_busy(true)
