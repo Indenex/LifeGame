@@ -722,7 +722,17 @@ sealed class Bot
             item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
             gatherTargets[name] = targetItem;
-            if (item == null) return;
+            if (item == null)
+            {
+                // Nothing left in the world to pick up: say so once, so a timeout reads as scarcity, not a stall.
+                if (!noneLogged)
+                {
+                    noneLogged = true;
+                    Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                }
+                return;
+            }
+            noneLogged = false;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -737,6 +747,7 @@ sealed class Bot
     // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
+    bool noneLogged;
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;

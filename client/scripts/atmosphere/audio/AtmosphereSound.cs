@@ -223,4 +223,19 @@ public partial class Atmosphere
         float cap = fireCaps.TryGetValue(id, out var c) && c > 0f ? c : Fires.MasterMaxSeconds;
         return Mathf.SmoothStep(0.70f, 0.80f, left / cap);
     }
+
+    // Kilns that are firing, with when they finish (microseconds since the epoch), for the roar.
+    readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long Finish)> kilnFires = new();
+
+    void HearKilns(DbConnection conn)
+    {
+        void Set(Kiln k)
+        {
+            if (k.State == 1) kilnFires[k.StructureId] = (k.X, k.Z, k.FireFinish.MicrosecondsSinceUnixEpoch);
+            else kilnFires.Remove(k.StructureId);
+        }
+        conn.Db.Kiln.OnInsert += (_, k) => Set(k);
+        conn.Db.Kiln.OnUpdate += (_, _, k) => Set(k);
+        conn.Db.Kiln.OnDelete += (_, k) => kilnFires.Remove(k.StructureId);
+    }
 }

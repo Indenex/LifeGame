@@ -53,6 +53,57 @@ public static class RestPoses
         p[Joint.HandR] = new Vector3(0.25f, 0, -0.1f);
     }
 
+    // What a sitter does now and then (anim-15), laid over Sit by weight w: hug the
+    // knees, lean back on the hands, look up at the night sky, or hold the palms out to
+    // a fire. Hugging and leaning back only on the ground.
+    public enum SitFidget : byte { None, HugKnees, LeanBack, LookUp, Warm }
+
+    public static void Fidget(Pose p, SitFidget f, float w, float t)
+    {
+        if (f == SitFidget.None || w <= 0f) return;
+        void To(Joint j, Vector3 v) => p[j] = p[j].Lerp(v, w);
+        switch (f)
+        {
+            case SitFidget.HugKnees:
+                // Folded forward over the knees, arms wrapped round the shins, cheek down.
+                To(Joint.Spine, new Vector3(0.42f, 0, 0));
+                To(Joint.Neck, new Vector3(-0.05f, 0.25f, 0.12f));
+                To(Joint.ShoulderL, new Vector3(-0.95f, 0, 0.02f));
+                To(Joint.ShoulderR, new Vector3(-0.95f, 0, -0.02f));
+                To(Joint.ElbowL, new Vector3(-1.45f, 0, 0));
+                To(Joint.ElbowR, new Vector3(-1.45f, 0, 0));
+                break;
+            case SitFidget.LeanBack:
+                // Leaning back on straight arms, palms flat behind, face to the sky.
+                To(Joint.Spine, new Vector3(-0.38f, 0, 0));
+                To(Joint.Neck, new Vector3(0.15f + 0.04f * Mathf.Sin(t * 0.4f), 0.2f * Mathf.Sin(t * 0.17f), 0));
+                To(Joint.ShoulderL, new Vector3(0.65f, 0, 0.3f));
+                To(Joint.ShoulderR, new Vector3(0.65f, 0, -0.3f));
+                To(Joint.ElbowL, new Vector3(-0.1f, 0, 0));
+                To(Joint.ElbowR, new Vector3(-0.1f, 0, 0));
+                To(Joint.HandL, new Vector3(-1.1f, 0, 0));
+                To(Joint.HandR, new Vector3(-1.1f, 0, 0));
+                break;
+            case SitFidget.LookUp:
+                // Head tipped right back, looking slowly across the stars.
+                To(Joint.Spine, new Vector3(-0.05f, 0, 0));
+                To(Joint.Neck, new Vector3(-0.55f, 0.35f * Mathf.Sin(t * 0.25f), 0));
+                break;
+            case SitFidget.Warm:
+                // Palms held out to the fire, a gentle rub now and then.
+                float rub = 0.05f * Mathf.Sin(t * 6f) * Mathf.Max(Mathf.Sin(t * 0.7f), 0f);
+                To(Joint.Spine, new Vector3(0.22f, 0, 0));
+                To(Joint.Neck, new Vector3(-0.12f, 0, 0));
+                To(Joint.ShoulderL, new Vector3(-1.15f + rub, 0, 0.12f));
+                To(Joint.ShoulderR, new Vector3(-1.15f - rub, 0, -0.12f));
+                To(Joint.ElbowL, new Vector3(-0.35f, 0, 0));
+                To(Joint.ElbowR, new Vector3(-0.35f, 0, 0));
+                To(Joint.HandL, new Vector3(-0.8f, 0, 0.1f));
+                To(Joint.HandR, new Vector3(-0.8f, 0, -0.1f));
+                break;
+        }
+    }
+
     // Lying curled on the left side along the way the figure faced, head forward, knees
     // drawn up, the left hand under the cheek and the right arm over the body, breathing
     // slowly. Asleep the breath slows further.
