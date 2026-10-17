@@ -33,6 +33,9 @@ env:
 jobs:
   priority:
     name: Main first
+    # A finished run only matters when it is a main Build (a push) or a Release: pull request builds finish
+    # (or are cancelled by this very workflow) all the time and would otherwise each start a run here.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'push' || github.event.workflow_run.name == 'Release'
     runs-on: ubuntu-24.04
     steps:
       - name: Pause or resume pull request builds

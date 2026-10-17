@@ -9,7 +9,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
+// Views: row (everyone), people, faces, sheep, walk, items (--old for today's, --compare for today vs painted), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -47,6 +47,7 @@ public partial class Showcase : Node3D
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
+            else if (view == "items" && args.ContainsKey("compare")) PaintedItemRows();
             else if (view == "roster") Roster();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
@@ -158,6 +159,40 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 4.3f, 3.6f), new Vector3(0, 0, 0.35f), Vector3.Up);
+    }
+
+    // painted-6: representative items in pairs of rows, today's look behind, painted in front.
+    void PaintedItemRows()
+    {
+        var items = new[]
+        {
+            Item.StoneAxe, Item.StoneKnife, Item.Stone, Item.HandAxe, (Item)18, Item.Spear, Item.Cordage,
+            Item.Waterskin, Item.PinchPot, Item.StorageJar, Item.Egg, Item.Berries, Item.CookedMutton, Item.SheepHide,
+        };
+        const int columns = 7;
+        const float step = 0.62f;
+        for (int i = 0; i < items.Length; i++)
+        {
+            var painted = ItemLook.MeshFor(items[i]);
+            float x = (i % columns - (columns - 1) / 2f) * step;
+            float z = (i / columns) * 1.25f - 0.62f;
+            // Each scaled to fill its cell, so small things (an egg) read as well as big ones.
+            float fit = 0.5f / painted.GetAabb().Size.Length();
+            AddChild(new MeshInstance3D { Mesh = PaintedItems.Unpaint(painted), Position = new Vector3(x, 0, z - 0.5f), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
+            AddChild(new MeshInstance3D { Mesh = painted, Position = new Vector3(x, 0, z), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
+            AddChild(new Label3D
+            {
+                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "Spade",
+                FontSize = 22, PixelSize = 0.0022f, Modulate = Look.Cream, OutlineSize = 6,
+                OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.8f),
+                Position = new Vector3(x, 0.02f, z + 0.24f), Rotation = new Vector3(-Mathf.Pi / 2f + 0.9f, 0, 0),
+            });
+        }
+        foreach (var (text, z) in new[] { ("today", -1.12f), ("painted", -0.62f), ("today", 0.13f), ("painted", 0.63f) })
+            AddChild(new Label3D { Text = text, FontSize = 26, PixelSize = 0.0024f, Modulate = Look.Cream, OutlineSize = 6, Position = new Vector3(-2.3f, 0.02f, z), Rotation = new Vector3(-1.2f, 0, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 3.6f, 2.4f), new Vector3(0, 0, -0.1f), Vector3.Up);
     }
 
     // The player figure holding tools in its right hand, arm raised a little.
