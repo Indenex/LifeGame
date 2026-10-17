@@ -10,7 +10,7 @@ namespace LifeGame;
 // One stack in the bag panel: what it is, how good, how many (ui-18). Id is its row
 // (a basket's item row, or the bag's own row once the bag keeps an order), Slot its
 // place in the bag or on the tools belt, -1 for none.
-public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0, uint Decor = 0)
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0, uint Decor = 0, float Left = 1f)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -103,7 +103,7 @@ public sealed class ServerBagLink : IBagLink
         .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
         // The maker: the row's own Maker (crafting-25), else a clay pot's mark in Wear (ceramics-15).
         .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, i.Maker != 0 ? i.Maker : Marks.MakerOf((Item)i.Item, i.Wear),
-            ClayItemLook.Decoration((Item)i.Item, i.Wear)));
+            ClayItemLook.Decoration((Item)i.Item, i.Wear), Durability.Wears((Item)i.Item) ? Durability.Left(i.Quality, i.Wear) : 1f));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
@@ -176,7 +176,7 @@ public partial class BagGrid : GridContainer
             .OrderBy(s => placed ? s.Slot : 0).ThenBy(s => Group(s.Item)).ThenBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
         int room = Capacity?.Invoke() ?? 0;
         var held = Kind == "bag" ? InHand() : null;
-        string now = $"{placed}|{room}|{held}|" + string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}:{s.Slot}"));
+        string now = $"{placed}|{room}|{held}|" + string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}:{s.Slot}:{s.Left:0.00}"));
         if (now == shown) return;
         shown = now;
         foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
@@ -280,6 +280,8 @@ public partial class BagSlotView : PanelContainer
         var (plate, shadow) = SlotLook.Behind(stack, picture, BagGrid.Slot);
         stack.AddChild(picture);
         SlotLook.Set(plate, shadow, picture, picture.Texture, true);
+        // A worn tool shows its life left along the bottom (ui-79).
+        if (Stack.Left <= Durability.WornBelow) stack.AddChild(new WearArc { Radius = BagGrid.Slot / 2 - 3, Left = Stack.Left });
         if (InHand)
         {
             var ring = new ActiveRing { Radius = BagGrid.Slot / 2 + 5 };
