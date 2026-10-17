@@ -1,9 +1,9 @@
 # anim-9: Idle life (stretch, look around, shoulder roll, cold hands and shiver)
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_progress
+Status: done
 Branch: claude/anim-9
-PR: (to open)
+PR: #508 (merged)
 
 ## Goal
 A player standing still for a while comes alive. Every 12 to 24 s (its own timing per figure, so a crowd never moves in step) it plays one of these:
@@ -21,4 +21,4 @@ In the cold it also shivers finely while standing. Any movement or work blends a
 - (none)
 
 ## Next step
-Open the PR, get CI green and send the sha to the PM; ask Render for a clip of an idle figure (warm and cold).
+Done (#508 merged 04:13).
