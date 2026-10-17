@@ -1,0 +1,21 @@
+# survival-37 (#866): two players at one fire at dusk. The camera player A stands by the fire;
+# the puppet B owns a finished pot of mutton stew beside it (inserted by owner SQL, put on long ago)
+# and ladles a bowl. Run with RENDER_PATCH=tools/render/patches/cabin.sh (SeedFire). The group-mate
+# ladle path is the same reducer; the owner's own ladle shows the same pot, motion and bowl count.
+client --time-of-day=0.78 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --debug-position=-4.6,-6.2 --render-cam=5,1.9,0,0.6
+name B
+find
+wait 30
+act SeedFire -6 -8
+wait 3
+sqlout SELECT id, x, z FROM fire
+sql INSERT INTO simmer_pot (id, fire_id, owner, player_id, dish, quality, x, z, chunk_x, chunk_z, put_at, pot_wear, pot_maker, served) VALUES (0, 1, {me}, 0, 116, 60, -6.7, -7.2, -1, -1, '2026-10-17T00:00:00Z', 0, 0, 0)
+sqlout SELECT id, fire_id, dish, served FROM simmer_pot
+warp -7.4 -6.6
+wait 8
+snap
+act LadlePot 1
+burst 3 1.0
+wait 6
+snap
+sqlout SELECT id, served FROM simmer_pot
