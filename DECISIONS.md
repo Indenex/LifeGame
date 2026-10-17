@@ -1249,3 +1249,23 @@ Owner: Claims.
 ## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
 **Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
 **Who:** Justin: "Every slot equips".
+
+## D-308 — 2026-10-17 — Frost "in between": silvered grass tips, white-edged rocks and leaves
+**Decision:** Frost sits "in between": grass tips clearly silvered, rocks and leaf tops white-edged, never snow-like (#597).
+**Who:** Justin, choosing the in-between frost look (relayed by the PM; no direct quote).
+
+## D-309 — 2026-10-17 — Character menu as a "Cutesy page"
+**Decision:** The character menu is a "Cutesy page": pastel paper, polaroid or sticker frames, chibis bobbing, doodles (ui-39).
+**Who:** Justin, choosing the Cutesy page (relayed by the PM; no direct quote).
+
+## D-310 — 2026-10-17 — No move to Unity; work on Godot shadows
+**Decision:** No move to Unity. The spike's conclusion is accepted. "Shadows might be nice", so Godot shadow quality work goes ahead (atmos-shadows-1). Merged meshes come via env-24.
+**Who:** Justin: "Shadows might be nice" (relayed by the PM).
+
+## D-311 — 2026-10-17 — Pot slip decoration is a banded rim with a free colour picker
+**Decision:** Pot slip decoration is a banded rim (one or two bands), with colours from a free picker in the mark's allowed range (ceramics-14).
+**Who:** Justin, choosing the banded rim (relayed by the PM; no direct quote).
+
+## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
+**Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
+**Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
