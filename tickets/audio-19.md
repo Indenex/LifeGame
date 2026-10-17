@@ -18,5 +18,6 @@ Pots of broth and stew simmering by fires (ceramics-7) were silent. Soft bubblin
 ## Next step
 Send the PM the green sha, then the kiln roar.
 
-## Level fix (pending)
-- The bubble cue gains were on the wrong scale (0.00x; handling cues run 0.03-0.4), so in game they are barely audible. Branch `claude/audio-23-potlevel` (stacked on this one) multiplies them by 4: loudest 50 ms -28.5 dBFS in the `pot:12` scene over a -33 median. Open it as a PR (or fast-forward it into this branch) once #631's CI has settled.
+## Level fix (done)
+- The bubble cue gains were on the wrong scale (0.00x; handling cues run 0.03-0.4), so in game they would have been barely audible. They are now x4: loudest 50 ms -28.5 dBFS in the `pot:12` scene over a -33 median.
+- `PotSounds.Connect` was never called, so no pot would have made a sound; it is now in `AudioHooks.Connect` (which also owns `PotSounds.Tick`). The pot preview scene lives in `tools/SoundPreview/AudioScenes.cs`.
