@@ -28,6 +28,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | M | Music on/off | Atmosphere | same |
 | I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
 | H | Sit down; press again to lie down; walk off to get up (anim-12). Rebindable | UX/UI, Animation | ui-40 |
+| Hold Q | Emote wheel (ui-48, D-323): wave, cheer, a little dance, bow. Point at one and let go; a tap leaves the wheel open to click. Esc closes. Shown to everyone (anim-16's `Emote` reducer, 1.5 s apart). The list is `shared/Emotes.cs`. Rebindable | UX/UI, Animation | new |
 | 1 to 9, 0 | Take what sits on hotbar slot 1 to 10 in hand (gold ring); the same key again puts it away, an empty slot's key puts away what you hold (Justin: every slot equips). Click then uses it: eat, drink, put on, or set a made thing down. With a tool or weapon the click is the strike as before, and E chops, digs, shears or butchers with the tool in hand (crafting-29). Rebindable | UX/UI | ui-19, ui-36 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |

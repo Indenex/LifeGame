@@ -19,6 +19,13 @@ public sealed class BotGround : ICellGround
 
     public bool Dug(int x, int z) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(x, z)) != null;
 
+    public float FelledProgress(int x, int z)
+    {
+        if (conn.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is not { Felled: true } row) return -1f;
+        double seconds = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000L - row.LastChop.MicrosecondsSinceUnixEpoch) / 1e6;
+        return (float)Math.Clamp(seconds / Trees.RegrowSeconds, 0.0, 1.0);
+    }
+
     public bool Cleared(int x, int z)
     {
         if (conn.Db.ChoppedTree.CellKey.Find(World.CellKey(x, z)) is { Felled: true }) return true;
