@@ -285,7 +285,8 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         float load = 0f;
         bool basket = false;
-        foreach (var i in conn.Db.MyInventory.Iter())
+        // Tools on the doll's tools section add no weight (ui-18).
+        foreach (var i in conn.Db.MyInventory.Iter().Where(i => !i.OnBelt))
         {
             load += Carry.Weight((Item)i.Item) * i.Count;
             if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;

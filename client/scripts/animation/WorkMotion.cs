@@ -231,9 +231,10 @@ public static class WorkMotions
     public static bool ActItemInLeft(WorkMotion m) => m == WorkMotion.Shoot;
 
     // The action's pose at t seconds in. The fades come from PlayerAnimator.
-    public static void ActPose(Pose p, WorkMotion m, float t, float legLength, StrikeStyle style = StrikeStyle.Fist)
+    public static void ActPose(Pose p, WorkMotion m, float t, PlayerRig body, StrikeStyle style = StrikeStyle.Fist)
     {
         p.Clear();
+        float legLength = body.LegLength;
         switch (m)
         {
             case WorkMotion.Strike:
@@ -259,7 +260,7 @@ public static class WorkMotions
                 // into the earth and lever it back.
                 float stab = Mathf.Sin(Mathf.Clamp(t / 0.9f, 0f, 1f) * Mathf.Pi);
                 float lever = Mathf.Sin(Mathf.Clamp((t - 0.35f) / 0.45f, 0f, 1f) * Mathf.Pi);
-                p.HipsOffset = new Vector3(0, -0.14f, -0.05f);
+                p.HipsOffset = new Vector3(0, -0.18f * legLength, -0.05f);
                 p[Joint.HipL] = new Vector3(-0.55f, 0, 0.12f);
                 p[Joint.HipR] = new Vector3(-0.55f, 0, -0.12f);
                 p[Joint.KneeL].X = 0.95f;
@@ -293,7 +294,7 @@ public static class WorkMotions
                 float back = Mathf.Sin(Mathf.Min(swing / 0.45f, 1f) * Mathf.Pi * 0.5f) * (1f - Mathf.SmoothStep(0.45f, 0.8f, swing));
                 float toss = Mathf.SmoothStep(0.4f, 0.8f, swing) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.6f) / 0.3f, 0f, 1f)));
                 p[Joint.Spine].X = 0.3f * (back + toss);
-                p.HipsOffset = new Vector3(0, -0.04f * (back + toss), 0);
+                p.HipsOffset = new Vector3(0, -0.05f * legLength * (back + toss), 0);
                 p[Joint.KneeL].X = 0.2f * (back + toss);
                 p[Joint.KneeR].X = 0.2f * (back + toss);
                 Arm(p, false, 0.45f * back - 1.1f * toss, 0.05f, -0.3f);
@@ -321,8 +322,10 @@ public static class WorkMotions
                 float dip = Mathf.Sin(Mathf.Clamp((t - 0.3f) / 0.45f, 0f, 1f) * Mathf.Pi) * (1f - lift);
                 p[Joint.Spine].X = Mathf.Lerp(0.75f + 0.08f * dip, 0.25f, lift);
                 p[Joint.Neck].X = Mathf.Lerp(0.1f, -0.35f, lift);
-                Arm(p, true, Mathf.Lerp(-1.05f - 0.1f * dip, -0.85f, lift), Mathf.Lerp(-0.22f, -0.38f, lift), Mathf.Lerp(-0.25f, -2.2f, lift));
-                Arm(p, false, Mathf.Lerp(-1.05f - 0.1f * dip, -0.85f, lift), Mathf.Lerp(0.22f, 0.38f, lift), Mathf.Lerp(-0.25f, -2.2f, lift));
+                var (ls, lw, le) = ToMouth(body, true, 0.03f);
+                var (rs, rw, re) = ToMouth(body, false, 0.03f);
+                Arm(p, true, Mathf.Lerp(-1.05f - 0.1f * dip, ls, lift), Mathf.Lerp(-0.22f, lw, lift), Mathf.Lerp(-0.25f, le, lift));
+                Arm(p, false, Mathf.Lerp(-1.05f - 0.1f * dip, rs, lift), Mathf.Lerp(0.22f, rw, lift), Mathf.Lerp(-0.25f, re, lift));
                 // Palms turned up into a cup.
                 p[Joint.HandL].Y = -0.6f;
                 p[Joint.HandR].Y = 0.6f;
@@ -334,7 +337,8 @@ public static class WorkMotions
                 float lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.15f) / 0.35f, 0f, 1f))
                     * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.85f) / 0.3f, 0f, 1f)));
                 float chew = t > 0.6f ? Mathf.Max(0f, Mathf.Sin((t - 0.6f) * 16f)) * (1f - Mathf.Clamp((t - 0.8f) / 0.3f, 0f, 1f)) : 0f;
-                Arm(p, false, Mathf.Lerp(-0.1f, -0.85f, lift), Mathf.Lerp(0.05f, 0.4f, lift), Mathf.Lerp(-0.3f, -2.3f, lift));
+                var (ms, mw, me) = ToMouth(body, false, 0f);
+                Arm(p, false, Mathf.Lerp(-0.1f, ms, lift), Mathf.Lerp(0.05f, mw, lift), Mathf.Lerp(-0.3f, me, lift));
                 Arm(p, true, -0.05f, 0.02f, -0.2f);
                 p[Joint.Spine].X = 0.04f;
                 p[Joint.Neck].X = 0.08f * lift + 0.06f * chew;
@@ -359,7 +363,7 @@ public static class WorkMotions
             {
                 // A quick bend from the waist with soft knees and a grab near the feet.
                 float down = Mathf.Sin(Mathf.Clamp(t / ActSeconds(m), 0f, 1f) * Mathf.Pi);
-                p.HipsOffset = new Vector3(0, -0.08f * down, -0.04f * down);
+                p.HipsOffset = new Vector3(0, -0.1f * legLength * down, -0.04f * down);
                 p[Joint.HipL].X = -0.35f * down;
                 p[Joint.HipR].X = -0.35f * down;
                 p[Joint.KneeL].X = 0.6f * down;
@@ -373,6 +377,28 @@ public static class WorkMotions
                 break;
             }
         }
+    }
+
+    // Arm angles (as Arm takes them) that bring a hand to just in front of the mouth,
+    // worked out from this body's own arm lengths, shoulders and mouth: a two-bone
+    // reach, so it lands on a tall adult and a short, big-headed chibi alike. apart
+    // moves the hand that far off the middle (cupped hands side by side).
+    static (float swing, float sideways, float elbow) ToMouth(PlayerRig body, bool left, float apart)
+    {
+        var shoulder = left ? body.ShoulderL : body.ShoulderR;
+        var target = body.Mouth + new Vector3(left ? apart : -apart, -0.02f, 0.06f) - shoulder;
+        float u = body.UpperArm, f = body.Forearm;
+        float d = Mathf.Clamp(target.Length(), Mathf.Abs(u - f) + 0.01f, u + f - 0.001f);
+        // The elbow folds forward by however much keeps shoulder-to-hand at d.
+        float bend = Mathf.Pi - Mathf.Acos(Mathf.Clamp((u * u + f * f - d * d) / (2f * u * f), -1f, 1f));
+        // The hand, in the upper arm's hanging frame, after that fold.
+        float down = u + f * Mathf.Cos(bend), forward = f * Mathf.Sin(bend);
+        // Lift sideways to the target's x, then swing forward in the y-z plane to it.
+        float side = Mathf.Asin(Mathf.Clamp(target.X / Mathf.Max(down, 0.01f), -1f, 1f));
+        float y = -down * Mathf.Cos(side);
+        float swing = Mathf.Atan2(target.Z, target.Y) - Mathf.Atan2(forward, y);
+        swing = Mathf.Wrap(swing, -Mathf.Pi, Mathf.Pi);
+        return (swing, side - (left ? 0.12f : -0.12f), -bend);
     }
 
     // A strike over 0.6 s: a quick wind-up, the blow at about 0.2 s, then recovery.

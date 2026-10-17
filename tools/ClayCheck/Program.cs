@@ -1063,6 +1063,7 @@ void WalkTo(float tx, float tz, float near)
 
 void Leg(float tx, float tz, float near)
 {
+    int lagged = 0;
     while (true)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
@@ -1070,7 +1071,15 @@ void Leg(float tx, float tz, float near)
         float step = Math.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
+        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
+        {
+            // The server has not followed for a second: it refused the last step (something solid in the
+            // way). Take its word for where we are and carry on from there, like a player would.
+            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
+        }
+        else lagged = 0;
+        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
             float px = x, pz = z;
             x += dx / d * step;

@@ -506,7 +506,7 @@ public partial class Main : Node3D
 
     void OnPlayerPos(PlayerPos p, bool inserted)
     {
-        var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
+        var at = new Vector3(p.X, Wading.FeetY(terrain.HeightAt(p.X, p.Z)), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
             // Before spawning we wait for the area around us (see Subscribe).
