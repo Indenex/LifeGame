@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_review
 Branch: claude/environment-ambient-life
-PR: (opening)
+PR: #656
 
 ## Goal
 Justin's cutesy pick #12: small life in the air, calm and cosy, client-only and cheap,
