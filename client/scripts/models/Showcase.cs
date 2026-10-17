@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -42,6 +42,7 @@ public partial class Showcase : Node3D
             else if (view == "stonehearth") StoneHearthView();
             else if (view == "treelod") TreeLod();
             else if (view == "rocks") Rocks();
+            else if (view == "structures") Structures(args.GetValueOrDefault("set", "homes"));
             else if (view == "animals") Animals();
             else if (view == "bushes") Bushes();
             else if (view == "logs") Logs();
@@ -351,7 +352,9 @@ public partial class Showcase : Node3D
             }
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        // --top: from high above, as the camera sees the crowns when zoomed out.
+        if (args.ContainsKey("top")) camera.LookAtFromPosition(new Vector3(-4.5f, 19f, 9f), new Vector3(-4.5f, 2.5f, -2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
@@ -380,6 +383,59 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Built structures (painted-5): today's materials in the back row, painted in front.
+    // set=homes: lean-to, clay hut, log cabin; set=small: table, kiln, stone hearth, fire
+    // ring, fence and jar.
+    void Structures(string set)
+    {
+        bool homes = set != "small";
+        var builds = homes
+            ? new List<(System.Func<List<StructureModel.Piece>>, float)>
+            {
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.LeanTo), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.LeanTo)),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.ClayHut), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.ClayHut)),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.LogCabin), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.LogCabin)),
+            }
+            : new List<(System.Func<List<StructureModel.Piece>>, float)>
+            {
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.CraftingTable), 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.Kiln), 1f),
+                (() => StructureModel.StoneHearth(), 1f),
+                (() => new List<StructureModel.Piece> { new() { Mesh = HearthModel.Ring, Material = HearthModel.Ring.SurfaceGetMaterial(0) } }, 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.Fence), 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.StorageJar), 1f),
+            };
+        float gap = homes ? 6.5f : 2.0f, depth = homes ? 7.5f : 2.4f;
+        for (int i = 0; i < builds.Count; i++)
+            for (int row = 0; row < 2; row++)
+            {
+                var (pieces, scale) = builds[i];
+                var root = new Node3D { Position = new Vector3((i - (builds.Count - 1) / 2f) * gap, 0, row == 0 ? -depth : 0), Rotation = new Vector3(0, 0.45f, 0), Scale = Vector3.One * scale };
+                AddChild(root);
+                foreach (var piece in pieces())
+                    if (piece.Stage >= 0)
+                    {
+                        var material = row == 0 ? PaintedStructures.Unpainted(piece.Material) : piece.Material;
+                        // --cutaway: the roofs half faded, as StructureView does from inside (D-168).
+                        if (args.ContainsKey("cutaway") && piece.Role == StructureModel.PieceRole.Roof && material is ShaderMaterial solid)
+                        {
+                            var ghost = Painted.StructureGhostOf(solid) ?? Look.StructureGhost(solid);
+                            ghost.SetShaderParameter("fade_override", 0.5f);
+                            material = ghost;
+                        }
+                        root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = material });
+                    }
+            }
+        var figure = PlayerModel.Build();
+        figure.Position = homes ? new Vector3(-gap * 0.5f, 0, 2.2f) : new Vector3(-gap * 3.3f, 0, 0.8f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        if (homes) camera.LookAtFromPosition(new Vector3(0, 7.5f, 15f), new Vector3(0, 1.0f, -3.2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(-0.6f, 3.9f, 8.2f), new Vector3(-0.6f, 0.3f, -1.2f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
@@ -496,7 +552,8 @@ public partial class Showcase : Node3D
             {
                 var at = new Transform3D(new Basis(Vector3.Up, v * 1.3f).Scaled(Vector3.One * 0.6f), new Vector3(-7f + v * 3f, 0, z));
                 Place(PropMeshes.Birch(v % PropMeshes.BirchVariants), bark, at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(v * 0.05f));
-                Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                if (row == 0) Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                else Place(PaintedTrees.BroadleafCrown(v, false), PaintedTrees.BroadleafMaterial, Terrain.BirchCrown(at), Terrain.BirchLeaf.Darkened(v * 0.05f));
             }
             for (int v = 0; v < PropMeshes.FallenLogVariants && v < 3; v++)
                 Place(PropMeshes.FallenLog(v), bark, new Transform3D(new Basis(Vector3.Up, 0.3f + v * 0.5f), new Vector3(3.5f + v * 1.4f, 0, z + 1.5f + v * 0.5f)), Look.Bark.Darkened(0.1f));
