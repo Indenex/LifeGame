@@ -196,6 +196,14 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     }
     Pump(300);
     var done = a.Conn.Db.Structure.Id.Find(id);
+    if (done is not { Complete: true })
+        // Say where everyone stood, so a reach failure can be told apart from a blocked walk.
+        foreach (var (bot, who) in new[] { (a, "A"), (b, "B") })
+        {
+            var seen = bot.Seen();
+            float sd = seen is { } sp ? MathF.Sqrt((sp.X - sx) * (sp.X - sx) + (sp.Z - sz) * (sp.Z - sz)) : -1f;
+            Console.WriteLine($"  {who}: bot ({bot.X:F1}, {bot.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}), {sd:F1} m from the {name}'s middle at ({sx:F1}, {sz:F1}); reach {Structures.WorkReach} m past its edge, round={shape.Round} radius={shape.Radius}");
+        }
     Check(done is { Complete: true }, $"{name} finished (stage {done?.Stage})");
     Check(done!.Builders == 2, $"both players built it (builders: {done.Builders})");
     Check(b.Conn.Db.Structure.Id.Find(id) is { Complete: true }, "the other player sees it finished");
@@ -535,6 +543,9 @@ sealed class Bot
         throw new Exception("No clay nearby");
     }
 
+    // Where the server has this player.
+    public PlayerPos? Seen() => Conn.Db.PlayerPos.PlayerId.Find(myId);
+
     // How far the server still has this player from where the bot thinks it stands.
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
 
@@ -559,7 +570,27 @@ sealed class Bot
         return MathF.Max(0, dist - 5f * dt);
     }
 
+    // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
+    // trunk or boulder on the way (they block movement now) can hold the server's position back while
+    // the bot believes it arrived, and every Build after that is "Out of reach". When the server is
+    // still short, adopt where it has us and go round the side, a little wider each time.
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
+    {
+        for (int attempt = 0; attempt < 6; attempt++)
+        {
+            WalkStraight(tx, tz, within, pump);
+            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
+            float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
+            if (left <= within + 1f) return;
+            X = seen.X;
+            Z = seen.Z;
+            float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
+            float side = (attempt % 2 == 0 ? 1f : -1f) * (3f + attempt);
+            if (d > 0.1f) WalkStraight(X - dz / d * side, Z + dx / d * side, 0.5f, pump);
+        }
+    }
+
+    void WalkStraight(float tx, float tz, float within, Action<int> pump)
     {
         while (Step(tx, tz, 0.1f) > within) pump(100);
         // The server limits the pace (bugfix-24): keep reporting until it has us here too.

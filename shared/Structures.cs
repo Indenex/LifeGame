@@ -13,6 +13,8 @@ namespace LifeGame.Shared
         // every footprint, clearance and doorway number is already the real, scaled size; the model
         // is drawn at the design size and scaled by this at the view. 1 for everything but homes.
         public float Scale = 1f;
+        // Where the build menu files it: Shelter, Storage, Crafting, Fire, "Fences and gates" or Claims (ui-20).
+        public string Category = "Shelter";
         // Footprint in the structure's own frame: +Z is the open front or door.
         public bool Round;
         public float HalfWidth, HalfDepth, Radius;
@@ -76,6 +78,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Claim marker",
+                Category = "Claims",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
                 Solid = true,
@@ -86,6 +89,7 @@ namespace LifeGame.Shared
                 // Ceramics' updraft kiln: pots are loaded and fired in it (server/spacetimedb/Kiln.cs).
                 Kiln = true,
                 Name = "Updraft kiln",
+                Category = "Crafting",
                 Round = true, Radius = 0.85f,
                 Clearance = 1.2f,
                 Solid = true,
@@ -94,6 +98,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage basket",
+                Category = "Storage",
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
                 Solid = true,
@@ -119,6 +124,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Category = "Storage",
                 Jar = true,
                 Round = true, Radius = 0.32f,
                 Clearance = 0.6f,
@@ -132,6 +138,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Fence",
+                Category = "Fences and gates",
                 HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
                 Clearance = 0.25f,
                 Fence = true,
@@ -141,6 +148,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Gate",
+                Category = "Fences and gates",
                 HalfWidth = FenceHalfLength, HalfDepth = 0.15f,
                 Clearance = 0.25f,
                 Fence = true, Gate = true,
@@ -150,6 +158,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Crafting table",
+                Category = "Crafting",
                 HalfWidth = 0.8f, HalfDepth = 0.45f,
                 Clearance = 1.0f,
                 Station = StationKind.Table,
@@ -160,6 +169,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
+                Category = "Fire",
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
                 Indoor = true,
@@ -169,6 +179,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Spindle station",
+                Category = "Crafting",
                 HalfWidth = 0.6f, HalfDepth = 0.4f,
                 Clearance = 1.0f,
                 Station = StationKind.Spindle,
@@ -178,6 +189,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Leather drying rack",
+                Category = "Crafting",
                 HalfWidth = 1.2f, HalfDepth = 0.35f,
                 Clearance = 1.0f,
                 Station = StationKind.DryingRack,
@@ -187,6 +199,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Potter's bench",
+                Category = "Crafting",
                 // Modeling's bench (wedging stone, stool, pots) is about 1.3 x 1.0 m, +Z where the potter sits.
                 HalfWidth = 0.65f, HalfDepth = 0.5f,
                 Clearance = 1.0f,
