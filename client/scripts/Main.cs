@@ -91,6 +91,7 @@ public partial class Main : Node3D
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         atmosphere.SeeThrough = building.SeeThroughOf;
+        atmosphere.OtherFigures = () => others.Values;
         AddChild(building);
         // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
         // Added after building, so it sees B first; while the ghost is up, B is building's.
