@@ -711,7 +711,7 @@ public partial class Showcase : Node3D
             for (int i = 0; i < cells[v].Count; i++)
             {
                 blades.SetInstanceTransform(i, cells[v][i]);
-                blades.SetInstanceColor(i, PaintedGround.Grass(new Color(0.47f, 0.58f, 0.2f), rng.Randf()));
+                blades.SetInstanceColor(i, PaintedGround.Grass(PaintedGround.MeadowTop, rng.Randf()));
             }
             AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = PaintedGround.GrassMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
