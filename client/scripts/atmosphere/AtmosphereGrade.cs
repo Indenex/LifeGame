@@ -35,7 +35,7 @@ public partial class Atmosphere
         Gradient = new Gradient
         {
             Offsets = new[] { 0f, 0.5f, 1f },
-            Colors = new[] { new Color(0.075f, 0.065f, 0.11f), new Color(0.54f, 0.53f, 0.46f), new Color(0.99f, 0.97f, 0.88f) },
+            Colors = new[] { new Color(0.04f, 0.03f, 0.07f), new Color(0.53f, 0.52f, 0.45f), new Color(0.99f, 0.97f, 0.88f) },
         },
     };
 
@@ -54,22 +54,33 @@ public partial class Atmosphere
         float lowSun = Mathf.SmoothStep(-0.02f, 0.1f, sunHeight) * (1f - Mathf.SmoothStep(0.2f, 0.45f, sunHeight)) * clear * grade;
         float night = (1f - daylight) * grade;
 
-        sun.LightColor = sun.LightColor.Lerp(new Color(1f, 0.70f, 0.40f), 0.35f * lowSun);
-        sun.LightEnergy *= 1f + 0.15f * lowSun;
+        // Lit tips read warm and bright, as in reference 02: a warmer, stronger sun.
+        sun.LightColor = sun.LightColor.Lerp(new Color(1f, 0.93f, 0.78f), 0.25f * grade * daylight).Lerp(new Color(1f, 0.70f, 0.40f), 0.35f * lowSun);
+        sun.LightEnergy *= 1f + 0.1f * grade + 0.15f * lowSun;
         // Shadows take a blue-violet cast all day, more at golden hour, deep blue at night.
         env.AmbientLightColor = env.AmbientLightColor
             .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.15f * grade + 0.3f * lowSun)
             .Lerp(new Color(0.12f, 0.16f, 0.40f), 0.35f * night);
         env.AmbientLightSkyContribution = 0.75f - 0.1f * grade - 0.2f * lowSun - 0.1f * night;
+        // Deeper shade: less fill light and stronger contact shadows, so darks hold their
+        // value instead of going milky (Environment's env-13 comparison with reference 02).
+        env.AmbientLightEnergy *= 1f - 0.25f * grade;
+        env.SsaoIntensity = 1.8f + 0.8f * grade;
+        // Clear air near the camera by day: thinner distance fog and haze, keeping the
+        // thicker air at dawn and dusk for the light rays.
+        float dayClear = grade * daylight * (1f - lowSun);
+        env.FogDensity *= 1f - 0.4f * dayClear;
+        env.VolumetricFogDensity *= 1f - 0.5f * dayClear;
+        env.VolumetricFogAmbientInject = 0.4f - 0.25f * grade;
         // Gentle bloom: a softer threshold so fire and bright light glow, swelling at low sun.
         env.GlowIntensity += 0.15f * grade + 0.3f * lowSun;
         env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;
         env.GlowHdrThreshold = 1.1f - 0.25f * grade;
-        // Faded and warm: a touch less contrast, darks lifted, lights creamy.
+        // Faded and warm, but with strong darks: violet-tinted shade, creamy lights.
         // The Golden Skull packs are muted, but lighting already greys them in engine, so
         // saturation stays where it is; the curve's warm mids do the yellowing.
         env.TonemapExposure *= 1f + 0.06f * grade;
-        env.AdjustmentContrast = 1.08f - 0.12f * grade;
+        env.AdjustmentContrast = 1.08f + 0.06f * grade;
         env.AdjustmentColorCorrection = grade > 0.5f ? (curve ??= FadedCurve()) : null;
         if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)
             lens.DofBlurAmount = 0.05f + 0.03f * grade;
