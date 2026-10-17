@@ -75,7 +75,22 @@ public partial class Sheep : Node3D
         new(0.74f, 0.71f, 0.63f),
         new(0.34f, 0.27f, 0.22f),
     };
-    static readonly Dictionary<int, Material> WoolMaterials = new();
+    // Hens and rabbits get their own coat palettes (D-166: no two flocks look like clones); a model plan without
+    // one (the sheep) uses the fleece palette. Hens: mostly cream and white, some grey, brown and tan. Rabbits: wild browns.
+    static readonly Dictionary<string, Color[]> Palettes = new()
+    {
+        ["hen"] = new Color[]
+        {
+            new(0.80f, 0.77f, 0.70f), new(0.80f, 0.77f, 0.70f), new(0.70f, 0.66f, 0.58f),
+            new(0.52f, 0.50f, 0.48f), new(0.46f, 0.30f, 0.20f), new(0.62f, 0.45f, 0.28f),
+        },
+        ["rabbit"] = new Color[]
+        {
+            new(0.46f, 0.36f, 0.26f), new(0.46f, 0.36f, 0.26f), new(0.40f, 0.37f, 0.33f),
+            new(0.55f, 0.43f, 0.30f), new(0.30f, 0.25f, 0.21f),
+        },
+    };
+    static readonly Dictionary<(string, int), Material> WoolMaterials = new();
     static ArrayMesh? sheepMesh;
     // Red deer: coats from red-brown to grey-brown; the rump, belly and throat are pale.
     static readonly Color[] Coats = { new(0.47f, 0.30f, 0.19f), new(0.50f, 0.33f, 0.21f), new(0.42f, 0.32f, 0.24f) };
@@ -115,10 +130,11 @@ public partial class Sheep : Node3D
         BuildMeshes();
         if (deer) BuildDeerMeshes();
 
-        int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
-        if (!WoolMaterials.TryGetValue(color, out var wool))
-            WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
-        woolColor = Fleeces[color];
+        var palette = Palettes.GetValueOrDefault(def.Model, Fleeces);
+        int color = (int)(Terrain.Hash01((int)id, 11, 5) * palette.Length) % palette.Length;
+        if (!WoolMaterials.TryGetValue((def.Model, color), out var wool))
+            WoolMaterials[(def.Model, color)] = wool = WoolLook(palette[color]);
+        woolColor = palette[color];
         if (deer)
         {
             // Coats vary a little, from red-brown to a greyer brown.
