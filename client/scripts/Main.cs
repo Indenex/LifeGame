@@ -161,6 +161,8 @@ public partial class Main : Node3D
         lookPicker.Conn = () => conn;
         lookPicker.MyId = () => myId;
         AddChild(lookPicker);
+        // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
