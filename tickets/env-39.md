@@ -2,7 +2,7 @@
 Lane: Environment (client/scripts/atmosphere handed to this lane by the PM)
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
 Status: in_progress
-Branch: claude/environment-np240l (after the water PR; local `env-39-local` until then)
+Branch: claude/environment-np240l
 PR: (none yet)
 
 ## Goal
@@ -33,4 +33,4 @@ quality setting. Stills at noon, golden hour and rain through Render.
 - (none)
 
 ## Next step
-After the water PR merges: push, open the PR, request Render stills (noon, golden hour 0.7, rain --rain=0.7, each with --cloud=0.45 and looking up a little; plus --clouds=0 before shots).
+Wait for the PR's CI (water and clouds together); send the PM the green sha; Render after shots requested.

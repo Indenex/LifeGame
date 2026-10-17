@@ -2,7 +2,7 @@
 Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
 Status: in_progress
-Branch: claude/environment-np240l (after #833 merges; local `env-38-local` until then)
+Branch: claude/environment-np240l
 PR: (none yet)
 
 ## Goal
@@ -57,4 +57,4 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
   first real check of the shader.
 
 ## Next step
-When #833 merges: push env-38 on claude/environment-np240l, open the PR, request the "after" renders.
+Wait for the PR's CI (water and clouds together); send the PM the green sha; Render after shots requested.

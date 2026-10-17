@@ -1,7 +1,7 @@
 # env-31: Ghibli ground everywhere (from the BotW / Ghibli prototypes)
 Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
-Status: in_progress
+Status: done
 Branch: claude/environment-ground-looks (old account); refresh rides claude/environment-np240l after env-37
 PR: #833
 
@@ -49,4 +49,4 @@ Built on top of env-27 (merged in) so `PaintedTerrain.Chosen` picks the style.
 - (none)
 
 ## Next step
-Wait for #833 CI; send the PM the green sha. Render requested 179bc02b (before --ground=old / after, noon and golden hour).
+None, merged as #833.
