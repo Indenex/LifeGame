@@ -35,7 +35,7 @@ public static class MaterialLook
         Pattern.Bark => (1.4f, new Vector2(1f, 0.6f), 1f),
         Pattern.Stone => (0.8f, Vector2.One, 1f),
         Pattern.Leaves => (0.6f, Vector2.One, 1.2f),
-        Pattern.Straw => (0.8f, new Vector2(1f, 1f), 1f),
+        Pattern.Straw => (1.1f, new Vector2(1f, 1f), 1f),
         Pattern.Wool => (3.5f, Vector2.One, 0.8f),
         Pattern.Skin => (1.5f, Vector2.One, 0.25f),
         Pattern.Grass => (1.2f, Vector2.One, 1f),
@@ -58,6 +58,8 @@ public static class MaterialLook
             if (pattern == Pattern.Stone) color *= new Color(0.92f, 0.9f, 1.08f);
             if (pattern == Pattern.Bark) color *= new Color(0.95f, 0.92f, 1.06f);
             if (pattern == Pattern.Wood) color *= new Color(1.05f, 0.95f, 0.88f);
+            // Straw toward the pack's golden hay, a little deeper than today's pale thatch.
+            if (pattern == Pattern.Straw) color *= new Color(0.86f, 0.8f, 0.72f);
             // Foliage toward the pack's olive-yellow and muted greens: half way to a
             // warm olive of the same brightness.
             if (pattern == Pattern.Leaves)
@@ -358,9 +360,16 @@ public static class MaterialLook
             }
             case Pattern.Straw:
             {
-                float column = Mathf.Floor(u * 16f);
-                float f = Mathf.PosMod(u * 16f, 1f);
-                return f < 0.2f ? 0f : MeshKit.Hash((int)column, 60) > 0.6f ? 1f : 0.5f;
+                // Thatch, as on the artist's hay roofs: rows of straw bundles, each
+                // with a ragged fringe hanging over the row below, lit above the
+                // fringe, dark in the shadow it casts, fine straws in between.
+                float row = Mathf.Floor(v * 4f);
+                float fv = Mathf.PosMod(v * 4f, 1f);
+                float fringe = 0.18f + 0.1f * MeshKit.Hash((int)Mathf.Floor(u * 24f), (int)row + 85);
+                if (fv < fringe * 0.55f) return 0f;
+                if (fv < fringe) return 1f;
+                float straw = Mathf.PosMod(u * 24f + Noise(u * 4, v * 4, 4, 8) * 0.6f, 1f);
+                return straw < 0.18f ? 0f : fv > 0.8f ? 0.5f : (MeshKit.Hash((int)Mathf.Floor(u * 24f), 86) > 0.55f ? 1f : 0.5f);
             }
             default:
                 return Mathf.Clamp(Value(p, u, v), 0f, 1f);
