@@ -11,6 +11,7 @@ In the in-game world, rocks read near-white in sun and pinkish at dusk. Since D-
 ## Progress log
 - 2026-10-17: rendered the world from main at dawn, noon and dusk (renders/painted-16-world-before-*.png); changed Painted.MakeRock; build has 0 errors; after renders in progress.
 - 2026-10-17 10:00: after renders done: renders/painted-16-rocks-before-after.png (left before 0.6, right after 0.47; noon top, dusk bottom). It's a modest gain: the noon rocks sit greyer in the grass. The dusk pink is the sunset light, not the rock value. Sent to the PM as two options.
+- 2026-10-17 10:40: merged main (#690 haze fix); re-shot the before (main) and after (this branch) at noon and dusk into renders/painted-16-rocks-before-after.png. Held for Justin per the PM (D-154).
 
 ## Open questions / blockers
 - Justin: darker rocks (recommended) or keep them pale?
