@@ -560,6 +560,16 @@ void LayMat(ulong hut)
     var laid = a.Conn.Db.SleepingMat.PlayerId.Find(me)!;
     Check(point.StructureId == hut && point.Spot == mat.Id && MathF.Abs(point.X - laid.X) < 0.01f && MathF.Abs(point.Z - laid.Z) < 0.01f,
         $"the waking place is the mat in the hut ({point.X:F1}, {point.Z:F1})");
+
+    // Lying down on the mat is a pose everyone sees, and only the mat's owner may do it (survival-27).
+    b.LastError = null;
+    b.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B lying on A's mat to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is { Kind: 2 } r && r.SpotId == hut, 10, "A lies on the mat, seen by B");
+    a.Conn.Reducers.StandUp();
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is null, 10, "A stands up again, seen by B");
 }
 
 // A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
@@ -676,6 +686,7 @@ sealed class Bot
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
+                        "SELECT * FROM player_rest",
                         "SELECT * FROM my_respawn_point",
                         "SELECT * FROM fire",
                         "SELECT * FROM chopped_tree",
