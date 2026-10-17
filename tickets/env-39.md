@@ -37,8 +37,10 @@ quality setting. Stills at noon, golden hour and rain through Render.
 
 - 2026-10-17: sky option 2 (PM/Justin): daytime top and noon horizon moved halfway toward the Stylized Nature kit's cyan; dawn, dusk and night unchanged.
 
+- 2026-10-17 15:55: CI on 4d1f443e green (14/14), https://github.com/Indenex/LifeGame/actions/runs/39045459794; green sha sent to the PM.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for the PR's CI (water and clouds together); send the PM the green sha; Render after shots requested.
+Wait for the PM to merge #843 (green at 4d1f443e); then push env-40 (Cool Water blend).

@@ -52,9 +52,11 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
 - 2026-10-17 15:40: built the pass locally (not compiled here: the network policy blocks
   the Godot and .NET downloads); before/after renders requested through the PM.
 
+- 2026-10-17 15:55: CI on 4d1f443e green (14/14), https://github.com/Indenex/LifeGame/actions/runs/39045459794; green sha sent to the PM.
+
 ## Open questions / blockers
 - Godot shader errors only show at runtime, so the Render lane's "after" shots are the
   first real check of the shader.
 
 ## Next step
-Wait for the PR's CI (water and clouds together); send the PM the green sha; Render after shots requested.
+Wait for the PM to merge #843 (green at 4d1f443e); then push env-40 (Cool Water blend).
