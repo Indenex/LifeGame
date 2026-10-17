@@ -231,6 +231,15 @@ public static class ItemModels
         (Item)197 => (DropSpindle, false),
         (Item)198 => (Yarn, true),
         (Item)199 => (WoolCloth, true),
+        // The hen (animals-19, model-7): eggs, a feather and chicken legs.
+        Item.Egg => (k => Egg(k, EggShell, false), true),
+        Item.Feather => (Feather, true),
+        Item.RawChicken => (k => Drumstick(k, new Color(0.9f, 0.72f, 0.64f), new Color(0.96f, 0.86f, 0.76f)), true),
+        Item.CookedChicken => (k => Drumstick(k, new Color(0.66f, 0.4f, 0.17f), new Color(0.8f, 0.56f, 0.26f)), true),
+        Item.BurntChicken => (k => Drumstick(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        // Boiled and burnt eggs (crafting-24), by number until the items reach main.
+        (Item)212 => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
+        (Item)213 => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
         _ => (null, false),
     };
 
@@ -438,6 +447,39 @@ public static class ItemModels
         k.Plain.Paint(fat).Ellipsoid(new Vector3(-0.01f, 0.045f, -0.02f) * size, new Vector3(0.115f, 0.046f, 0.075f) * size, 9, 5, null, 0.6f);
         k.Plain.Paint(bone).Tube(new[] { new Vector3(0.06f, 0.05f, 0.01f) * size, new Vector3(0.19f, 0.055f, 0.015f) * size }, 0.014f * size, 6);
         k.Plain.Paint(bone, 0.95f).Ellipsoid(new Vector3(0.195f, 0.055f, 0.015f) * size, new Vector3(0.02f, 0.022f, 0.026f) * size, 7, 4);
+    }
+
+    static readonly Color EggShell = new(0.86f, 0.72f, 0.55f);
+
+    // A hen's egg lying on its side, the narrow end a little pointed. Shelled and
+    // white when boiled; a burnt one is black with a pale crack.
+    static void Egg(Kit k, Color shell, bool cracked)
+    {
+        k.Plain.Paint(shell).Ellipsoid(new Vector3(0, 0.022f, 0), new Vector3(0.021f, 0.021f, 0.026f), 10, 7);
+        k.Plain.Paint(shell, 0.98f).Ellipsoid(new Vector3(0, 0.021f, 0.016f), new Vector3(0.016f, 0.016f, 0.017f), 8, 5);
+        if (cracked)
+            k.Plain.Paint(new Color(0.45f, 0.4f, 0.33f)).Tube(new[] { new Vector3(-0.012f, 0.038f, -0.012f), new Vector3(0.0f, 0.042f, -0.002f), new Vector3(-0.006f, 0.041f, 0.01f), new Vector3(0.008f, 0.037f, 0.018f) }, 0.0015f, 3);
+    }
+
+    // A long tail feather, a pale quill down its middle, lying flat.
+    static void Feather(Kit k)
+    {
+        var root = new Vector3(0, 0.004f, -0.09f);
+        k.Plain.Paint(new Color(0.93f, 0.9f, 0.84f)).Tube(new[] { root + new Vector3(0, 0, -0.02f), root, new Vector3(0.008f, 0.006f, 0.08f) }, 0.0025f, 4, 0.001f);
+        for (int side = -1; side <= 1; side += 2)
+            k.Plant.Paint(new Color(0.62f, 0.42f, 0.26f), side < 0 ? 1f : 0.88f).Blade(new Vector3(side * 0.002f, 0.005f, -0.08f), new Vector3(side * 0.006f + 0.007f, 0.005f, 0.085f), Vector3.Up, 0.034f, 0.002f);
+    }
+
+    // A chicken leg: a plump drumstick of meat on a short knuckled bone.
+    static void Drumstick(Kit k, Color meat, Color skin)
+    {
+        k.Plain.Paint(skin).Ellipsoid(new Vector3(0, 0.032f, -0.02f), new Vector3(0.036f, 0.032f, 0.05f), 9, 6);
+        k.Plain.Paint(meat).Loft(new Vector3(0, 0.03f, 0.02f), new Vector3(0, 0.022f, 0.06f), new MeshKit.Ring[]
+        {
+            new(0f, 0.026f, 0.024f), new(1f, 0.011f, 0.011f),
+        }, 8, 0.2f);
+        k.Plain.Paint(Bone).Tube(new[] { new Vector3(0, 0.022f, 0.055f), new Vector3(0, 0.02f, 0.09f) }, 0.007f, 6);
+        k.Plain.Paint(Bone, 0.95f).Ellipsoid(new Vector3(0, 0.02f, 0.094f), new Vector3(0.011f, 0.01f, 0.009f), 7, 4);
     }
 
     // A tuft of shorn fleece.

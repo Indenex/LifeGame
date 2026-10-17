@@ -23,7 +23,7 @@ public static class NextSteps
         [Skills.Run] = "Hold {run} to run. The more you run, the farther you can go.",
         [Wading.WadeProcess] = "Shallow water slows you, but a patient wader gets across.",
         [Wading.FloatProcess] = "Where the water is deep, you can let it carry you across.",
-        [Skills.Repair] = "A tool gone soft in the hand is made good again at a table with a length of cord.",
+        [Skills.Repair] = "A tool worn thin is not lost. A repair table and a little cord will mend it.",
         [Skills.Berries] = "Some bushes carry ripe berries. Food for the road.",
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
         ["gather.tinder"] = "Fire needs something fine and dry to catch. Plant fiber can be shredded.",
@@ -31,6 +31,7 @@ public static class NextSteps
         ["knap.flake"] = "Stone breaks sharp when it is struck with stone.",
         ["knap.hand_axe"] = "A stone shaped with patience makes a heavy tool for the hand.",
         ["cook.meat"] = "Raw meat is better over a fire.",
+        ["cook.chicken"] = "A plucked bird roasts quickly. Watch it so it doesn't blacken.",
         ["cook.venison"] = "A haunch of deer, turned over the fire, makes a richer meal than mutton.",
         ["cook.broth"] = "Water and a handful of berries, kept hot in a pot, make something warm to sip on a cold evening.",
         ["cook.stew"] = "A pot left to simmer with meat and more besides becomes a meal that stays with you.",
@@ -78,6 +79,7 @@ public static class NextSteps
         ["build.roof"] = "A frame thatched with fiber keeps the rain off.",
         ["build.weave"] = "A woven storage basket keeps your things by your shelter.",
         ["build.door"] = "A finished hut wants a door.",
+        [Skills.Eggs] = "Hens lay about the yard. A hen that has been sitting a while will have an egg to spare.",
         [Skills.Shear] = "A calm sheep with a full fleece will stand for a blade. Come up slowly.",
         [Skills.Kill] = "A spear or blade can bring a sheep down, but it will run.",
         [Skills.Sneak] = "Wary animals bolt from a walker. Move slowly and stay low, and you can get closer.",
@@ -149,6 +151,7 @@ public static class NextSteps
         [ClayRules.PitFireProcess] = new[] { Item.PinchPot, Item.CoilPot, Item.Potsherd },
         [ClayRules.KilnFireProcess] = new[] { Item.PinchPot, Item.CoilPot, Item.Potsherd },
         [Skills.Shear] = new[] { Item.Wool },
+        [Skills.Eggs] = new[] { Item.Egg },
         [Skills.Butcher] = new[] { Item.RawMutton, Item.SheepHide },
         [Skills.DryHide] = new[] { Item.Leather },
     };
@@ -158,7 +161,7 @@ public static class NextSteps
     {
         [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Wading.WadeProcess] = 1, [Wading.FloatProcess] = 1, [Skills.Repair] = 3, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
-        [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
+        [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
     // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone

@@ -49,10 +49,16 @@ namespace LifeGame.Shared
         // What butchering gives: meat (grown / young), a hide and an extra for grown animals.
         public Item Meat;
         public int MeatGrown = 3, MeatYoung = 1;
-        public Item Hide;
+        public Item? Hide;
         public Item? Extra;
 
-        // The client's model plan ("sheep" or "deer") and the share of males that carry antlers.
+        // Laying (animals-19): the egg a grown animal lays, game days between eggs, and how many it holds
+        // until collected (D-148: no chore, they just wait, up to the cap).
+        public Item? Egg;
+        public float EggDays;
+        public byte EggCap;
+
+        // The client's model plan ("sheep", "deer" or "hen") and the share of males that carry antlers.
         public string Model = "sheep";
         public float AntlerShare;
 
@@ -61,7 +67,7 @@ namespace LifeGame.Shared
 
     public static class AnimalDefs
     {
-        public const byte Sheep = 0, Deer = 1;
+        public const byte Sheep = 0, Deer = 1, Hen = 2;
 
         // Sheep keep exactly the numbers they always had.
         public static readonly AnimalDef[] All =
@@ -89,6 +95,18 @@ namespace LifeGame.Shared
                 Meat = Item.RawVenison, MeatGrown = 2, MeatYoung = 1, Hide = Item.DeerHide, Extra = Item.Antler,
                 Model = "deer", AntlerShare = 0.35f,
                 Herds = new[] { new AnimalHerdSpot(70f, 45f, 4, 22f), new AnimalHerdSpot(-60f, -75f, 3, 22f) },
+            },
+            // Hens (animals-19): a tame yard flock that stays close to where it lives, scratches about
+            // and shies only from a charge. D-075: an egg every game day and a half, three held.
+            new()
+            {
+                Id = Hen, Key = "animal.hen", Name = "Hen",
+                Walk = 0.7f, Trot = 1.3f, Run = 3.4f, Notice = 7f, CalmSpeed = 2.4f,
+                HomeRange = 7f, FleeAhead = 4f, WanderMin = 1f, WanderMax = 4f, WoodPref = 0f, Curious = true,
+                Meat = Item.RawChicken, MeatGrown = 1, MeatYoung = 1, Hide = null, Extra = Item.Feather,
+                Egg = Item.Egg, EggDays = 1.5f, EggCap = 3,
+                Model = "hen",
+                Herds = new[] { new AnimalHerdSpot(-8f, 7f, 4, 4f) },
             },
         };
 

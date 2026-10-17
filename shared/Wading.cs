@@ -7,10 +7,14 @@ namespace LifeGame.Shared
     // about half speed. D-075: gentle numbers; no stamina cost, no new animation.
     public static class Wading
     {
+        // Process ids for the Swimming skill (swim prefix): every WaterPerUse seconds spent moving
+        // through water, measured on the server's own positions, is one report.
+        public const string WadeProcess = "swim.wade";
+        public const string FloatProcess = "swim.float";
+        public const float WaterPerUse = 20f;
+
         // Deeper than this and the feet stop following the bed.
         public const float FloatDepth = 0.9f;
-        // Process ids for the Swimming skill (swim family): moving on the bed, and moving afloat.
-        public const string WadeProcess = "swim.wade", FloatProcess = "swim.float";
         // Walking speed left at FloatDepth, and once properly afloat, as fractions of full speed.
         public const float WadeFloor = 0.6f;
         public const float FloatSpeed = 0.5f;

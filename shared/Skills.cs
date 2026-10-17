@@ -56,6 +56,8 @@ namespace LifeGame.Shared
         // reports it as failed, so a hit teaches twice as much (Skills.Gain).
         public const string Shoot = "animal.shoot";
         public const string Butcher = "animal.butcher";
+        // Taking eggs from a hen (Animals lane, Eggs.cs).
+        public const string Eggs = "animal.eggs";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
         // Running, reported by Survival's stamina every 20 s of actual running (D-123).
@@ -75,7 +77,7 @@ namespace LifeGame.Shared
             new("swimming", "Swimming", true, "Wading deeper and moving through water with less effort.", "swim"),
             // Animal work is a survival basic (D-049). Husbandry names its processes, so a new
             // animal.* process trains nothing until a skill claims it (CONTENT.md, Skill row).
-            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher),
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher, Eggs),
             // Sneaking up on wary animals and striking before they bolt (skills-12).
             new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", Kill, Sneak),
             // The bow (skills-12): a capped specialty, so it competes for the 300 total.
@@ -114,6 +116,7 @@ namespace LifeGame.Shared
             (Sneak, "Sneaking up on an animal"),
             (Shoot, "Shooting a bow"),
             (Butcher, "Butchering a carcass"),
+            (Eggs, "Gathering eggs"),
             (DryHide, "Drying leather"),
             (Run, "Running"),
             (Wading.WadeProcess, "Wading"),
@@ -157,7 +160,7 @@ namespace LifeGame.Shared
         }
 
         // Some things can't be picked up by watching someone else do them.
-        public static bool Watchable(string processId) => !processId.StartsWith("move.");
+        public static bool Watchable(string processId) => !processId.StartsWith("move.") && !processId.StartsWith("swim.");
 
         public static Specialization? Spec(string id)
         {
