@@ -151,19 +151,6 @@ for (int top = 0; top < 12; top++)
 }
 RefusedFeed(bowFire, Item.Stick);
 
-// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
-// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
-WalkTo(fire.X, fire.Z);
-float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
-float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
-Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
-long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
-lastError = null;
-conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
-Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
-if (lastError != null) Fail($"feeding the fire: {lastError}");
-Console.WriteLine("Fed the fire a stick");
-
 // Chopping: the stone axe takes logs from the nearest standing tree until it falls.
 var (treeX, treeZ) = NearestTree();
 var trunk = Trees.Trunk(treeX, treeZ);
@@ -364,6 +351,21 @@ if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
     if (lastError != null) Fail($"taking the roast off: {lastError}");
     Console.WriteLine($"Roasted mutton (quality {conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CookedMutton).Quality})");
 }
+
+// The first fire has burned a while; once a whole stick fits under the cap it is taken (D-121).
+// This waits for the fire to burn down, so it runs last: the rest of the check has taken the time
+// it needs, instead of the whole check standing still for a minute (integration-10).
+// Firecraft only raises the cap, so the rank-0 cap is a safe bound.
+WalkTo(fire.X, fire.Z);
+float FirstFireLeft() => (conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1_000_000f;
+float roomNeeded = Items.Def(Item.Stick).FuelSeconds + 2;
+Pump(() => FirstFireLeft() < Fires.MaxSeconds - roomNeeded, 150, "room for a stick on the first fire");
+long fuelBefore = conn.Db.Fire.Id.Find(fire.Id)!.FuelUntil.MicrosecondsSinceUnixEpoch;
+lastError = null;
+conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
+Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
+if (lastError != null) Fail($"feeding the fire: {lastError}");
+Console.WriteLine("Fed the fire a stick");
 
 Console.WriteLine("Inventory:");
 foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
