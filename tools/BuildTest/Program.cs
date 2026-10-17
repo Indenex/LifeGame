@@ -294,8 +294,12 @@ void EnsureClaim()
     if (claimAt != null) return;
     Console.WriteLine("--- Claim");
     // Outside a claim the brick house is refused (building-13).
+    // On clear ground in reach, so the claim rule is what refuses it (not distance or a neighbour).
+    var probe = a.FindSite(StructureKind.BrickHouse);
+    Check(probe != null, "found clear ground for the claim-only probe");
+    a.WalkTo(probe!.Value.Item1, probe.Value.Item2 + 2.5f, 1f, Pump);
     a.LastError = null;
-    a.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, a.X + 3f, a.Z, 0f);
+    a.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, probe.Value.Item1, probe.Value.Item2, 0f);
     WaitFor(() => a.LastError != null, 5, "a claim-only building to be refused outside a claim");
     Check(a.LastError!.Contains("inside your claim"), $"it says it needs a claim ({a.LastError})");
     ulong marker = BuildTogether(StructureKind.ClaimMarker,
