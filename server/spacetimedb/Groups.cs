@@ -150,6 +150,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LeaveGroup(ReducerContext ctx)
     {
+        MeterCall(ctx);
         var mine = ctx.Db.GroupMember.Member.Find(Me(ctx)) ?? throw new Exception("You're not in a group");
         RemoveFromGroup(ctx, mine);
     }

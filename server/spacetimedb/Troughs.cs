@@ -34,6 +34,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void PourIntoTrough(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (s, player) = RequireTrough(ctx, structureId);
         InventoryItem? stack = null;
         foreach (var item in new[] { Item.CoilPotOfWater, Item.PinchPotOfWater })
@@ -57,6 +58,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void DrinkFromTrough(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (_, player) = RequireTrough(ctx, structureId);
         var row = ctx.Db.TroughWater.StructureId.Find(structureId);
         if (row is not { Litres: > 0 }) throw new Exception("The trough is dry");
@@ -74,6 +76,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void ScoopFromTrough(ReducerContext ctx, ulong structureId)
     {
+        MeterCall(ctx);
         var (_, player) = RequireTrough(ctx, structureId);
         int have = (int)(ctx.Db.TroughWater.StructureId.Find(structureId)?.Litres ?? 0);
         if (have <= 0) throw new Exception("The trough is dry");

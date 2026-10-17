@@ -309,6 +309,21 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "and play carries on once the bucket has refilled");
 }
 
+// Heavy reducers are paced on top of the bucket (bugfix-51): a second name change straight after the
+// first is refused with a friendly message, and goes through once a moment has passed.
+{
+    var refused = new List<string>();
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("One moment")) refused.Add(e.Message); }
+    conn.OnUnhandledReducerError += OnError;
+    conn.Reducers.SetName("Pacer");
+    conn.Reducers.SetName("Pacertwo");
+    Pump(1500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(refused.Count == 1, $"a second name change straight away was paced ({refused.Count} refused)");
+    conn.Reducers.SetName("Pacerthree");
+    WaitFor(() => conn.Db.Player.PlayerId.Find(myId) is { } me && me.Name == "Pacerthree", 10, "and a name change after a moment goes through");
+}
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;
