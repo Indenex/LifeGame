@@ -267,6 +267,14 @@ public partial class EquipmentPanel : CanvasLayer
         };
         style.SetBorderWidthAll(chosen ? 2 : 1);
         style.SetCornerRadiusAll((int)(SlotSize / 2) - 2);
+        // Warm paper (ui-58): a paper circle, a shade darker when something is worn, with an
+        // ink ring and a coral ring on the chosen slot. Set here so it never flashes dark.
+        if (WarmLook.On)
+        {
+            style.BgColor = WarmLook.Paper.Darkened(filled ? 0.12f : 0.06f);
+            style.BorderColor = chosen ? WarmLook.Coral : new Color(WarmLook.Ink, 0.35f);
+            style.SetBorderWidthAll(chosen ? 3 : 2);
+        }
         return style;
     }
 
@@ -288,7 +296,8 @@ public partial class EquipmentPanel : CanvasLayer
             var style = SlotStyle(slot == selected, on != null);
             foreach (var state in new[] { "normal", "hover", "pressed", "focus" })
                 button.AddThemeStyleboxOverride(state, style);
-            button.AddThemeColorOverride("font_color", new Color(Look.Cream, 0.55f));
+            button.AddThemeColorOverride("font_color", WarmLook.On ? new Color(WarmLook.Ink, 0.6f) : new Color(Look.Cream, 0.55f));
+            WarmLook.KeepColours(button);
         }
 
         var worn = Link.Worn(selected);
