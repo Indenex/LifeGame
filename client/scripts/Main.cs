@@ -69,6 +69,8 @@ public partial class Main : Node3D
 
     public override void _Ready()
     {
+        // First, so it sees every window built after it (the --warm prototype, D-313).
+        AddChild(new WarmLook());
         SetupInput();
         SetupView();
         SetupEnvironment();

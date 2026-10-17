@@ -25,6 +25,7 @@ public static class Ui
         panel.SetAnchorsPreset(Control.LayoutPreset.Center);
         panel.GrowHorizontal = Control.GrowDirection.Both;
         panel.GrowVertical = Control.GrowDirection.Both;
+        WarmLook.Frame(panel, style);
         return panel;
     }
 
