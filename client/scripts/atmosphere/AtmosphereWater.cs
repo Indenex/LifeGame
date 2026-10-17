@@ -9,6 +9,9 @@ namespace LifeGame;
 // throws up droplets as you step or jump in, and your legs come out darker and a
 // little glossy up to the waterline, drying off over about half a minute.
 //
+// Other players in the water get the same rings and splash (atmosphere-27), but stay
+// dry-legged: the wet band is one global, so it can only follow you.
+//
 // The wet band is drawn by the painted shader (which the player figure uses) from two
 // globals: wet_line, the world height it reaches, and wet_amount, how wet (0 to 1).
 public partial class Atmosphere
@@ -18,15 +21,38 @@ public partial class Atmosphere
     // How long legs take to dry after leaving the water, in seconds.
     const float DryTime = 30f;
 
-    readonly MeshInstance3D ripples = new()
+    // Other players' figures, for their rings and splashes (Main hands these over).
+    public System.Func<System.Collections.Generic.IEnumerable<Node3D>>? OtherFigures;
+
+    // Others only show rings this close, and at most this many at once.
+    const float OthersReach = 60f;
+    const int OthersMax = 12;
+
+    readonly MeshInstance3D ripples = NewRipples();
+    readonly ShaderMaterial rippleMaterial = new() { Shader = RippleShader };
+    readonly CpuParticles3D splash = NewSplash();
+
+    // Rings and splash following one other player, with what they need from frame to frame.
+    sealed class OtherWater
+    {
+        public readonly MeshInstance3D Ripples = NewRipples();
+        public readonly ShaderMaterial Material = new() { Shader = RippleShader };
+        public readonly CpuParticles3D Splash = NewSplash();
+        public Vector3 LastPos;
+        public bool InWater, Seen;
+        public float Amount;
+    }
+    readonly System.Collections.Generic.Dictionary<Node3D, OtherWater> othersWater = new();
+
+    static MeshInstance3D NewRipples() => new()
     {
         Mesh = new PlaneMesh { Size = new Vector2(2.6f, 2.6f) },
         CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         Visible = false,
         TopLevel = true,
     };
-    readonly ShaderMaterial rippleMaterial = new() { Shader = RippleShader };
-    readonly CpuParticles3D splash = new()
+
+    static CpuParticles3D NewSplash() => new()
     {
         Emitting = false,
         OneShot = true,
@@ -75,6 +101,7 @@ public partial class Atmosphere
     void UpdateWater(float dt, Vector3 focus, Color air)
     {
         if (Player == null || !Player.IsInsideTree() || terrain == null) return;
+        UpdateOthersWater(dt, focus, air);
         var at = Player.GlobalPosition;
         float speed = dt > 0f ? new Vector2(at.X - waterLastPos.X, at.Z - waterLastPos.Z).Length() / dt : 0f;
         waterLastPos = at;
@@ -111,6 +138,61 @@ public partial class Atmosphere
             rippleMaterial.SetShaderParameter(NRippleAmount, rippleAmount);
             rippleMaterial.SetShaderParameter(NStir, Mathf.Clamp(speed / 3f, 0f, 1f));
             rippleMaterial.SetShaderParameter(NRippleTint, air.Lerp(Colors.White, 0.55f));
+        }
+    }
+
+    void UpdateOthersWater(float dt, Vector3 focus, Color air)
+    {
+        foreach (var w in othersWater.Values) w.Seen = false;
+        if (OtherFigures?.Invoke() is { } figures)
+        {
+            int shown = 0;
+            foreach (var figure in figures)
+            {
+                if (!GodotObject.IsInstanceValid(figure) || !figure.IsInsideTree() || !figure.Visible) continue;
+                var at = figure.GlobalPosition;
+                if (at.DistanceSquaredTo(focus) > OthersReach * OthersReach) continue;
+                if (!othersWater.TryGetValue(figure, out var w))
+                {
+                    if (shown >= OthersMax) continue;
+                    w = new OtherWater { LastPos = at };
+                    w.Ripples.MaterialOverride = w.Material;
+                    AddChild(w.Ripples);
+                    AddChild(w.Splash);
+                    othersWater[figure] = w;
+                }
+                w.Seen = true;
+                shown++;
+                float speed = dt > 0f ? new Vector2(at.X - w.LastPos.X, at.Z - w.LastPos.Z).Length() / dt : 0f;
+                w.LastPos = at;
+                bool inWater = Wading.Depth(terrain!.HeightAt(at.X, at.Z)) > 0.03f && at.Y < World.WaterLevel - 0.02f;
+                if (inWater && !w.InWater)
+                {
+                    w.Splash.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.02f, at.Z);
+                    w.Splash.Restart();
+                }
+                w.InWater = inWater;
+                w.Amount = Mathf.Lerp(w.Amount, inWater ? 1f : 0f, 1f - Mathf.Exp(-dt * 4f));
+                w.Ripples.Visible = w.Amount > 0.02f;
+                if (!w.Ripples.Visible) continue;
+                w.Ripples.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.015f, at.Z);
+                w.Material.SetShaderParameter(NRippleAmount, w.Amount);
+                // Remote positions arrive in steps, so their speed is rougher; ease it.
+                w.Material.SetShaderParameter(NStir, Mathf.Clamp(speed / 4f, 0f, 1f));
+                w.Material.SetShaderParameter(NRippleTint, air.Lerp(Colors.White, 0.55f));
+            }
+        }
+        // Drop the ones whose player left, went out of reach or out of sight.
+        System.Collections.Generic.List<Node3D>? gone = null;
+        foreach (var (figure, w) in othersWater)
+            if (!w.Seen) (gone ??= new()).Add(figure);
+        if (gone == null) return;
+        foreach (var figure in gone)
+        {
+            var w = othersWater[figure];
+            w.Ripples.QueueFree();
+            w.Splash.QueueFree();
+            othersWater.Remove(figure);
         }
     }
 

@@ -1,7 +1,7 @@
 # atmosphere-26: Wading and floating, seen
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-26-wading
 PR: #429
 
@@ -10,6 +10,7 @@ The PM's pick (2026-10-17), after bugfix-32 (#414) let players wade into ponds a
 
 ## Progress log
 - 2026-10-17 01:55: first build (client 0 errors).
+- 2026-10-17 02:23: #429 merged (green sha 841d59b, CI run 38992827488).
   - New client/scripts/atmosphere/AtmosphereWater.cs, local player.
   - Ripples: a 2.6 m plane at the water surface following the player, with three painted rings widening and fading. They come faster and stronger with speed. Tint is the air light lerped to white; fades in and out over about 0.25 s.
   - Splash: a one-shot burst of 28 droplets from a ring at the surface when the player goes from dry to in the water (wading in or landing from a jump).
@@ -21,4 +22,4 @@ The PM's pick (2026-10-17), after bugfix-32 (#414) let players wade into ponds a
 - Other players don't get ripples or wet legs yet; that needs per-player state. A later follow-up if wanted.
 
 ## Next step
-Wait for #429 CI and send the PM the green sha. Render request sent (wading, floating, splash, just out). Audio request sent via the PM.
+Done. Tune from the Render wading clip at pond (30,76) when it arrives, in a follow-up ticket.

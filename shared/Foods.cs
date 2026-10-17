@@ -50,6 +50,9 @@ namespace LifeGame.Shared
             // Venison (animals-14) feeds like mutton for now: same numbers as the roast.
             new FoodDef { Id = Item.CookedVenison, Food = Needs.RoastMuttonFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntVenison, Food = Needs.BurntMuttonFood },
+            new FoodDef { Id = Item.Egg, Food = Needs.EggFood },
+            new FoodDef { Id = Item.CookedChicken, Food = Needs.RoastChickenFood, GoodMeal = true },
+            new FoodDef { Id = Item.BurntChicken, Food = Needs.BurntChickenFood },
             new FoodDef { Id = Item.PotOfBroth, Food = Needs.BrothFood, Water = Needs.BrothWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
             new FoodDef { Id = Item.PotOfStew, Food = Needs.StewFood, Water = Needs.StewWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
         };
@@ -65,6 +68,7 @@ namespace LifeGame.Shared
         {
             new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat", Name = "Roast mutton", Doing = "Setting mutton over the fire" },
             new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison", Name = "Roast venison", Doing = "Setting venison over the fire" },
+            new RoastDef { Raw = Item.RawChicken, Cooked = Item.CookedChicken, Burnt = Item.BurntChicken, Process = "cook.chicken", Name = "Roast chicken", Doing = "Setting a chicken over the fire" },
         };
 
         static readonly Dictionary<Item, RoastDef> RoastByRaw = Roasts.ToDictionary(r => r.Raw);

@@ -175,6 +175,7 @@ namespace LifeGame.Shared
                 Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
             },
             Roast(Item.RawVenison),
+            Roast(Item.RawChicken),
             new ProcessDef
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
