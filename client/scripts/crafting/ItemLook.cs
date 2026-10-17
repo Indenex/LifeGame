@@ -64,10 +64,11 @@ public static class ItemLook
     {
         if (!Items.IsKnown(item)) return "";
         if (Durability.Wears((Item)item)) return Durability.Condition(quality, wear);
-        // A pot with a maker's mark says who made it (ceramics-15). Main fills in the name lookup.
-        if (Marks.Marked((Item)item) && Marks.Has(wear))
-            return $"made by {MakerName?.Invoke(Marks.Maker(wear)) ?? "someone"}";
-        return "";
+        // A pot with a maker's mark says who made it (ceramics-15), and slip says so too (ceramics-14).
+        // Main fills in the name lookup.
+        string made = Marks.Marked((Item)item) && Marks.Has(wear) ? $"made by {MakerName?.Invoke(Marks.Maker(wear)) ?? "someone"}" : "";
+        string slip = Slip.On((Item)item, wear) ? (Slip.Bands(wear) == 2 ? "two bands of slip" : "a band of slip") : "";
+        return made != "" && slip != "" ? $"{made}, {slip}" : made + slip;
     }
 
     // Looks up a player's name from the low 16 bits of their id (a maker's mark carries that much).
