@@ -1,6 +1,7 @@
 # One job per line: <name> <command...>. queue.sh rereads this file between jobs,
 # so jobs can be added or reordered while it runs. Live scenes go last.
 grass-main tools/render/render.sh grass-main dbe929a "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2" "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2 --render-cam=4,1.0,35,0.5"
+grass-main2 tools/render/render.sh grass-main2 dbe929a "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2" "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2 --render-cam=4,1.0,35,0.5"
 grass tools/render/render.sh grass 2064cb0 "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2" "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2 --render-cam=4,1.0,35,0.5"
 grass-walk-main env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk-main dbe929a tools/render/scenes/grass-walk.txt
 grass-walk env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk 2064cb0 tools/render/scenes/grass-walk.txt

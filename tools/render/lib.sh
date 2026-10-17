@@ -34,6 +34,7 @@ fi
 # 2. Server module, bindings, client build.
 # RENDER_PATCH=<script>: render-tree-only tweak run on the checkout before the build.
 [ -n "${RENDER_PATCH:-}" ] && "$RENDER_PATCH" "$tree" >>"$log" 2>&1
+"$(dirname "${BASH_SOURCE[0]}")/patches/nolook.sh" "$tree" >>"$log" 2>&1 || true   # no first-join look picker over stills
 (cd "$tree/server" && spacetimedb-cli build) >>"$log" 2>&1 || { echo "server build failed, see $log"; exit 1; }
 "$tree/tools/gen-bindings.sh" >>"$log" 2>&1
 (cd "$tree/client" && dotnet build -c Debug) >>"$log" 2>&1 || { echo "client build failed, see $log"; exit 1; }
