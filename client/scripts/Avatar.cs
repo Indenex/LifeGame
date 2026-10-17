@@ -14,6 +14,7 @@ public partial class Avatar : Node3D
 
     readonly Node3D figure;
     readonly PlayerAnimator animator;
+    readonly PlayerRig rig;
     readonly Label3D nameplate;
     float speed, turnRate, lastHeading;
     Vector3 lastPosition;
@@ -27,7 +28,9 @@ public partial class Avatar : Node3D
         PlayerModel.Wear(body, PlayerModel.Body, 0);
         figure = body;
         AddChild(figure);
-        animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        rig = new PlayerRig(figure);
+        PlaceMouth();
+        animator = new PlayerAnimator(rig, GetInstanceId());
         // Breath in the cold leaves the mouth, on the head bone's attachment.
         if (figure.FindChild("HeadAttach", true, false) is Node3D head)
             head.AddChild(new Breath { Position = PlayerModel.MouthAt });
@@ -146,8 +149,21 @@ public partial class Avatar : Node3D
     }
 
     // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
-    public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
-    public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
+    public void SetLook(uint playerId) => SetLook(HumanFigure.Appearance.For(playerId));
+    public void SetLook(HumanFigure.Appearance look)
+    {
+        PlayerModel.SetLook((Skeleton3D)figure, look);
+        // A new look may be a differently shaped body: poses that reach the face re-measure it.
+        rig.Measure();
+        PlaceMouth();
+    }
+
+    // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
+    void PlaceMouth()
+    {
+        if (figure is Skeleton3D skeleton && skeleton.FindBone("Head") is var head and >= 0)
+            rig.Mouth = skeleton.GetBoneGlobalRest(head).Origin + PlayerModel.MouthAt;
+    }
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
@@ -182,6 +198,8 @@ public partial class Avatar : Node3D
         // Hidden avatars (offline players) cost nothing.
         if (IsVisibleInTree())
         {
+            // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
+            animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
         }

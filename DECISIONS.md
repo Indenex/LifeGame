@@ -1141,3 +1141,15 @@ Owner: Claims.
 ## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
 **Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
 **Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.
