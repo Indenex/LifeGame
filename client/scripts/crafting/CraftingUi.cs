@@ -14,7 +14,7 @@ namespace LifeGame;
 public partial class CraftingUi : CanvasLayer
 {
     // True while a minigame or the search box wants the keyboard, so walking pauses.
-    public bool CapturesInput => minigame != null || grid.Typing;
+    public bool CapturesInput => minigame != null || CraftGrid.Focused != null;
     // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
     public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;

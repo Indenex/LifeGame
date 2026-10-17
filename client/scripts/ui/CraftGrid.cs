@@ -62,6 +62,8 @@ public partial class CraftGrid : VBoxContainer
         top.AddChild(tabs);
         search.AddThemeFontSizeOverride("font_size", 14);
         search.TextChanged += _ => Refresh();
+        search.FocusEntered += () => Focused = this;
+        search.FocusExited += () => { if (Focused == this) Focused = null; };
         top.AddChild(search);
         AddChild(top);
         grid.AddThemeConstantOverride("h_separation", 10);
@@ -70,8 +72,10 @@ public partial class CraftGrid : VBoxContainer
         AddChild(scroll);
     }
 
-    // The search box holds the keyboard while you type in it.
+    // The search box holds the keyboard while you type in it; Focused is whichever grid's
+    // box has it (the C menu's or a station's), so walking can pause for either.
     public bool Typing => search.HasFocus();
+    public static CraftGrid? Focused { get; private set; }
 
     // Screenshots (--screenshot-craft): --screenshot-craft-search=axe types into the search
     // box, and --screenshot-craft-hover pins the first can't-make card's hover text beside it,
@@ -129,6 +133,8 @@ public partial class CraftGrid : VBoxContainer
         if (!all.Contains(category)) category = all.FirstOrDefault(c => Recipes().Any(p => CategoryOf(p) == c && Missing(p) == null)) ?? all.FirstOrDefault() ?? "";
         string query = search.Text.Trim();
 
+        // One category needs no tabs (a station's few recipes).
+        tabs.Visible = all.Count > 1;
         foreach (var child in tabs.GetChildren()) { tabs.RemoveChild(child); child.QueueFree(); }
         foreach (var c in all)
         {
