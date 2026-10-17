@@ -190,7 +190,22 @@ public partial class Main : Node3D
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
-        AddChild(new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing });
+        // ui-35: a right click that doesn't drag opens the player menu on whoever is under it.
+        var playerMenu = new PlayerMenu
+        {
+            Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || social.Typing,
+            PlayerAt = point => PlayerMenuFacts.At(point, cameraRig.Camera, view.Size, GetViewport().GetVisibleRect().Size, me.Position,
+                others.Select(o => (o.Key, (Node3D)o.Value))),
+            Facts = id => conn == null ? null : PlayerMenuFacts.Read(conn, myId, id, me.Position, trade.Link.Incoming?.id ?? 0),
+            AskTrade = id => conn?.Reducers.AskTrade(id),
+            AnswerTrade = yes => trade.Link.Answer(yes),
+            InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            OpenChat = social.OpenChat,
+        };
+        AddChild(playerMenu);
+        var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
+        cameraDrag.Clicked += playerMenu.Clicked;
+        AddChild(cameraDrag);
         RegisterUse();
         cameraRig.Camera.MakeCurrent();
         if (CeramicsDemo.Wanted) view.AddChild(new CeramicsDemo(terrain, me));
