@@ -37,9 +37,11 @@ public partial class JournalPanel : Control
         MouseFilter = MouseFilterEnum.Ignore;
         Visible = false;
         Modulate = new Color(1, 1, 1, 0);
+        Panels.Centre(this, () => { if (IsOpen) Toggle(); });
 
         var page = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        page.AddThemeStyleboxOverride("panel", Box(new Color(0.09f, 0.10f, 0.08f, 0.82f), 18, 26));
+        // The shared window look (ui/Ui.cs, ui-25).
+        page.AddThemeStyleboxOverride("panel", Box(Ui.Frame, Ui.Corner, 20));
         page.CustomMinimumSize = new Vector2(860, 520);
         var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -51,7 +53,7 @@ public partial class JournalPanel : Control
         page.AddChild(rows);
 
         var header = new HBoxContainer();
-        header.AddChild(Text("Journal", 26, Ink));
+        header.AddChild(Text("Journal", Ui.TitleSize, Ink));
         header.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         header.AddChild(Text("J to close", 14, Faint));
         rows.AddChild(header);
@@ -91,6 +93,7 @@ public partial class JournalPanel : Control
 
     public void Toggle()
     {
+        if (!IsOpen) Panels.Opening(this);
         IsOpen = !IsOpen;
         // Closing clears the marks; Journal redraws after toggling.
         if (!IsOpen) Fresh.Clear();

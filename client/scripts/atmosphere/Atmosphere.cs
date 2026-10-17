@@ -11,7 +11,7 @@ namespace LifeGame;
 //
 // Preview keys in debug builds (only change what you see and hear): hold F5 to
 // fast-forward time, F6 to cycle rain / clear / the server's weather, M to mute or unmute music.
-// Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5
+// Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5 --smoke-signal=1
 // --day-minutes=4 (a shorter day, for watching the whole cycle), and
 // --debug-position=x,z to hold the player somewhere for screenshots.
 public partial class Atmosphere : Node3D
@@ -53,6 +53,7 @@ public partial class Atmosphere : Node3D
     public readonly SheepVoices Sheep = new();
     // The same for red deer: a bark when a herd bolts, hoof thuds, and stags roaring at autumn dusk (audio-4).
     public readonly DeerVoices Deer = new();
+    public readonly HenVoices Hens = new();
 
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
@@ -124,8 +125,10 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
+        ReadySignals();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -180,12 +183,17 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectImpacts(conn);
         ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
-        conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
-        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
+        conn.Db.Animal.OnUpdate += (_, was, a) =>
+        {
+            HearAnimal(a);
+            if (a.Eggs > was.Eggs && AnimalDefs.Get((byte)a.Species).Model == "hen") Hens.Laid(a.X, a.Z);
+        };
+        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); Hens.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
         conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
         // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
@@ -198,9 +206,10 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
+            .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
+        ToolSounds.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -294,6 +303,8 @@ public partial class Atmosphere : Node3D
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
             Deer.RoarTime = StagRoarTime();
             Deer.Tick(dt, focus, camera.GlobalBasis.X);
+            Hens.NightTime = Mathf.SmoothStep(0.7f, 0.85f, timeOfDay < 0f ? 0.5f : timeOfDay) + Mathf.SmoothStep(0.3f, 0.2f, timeOfDay < 0f ? 0.5f : timeOfDay);
+            Hens.Tick(dt);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
@@ -306,6 +317,7 @@ public partial class Atmosphere : Node3D
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
+        UpdateSignals(dt, focus, Night);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
@@ -316,6 +328,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
@@ -324,6 +337,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
+            ToolSounds.Tick(dt);
         }
     }
 
@@ -456,7 +470,7 @@ public partial class Atmosphere : Node3D
     void FireSound(Vector3 listener, Vector3 right)
     {
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-        float total = 0f, nearest = 0f, pan = 0f;
+        float total = 0f, nearest = 0f, pan = 0f, stoke = 0f;
         foreach (var (x, z, fuelUntil) in fires.Values)
         {
             float left = (fuelUntil - now) / 1_000_000f;
@@ -469,11 +483,14 @@ public partial class Atmosphere : Node3D
             if (g > nearest)
             {
                 nearest = g;
+                // Stoked: fuel left against what a fire holds at most (a well-fed fire roars).
+                stoke = Mathf.Clamp(left / Fires.MaxSeconds, 0f, 1f);
                 pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
             }
         }
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
+        sound.FireStoke = stoke;
     }
 
     // How much of night it is, 0 full day to 1 full night, for other lanes that

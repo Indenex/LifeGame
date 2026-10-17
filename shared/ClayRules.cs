@@ -138,7 +138,7 @@ namespace LifeGame.Shared
         public static string FormName(ClayForm form) => form switch
         {
             ClayForm.PinchPot => "pinch pot",
-            ClayForm.CoilPot => "coil pot",
+            ClayForm.CoilPot => "clay pot",
             ClayForm.StorageJar => "storage jar",
             ClayForm.Lamp => "lamp",
             ClayForm.Tile => "roof tile",
@@ -186,12 +186,8 @@ namespace LifeGame.Shared
             _ => Item.PinchPot,
         };
 
-        public static Item? FilledItem(Item empty) => empty switch
-        {
-            Item.PinchPot => Item.PinchPotOfWater,
-            Item.CoilPot => Item.CoilPotOfWater,
-            _ => null,
-        };
+        // What an empty water container becomes when filled (pots and the waterskin): Foods.Pots.
+        public static Item? FilledItem(Item empty) => Foods.FilledFrom(empty);
 
         // Cooking in a pot (ceramics-7). A coil pot of water and food set by a burning
         // fire simmers for this long, then waits, never burning (D-081). It keeps
