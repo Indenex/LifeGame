@@ -1233,3 +1233,19 @@ Owner: Claims.
 ## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
 **Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
 **Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
+
+## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
+**Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
+**Who:** Justin: "Every slot equips".
