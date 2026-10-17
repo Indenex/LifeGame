@@ -11,6 +11,9 @@ namespace LifeGame.Shared
         // DeadwoodSeconds instead. Justin chose felling (D-060).
         public const bool Felling = true;
         public const int LogsPerTree = 3;
+        // A tree coming down also gives branches and bark fiber (survival-38, Justin): about a campfire's worth,
+        // so a felled tree feels rewarding and sticks and fiber from the ground still matter (D-075).
+        public const uint FellSticks = 3, FellFiber = 2;
         public const float RegrowSeconds = 2 * 60 * 60;
 
         // How a felled tree comes back over RegrowSeconds, as a fraction p of that time

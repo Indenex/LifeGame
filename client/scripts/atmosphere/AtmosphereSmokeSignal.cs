@@ -251,7 +251,8 @@ public partial class Atmosphere
                         break;
                     }
             if (indoors) continue;
-            float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
+            // A signal fire (survival-38) holds its column until its last seconds, then fades with the flame.
+            float signal = Math.Max(signalFires.Contains(id) ? Mathf.Clamp(left / 10f, 0f, 1f) : Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
             if (signal < 0.01f) continue;
             float ground = terrain?.TileHeight(World.CellOf(f.X), World.CellOf(f.Z)) ?? World.BaseHeight(World.CellOf(f.X), World.CellOf(f.Z));
             signalPicks.Add((id, new Vector3(f.X, ground + 0.9f, f.Z), signal, dist, false));

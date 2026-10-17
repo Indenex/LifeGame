@@ -108,6 +108,8 @@ namespace LifeGame.Shared
         // The skill (a Specialization id) this process trains. It wins over the guess from the
         // id when set; null = inferred from the id by Skills.SpecFor.
         public string? Skill;
+        // A fire this lights is a signal fire (survival-38): burns briefly, puts up a thick smoke column.
+        public bool Signal;
     }
 
     public static class Processes
@@ -150,6 +152,14 @@ namespace LifeGame.Shared
                 Id = "fire.hand_drill", Name = "Hand-drill fire", Doing = "Nursing an ember into flame", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Tinder) },
                 Seconds = 4, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.35f,
+            },
+            // A bundle of fiber lit to smoke (survival-38, Justin): a signal fire burns out in minutes
+            // and puts up a thick, tall column of smoke to be seen from far off (Atmosphere).
+            new ProcessDef
+            {
+                Id = "fire.signal", Name = "Light a signal fire", Doing = "Lighting a bundle of fiber", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.Fiber, Fires.SignalFiber) },
+                Seconds = 4, Minigame = Minigame.Drill, Outcome = Outcome.Fire, FailBelow = 0.35f, Signal = true,
             },
             new ProcessDef
             {
@@ -486,6 +496,10 @@ namespace LifeGame.Shared
         // Fuel stacks up to this many seconds ahead. The cap grows with the feeder's
         // Firecraft rank, from MaxSeconds at rank 0 to MasterMaxSeconds at Master (D-090).
         public const float MaxSeconds = 20 * 60;
+        // A signal fire (survival-38, lane default): a bundle of fiber, burning a fifth as long as a
+        // campfire. It can't be fed, and sends its smoke up the whole time.
+        public const uint SignalFiber = 2;
+        public const float SignalSeconds = 4 * 60;
         public const float MasterMaxSeconds = 40 * 60;
         public static float MaxSecondsFor(int firecraftRank) =>
             Progression.Effect(EffectKind.FireSeconds, firecraftRank);
