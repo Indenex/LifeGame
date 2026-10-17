@@ -80,6 +80,10 @@ public partial class Avatar : Node3D
     }
     readonly ushort[] worn = new ushort[2];
 
+    // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
+    public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
+    public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
+
     public void SetPlayerName(string name) => nameplate.Text = name;
 
     // Claims tints a name red while that player is marked for striking someone down.

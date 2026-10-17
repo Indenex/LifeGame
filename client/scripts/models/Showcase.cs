@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "materials" or "painted" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -41,6 +41,7 @@ public partial class Showcase : Node3D
             else if (view == "devices") Devices();
             else if (view == "materials") Materials();
             else if (view == "painted") PaintedScene();
+            else if (view == "crowd") Crowd();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -637,6 +638,25 @@ public partial class Showcase : Node3D
         camera.LookAtFromPosition(new Vector3(2.5f, 7.5f, 11f), new Vector3(0, 0.8f, -2f), Vector3.Up);
         if (!args.ContainsKey("time-of-day")) return;
         AddChild(new Atmosphere());
+    }
+
+    // Players side by side, each with their own look from their player id (skin, hair,
+    // cut, beard), the first in the default look.
+    void Crowd()
+    {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "0"), System.Globalization.CultureInfo.InvariantCulture));
+        for (int i = 0; i < 10; i++)
+        {
+            var look = i == 0 ? HumanFigure.Appearance.Default : HumanFigure.Appearance.For((uint)i);
+            var figure = PlayerModel.Build(look);
+            figure.Position = new Vector3((i % 5 - 2f) * 0.9f, 0, (i / 5) * -1.6f);
+            figure.Rotation = new Vector3(0, yaw + (i % 2 == 0 ? -0.35f : 0.35f), 0);
+            AddChild(figure);
+            PlayerModel.Wear(figure, PlayerModel.Body, (ushort)(i % 3 == 1 ? 200 : 0));
+        }
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.2f, 5.2f), new Vector3(0, 1.0f, -0.8f), Vector3.Up);
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
