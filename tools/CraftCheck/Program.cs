@@ -483,18 +483,42 @@ if (runStations)
             conn.Reducers.StartCraft("chop.log", 0);
             Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
             if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
-            float awayX = x - trunk0.X, awayZ = z - trunk0.Z;
-            float awayLen = MathF.Max(MathF.Sqrt(awayX * awayX + awayZ * awayZ), 0.01f);
-            awayX /= awayLen; awayZ /= awayLen;
+            // Walk off along a line the ground leaves free (no boulder, trunk, water or steep cell on it), in
+            // steps, reading where the server really has us: a raw line into an obstacle would leave the player
+            // in reach and the check would time out for the wrong reason.
+            (float X, float Z) ServerAt() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } sp ? (sp.X, sp.Z) : (x, z);
+            float Away((float X, float Z) at) => MathF.Sqrt((at.X - trunk0.X) * (at.X - trunk0.X) + (at.Z - trunk0.Z) * (at.Z - trunk0.Z));
             float startX = x, startZ = z;
-            for (int step = 1; step <= 6 && conn.Db.MyCraftJob.Count > 0; step++)
+            (float X, float Z) goal = (startX, startZ);
+            for (int k = 0; k < 12; k++)
             {
-                x = startX + awayX * 0.5f * step;
-                z = startZ + awayZ * 0.5f * step;
+                float dirAng = k * MathF.Tau / 12f;
+                var cand = (X: startX + MathF.Cos(dirAng) * 4f, Z: startZ + MathF.Sin(dirAng) * 4f);
+                if (Away(cand) < Away((startX, startZ)) + 2.5f) continue;     // must lead away from the tree
+                var stand = ground.Stand(cand.X, cand.Z);
+                if (MathF.Abs(stand.X - cand.X) > 0.05f || MathF.Abs(stand.Z - cand.Z) > 0.05f) continue;
+                if (ground.Route(startX, startZ, cand.X, cand.Z).Count > 2) continue;   // a detour: not a straight, free line
+                goal = cand;
+                break;
+            }
+            if (goal == (startX, startZ)) Fail($"no free line away from the tree at ({trunk0.X:F1}, {trunk0.Z:F1}) from ({startX:F1}, {startZ:F1}): {ground.Describe(startX, startZ)}");
+            for (int step = 1; step <= 10 && conn.Db.MyCraftJob.Count > 0; step++)
+            {
+                float f = MathF.Min(1f, step * 0.5f / 4f);
+                x = startX + (goal.X - startX) * f;
+                z = startZ + (goal.Z - startZ) * f;
                 conn.Reducers.Move(x, z, 0f);
                 Pump(() => false, 0.25f, null);
             }
-            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the player walked off");
+            if (conn.Db.MyCraftJob.Count > 0)
+            {
+                var at = ServerAt();
+                Console.WriteLine($"Walk-away: bot ({x:F1}, {z:F1}), server ({at.X:F1}, {at.Z:F1}), tree ({trunk0.X:F1}, {trunk0.Z:F1}), {Away(at):F1} m from it, goal ({goal.X:F1}, {goal.Z:F1})");
+            }
+            {
+                var at = ServerAt();
+                Pump(() => conn.Db.MyCraftJob.Count == 0, 5, $"the chop to stop when the player walked off (server has the bot at ({at.X:F1}, {at.Z:F1}), {Away(at):F1} m from the tree at ({trunk0.X:F1}, {trunk0.Z:F1}); started from ({startX:F1}, {startZ:F1}))");
+            }
             Pump(() => false, 3f, null);
             if (CountOf(Item.Log) != logsBefore) Fail("a chop the player walked away from still gave a log");
             if (conn.Db.CraftWork.PlayerId.Find(myId) != null) Fail("the work row stayed after the player walked away");
