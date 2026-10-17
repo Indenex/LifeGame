@@ -21,6 +21,9 @@ public partial class Terrain : Node3D
 
     static Mesh? trunkMesh, leafyMesh, pineMesh, tuftMesh;
 
+    // The old broadleaf canopy (birches, landmark trees), for Showcase.
+    internal static Mesh LeafyCanopy { get { EnsureMeshes(); return leafyMesh!; } }
+
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
     // Cells whose clearing is drawn by something else (TreeFall), so the chunk shows
