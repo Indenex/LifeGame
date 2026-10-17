@@ -214,6 +214,7 @@ public partial class Atmosphere : Node3D
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
         ToolSounds.Connect(conn);
+        RoastSounds.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -344,6 +345,7 @@ public partial class Atmosphere : Node3D
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
             ToolSounds.Tick(dt);
+            RoastSounds.Tick(dt);
         }
     }
 
