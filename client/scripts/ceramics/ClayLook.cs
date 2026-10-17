@@ -159,8 +159,8 @@ public static class ClayLook
     }
 
     // The painted light (painted-8, D-313/D-319): pots are lit in the same soft shade, mid and lit
-    // bands as every other painted thing (Painted.Light), with the shade leaning violet, a faint
-    // ink edge, and only a whisper of grain so the clay reads smooth and clean.
+    // bands as every other painted thing (Painted.Light), with the shade leaning violet, the
+    // sky's rim light (Painted.Rim), a faint ink edge, and only a whisper of grain so the clay reads smooth and clean.
     static string F(float v) => v.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
 
     static Shader Shader => shader ??= new Shader
@@ -188,6 +188,7 @@ public static class ClayLook
             uniform vec2 slip_rim = vec2(0.256, 0.03);
             uniform vec3 shade_tint : source_color = vec3(0.74, 0.72, 0.9);
             uniform float ink_edge = 0.5;
+            {{Painted.RimUniform}}
             const float BAND_SOFT = {{F(Painted.Smooth.BandSoft)}};
             const float BAND_BREAK = {{F(Painted.Smooth.BandBreak)}};
             varying float dab;
@@ -316,6 +317,7 @@ public static class ClayLook
             void light() {
                 float shade = 1.0;
             {{Painted.Light}}
+            {{Painted.Rim}}
                 // Wet clay still glistens: a soft highlight that fades as it dries.
                 vec3 half_v = normalize(LIGHT + VIEW);
                 float shine = pow(clamp(dot(NORMAL, half_v), 0.0, 1.0), mix(8.0, 48.0, wetness));

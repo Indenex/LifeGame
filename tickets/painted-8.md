@@ -15,6 +15,7 @@ Ceramics' colours and marks are unchanged. Justin sees pots that sit with the ro
 
 ## Progress log
 - 2026-10-17: ClayLook shader got a light() (Painted.Light plus a wet highlight), an ink edge, a top gradient, and less grain. Added the Showcase `pots` view. Local build has 0 errors; before/after rendered.
+- 2026-10-17: merged main (#620); pots also take the sky rim light (Painted.Rim); builds, renders fine.
 
 ## Open questions / blockers
 - Ceramics lane owns ClayLook.cs; told via the PM. Shading is a little paler than before. If Justin wants more contrast, the shade_tint uniform or Painted.Smooth is the knob.
