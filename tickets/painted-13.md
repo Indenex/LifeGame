@@ -1,7 +1,7 @@
 # painted-13: Painted ghosts follow env-25
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-13-ghosts (stacked on painted-12, #642)
 PR: #661
 

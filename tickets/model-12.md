@@ -1,7 +1,7 @@
 # model-12: Sundial model
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-12-sundial-on-hb (one commit on House building's claude/house-building-8ueqz2-sundial; House building merges it)
 PR: (House building's sundial PR)
 

@@ -1,7 +1,7 @@
 # model-32: Fern variety (D-166)
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-32-fern-variety
 PR: #771
 

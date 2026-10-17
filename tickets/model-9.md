@@ -1,7 +1,7 @@
 # model-9: Stone-ringed hearth model
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-9-stone-hearth
 PR: (opening)
 

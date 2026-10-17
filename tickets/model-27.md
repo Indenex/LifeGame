@@ -1,7 +1,7 @@
 # model-27: World check of rabbits and hazel bushes
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-27-wildlife
 PR: (see below)
 

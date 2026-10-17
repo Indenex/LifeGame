@@ -1,7 +1,7 @@
 # model-25: Icon pass 3 (clay-working items)
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-25-clay-items
 PR: (see below)
 
