@@ -75,6 +75,7 @@ public partial class Main : Node3D
         // First, so it sees every window built after it (the --warm prototype, D-313).
         AddChild(new WarmLook());
         AddChild(new Bounce());
+        AddChild(new Mover());
         // ui-47: a soft "Waking up…" veil until you stand in the world.
         // The veil gives way to the world, or to the character menu when a login has characters (ui-39).
         AddChild(new WakeVeil { Done = () => spawned || characterMenu.IsOpen });

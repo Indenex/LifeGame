@@ -43,6 +43,8 @@ public partial class FriendWay : CanvasLayer
         view.GrowHorizontal = Control.GrowDirection.Both;
         view.Size = new Vector2(Width, Height);
         AddChild(view);
+        // ui-85: Alt and drag moves it; placed here each frame, so it adds the offset itself.
+        Mover.Hud(view, "way", ownerPlaces: true);
         if (Preview) { Target = uint.MaxValue; name = "Mara"; }
     }
 
@@ -85,7 +87,7 @@ public partial class FriendWay : CanvasLayer
         alpha = Mathf.MoveToward(alpha, show ? 1f : 0f, (float)delta * 3f);
         view.Modulate = new Color(1, 1, 1, alpha);
         view.Visible = alpha > 0.01f;
-        view.Position = new Vector2(-Width / 2, 10 + SundialArc.Room);
+        view.Position = new Vector2(-Width / 2, 10 + SundialArc.Room) + Mover.Offset("way");
         if (view.Visible) view.QueueRedraw();
     }
 

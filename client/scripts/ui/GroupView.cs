@@ -22,6 +22,7 @@ public partial class GroupView : CanvasLayer
 
     DbConnection? conn;
     VBoxContainer list = null!;
+    PanelContainer frame = null!;
     Label asked = null!;
     Label3D? cue;
     uint cueFor;
@@ -58,10 +59,17 @@ public partial class GroupView : CanvasLayer
 
         list = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         list.AddThemeConstantOverride("separation", 2);
-        list.SetAnchorsPreset(Control.LayoutPreset.CenterLeft);
-        list.GrowVertical = Control.GrowDirection.Both;
-        list.Position = new Vector2(18, -60);
-        root.AddChild(list);
+        // ui-85 (Justin): its own small parchment window, like the Friends window, so it reads
+        // over bright grass. A HUD piece: Alt and drag moves it.
+        frame = Ui.Window(list);
+        frame.MouseFilter = Control.MouseFilterEnum.Ignore;
+        frame.SetAnchorsPreset(Control.LayoutPreset.CenterLeft);
+        frame.GrowHorizontal = Control.GrowDirection.End;
+        frame.GrowVertical = Control.GrowDirection.Both;
+        frame.Position = new Vector2(18, -60);
+        frame.Visible = false;
+        Mover.Hud(frame, "group");
+        root.AddChild(frame);
 
         asked = new Label { HorizontalAlignment = HorizontalAlignment.Center };
         Hud.Soft(asked, 16, 0.92f);
@@ -99,10 +107,11 @@ public partial class GroupView : CanvasLayer
     void Fill(System.Collections.Generic.IReadOnlyList<(uint Id, string Name, bool Here, string? Far)> members)
     {
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
+        frame.Visible = members.Count > 0;
         if (members.Count == 0) return;
 
         var title = Hud.Text("Your group", 14);
-        title.Modulate = new Color(1, 1, 1, 0.6f);
+        title.Modulate = new Color(1, 1, 1, 0.65f);
         list.AddChild(title);
         foreach (var m in members)
         {
@@ -115,6 +124,7 @@ public partial class GroupView : CanvasLayer
                 string who = m.Name;
                 var row = ControlsPage.TextButton(text, () => { ShowWay(id, who, () => Where(id)); shown = ""; });
                 row.AddThemeFontSizeOverride("font_size", 15);
+                row.AddThemeConstantOverride("outline_size", 0);
                 row.Alignment = HorizontalAlignment.Left;
                 row.MouseFilter = Control.MouseFilterEnum.Stop;
                 row.FocusMode = Control.FocusModeEnum.None;
@@ -123,13 +133,14 @@ public partial class GroupView : CanvasLayer
                 continue;
             }
             var name = Hud.Text(text, 15);
-            Hud.Soft(name, 15, m.Here ? 0.9f : 0.45f);
+            name.Modulate = new Color(1, 1, 1, m.Here ? 0.9f : 0.5f);
             list.AddChild(name);
         }
         var leave = ControlsPage.TextButton("Leave group", () => conn?.Reducers.LeaveGroup());
         leave.AddThemeFontSizeOverride("font_size", 13);
         leave.Modulate = new Color(1, 1, 1, 0.6f);
         leave.MouseFilter = Control.MouseFilterEnum.Stop;
+        leave.AddThemeConstantOverride("outline_size", 0);
         list.AddChild(leave);
     }
 

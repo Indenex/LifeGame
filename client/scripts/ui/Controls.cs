@@ -61,6 +61,9 @@ public static class Controls
         // hint waits until someone first comes near (ui-75).
         new("player_menu", None, "Trade, whisper or invite someone (rest on them to see who they are)",
             "{key} to trade, whisper, or invite them to your town or group", OnRequest: true, Fixed: true, KeyText: "{click} a player"),
+        // ui-85: windows drag by their top edge; HUD pieces with Alt held. Fixed, shown in F1.
+        new("move_ui", None, "Move a window by its top edge; hold Alt to move the rings, sundial and other HUD pieces",
+            Fixed: true, KeyText: "Drag"),
         // anim-12: sit down, press again to lie down; walking gets you up (Animation's Avatar).
         // ui-48 (D-323): hold for the emote wheel, let go on one; a tap leaves it open to click.
         new("emote", new[] { Key.Q }, "Wave, cheer, dance or bow (hold, point, let go)", "Hold {key} for a wave, a cheer, a dance or a bow", OnRequest: true, Name: "Emotes (hold)"),

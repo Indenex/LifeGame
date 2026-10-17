@@ -57,6 +57,8 @@ public partial class Hints : CanvasLayer
         label.CustomMinimumSize = new Vector2(380, 0);
         panel.Modulate = new Color(1, 1, 1, 0);
         root.AddChild(panel);
+        // ui-85: Alt and drag moves the hint corner while a hint shows.
+        Mover.Hud(panel, "hints");
     }
 
     public override void _Input(InputEvent e)
