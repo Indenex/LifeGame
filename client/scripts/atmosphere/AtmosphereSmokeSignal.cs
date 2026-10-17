@@ -6,6 +6,10 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
+// NOTE (bugfix-72): ordinary campfires no longer put up this column, however stoked
+// (CanSignal below); it waits for the signal fire's own kind. Only --smoke-signal
+// raises a column now. What follows is how a column looks when one is up.
+//
 // Smoke signals (atmosphere-32, from a playtester via Justin): a fire stoked past
 // three quarters of the most fuel it can hold puts up a tall, thick, soft column of
 // smoke, 30 m or more, that leans with the wind and spreads at the top, so you can
@@ -231,6 +235,11 @@ public partial class Atmosphere
     // AtmosphereSound's (HearFireCaps), shared with the fire's sound.
     float FireMost(ulong id) => fireCaps.TryGetValue(id, out var cap) && cap > 0f ? cap : Fires.MaxSeconds;
 
+    // Whether a fire puts up the column. An ordinary campfire does not, however stoked (Justin,
+    // bugfix-72): the signal fire is its own thing, and its fire kind switches this on. Until
+    // then only --smoke-signal raises a column.
+    static bool CanSignal(ulong fireId) => false;
+
     // The stoked fires near the player, nearest first, a few at most.
     void FindSignals(Vector3 focus)
     {
@@ -253,6 +262,7 @@ public partial class Atmosphere
                         break;
                     }
             if (indoors) continue;
+            if (!CanSignal(id) && signalForce <= 0f) continue;
             float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
             if (signal < 0.01f) continue;
             float ground = terrain?.TileHeight(World.CellOf(f.X), World.CellOf(f.Z)) ?? World.BaseHeight(World.CellOf(f.X), World.CellOf(f.Z));
@@ -264,6 +274,7 @@ public partial class Atmosphere
             foreach (var row in homesConn.Db.SignalFire.Iter())
             {
                 if (fires.ContainsKey(row.FireId)) continue;
+                if (!CanSignal(row.FireId) && signalForce <= 0f) continue;
                 float dist = new Vector2(row.X - focus.X, row.Z - focus.Z).Length();
                 if (dist > SignalFarReach) continue;
                 float left = (row.Until.MicrosecondsSinceUnixEpoch - now) / 1_000_000f;
