@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-11-dusk (stacked on painted-12, #642)
-PR: (opening)
+PR: #649
 
 ## Goal
 Front-lit painted props washed out to a pale peach-white at dusk. The cause was the painted light's low-sun lift, which raised every band on top of Atmosphere's bright golden light. The PM approved the fix after the faces.
