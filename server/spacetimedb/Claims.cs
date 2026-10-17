@@ -209,10 +209,10 @@ public static partial class Module
             {
                 foreach (var other in ctx.Db.Claim.ByChunk.Filter((cx + dx, cz + dz)))
                     if (IsStanding(ctx, other) && Closer(other.X - x, other.Z - z, minGap))
-                        throw new Exception($"Too close to {other.OwnerName}'s claim");
+                        throw new Exception($"Too close to {other.OwnerName}'s claim. Move {MoveAway(other.X - x, other.Z - z, minGap)} m further from their marker, or the edges just touch at {minGap:0} m");
                 foreach (var site in ctx.Db.Structure.ByChunk.Filter((cx + dx, cz + dz)))
                     if (site.Kind == StructureKind.ClaimMarker && !site.Complete && Closer(site.X - x, site.Z - z, minGap))
-                        throw new Exception("Too close to another claim marker being built");
+                        throw new Exception($"Too close to another claim marker being built. Move {MoveAway(site.X - x, site.Z - z, minGap)} m further away");
             }
     }
 
@@ -261,6 +261,10 @@ public static partial class Module
         if (s.Kind == StructureKind.ClaimMarker && ctx.Db.Claim.StructureId.Find(s.Id) is { } claim)
             RemoveClaim(ctx, claim);
     }
+
+    // How many whole metres further from the other marker a spot must go to be allowed.
+    static int MoveAway(float dx, float dz, float distance) =>
+        Math.Max(1, (int)MathF.Ceiling(distance - MathF.Sqrt(dx * dx + dz * dz)));
 
     static bool Closer(float dx, float dz, float distance) => dx * dx + dz * dz < distance * distance;
 

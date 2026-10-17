@@ -173,7 +173,16 @@ public static class WorkMotions
 
     // --- Quick actions (anim-4): played once, blended in and out by PlayerAnimator ---
 
-    public static bool IsAct(WorkMotion m) => m is WorkMotion.Drink or WorkMotion.Eat or WorkMotion.Pluck or WorkMotion.PickUp;
+    public static bool IsAct(WorkMotion m) => m >= WorkMotion.Drink && m <= WorkMotion.Flinch;
+
+    // How a strike is thrown, from what is in the hand.
+    public enum StrikeStyle : byte { Fist, Thrust, Slash }
+
+    public static StrikeStyle StyleOf(Item? weapon) =>
+        weapon is not { } w || !Items.IsKnown((ushort)w) ? StrikeStyle.Fist
+        : Items.Def(w).Tags.HasFlag(ItemTags.Piercing) ? StrikeStyle.Thrust
+        : Items.Def(w).Tags.HasFlag(ItemTags.Cutting) ? StrikeStyle.Slash
+        : StrikeStyle.Fist;
 
     // How long one plays, in seconds, fades included.
     public static float ActSeconds(WorkMotion m) => m switch
@@ -182,6 +191,13 @@ public static class WorkMotions
         WorkMotion.Eat => 1.6f,
         WorkMotion.Pluck => 1.0f,
         WorkMotion.PickUp => 0.45f,
+        WorkMotion.Strike => 0.6f,
+        WorkMotion.Shoot => 1.0f,
+        WorkMotion.Dig => 0.9f,
+        WorkMotion.Shear => 1.4f,
+        WorkMotion.Butcher => 1.6f,
+        WorkMotion.Feed => 0.9f,
+        WorkMotion.Flinch => 0.35f,
         _ => 0f,
     };
 
@@ -192,22 +208,108 @@ public static class WorkMotions
         WorkMotion.Drink => (2.3f, 0.3f),
         WorkMotion.Eat => (1.15f, 0.15f),
         WorkMotion.Pluck => (0.85f, 0f),
+        WorkMotion.Shear => (1.2f, 0.2f),
+        WorkMotion.Butcher => (1.4f, 0.2f),
         _ => (ActSeconds(m), 0f),
     };
 
     // Seconds to blend in and out; a pick-up is quick and light so it never slows play.
-    public static float ActFade(WorkMotion m) => m == WorkMotion.PickUp ? 0.12f : 0.25f;
+    public static float ActFade(WorkMotion m) => m switch
+    {
+        WorkMotion.PickUp or WorkMotion.Flinch => 0.08f,
+        WorkMotion.Strike => 0.1f,
+        _ => 0.25f,
+    };
 
     // Whether the legs take part. A pick-up bends only the back and arms (with a slight
     // knee dip), so it plays over walking; the others stop when you walk off.
-    public static bool ActUsesLegs(WorkMotion m) => m != WorkMotion.PickUp;
+    // Strikes, shots, feeding a fire and flinching are upper-body too.
+    public static bool ActUsesLegs(WorkMotion m) =>
+        m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch);
+
+    // Which hand holds the action's item: a bow is held in the left.
+    public static bool ActItemInLeft(WorkMotion m) => m == WorkMotion.Shoot;
 
     // The action's pose at t seconds in. The fades come from PlayerAnimator.
-    public static void ActPose(Pose p, WorkMotion m, float t, float legLength)
+    public static void ActPose(Pose p, WorkMotion m, float t, float legLength, StrikeStyle style = StrikeStyle.Fist)
     {
         p.Clear();
         switch (m)
         {
+            case WorkMotion.Strike:
+                Strike(p, t, style);
+                break;
+            case WorkMotion.Shoot:
+            {
+                // Turn side-on, bow arm straight out at the target, draw the string back to
+                // the cheek, hold a moment, loose, and the drawing hand flies back.
+                float up = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 0.25f, 0f, 1f));
+                float draw = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.15f) / 0.4f, 0f, 1f));
+                float loose = Mathf.Clamp((t - 0.72f) / 0.08f, 0f, 1f);
+                p[Joint.Hips].Y = 0.5f * up;
+                p[Joint.Spine].Y = 0.35f * up;
+                p[Joint.Neck].Y = -0.8f * up;
+                Arm(p, true, -1.5f * up, -0.15f * up, -0.1f);
+                Arm(p, false, Mathf.Lerp(-0.4f, -1.45f, up), Mathf.Lerp(0.1f, 0.45f, draw) - 0.25f * loose, Mathf.Lerp(-0.6f, -2.3f, draw) + 1.1f * loose);
+                break;
+            }
+            case WorkMotion.Dig:
+            {
+                // Feet apart and knees bent, both hands drive the stick (or the fingers) down
+                // into the earth and lever it back.
+                float stab = Mathf.Sin(Mathf.Clamp(t / 0.9f, 0f, 1f) * Mathf.Pi);
+                float lever = Mathf.Sin(Mathf.Clamp((t - 0.35f) / 0.45f, 0f, 1f) * Mathf.Pi);
+                p.HipsOffset = new Vector3(0, -0.14f, -0.05f);
+                p[Joint.HipL] = new Vector3(-0.55f, 0, 0.12f);
+                p[Joint.HipR] = new Vector3(-0.55f, 0, -0.12f);
+                p[Joint.KneeL].X = 0.95f;
+                p[Joint.KneeR].X = 0.95f;
+                p[Joint.FootL].X = -0.4f;
+                p[Joint.FootR].X = -0.4f;
+                p[Joint.Spine].X = 0.6f + 0.15f * stab;
+                p[Joint.Neck].X = -0.15f;
+                Arm(p, true, -0.9f - 0.15f * stab + 0.35f * lever, -0.25f, -0.5f + 0.35f * stab);
+                Arm(p, false, -0.9f - 0.15f * stab + 0.35f * lever, 0.25f, -0.5f + 0.35f * stab);
+                break;
+            }
+            case WorkMotion.Shear:
+            case WorkMotion.Butcher:
+            {
+                // Down on one knee at the animal: the left hand holds the fleece or the hide
+                // flat, the right works the blade in short strokes.
+                Kneel(p, legLength);
+                bool butcher = m == WorkMotion.Butcher;
+                float stroke = Mathf.Sin(t * (butcher ? 7f : 10f)) * Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.2f) / 0.2f, 0f, 1f));
+                p[Joint.Spine].X = butcher ? 0.7f : 0.45f;
+                p[Joint.Neck].X = 0.15f;
+                Arm(p, true, butcher ? -1.0f : -0.85f, -0.2f, -0.5f);
+                Arm(p, false, (butcher ? -0.95f : -0.8f) + 0.12f * stroke, 0.15f + 0.1f * stroke, -0.7f - 0.15f * stroke);
+                break;
+            }
+            case WorkMotion.Feed:
+            {
+                // A small bend and an underhand toss onto the fire.
+                float swing = Mathf.Clamp(t / 0.6f, 0f, 1f);
+                float back = Mathf.Sin(Mathf.Min(swing / 0.45f, 1f) * Mathf.Pi * 0.5f) * (1f - Mathf.SmoothStep(0.45f, 0.8f, swing));
+                float toss = Mathf.SmoothStep(0.4f, 0.8f, swing) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.6f) / 0.3f, 0f, 1f)));
+                p[Joint.Spine].X = 0.3f * (back + toss);
+                p.HipsOffset = new Vector3(0, -0.04f * (back + toss), 0);
+                p[Joint.KneeL].X = 0.2f * (back + toss);
+                p[Joint.KneeR].X = 0.2f * (back + toss);
+                Arm(p, false, 0.45f * back - 1.1f * toss, 0.05f, -0.3f);
+                break;
+            }
+            case WorkMotion.Flinch:
+            {
+                // Rocked back by a blow: the chest and head snap back, arms jerk up.
+                float hit = t < 0.06f ? t / 0.06f : Mathf.Exp(-(t - 0.06f) * 10f);
+                p[Joint.Spine].X = -0.25f * hit;
+                p[Joint.Neck].X = -0.3f * hit;
+                p[Joint.Spine].Z = 0.08f * hit;
+                Arm(p, true, -0.5f * hit, -0.1f * hit, -1.0f * hit);
+                Arm(p, false, -0.5f * hit, 0.1f * hit, -1.0f * hit);
+                break;
+            }
             case WorkMotion.Drink:
             {
                 // Down on one knee at the bank, lean out, cup both hands in the water, lift
@@ -270,6 +372,35 @@ public static class WorkMotions
                 Arm(p, true, -0.2f * down, -0.05f, -0.4f * down);
                 break;
             }
+        }
+    }
+
+    // A strike over 0.6 s: a quick wind-up, the blow at about 0.2 s, then recovery.
+    static void Strike(Pose p, float t, StrikeStyle style)
+    {
+        float wind = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 0.14f, 0f, 1f)) * (1f - Mathf.Clamp((t - 0.14f) / 0.06f, 0f, 1f));
+        float blow = Mathf.Clamp((t - 0.14f) / 0.08f, 0f, 1f) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.3f) / 0.3f, 0f, 1f)));
+        // The chest winds against the blow and the weight comes forward into it.
+        p[Joint.Spine] = new Vector3(0.12f * blow, -0.35f * wind + 0.4f * blow, 0);
+        p[Joint.Hips].Y = -0.15f * wind + 0.2f * blow;
+        p.HipsOffset = new Vector3(0, -0.03f * blow, 0.04f * blow);
+        switch (style)
+        {
+            case StrikeStyle.Thrust:
+                // Spear: drawn back at the hip, driven straight out, the left hand guiding.
+                Arm(p, false, Mathf.Lerp(Mathf.Lerp(-0.3f, 0.35f, wind), -1.45f, blow), 0.25f, Mathf.Lerp(Mathf.Lerp(-1.2f, -1.7f, wind), -0.1f, blow));
+                Arm(p, true, Mathf.Lerp(-0.6f, -1.2f, blow), -0.35f, Mathf.Lerp(-1.2f, -0.6f, blow));
+                break;
+            case StrikeStyle.Slash:
+                // Blade: raised high over the right shoulder, cut down and across.
+                Arm(p, false, Mathf.Lerp(Mathf.Lerp(-0.4f, -2.5f, wind), -0.7f, blow), Mathf.Lerp(Mathf.Lerp(0f, -0.4f, wind), 0.55f, blow), Mathf.Lerp(Mathf.Lerp(-0.6f, -1.3f, wind), -0.3f, blow));
+                Arm(p, true, -0.4f, -0.1f, -1.2f);
+                break;
+            default:
+                // Fist: guard up, a straight punch from the right shoulder.
+                Arm(p, false, Mathf.Lerp(-0.6f, -1.5f, blow), Mathf.Lerp(0.2f, 0.25f, blow), Mathf.Lerp(Mathf.Lerp(-2.0f, -2.3f, wind), -0.15f, blow));
+                Arm(p, true, -0.7f, 0.2f, -2.1f);
+                break;
         }
     }
 
