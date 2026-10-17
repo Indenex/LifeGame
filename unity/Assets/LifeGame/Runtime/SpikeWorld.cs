@@ -347,6 +347,7 @@ namespace LifeGame.Spike
         {
             var parent = new GameObject("Godot export");
             spawned.Add(parent);
+            var merged = new Dictionary<(Mesh, int, Material, ShadowCastingMode), (List<Matrix4x4>, List<Vector4>)>();
             foreach (var draw in geo.Scene.A("draws") ?? new List<object>())
             {
                 int meshId = draw.I("mesh", -1);
@@ -376,21 +377,17 @@ namespace LifeGame.Spike
                 int offset = draw.I("offset", 0);
                 if (draw.Get("multimesh") is true || count > 1)
                 {
+                    // Godot keeps one multimesh per chunk; Unity draws fastest with every
+                    // instance of a mesh and material together, so they are merged here.
                     for (int s = 0; s < mats.Length; s++)
                     {
                         if (mats[s] == null) continue;
-                        for (int start = 0; start < count; start += 1023)
+                        var key = (mesh, s, mats[s], shadows);
+                        if (!merged.TryGetValue(key, out var list)) merged[key] = list = (new List<Matrix4x4>(), new List<Vector4>());
+                        for (int i = 0; i < count; i++)
                         {
-                            int n = Mathf.Min(1023, count - start);
-                            var b = new Batch { Mesh = mesh, Submesh = s, Material = mats[s], Shadows = shadows, Matrices = new Matrix4x4[n], Props = new MaterialPropertyBlock() };
-                            var colors = new Vector4[n];
-                            for (int i = 0; i < n; i++)
-                            {
-                                b.Matrices[i] = geo.InstanceMatrix(offset, start + i);
-                                colors[i] = geo.InstanceColor(offset, start + i);
-                            }
-                            b.Props.SetVectorArray("_InstColor", colors);
-                            batches.Add(b);
+                            list.Item1.Add(geo.InstanceMatrix(offset, i));
+                            list.Item2.Add(geo.InstanceColor(offset, i));
                         }
                     }
                 }
@@ -416,6 +413,18 @@ namespace LifeGame.Spike
                     }
                 }
             }
+            foreach (var ((mesh, sub, mat, shadows), (mats4, cols)) in merged)
+                for (int start = 0; start < mats4.Count; start += 1023)
+                {
+                    int n = Mathf.Min(1023, mats4.Count - start);
+                    var b = new Batch
+                    {
+                        Mesh = mesh, Submesh = sub, Material = mat, Shadows = shadows,
+                        Matrices = mats4.GetRange(start, n).ToArray(), Props = new MaterialPropertyBlock(),
+                    };
+                    b.Props.SetVectorArray("_InstColor", cols.GetRange(start, n));
+                    batches.Add(b);
+                }
         }
 
         // The ground around the player from shared/World.cs, over the same chunks Godot drew.

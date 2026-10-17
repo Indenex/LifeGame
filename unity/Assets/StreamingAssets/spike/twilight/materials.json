@@ -1,0 +1,576 @@
+[
+ {
+  "id": 0,
+  "class": "ShaderMaterial",
+  "shader": "shader_00.gdshader",
+  "params": {
+   "top_color": [
+    0.21683557331562,
+    0.261998564004898,
+    0.42612698674202,
+    1.0
+   ],
+   "horizon_color": [
+    0.75353991985321,
+    0.536487996578217,
+    0.440874218940735,
+    1.0
+   ],
+   "ground_color": [
+    0.160549208521843,
+    0.153808444738388,
+    0.145602986216545,
+    1.0
+   ],
+   "sun_color": [
+    0.903999984264374,
+    0.578559994697571,
+    0.343519985675812,
+    0.903999984264374
+   ],
+   "sun_dir": [
+    -0.19388173520565,
+    -0.0602381192147732,
+    0.979173719882965
+   ],
+   "moon_dir": [
+    0.184718355536461,
+    0.309171319007874,
+    -0.93289452791214
+   ],
+   "daylight": 0.050607331097126,
+   "cloud_cover": 0.200000002980232,
+   "cloud_offset": [
+    -477.719909667969,
+    -636.960144042969
+   ],
+   "stars": 0.835465550422668,
+   "clouds": "tex_01.png",
+   "front_dir": [
+    -0.600000023841858,
+    0.0,
+    -0.800000011920929
+   ],
+   "front_cloud": 0.200000002980232,
+   "front_rain": 0.0,
+   "front_amount": 0.0,
+   "rainbow": 0.0,
+   "grade": 1.0,
+   "storm": 0.0,
+   "flash": 0.0,
+   "flash_dir": [
+    0.0,
+    0.242535635828972,
+    -0.970142543315887
+   ]
+  }
+ },
+ {
+  "id": 1,
+  "class": "ShaderMaterial",
+  "shader": "shader_01.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "water_color": [
+    0.140000000596046,
+    0.340000003576279,
+    0.400000005960464,
+    0.899999976158142
+   ],
+   "shallow_color": null,
+   "sky_tint": null
+  }
+ },
+ {
+  "id": 2,
+  "class": "ShaderMaterial",
+  "shader": "shader_02.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0,
+   "sway_height": 1.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 0.449999988079071,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 1.0,
+   "cavity": 0.180000007152557,
+   "see_through": null,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": 1.0
+  }
+ },
+ {
+  "id": 3,
+  "class": "ShaderMaterial",
+  "shader": "shader_03.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0500000007450581,
+   "sway_height": 3.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 0.0,
+   "cavity": 0.0,
+   "see_through": true,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": null,
+   "dabs": "tex_04.png",
+   "shade_col": [
+    0.0900000035762787,
+    0.119999997317791,
+    0.109999999403954,
+    1.0
+   ],
+   "base_col": [
+    0.150000005960464,
+    0.200000002980232,
+    0.170000001788139,
+    1.0
+   ],
+   "lit_col": [
+    0.219999998807907,
+    0.280000001192093,
+    0.219999998807907,
+    1.0
+   ],
+   "ink": null,
+   "bark_dark": null,
+   "bark_lit": null,
+   "shade_tint": null,
+   "warm_tint": null,
+   "dab_size": null,
+   "cone_light": null,
+   "crown_y": 2.55200004577637,
+   "tree_height": 4.40000009536743
+  }
+ },
+ {
+  "id": 4,
+  "class": "ShaderMaterial",
+  "shader": "shader_04.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0500000007450581,
+   "sway_height": 3.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 0.0,
+   "cavity": 0.0,
+   "see_through": true,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": null,
+   "dabs": "tex_04.png",
+   "shade_col": [
+    0.0900000035762787,
+    0.119999997317791,
+    0.109999999403954,
+    1.0
+   ],
+   "base_col": [
+    0.150000005960464,
+    0.200000002980232,
+    0.170000001788139,
+    1.0
+   ],
+   "lit_col": [
+    0.219999998807907,
+    0.280000001192093,
+    0.219999998807907,
+    1.0
+   ],
+   "ink": null,
+   "bark_dark": null,
+   "bark_lit": null,
+   "shade_tint": null,
+   "warm_tint": null,
+   "dab_size": null,
+   "cone_light": null,
+   "crown_y": 2.55200004577637,
+   "tree_height": 4.40000009536743
+  }
+ },
+ {
+  "id": 5,
+  "class": "ShaderMaterial",
+  "shader": "shader_02.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0,
+   "sway_height": 1.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 1.0,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 1.5,
+   "cavity": 0.219999998807907,
+   "see_through": null,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": null
+  }
+ },
+ {
+  "id": 6,
+  "class": "ShaderMaterial",
+  "shader": "shader_05.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "fade_far": 48.0,
+   "stylised": 1.0
+  }
+ },
+ {
+  "id": 7,
+  "class": "ShaderMaterial",
+  "shader": "shader_05.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "fade_far": 0.0,
+   "stylised": 0.0
+  }
+ },
+ {
+  "id": 8,
+  "class": "ShaderMaterial",
+  "shader": "shader_02.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0799999982118607,
+   "sway_height": 3.0,
+   "brush_scale": 0.0900000035762787,
+   "brush_strength": 0.140000000596046,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 1.5,
+   "cavity": 0.300000011920929,
+   "see_through": false,
+   "fade_override": -1.0,
+   "cut_mode": 0.0,
+   "cut_origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cam_dir": [
+    0.0,
+    1.0
+   ],
+   "cut_floor": 0.850000023841858,
+   "puddles_ok": 0.0
+  }
+ },
+ {
+  "id": 9,
+  "class": "ShaderMaterial",
+  "shader": "shader_04.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0500000007450581,
+   "sway_height": 3.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 0.0,
+   "cavity": 0.0,
+   "see_through": true,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": null,
+   "dabs": "tex_04.png",
+   "shade_col": null,
+   "base_col": null,
+   "lit_col": null,
+   "ink": null,
+   "bark_dark": null,
+   "bark_lit": null,
+   "shade_tint": null,
+   "warm_tint": null,
+   "dab_size": null,
+   "cone_light": null,
+   "crown_y": -1.0,
+   "tree_height": 4.40000009536743
+  }
+ },
+ {
+  "id": 10,
+  "class": "ShaderMaterial",
+  "shader": "shader_03.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": null,
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0500000007450581,
+   "sway_height": 3.0,
+   "brush_scale": null,
+   "brush_strength": null,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 0.0,
+   "cavity": 0.0,
+   "see_through": true,
+   "fade_override": null,
+   "cut_mode": null,
+   "cut_origin": null,
+   "cam_dir": null,
+   "cut_floor": null,
+   "puddles_ok": null,
+   "dabs": "tex_04.png",
+   "shade_col": null,
+   "base_col": null,
+   "lit_col": null,
+   "ink": null,
+   "bark_dark": null,
+   "bark_lit": null,
+   "shade_tint": null,
+   "warm_tint": null,
+   "dab_size": null,
+   "cone_light": null,
+   "crown_y": -1.0,
+   "tree_height": 4.40000009536743
+  }
+ },
+ {
+  "id": 11,
+  "class": "ShaderMaterial",
+  "shader": "shader_02.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0,
+   "sway_height": 1.0,
+   "brush_scale": 0.0900000035762787,
+   "brush_strength": 0.140000000596046,
+   "detail_scale": 2.0,
+   "detail_stretch": [
+    4.0,
+    0.349999994039536,
+    4.0
+   ],
+   "bump": 1.20000004768372,
+   "cavity": 0.300000011920929,
+   "see_through": true,
+   "fade_override": -1.0,
+   "cut_mode": 0.0,
+   "cut_origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cam_dir": [
+    0.0,
+    1.0
+   ],
+   "cut_floor": 0.850000023841858,
+   "puddles_ok": 0.0
+  }
+ },
+ {
+  "id": 12,
+  "class": "ShaderMaterial",
+  "shader": "shader_06.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0,
+   "sway_height": 1.0,
+   "brush_scale": 0.0900000035762787,
+   "brush_strength": 0.140000000596046,
+   "detail_scale": 2.0,
+   "detail_stretch": [
+    4.0,
+    0.349999994039536,
+    4.0
+   ],
+   "bump": 1.20000004768372,
+   "cavity": 0.300000011920929,
+   "see_through": true,
+   "fade_override": -1.0,
+   "cut_mode": 0.0,
+   "cut_origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cam_dir": [
+    0.0,
+    1.0
+   ],
+   "cut_floor": 0.850000023841858,
+   "puddles_ok": 0.0
+  }
+ },
+ {
+  "id": 13,
+  "class": "ShaderMaterial",
+  "shader": "shader_06.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0799999982118607,
+   "sway_height": 3.0,
+   "brush_scale": 0.0900000035762787,
+   "brush_strength": 0.140000000596046,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 1.5,
+   "cavity": 0.300000011920929,
+   "see_through": true,
+   "fade_override": -1.0,
+   "cut_mode": 0.0,
+   "cut_origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cam_dir": [
+    0.0,
+    1.0
+   ],
+   "cut_floor": 0.850000023841858,
+   "puddles_ok": 0.0
+  }
+ },
+ {
+  "id": 14,
+  "class": "ShaderMaterial",
+  "shader": "shader_02.gdshader",
+  "params": {
+   "clouds": "tex_01.png",
+   "albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "brush": "tex_02.png",
+   "detail": "tex_03.png",
+   "sway": 0.0799999982118607,
+   "sway_height": 3.0,
+   "brush_scale": 0.0900000035762787,
+   "brush_strength": 0.140000000596046,
+   "detail_scale": 1.60000002384186,
+   "detail_stretch": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "bump": 1.5,
+   "cavity": 0.300000011920929,
+   "see_through": true,
+   "fade_override": -1.0,
+   "cut_mode": 0.0,
+   "cut_origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cam_dir": [
+    0.0,
+    1.0
+   ],
+   "cut_floor": 0.850000023841858,
+   "puddles_ok": 0.0
+  }
+ }
+]
