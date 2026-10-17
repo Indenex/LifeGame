@@ -70,6 +70,25 @@ public static class Painted
         return twin;
     }
 
+    // Look's foliage, painted, for low plants with their own colours in the vertices
+    // (heather, gorse): sway and the heather's season code stay as they were.
+    public static ShaderMaterial Foliage => Of(Look.Foliage);
+
+    // The bushes' leaves (painted-2): Look's foliage with the shade leaning further
+    // violet, more lit dabs on the tops and only the deepest relief as dark gaps.
+    public static ShaderMaterial Bush => bush ??= MakeBush();
+    static ShaderMaterial? bush;
+
+    static ShaderMaterial MakeBush()
+    {
+        var twin = (ShaderMaterial)Of(Look.Foliage).Duplicate();
+        twin.SetShaderParameter("shade_tint", new Color(0.64f, 0.6f, 0.88f));
+        twin.SetShaderParameter("lit_dabs", 0.22f);
+        twin.SetShaderParameter("crevice", 0.28f);
+        twin.SetShaderParameter("dab_size", 0.9f);
+        return twin;
+    }
+
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: false));
     static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: true));
     static Shader? shader, ghostShader;
