@@ -42,3 +42,7 @@ Pass after `--`, e.g. `LifeGameLauncher.x86_64 -- --no-server --server=http://fr
 - `launcher.gd` is the whole app (GDScript, Godot 4.6). Open `launcher/project.godot` in the Godot 4.6 .NET editor.
 - Export: `godot --headless --path launcher --export-release Linux out/LifeGameLauncher.x86_64` (and `Windows out/LifeGameLauncher.exe`). The .NET editor needs the .NET 8 SDK on PATH even though the launcher has no C#.
 - Test without GitHub: pack releases with `tools/release/make-release.sh`, serve them with `tools/release/fake-api.py <dir>`, then run the launcher with `-- --api=http://127.0.0.1:8765 --home=/tmp/lg --auto --no-play --quit` against a local `spacetime start`. Exit code 0 ok, 1 failed, 2 stopped at a world wipe.
+
+## What's new (release-9)
+
+Each release body lists player-facing patch notes between `<!-- notes -->` and `<!-- /notes -->` (also `notes` in `release.json`). They come from `tools/release/merged-prs.sh`: the `Player note: <one plain sentence>` line in a PR body, else the PR title without its ticket prefix. PRs labelled or titled scribe, docs, ticket-only or ci-only are left out. Both launchers show a scrollable "What's new" box when an update is ready and after it lands, listing every build between the installed one and the newest, newest first. The "What's new" button reopens it.
