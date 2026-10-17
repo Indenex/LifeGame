@@ -259,7 +259,7 @@ public partial class Terrain : Node3D
         }
     }
 
-    Color TileColor(int x, int z, float top, bool? cleared = null)
+    Color TileColor(int x, int z, float top, bool? cleared = null, bool painted = true)
     {
         float lush = World.Noise(x, z, 14f, 31);
         var color = Look.GrassLow.Lerp(Look.GrassHigh, Mathf.Clamp(lush * 1.1f - 0.1f, 0f, 1f));
@@ -283,7 +283,11 @@ public partial class Terrain : Node3D
 
         if (cleared ?? Cleared?.Invoke(x, z) == true) color = color.Lerp(Look.Earth, 0.6f);
 
-        return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+        color = color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+        // The art-reference prototype: darker olive earth under thick grass, bare dirt
+        // on the trails (PaintedGround, --ground=painted).
+        if (PaintedGround.On && painted) color = PaintedGround.Ground(color, Landmarks.Trail(x, z));
+        return color;
     }
 
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
@@ -480,7 +484,26 @@ public partial class Terrain : Node3D
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
                     var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
                     var g = new Transform3D(slope, new Vector3(x, top, z));
-                    tufts!.Add((g, TileColor(x, z, top, cleared: false), custom));
+                    var tuftColor = PaintedGround.On
+                        ? PaintedGround.Grass(TileColor(x, z, top, cleared: false, painted: false), World.Noise(x, z, 14f, 31))
+                        : TileColor(x, z, top, cleared: false);
+                    tufts!.Add((g, tuftColor, custom));
+                }
+
+                // The art-reference prototype: small mushrooms under the trees, twigs and
+                // the odd old stump scattered through the grass (PaintedGround).
+                if (PaintedGround.On && grassy && !shore && trail < 0.5f)
+                {
+                    float scatter = Hash01(x, z, 70);
+                    float mushrooms = 0.004f + 0.03f * density * (1f - heath), twigs = 0.006f + 0.012f * density, stumps = 0.0025f * edge;
+                    float px = x + 0.5f - Hash01(x, z, 71), pz = z + 0.5f - Hash01(x, z, 72);
+                    var spot = Plant(px, HeightAt(px, pz), pz, Hash01(x, z, 73) * Mathf.Tau, 0.8f + Hash01(x, z, 74) * 0.6f);
+                    if (scatter < mushrooms)
+                        landmarks.Put(PaintedGround.Mushroom, Look.RockSurface, (spot, Colors.White.Darkened(Hash01(x, z, 75) * 0.2f), custom));
+                    else if (scatter < mushrooms + twigs)
+                        landmarks.Put(PaintedGround.Twig, Look.BarkSurface, (spot, Look.Bark.Lightened(Hash01(x, z, 75) * 0.15f), custom));
+                    else if (scatter < mushrooms + twigs + stumps)
+                        landmarks.Put(PropMeshes.Stump, Look.BarkSurface, (spot, Look.Bark.Darkened(Hash01(x, z, 75) * 0.1f), custom));
                 }
             }
 
@@ -625,7 +648,7 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
-        tuftMesh = BuildTuft();
+        tuftMesh = PaintedGround.On ? PaintedGround.Blades : BuildTuft();
     }
 
     internal static SphereMesh Blob(float radius) => new() { Radius = radius, Height = radius * 1.7f, RadialSegments = 10, Rings = 6 };
