@@ -45,6 +45,8 @@ public partial class Atmosphere : Node3D
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
     readonly FallingLeaves leaves = new();
+    // Butterflies, pollen and seeds, and fireflies by water (Environment, env-30).
+    readonly AmbientLife life = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -118,6 +120,7 @@ public partial class Atmosphere : Node3D
         AddChild(fireflies);
         AddChild(mist);
         AddChild(leaves);
+        AddChild(life);
         ReadyWater();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
@@ -316,7 +319,7 @@ public partial class Atmosphere : Node3D
         var towardSun = WorldTime.SunHeight(timeOfDay) > -0.06f ? sun.GlobalBasis.Z : -sun.GlobalBasis.Z;
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f),
             towardSun, sun.LightColor * sunLow * (1f - Mathf.Clamp(cloud * 1.2f - 0.2f, 0f, 1f)), wind, dt);
-        fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
+        fireflies.Follow(focus, life.Fireflies(Mathf.SmoothStep(0.85f, 1f, 1f - daylight), 1f - daylight, Year) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
         UpdateSignals(dt, focus, Night);
@@ -329,6 +332,7 @@ public partial class Atmosphere : Node3D
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
+        life.Follow(dt, focus, terrain, daylight, Year, wind, WindDirection, woods, rainAmount);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
         UpdateFrost(dt);
         UpdateImpacts(dt);

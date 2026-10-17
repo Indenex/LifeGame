@@ -29,6 +29,7 @@ public partial class OptionsPage : Control
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
     Button lightRays = null!;
+    Button ambientLife = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -100,6 +101,14 @@ public partial class OptionsPage : Control
         });
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
+        // Butterflies, pollen and fireflies (Environment, env-30); Off for slower PCs.
+        ambientLife = ControlsPage.TextButton(LifeText(), () =>
+        {
+            AmbientLife.Setting = (AmbientLife.Setting + 1) % AmbientLife.Names.Length;
+            ambientLife.Text = LifeText();
+        });
+        ambientLife.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(ambientLife);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -117,6 +126,8 @@ public partial class OptionsPage : Control
     }
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
+
+    static string LifeText() => $"Ambient life: {AmbientLife.Names[AmbientLife.Setting]}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
