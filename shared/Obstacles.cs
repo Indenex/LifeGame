@@ -31,6 +31,11 @@ namespace LifeGame.Shared
             return t * t * (3f - 2f * t);
         }
 
+        // How likely a bank cell holds a stone: pebbles gather in beds along the waterline with
+        // bare stretches between (env-21), about as many in all as a flat 8% (env-28: the client
+        // drew these while the server still used the flat chance).
+        public static float ShoreStones(int x, int z) => 0.02f + 0.24f * Smooth(0.55f, 0.75f, World.Noise(x - 3121, z + 1877, 5f, 100));
+
         // Whether any ground within two cells is under water (a shore: rocks are smaller there).
         static bool NearWater(ICellGround g, int x, int z, float top)
         {
@@ -57,8 +62,8 @@ namespace LifeGame.Shared
             float tree = Forest.TreeChance(density, heath);
             float sapling = tree + 0.03f * Forest.Edge(density) * (1f - heath);
             // Most cells hold nothing: leave before asking the ground anything (the server looks
-            // that up in its tables). 0.154 is the most a boulder's chance can add to a sapling's.
-            if (roll >= sapling + 0.154f) return false;
+            // that up in its tables). 0.334 is the most a boulder's chance can add to a sapling's.
+            if (roll >= sapling + 0.334f) return false;
             if (g.Dug(x, z) || g.Cleared(x, z)) return false;
             float top = g.TileHeight(x, z);
             if (top < World.WaterLevel + 0.1f) return false;
@@ -77,7 +82,7 @@ namespace LifeGame.Shared
             }
             bool shore = NearWater(g, x, z, top);
             float rocky = Smooth(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-            float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
+            float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
             if (roll >= rock) return false;
             float size = shore && rocky < 0.5f ? 0.2f + Trees.Hash01(x, z, 22) * 0.2f : 0.3f + Trees.Hash01(x, z, 22) * 0.55f;
             radius = RockRadius(scale * size);

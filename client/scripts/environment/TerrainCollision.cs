@@ -80,11 +80,6 @@ public partial class Terrain
         return stones;
     }
 
-    // How likely a bank cell holds a stone: pebbles gather in beds along the waterline
-    // with bare stretches between (env-21), about as many in all as before. Shared
-    // with AddVegetation.
-    static float ShoreStones(int x, int z) => 0.02f + 0.24f * Mathf.SmoothStep(0.55f, 0.75f, World.Noise(x - 3121, z + 1877, 5f, 100));
-
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
     // stones, ferns and fallen trunks never block.
     bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius, out float height)
@@ -122,7 +117,7 @@ public partial class Terrain
         }
         bool shore = NearWater(x, z, top);
         float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
+        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? Obstacles.ShoreStones(x, z) : 0f);
         if (roll >= rock) return false;
         float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
         radius = RockRadius(scale * size);
