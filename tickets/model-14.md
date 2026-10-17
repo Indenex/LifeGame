@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm); built by Art R&D (art-rnd-1)
 Status: in_review
 Branch: claude/model-14-authored-shell
-PR: (opening)
+PR: #623
 
 ## Goal
 Replace Pebble's code-built shell, which Justin rejected in #594 ("awful"), with Art R&D's authored shell. It is modelled and baked in headless Blender with a script-painted texture, in D-313's cute, rounded style. The PM asked Modeling to take it into its lane with small hooks.
