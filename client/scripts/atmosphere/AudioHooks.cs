@@ -15,6 +15,7 @@ static class AudioHooks
         StructureSounds.Connect(conn);
         PotSounds.Connect(conn);
         EmoteSounds.Connect(conn);
+        LampSounds.Connect(conn);
     }
 
     public static void Tick(double dt)
@@ -23,5 +24,6 @@ static class AudioHooks
         RoastSounds.Tick(dt);
         PotSounds.Tick(dt);
         EmoteSounds.Tick(dt);
+        LampSounds.Tick(dt);
     }
 }
