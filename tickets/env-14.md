@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment lane (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_review
 Branch: claude/environment-water-at
-PR: (opening)
+PR: #387
 
 ## Goal
 Ceramics (ceramics-13, clay pipes for water, Justin's pick) needs one shared server+client answer to "is this cell water, and at what height?". Add `Land.WaterAt(x, z, depth, out surface, out flowing)` in shared/Land.cs: true when the land (base height minus dug depth) is below World.WaterLevel; surface is World.WaterLevel (one flat plane); flowing tells a stream (within 12 m of its line) from a pond. No behaviour change elsewhere.
