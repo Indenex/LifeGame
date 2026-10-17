@@ -3,7 +3,7 @@ Lane: Claims
 Owner: Claims thread (session_01T6RYk3zyUHiSncD3ZXrFFm, back on Justin's first account)
 Status: in_review
 Branch: claude/claims-nxkyjn
-PR: (see below)
+PR: #839
 
 ## Goal
 Land the playtest strike feedback that was built on the other account but never merged (handoff `/mnt/project-files/handoff/claims-strike-feedback/`, old ticket claims-7 there; that id is taken on main by trading). Main already had the swing on a real hit (anim-5, everyone sees it) and the flinch. This adds what main lacked:
