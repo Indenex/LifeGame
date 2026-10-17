@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store" };
+    static readonly string[] scenes = { "roast", "store", "pot" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -27,6 +27,20 @@ static class AudioScenes
                     if (prng.NextDouble() < sizzle * 0.05) mix.Play(CueDefs.RoastSizzle);
                     if (prng.NextDouble() < spit * 0.05) mix.Play(CueDefs.RoastSpit);
                     if (prng.NextDouble() < drip * 0.05) mix.Play(CueDefs.RoastDrip);
+                }
+                break;
+            }
+            // Pot scene: a thin broth bubbling for 6 s, then a thick stew.
+            case "pot":
+            {
+                var prng = new Random((int)(a * 100));
+                for (double t0 = Math.Floor(a * 20) / 20; t0 < b; t0 += 0.05)
+                {
+                    if (t0 < a) continue;
+                    bool stew = t0 > 6;
+                    double r = (stew ? 0.9 : 1.8) * 0.05, roll = prng.NextDouble();
+                    if (prng.NextDouble() >= r) continue;
+                    mix.Play(stew ? (roll < 0.55 ? CueDefs.BubbleBig : roll < 0.85 ? CueDefs.BubbleSmall : CueDefs.BubblePop) : (roll < 0.6 ? CueDefs.BubbleSmall : roll < 0.9 ? CueDefs.BubblePop : CueDefs.BubbleBig));
                 }
                 break;
             }
