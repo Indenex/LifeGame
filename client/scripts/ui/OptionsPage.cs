@@ -30,6 +30,7 @@ public partial class OptionsPage : Control
     Button music = null!;
     Button lightRays = null!;
     HSlider view = null!;
+    Button markButton = null!;
     Label viewName = null!;
 
     public override void _Ready()
@@ -41,14 +42,7 @@ public partial class OptionsPage : Control
         // The same soft dark panel as the other windows (trade, equipment), centred (D-125).
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.AddThemeConstantOverride("separation", 12);
-        var panel = Hud.Panel(column, Vector2.Zero);
-        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 18;
-        style.ContentMarginLeft = style.ContentMarginRight = 28;
-        panel.SetAnchorsPreset(LayoutPreset.Center);
-        panel.GrowHorizontal = GrowDirection.Both;
-        panel.GrowVertical = GrowDirection.Both;
+        var panel = Ui.Window(column, roomy: true);
         AddChild(panel);
 
         var title = new Label { Text = "Options", HorizontalAlignment = HorizontalAlignment.Center };
@@ -112,6 +106,11 @@ public partial class OptionsPage : Control
         lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lookButton);
 
+        // Your maker's mark (ui-23).
+        markButton = ControlsPage.TextButton("Your mark", () => MarkPicker.OpenFromMenu?.Invoke());
+        markButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(markButton);
+
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);
@@ -123,6 +122,7 @@ public partial class OptionsPage : Control
 
     public void Open()
     {
+        markButton.Visible = MarkPicker.Available;
         for (int i = 0; i < Levels.Length; i++)
         {
             double v = SoundLevels.Get(Levels[i].Key);

@@ -37,7 +37,7 @@ public partial class Woodcutting : Node
                 // How far the tree has come down: the chop about to land, out of all it takes (Trees.LogsPerTree).
                 int logs = conn?.Db.ChoppedTree.CellKey.Find(World.CellKey(tree.CellX, tree.CellZ))?.Logs ?? 0;
                 string label = Trees.Felling ? $"{chop.Name} ({logs + 1} of {Trees.LogsPerTree})" : chop.Name;
-                return new UseOffer(label, d, () => crafting.Start(chop), Target: new Vector3(tree.Trunk.X, at.Y, tree.Trunk.Y));
+                return new UseOffer(label, d, () => crafting.Start(chop), Target: new Vector3(tree.Trunk.X, at.Y, tree.Trunk.Y), Again: 0.3f);
             },
         });
     }
