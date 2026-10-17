@@ -11,7 +11,7 @@
     <PackageReference Include="SpacetimeDB.ClientSDK" Version="2.12.*" />
     <Compile Include="../../client/module_bindings/**/*.cs" LinkBase="Bindings" />
     <Compile Include="../../shared/**/*.cs" LinkBase="Shared" />
-    <Compile Include="../../client/scripts/net/Subscriptions.cs" LinkBase="Client" />
+    <Compile Include="../../client/scripts/net/Subscriptions*.cs" LinkBase="Client" />
   </ItemGroup>
 
 </Project>
