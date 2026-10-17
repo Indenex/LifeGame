@@ -169,8 +169,7 @@ public partial class Main : Node3D
             || equipment.IsOpen
             || station.IsOpen
             || buildMenu.IsOpen
-            || markPicker.IsOpen
-            || lookPicker.IsOpen;
+            || markPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
