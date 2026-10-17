@@ -354,6 +354,19 @@ def text(x, y, s, size=14, col="#3f2c26", anchor="middle"):
     return "<text x='%.1f' y='%.1f' font-size='%d' fill='%s' text-anchor='%s' %s>%s</text>" % (x, y, size, col, anchor, FONT, s)
 
 
+def bone_table():
+    """Joint positions of the bare base in drawing units (round 4 overrides this)."""
+    bones = {"Head": (0, -0.66), "Neck": (0, -0.47), "Spine": (0, -0.33), "Hips": (0, -0.17)}
+    for s, n in ((-1, "L"), (1, "R")):
+        bones["UpperArm" + n] = (s * 0.13, -0.40)
+        bones["LowerArm" + n] = (s * 0.165, -0.32)
+        bones["Hand" + n] = (s * 0.18, -0.25)
+        bones["UpperLeg" + n] = (s * 0.06, -0.16)
+        bones["LowerLeg" + n] = (s * 0.06, -0.08)
+        bones["Foot" + n] = (s * 0.065, -0.02)
+    return bones
+
+
 def base_sheet():
     S = 300
     W, H, gy = 1500, 760, 660
@@ -370,14 +383,7 @@ def base_sheet():
     # bare base + skeleton
     bx = 360
     b += char(bare, 0, bx, gy, S)
-    bones = {"Head": (0, -0.66), "Neck": (0, -0.47), "Spine": (0, -0.33), "Hips": (0, -0.17)}
-    for s, n in ((-1, "L"), (1, "R")):
-        bones["UpperArm" + n] = (s * 0.13, -0.40)
-        bones["LowerArm" + n] = (s * 0.165, -0.32)
-        bones["Hand" + n] = (s * 0.18, -0.25)
-        bones["UpperLeg" + n] = (s * 0.06, -0.16)
-        bones["LowerLeg" + n] = (s * 0.06, -0.08)
-        bones["Foot" + n] = (s * 0.065, -0.02)
+    bones = bone_table()
     links = [("Hips", "Spine"), ("Spine", "Neck"), ("Neck", "Head")]
     for n in ("L", "R"):
         links += [("Neck", "UpperArm" + n), ("UpperArm" + n, "LowerArm" + n), ("LowerArm" + n, "Hand" + n),

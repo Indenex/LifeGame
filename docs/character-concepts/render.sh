@@ -3,6 +3,7 @@
 set -e
 cd "$(dirname "$0")"
 python3 make_concepts.py
+python3 make_round4.py
 python3 make_round2.py
 python3 make_round3.py
 CH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome
