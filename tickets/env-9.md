@@ -1,9 +1,9 @@
 # env-9: Seeing further (distant land and tree silhouettes)
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_review
+Status: done
 Branch: claude/environment-view
-PR: #337 (replaces #306, closed)
+PR: #337 (merged 2026-10-16; replaces #306, closed)
 
 ## Goal
 Hills, heath tops, valleys and the woods read from a distance, so players can steer by them and the world doesn't end at the last loaded chunk (about 56 m). A coarse ground mesh and simple tree silhouettes cover the land out to the fog, from the shared height and forest rules. Visual only, no wipe. Cheap: built on a background thread when the player changes chunk.
@@ -25,4 +25,4 @@ Hills, heath tops, valleys and the woods read from a distance, so players can st
 - To see out to the fog (about 240 m), Main's water plane needs to grow to about 500 m (Integration's file). Ask once A is confirmed.
 
 ## Next step
-Wait for CI on #337 (merges after #289); send the PM the green sha. Merges after #289 and #339. Ask Render for a hilltop view.
+None: merged as #337 (CI green on 534e3c8). Follow-ups: env-12 (#344, worker-thread chunk building), then batching distant chunks for Very far at radius 12. Render was asked for hilltop shots.

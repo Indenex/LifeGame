@@ -51,6 +51,7 @@ public partial class Main : Node3D
     readonly TradeWindow trade = new();
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
+    readonly BuildMenu buildMenu = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
@@ -89,6 +90,11 @@ public partial class Main : Node3D
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
+        // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
+        // Added after building, so it sees B first; while the ghost is up, B is building's.
+        buildMenu.Place = building.StartPlacing;
+        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
@@ -136,6 +142,7 @@ public partial class Main : Node3D
             || trade.IsOpen
             || equipment.IsOpen
             || station.IsOpen
+            || buildMenu.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
@@ -369,6 +376,7 @@ public partial class Main : Node3D
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         equipment.Bag.Link = new ServerBagLink(conn);
+        buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
