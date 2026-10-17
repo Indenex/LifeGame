@@ -42,6 +42,26 @@ public static class ClayLook
         return m;
     }
 
+    static readonly Dictionary<(ShaderMaterial, int), ShaderMaterial> StampedMaterials = new();
+
+    // The same clay as `plain` with a maker's mark pressed in (ceramics-15). The glyph is 0 to 11
+    // (shared/Marks.cs). The stamp sits at a height that suits the form: higher on a tall jar,
+    // lower on a squat lamp.
+    public static ShaderMaterial Stamped(ShaderMaterial plain, int glyph, ClayForm form)
+    {
+        var key = (plain, glyph + 100 * (int)form);
+        if (StampedMaterials.TryGetValue(key, out var m)) return m;
+        m = new ShaderMaterial { Shader = Shader };
+        foreach (var name in new[] { "albedo", "wetness", "clouds", "broken", "seed", "glow" })
+            m.SetShaderParameter(name, plain.GetShaderParameter(name));
+        m.SetShaderParameter("stamp_atlas", MakerStamp.Atlas);
+        m.SetShaderParameter("stamp_glyph", (float)glyph);
+        float height = PotMesh.Height(form);
+        m.SetShaderParameter("stamp_spot", new Vector2(height * 0.55f, Mathf.Min(0.075f, height * 0.3f)));
+        StampedMaterials[key] = m;
+        return m;
+    }
+
     // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
     // through. t is how far the firing has got, 0 to 1.
     public static ShaderMaterial Firing(float t, ulong id)
@@ -98,12 +118,18 @@ public static class ClayLook
             uniform float broken = 0.0;
             uniform float seed = 0.0;
             uniform float glow = 0.0;
+            // A maker's mark (ceramics-15): the glyph's cell in the stamp atlas, or -1 for none.
+            uniform sampler2D stamp_atlas : filter_linear;
+            uniform float stamp_glyph = -1.0;
+            uniform vec2 stamp_spot = vec2(0.095, 0.075); // height of the stamp's centre, and its half size
 
             varying vec3 local_pos;
+            varying vec3 local_normal;
             varying float height;
 
             void vertex() {
                 local_pos = VERTEX;
+                local_normal = NORMAL;
                 height = UV.y;
             }
 
@@ -141,6 +167,26 @@ public static class ClayLook
                 float grain = noise(p * 1.6);
                 color *= 0.95 + grain * 0.08;
                 color *= 0.96 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.08;
+
+                // A maker's mark pressed into the outside of the pot, twice, on opposite sides, so
+                // one is usually in view: dark in the dent, with a thin lighter lip.
+                if (stamp_glyph >= 0.0 && dot(local_normal.xz, local_pos.xz) > 0.0) {
+                    float radius = max(length(local_pos.xz), 0.001);
+                    float angle = atan(local_pos.z, local_pos.x);
+                    for (int side = 0; side < 2; side++) {
+                        float centre = float(side) * 3.14159265;
+                        float da = angle - centre;
+                        da = atan(sin(da), cos(da));
+                        vec2 uv = vec2(-da * radius / stamp_spot.y, -(local_pos.y - stamp_spot.x) / stamp_spot.y) * 0.5 + 0.5;
+                        if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
+                            float col = mod(stamp_glyph, 4.0);
+                            float row = floor(stamp_glyph / 4.0);
+                            vec2 cell = vec2((col + uv.x) / 4.0, (row + uv.y) / 3.0);
+                            float ink = texture(stamp_atlas, cell).a;
+                            color = mix(color, color * 0.32, ink * 0.9);
+                        }
+                    }
+                }
 
                 // Smoke clouds from an open fire: soft dark patches, heavier low down.
                 float cloud = smoothstep(0.38, 0.7, fbm(p * 0.25)) * clouds;

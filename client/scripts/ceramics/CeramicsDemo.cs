@@ -27,6 +27,10 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=lamp shows three lit clay lamps and a cold one, for judging the glow at night (ceramics-9).
     static bool ShowLamps => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=lamp");
 
+    // --ceramics-demo=marks shows kiln-fired coil pots with each of the twelve maker's marks
+    // facing the camera, for judging the glyphs (ceramics-15, rough prototype art).
+    static bool ShowMarks => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=marks");
+
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
         this.terrain = terrain;
@@ -49,6 +53,26 @@ public partial class CeramicsDemo : Node3D
                 var pot = new PotView { Position = new Vector3(-0.6f + i * 0.45f, 0, 1.2f) };
                 row.AddChild(pot);
                 pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowMarks)
+        {
+            for (int g = 0; g < Marks.Glyphs; g++)
+            {
+                ulong id = (ulong)(70 + g);
+                var plain = ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, id);
+                row.AddChild(new MeshInstance3D
+                {
+                    Mesh = PotMesh.For(ClayForm.CoilPot, id),
+                    MaterialOverride = ClayLook.Stamped(plain, g, ClayForm.CoilPot),
+                    // Turned so the stamp faces the camera, which looks along -Z.
+                    Position = new Vector3((g % 6 - 2.5f) * 0.55f, 0, (g / 6) * 0.65f),
+                    Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
+                    Scale = Vector3.One * PotView.Size,
+                });
             }
             AddChild(camera);
             camera.MakeCurrent();
@@ -142,7 +166,7 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
-        if (ShowLamps)
+        if (ShowLamps || ShowMarks)
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
             camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);
