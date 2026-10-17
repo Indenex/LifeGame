@@ -30,9 +30,11 @@ public static class NatureKit
     static readonly Dictionary<(bool, int), (Mesh Mesh, float Scale)> TreeMeshes = new();
 
     // Loads the kit trees on the main thread (ChunkWorker.Prewarm), so chunk workers only read.
+    static bool prewarmed;
     public static void Prewarm()
     {
-        if (!Trees) return;
+        if (!Trees || prewarmed) return;
+        prewarmed = true;
         for (int v = 0; v < PaintedTrees.Variants; v++)
             foreach (bool pine in new[] { false, true })
                 if (Mesh(TreeName(pine, v)) is { } mesh)
@@ -47,6 +49,8 @@ public static class NatureKit
     // The kit tree for one of our tree variants and the extra scale it stands at, or null.
     public static (Mesh Mesh, float Scale)? Tree(bool pine, int variant)
     {
+        // Chunks built on the main thread (the view bench) before any worker started.
+        if (!prewarmed && OS.GetThreadCallerId() == OS.GetMainThreadId()) Prewarm();
         lock (TreeMeshes) return TreeMeshes.TryGetValue((pine, variant), out var t) ? t : null;
     }
 
@@ -127,8 +131,11 @@ public static class NatureKit
     static readonly LeafLook BushLeaves = new(new(0.348f, 0.658f, 0.216f), KitLow, new(0.539f, 0.733f, 0.092f), 2f, 0.2f, true);
     static readonly LeafLook PineLeaves = new(new(0.111f, 0.321f, 0f), KitLow, new(0.65f, 0.7f, 0f), 1.946f, 0.085f, false);
     static readonly LeafLook GiantPineLeaves = new(new(0f, 0.729f, 0.45f), KitLow, new(0f, 0.743f, 0.802f), 3.088f, -0.044f, false);
-    static readonly LeafLook BirchLeaves = new(new(1f, 0.252f, 0.066f), KitLow, new(1f, 0.495f, 0.127f), 1.836f, 0.335f, true);
-    static readonly LeafLook TwistedLeaves = new(new(0.767f, 0f, 0.029f), KitLow, new(0.547f, 0f, 0.131f), 1.51f, 0.61f, true);
+    // The kit paints birches orange and twisted trees red all year; ours are green until
+    // autumn turns them (the PM's default while Justin picks; the kit's colours are in the
+    // comments to switch back).
+    static readonly LeafLook BirchLeaves = new(new(0.56f, 0.7f, 0.18f), KitLow, new(0.62f, 0.76f, 0.1f), 1.836f, 0.25f, true); // kit: (1, 0.252, 0.066), glow (1, 0.495, 0.127), 0.335
+    static readonly LeafLook TwistedLeaves = new(new(0.3f, 0.54f, 0.1f), KitLow, new(0.5f, 0.7f, 0.05f), 1.51f, 0.3f, true); // kit: (0.767, 0, 0.029), glow (0.547, 0, 0.131), 0.61
 
     static LeafLook? Leaf(string model) =>
         model.StartsWith("CommonTree") || model.StartsWith("Bush_Common") ? CommonLeaves

@@ -19,8 +19,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 16:10: switched to the Source/Godot pack (8d28456e), now in client/assets/quaternius/nature with License_Nature_Source.txt (CC0); import script tools/art/quaternius/import.py. Ported the kit's Godot shaders into NatureKit's blended shader (a8687198): flat leaf greens + blue-green low colour, card spread, sun-driven leaf glow, bark foot tint + normal maps, grass gradients and wind lines. Shots: /mnt/project-files/screenshots/naturekit/kit-shaders-blend-{noon,golden}.png. Build clean locally (after tools/gen-bindings.sh).
 
+- 2026-10-17 16:30: --view-bench (headless, all chunks per radius, before culling and before Godot's mesh LOD). Ours vs kit trees: radius 6: 16.66 M vs 14.09 M triangles, 4758 vs 3540 draw calls (+3724 vs +2506 shadow); radius 8: 27.64 M vs 23.45 M, 8043 vs 6007 (+6273 vs +4237); radius 12: 52.84 M vs 44.86 M, 16170 vs 12192. Kit trees are cheaper (one mesh per tree instead of near+far painted parts). Fixed: NatureKit.Tree prewarms itself on the main thread when nothing has yet. Birch and twisted leaves default to green until autumn (PM default while Justin picks).
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Run `--view-bench` with and without `--naturekit` and record vertex and draw-call numbers here; then the rocks swap behind a setting.
+Rocks swap behind a setting (graphics/naturekit_rocks): find where Terrain places painted rocks and hook NatureKit.Rock like the trees.
