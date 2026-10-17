@@ -92,7 +92,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetName(ReducerContext ctx, string name)
     {
-        name = name.Trim();
+        name = Social.StripControl(name).Trim();
         if (name.Length < 1 || name.Length > 24)
             throw new Exception("Name must be 1 to 24 characters");
         var player = RequirePlayer(ctx);
