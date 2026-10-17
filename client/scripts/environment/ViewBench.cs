@@ -28,7 +28,7 @@ public partial class Terrain
                 for (int cz = chunkZ - 4; cz <= chunkZ + 4; cz++)
                 {
                     var node = BuildChunk(cx, cz);
-                    foreach (var child in node.GetChildren())
+                    foreach (var child in Parts(node))
                     {
                         if (child is MultiMeshInstance3D mmi && mmi.Multimesh is { } mm)
                         {
@@ -54,14 +54,27 @@ public partial class Terrain
             long tris = 0, grassTris = 0, instances = 0, draws = 0, shadowDraws = 0;
             double ms = 0;
             int count = 0;
+            // What env-24 draws: near chunks as they are (only the painted trees' near
+            // version), far chunks as one batch per mesh and material in each region.
+            long batched = 0;
+            var regionBatches = new HashSet<((int, int), Mesh, Material, bool)>();
             for (int cx = chunkX - r; cx <= chunkX + r; cx++)
                 for (int cz = chunkZ - r; cz <= chunkZ + r; cz++)
                 {
                     var clock = System.Diagnostics.Stopwatch.StartNew();
-                    var node = BuildChunk(cx, cz);
+                    var data = Compute(TakeSnapshot(cx, cz));
+                    var node = Assemble(cx, cz, data);
+                    batched++;
+                    bool far = Math.Max(Math.Abs(cx - chunkX), Math.Abs(cz - chunkZ)) > NearChunks;
+                    foreach (var (bMesh, bMaterial, _, bShadow, range) in data.Batches)
+                    {
+                        if (far ? range.Item2 > 0f : range.Item1 > 0f) continue;
+                        if (!far) batched += bMesh.GetSurfaceCount();
+                        else if (regionBatches.Add((RegionOf((cx, cz)), bMesh, bMaterial, bShadow))) batched += bMesh.GetSurfaceCount();
+                    }
                     ms += clock.Elapsed.TotalMilliseconds;
                     count++;
-                    foreach (var child in node.GetChildren())
+                    foreach (var child in Parts(node))
                     {
                         Mesh? mesh = null;
                         long n = 1;
@@ -89,9 +102,21 @@ public partial class Terrain
                     node.Free();
                 }
             GD.Print($"[bench] radius {r} ({count} chunks, edge {r * World.ChunkSize} m): build {ms:F0} ms ({ms / count:F1} per chunk), "
-                + $"instances {instances}, triangles {tris / 1e6:F2} M (grass {grassTris / 1e6:F2} M), draw calls {draws} (+{shadowDraws} shadow-casting)");
+                + $"instances {instances}, triangles {tris / 1e6:F2} M (grass {grassTris / 1e6:F2} M), draw calls {draws} (+{shadowDraws} shadow-casting), "
+                + $"drawn with far regions {batched}");
         }
         GetTree().Quit();
+    }
+
+    // A chunk's ground and every batch, its plants included (env-24 keeps them under "Plants").
+    static IEnumerable<Node> Parts(Node3D node)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child.Name == PlantsName)
+                foreach (var plant in child.GetChildren()) yield return plant;
+            else yield return child;
+        }
     }
 
     static void Mix(ref ulong h, long v) { h ^= (ulong)v; h *= 1099511628211UL; }
