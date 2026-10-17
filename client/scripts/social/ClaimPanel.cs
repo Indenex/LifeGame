@@ -13,6 +13,8 @@ public partial class ClaimPanel : CanvasLayer
 {
     public DbConnection? Conn;
     public Func<uint> MyId = () => 0;
+    // claims-19: opens the Town panel (SocialLayer.Town).
+    public Action? OpenTown;
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
     // True while the owner is typing a name, so Main stops walking.
@@ -305,6 +307,7 @@ public partial class ClaimPanel : CanvasLayer
         }
 
         content.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
+        if (OpenTown != null) content.AddChild(Button("Town", OpenTown));
         if (owner)
             content.AddChild(Button(confirmAbandon ? "Really take the marker down?" : "Take the marker down", () =>
             {
