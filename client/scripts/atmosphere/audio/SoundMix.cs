@@ -32,6 +32,8 @@ public sealed class SoundMix
     // The nearest campfires: how loud (0 to 1, from distance and how well it burns)
     // and where (pan -1 left to 1 right).
     public float Fire, FirePan;
+    // How well stoked the nearest fire is, 0 to 1: above about 0.75 it roars (deeper, louder, more pops).
+    public float FireStoke;
     // Open water nearby: how close and how much of it (0 none, 1 at the edge of a
     // pond), and which side it lies (pan -1 left to 1 right).
     public float Water, WaterPan;
@@ -152,7 +154,7 @@ public sealed class SoundMix
     {
         Daylight = Unit(Daylight); Rain = Unit(Rain); Wind = Unit(Wind); Wetness = Unit(Wetness); Cover = Unit(Cover);
         TimeOfDay = Fin(TimeOfDay, 0.5f); TimeOfDay -= MathF.Floor(TimeOfDay);
-        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan);
+        Foliage = Unit(Foliage); Fire = Unit(Fire); FirePan = Side(FirePan); FireStoke = Unit(FireStoke);
         Water = Unit(Water); WaterPan = Side(WaterPan); Stream = Unit(Stream); StreamPan = Side(StreamPan);
         Year = Fin(Year, 0.3f); SnowCover = Unit(SnowCover);
         MasterLevel = Unit(MasterLevel); MusicLevel = Unit(MusicLevel); EffectsLevel = Unit(EffectsLevel); AmbienceLevel = Unit(AmbienceLevel);
@@ -301,7 +303,7 @@ public sealed class SoundMix
         wind.Render(outL, outR, count, winterWind, Rain, season.Cold);
         foliage.Render(outL, outR, count, winterWind, Rain, Foliage, wind.Gust, season.Leaves, season.Dry, SnowCover);
         thunder.Render(outL, outR, count);
-        fire.Render(outL, outR, count, Fire, FirePan, Rain);
+        fire.Render(outL, outR, count, Fire, FirePan, Rain, FireStoke);
         birds.Render(outL, outR, sendL, sendR, count, birdLevel * season.Birds * (1f - 0.9f * Rain) * (1f - 0.5f * Wind), Math.Min(1f, chorus * season.Chorus));
         night.Render(outL, outR, sendL, sendR, count, night01 * (1f - 0.9f * Rain) * (1f - 0.4f * Wind), season.Insects);
         insects.Render(outL, outR, count, season.Summer * Smooth(0.2f, 0.8f, Daylight) * (1f - Rain) * (1f - 0.6f * Wind) * (1f - SnowCover));
@@ -489,6 +491,12 @@ public sealed class SoundMix
     {
         pan = Side(pan);
         return left ? MathF.Sqrt(0.5f * (1f - pan)) : MathF.Sqrt(0.5f * (1f + pan));
+    }
+
+    static float SmoothStep(float a, float b, float x)
+    {
+        float t = Math.Clamp((x - a) / (b - a), 0f, 1f);
+        return t * t * (3f - 2f * t);
     }
 
     static float Range(Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
@@ -793,8 +801,8 @@ public sealed class SoundMix
         readonly Noise noise;
         readonly Random rng;
         readonly List<Crack> cracks = new();
-        Lowpass roarL, roarR, flutter, hissLow;
-        float level, flutterTarget = 0.5f, hissLeft;
+        Lowpass roarL, roarR, flutter, hissLow, deepL, deepR;
+        float level, stoked, flutterTarget = 0.5f, hissLeft;
         int counter;
 
         sealed class Crack
@@ -810,30 +818,36 @@ public sealed class SoundMix
             this.rng = rng;
         }
 
-        public void Render(float[] l, float[] r, int n, float gain, float pan, float rain)
+        public void Render(float[] l, float[] r, int n, float gain, float pan, float rain, float stoke)
         {
             float dt = 1f / rate;
-            float levelCoef = Lowpass.Coef(1.5f, rate), roarCoef = Lowpass.Coef(260f, rate);
+            float levelCoef = Lowpass.Coef(1.5f, rate), roarCoef = Lowpass.Coef(260f, rate), deepCoef = Lowpass.Coef(120f, rate), stokeCoef = Lowpass.Coef(0.4f, rate);
             float flutterCoef = Lowpass.Coef(3f, rate), hissCoef = Lowpass.Coef(2500f, rate);
             if (gain < 0.001f && level < 0.001f && cracks.Count == 0) return;
             float pl = Pan(pan * 0.8f, true), pr = Pan(pan * 0.8f, false);
             for (int i = 0; i < n; i++)
             {
                 level += levelCoef * (gain - level);
+                // A well-stoked fire (past about 75%) swells slowly into a roar.
+                stoked += stokeCoef * (SmoothStep(0.7f, 0.95f, stoke) - stoked);
                 if (counter-- <= 0)
                 {
                     counter = rate / 12;
                     flutterTarget = Math.Clamp(flutterTarget + noise.Next() * 0.4f, 0.1f, 1f);
                 }
                 float f = flutter.Process(flutterTarget, flutterCoef);
-                float roar = level * (0.4f + 0.6f * f) * 0.12f;
+                float roar = level * (0.4f + 0.6f * f) * 0.12f * (1f + 0.35f * stoked);
                 l[i] += roarL.Process(noise.Next(), roarCoef) * 3f * roar * pl;
                 r[i] += roarR.Process(noise.Next(), roarCoef) * 3f * roar * pr;
+                // The deep roar of a big fire: a low rumble that breathes with the flutter.
+                float deep = level * stoked * (0.5f + 0.5f * f) * 0.16f;
+                l[i] += deepL.Process(noise.Next(), deepCoef) * 3f * deep * pl;
+                r[i] += deepR.Process(noise.Next(), deepCoef) * 3f * deep * pr;
 
-                if (rng.NextDouble() < (5f + 40f * level * f) * level * dt)
+                if (rng.NextDouble() < (5f + 40f * level * f) * (1f + 0.9f * stoked) * level * dt)
                     cracks.Add(new Crack { Decay = Range(rng, 0.0015f, 0.006f), Amp = Range(rng, 0.1f, 0.35f) * level, Cutoff = Range(rng, 1500f, 4500f), Pan = pan * 0.8f + Range(rng, -0.15f, 0.15f) });
-                if (rng.NextDouble() < 0.4f * level * dt)
-                    cracks.Add(new Crack { Decay = Range(rng, 0.012f, 0.03f), Amp = Range(rng, 0.4f, 0.8f) * level, Cutoff = Range(rng, 500f, 1200f), Pan = pan * 0.8f });
+                if (rng.NextDouble() < (0.4f + 0.8f * stoked) * level * dt)
+                    cracks.Add(new Crack { Decay = Range(rng, 0.012f, 0.03f), Amp = Range(rng, 0.4f, 0.8f) * level * (1f + 0.05f * stoked), Cutoff = Range(rng, 500f, 1200f), Pan = pan * 0.8f });
 
                 // Rain on the embers: short sizzles.
                 if (hissLeft <= 0f && rng.NextDouble() < rain * 2f * level * dt) hissLeft = Range(rng, 0.1f, 0.35f);
