@@ -54,7 +54,7 @@ public static partial class Module
 
         var spear = BestTool(ctx, ItemTags.Piercing);
         var blade = BestTool(ctx, ItemTags.Cutting);
-        if (spear == null && blade == null) throw new Exception("You need a spear or a blade to hunt with");
+        if (spear == null && blade == null) throw new Exception(NoToolMessage(ctx, ItemTags.Piercing | ItemTags.Cutting, "You need a spear or a blade to hunt with"));
 
         // A spear reaches a little further; a running target gets some slack for
         // where the hunter saw it a moment ago.
@@ -70,6 +70,7 @@ public static partial class Module
         int damage = spear is { } s ? 50 + s.Quality / 4 : 30 + blade!.Value.Quality / 8;
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
+        WearTool(ctx, (spear ?? blade)!.Value);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
     }
 
@@ -99,14 +100,16 @@ public static partial class Module
         public float FromZ;
         public bool Crit;
         public bool Killed;
+        // True for an arrow hit, so Audio doesn't also play the melee thud.
+        public bool Ranged;
     }
 
     // Damage lands: it dies if that is all the health it has, otherwise it is wounded
     // and bolts away from (fromX, fromZ), leaping `leap` meters at once.
-    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false)
+    static void HurtAnimal(ReducerContext ctx, Animal animal, AnimalMind mind, int damage, float fromX, float fromZ, float leap, long now, bool crit = false, bool ranged = false)
     {
         bool kills = damage >= mind.Health;
-        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills });
+        ctx.Db.AnimalHit.Insert(new AnimalHit { AnimalId = animal.Id, X = animal.X, Z = animal.Z, FromX = fromX, FromZ = fromZ, Crit = crit, Killed = kills, Ranged = ranged });
         if (kills)
         {
             KillAnimal(ctx, animal, mind, now);
@@ -185,21 +188,21 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception("You need a blade to butcher with");
+        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need a blade to butcher with"));
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
+        WearTool(ctx, tool);
 
-        // A grown sheep gives a few cuts and a hide; a lamb gives one small cut. A deer
-        // gives venison, its hide and an antler; a fawn one small cut.
+        // What a carcass gives comes from its species' Def: a grown animal gives its cuts, its
+        // hide and any extra (a deer's antler); a young one a single small cut.
+        var def = AnimalDefs.Get((byte)carcass.Species);
         bool grown = carcass.Growth >= 80;
-        bool deer = carcass.Species == AnimalSpecies.Deer;
-        var meat = deer ? Item.RawVenison : Item.RawMutton;
-        for (int i = 0; i < (grown ? (deer ? 2 : 3) : 1); i++) DropNear(ctx, carcass, meat, quality);
-        if (grown) DropNear(ctx, carcass, deer ? Item.DeerHide : Item.SheepHide, quality);
-        if (grown && deer) DropNear(ctx, carcass, Item.Antler, quality);
+        for (int i = 0; i < (grown ? def.MeatGrown : def.MeatYoung); i++) DropNear(ctx, carcass, def.Meat, quality);
+        if (grown) DropNear(ctx, carcass, def.Hide, quality);
+        if (grown && def.Extra is { } extra) DropNear(ctx, carcass, extra, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }
 

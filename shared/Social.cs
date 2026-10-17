@@ -168,9 +168,20 @@ namespace LifeGame.Shared
         // most ClaimNameMax characters. Empty means unnamed.
         public const int ClaimNameMax = 28;
 
+        // claims-16 (D-182): control characters (newlines, escapes, NUL) never reach other
+        // players' screens; they read as spaces, so words don't run together.
+        public static string StripControl(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text ?? "";
+            var chars = text.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+                if (char.IsControl(chars[i])) chars[i] = ' ';
+            return new string(chars);
+        }
+
         public static string CleanClaimName(string name)
         {
-            var words = (name ?? "").Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            var words = StripControl(name).Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             string clean = string.Join(" ", words);
             return clean.Length > ClaimNameMax ? clean[..ClaimNameMax].TrimEnd() : clean;
         }

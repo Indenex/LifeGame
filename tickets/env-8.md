@@ -1,9 +1,9 @@
 # env-8: Modeling's props in the world (seeded shape variants)
 Lane: Environment
 Owner: Environment session (Opus), session_012hVejTxLoxBpZyX3GQmNL9
-Status: in_review
+Status: done
 Branch: claude/environment-props
-PR: (once opened)
+PR: #284 (merged 2026-10-16)
 
 ## Goal
 Swap Modeling's props (#197, #235, `client/scripts/models/PropMeshes.cs`) into the world so repeated things don't look like copies (D-166). Ordinary trunks get flared roots; boulders, river stones, birches, heather, gorse, fallen logs and outcrop formations come in several real shapes, chosen per instance from the seed, with Environment's own per-instance scale, tilt and tint on top. Cattails at pond edges. Collision follows (outcrop formations and boulders block; logs and small stones don't).
@@ -15,4 +15,4 @@ Swap Modeling's props (#197, #235, `client/scripts/models/PropMeshes.cs`) into t
 - (none)
 
 ## Next step
-Open the PR, request renders (boulder patch, heath with heather and gorse, wetland birches and cattails, an outcrop, a log ford), send the green sha to the PM.
+None: merged as #284 (CI run https://github.com/Indenex/LifeGame/actions/runs/38972520564 green on 71e65cf). Renders (boulder patch, heath, wetland birches and cattails, an outcrop, a log ford) are still worth asking for; they never block (D-142).

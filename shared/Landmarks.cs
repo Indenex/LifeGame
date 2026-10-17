@@ -37,46 +37,33 @@ namespace LifeGame.Shared
             return off / MathF.Max(MathF.Sqrt(gx * gx + gz * gz), 0.002f);
         }
 
+        // Placement rules for the world features in shared/Features.cs, which says how
+        // many of each there are (one per square, or every cell that fits).
+
         // A huge old oak, one at most in each 64 m square: the first of a few spots in
         // the square that falls in an open glade on dry ground, away from the spawn
         // clearing. Scenery: no choppable tree grows on its cell.
-        public static bool GiantOakAt(int x, int z) => IsChosen(x, z, 64, 0u, OakFits);
-
-        static bool OakFits(int x, int z) =>
+        public static bool OakFits(int x, int z) =>
             x * x + z * z >= 20 * 20 && !Trees.GrowsAt(x, z)
             && Forest.Density(x, z) < 0.25f && Forest.Heath(x, z) < 0.5f && Forest.Wetland(x, z) < 0.3f
             && World.BaseHeight(x, z) > World.WaterLevel + 0.4f && Trail(x, z) < 0.3f;
 
         // The middle of a rock outcrop, one at most in each 48 m square, on the heath.
         public const int OutcropSquare = 48;
-        public static bool OutcropAt(int x, int z) => IsChosen(x, z, OutcropSquare, 1u, OutcropFits);
 
-        // The outcrop in a given 48 m square, if it has one (for collision, which needs
-        // the stones round a point without testing every cell).
-        public static bool OutcropIn(int sx, int sz, out int x, out int z)
-        {
-            for (int k = 0; k < Candidates; k++)
-            {
-                (x, z) = Candidate(sx, sz, OutcropSquare, 1u, k);
-                if (OutcropFits(x, z)) return true;
-            }
-            x = z = 0;
-            return false;
-        }
+        public static bool OutcropFits(int x, int z) => Forest.Heath(x, z) > 0.55f && x * x + z * z > 20 * 20;
 
         public static int SquareOf(int cell, int size) => FloorDiv(cell, size);
 
-        static bool OutcropFits(int x, int z) => Forest.Heath(x, z) > 0.55f && x * x + z * z > 20 * 20;
-
         // A stepping stone across a stream, in a row every 40 m along it.
-        public static bool FordStoneAt(int x, int z) =>
+        public static bool FordFits(int x, int z) =>
             Mod(z + 13, 40) == 0 && Land.StreamDistance(x, z) < 3.2f;
 
         // Whether this cell is the chosen spot in its square of the given size: the first
         // of a few seeded candidates there that fits.
         const int Candidates = 6;
 
-        static bool IsChosen(int x, int z, int size, uint salt, Func<int, int, bool> fits)
+        public static bool IsChosen(int x, int z, int size, uint salt, Func<int, int, bool> fits)
         {
             int sx = FloorDiv(x, size), sz = FloorDiv(z, size);
             int mine = -1;
@@ -90,6 +77,19 @@ namespace LifeGame.Shared
                 if (fits(px, pz)) return false;
             }
             return fits(x, z);
+        }
+
+        // The chosen spot in square (sx, sz), if one fits (for collision, which needs the
+        // pieces round a point without testing every cell).
+        public static bool ChosenIn(int sx, int sz, int size, uint salt, Func<int, int, bool> fits, out int x, out int z)
+        {
+            for (int k = 0; k < Candidates; k++)
+            {
+                (x, z) = Candidate(sx, sz, size, salt, k);
+                if (fits(x, z)) return true;
+            }
+            x = z = 0;
+            return false;
         }
 
         static (int, int) Candidate(int sx, int sz, int size, uint salt, int k)
