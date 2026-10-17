@@ -323,8 +323,12 @@ public static partial class StructureModel
     }
 
     // A shaggy slab of thatch lying on the slope from low to high, with a ragged lower edge.
+    // Prototype (model-4): Modeling's rounded-row thatch in place of the flat columns.
+    internal static bool RoundThatch;
+
     static Mesh ThatchRow(Vector3 low, Vector3 high, float width, float thickness, int seed)
     {
+        if (RoundThatch) return ThatchMeshes.Row(low, high, width, thickness * 1.6f, seed);
         var st = Begin();
         var up = high - low;
         var normal = Vector3.Right.Cross(up).Normalized();

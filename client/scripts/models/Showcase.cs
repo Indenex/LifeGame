@@ -579,7 +579,8 @@ public partial class Showcase : Node3D
             if (child is MeshInstance3D { Mesh: PlaneMesh } ground)
                 ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Grass, MaterialLook.Variant.D, new Color(0.52f, 0.57f, 0.26f));
 
-        // The cabin, sheep and player in variant D.
+        // The cabin, sheep and player in variant D; the roof in rounded-row thatch.
+        StructureModel.RoundThatch = !args.ContainsKey("flat-thatch");
         int cabin = 0;
         for (int kind = 0; kind < LifeGame.Shared.Structures.Shapes.Length; kind++)
             if (LifeGame.Shared.Structures.Shape(kind).Name == "Log cabin") cabin = kind;
