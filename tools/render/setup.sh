@@ -6,8 +6,13 @@ GODOT_VERSION=4.6.2
 SPACETIME_VERSION=2.12.0
 
 if [ ! -x "$HOME/.dotnet/dotnet" ]; then
-  curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-  bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$HOME/.dotnet"
+  # Microsoft's download host can be blocked by the container's network policy;
+  # Ubuntu's own dotnet-sdk-8.0 works too (linked to ~/.dotnet so lib.sh finds it).
+  if curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+     && bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$HOME/.dotnet"; then :; else
+    apt-get update -q && apt-get install -y -q dotnet-sdk-8.0
+    ln -sfn "$(dirname "$(readlink -f "$(command -v dotnet)")")" "$HOME/.dotnet"
+  fi
 fi
 if [ ! -x "$HOME/stdb/spacetimedb-cli" ]; then
   mkdir -p "$HOME/stdb"

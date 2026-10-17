@@ -151,8 +151,15 @@ Still owed (in queue.jobs order after the running job):
 - then the older list above: seethru-before/after (env-25), paintedtrees-walk, pebble-shell, camcheck low2/default/high, ceramics-14b, rocks/flowers/ground/edge/bush before-after (env-16..20), atmosphere-28 frost (gates merge of #459), atmosphere-29 painterly, pinetest-light, model-4f, env-9 pair, heath-patch.
 Notes: nolook.sh now also handles the once-only look picker; render.sh has --when-loaded (screenshot-when-loaded) and a bare "pkill -f" can kill your own shell if the pattern appears in the command text.
 
+### Session state 2026-10-17 15:05 (one Render lane, new account)
+- Merged claude/render-1-013qe8 + claude/render-c-clips + claude/render-b-ui into claude/render-t9zssd (a38e3ff6). Conflicts: nolook.sh (kept both seds), Puppet `give` (tries maker / slot+on_belt / wear-only shapes).
+- Microsoft's dotnet host is blocked by this container's network policy; setup.sh now falls back to Ubuntu's dotnet-sdk-8.0 linked to ~/.dotnet.
+- One queue now: tools/render/queue.render.jobs (run: `RENDER_WORK=/tmp/render RENDER_OUT=$PWD/renders QUEUE_JOBS=tools/render/queue.render.jobs nohup tools/render/queue.sh > /tmp/render/queue.log 2>&1 &`). Every name in the three older job files counts as done (pre-fill /tmp/render/queue.done with them); what is still owed from them is listed in render-b-1.md and render-c-1.md "Still owed"/"QUEUED" and is being re-added here by priority.
+- Reviewed and sent to the PM: house-show-36ac39d-1..6 (chest yaw flag had no effect: three identical chest shots; sundial noon/15:00; devices with labels), animals25b-534a588-1/2 (no rabbits or hens in frame; shot 2 has large dark triangle shadows across the view). Copies in /mnt/project-files/screenshots/.
+- Priority order (STATUS 14:40): env-35 dragonflies pond, fallen giant glade, rabbits and hens, straw bed in the world, emotes front clip, then the rest of B's and C's owed lists.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
 ## Next step
-Set up the container (tools/render/setup.sh; pre-fill /tmp/render/queue.done from tools/render/queue.done.snapshot plus the done names above), start `nohup tools/render/queue.sh` and let it work through queue.jobs from animals25b; check the "Still owed" list above against queue.jobs, add anything missing, send each result to the PM.
+Check /tmp/render/queue.log (restart the queue with the command above if the container is fresh), review each image, copy it to /mnt/project-files/screenshots/ and send it to the PM (session_01HQQLrCgy3JhRUA9YMTqyL1); then add the straw-bed and emotes-front jobs.
