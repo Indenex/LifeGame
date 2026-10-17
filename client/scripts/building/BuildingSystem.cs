@@ -132,6 +132,7 @@ public partial class BuildingSystem : Node
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
         if (args.Contains("--building-showcase")) Showcase();
         if (args.Contains("--building-closeup")) cameraRig.Zoom(-8f);
+        if (args.Contains("--building-housewarming")) PreviewWarming();
     }
 
     // --building-showcase lays out local, finished and half-built structures in
@@ -247,8 +248,8 @@ public partial class BuildingSystem : Node
         if (appeared > 0 && (existed || fresh))
             Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || Structures.Shape((int)s.Kind).Hut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
 
-        if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
-            hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
+        if (existed && !before!.Complete && s.Complete)
+            Finished(s, v.Position, me.Position.DistanceTo(v.Position));
     }
 
     // How full a batch device looks: 0 idle, 1 for 1 to 3 units, 2 for 4 to 7, 3 for 8 to 10
@@ -746,6 +747,7 @@ public partial class BuildingSystem : Node
             var have = string.Join("   ", site.Needs.Select(n => $"{ItemName(n.Item, n.Need)} {n.Have}/{n.Need}"));
             text = $"{shape.Name}: {stage} ({site.Stage + 1} of {shape.Stages.Length})    {have}";
             if (site.Owner == MyIdentity()) text += $"    Shift+{Controls.KeyFor("use") ?? "E"} take down";
+            if (HelpersLine(site.Id) is { } helpers) text += "\n" + helpers;
             // Out of what it still needs: say what to fetch, since G has nothing to add.
             var missing = site.Needs.Where(n => n.Have < n.Need).ToList();
             if (conn() is { } c && missing.Count > 0 && missing.All(n => Carried(c, (Item)n.Item) == 0))
@@ -754,7 +756,7 @@ public partial class BuildingSystem : Node
         else if (UsePrompt() is { } use)
             text = use;
         else if (ShelterAt(me.Position) is { } home)
-            text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}";
+            text = $"Sheltered in the {ShapeOf(home).Name.ToLowerInvariant()}" + (BuiltBy(home.Id) is { } by && by != "built by you" ? $", {by}" : "");
 
         promptPanel.Visible = text != null;
         if (text != null) prompt.Text = text;
