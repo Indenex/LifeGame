@@ -1,0 +1,22 @@
+# claims-19 (#535) Town panel. The SeedTown reducer (render-tree patch) lays the town out on the
+# fresh in-memory server: the camera (puppet, player 1) is Alda, Mayor of "Willow Run" with Bren
+# (Herald) and Cai signed; Dee's claim is on no roster (dashed ring), Eli's is in another town
+# (blue); an open Mayor ballot has Cai voting for Bren. Run with
+#   RENDER_PATCH=tools/render/patches/seedtown.sh RENDER_TOWN=1 RENDER_TOWN_AT=45 [RENDER_SIZE=1280x720]
+# (the panel opens from a timer; K and the Town button are unreliable at ~0.5 fps).
+client-as-puppet
+client --time-of-day=0.5 --rain=0 --cloud=0.1
+wait 20
+act SeedTown
+wait 35
+snap
+# positions from the 1280x720 still: Bren (478,280), Dee's dashed ring (301,348), Mayor's Vote button (1014,367)
+mouse 478 280
+wait 5
+snap
+click 301 348
+wait 6
+snap
+click 1014 346
+wait 6
+snap

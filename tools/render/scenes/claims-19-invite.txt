@@ -1,0 +1,9 @@
+# claims-19 (#535), the invited neighbour's view: the camera (puppet, player 1) is Dee, with a
+# claim on no roster and a pinned invitation from Alda to sign Willow Run. Run with
+#   RENDER_PATCH=tools/render/patches/seedtown.sh RENDER_TOWN=1 RENDER_TOWN_AT=45 [RENDER_SIZE=1280x720]
+client-as-puppet
+client --time-of-day=0.5 --rain=0 --cloud=0.1
+wait 20
+act SeedInvite
+wait 35
+snap
