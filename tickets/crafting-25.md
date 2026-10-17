@@ -1,7 +1,7 @@
 # crafting-25: Maker's mark (who made it)
 Lane: Crafting
 Owner: Crafting thread
-Status: todo (starts when UX's #443 is on main)
+Status: done
 Branch: crafting-maker
 PR: (none yet)
 
@@ -22,4 +22,4 @@ Justin: "if an item is inspected, it tells you who made it." Made things remembe
 - Ceramics (kiln/drying outputs) must pass the maker: tell them when the optional argument exists.
 
 ## Next step
-When #443 is on main: merge main into crafting-maker, add the column and the helper, use it at every site above, wire FinishCraft, run CraftCheck and the upgrade check, open the PR.
+None: merged (#646). Later sections below are history.

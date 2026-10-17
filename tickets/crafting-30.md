@@ -1,7 +1,7 @@
 # crafting-30: Shared fire-ground check
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-fireground (harness branch claude/...; see PR)
 PR: (opened below)
 
@@ -15,4 +15,4 @@ The fire-ground rules (level, above water, clear of boulders and trunks) live in
 - Local CraftCheck run is blocked by the bot-walk bug (bugfix-34); relying on CI.
 
 ## Next step
-Wait for CI on the PR, send the green sha to the PM, tell UX it landed.
+None: merged (#596). Later sections below are history.

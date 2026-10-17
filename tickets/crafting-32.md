@@ -1,7 +1,7 @@
 # crafting-32: A cooldown refusal does not end a held dig
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-holdfix
 PR: (see below)
 
@@ -12,4 +12,4 @@ Render C's clip of #495 (hold F to dig) showed one dig, "Still working" for abou
 - 2026-10-17: found the path, one-line fix, client builds.
 
 ## Next step
-Wait for CI, send the green sha to the PM.
+None: merged (#670). Later sections below are history.
