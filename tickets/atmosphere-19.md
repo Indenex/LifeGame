@@ -1,8 +1,8 @@
 # atmosphere-19: Warm homes at night
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
-Branch: claude/atmosphere-19-warm-homes
+Status: in_review
+Branch: claude/atmosphere-19b-homes (follow-up; first part claude/atmosphere-19-warm-homes, #281 merged)
 PR: #281
 
 ## Goal
@@ -15,9 +15,14 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
 
 - 2026-10-16 22:10: House building answered. `StructureShape.SmokeY` arrives in PR #271 (clay hut 2.9, mud-brick house 3.3, log cabin 3.3, others 0). `BuildingSystem.SeeThroughOf(ulong structureId)` (0..1) arrives in PR #272, after #271. Plan: smoke at SmokeY, and none when it is 0. Doorway glow quad alpha and door light energy are multiplied by (1 - SeeThroughOf(id)). Smoke does not fade.
 - 2026-10-16 22:09: CI run 38972227238 green on 5702699; PR #281 merged. Follow-up still open: SmokeY and SeeThroughOf from House building.
+- 2026-10-17 01:15: follow-up, now that House building's #271 (SmokeY) and #272 (see-through shelters) are on main:
+  - Roof smoke rises from `ground + StructureShape.SmokeY` (clay hut 2.9, mud-brick house and log cabin 3.3). Shapes with SmokeY 0 send up no smoke. This is data-driven per D-206 and replaces the flat 2.9 m default.
+  - Door light energy and the doorway glow quad are multiplied by (1 - BuildingSystem.SeeThroughOf(id)), so a home faded out of the camera's way doesn't leave its glow hanging in the air. Smoke does not fade.
+  - Hook: `Atmosphere.SeeThrough` (Func<ulong, float>), set in Main with one line next to the existing Sheltered hook.
+  - Client 0 errors.
 
 ## Open questions / blockers
-- Waiting on House building #271 (SmokeY) and #272 (SeeThroughOf) to merge before #281 can use them (using them earlier won't compile).
+- (none)
 
 ## Next step
-After House building's #271 merges, on a new branch from main, use Structures.Shape(kind).SmokeY in AtmosphereHomes.FindHomes (no smoke when 0). After #272 merges, multiply the door glow and light by (1 - BuildingSystem.SeeThroughOf(id)).
+Wait for the follow-up PR's CI and send the PM the green sha.
