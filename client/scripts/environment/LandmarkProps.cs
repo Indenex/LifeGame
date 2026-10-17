@@ -104,7 +104,7 @@ public static class LandmarkProps
             float a = H(x, z, 96) * Mathf.Tau, r = Range(x, z, 97, 3f, 6f);
             float px = at.X + Mathf.Cos(a) * r, pz = at.Z + Mathf.Sin(a) * r;
             var lying = new Basis(Vector3.Up, H(x, z, 98) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 99, 0.6f, 1.0f));
-            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(lying, new Vector3(px, heightAt(px, pz), pz)), Look.Bark.Darkened(0.2f), custom));
         }
     }
@@ -199,7 +199,7 @@ public static class LandmarkProps
             if (Land.StreamDistance(x, z) > Land.StreamDistance(x - 1, z) || Land.StreamDistance(x, z) > Land.StreamDistance(x + 1, z)) return;
             // Modeling's fallen log lies along x, centred on its origin, about 3 m long.
             var across = new Basis(Vector3.Up, Range(row, 1, 401, -0.25f, 0.25f)) * Basis.FromScale(new Vector3(Range(row, 1, 402, 1.7f, 2.1f), 1f, 1f));
-            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(across, new Vector3(x, World.WaterLevel - 0.05f, z + 0.3f)), Look.Bark.Darkened(0.18f), custom));
             return;
         }
