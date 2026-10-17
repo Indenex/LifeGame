@@ -88,9 +88,10 @@ public partial class Atmosphere
         float night = (1f - daylight) * grade;
 
         // Lit tips read warm and bright, as in reference 02: a warmer, stronger sun.
-        // Cosy: a softer warm-white day sun and a peach-rose low sun, not orange.
+        // Cosy: a softer warm-white day sun and a soft gold low sun, not orange (rose
+        // turned pale rocks lilac under the props' lavender shade, atmosphere-40).
         var daySun = new Color(1f, 0.93f, 0.78f).Lerp(new Color(1f, 0.95f, 0.87f), soft);
-        var lowSunColor = new Color(1f, 0.70f, 0.40f).Lerp(new Color(1f, 0.70f, 0.56f), soft);
+        var lowSunColor = new Color(1f, 0.70f, 0.40f).Lerp(new Color(1f, 0.76f, 0.50f), soft);
         sun.LightColor = sun.LightColor.Lerp(daySun, 0.25f * grade * daylight).Lerp(lowSunColor, 0.35f * lowSun);
         sun.LightEnergy *= 1f + 0.1f * grade * daylight + 0.15f * lowSun;
         // Moonlight is a readable blue-violet fill, not near-black: the moon (the same
