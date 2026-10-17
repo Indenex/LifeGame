@@ -58,7 +58,13 @@ public static class MaterialLook
             if (pattern == Pattern.Stone) color *= new Color(0.92f, 0.9f, 1.08f);
             if (pattern == Pattern.Bark) color *= new Color(0.95f, 0.92f, 1.06f);
             if (pattern == Pattern.Wood) color *= new Color(1.05f, 0.95f, 0.88f);
-            if (pattern == Pattern.Leaves) color *= new Color(1.0f, 1.0f, 0.78f);
+            // Foliage toward the pack's olive-yellow and muted greens: half way to a
+            // warm olive of the same brightness.
+            if (pattern == Pattern.Leaves)
+            {
+                float lum = color.R * 0.3f + color.G * 0.59f + color.B * 0.11f;
+                color = color.Lerp(new Color(lum * 1.15f, lum * 1.1f, lum * 0.6f), 0.5f);
+            }
             if (pattern == Pattern.Leaves) (scale, stretch) = (0.8f, Vector2.One);
         }
         var material = new ShaderMaterial { Shader = shader };

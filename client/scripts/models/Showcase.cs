@@ -467,7 +467,7 @@ public partial class Showcase : Node3D
         // Ground: today's grass, or the painted plain pattern in grass colour.
         foreach (var child in GetChildren())
             if (child is MeshInstance3D { Mesh: PlaneMesh } ground && !now)
-                ground.MaterialOverride = d ? MaterialLook.For(MaterialLook.Pattern.Grass, variant, new Color(0.56f, 0.66f, 0.28f)) : MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
+                ground.MaterialOverride = d ? MaterialLook.For(MaterialLook.Pattern.Grass, variant, new Color(0.62f, 0.64f, 0.38f)) : MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
 
         // Light for the time of day.
         foreach (var child in GetChildren())
