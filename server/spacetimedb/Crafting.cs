@@ -225,6 +225,8 @@ public static partial class Module
             toolUsed = tool.Item;
             WearTool(ctx, tool);
         }
+        // Bot checks only; 1 in every player's world. Fires and roasts keep their times.
+        if (def.Outcome is not (Outcome.Fire or Outcome.Roast)) seconds /= TestSpeed(ctx);
         seconds = Math.Max(seconds, 0.5f);
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
