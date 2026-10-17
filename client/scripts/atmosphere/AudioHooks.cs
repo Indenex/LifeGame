@@ -14,6 +14,7 @@ static class AudioHooks
         StorageSounds.Connect(conn);
         StructureSounds.Connect(conn);
         PotSounds.Connect(conn);
+        RestSounds.Connect(conn);
         EmoteSounds.Connect(conn);
         LampSounds.Connect(conn);
         RabbitSounds.Connect(conn);

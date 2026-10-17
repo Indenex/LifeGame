@@ -48,22 +48,45 @@ public static partial class Module
         return true;
     }
 
+    // The rest spot at this building that the player may use and is close enough to: its definition and
+    // where it stands. Shared by choosing a waking place and lying down on it.
+    static RestSpotDef RequireRestSpot(ReducerContext ctx, Player player, PlayerPos pos, ushort spotId, ulong structureId, out float x, out float z)
+    {
+        var spot = RestSpots.Find(spotId) ?? throw new Exception("That is not somewhere to sleep");
+        var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
+        if (!MayLiveIn(ctx, s))
+            throw new Exception("This isn't your home: only its builders or the claim's members can wake here");
+        if (!RestSpotStands(ctx, player.PlayerId, spot, structureId, out x, out z))
+            throw new Exception($"There is no {spot.Name} here to wake on");
+        RequireReach(pos, x, z);
+        return spot;
+    }
+
     // Chooses a rest spot as your waking place. Replaces any earlier one.
     [SpacetimeDB.Reducer]
     public static void SetRespawn(ReducerContext ctx, ushort spotId, ulong structureId)
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
-        var spot = RestSpots.Find(spotId) ?? throw new Exception("That is not somewhere to sleep");
-        var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
-        if (!MayLiveIn(ctx, s))
-            throw new Exception("This isn't your home: only its builders or the claim's members can wake here");
-        if (!RestSpotStands(ctx, player.PlayerId, spot, structureId, out float x, out float z))
-            throw new Exception($"There is no {spot.Name} here to wake on");
-        RequireReach(pos, x, z);
+        RequireRestSpot(ctx, player, pos, spotId, structureId, out float x, out float z);
         var row = new RespawnPoint { PlayerId = player.PlayerId, Spot = spotId, StructureId = structureId, X = x, Z = z };
         if (ctx.Db.RespawnPoint.PlayerId.Find(player.PlayerId) is not null) ctx.Db.RespawnPoint.PlayerId.Update(row);
         else ctx.Db.RespawnPoint.Insert(row);
+    }
+
+    // Lie down on a rest spot you may use (survival-27): the same pose as Rest(RestLie), but on your mat, so
+    // everyone sees you asleep there. Walking off stands you up, as ever. Just a pose (Justin's pick).
+    [SpacetimeDB.Reducer]
+    public static void LieOnRestSpot(ReducerContext ctx, ushort spotId, ulong structureId)
+    {
+        var player = RequirePlayer(ctx);
+        var pos = RequirePos(ctx, player);
+        RequireRestSpot(ctx, player, pos, spotId, structureId, out _, out _);
+        if (IsFlyingAdmin(ctx, player.PlayerId)) throw new Exception("Not while flying");
+        var row = new PlayerRest { PlayerId = player.PlayerId, Kind = RestLie, SpotId = structureId };
+        if (ctx.Db.PlayerRest.PlayerId.Find(player.PlayerId) is null) ctx.Db.PlayerRest.Insert(row);
+        else ctx.Db.PlayerRest.PlayerId.Update(row);
+        ctx.Db.PlayerSneaking.PlayerId.Delete(player.PlayerId);
     }
 
     // Where a player wakes after dying: their chosen rest spot while it stands, else Survival's default.

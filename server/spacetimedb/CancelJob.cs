@@ -36,8 +36,11 @@ public static partial class Module
             foreach (var input in def.Consumes)
             {
                 var item = Items.Def(input.Item);
-                byte quality = ClayRules.IsVessel(input.Item) ? job.VesselQuality : item.HasQuality ? job.Quality : Items.RawQuality;
-                AddToInventory(ctx, owner, input.Item, input.Count, quality);
+                byte given = job.InputQuality > 0 ? job.InputQuality : job.Quality;
+                byte quality = ClayRules.IsVessel(input.Item) ? job.VesselQuality : item.HasQuality ? given : Items.RawQuality;
+                // A pot goes back as it was, with its maker and slip (ceramics, crafting-25).
+                bool vessel = ClayRules.IsVessel(input.Item);
+                AddToInventory(ctx, owner, input.Item, input.Count, quality, vessel ? job.VesselWear : 0u, vessel ? job.VesselMaker : 0u);
             }
         return true;
     }
