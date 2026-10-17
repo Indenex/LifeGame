@@ -1,6 +1,8 @@
 # One job per line: <name> <command...>. queue.sh rereads this file between jobs,
 # so jobs can be added or reordered while it runs. Live scenes go last.
+grass-main tools/render/render.sh grass-main dbe929a "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2" "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2 --render-cam=4,1.0,35,0.5"
 grass tools/render/render.sh grass 2064cb0 "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2" "--time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4 --screenshot-delay=90 --debug-position=-2,-2 --render-cam=4,1.0,35,0.5"
+grass-walk-main env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk-main dbe929a tools/render/scenes/grass-walk.txt
 grass-walk env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk 2064cb0 tools/render/scenes/grass-walk.txt
 pinetest2 env TICKET=pinetest2 "VIEWS=pinetest --time-of-day=0.62 --grade=1,pinetest --time-of-day=0.62 --grade=1 --close" tools/render/scenes/model-1-style.sh 361526ef
 model-4 env TICKET=model-4 "VIEWS=painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2,painted --time-of-day=0.70 --cloud=0.25 --grade=1 --godrays=2,painted --time-of-day=0.92 --cloud=0.1 --grade=1" tools/render/scenes/model-1-style.sh a03e50bf
