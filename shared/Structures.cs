@@ -314,6 +314,21 @@ namespace LifeGame.Shared
                     new[] { (Item.Fiber, 14u) },
                 },
             },
+            // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
+            new StructureShape
+            {
+                Name = "Repair table",
+                Category = "Crafting",
+                HalfWidth = 0.8f, HalfDepth = 0.45f,
+                Clearance = 1.0f,
+                Station = StationKind.Repair,
+                Stages = new[] { "Table" },
+                // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
+                },
+            },
         });
 
         // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
