@@ -37,12 +37,12 @@ public partial class BuildMenu : CanvasLayer
     // Tabs in this order; any category not listed comes after, so a new one still shows.
     static readonly string[] Preferred = { "Shelter", "Storage", "Crafting", "Fire", "Fences and gates", "Claims" };
     static IEnumerable<string> Order => Preferred
-        .Concat(Enumerable.Range(0, Structures.Shapes.Length).Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
+        .Concat(Structures.Kinds.Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
 
     // Everything it takes, all stages together.
     public static List<(Item item, uint count)> Costs(int kind) =>
-        kind < Structures.StageCosts.Length
-            ? Structures.StageCosts[kind].SelectMany(stage => stage)
+        Structures.Exists(kind)
+            ? Structures.Costs(kind).SelectMany(stage => stage)
                 .GroupBy(c => c.Item).Select(g => (g.Key, (uint)g.Sum(c => c.Count))).ToList()
             : new();
 
@@ -81,7 +81,7 @@ public partial class BuildMenu : CanvasLayer
     }
 
     static IEnumerable<int> Kinds(string category) =>
-        Enumerable.Range(0, Structures.Shapes.Length).Where(k => CategoryOf(k) == category);
+        Structures.Kinds.Where(k => CategoryOf(k) == category);
 
     Control MakePanel()
     {
@@ -214,7 +214,7 @@ public partial class BuildMenu : CanvasLayer
             },
         });
 
-        for (int kind = 0; kind < Structures.Shapes.Length; kind++)
+        foreach (int kind in Structures.Kinds)
         {
             var model = new StructureView(kind);
             view.AddChild(model);

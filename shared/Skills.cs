@@ -144,9 +144,12 @@ namespace LifeGame.Shared
             foreach (var (id, _) in ActionsAfterRecipes) yield return id;
             // Building each kind of crafting station (D-098), as Structures reports it.
             var stations = new HashSet<string>();
-            foreach (var shape in Structures.Shapes)
+            foreach (var kind in Structures.Kinds)
+            {
+                var shape = Structures.Shape(kind);
                 if (shape.Station != StationKind.None && stations.Add(StationInfo.BuildProcess(shape.Station)))
                     yield return StationInfo.BuildProcess(shape.Station);
+            }
         }
 
         // Some things can't be picked up by watching someone else do them.
