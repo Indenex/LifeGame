@@ -49,6 +49,22 @@ public static class PotMesh
         new(0.190f, 0.092f), new(0.184f, 0.120f),
     };
 
+    // The trough's inside radius at a height (both in the mesh's own units, before PotView.Size),
+    // so the water in it follows the bowl instead of floating as a flat disc.
+    public static float TroughInnerRadius(float y)
+    {
+        const float wall = 0.011f;
+        y = Mathf.Clamp(y, 0f, TroughProfile[^1].Y);
+        for (int i = 0; i < TroughProfile.Length - 1; i++)
+        {
+            var a = TroughProfile[i];
+            var b = TroughProfile[i + 1];
+            if (y <= b.Y)
+                return Mathf.Max(0.02f, Mathf.Lerp(a.X, b.X, b.Y > a.Y ? (y - a.Y) / (b.Y - a.Y) : 0f) - wall);
+        }
+        return TroughProfile[^1].X - wall;
+    }
+
     public static float Height(ClayForm form) => form switch
     {
         ClayForm.PinchPot => 0.122f,

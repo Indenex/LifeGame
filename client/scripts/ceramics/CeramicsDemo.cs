@@ -69,7 +69,15 @@ public partial class CeramicsDemo : Node3D
         }
         if (ShowTrough(out var troughFill))
         {
-            var hut = new Node3D { Position = new Vector3(-3.4f, 0, -1.2f), Rotation = new Vector3(0, 0.5f, 0) };
+            // Like a real building, clear the grass and trees on the cells it stands on (Terrain.Cleared).
+            var centre = anchor.Position + new Vector3(0, 0, -2.2f);
+            int x0 = Mathf.FloorToInt(centre.X - 4f), x1 = Mathf.CeilToInt(centre.X + 2f);
+            int z0 = Mathf.FloorToInt(centre.Z - 5f), z1 = Mathf.CeilToInt(centre.Z + 2f);
+            var before = terrain.Cleared;
+            terrain.Cleared = (cx, cz) => (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) || before?.Invoke(cx, cz) == true;
+            for (int cx = x0; cx <= x1; cx++)
+                for (int cz = z0; cz <= z1; cz++) terrain.Refresh(cx, cz);
+            var hut = new Node3D { Position = new Vector3(-1.5f, 0, -3.3f), Rotation = new Vector3(0, 0.3f, 0) };
             foreach (var piece in StructureModel.Pieces(1).Where(p => p.Stage >= 0))
                 hut.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material });
             row.AddChild(hut);

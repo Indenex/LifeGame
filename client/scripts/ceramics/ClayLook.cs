@@ -64,6 +64,29 @@ public static class ClayLook
 
     public static ShaderMaterial Water => water ??= MakeWater();
 
+    static ShaderMaterial? troughWater;
+
+    // Deeper, darker water for a trough (ceramics-13): a clear tint over the clay bottom with a
+    // soft ring ripple, so it reads as water rather than a pale film.
+    public static ShaderMaterial TroughWater => troughWater ??= new ShaderMaterial
+    {
+        Shader = new Shader
+        {
+            Code = """
+                shader_type spatial;
+                render_mode cull_disabled;
+                void fragment() {
+                    float r = length(UV - 0.5);
+                    float ripple = sin(TIME * 1.6 - r * 30.0) * 0.5 + 0.5;
+                    ALBEDO = vec3(0.05, 0.13, 0.16) + ripple * 0.015;
+                    ROUGHNESS = 0.03;
+                    METALLIC = 0.0;
+                    SPECULAR = 0.9;
+                }
+                """,
+        },
+    };
+
     static ShaderMaterial MakeWater()
     {
         var m = new ShaderMaterial

@@ -8,12 +8,12 @@ namespace LifeGame;
 public partial class TroughView : Node3D
 {
     // Basin dimensions at PotView's scale: water sits between these heights.
-    const float EmptyY = 0.03f, FullY = 0.20f, Radius = 0.31f;
+    const float EmptyY = 0.03f, FullY = 0.20f;
 
     readonly MeshInstance3D water = new()
     {
-        Mesh = new CylinderMesh { TopRadius = Radius, BottomRadius = Radius, Height = 0.004f, RadialSegments = 24 },
-        MaterialOverride = ClayLook.Water,
+        Mesh = new CylinderMesh { TopRadius = 1f, BottomRadius = 1f, Height = 0.004f, RadialSegments = 28 },
+        MaterialOverride = ClayLook.TroughWater,
         Visible = false,
     };
     readonly Label3D label = new()
@@ -46,7 +46,11 @@ public partial class TroughView : Node3D
         Capacity = Mathf.Max(1, capacity);
         water.Visible = litres > 0;
         float t = Mathf.Clamp(litres / (float)Capacity, 0f, 1f);
-        water.Position = new Vector3(0, Mathf.Lerp(EmptyY, FullY, t), 0);
+        float y = Mathf.Lerp(EmptyY, FullY, t);
+        water.Position = new Vector3(0, y, 0);
+        // Follow the bowl's inside, a hair in so the clay edge shows round the water.
+        float r = PotMesh.TroughInnerRadius(y / PotView.Size) * PotView.Size - 0.01f;
+        water.Scale = new Vector3(r, 1f, r);
         label.Text = litres > 0 ? $"Trough  {litres}/{Capacity} L" : "Empty trough";
     }
 }
