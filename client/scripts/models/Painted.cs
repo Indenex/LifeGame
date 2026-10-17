@@ -260,7 +260,11 @@ public static class Painted
             // golden light is bright enough, and lifting both washed sunlit faces out to a
             // pale peach at dusk (painted-11).
             float band = 0.12 + 0.2 * low_sun * (1.0 - mid) + 0.4 * mid * (1.0 - 0.2 * low_sun) + 0.36 * lit * (1.0 - 0.5 * low_sun);
-            vec3 tone = mix(shade_tint, vec3(1.0), mid);
+            // The violet shade is a daylight thing; at golden hour it warms to an amber grey of
+            // the same depth, so pale stone and plaster don't read lilac in the low sun (painted-17).
+            float shade_depth = dot(shade_tint, vec3(0.3, 0.59, 0.11));
+            vec3 shade_tone = mix(shade_tint, shade_depth * vec3(1.12, 1.0, 0.86), 0.85 * low_sun);
+            vec3 tone = mix(shade_tone, vec3(1.0), mid);
             float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
             DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;
         """;
