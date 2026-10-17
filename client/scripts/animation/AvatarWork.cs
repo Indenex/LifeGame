@@ -26,6 +26,16 @@ public static class AvatarWork
         conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId, tool: w.Tool); };
         conn.Db.CraftWork.OnDelete += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, null); };
 
+        // Warmth from burning fires, for a happy sway by the fire (#15).
+        Avatar.FireWarmthAt = at =>
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+            float warmth = 0f;
+            foreach (var f in conn.Db.Fire.Iter())
+                if (f.FuelUntil.MicrosecondsSinceUnixEpoch > now)
+                    warmth = Math.Max(warmth, Fires.WarmthFrom(f.X, f.Z, at.X, at.Z));
+            return warmth;
+        };
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);
         conn.Db.PlayerSneaking.OnInsert += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = true; };
         conn.Db.PlayerSneaking.OnDelete += (_, s) => { if (other(s.PlayerId) is { } a) a.Sneaking = false; };
@@ -47,7 +57,7 @@ public static class AvatarWork
         // row and inserts the new one, so each change re-reads the player's whole set.
         void Changed(WornItem w)
         {
-            if (w.Owner == conn.Identity) Dress(conn, me, w.PlayerId);
+            if (w.Owner == Me.Key(conn)) Dress(conn, me, w.PlayerId);
             else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
         }
         conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
@@ -56,7 +66,7 @@ public static class AvatarWork
         // none when the hand is empty).
         void Holding(PlayerEquip row, bool gone)
         {
-            var avatar = row.Owner == conn.Identity ? me
+            var avatar = row.Owner == Me.Key(conn) ? me
                 : conn.Db.Player.Identity.Find(row.Owner) is { } p ? other(p.PlayerId) : null;
             avatar?.Equip(gone ? null : Equipped.ItemOf(row));
         }
@@ -80,6 +90,8 @@ public static class AvatarWork
         // asks the server, and the pose follows its row.
         me.RestRequested += kind =>
         {
+            // Sitting down near a burning fire, turn to face it (anim-15).
+            if (kind == RestKind.Sit && NearestFire(conn, me.Position) is { } fire) me.Face(fire.X, fire.Z);
             if (kind == RestKind.None) conn.Reducers.StandUp();
             else conn.Reducers.Rest((byte)kind);
         };
@@ -107,11 +119,25 @@ public static class AvatarWork
         if (best < 3f * 3f) avatar.Face(bx, bz);
     }
 
+    static (float X, float Z)? NearestFire(DbConnection conn, Godot.Vector3 at)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        (float, float)? best = null;
+        float bestD = Fires.WarmthRadius * Fires.WarmthRadius;
+        foreach (var f in conn.Db.Fire.Iter())
+        {
+            if (f.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
+            float d = (f.X - at.X) * (f.X - at.X) + (f.Z - at.Z) * (f.Z - at.Z);
+            if (d < bestD) (best, bestD) = ((f.X, f.Z), d);
+        }
+        return best;
+    }
+
     static Avatar? AvatarOf(DbConnection conn, Avatar me, Func<uint, Avatar?> other, uint playerId) =>
         playerId == MyPlayerId(conn) ? me : other(playerId);
 
     static uint? MyPlayerId(DbConnection conn) =>
-        conn.Identity is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
+        Me.Key(conn) is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
 
     static void Dress(DbConnection conn, Avatar avatar, uint playerId)
     {

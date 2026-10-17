@@ -31,6 +31,7 @@ public partial class OptionsPage : Control
     Button lightRays = null!;
     Button softGlow = null!, vignette = null!;
     Button shadows = null!;
+    Button ambientLife = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -93,6 +94,15 @@ public partial class OptionsPage : Control
         viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
+        // How thick the grass is drawn (Environment, env-32); Low for slower PCs.
+        Button grass = null!;
+        grass = ControlsPage.TextButton(GrassText(), () =>
+        {
+            GrassDetail.Setting = (GrassDetail.Setting + 1) % GrassDetail.Names.Length;
+            grass.Text = GrassText();
+        });
+        grass.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(grass);
         // Beams of low sunlight through the air (Atmosphere); Off for slower PCs.
         lightRays = ControlsPage.TextButton(RaysText(), () =>
         {
@@ -147,6 +157,14 @@ public partial class OptionsPage : Control
         });
         shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(shadows);
+        // Butterflies, pollen and fireflies (Environment, env-30); Off for slower PCs.
+        ambientLife = ControlsPage.TextButton(LifeText(), () =>
+        {
+            AmbientLife.Setting = (AmbientLife.Setting + 1) % AmbientLife.Names.Length;
+            ambientLife.Text = LifeText();
+        });
+        ambientLife.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(ambientLife);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -168,6 +186,9 @@ public partial class OptionsPage : Control
     static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
     static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
+    static string LifeText() => $"Ambient life: {AmbientLife.Names[AmbientLife.Setting]}";
+
+    static string GrassText() => $"Grass: {GrassDetail.Names[GrassDetail.Setting]}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 

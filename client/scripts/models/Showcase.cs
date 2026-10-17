@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots" or "turntable" or "art")
         {
             if (view == "faces") ChibiFaces();
             else
@@ -54,6 +54,8 @@ public partial class Showcase : Node3D
             else if (view == "crowd") Crowd();
             else if (view == "items" && args.ContainsKey("compare")) PaintedItemRows();
             else if (view == "roster") Roster();
+            else if (view == "turntable") Turntable();
+            else if (view == "art") ArtPiece();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -127,7 +129,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         // --ids=207,211 shows only those items.
@@ -187,7 +189,7 @@ public partial class Showcase : Node3D
             AddChild(new MeshInstance3D { Mesh = painted, Position = new Vector3(x, 0, z), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
             AddChild(new Label3D
             {
-                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "Spade",
+                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "?",
                 FontSize = 22, PixelSize = 0.0022f, Modulate = Look.Cream, OutlineSize = 6,
                 OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.8f),
                 Position = new Vector3(x, 0.02f, z + 0.24f), Rotation = new Vector3(-Mathf.Pi / 2f + 0.9f, 0, 0),
@@ -918,5 +920,66 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 35f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.6f, 1.7f, 7.4f), new Vector3(0.6f, 0.85f, 0), Vector3.Up);
+    }
+
+    // One chibi look turned through five views in a row (art-rnd-1): front three-quarter,
+    // side, back three-quarter, back and the other side, close up, so a part can be
+    // checked all the way round in one shot. --race=1 --main= --second= --style= pick the look.
+    void Turntable()
+    {
+        int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
+        var look = new ChibiFigure.Look((ChibiFigure.Race)Arg("race", 1), Arg("main", 0), Arg("second", 0), Arg("style", 1));
+        // --built-shell draws Pebble with ChibiFigure's built shell instead of the authored one.
+        ChibiShell.Enabled = !args.ContainsKey("built-shell");
+        var yaws = new[] { 25f, -35f, -95f, -125f, 145f };
+        // --variants: the same view of five looks instead (Pebble: the three shell
+        // colours with scutes, then two worn smooth).
+        bool variants = args.ContainsKey("variants");
+        for (int i = 0; i < yaws.Length; i++)
+        {
+            var figure = ChibiFigure.Create(variants ? look with { Second = i % 3, Style = i < 3 ? 1 : 0 } : look);
+            if (variants) yaws[i] = -95f;
+            figure.Position = new Vector3((i - 2) * 0.95f, 0, 0);
+            figure.Rotation = new Vector3(0, Mathf.DegToRad(yaws[i]), 0);
+            AddChild(figure);
+        }
+        var camera = new Camera3D { Fov = 30f, Current = true };
+        AddChild(camera);
+        // --close: the middle three views, near.
+        if (args.ContainsKey("close"))
+            camera.LookAtFromPosition(new Vector3(0, 0.95f, 3.7f), new Vector3(0, 0.66f, 0), Vector3.Up);
+        else
+            camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
+    }
+
+    // Today's model beside its Blender-authored version (art-rnd-1), each turned through
+    // three views: --view=art --piece=<name> finds the static class LifeGame.Art<Name>
+    // (client/scripts/models/art/), which has Node3D Today(), Node3D Authored() and the
+    // float fields Spacing (m between models) and Height (m, for framing).
+    // --yaws=30,-60,-150 picks the views; --close frames the authored ones only.
+    void ArtPiece()
+    {
+        string piece = args.GetValueOrDefault("piece", "tree");
+        var type = System.Type.GetType("LifeGame.Art" + char.ToUpperInvariant(piece[0]) + piece[1..])
+            ?? throw new System.ArgumentException($"no art piece {piece}");
+        Node3D Make(string name) => (Node3D)type.GetMethod(name)!.Invoke(null, null)!;
+        float spacing = (float)type.GetField("Spacing")!.GetValue(null)!;
+        float height = (float)type.GetField("Height")!.GetValue(null)!;
+        var yaws = args.GetValueOrDefault("yaws", "30,-60,-150").Split(',');
+        bool close = args.ContainsKey("close");
+        int n = yaws.Length, count = close ? n : 2 * n;
+        for (int i = 0; i < count; i++)
+        {
+            var model = close || i >= n ? Make("Authored") : Make("Today");
+            model.Position = new Vector3((i - (count - 1) * 0.5f) * spacing + (close || i < n ? 0 : spacing * 0.4f), 0, 0);
+            model.Rotation = new Vector3(0, Mathf.DegToRad(float.Parse(yaws[i % n], System.Globalization.CultureInfo.InvariantCulture)), 0);
+            AddChild(model);
+        }
+        float fov = 30f;
+        float width = count * spacing + spacing * 0.6f;
+        float distance = Mathf.Max(width * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f * 16f / 9f)), height * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f))) * 1.08f;
+        var camera = new Camera3D { Fov = fov, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, height * 0.55f + distance * 0.12f, distance), new Vector3(0, height * 0.48f, 0), Vector3.Up);
     }
 }

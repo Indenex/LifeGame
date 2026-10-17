@@ -31,7 +31,7 @@ public static partial class Module
                 if (!Structures.StepCrossesFence(s.X, s.Z, s.Yaw, fromX, fromZ, toX, toZ, PlayerBody)) continue;
                 // A low fence can be hopped, but not one that stands in a claim you don't belong to.
                 if (Jumping.Clears(Jumping.FenceTop(shape.Gate), air)
-                    && (ClaimAt(ctx, s.X, s.Z) is not { } claim || HasClaimRights(ctx, claim, ctx.Sender)))
+                    && (ClaimAt(ctx, s.X, s.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx))))
                     continue;
                 return true;
             }
