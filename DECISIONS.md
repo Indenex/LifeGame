@@ -1269,3 +1269,7 @@ Owner: Claims.
 ## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
 **Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
 **Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
+
+## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
+**Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
+**Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
