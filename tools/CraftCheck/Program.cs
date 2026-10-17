@@ -607,6 +607,25 @@ if (runStations)
     // Crafting-23: a batch device (D-195, D-209). A settling tub cleans a loaded batch of clay
 // on its own; a process with no minigame by hand is a plain queue.
 {
+    // The two parts run apart in CI, so this part digs its own clay (by hand, a few cells if need be).
+    for (int attempt = 0; CountOf(Item.Clay) < 12 && attempt < 6; attempt++)
+    {
+        var (dcx, dcz) = Enumerable.Range(1 + attempt * 3, 40)
+            .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+            .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+            .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
+                && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
+        WalkTo(dcx * World.CellSize, dcz * World.CellSize);
+        for (int dig = 0; dig < World.MaxDigDepth && CountOf(Item.Clay) < 12; dig++)
+        {
+            uint clayBefore = CountOf(Item.Clay);
+            lastError = null;
+            conn.Reducers.Dig(dcx, dcz);
+            Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging for the tub");
+            if (lastError != null) break;
+            Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+        }
+    }
     if (CountOf(Item.Clay) < 12) Fail($"only {CountOf(Item.Clay)} clay for the tub check");
     Gather(Item.Stick, 6);
     Gather(Item.Fiber, 8);
