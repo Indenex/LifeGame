@@ -99,6 +99,8 @@ public partial class Sheep : Node3D
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
         var def = AnimalDefs.Get((byte)species);
         bool deer = def.Model == "deer";
+        // Until Modeling's hen figure lands (animals-19), a hen is drawn as a small sheep.
+        if (def.Model == "hen") Scale = Vector3.One * 0.4f;
         // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
