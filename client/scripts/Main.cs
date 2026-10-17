@@ -404,7 +404,8 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
+        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
@@ -602,15 +603,33 @@ public partial class Main : Node3D
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
             if (mb.ButtonIndex == MouseButton.WheelDown) cameraRig.Zoom(2f);
         }
-        if (e.IsActionPressed("dig")) Dig();
-        if (e.IsActionPressed("pick_up")) PickUp();
+        if (e.IsActionPressed("dig") && !e.IsEcho()) { digHold.Pressed(me.Position); Dig(); }
+        if (e.IsActionPressed("pick_up") && !e.IsEcho()) { pickHold.Pressed(me.Position); PickUp(); }
         if (e.IsActionPressed("craft")) crafting.Toggle();
     }
+
+    // Hold the dig key to keep digging, one cell at a time as the ground allows (HoldRepeat).
+    readonly HoldRepeat digHold = new();
+    // The same for picking things up off the ground with the Use key when nothing else is on offer.
+    readonly HoldRepeat pickHold = new();
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
         conn?.FrameTick();
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && digHold.Update(Input.IsActionPressed("dig"), dt, World.DigCooldownMicros / 1_000_000f + 0.1f, false, me.Position))
+        {
+            digHold.Acted(me.Position);
+            Dig();
+        }
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && pickHold.Update(Input.IsActionPressed("pick_up") && Use.Shown == null, dt, 0.5f, false, me.Position)
+            && conn != null && conn.Db.WorldItem.Iter().Any(i => new Vector2(i.X - me.Position.X, i.Z - me.Position.Z).Length() <= World.Reach))
+        {
+            pickHold.Acted(me.Position);
+            PickUp();
+        }
 
         if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);

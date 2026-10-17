@@ -150,6 +150,8 @@ public partial class Atmosphere
         bool running = a.State == AnimalState.Run;
         if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
         else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
+        else if (AnimalDefs.Get((byte)a.Species).Model == "hen")
+            Hens.Seen(a.Id, a.X, a.Z, a.State switch { AnimalState.Graze => HenVoices.Mood.Peck, AnimalState.Walk => HenVoices.Mood.Walk, AnimalState.Run => HenVoices.Mood.Run, _ => HenVoices.Mood.Idle });
     }
 
     // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,
@@ -186,7 +188,7 @@ public partial class Atmosphere
 
     // Sounds for the quick body actions (player_act): data cues (CueDefs) timed to the motion,
     // played from where that player stands, so nearby players hear each other.
-    static CueDef? SoundOfAct(WorkMotion motion) => motion switch
+    static CueDef? SoundOfAct(WorkMotion motion, ushort item) => motion switch
     {
         WorkMotion.Drink => CueDefs.Drink,
         WorkMotion.Eat => CueDefs.Eat,
@@ -197,7 +199,7 @@ public partial class Atmosphere
 
     void HearAct(DbConnection conn, PlayerAct act)
     {
-        if (SoundOfAct((WorkMotion)act.Motion) is not { } def) return;
+        if (SoundOfAct((WorkMotion)act.Motion, act.Item) is not { } def) return;
         if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
         Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
     }
