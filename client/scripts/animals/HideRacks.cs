@@ -20,6 +20,9 @@ public partial class HideRacks : Node3D
     readonly Dictionary<ulong, Rack> racks = new();
     Terrain terrain = null!;
     DbConnection? conn;
+    // Set by Herd from the Claims layer, so the prompt shows only where the server would allow it.
+    public Func<float, float, bool> ClaimGoodsOpenAt = (_, _) => false;
+    public Func<float, float, bool> ClaimStandingAt = (_, _) => false;
 
     public void Bind(DbConnection connection, Terrain ground)
     {
@@ -52,10 +55,13 @@ public partial class HideRacks : Node3D
         if (conn == null) return null;
         HideRack? nearest = null;
         float best = World.Reach;
+        uint mine = Me.Player(conn)?.PlayerId ?? 0;
         foreach (var r in conn.Db.HideRack.Iter())
         {
             float d = new Vector2(r.X - at.X, r.Z - at.Z).Length();
-            if (d <= best) (nearest, best) = (r, d);
+            // The leather is its maker's, or the owner's and members' of the claim it hangs in (the server decides).
+            bool mayTake = r.MadeBy == mine || (ClaimStandingAt(r.X, r.Z) && ClaimGoodsOpenAt(r.X, r.Z));
+            if (d <= best && mayTake) (nearest, best) = (r, d);
         }
         if (nearest == null || !racks.TryGetValue(nearest.Id, out var node) || node.Moisture > 0f) return null;
         ulong id = nearest.Id;

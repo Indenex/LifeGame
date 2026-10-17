@@ -194,6 +194,7 @@ public partial class Main : Node3D
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         herd.ClaimGoodsOpenAt = social.ClaimGoodsOpenAt;
+        herd.ClaimStandingAt = social.ClaimStandingAt;
         AddChild(useKey);
         AddChild(new Hints());
         // The crit cue over an animal (HitPop.Show, called by Animals).

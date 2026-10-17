@@ -29,6 +29,8 @@ public partial class Herd : Node3D
     // Whether goods at a spot are open to me: no claim covers it, or I own it or belong to it (the
     // Claims rule, so the "Take eggs" prompt shows only when the server would let me; the server still checks).
     public Func<float, float, bool> ClaimGoodsOpenAt = (_, _) => true;
+    // Whether a standing claim covers a spot (hung leather is its maker's, or the claim's people's, never a passer-by's).
+    public Func<float, float, bool> ClaimStandingAt = (_, _) => false;
     double lastStrike, lastStrikeHint = -1000;
 
     public override void _Ready()
@@ -78,6 +80,8 @@ public partial class Herd : Node3D
         Strike.Register("animals.bow", OfferShot);
         var racks = new HideRacks();
         AddChild(racks);
+        racks.ClaimGoodsOpenAt = (x, z) => ClaimGoodsOpenAt(x, z);
+        racks.ClaimStandingAt = (x, z) => ClaimStandingAt(x, z);
         racks.Bind(conn, terrain);
     }
 
