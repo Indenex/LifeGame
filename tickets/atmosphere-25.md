@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-25-grade
-PR: (none yet)
+PR: #448
 
 ## Goal
 Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "beautiful/awe inspiring with lighting". Options sent to the PM: (a) a time-of-day colour grade (recommended), (b) big god rays at low sun, (c) richer sky with glowing cloud rims. Per D-154, this stays a prototype behind a flag until Justin picks: `--grade=1` turns on (a) + (c), and the default is off. Done when Justin has picked from Render shots with and without the grade, and the pick is built as the default.
@@ -56,4 +56,4 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
 - (Reference images are now on main in docs/art-reference/.)
 
 ## Next step
-Wait for the PR's CI, then send the PM the green sha.
+Wait for #448 CI, then send the PM the green sha.
