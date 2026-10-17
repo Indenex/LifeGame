@@ -135,6 +135,9 @@ Many requested shas will have merged into main by now; if a branch moved, use th
 - Season values: 0 spring, 0.25 summer, 0.5 autumn; heather bloom 0.30-0.56. `--screenshot-yaw` takes whole 45 degree steps. render-cam yaw is added to the game camera's 45 degrees: the camera sits at (sin a, cos a) from the player with a = 45 + yaw.
 - `render.sh` shot options: `--offline`, `--engine=gl_compatibility`; env `RENDER_PATCH=<script>` (tools/render/patches/) patches the render tree only (pitch.sh with RENDER_PITCH, buildtab.sh with RENDER_TAB).
 
+### PM rule 2026-10-17 for art-look images
+Composite every art-look image (grade, materials, crowd/people looks, lighting) side by side with the matching docs/art-reference image (ours left, reference right, same size) before sending to the PM. Do not forward look-test shots of the old look. Justin found earlier images "NOTHING like" the references. The model-4 A-E materials set (5337ccbb..2359eb7a) is HELD in queue.jobs until Modeling confirms which options are worth showing.
+
 ## Open questions / blockers
 - (none)
 
