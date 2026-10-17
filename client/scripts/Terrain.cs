@@ -513,6 +513,8 @@ public partial class Terrain : Node3D
         data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
+        // Bushes lean toward the grass tufts' muted olive (env-20).
+        for (int i = 0; i < bushes.Count; i++) bushes[i] = bushes[i] with { Item2 = Undergrowth.Olive(bushes[i].Item2) };
         data.Add(Undergrowth.Bush, bushes, Look.Foliage);
     }
 
