@@ -11,8 +11,10 @@ Option (a), sent to the PM for Justin on 2026-10-17 (recommended: morning frost;
 ## Progress log
 - 2026-10-17 03:10: `AtmosphereFrost.cs` (new) sets the global `frost`. `Look.cs` registers `frost`; the painted shader whitens faces open to the sky in patches (from the detail texture) with glints, and the grass shader silvers the blade tips. Hooks in `Atmosphere.cs`: `ReadyFrost()` and `UpdateFrost(dt)`. `--frost=0..1` holds it for screenshots. The client builds with 0 errors.
 
+- 2026-10-17 03:02: CI run 38997049144 green on bbec24b8. Justin picked (a). Render has 6 stills queued (meadow near spawn: frost 1, 0.45 and 0, each wide and close).
+
 ## Open questions / blockers
-- Justin's pick (a)/(b)/(c), via the PM.
+- (none) Justin picked (a) morning frost (via the PM, 2026-10-17 03:02).
 
 ## Next step
-Wait for #459 CI, send the PM the green sha, and ask Render for shots: `--frost=1 --time-of-day=0.27 --cloud=0`, and the same with `--frost=0.45`.
+Wait for CI on this ticket push, then send the PM the green sha. Tune from Render's frost stills; the PM may merge once they confirm the shaders compile.
