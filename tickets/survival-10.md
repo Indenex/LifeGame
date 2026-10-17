@@ -1,7 +1,7 @@
 # survival-10: First evening tuning (M2)
 Lane: Survival
 Owner: Survival thread (session_014pHdaxJ7uESzsvWekpjvsH)
-Status: in_progress
+Status: done
 Branch: claude/survival-next
 PR: (none yet; tools/FirstEvening merged in #185)
 
@@ -23,8 +23,10 @@ Justin picked first-evening tuning on the new land (env-2, #175, lands with the 
 
 - 2026-10-16: tools/FirstEvening merged with #185. How to run it (fresh session): install dotnet 8 (`curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir ~/.dotnet`) and SpacetimeDB 2.12.0 (`mkdir -p ~/stdb && curl -sSL https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.12.0/spacetime-x86_64-unknown-linux-gnu.tar.gz | tar xz -C ~/stdb`); `export PATH=~/stdb:~/.dotnet:$PATH DOTNET_ROOT=~/.dotnet`; `(cd server && spacetimedb-cli build)`; `spacetimedb-cli start --listen-addr 127.0.0.1:3000 &`; `(cd server && spacetimedb-cli publish lifegame --server local --yes --delete-data)`; `tools/gen-bindings.sh`; `cd tools/FirstEvening && dotnet run -c Release`. Compare with the baseline above.
 
+- 2026-10-17: re-ran FirstEvening on current main (after #226 thirst ease): first spawn bush median 5/worst 9 m, water median 36/worst 44 m, first fire 17/18 s, freeze 32 min mild / 16 min freezing night; respawn water 28/40. Thirst from the 0.8 start now lasts about 60 min instead of 48 in the first hour online, so the ~36 m walk (about 9 s) is comfortably inside it. Tuning landed; no further change proposed. FirstEvening is read-only and does not simulate the thirst ease itself.
+
 ## Open questions / blockers
 - Waits on env-2 (#175) for the final land; tooling can be built against current main.
 
 ## Next step
-When env-2 (#175) merges: merge main, publish locally with --delete-data, run tools/FirstEvening, compare with the baseline above, then send the PM findings and any tuning options.
+None. Re-run tools/FirstEvening after any future land change (new terrain, spawn move) and compare with the numbers above.
