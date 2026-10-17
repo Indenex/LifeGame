@@ -238,6 +238,72 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0f, 0.5f, 0.06f, 100f, 900f, 0.4f),
     });
 
+    // --- Hen (audio-13, Animals' hen): small, soft and domestic. All quieter than a sheep.
+
+    // Cluck: one soft "buk", a short voiced note that dips and a breath of throat.
+    public static readonly CueDef HenCluck = new("hen.cluck", 0.25f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.07f, 820f, 560f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.035f, 1700f, 1150f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.07f, 800f, 2800f, 0.005f),
+    });
+
+    // Clucks: an idle hen's run of three, each a little different in length and level.
+    public static readonly CueDef HenClucks = new("hen.clucks", 0.8f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.075f, 800f, 540f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.0375f, 1650f, 1100f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.075f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.19f, 0.06f, 0.0638f, 880f, 600f, 0.006f),
+        new CueLayer(Src.Tone, 0.19f, 0.04f, 0.03f, 1800f, 1200f, 0.006f),
+        new CueLayer(Src.Noise, 0.19f, 0.03f, 0.06f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.4f, 0.07f, 0.0562f, 760f, 500f, 0.006f),
+        new CueLayer(Src.Noise, 0.4f, 0.03f, 0.0525f, 800f, 2600f, 0.005f),
+    });
+
+    // Peck: the beak tapping the ground, a dry tick and a hollow tap under it.
+    public static readonly CueDef HenPeck = new("hen.peck", 0.15f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.008f, 0.11f, 1500f, 4500f, 0.001f),
+        new CueLayer(Src.Tone, 0f, 0.015f, 0.025f, 420f, 300f, 0.002f),
+    });
+
+    // Squawk: startled. A harsh, falling cry with a rasp, and a flurry of wingbeats under it.
+    public static readonly CueDef HenSquawk = new("hen.squawk", 0.9f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.22f, 0.102f, 1050f, 640f, 0.01f),
+        new CueLayer(Src.Tone, 0f, 0.12f, 0.051f, 2100f, 1300f, 0.01f),
+        new CueLayer(Src.Noise, 0f, 0.18f, 0.102f, 1000f, 4000f, 0.01f),
+        new CueLayer(Src.Noise, 0.06f, 0.035f, 0.1105f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.13f, 0.035f, 0.102f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.2f, 0.035f, 0.085f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.28f, 0.035f, 0.0723f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.37f, 0.035f, 0.0553f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.48f, 0.035f, 0.0382f, 200f, 1400f, 0.012f),
+    }, Send: 0.1f);
+
+    // Lay: a hen's egg song, three quick rising clucks and one drawn-out proud "bu-gawk".
+    public static readonly CueDef HenLay = new("hen.lay", 1.0f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.0525f, 700f, 520f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.17f, 0.05f, 0.0562f, 780f, 590f, 0.006f),
+        new CueLayer(Src.Noise, 0.17f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.34f, 0.055f, 0.06f, 860f, 650f, 0.006f),
+        new CueLayer(Src.Noise, 0.34f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.55f, 0.13f, 0.0638f, 640f, 980f, 0.015f),
+        new CueLayer(Src.Tone, 0.55f, 0.08f, 0.03f, 1300f, 1900f, 0.015f),
+        new CueLayer(Src.Noise, 0.55f, 0.1f, 0.0525f, 900f, 3000f, 0.012f),
+    });
+
+    // Roosting murmur: a sleepy hen settling, a low warbling purr that swells and fades.
+    public static readonly CueDef HenRoost = new("hen.roost", 1.6f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.025f, 360f, 330f, 0.25f),
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.025f, 372f, 342f, 0.25f),
+        new CueLayer(Src.Noise, 0.05f, 0.4f, 0.02f, 250f, 800f, 0.3f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,
