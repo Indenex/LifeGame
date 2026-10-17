@@ -17,9 +17,11 @@ From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I
 
 - 2026-10-17 05:20: draft PR #533. Integration agreed the table stays in my AtmosphereSignals.cs, server-written only, and that I add `client/scripts/net/Subscriptions.Atmosphere.cs` ([SubscriptionQueries] AtmosphereQueries yielding "SELECT * FROM signal_fire") once their #527 lands; their #529 is the 1500 m far plane. Crafting's #531 adds `Fire.FuelCapSeconds`: the lighter's cap including the hearth scale, raised to a feeder's higher cap, and 0 on old fires (fall back to Fires.MaxSeconds). The rule is (FuelUntil − now) >= 0.75 × FuelCapSeconds.
 
+- 2026-10-17 05:30: per Integration, `SELECT * FROM signal_fire` is a plain core query in Subscriptions.cs for now (Integration moves it to Subscriptions.Atmosphere.cs when #527 lands). tools/upgrade-check.sh origin/main passed locally: the new table migrates without a wipe.
+
 ## Open questions / blockers
 - Design (for Justin via PM): the threshold is 75% of the Master cap (40 min). A new player's fire tops out at 20 min (50%), so only a mid-rank Firecraft player can raise a signal. Options: (a, recommended for now, as built) keep 75% of the Master cap, so a signal is something you grow into; (b) 75% of the lighter's own cap, which needs the server to publish the cap or rank. Also, a hearth fed from nearby baskets (D-149) stays near its cap, so a well-stocked home of a ranked player would signal all the time.
 - The camera far plane is 300 m and depth fog (0.006) thins the far column past about 200 m; neither is this lane's file.
 
 ## Next step
-When #527 and #531 are on main: merge main into claude/atmosphere-32b-signal-server, add Subscriptions.Atmosphere.cs, and make server FireCapSeconds and client FireMost read FuelCapSeconds (0 → Fires.MaxSeconds) without the hearth multiply. Then build both, take #533 out of draft and send the sha to Integration and the PM.
+When #531 is on main: merge main into claude/atmosphere-32b-signal-server, and make server FireCapSeconds and client FireMost read FuelCapSeconds (0 → Fires.MaxSeconds) without the hearth multiply. Then build both, take #533 out of draft and send the sha to Integration and the PM.
