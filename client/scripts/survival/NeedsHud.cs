@@ -53,6 +53,8 @@ public partial class NeedsHud : CanvasLayer
         // The load ring only fades in when you near your carrying limit.
         gauges.AddChild(load);
         gaugePanel = Hud.Panel(gauges, Vector2.Zero);
+        // On the warm look the gauges sit on a paper chip, like the bar beside them (ui-54).
+        WarmLook.HudChip(gaugePanel);
         gaugePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         gaugePanel.GrowHorizontal = Control.GrowDirection.Begin;
         gaugePanel.GrowVertical = Control.GrowDirection.Begin;
