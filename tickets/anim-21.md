@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-21 (from main)
-PR: (see below)
+PR: #714
 
 ## Goal
 Pebble (the shell-backed chibi) no longer pushes its arms through its shell:
