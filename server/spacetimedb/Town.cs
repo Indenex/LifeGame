@@ -459,6 +459,7 @@ public static partial class Module
             DeleteMerge(ctx, m);
         foreach (var ban in ctx.Db.TownBan.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownBan.Id.Update(ban with { TownId = keep.Id });
         foreach (var line in ctx.Db.TownLog.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownLog.Id.Update(line with { TownId = keep.Id });
+        MergeTownStore(ctx, gone.Id, keep.Id);
         ctx.Db.Town.Id.Delete(gone.Id);
         TownLogLine(ctx, keep.Id, $"{gone.Name} joined {keep.Name}");
         ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
@@ -556,6 +557,7 @@ public static partial class Module
             if (ctx.Db.TownVoice.TownId.Find(row.TownId) != null) ctx.Db.TownVoice.TownId.Delete(row.TownId);
             foreach (var ban in ctx.Db.TownBan.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownBan.Id.Delete(ban.Id);
             foreach (var line in ctx.Db.TownLog.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownLog.Id.Delete(line.Id);
+            SpillTownStore(ctx, row.TownId, row.ClaimId);
             ctx.Db.Town.Id.Delete(row.TownId);
             return;
         }

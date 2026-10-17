@@ -204,7 +204,7 @@ public static partial class Module
 
         float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
         if (x * x + z * z < keepOut * keepOut)
-            throw new Exception("This clearing is where newcomers wake up. Claim land further out");
+            throw new Exception("Too close to where newcomers wake up. Claim land a little further out");
 
         int owned = 0;
         foreach (var mine in ctx.Db.Claim.Owner.Filter(Me(ctx)))
@@ -459,6 +459,7 @@ public static partial class Module
         foreach (var claim in ctx.Db.Claim.Iter().ToList())
             if (!IsStanding(ctx, claim))
                 RemoveClaim(ctx, claim);
+        ForgetGoneDroppers(ctx);
     }
 
     // --- Helpers -----------------------------------------------------------

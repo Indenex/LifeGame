@@ -202,12 +202,16 @@ public static class ItemModels
     // Picked mushrooms (model-34, for Survival's survival-35): MushroomItem points their item
     // id at three mushrooms lying together (Mushrooms.Pile) for the ground, hand and inventory.
     public static Item? MushroomItem;
+    // Dug wild roots (model-35, for Survival's survival-36): WildRootItem points their item
+    // here (set by Survival, which owns the id) and they draw as WildRoots.Pile.
+    public static Item? WildRootItem;
 
     static (Action<Kit>? Build, bool Upright) Recipe(Item item) =>
         BowItem.HasValue && item == BowItem.Value ? (Bow, false)
         : ArrowItem.HasValue && item == ArrowItem.Value ? (Arrow, false)
         : SnareItem.HasValue && item == SnareItem.Value ? (SnareBundle, true)
         : MushroomItem.HasValue && item == MushroomItem.Value ? (k => Mushrooms.PileInto(k.Plain), true)
+        : WildRootItem.HasValue && item == WildRootItem.Value ? (k => WildRoots.PileInto(k.Plain), true)
         : KnownRecipe(item);
 
     static (Action<Kit>? Build, bool Upright) KnownRecipe(Item item) => item switch
