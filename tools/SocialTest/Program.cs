@@ -86,27 +86,21 @@ void ExpectError(Tester t, Action call, string contains, string what)
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
 }
 
+// The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
+// last resort asks the server to shake the bot free (unstuck).
+var walkers = new Dictionary<Tester, BotWalker>();
 void Walk(Tester t, float x, float z)
 {
-    (x, z) = t.Stand(x, z);
-    var route = t.Route(x, z);
-    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1}) in {route.Count} legs: {string.Join(" ", route.Select(r => $"({r.X:F1},{r.Z:F1})"))}");
-    for (int i = 0; i < route.Count; i++)
+    if (!walkers.TryGetValue(t, out var w))
     {
-        var (lx, lz) = i == route.Count - 1 ? (x, z) : route[i];
-        var sw = Stopwatch.StartNew();
-        while (!t.StepToward(lx, lz))
+        w = walkers[t] = new BotWalker(t.Conn, t.PlayerId, "Social test", t.Name, ms =>
         {
-            if (sw.Elapsed.TotalSeconds > 60)
-            {
-                var seen = t.Conn.Db.PlayerPos.PlayerId.Find(t.PlayerId);
-                Console.WriteLine($"FAIL  {t.Name} stuck on leg {i + 1}/{route.Count} to ({lx:F1}, {lz:F1}): bot ({t.X:F1}, {t.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}) (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})\n  near: {t.Describe()}");
-                Environment.Exit(1);
-            }
-            foreach (var u in all) u.Tick();
-            Thread.Sleep(5);
-        }
+            for (var until = Stopwatch.StartNew(); until.ElapsedMilliseconds < ms; Thread.Sleep(5))
+                foreach (var u in all) u.Tick();
+        }, msg => { Console.WriteLine($"FAIL  {msg} (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})"); Environment.Exit(1); });
     }
+    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1})");
+    w.To(ref t.X, ref t.Z, x, z, 0.3f, stand: true);
 }
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
