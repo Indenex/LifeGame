@@ -232,6 +232,7 @@ public static partial class Module
         foreach (var row in ctx.Db.Taught.Teacher.Filter(key).ToList()) ctx.Db.Taught.Id.Delete(row.Id);
         foreach (var row in ctx.Db.WornItem.Owner.Filter(key).ToList()) ctx.Db.WornItem.Id.Delete(row.Id);
         foreach (var row in ctx.Db.ClaimMember.Member.Filter(key).ToList()) ctx.Db.ClaimMember.Id.Delete(row.Id);
+        if (ctx.Db.PlayerEquip.Owner.Find(key) != null) ctx.Db.PlayerEquip.Owner.Delete(key);
         if (ctx.Db.CraftJob.Owner.Find(key) != null) ctx.Db.CraftJob.Owner.Delete(key);
         if (ctx.Db.SleepingMat.PlayerId.Find(id) != null) ctx.Db.SleepingMat.PlayerId.Delete(id);
         if (ctx.Db.Vitals.PlayerId.Find(id) != null) ctx.Db.Vitals.PlayerId.Delete(id);

@@ -38,6 +38,8 @@ public static class AvatarWork
             var work = conn.Db.CraftWork.PlayerId.Find(p.PlayerId);
             Start(a, work?.ProcessId, tool: work?.Tool ?? 0);
             Dress(conn, a, p.PlayerId);
+            if (conn.Db.Player.PlayerId.Find(p.PlayerId) is { } who)
+                a.Equip(Equipped.ItemOf(conn.Db.PlayerEquip.Owner.Find(who.Identity)), instant: true);
         };
 
         // What everyone wears (worn_item, D-074). Wearing a new piece deletes the old
@@ -48,6 +50,18 @@ public static class AvatarWork
             else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
         }
         conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
+
+        // What everyone holds (crafting-29 PlayerEquip: the item in hand, one row per player,
+        // none when the hand is empty).
+        void Holding(PlayerEquip row, bool gone)
+        {
+            var avatar = row.Owner == Me.Key(conn) ? me
+                : conn.Db.Player.Identity.Find(row.Owner) is { } p ? other(p.PlayerId) : null;
+            avatar?.Equip(gone ? null : Equipped.ItemOf(row));
+        }
+        conn.Db.PlayerEquip.OnInsert += (_, row) => Holding(row, false);
+        conn.Db.PlayerEquip.OnUpdate += (_, _, row) => Holding(row, false);
+        conn.Db.PlayerEquip.OnDelete += (_, row) => Holding(row, true);
 
         // Quick actions anyone did (player_act, anim-4), your own included: the server
         // notes them only once they succeed.
