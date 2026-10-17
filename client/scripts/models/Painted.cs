@@ -70,6 +70,31 @@ public static class Painted
         return twin;
     }
 
+    // Look's tree bark and foliage, painted: fallen logs, birches, landmark trees and the
+    // canopies not yet replaced by PaintedTrees. Both fade out of the camera's way, so both
+    // have ghosts. The leaves lean toward the painted broadleaf's grey-green.
+    public static ShaderMaterial Bark => bark ??= MakeBark();
+    public static ShaderMaterial Leaves => leaves ??= MakeLeaves();
+    static ShaderMaterial? bark, leaves;
+
+    static ShaderMaterial MakeBark()
+    {
+        var twin = (ShaderMaterial)Of(Look.TreeBark).Duplicate();
+        twin.SetShaderParameter("shade_tint", new Color(0.66f, 0.6f, 0.82f));
+        twin.SetShaderParameter("crevice", 0.3f);
+        return twin;
+    }
+
+    static ShaderMaterial MakeLeaves()
+    {
+        var twin = (ShaderMaterial)Of(Look.TreeFoliage).Duplicate();
+        twin.SetShaderParameter("base_paint", new Color(0.3f, 0.38f, 0.3f));
+        twin.SetShaderParameter("base_mix", 0.45f);
+        twin.SetShaderParameter("crevice", 0.3f);
+        twin.SetShaderParameter("lit_dabs", 0.2f);
+        return twin;
+    }
+
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: false));
     static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: true));
     static Shader? shader, ghostShader;
