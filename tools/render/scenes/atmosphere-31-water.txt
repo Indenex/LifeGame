@@ -1,18 +1,20 @@
-# atmosphere-31 (PR #517): the pond near (30,76): walk into the shallows, wade, stand still, turn, walk back out.
-# Ponds on main are at most 0.4 m deep, so there is no swimming water here. 12 fps movie, camera a little closer and lower.
-# EXTRA is appended to the client options by the job (e.g. --rain=0.6, --water-reflections=0).
+# atmosphere-31 (PR #517): the pond south of (29,75): the pond edge is at z about 78-80 (x 26 to 42), so s (walks +x,+z)
+# wades straight in. Ponds are at most 0.4 m deep on main, so no swimming here. Camera sits at -x,-z of the player
+# (yaw 180) looking toward the water, a little closer and lower than default. 12 fps movie.
+# EXTRA is replaced per job (e.g. --rain=0.6, --water-reflections=0). SQL moves the player; --debug-position would pin it.
 client-as-puppet
 client-movie 12
-client --time-of-day=0.38 --cloud=0.2 --wind=0.4 --debug-position=29,75 --render-cam=2.6,0.5,35,0.3 EXTRA
+client --time-of-day=0.38 --cloud=0.2 --wind=0.4 --render-cam=2.8,0.6,180,0.3 EXTRA
+frames 30
 sql UPDATE player_pos SET x = 29.0, z = 75.0, chunk_x = 1, chunk_z = 4
-frames 72
+frames +60
 mark water-start
 keydown s
-frames +48
+frames +54
 keyup s
-frames +24
+frames +30
 keydown a
-frames +18
+frames +12
 keyup a
 keydown w
 frames +54
