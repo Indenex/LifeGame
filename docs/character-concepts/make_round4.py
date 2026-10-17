@@ -19,21 +19,23 @@ NECK_Y = -0.47
 LEG_EXTRA = 0.06
 BASE_TOP = LEG_EXTRA + (-NECK_Y) + (HY - HR * 0.9 - NECK_Y) * -HEAD_SCALE
 K = 1.35 / BASE_TOP
+BACK = False   # set True to draw the back view: no face or front parts, back and tail drawn over the body
 
 
 def base(t, sp):
     d = D()
     skin = sp.get("skin", "#d8c9b4")
     up = '<g transform="translate(0 %.3f)">' % -LEG_EXTRA
-    d.flat(up)
-    for slot in ("back", "tail"):
-        if slot in sp:
-            sp[slot](d, t)
-    d.flat("</g>")
+    if not BACK:
+        d.flat(up)
+        for slot in ("back", "tail"):
+            if slot in sp:
+                sp[slot](d, t)
+        d.flat("</g>")
     legs(d, t, 0, 0.085, 0.16 + LEG_EXTRA, sp.get("leg", skin), sp.get("feet", dark(skin, 0.45)), gap=0.06, footw=0.07)
     d.flat(up)
     d.ell(0, -0.30, 0.15, 0.15, sp.get("body", skin))
-    if "belly" in sp:
+    if "belly" in sp and not BACK:
         d.ell(P(t, 0, 0.08), -0.28, 0.09, 0.1, sp["belly"], hl=False)
     out = sp.get("outfit")
     if out:
@@ -54,10 +56,10 @@ def base(t, sp):
     d.flat('<g transform="translate(0 %.3f) scale(%.3f) translate(0 %.3f)">' % (NECK_Y, HEAD_SCALE, -NECK_Y))
     if "ears" in sp:
         sp["ears"](d, t)
-    d.ell(0, HY, HR, HR * 0.9, sp.get("head", skin))
-    if "pattern" in sp:
+    d.ell(0, HY, HR, HR * 0.9, sp.get("back_head", sp.get("head", skin)) if BACK else sp.get("head", skin))
+    if "pattern" in sp and not BACK:
         sp["pattern"](d, t)
-    if sp.get("face", True):
+    if sp.get("face", True) and not BACK:
         er = sp.get("er", HR * 0.16) * 0.72
         face(d, t, 0, HY + 0.02, HR, ey=0.1, er=er, mouth=sp.get("mouth", True), cheeks=sp.get("cheeks", True), my=0.42)
         for s in (-1, 1):  # short brows: a bit of attitude, less baby-like
@@ -65,15 +67,19 @@ def base(t, sp):
             sq = 1 - 0.35 * t * (s < 0)
             d.flat('<path d="M%.3f %.3f l%.3f %.3f" stroke="%s" stroke-width="0.011" stroke-linecap="round"/>' % (
                 x - 0.025 * sq, HY + 0.02 - 0.034 - s * 0.003, 0.05 * sq, s * 0.006, sp.get("brow", dark(sp.get("head", skin), 0.6))))
-    if "muzzle" in sp:  # eyes are smaller now, so the muzzle sits a little lower to keep them clear
+    if "muzzle" in sp and not BACK:  # eyes are smaller now, so the muzzle sits a little lower to keep them clear
         d.flat('<g transform="translate(0 0.035)">')
         sp["muzzle"](d, t)
         d.flat("</g>")
     if "top" in sp:
         sp["top"](d, t)
     d.flat("</g>")
-    if "front" in sp:
+    if "front" in sp and not BACK:
         sp["front"](d, t)
+    if BACK:
+        for slot in ("back", "tail"):
+            if slot in sp:
+                sp[slot](d, t)
     d.flat("</g>")
     svg = d.svg().replace('fill="#f08a86" opacity="0.55"', 'fill="#f08a86" opacity="0.28"')
     h = sp.get("h", 0.84)

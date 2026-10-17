@@ -304,7 +304,7 @@ def bramble2(t):
         d.path("M%.3f %.3f q0.03 -0.09 0.08 -0.07 q-0.02 0.04 -0.03 0.08 Z" % (hx - 0.01, hy - 0.21), "#9a5a34")
     def strap(d, t):
         d.flat('<path d="M-0.11 -0.42 L0.12 -0.22" stroke="#8b5e3c" stroke-width="0.02"/>')
-    return base(t, dict(skin="#f2c9a0", outfit=("tunic", "#6f8f4e"), top=hair, front=strap, leg="#6a5a4c", feet="#7b4e33", arm="#6f8f4e", hand="#f2c9a0", h=0.93))
+    return base(t, dict(skin="#f2c9a0", back_head="#9a5a34", outfit=("tunic", "#6f8f4e"), top=hair, front=strap, leg="#6a5a4c", feet="#7b4e33", arm="#6f8f4e", hand="#f2c9a0", h=0.93))
 
 
 def clover2(t):
