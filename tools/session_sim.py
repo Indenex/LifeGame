@@ -6,7 +6,7 @@ WATER_DRAIN = 1 / (60 * 60)
 COLD_DRAIN = 1 / (16 * 60)
 FIRE_HEAT = 1 / 60          # per second, right beside a burning fire
 WARM_RADIUS = 5.0           # campfire: warmth falls linearly to 0 at 5 m (Fires.WarmthRadius)
-STONE_RING_RADIUS = 8.0     # stone-ringed hearth (Fires.StoneRingWarmthRadius)
+STONE_RING_RADIUS = 9.0     # stone-ringed hearth (Fires.StoneRingWarmthRadius)
 LOW = 0.25
 MAX_CHILL = 2.0
 SIP = 0.2; SKIN = 0.4; COIL = 1.0
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             r = run(c, dist, SKIN, ROAST)
             print(f"  work {dist:>2} m off, skin+roast: meals {r['meals']}, drinks {r['drinks']}, warm-ups/h {r['warmups_per_h']:.1f}, "
                   f"{r['pct_at_fire']:.0f}% of time at the fire")
-    print("\nStone-ringed hearth (8 m) vs campfire (5 m), winter night -8C, builder working at distance d:")
+    print("\nStone-ringed hearth (9 m) vs campfire (5 m), winter night -8C, builder working at distance d:")
     for d in (4, 6, 7, 8, 10):
         a = run(-8, d, SKIN, ROAST)
         b = run(-8, d, SKIN, ROAST, radius=STONE_RING_RADIUS)
