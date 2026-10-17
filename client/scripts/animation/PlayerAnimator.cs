@@ -97,8 +97,48 @@ public sealed class PlayerAnimator
     // Already resting when first seen (a player who sat down before you arrived).
     public void SettleRest() => restStage = Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
 
+    // Settled on the ground, a sitter shifts into a fidget every 8 to 16 s and holds it
+    // a while (anim-15).
+    RestPoses.SitFidget sitFidget;
+    float sitFidgetW, sitFidgetFor, sitFidgetNext = 6f;
+
+    void SitFidgets(float dt)
+    {
+        bool settled = Rest == RestKind.Sit && restStage >= 1.99f;
+        if (!settled)
+        {
+            sitFidgetW = 0f;
+            sitFidget = RestPoses.SitFidget.None;
+            sitFidgetNext = 6f;
+            return;
+        }
+        if (sitFidget == RestPoses.SitFidget.None)
+        {
+            sitFidgetNext -= dt;
+            if (sitFidgetNext > 0f) return;
+            var (warmth, _) = Surroundings?.Invoke() ?? (0f, null);
+            int pick = (int)Mathf.PosMod(time * 5.1f + seed * 7f, 4f);
+            bool ground = Seat <= 0.05f;
+            sitFidget = warmth > 0.2f && pick < 2 ? RestPoses.SitFidget.Warm
+                : Atmosphere.Night > 0.5f && pick == 2 ? RestPoses.SitFidget.LookUp
+                : !ground ? (pick % 2 == 0 ? RestPoses.SitFidget.LookUp : RestPoses.SitFidget.Warm)
+                : pick % 2 == 0 ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
+            if (!ground && sitFidget == RestPoses.SitFidget.Warm && warmth <= 0.2f) sitFidget = RestPoses.SitFidget.LookUp;
+            sitFidgetFor = 0f;
+        }
+        sitFidgetFor += dt;
+        float hold = 7f + Mathf.PosMod(seed * 11f, 5f);
+        sitFidgetW = Mathf.Clamp(Mathf.Min(sitFidgetFor / 1.2f, (hold - sitFidgetFor) / 1.2f), 0f, 1f);
+        if (sitFidgetFor >= hold)
+        {
+            sitFidget = RestPoses.SitFidget.None;
+            sitFidgetNext = 8f + Mathf.PosMod(seed * 23f + time, 8f);
+        }
+    }
+
     void Resting(float dt)
     {
+        SitFidgets(dt);
         float target = RestTarget;
         restStage = Mathf.MoveToward(restStage, target, dt / RestStageSeconds);
         if (restStage <= 0f) return;
@@ -125,6 +165,7 @@ public sealed class PlayerAnimator
                 break;
             case 2:
                 RestPoses.Sit(p, rig, Rest == RestKind.Lie ? 0f : Seat, time + seed * 13f);
+                if (Rest == RestKind.Sit) RestPoses.Fidget(p, sitFidget, Mathf.SmoothStep(0f, 1f, sitFidgetW), time + seed * 13f);
                 break;
             default:
                 RestPoses.Lie(p, rig, time + seed * 13f, Asleep);
@@ -137,6 +178,34 @@ public sealed class PlayerAnimator
         this.airborne = airborne;
         this.rising = rising;
         if (landing > landKick) landKick = Mathf.Clamp(landing, 0f, 1f);
+    }
+
+    // The face to show (#16): blinking every few seconds, happy while eating or waving or
+    // swaying by a fire, sleepy when lying down, yawning or idle late at night. The
+    // Modeling's Face parts show it (PlayerModel.SetFace).
+    public Face Face { get; private set; }
+    float blinkIn = 3f, blinkLeft;
+    int blinkCount;
+
+    void Expressions(float dt)
+    {
+        bool lying = Rest == RestKind.Lie && restStage > 2.5f;
+        Face mood =
+            lying && Asleep ? Face.Closed
+            : lying || shownGesture == Gesture.Yawn ? Face.Sleepy
+            : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Face.Happy
+            : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Face.Sleepy
+            : Face.Open;
+        // Blink every 2.5 to 6 s, now and then twice; sleepy eyes blink slower.
+        blinkIn -= dt;
+        if (blinkLeft > 0f) blinkLeft -= dt;
+        else if (blinkIn <= 0f)
+        {
+            blinkLeft = 0.13f;
+            bool twice = Mathf.PosMod(time * 3.7f + seed, 1f) < 0.2f && blinkCount++ % 2 == 0;
+            blinkIn = twice ? 0.25f : (mood == Face.Sleepy ? 4f : 2.5f) + Mathf.PosMod(seed * 17f + time * 1.3f, 3.5f);
+        }
+        Face = blinkLeft > 0f && mood is Face.Open or Face.Sleepy ? Face.Closed : mood;
     }
 
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
@@ -211,6 +280,7 @@ public sealed class PlayerAnimator
         Carry(dt);
         Gestures(dt);
         if (shownAct != WorkMotion.None) PlayAct(dt);
+        Expressions(dt);
         air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
         rise = Mathf.Lerp(rise, rising ? 1f : 0f, 1f - Mathf.Exp(-10f * dt));
         landKick *= Mathf.Exp(-7f * dt);
@@ -644,6 +714,29 @@ public sealed class PlayerAnimator
         p[Joint.HipR] = p[Joint.HipR].Lerp(new Vector3(-0.3f - 0.4f * Mathf.Max(kick, 0f), 0, -0.2f), m);
         p[Joint.KneeL].X = Mathf.Lerp(p[Joint.KneeL].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
         p[Joint.KneeR].X = Mathf.Lerp(p[Joint.KneeR].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
+        // A small round body doggy-paddles instead (anim-17): head held high and
+        // bobbing side to side, hands paddling in turn under the chin, quick little kicks.
+        if (Bounce >= 1f) DoggyPaddle(p, t, m);
+    }
+
+    void DoggyPaddle(Pose p, float t, float m)
+    {
+        float paddle = t * Mathf.Tau * 1.6f;
+        float l = Mathf.Sin(paddle), r = Mathf.Sin(paddle + Mathf.Pi);
+        float kick = Mathf.Sin(paddle * 1.5f);
+        p.HipsOffset.Y += 0.015f * Mathf.Abs(l) * m;
+        p[Joint.Spine] = p[Joint.Spine].Lerp(new Vector3(0.3f, 0, 0.05f * l), m);
+        p[Joint.Neck] = p[Joint.Neck].Lerp(new Vector3(-0.4f, 0.12f * l, 0.1f * l), m);
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-1.5f - 0.5f * l, 0, 0.15f), m);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-1.5f - 0.5f * r, 0, -0.15f), m);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -0.9f + 0.5f * l, m);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -0.9f + 0.5f * r, m);
+        p[Joint.HandL].X = Mathf.Lerp(p[Joint.HandL].X, -0.6f, m);
+        p[Joint.HandR].X = Mathf.Lerp(p[Joint.HandR].X, -0.6f, m);
+        p[Joint.HipL] = p[Joint.HipL].Lerp(new Vector3(-0.5f + 0.35f * kick, 0, 0.1f), m);
+        p[Joint.HipR] = p[Joint.HipR].Lerp(new Vector3(-0.5f - 0.35f * kick, 0, -0.1f), m);
+        p[Joint.KneeL].X = Mathf.Lerp(p[Joint.KneeL].X, 0.6f - 0.3f * kick, m);
+        p[Joint.KneeR].X = Mathf.Lerp(p[Joint.KneeR].X, 0.6f + 0.3f * kick, m);
     }
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,

@@ -19,6 +19,10 @@ public partial class EmoteWheel : CanvasLayer
     public Action<EmoteDef> Play = _ => { };
     // True while something else has the screen (a panel, placing, typing).
     public Func<bool> Blocked = () => false;
+    // True when another player stands close: the moment to first teach the Q key (Hints).
+    public Func<bool> SomeoneNear = () => false;
+    float nearCheck;
+    bool hinted;
 
     public bool IsOpen => wheel.Visible;
 
@@ -72,6 +76,11 @@ public partial class EmoteWheel : CanvasLayer
 
     public override void _Process(double delta)
     {
+        if (!hinted && (nearCheck -= (float)delta) <= 0f)
+        {
+            nearCheck = 1f;
+            if (SomeoneNear()) { hinted = true; Hints.Request("emote"); }
+        }
         if (!IsOpen) return;
         if (Blocked()) { Close(); return; }
         if (holding) heldFor += (float)delta;

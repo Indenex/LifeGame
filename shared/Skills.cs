@@ -177,6 +177,8 @@ namespace LifeGame.Shared
         // but train nothing.
         public static Specialization? SpecFor(string processId)
         {
+            // A process that names its own skill wins over any guess from its id.
+            if (Processes.Find(processId)?.Skill is { } named) return Spec(named);
             // An exact process id beats a recipe family (wool spinning shares "cord" with Toolmaking).
             foreach (var s in Specializations)
                 if (Array.IndexOf(s.Trains, processId) >= 0) return s;

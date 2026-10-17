@@ -95,7 +95,7 @@ static class WorkSounds
     }
 
     static bool IsMe(uint playerId) =>
-        conn?.Identity is { } me && conn.Db.Player.Identity.Find(me) is { } p && p.PlayerId == playerId;
+        Me.Key(conn) is { } me && conn.Db.Player.Identity.Find(me) is { } p && p.PlayerId == playerId;
 
     static void Update()
     {

@@ -16,7 +16,7 @@ public readonly record struct CueLayer(Src Source, float Start, float Decay, flo
 // Length is how long the voice lives, seconds. Send is how much goes to the reverb.
 public sealed record CueDef(string Id, float Length, CueLayer[] Layers, float Send = 0f);
 
-public static class CueDefs
+public static partial class CueDefs
 {
     static CueLayer Splash(float at, float decay, float gain, float lo = 500f, float hi = 3500f) => new(Src.Noise, at, decay, gain, lo, hi, 0.01f);
     static CueLayer Crunch(float at, float decay, float gain, float lo = 1200f, float hi = 5500f) => new(Src.Noise, at, decay, gain, lo, hi, 0.002f);
@@ -382,6 +382,29 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0f, 0.18f, 0.19f, 1000f, 5000f, 0.04f),
         new CueLayer(Src.Noise, 0.05f, 0.1f, 0.24f, 400f, 2000f, 0.02f),
         new CueLayer(Src.Noise, 0.22f, 0.025f, 0.11f, 1500f, 5000f, 0.003f),
+    });
+
+    // --- Cooking pots (audio-19): broth and stew simmering by a fire.
+
+    // A small bubble rising and breaking: a quick blip that climbs in pitch and a faint wet tick.
+    public static readonly CueDef BubbleSmall = new("pot.bubble.small", 0.15f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.058f, 380f, 820f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.01f, 0.019f, 1500f, 5000f, 0.002f),
+    });
+
+    // A big slow bubble of thick stew: a lower, rounder "gloop".
+    public static readonly CueDef BubbleBig = new("pot.bubble.big", 0.28f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.077f, 200f, 480f, 0.006f),
+        new CueLayer(Src.Noise, 0.01f, 0.03f, 0.029f, 400f, 1500f, 0.004f),
+    });
+
+    // A bubble breaking at the surface: a tiny wet pop.
+    public static readonly CueDef BubblePop = new("pot.bubble.pop", 0.12f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.01f, 0.048f, 2000f, 6000f, 0.002f),
+        new CueLayer(Src.Tone, 0f, 0.015f, 0.019f, 900f, 600f, 0.002f),
     });
 
     // --- Doors (audio-16): a hung door of sticks and fibre, swinging 0.6 s (StructureView.SetDoor).

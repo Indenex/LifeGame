@@ -27,9 +27,9 @@ public static partial class Module
     public static List<ClaimStashLog> MyClaimStashLog(ViewContext ctx)
     {
         var result = new List<ClaimStashLog>();
-        foreach (var claim in ctx.Db.Claim.Owner.Filter(ctx.Sender))
+        foreach (var claim in ctx.Db.Claim.Owner.Filter(Me(ctx)))
             result.AddRange(ctx.Db.ClaimStashLog.ClaimId.Filter(claim.Id));
-        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(ctx.Sender))
+        foreach (var membership in ctx.Db.ClaimMember.Member.Filter(Me(ctx)))
             result.AddRange(ctx.Db.ClaimStashLog.ClaimId.Filter(membership.ClaimId));
         return result;
     }

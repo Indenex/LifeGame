@@ -1,7 +1,7 @@
 # atmos-shadows-1: steadier, crisper sun shadows
 Lane: Atmosphere (lighting), done by the Unity spike worker for the PM; Atmosphere owns the files
 Owner: Atmosphere lane session_014MSnDGYpnGPmnSQ4CjhF7c (landing it; written by the Unity spike worker session_017Weex8fujB3VFsrpg84jEP)
-Status: in_review
+Status: done
 Branch: claude/atmos-shadows-1 (Justin approved via the PM)
 PR: #667
 
@@ -60,9 +60,10 @@ before and after; Render shows noon and dusk, walking, before and after.
   (soft edges cost a lot on weak GPUs; Medium/High stay 1.1), set per tier in ApplyLevel;
   SunShadows has a parameterless constructor for Godot's editor/hot reload (stays idle).
   Client build green locally.
+- 2026-10-17: CI run 39018490785 green on b1f013f6; merged as cbc623f (PR #667)
 
 ## Open questions / blockers
 - None.
 
 ## Next step
-Wait for CI on the PR, then send the PM the full green sha.
+None (done). Render C walking clips (noon and dusk, main vs. branch) go to the PM.

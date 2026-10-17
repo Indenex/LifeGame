@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|coop|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -13,7 +13,7 @@ using SpacetimeDB.Types;
 // What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
-bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -66,6 +66,16 @@ b.WalkTo(1f, 0f, 0.3f, Pump);
     Check(tiled.Costs[3].Length == 1 && tiled.Costs[3][0] == (Item.RoofTile, 12u), "its roof takes 12 roof tiles");
     for (int i = 0; i < 3; i++) Check(tiled.Costs[i].SequenceEqual(brick.Costs[i]), $"its stage {i + 1} costs what the brick house's does");
     Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
+}
+
+// The hen coop (building-16): claim-only, with the entry and roost points Animals target.
+{
+    var coop = Structures.Shape((int)StructureKind.HenCoop);
+    Check(!coop.Wild, "the hen coop has to stand inside a claim");
+    Check(coop.Stages.Length == 3 && coop.Costs.Length == 3, "the hen coop goes up in three stages");
+    Check(coop.Entry.Z > coop.HalfDepth && coop.Entry.Z < coop.HalfDepth + 2f, "the coop's entry is just outside its front");
+    Check(MathF.Abs(coop.Roost.X) < coop.HalfWidth && MathF.Abs(coop.Roost.Z) < coop.HalfDepth, "the roost is inside the coop");
+    Check(Structures.StageProcess((int)StructureKind.HenCoop, 1) == Structures.WattleProcess && Structures.StageProcess((int)StructureKind.HenCoop, 2) == Structures.RoofProcess, "its walls are wattle work and its roof is roofing");
 }
 
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
@@ -124,6 +134,11 @@ if (Wants("fence"))
         new() { [Item.Stick] = 3 },
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
+
+if (Wants("coop"))
+    BuildTogether(StructureKind.HenCoop,
+        new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
+        new() { [Item.Stick] = 4, [Item.Fiber] = 5 });
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
@@ -655,7 +670,11 @@ sealed class Bot
     {
         Conn.Disconnect();
         pump(500);
+        Ready = false;
         Conn = Connect();
+        // A login that already has a character waits at the character menu (survival-24): play it.
+        for (int i = 0; i < 400 && !Ready; i++) pump(50);
+        if (Conn.Identity is { } login) Conn.Reducers.SelectCharacter(login);
     }
 
     public uint CountOf(Item item) => Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
@@ -703,7 +722,17 @@ sealed class Bot
             item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
             gatherTargets[name] = targetItem;
-            if (item == null) return;
+            if (item == null)
+            {
+                // Nothing left in the world to pick up: say so once, so a timeout reads as scarcity, not a stall.
+                if (!noneLogged)
+                {
+                    noneLogged = true;
+                    Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                }
+                return;
+            }
+            noneLogged = false;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -718,6 +747,7 @@ sealed class Bot
     // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
+    bool noneLogged;
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;
