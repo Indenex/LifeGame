@@ -164,6 +164,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:10: bugfix-58 claim rings (#835, Justin's request, jumps the queue): after 3166cf99, before main 5064a254. New render-tree patch tools/render/patches/ghost.sh pins the build ghost at /tmp/render-ghost; puppet gained `warp x z`; scene scenes/bugfix-58-rings.txt.
 
+- 2026-10-17 15:12: PM: end of queue, the two-player "Home and friends" playtest (/mnt/project-files/bugfix/playtest-home-and-friends.md) for Bug fixes. Plan: one camera client plus the puppet as the second player (two Godot clients at once do not fit 4 cores at ~0.5 fps); steps scripted via puppet reducers, keys only where unavoidable.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
