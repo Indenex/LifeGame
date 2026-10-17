@@ -73,23 +73,98 @@ public static partial class StructureModel
     // --- Hen coop (animals-20): a rough placeholder until Modeling's coop lands. Four posts, slatted
     // sides, a pop-hole gap in the front (+Z) and a low thatched gable.
 
+    // A hen house (model-7, for Animals' D-265): a little woven-wattle house raised
+    // on four short legs off the damp ground, a framed pop-hole at the front (+Z)
+    // with a stick ramp down to the grass, and a steep thatched roof with deep
+    // eaves. Footprint 1.6 x 1.2 m. Stage 0 is the frame (legs, floor, walls,
+    // ramp), stage 1 the roof.
     static List<Piece> Coop()
     {
         var list = new List<Piece>();
-        const float hw = 0.8f, hd = 0.6f, eaveY = 0.8f, ridgeY = 1.2f;
+        const float hw = 0.8f, hd = 0.6f;
+        // The house sits inside the footprint so the ramp and eaves stay within it.
+        const float w = 0.62f, d = 0.4f, floorY = 0.3f, eaveY = 0.86f, ridgeY = 1.26f;
+        const float holeW = 0.14f, holeTop = floorY + 0.3f;
         Site(list, new[] { new Vector3(-hw, 0, hd), new Vector3(hw, 0, hd), new Vector3(hw, 0, -hd), new Vector3(-hw, 0, -hd) });
-        foreach (var (x, z) in new[] { (-hw, hd), (hw, hd), (hw, -hd), (-hw, -hd) })
-            Add(list, 0, Wood, Stick(new Vector3(x, -0.05f, z), new Vector3(x, eaveY, z), 0.05f));
-        foreach (float y in new[] { 0.2f, 0.45f, 0.7f })
+
+        // Legs, sill logs and a floor of split poles.
+        foreach (var (x, z) in new[] { (-w, d), (w, d), (w, -d), (-w, -d) })
+            Add(list, 0, Wood, Stick(new Vector3(x, -0.08f, z), new Vector3(x + (Hash((int)(x * 10 + z * 3), 3) - 0.5f) * 0.03f, eaveY + 0.04f, z), 0.036f));
+        foreach (float z in new[] { -d, d })
+            Add(list, 0, Wood, Stick(new Vector3(-w - 0.06f, floorY - 0.04f, z), new Vector3(w + 0.06f, floorY - 0.03f, z), 0.05f));
+        for (int i = 0; i < 9; i++)
         {
-            Add(list, 0, Wood, Stick(new Vector3(-hw, y, -hd), new Vector3(hw, y, -hd), 0.03f));
-            Add(list, 0, Wood, Stick(new Vector3(-hw, y, hd), new Vector3(hw, y, hd), 0.03f));
-            Add(list, 0, Wood, Stick(new Vector3(-hw, y, -hd), new Vector3(-hw, y, hd), 0.03f));
-            Add(list, 0, Wood, Stick(new Vector3(hw, y, -hd), new Vector3(hw, y, hd), 0.03f));
+            float x = -w + 0.07f + i * (2f * w - 0.14f) / 8f;
+            Add(list, 0, PaleWood, Stick(new Vector3(x, floorY + 0.01f, -d - 0.02f), new Vector3(x + 0.01f, floorY + 0.01f, d + 0.02f), 0.03f));
         }
-        Add(list, 1, Wood, Stick(new Vector3(-hw - 0.1f, ridgeY, 0), new Vector3(hw + 0.1f, ridgeY, 0), 0.04f));
-        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.05f, -hd - 0.12f), new Vector3(0, ridgeY + 0.05f, 0), hw * 2f + 0.3f, 0.09f, 1));
-        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.05f, hd + 0.12f), new Vector3(0, ridgeY + 0.05f, 0), hw * 2f + 0.3f, 0.09f, 2));
+
+        // Wattle: upright stakes with rods woven in and out between them, a row at a
+        // time, round all four sides; the front leaves the pop-hole open.
+        void Wall(Vector3 from, Vector3 to, Vector3 outward, bool front, int seed)
+        {
+            float len = from.DistanceTo(to);
+            int stakes = Mathf.Max(3, Mathf.RoundToInt(len / 0.2f));
+            var along = (to - from) / stakes;
+            for (int i = 1; i < stakes; i++)
+            {
+                var at = from + along * i;
+                Add(list, 0, Wood, Stick(at + new Vector3(0, floorY - 0.02f, 0), at + new Vector3(0, eaveY + 0.02f, 0), 0.018f));
+            }
+            int rows = 13;
+            for (int r = 0; r < rows; r++)
+            {
+                float y = floorY + 0.05f + r * (eaveY - floorY - 0.08f) / (rows - 1);
+                for (int i = 0; i < stakes; i++)
+                {
+                    var a = from + along * i;
+                    var b = from + along * (i + 1);
+                    float mid = (a + b).X * 0.5f;
+                    if (front && y < holeTop && Mathf.Abs(mid) < holeW + 0.06f) continue;
+                    float weave = ((i + r) % 2 == 0 ? 1f : -1f) * 0.016f;
+                    var shade = Hash(r * 13 + i, seed) * 0.2f;
+                    Add(list, 0, shade > 0.18f ? PaleWood : Wood, Stick(a + new Vector3(0, y, 0) + outward * weave, b + new Vector3(0, y + (Hash(r, i + seed) - 0.5f) * 0.012f, 0) - outward * weave, 0.022f));
+                }
+            }
+        }
+        Wall(new Vector3(-w, 0, d), new Vector3(w, 0, d), Vector3.Back, true, 1);
+        Wall(new Vector3(w, 0, -d), new Vector3(-w, 0, -d), Vector3.Forward, false, 2);
+        Wall(new Vector3(-w, 0, -d), new Vector3(-w, 0, d), Vector3.Left, false, 3);
+        Wall(new Vector3(w, 0, d), new Vector3(w, 0, -d), Vector3.Right, false, 4);
+        // Gable ends (left and right): rods across the triangle under the roof.
+        foreach (float x in new[] { -w, w })
+            for (int r = 0; r < 12; r++)
+            {
+                float y = eaveY + 0.03f + r * 0.042f;
+                float half = d * (1f - (y - eaveY) / (ridgeY - eaveY)) - 0.02f;
+                if (half < 0.04f) break;
+                Add(list, 1, Wood, Stick(new Vector3(x, y, -half), new Vector3(x, y + 0.008f, half), 0.02f));
+            }
+
+        // The pop-hole: two posts, a lintel, and a sill; a ramp of rungs down the front.
+        foreach (float x in new[] { -holeW - 0.02f, holeW + 0.02f })
+            Add(list, 0, Wood, Stick(new Vector3(x, floorY, d + 0.02f), new Vector3(x, holeTop + 0.03f, d + 0.02f), 0.025f));
+        Add(list, 0, Wood, Stick(new Vector3(-holeW - 0.08f, holeTop, d + 0.03f), new Vector3(holeW + 0.08f, holeTop + 0.01f, d + 0.03f), 0.028f));
+        var rampTop = new Vector3(0, floorY + 0.02f, d + 0.03f);
+        var rampFoot = new Vector3(0, 0.01f, hd + 0.05f);
+        foreach (float x in new[] { -0.09f, 0.09f })
+            Add(list, 0, PaleWood, Stick(rampTop + new Vector3(x, 0, 0), rampFoot + new Vector3(x, 0, 0), 0.02f));
+        for (int i = 1; i < 5; i++)
+        {
+            var at = rampTop.Lerp(rampFoot, i / 5f);
+            Add(list, 0, Wood, Stick(at + new Vector3(-0.11f, 0.015f, 0), at + new Vector3(0.11f, 0.015f, 0), 0.012f));
+        }
+
+        // Roof: a ridge pole on two crossed gable sticks at each end, then deep
+        // thatch sloping front and back, its front eave over the pop-hole.
+        foreach (float x in new[] { -w, w })
+        {
+            Add(list, 1, Wood, Stick(new Vector3(x, eaveY - 0.04f, -d - 0.05f), new Vector3(x, ridgeY + 0.12f, 0.08f), 0.03f));
+            Add(list, 1, Wood, Stick(new Vector3(x, eaveY - 0.04f, d + 0.05f), new Vector3(x, ridgeY + 0.12f, -0.08f), 0.03f));
+        }
+        Add(list, 1, Wood, Stick(new Vector3(-w - 0.1f, ridgeY, 0), new Vector3(w + 0.1f, ridgeY, 0), 0.035f));
+        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.08f, -d - 0.17f), new Vector3(0, ridgeY + 0.06f, 0), 2f * w + 0.3f, 0.11f, 1));
+        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.08f, d + 0.17f), new Vector3(0, ridgeY + 0.06f, 0), 2f * w + 0.3f, 0.11f, 2));
+        Add(list, 1, Fiber, Wrap(new Vector3(0, ridgeY + 0.08f, 0), Vector3.Right, 0.06f, 2f * w + 0.2f, lumpy: true));
         return list;
     }
 
