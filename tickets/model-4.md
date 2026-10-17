@@ -23,4 +23,4 @@ Justin dislikes today's fine noisy relief on everything and wants Valheim-like m
 - Justin's pick of A / B / C (or tweaks), via the PM.
 
 ## Next step
-Paint the cabin logs, player and sheep in the artist's style (MaterialLook D patterns), render `--view=painted` and `--view=materials --look=D --close` beside docs/art-reference, and send the PM a self-critique.
+Painted face and hair for players (PM-approved): give HumanFigure's head and hair UVs (spherical projection from the head centre) and a generated painted face sheet (eyes, brows, nose shade, mouth, blush) plus hair strokes, used by MaterialLook D on the figure; check in Showcase `crowd` and `--view=painted --near`.
