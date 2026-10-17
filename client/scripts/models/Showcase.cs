@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "coop" or "treelod" or "rocks" or "logs" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "sundial" or "coop" or "treelod" or "rocks" or "logs" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -44,6 +44,7 @@ public partial class Showcase : Node3D
             else if (view == "treelod") TreeLod();
             else if (view == "rocks") Rocks();
             else if (view == "logs") Logs();
+            else if (view == "sundial") SundialView();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -299,6 +300,21 @@ public partial class Showcase : Node3D
 
     // The stone-ringed hearth (model-9, D-286): its first course on the left, the
     // finished kerb on the right, the player beside for scale.
+    // The sundial (model-12): stage 0 and the finished dial, seen from the south-east; run
+    // with --time-of-day to check the stick's shadow against the hour lines.
+    void SundialView()
+    {
+        var pieces = StructureModel.Sundial();
+        for (int c = 0; c < 2; c++)
+            foreach (var piece in pieces)
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-0.9f + c * 1.1f, 0, c * 0.4f) });
+        var camera = new Camera3D { Fov = 34f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.4f, 2.1f, 2.4f), new Vector3(-0.2f, 0.4f, 0.1f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
     void StoneHearthView()
     {
         var pieces = StructureModel.StoneHearth();
