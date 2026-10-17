@@ -56,7 +56,7 @@ public static partial class Module
     }
 
     // A fire on a finished hearth with a wider reach (the stone-ringed hearth) warms out to that far.
-    static partial void FireHeatRadiusHook(ReducerContext ctx, float x, float z, ref float radius)
+    static partial void FireWarmthRadiusHook(ReducerContext ctx, float x, float z, ref float radius)
     {
         foreach (var h in HearthsNear(ctx, x, z, Structures.HearthRadius))
             radius = MathF.Max(radius, Structures.Shape((int)h.Kind).HeatRadius);

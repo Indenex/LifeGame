@@ -385,7 +385,7 @@ namespace LifeGame.Shared
                 },
             },
             // A stone-ringed hearth (D-286, Justin): an outdoor hearth builders can work beside through winter
-            // nights. A fire lit on it warms out to 8 m instead of the campfire's 5 m, and burns longer like the
+            // nights. A fire lit on it warms out to Fires.StoneRingWarmthRadius instead of the campfire's 5 m, and burns longer like the
             // raised hearth. Wild like the campfire; modest stone cost.
             new StructureShape
             {
@@ -393,11 +393,10 @@ namespace LifeGame.Shared
                 Model = "StoneHearth",
                 Wild = true,
                 Category = "Fire",
-                Scale = 1.2f,
-                Round = true, Radius = HearthRadius, Solid = true,
+                Round = true, Radius = 0.55f, Solid = true,
                 Clearance = 0.7f,
                 Hearth = true,
-                HeatRadius = 8f,
+                HeatRadius = Fires.StoneRingWarmthRadius,
                 Stages = new[] { "Ring stones", "Kerb" },
                 // Stone-ringed hearth: Ring stones, Kerb
                 Costs = new (Item Item, uint Count)[][]
