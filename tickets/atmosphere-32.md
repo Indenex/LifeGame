@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-32-smoke-signal
-PR: #524
+PR: #524 (merged); far signals #533
 
 ## Goal
 From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I want to be able to see like a smoke signal kinda thing." A fire whose fuel is above 75% of the most a fire can hold (`Fires.MasterMaxSeconds`, or that times `Structures.HearthFuelScale` for a fire on a raised hearth) puts up a tall, thick, soft smoke column, about 30 to 36 m, leaning with the wind and spreading at the top, readable from as far as the camera sees (300 m). Below 75% the fire keeps today's light smoke (AtmosphereHomes). Between 70% and 80% the column swells and thins smoothly. Campfires send it up from the fire; a home sends it up from its smoke outlet (chimney) when the fire inside is stoked. Client only, no server change. Justin sees a pale, painted, sun-lit column over a stoked camp, warm at the foot, grey and wide higher up.
@@ -18,6 +18,8 @@ From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I
 - 2026-10-17 05:20: draft PR #533. Integration agreed the table stays in my AtmosphereSignals.cs, server-written only, and that I add `client/scripts/net/Subscriptions.Atmosphere.cs` ([SubscriptionQueries] AtmosphereQueries yielding "SELECT * FROM signal_fire") once their #527 lands; their #529 is the 1500 m far plane. Crafting's #531 adds `Fire.FuelCapSeconds`: the lighter's cap including the hearth scale, raised to a feeder's higher cap, and 0 on old fires (fall back to Fires.MaxSeconds). The rule is (FuelUntil − now) >= 0.75 × FuelCapSeconds.
 
 - 2026-10-17 05:30: per Integration, `SELECT * FROM signal_fire` is a plain core query in Subscriptions.cs for now (Integration moves it to Subscriptions.Atmosphere.cs when #527 lands). tools/upgrade-check.sh origin/main passed locally: the new table migrates without a wipe.
+
+- 2026-10-17 04:48: #524 merged (green sha d64d487a, CI run 39003198556). Near columns are live. #533 carries the far signals.
 
 ## Open questions / blockers
 - Design (for Justin via PM): the threshold is 75% of the Master cap (40 min). A new player's fire tops out at 20 min (50%), so only a mid-rank Firecraft player can raise a signal. Options: (a, recommended for now, as built) keep 75% of the Master cap, so a signal is something you grow into; (b) 75% of the lighter's own cap, which needs the server to publish the cap or rank. Also, a hearth fed from nearby baskets (D-149) stays near its cap, so a well-stocked home of a ranked player would signal all the time.
