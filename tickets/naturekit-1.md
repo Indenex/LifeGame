@@ -25,8 +25,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 17:15: draft PR #853 opened (naturekit-1 + village-1). Kit trees now fall when chopped: TreeFall.StandingTree also takes batches whose mesh NatureKit.IsTree (one-line hook in Environment's TreeFall.cs). They fall whole, with no sawn-off version yet. Still missing: a see-through ghost for kit trees.
 
+- 2026-10-17 17:35: kit trees fade out of the camera's way like ours. Each world copy of a kit tree has see-through surfaces (Look's fade test, sized by fade_size = 1/kit scale), plus a ghost mesh drawn see-through. Terrain.AddMulti draws the ghost beside a null-material batch when NatureKit.GhostOf(mesh) has one (small hook, Environment's file). Checked in the showcase: ghost shader compiles, solid hides and ghost draws at 55%.
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Watch CI on PR #853 and send the green sha to the PM; meanwhile add a ghost variant of NatureKit's shader (fade_override like Painted's GhostShader) so kit trees fade when the player is behind them.
+Watch CI on PR #853 and send the green sha to the PM; then the kit trees' grow-in and topple-on-clear (INSTANCE_CUSTOM.x/y as Look's PaintedCode) in NatureKit's shader.

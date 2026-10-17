@@ -70,8 +70,42 @@ public static class NatureKit
                     // Stand as tall as our tree of the same scale (PaintedTrees.Height), so
                     // placement, collision and the canopy fade keep their sizes.
                     float tall = mesh.GetAabb().End.Y;
-                    lock (TreeMeshes) TreeMeshes[(pine, v)] = (mesh, PaintedTrees.Height / tall);
+                    float scale = PaintedTrees.Height / tall;
+                    var (world, ghost) = SeeThrough(mesh, scale);
+                    lock (TreeMeshes)
+                    {
+                        TreeMeshes[(pine, v)] = (world, scale);
+                        TreeGhosts[world] = ghost;
+                    }
                 }
+    }
+
+    static readonly Dictionary<Mesh, Mesh> TreeGhosts = new();
+
+    // The world's copy of a kit tree, its surfaces fading when the tree hides the player,
+    // and its ghost: the same tree drawn see-through, which stands in while it fades
+    // (Terrain.AddMulti draws it beside the solid, as Look.GhostOf does for ours). Fading
+    // reads the tree's size from its scale, which for a kit tree carries `scale` on top.
+    static (Mesh World, Mesh Ghost) SeeThrough(Mesh mesh, float scale)
+    {
+        var world = (ArrayMesh)mesh.Duplicate();
+        var ghost = (ArrayMesh)mesh.Duplicate();
+        for (int s = 0; s < world.GetSurfaceCount(); s++)
+        {
+            if (world.SurfaceGetMaterial(s) is not ShaderMaterial solid) continue;
+            var faded = (ShaderMaterial)solid.Duplicate();
+            faded.SetShaderParameter("see_through", true);
+            faded.SetShaderParameter("fade_size", 1f / scale);
+            world.SurfaceSetMaterial(s, faded);
+            ghost.SurfaceSetMaterial(s, Look.Ghost(faded, GhostShader));
+        }
+        return (world, ghost);
+    }
+
+    // The see-through copy of a kit tree's world mesh, or null for any other mesh.
+    public static Mesh? GhostOf(Mesh mesh)
+    {
+        lock (TreeMeshes) return TreeGhosts.GetValueOrDefault(mesh);
     }
 
     // The kit tree for one of our tree variants and the extra scale it stands at, or null.
@@ -300,8 +334,14 @@ public static class NatureKit
         }
     }
 
-    static Shader? shader;
+    static Shader? shader, ghostShader;
     static Shader Shader => shader ??= new Shader { Code = Code };
+    // The same look drawn see-through, for a tree fading out of the camera's way.
+    static Shader GhostShader => ghostShader ??= new Shader
+    {
+        Code = Code.Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST")
+            .Replace("render_mode cull_disabled, depth_draw_opaque;", "render_mode cull_disabled, depth_prepass_alpha;"),
+    };
 
     // mode: 0 texture as painted (rocks), 1 kit leaves (flat green gradient, glow, cards),
     // 2 kit grass, 3 kit bark (foot tint, normal map), 4 foliage texture shaded by vertex colour.
@@ -343,6 +383,31 @@ public static class NatureKit
         uniform float tint_blend = 0.0;
         uniform float tint_ref = 0.6;
         uniform vec3 shade_tint : source_color = vec3(0.66, 0.64, 0.8);
+        uniform bool see_through = false;
+        uniform float fade_size = 1.0;
+        global uniform vec3 player_position;
+        global uniform vec3 view_camera_position;
+        varying float fade;
+
+        // Look's tree fade (fade_amount there): how far a tree hides the player, 0 not at
+        // all to 1 right across the line from the camera, for an upright capsule round the
+        // crown. A kit tree's own size is its scale times fade_size.
+        float fade_amount(mat4 model, vec3 cam) {
+            if (distance(cam, view_camera_position) > 0.5) return 0.0;
+            float tall = length(model[1].xyz) * fade_size;
+            float wide = length(model[0].xyz) * fade_size;
+            vec3 base = model[3].xyz;
+            vec3 p1 = cam, d1 = player_position + vec3(0.0, 1.0, 0.0) - cam;
+            vec3 p2 = base + vec3(0.0, 1.6 * tall, 0.0), d2 = vec3(0.0, 2.8 * tall, 0.0);
+            vec3 r = p1 - p2;
+            float a = dot(d1, d1), b = dot(d1, d2), c = dot(d1, r), e = dot(d2, d2), f = dot(d2, r);
+            float denom = a * e - b * b;
+            float s = denom > 1e-5 ? clamp((b * f - c * e) / denom, 0.0, 1.0) : 0.0;
+            float t = clamp((b * s + f) / e, 0.0, 1.0);
+            s = clamp((b * t - c) / a, 0.0, 1.0);
+            float d = distance(p1 + d1 * s, p2 + d2 * t);
+            return 1.0 - smoothstep(1.5 * wide, 2.1 * wide, d);
+        }
         const float BAND_SOFT = 0.1;
         const float BAND_BREAK = 0.0;
         varying vec3 world_pos;
@@ -379,6 +444,13 @@ public static class NatureKit
                 vec3 heart = vec3(0.0, max(VERTEX.y * 0.6, 0.5 * sway_height), 0.0);
                 NORMAL = normalize(mix(NORMAL, normalize(VERTEX - heart), 0.75 * crown_normals));
             }
+            fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+        #ifdef GHOST
+            // The ghost draws only a tree in the way; the solid draws the rest.
+            if (fade < 0.002) VERTEX = vec3(0.0);
+        #else
+            if (fade >= 0.002) VERTEX = vec3(0.0);
+        #endif
             world_pos = world;
             tree_seed = fract(sin(dot(floor(origin.xz * 0.5), vec2(12.9898, 78.233))) * 43758.5453);
         }
@@ -418,6 +490,13 @@ public static class NatureKit
             if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
             color *= mix(1.0, 0.8, wetness);
             ALBEDO = color;
+        #ifdef GHOST
+            // As Look's ghosts: thinned to about 55%, a little more round the player on screen.
+            vec4 target = VIEW_MATRIX * vec4(player_position + vec3(0.0, 0.9, 0.0), 1.0);
+            float apart = length(VERTEX.xy / -VERTEX.z - target.xy / -target.z);
+            float opening = 1.0 - smoothstep(0.04, 0.42, apart);
+            ALPHA = 1.0 - fade * (0.45 + 0.2 * opening * opening);
+        #endif
             ROUGHNESS = 0.9;
             SPECULAR = 0.0;
         }
