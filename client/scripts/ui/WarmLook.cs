@@ -119,6 +119,28 @@ public partial class WarmLook : Node
         b.AddThemeColorOverride("font_disabled_color", new Color(1f, 0.98f, 0.95f, 0.7f));
     }
 
+    // A panel that sits on the world rather than in a window (the needs gauges, the land chip):
+    // a small paper chip, round and a little see-through so the world shows at its edge, like
+    // the bar's paper buttons (ui-45, ui-54). Its insides are inked and left alone after.
+    public static void HudChip(PanelContainer p)
+    {
+        if (!On) return;
+        var s = new StyleBoxFlat
+        {
+            BgColor = new Color(Paper, 0.9f),
+            BorderColor = new Color(Ink, 0.22f),
+            ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.22f),
+            ShadowSize = 8,
+            ShadowOffset = new Vector2(0, 3),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        s.SetBorderWidthAll(2);
+        s.SetCornerRadiusAll(22);
+        p.AddThemeStyleboxOverride("panel", s);
+        p.SetMeta(Keep, true);
+        InkInside(p);
+    }
+
     // Controls that style themselves for paper are left as they are.
     const string Keep = "warm_keep";
 
