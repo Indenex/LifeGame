@@ -1,9 +1,9 @@
 # anim-5: Strike, bow, dig, shear, butcher, feed the fire, flinch
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
-Status: in_progress
+Status: done
 Branch: claude/anim-5
-PR: (to open)
+PR: #398 (merged)
 
 ## Goal
 More of Justin's "other activities should have similar animations" (anim-4, #382), on the same player_act system. Actions that had no motion now get one, for everyone:

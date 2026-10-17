@@ -506,7 +506,7 @@ public partial class Main : Node3D
 
     void OnPlayerPos(PlayerPos p, bool inserted)
     {
-        var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
+        var at = new Vector3(p.X, Wading.FeetY(terrain.HeightAt(p.X, p.Z)), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
             // Before spawning we wait for the area around us (see Subscribe).
@@ -628,7 +628,7 @@ public partial class Main : Node3D
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
-        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)));
+        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)), SwimmingRank());
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt) * wading;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));

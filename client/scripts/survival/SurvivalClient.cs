@@ -103,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
+                ? new UseOffer("Drink from what you carry", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -285,7 +285,8 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         float load = 0f;
         bool basket = false;
-        foreach (var i in conn.Db.MyInventory.Iter())
+        // Tools on the doll's tools section add no weight (ui-18).
+        foreach (var i in conn.Db.MyInventory.Iter().Where(i => !i.OnBelt))
         {
             load += Carry.Weight((Item)i.Item) * i.Count;
             if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;
