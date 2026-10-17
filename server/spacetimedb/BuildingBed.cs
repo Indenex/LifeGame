@@ -3,9 +3,9 @@ using SpacetimeDB;
 
 // Sleeping mats: a woven mat laid inside a finished hut or house you have a right
 // to (you placed it, helped build it, or belong to the claim it stands in). You
-// wake on your mat after dying. One mat per player; laying a new one rolls up the
+// wake on your mat if you chose it (survival-23). One mat per player; laying a new one rolls up the
 // old. If the mat's building is taken down or weathers away, the mat is left on
-// the ground and you wake at the wilderness edge again (Survival's default).
+// the ground. Whether you wake on it after dying is your choice (survival-23, RestSpots.cs).
 public static partial class Module
 {
     [SpacetimeDB.Table(Accessor = "SleepingMat", Public = true)]
@@ -84,12 +84,13 @@ public static partial class Module
         }
     }
 
-    // Survival asks where a player wakes after dying: on their mat, while it and its building stand.
-    static partial void RespawnPointHook(ReducerContext ctx, uint playerId, ref float x, ref float z)
+    // Survival asks whether a player's laid-out rest spot (their mat) is still there (RestSpots.cs).
+    static partial void LaidRestSpotHook(ReducerContext ctx, uint playerId, RestSpotDef spot, ulong structureId, ref float x, ref float z, ref bool stands)
     {
-        if (ctx.Db.SleepingMat.PlayerId.Find(playerId) is not { } mat) return;
-        if (ctx.Db.Structure.Id.Find(mat.StructureId) is not { Complete: true }) return;
+        if (spot.Item != Item.SleepingMat) return;
+        if (ctx.Db.SleepingMat.PlayerId.Find(playerId) is not { } mat || mat.StructureId != structureId) return;
         x = mat.X;
         z = mat.Z;
+        stands = true;
     }
 }
