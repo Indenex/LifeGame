@@ -98,6 +98,20 @@ public static class ClayLook
 
     public static ShaderMaterial Water => water ??= MakeWater();
 
+    static ShaderMaterial? troughWater;
+
+    // Trough water (ceramics-13): the same painted pond surface as the lakes (Look.WaterSurface:
+    // calm, deep, with slow ripples and rain rings), but with the shallow tint set deep, since a
+    // trough is only a hand deep and the pond's pale shallows would read as a thin film.
+    public static ShaderMaterial TroughWater => troughWater ??= MakeTroughWater();
+
+    static ShaderMaterial MakeTroughWater()
+    {
+        var m = (ShaderMaterial)Look.WaterSurface.Duplicate();
+        m.SetShaderParameter("shallow_color", new Color(0.09f, 0.22f, 0.26f));
+        return m;
+    }
+
     static ShaderMaterial MakeWater()
     {
         var m = new ShaderMaterial

@@ -23,6 +23,7 @@ public enum StructureKind
     LogCabin,
     RepairTable,
     TiledHouse,
+    ClayTrough,
     HenCoop,
 }
 
