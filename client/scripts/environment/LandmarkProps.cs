@@ -144,7 +144,7 @@ public static class LandmarkProps
             float t = Range(x, z, 520 + (uint)k, -0.9f, 0.9f) * half;
             float off = (H(x, z, 540 + (uint)k) < 0.5f ? -1f : 1f) * (radius + Range(x, z, 560 + (uint)k, 0.2f, 1.1f));
             var p = at + axis * t + side * off;
-            var fern = new Basis(Vector3.Up, H(x, z, 580 + (uint)k) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 600 + (uint)k, 0.9f, 1.7f));
+            var fern = new Basis(Vector3.Up, H(x, z, 580 + (uint)k) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 600 + (uint)k, 1.6f, 2.6f));
             into.Put(Undergrowth.Fern, Look.Grass, (new Transform3D(fern, p with { Y = heightAt(p.X, p.Z) }),
                 Look.Leaf.Lerp(Look.LeafLight, Range(x, z, 620 + (uint)k, 0f, 0.4f)), custom));
         }
