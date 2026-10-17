@@ -1,7 +1,7 @@
 # env-33: Fallen giant, a new world feature (D-166)
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_progress
+Status: in_review
 Branch: claude/environment-fallen-giant
 PR: (none yet)
 
@@ -22,8 +22,14 @@ Files: `shared/Features.cs` (FeatureId.FallenGiant = 4, appended), `shared/Landm
 - 2026-10-17 09:45: built; first renders landed in woodland (crowns over the trunk).
 - 2026-10-17 09:55: Fits tightened to open glades (density < 0.2 at the cell, < 0.3 six metres out all round); 30 in the 9x9 squares, nearest (-151,-42).
 
+- 2026-10-17 10:40: no standing tree within 7 m (7d4ad4ed); 22 in the 9x9 squares, nearest
+  (-73,-129), (149,-63). Render at (149,-63) (--camera-zoom=6, positive = farther) shows it
+  lying in an open glade, about 13 m with a long shadow. Draws see-through when the player
+  stands on it (the usual tree ghost).
+- PM: fallen giant first is a PM default (D-323).
+
 ## Open questions / blockers
-- Which feature kind comes first went to the PM as options (fallen giant recommended).
+- (none)
 
 ## Next step
-Check the render at (-151,-42), tune, open the PR, request a Render still pair.
+Wait for PR CI; send the green sha to the PM; Render still request for (149,-63) and (-73,-129).
