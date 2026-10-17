@@ -1,0 +1,19 @@
+name: Start a local SpacetimeDB with the built module
+description: Downloads the module and bindings built by the 'module' job, starts a server on 127.0.0.1:3000 and publishes the module as 'lifegame'.
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v7
+      with:
+        name: LifeGame-Server
+        path: module-wasm
+    - uses: actions/download-artifact@v7
+      with:
+        name: module-bindings
+        path: client/module_bindings
+    - name: Start the server and publish the module
+      shell: bash
+      run: |
+        spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
+        for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
+        spacetimedb-cli publish lifegame --server local --yes --bin-path module-wasm/StdbModule.wasm

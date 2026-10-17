@@ -184,7 +184,14 @@ public sealed class SoundMix
     // gain and pan (-1 left to 1 right) place it in the world, e.g. another player's jump.
     public void Play(CueDef def, float gain = 1f, float pan = 0f) => cues.Trigger(def, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
 
-    public void Play(Cue cue, float gain = 1f, float pan = 0f) => cues.Trigger(cue, Math.Clamp(Fin(gain), 0f, 4f), Side(pan));
+    public void Play(Cue cue, float gain = 1f, float pan = 0f)
+    {
+        gain = Math.Clamp(Fin(gain), 0f, 4f);
+        pan = Side(pan);
+        // Cues that have been converted to data play from their CueDef.
+        if (CueDefs.ForCue(cue) is { } def) cues.Trigger(def, gain, pan);
+        else cues.Trigger(cue, gain, pan);
+    }
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
     // closes it with a thunk, a snap if it failed, or a breath of flame for a drill.
@@ -1694,34 +1701,6 @@ public sealed class SoundMix
                             s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
                             break;
                         }
-                        case Cue.Place:
-                        {
-                            // Something set on the ground: a dull knock and a scuff.
-                            v.Phase += 2f * MathF.PI * 95f * v.Pitch * dt;
-                            float scuff = v.Low.Process(x, Lowpass.Coef(1200f, rate)) * Burst(t, 0f, 0.04f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.05f) * 0.13f + scuff * 0.12f;
-                            break;
-                        }
-                        case Cue.Hit:
-                        {
-                            // A blow landing: a dull thud dropping in pitch, a slap of cloth and flesh.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            float slap = v.Band.Process(x, 1100f * v.Pitch, 0.7f, rate) * Burst(t, 0f, 0.03f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.15f + slap * 0.225f;
-                            break;
-                        }
-                        case Cue.Crit:
-                        {
-                            // A sneak attack's bonus: the same thud, a sharp crack over it and a
-                            // short bright ring that says it was a good one.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            v.Phase2 += 2f * MathF.PI * 1480f * v.Pitch * dt;
-                            float crack = v.Band.Process(x, 3600f, 0.6f, rate) * Burst(t, 0f, 0.012f);
-                            float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
-                            send = ring * 0.024f;
-                            break;
-                        }
                         case Cue.BowDraw:
                         {
                             // Wood and sinew under strain: an irregular, slow creak. Band-passed
@@ -1771,15 +1750,6 @@ public sealed class SoundMix
                             v.Phase += 2f * MathF.PI * 85f * v.Pitch * dt;
                             float grit = v.Low.Process(x, Lowpass.Coef(1000f, rate)) * Burst(t, 0f, 0.05f);
                             s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.06f) * 0.14f + grit * 0.18f;
-                            break;
-                        }
-                        case Cue.Jump:
-                        {
-                            // Pushing off: a quick scuff of the ground and cloth, and a small
-                            // lift of breath.
-                            float scuff = v.Band.Process(x, 1500f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
-                            float breath = v.Low.Process(x, Lowpass.Coef(2200f, rate)) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.25f));
-                            s = scuff * 0.3f + breath * 0.05f;
                             break;
                         }
                         case Cue.Learn:
