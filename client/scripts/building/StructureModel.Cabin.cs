@@ -69,10 +69,10 @@ public static partial class StructureModel
         floor.GenerateNormals();
         Add(list, 0, PaleWood, floor.Commit());
 
-        // Door posts and a lintel log, so the course ends have something to butt against.
-        foreach (float x in new[] { HouseDoorHalf + 0.04f, -HouseDoorHalf - 0.04f })
-            Add(list, 1, Wood, Stick(new Vector3(x, 0.1f, wz), new Vector3(x, HouseDoorTop + 0.05f, wz + 0.01f), 0.07f));
-        Add(list, 1, Wood, Stick(new Vector3(-HouseDoorHalf - 0.35f, HouseDoorTop + 0.06f, wz + 0.02f), new Vector3(HouseDoorHalf + 0.35f, HouseDoorTop + 0.07f, wz + 0.02f), 0.1f));
+        // A hewn door frame and squared corner posts in the village kit's style (building-26):
+        // the course ends butt against the jambs, and the crossed log ends show either side of the posts.
+        DoorFrame(list, 1, HouseDoorHalf - 0.02f, HouseDoorTop + 0.04f, wz + 0.02f);
+        CornerPosts(list, 1, wx, wz, 0.13f, HouseWallTop + 0.08f);
 
         HouseRoof(list, CabinLog * 1.4f, Wood);
         return list;
