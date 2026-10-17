@@ -170,6 +170,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:16: survival-34 death line and light (#834, 3b098f0a), --death-preview: card up, then the shaft at dusk and midday; after mushrooms. PM order: ui-70 (when it comes), #835, #837, #834, env-35, env-31, the rest, Home and friends playtest last.
 
+- 2026-10-17 15:22: claims-27 (#839, bd7d3c96): strike at 2.5 m ("Too far away"), struck from the left (red flush), Town panel (seedtown patch); after #834. Puppet `act` now takes {target}.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

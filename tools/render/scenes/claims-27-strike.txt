@@ -1,0 +1,21 @@
+# claims-27 (#839): (1) the camera player A strikes (Z) at B standing 2.5 m ahead (reach 1.6):
+# the arm swings and "Too far away" shows; (2) B strikes A from A's screen-left: red flush on
+# the left and "B struck you". Both held at (30,20) in the wild; health rows are cleared so
+# they are recreated with no newcomer grace (CombatConfig grace 0).
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --debug-position=30,20
+name B
+find
+wait 35
+sql INSERT INTO combat_config (id, grace_micros) VALUES (0, 0)
+sql DELETE FROM player_health
+sql DELETE FROM player_standing
+sql UPDATE player_pos SET x = 30.0, z = 20.0, chunk_x = 1, chunk_z = 1 WHERE player_id = {target}
+warp 28.23 18.23
+wait 6
+key z
+burst 3 0.8
+wait 4
+warp 29.15 20.85
+wait 6
+act StrikePlayer {target}
+burst 3 0.6

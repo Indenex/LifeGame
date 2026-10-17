@@ -434,6 +434,7 @@ bool Step(string line)
             for (int i = 0; i < ps.Length; i++)
             {
                 string tok = i + 1 < a.Length ? a[i + 1] : "0";
+                if (tok == "{target}") tok = target.ToString();   // the camera player's id
                 object? v;
                 switch (tok)
                 {
