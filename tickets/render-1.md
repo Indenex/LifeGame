@@ -178,7 +178,7 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:38: ui-70 hotbar slots (#841 489c3c10, Justin's request) warm and cold, before on main 26273056, plus --screenshot-hotbar ghost; right after the cabin shots, then env-38.
 
-- 2026-10-17 15:42: env-38 water + env-39 clouds (#843 062e72cd): water after (same shots as env38-before), clouds 0.45 noon/0.7 and rain 0.7/cloud 0.9 vs --clouds=0, dragonflies close; first runtime of both shaders, so report pink/missing with the log. After ui-70.
+- 2026-10-17 15:42: env-38 water + env-39 clouds (#843 221c725b, was 062e72cd): water after (same shots as env38-before), clouds 0.45 noon/0.7 and rain 0.7/cloud 0.9 vs --clouds=0, dragonflies close; first runtime of both shaders, so report pink/missing with the log. After ui-70.
 
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
