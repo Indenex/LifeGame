@@ -5,20 +5,26 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // A small picture of each item, rendered once from the same mesh that lies on the
-// ground (ItemLook.MeshFor), so the inventory shows the things themselves.
+// ground (ItemLook.MeshFor), so the inventory shows the things themselves. A pot with a
+// maker's mark gets its own picture with the mark on (ui-46, Ceramics' ClayItemLook), so
+// what you made looks like what you made in the bag too (D-081).
 public static class ItemIcon
 {
     const int Size = 96;
-    static readonly Dictionary<Item, Texture2D> Icons = new();
+    static readonly Dictionary<(Item, uint), Texture2D> Icons = new();
     static Node? holder;
 
     // The node the little render viewports live under; Hud sets it.
     public static void Attach(Node node) => holder = node;
 
-    public static Texture2D? For(Item item)
+    // decor: the maker (Marks.MakerOf) of a marked pot, 0 for the plain picture.
+    public static Texture2D? For(Item item, uint decor = 0)
     {
-        if (Icons.TryGetValue(item, out var icon)) return icon;
+        var mesh = decor != 0 && ClayItemLook.MarkedMesh(item, decor) is { } marked ? marked : null;
+        if (mesh == null) decor = 0;
+        if (Icons.TryGetValue((item, decor), out var icon)) return icon;
         if (holder == null) return null;
+        mesh ??= ItemLook.MeshFor(item);
 
         var viewport = new SubViewport
         {
@@ -27,7 +33,6 @@ public static class ItemIcon
             TransparentBg = true,
             RenderTargetUpdateMode = SubViewport.UpdateMode.Once,
         };
-        var mesh = ItemLook.MeshFor(item);
         var aabb = mesh.GetAabb();
         var model = new MeshInstance3D { Mesh = mesh, Position = -aabb.GetCenter() };
         // A slight turn so flat things show their face and long things lie across.
@@ -55,7 +60,7 @@ public static class ItemIcon
         });
         holder.AddChild(viewport);
         icon = viewport.GetTexture();
-        Icons[item] = icon;
+        Icons[(item, decor)] = icon;
         return icon;
     }
 }

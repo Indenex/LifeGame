@@ -36,6 +36,30 @@ public static class PaintedTrees
     // at its base. Detailed, as a falling tree is always close by.
     public static Mesh Felled(bool pine, int variant) => Get(pine, variant, false, true);
 
+    // The crown alone, with no trunk, for trees that bring their own: birches on their white
+    // trunks and the landmark giants on theirs. Same height and frame as the whole tree.
+    public static Mesh PineCrown(int variant, bool coarse) => Crown(true, variant, coarse);
+    public static Mesh BroadleafCrown(int variant, bool coarse) => Crown(false, variant, coarse);
+    public static bool IsCrown(Mesh mesh) { lock (Crowns) return Crowns.ContainsValue(mesh); }
+    static readonly Dictionary<(bool, int, bool), Mesh> Crowns = new();
+
+    static Mesh Crown(bool pine, int variant, bool coarse)
+    {
+        int v = ((variant % Variants) + Variants) % Variants;
+        var whole = (ArrayMesh)Get(pine, v, coarse, false);
+        lock (Crowns)
+        {
+            if (!Crowns.TryGetValue((pine, v, coarse), out var mesh))
+            {
+                // Surface 0 is the trunk and roots, surface 1 the foliage.
+                var crown = new ArrayMesh();
+                crown.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, whole.SurfaceGetArrays(1));
+                Crowns[(pine, v, coarse)] = mesh = crown;
+            }
+            return mesh;
+        }
+    }
+
     static Mesh Get(bool pine, int variant, bool coarse, bool felled)
     {
         int v = ((variant % Variants) + Variants) % Variants;
@@ -56,6 +80,8 @@ public static class PaintedTrees
             {
                 Pine(v, coarse);
                 Broadleaf(v, coarse);
+                PineCrown(v, coarse);
+                BroadleafCrown(v, coarse);
             }
             Felled(true, v);
             Felled(false, v);
@@ -214,12 +240,22 @@ public static class PaintedTrees
                 f.Bough(root, dir, length * (0.85f + rnd * 0.35f), droop, wide * (0.9f + rnd * 0.2f), rnd);
             }
         }
-        // A tuft of short lobes on top.
-        for (int i = 0; i < 5; i++)
+        // A tuft of short lobes on top, broad and meeting at the middle so no dark heart
+        // shows through when the crown is seen from above (Justin's "hole in the top").
+        int tuft = coarse ? 6 : 9;
+        for (int i = 0; i < tuft; i++)
         {
-            float a = i * Mathf.Tau / 5 + R(60) * Mathf.Tau;
+            float a = i * Mathf.Tau / tuft + R(60) * Mathf.Tau;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-            f.Bough(center + new Vector3(0, radii.Y * 1.0f, 0) + dir * 0.02f, dir, 0.07f * width, 0.03f, 0.06f, H(v, i + 990));
+            f.Bough(center + new Vector3(0, radii.Y * 1.03f, 0), dir, 0.085f * width, 0.035f, 0.085f, H(v, i + 990));
+        }
+        // And a few lying across the very top, rooted just past the middle, so their lighter
+        // middles (not their dark roots) cover where the tuft meets.
+        for (int i = 0; i < 3; i++)
+        {
+            float a = i * Mathf.Tau / 3 + R(63) * Mathf.Tau;
+            var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+            f.Bough(center + new Vector3(0, radii.Y * 1.06f, 0) - dir * 0.03f, dir, 0.08f * width, 0.03f, 0.08f, H(v, i + 980));
         }
 
         var mesh = new ArrayMesh();

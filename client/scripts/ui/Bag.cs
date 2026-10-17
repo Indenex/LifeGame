@@ -258,7 +258,7 @@ public partial class BagSlotView : PanelContainer
         AddChild(stack);
         var picture = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item),
+            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -315,6 +315,12 @@ public partial class BagSlotView : PanelContainer
             row.AddChild(by);
             box.AddChild(row);
         }
+        // The warm look's tooltip is already a paper note (ui-44): ink the words, no dark box.
+        if (WarmLook.On)
+        {
+            WarmLook.InkInside(box);
+            return box;
+        }
         var panel = Hud.Panel(box, Vector2.Zero);
         return panel;
     }
@@ -327,7 +333,7 @@ public partial class BagSlotView : PanelContainer
         if (Stack == null) return default;
         var preview = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item),
+            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             Size = new Vector2(BagGrid.Slot, BagGrid.Slot),

@@ -11,6 +11,11 @@ public static partial class Module
     static bool ClaimGateAllows(ReducerContext ctx, Structure gate) =>
         ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx));
 
+    // Barring a gate on a claim: its owner and members, or the town's Gatekeeper (claims-21). Neighbours who
+    // only signed the roster can still open and shut it (ClaimGateAllows) but not bar it.
+    static bool ClaimGateLockAllows(ReducerContext ctx, Claim claim) =>
+        HasClaimRights(ctx, claim, Me(ctx)) && (IsOwnerOrMember(ctx, claim, Me(ctx)) || TownGateKeeperMay(ctx, claim));
+
     // Declared in BuildingStorage.cs (building-9, #202).
     static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed)
     {

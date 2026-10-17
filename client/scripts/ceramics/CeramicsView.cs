@@ -44,6 +44,7 @@ public partial class CeramicsView : Node
         AttachLamps(conn);
         AttachTroughs(conn);
         AttachMarks(conn);
+        AttachSlip();
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
@@ -155,6 +156,7 @@ public partial class CeramicsView : Node
         // sits just under feeding a fire, so G at a fire still feeds the fire.
         Use.Register(new UseHandler { Id = "ceramics.lamp", Priority = 24, Find = LampOffer });
         Use.Register(new UseHandler { Id = "ceramics.trough", Priority = 23, Find = TroughOffer });
+        Use.Register(new UseHandler { Id = "ceramics.slip", Priority = 3, Find = SlipOffer });
         Use.Register(new UseHandler { Id = "ceramics.mark", Priority = 2, Find = MarkOffer });
         Use.Register(new UseHandler { Id = "ceramics.set_lamp", Priority = 19, Find = SetLampOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });

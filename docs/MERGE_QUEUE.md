@@ -1,25 +1,29 @@
-# Merge queue and auto-merge (integration-8)
+# Merge queue (integration-8, integration-16)
 
-What it does: a green PR is merged by GitHub itself. The queue builds the PR on top of the newest `main` (up to 5 PRs per batch), runs the same three checks, and merges the batch if they pass. Nobody has to wait for a green sha or a clear moment.
+Why: every merge to `main` used to start its own Build and Release, and PR runs competed with them for the same 20 free runner slots. With the queue, finished PRs are merged in batches: GitHub builds a batch of 3 to 5 PRs on top of the newest `main` (the `merge_group` event), runs the same checks once on the combined state, and lands the whole batch in one push. One push means one Build (module, Upgrade check, both clients) and one Release, about every 10 to 15 minutes, instead of one per PR.
 
-## Justin's clicks (once, repo admin)
+## Justin's clicks (once, repo admin, about 2 minutes)
 
-1. **Settings → General → Pull Requests**: tick **Allow auto-merge**. Also tick **Allow squash merging** and untick the other two merge methods.
+1. **Settings → General → Pull Requests**: tick **Allow auto-merge**. Keep **Allow merge commits** ticked (history stays "Merge pull request #N").
 2. **Settings → Rules → Rulesets → New ruleset → New branch ruleset**.
-   - Name: `main`. Enforcement status: **Active**.
-   - Target branches: **Add target → Include default branch**.
-   - Tick **Require status checks to pass**. Add exactly these three checks: `Client (Linux)`, `Client (Windows)`, `Server module and load test`. Leave "Require branches to be up to date" off (the queue does that).
-   - Tick **Require merge queue**: merge method **Squash and merge**, maximum group size **5**, minimum group size **1**, wait time to meet minimum **2 minutes**, build concurrency **3**, status check timeout **60 minutes**.
+   - Name `main`. Enforcement status **Active**. Target branches: **Add target → Include default branch**.
+   - Tick **Require status checks to pass** and add exactly: `Client (Linux)`, `Client (Windows)`, `Server module and load test`. Leave "Require branches to be up to date" off (the queue does that).
+   - Tick **Require merge queue** with: merge method **Merge commit**; build concurrency **1**; maximum group size **5**; minimum group size **3**; wait time to meet minimum group size **10 minutes**; **Require all queue entries to pass required checks** on; status check timeout **45 minutes**.
+   - Bypass list: add the repository **Admin** role (the PM uses it to hand-merge a `world-wipe` PR).
    - Leave "Restrict deletions" and "Block force pushes" ticked. **Create**.
+
+After that, nobody but the bypass role can merge straight into `main`.
 
 ## Using it
 
-- On a green PR, press **Merge when ready** (or have Claude call `enable_pr_auto_merge`). It joins the queue as soon as the required checks pass.
-- A PR that fails in the queue is removed; the PRs behind it are rebuilt without it. Fix it and re-enable auto-merge.
-- `world-wipe` PRs (D-129): do not enable auto-merge. The PM merges them by hand on the date Justin confirms. The queue run skips the upgrade check (it only runs on the PR itself), so a wipe PR in the queue would not be caught.
+- Lanes: send the green sha to the PM, as before (D-119). The PM adds the PR to the queue (`enable_pr_auto_merge` on it; it joins as soon as the required checks pass) instead of merging.
+- A batch forms when 3 PRs are waiting, or when 10 minutes pass with fewer. The batch is built on the newest `main`, so a PR that conflicts with another in the same batch fails there.
+- A PR that fails in the queue is removed and the rest are rebuilt without it; the PR goes back to its lane. Fix it, push, and it is queued again.
+- `world-wipe` PRs (D-129) are not queued: the queue run cannot see the label. The PM merges them by hand with the bypass role on the date Justin confirms.
 - Doc-only PRs still report the three checks (a few seconds each, nothing built), so the rule never blocks them.
 
 ## How the workflow behaves
 
-- `build.yml` has a `merge_group` trigger; the queue's temporary `gh-readonly-queue/main/...` branches run the same jobs as a PR (smoke load test, no upgrade check).
-- Pushes to `main` still run the full build (20 bots) and share one `build-main` concurrency group; the release picks only green **push** Builds of `main`, so queue branches are never released.
+- PR runs: unchanged, the full checks (lighter PR runs are possible later, since the queue run tests the combined state).
+- `merge_group` runs (branches `gh-readonly-queue/main/...`): the same jobs as a PR, including the Upgrade check of the batch over the queue's base commit, so a batch that would need a world wipe is stopped before it merges. Queue branches are never released.
+- Push to `main` (the batch landing): module, Upgrade check (against the push's `before` commit, so the whole batch is covered) and both client exports, then the Release. No gameplay checks: they just ran on the batch. One `build-main` concurrency group, so a newer push replaces a queued Build.

@@ -141,13 +141,14 @@ public static partial class Module
     // Builder rights on a claim: its owner, its members, and (claims-19) anyone who signed
     // the same town roster as the claim. Building, digging, picking up, gates and the like.
     public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who) =>
-        IsOwnerOrMember(ctx, claim, who) || IsTownmate(ctx, claim, who);
+        !BannedFromClaim(ctx, claim, who) && (IsOwnerOrMember(ctx, claim, who) || IsTownmate(ctx, claim, who));
 
     // The inner circle only: the owner and the members the owner added. Stashes, tending the
     // marker and similar stay with them, not with the town.
     public static bool IsOwnerOrMember(ReducerContext ctx, Claim claim, Identity who)
     {
         if (claim.Owner == who) return true;
+        if (BannedFromClaim(ctx, claim, who)) return false;
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id))
             if (m.Member == who) return true;
         return false;
