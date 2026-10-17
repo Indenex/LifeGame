@@ -19,6 +19,19 @@ public static partial class Module
 
     static partial void BowShotHook(ReducerContext ctx, uint playerId, ref BowShot shot);
 
+    // One row per shot, hit or miss, so every client can hear and see the arrow (Audio).
+    // (ToX, ToZ) is the animal on a hit, or where the arrow lands on a miss.
+    [SpacetimeDB.Table(Accessor = "ArrowShot", Public = true, Event = true)]
+    public partial struct ArrowShot
+    {
+        public uint PlayerId;
+        public float FromX;
+        public float FromZ;
+        public float ToX;
+        public float ToZ;
+        public bool Hit;
+    }
+
     const float BowMaxRange = 40f;
     // Half the angle of the cone the client aims in, a little wider here for lag.
     const float BowConeRadians = 0.7f;
@@ -64,16 +77,20 @@ public static partial class Module
         {
             // A miss still teaches, at half the rate (Skills.Gain).
             OnProcessPerformed(ctx, player.PlayerId, ShootProcess, shotQuality, true);
-            // A miss still frightens it: the arrow lands close by.
+            // A miss still frightens it: the arrow lands a little past it and to one side.
+            float along = 1f + (float)ctx.Rng.NextDouble() * 2f, side = ((float)ctx.Rng.NextDouble() - 0.5f) * 3f;
+            float ux = dx / MathF.Max(d, 0.01f), uz = dz / MathF.Max(d, 0.01f);
+            ctx.Db.ArrowShot.Insert(new ArrowShot { PlayerId = player.PlayerId, FromX = pos.X, FromZ = pos.Z, ToX = animal.X + ux * along - uz * side, ToZ = animal.Z + uz * along + ux * side, Hit = false });
             ctx.Db.AnimalMind.AnimalId.Update(mind with { Nervous = 1f, FleeX = dx / MathF.Max(d, 0.01f), FleeZ = dz / MathF.Max(d, 0.01f), StruckAt = now });
             ctx.Db.Animal.Id.Update(animal with { State = AnimalState.Run });
             return;
         }
 
         OnProcessPerformed(ctx, player.PlayerId, ShootProcess, shotQuality, false);
+        ctx.Db.ArrowShot.Insert(new ArrowShot { PlayerId = player.PlayerId, FromX = pos.X, FromZ = pos.Z, ToX = animal.X, ToZ = animal.Z, Hit = true });
         int damage = Math.Max(1, (int)MathF.Round(BowDamage(shot, d, ctx.Rng.NextDouble()) * Progression.Effect(EffectKind.ArcheryDamage, rank)));
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
-        HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0);
+        HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, 0f, now, bonus > 0, ranged: true);
     }
 
     // 0.95 close up, falling 0.012 per meter beyond 5 m to a floor of 0.3, then the

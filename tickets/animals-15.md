@@ -48,3 +48,5 @@ A hunter with a bow and arrows can shoot huntable animals (sheep, deer) at range
 When #219 is on main: merge main here and open the PR (needs Crafting's BowShotHook, server/spacetimedb/CraftingBow.cs, to be useful in play); swap ArrowFlight.cs's plain shaft for Modeling's ItemModels.ArrowFlight if it is on main.
 
 - 2026-10-16 23:45: #219 merged. Re-applied the bow (Bow.cs, ArrowFlight.cs, Herd.cs hunk, this ticket) on fresh main; server and client build, upgrade check against main passed. Without Crafting's BowShotHook nobody can shoot yet (the reducer throws 'You need a bow and an arrow'), so this is safe to merge ahead of it.
+
+- 2026-10-16 23:50: Audio asked for (1) a public event table `ArrowShot {PlayerId, FromX, FromZ, ToX, ToZ, Hit}` emitted once per shot (hit or miss; a miss lands past the animal and to one side) and (2) `Ranged` on `AnimalHit` (true for arrow hits). Both added in Bow.cs / Hunting.cs. No draw phase yet: a shot is instant. Server and client build, upgrade check against main passed.

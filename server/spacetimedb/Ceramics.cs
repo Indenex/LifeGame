@@ -179,9 +179,12 @@ public static partial class Module
         if (pots.Count == 0)
             throw new Exception("You have no dry pots to fire");
         // A storage jar is too big for an open fire; it waits for a kiln.
+        var kilnOnlyForm = ClayRules.FormOfUnfired((Item)pots[0].Item)!.Value;
         pots = pots.Where(i => !ClayRules.KilnOnly(ClayRules.FormOfUnfired((Item)i.Item)!.Value)).ToList();
         if (pots.Count == 0)
-            throw new Exception("A storage jar is too big for a campfire. Fire it in a kiln.");
+            throw new Exception(kilnOnlyForm == ClayForm.StorageJar
+                ? "A storage jar is too big for a campfire. Fire it in a kiln."
+                : $"A {ClayRules.FormName(kilnOnlyForm)} needs more even heat than a campfire gives. Fire it in a kiln.");
         if (ctx.Db.ClayPiece.MadeBy.Filter(player.PlayerId).Count() >= ClayRules.MaxPiecesPerPlayer)
             throw new Exception("You have too much clay out already");
 

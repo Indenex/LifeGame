@@ -17,27 +17,27 @@ public partial class Terrain
     static float RockRadius(float scale) => 0.4f * scale;
 
     // Pushes a step out of any trunk or boulder, sliding along its edge instead of stopping dead.
-    public Vector3 CollideVegetation(Vector3 to)
+    public Vector3 CollideVegetation(Vector3 to, float airHeight = 0f)
     {
         int cx = Mathf.FloorToInt(to.X + 0.5f), cz = Mathf.FloorToInt(to.Z + 0.5f);
         for (int x = cx - 1; x <= cx + 1; x++)
             for (int z = cz - 1; z <= cz + 1; z++)
             {
-                if (!ObstacleAt(x, z, out float ox, out float oz, out float radius)) continue;
+                if (!ObstacleAt(x, z, out float ox, out float oz, out float radius, out float height) || Jumping.Clears(height, airHeight)) continue;
                 float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
                 if (d2 >= keep * keep) continue;
                 if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
                 float d = Mathf.Sqrt(d2);
                 to = new Vector3(ox + dx / d * keep, to.Y, oz + dz / d * keep);
             }
-        return CollideOutcrops(to);
+        return CollideOutcrops(to, airHeight);
     }
 
     // Outcrop boulders spread several meters from their middle cell (env-5), so they
     // are found by square rather than by the cells next to the walker.
     readonly Dictionary<(int, int), List<(float X, float Z, float R)>> outcropStones = new();
 
-    Vector3 CollideOutcrops(Vector3 to)
+    Vector3 CollideOutcrops(Vector3 to, float airHeight)
     {
         int size = Landmarks.OutcropSquare;
         int sx0 = Landmarks.SquareOf(Mathf.FloorToInt(to.X - 8f), size), sx1 = Landmarks.SquareOf(Mathf.FloorToInt(to.X + 8f), size);
@@ -46,6 +46,7 @@ public partial class Terrain
             for (int sz = sz0; sz <= sz1; sz++)
                 foreach (var (ox, oz, radius) in OutcropStones(sx, sz))
                 {
+                    if (Jumping.Clears(Jumping.RockHeight(radius), airHeight)) continue;
                     float dx = to.X - ox, dz = to.Z - oz, keep = radius + WalkerRadius, d2 = dx * dx + dz * dz;
                     if (d2 >= keep * keep) continue;
                     if (d2 < 0.0001f) { dx = 1f; dz = 0f; d2 = 1f; }
@@ -75,10 +76,11 @@ public partial class Terrain
 
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
     // stones, ferns and fallen trunks never block.
-    bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius)
+    bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius, out float height)
     {
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
+        height = float.MaxValue; // trunks are never hopped
         if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
         float top = TileHeight(x, z);
         if (top < Look.WaterLevel + 0.1f) return false;
@@ -113,6 +115,7 @@ public partial class Terrain
         if (roll >= rock) return false;
         float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
         radius = RockRadius(scale * size);
+        height = Jumping.RockHeight(radius);
         // Pebbles are stepped over.
         return radius >= 0.2f;
     }

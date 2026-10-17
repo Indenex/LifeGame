@@ -1,7 +1,7 @@
 # bugfix-20: shaping clay at the 24-piece cap refunds raw-quality clay and says "Your pot is drying"
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_review
+Status: done
 Branch: claude/bugfix-20
 PR: #221
 
@@ -18,8 +18,10 @@ Recommended fix: refuse the craft before it starts (StartCraft in Crafting.cs wo
 - 2026-10-16: scratch bot passed on a fresh local world: dug 52 clay, 26 tempered clay, 24 pinch pots out; the 25th StartCraft("clay.pinch_pot") was refused with "You have too much clay drying already. Pick some up or fire it first.", no MyCraftJob row, tempered clay stayed 2. The bot was a modified copy of tools/ClayCheck (head of the file up to the first clay.clean, with stones 9, clayWanted 52, dig limit 25*12; then 26 clean, 7 grit, 13 temper, 24 pinch pots, then one more StartCraft). Not committed. Merged main (a1e1f68). Opened #221.
 - 2026-10-16: lane handed to a Sonnet session (D-159).
 
+- 2026-10-16: #221 merged; CI green on efe779f (https://github.com/Indenex/LifeGame/actions/runs/38962303234).
+
 ## Open questions / blockers
 - Crafting to confirm the CanStartCraft hook in Crafting.cs (asked 2026-10-16).
 
 ## Next step
-Wait for CI on #221 and Crafting's OK on the CanStartCraft hook (session_01Y2sA7pDBFch57bWb1uKMTq); when both are in, record the CI link here and send the PM (session_01CvoSQGRe3vDvDXWQu2qruU) the green sha.
+None; done and merged.

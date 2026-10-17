@@ -37,6 +37,16 @@ public static class Sfx
         if (Place(worldPosition, out float gain, out float pan)) scape?.Play(cue, gain, pan);
     }
 
+    // A blow landing on an animal at `target`, struck from `attacker`. Yours (you are within a
+    // couple of metres of where it came from) plays at full volume; someone else's plays
+    // from where it happened, quieter with distance.
+    public static void PlayHit(Cue cue, Vector3 target, Vector3 attacker)
+    {
+        var offset = new Vector3(attacker.X - listener.X, 0, attacker.Z - listener.Z);
+        if (offset.LengthSquared() < 2.5f * 2.5f) Play(cue);
+        else PlayAt(cue, target);
+    }
+
     // Touching down after a jump: strength 0 (a hop) to 1 (a long fall), and the ground underfoot.
     public static void Land(float strength, Ground ground) => scape?.Land(ground, strength);
 
