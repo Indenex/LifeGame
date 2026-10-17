@@ -15,6 +15,7 @@ static class AudioHooks
         StructureSounds.Connect(conn);
         PotSounds.Connect(conn);
         EmoteSounds.Connect(conn);
+        DeerGrazing.Connect(conn);
         LampSounds.Connect(conn);
     }
 
@@ -24,6 +25,7 @@ static class AudioHooks
         RoastSounds.Tick(dt);
         PotSounds.Tick(dt);
         EmoteSounds.Tick(dt);
+        DeerGrazing.Tick(dt);
         LampSounds.Tick(dt);
     }
 }
