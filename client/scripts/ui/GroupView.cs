@@ -7,7 +7,7 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Your group on screen (ui-38, the shell): a quiet list of members down the left edge, each with
-// how far off they are (ui-78), no box
+// how far off they are and which way (ui-78), no box
 // (D-045), with "Leave group" under it; "Mara asks you to join her group    E joins" (the Use
 // key as bound) above the Use prompt while an invitation waits, and a soft "wants you in their group" over the
 // inviter's head, like the trade cue. The server decides everything (Groups.cs); this reads
@@ -23,6 +23,8 @@ public partial class GroupView : CanvasLayer
     Label3D? cue;
     uint cueFor;
     string shown = "";
+    bool previewed;
+    static readonly bool Preview = OS.GetCmdlineUserArgs().Contains("--screenshot-group");
 
     public void Attach(DbConnection connection)
     {
@@ -69,6 +71,13 @@ public partial class GroupView : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // --screenshot-group: a pretend group of four for Render (ui-78), kept once connected.
+        if (Preview)
+        {
+            if (!previewed) Fill(new[] { ("You", true, (string?)null), ("Mara", true, "40 m north"), ("Tobin", true, "close by"), ("Wren", false, null) });
+            previewed = true;
+            return;
+        }
         if (conn == null) return;
         var invite = Incoming;
         asked.Text = invite is { } i ? $"{i.FromName} asks you to join their group    {Controls.KeyFor("use") ?? "Use"} joins" : "";
@@ -79,6 +88,13 @@ public partial class GroupView : CanvasLayer
         string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}:{HowFar(m.PlayerId)}"));
         if (key == shown) return;
         shown = key;
+        Fill(members.Select(m => (m.PlayerId == MyId() ? "You" : m.Name, Online(m.PlayerId), m.PlayerId == MyId() ? null : HowFar(m.PlayerId))).ToList());
+    }
+
+    // The list itself: a title, each member (name, then how far and which way, or "(away)"), and
+    // "Leave group".
+    void Fill(System.Collections.Generic.IReadOnlyList<(string Name, bool Here, string? Far)> members)
+    {
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
         if (members.Count == 0) return;
 
@@ -87,10 +103,8 @@ public partial class GroupView : CanvasLayer
         list.AddChild(title);
         foreach (var m in members)
         {
-            bool here = Online(m.PlayerId);
-            string far = m.PlayerId == MyId() || !here ? "" : HowFar(m.PlayerId) is { } f ? $"   {f}" : "";
-            var name = Hud.Text((m.PlayerId == MyId() ? "You" : m.Name) + (here ? far : "  (away)"), 15);
-            Hud.Soft(name, 15, here ? 0.9f : 0.45f);
+            var name = Hud.Text(m.Name + (!m.Here ? "  (away)" : m.Far is { } f ? $"   {f}" : ""), 15);
+            Hud.Soft(name, 15, m.Here ? 0.9f : 0.45f);
             list.AddChild(name);
         }
         var leave = ControlsPage.TextButton("Leave group", () => conn?.Reducers.LeaveGroup());
@@ -102,15 +116,22 @@ public partial class GroupView : CanvasLayer
 
     bool Online(uint playerId) => conn?.Db.Player.PlayerId.Find(playerId) is { Online: true };
 
-    // How far a member is, in steps of 10 m so the list doesn't flicker as people walk (ui-78):
-    // "close by", "40 m", "far off". Null when either position isn't known.
+    // How far a member is and which way (ui-78; Justin picked distance and direction): "close by",
+    // "40 m north", "far off to the southwest". Steps of 10 m and eight world compass words (not
+    // the camera's), so the list doesn't flicker as people walk. Null when a position isn't known.
     string? HowFar(uint playerId)
     {
         if (conn == null || playerId == MyId()) return null;
         if (conn.Db.PlayerPos.PlayerId.Find(playerId) is not { } them || conn.Db.PlayerPos.PlayerId.Find(MyId()) is not { } me) return null;
-        float d = new Vector2(them.X - me.X, them.Z - me.Z).Length();
-        return d < 12f ? "close by" : d >= 300f ? "far off" : $"{Mathf.RoundToInt(d / 10f) * 10} m";
+        var v = new Vector2(them.X - me.X, them.Z - me.Z);
+        float d = v.Length();
+        if (d < 12f) return "close by";
+        string way = Compass[(int)Mathf.PosMod(Mathf.Round(Mathf.RadToDeg(Mathf.Atan2(v.X, -v.Y)) / 45f), 8f)];
+        return d >= 300f ? $"far off to the {way}" : $"{Mathf.RoundToInt(d / 10f) * 10} m {way}";
     }
+
+    // -Z is north and +X is east, as on the death marker (DeathMarker.Direction).
+    static readonly string[] Compass = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
 
     // "wants you in their group" over the inviter's head while you are asked; only you see it.
     void Cue(uint from)
