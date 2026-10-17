@@ -68,12 +68,12 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BanFromTown(ReducerContext ctx, uint playerId, int days)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Ban)) throw new Exception("Only the town's Marshal can ban someone");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can ban someone");
         if (days <= 0) days = Towns.BanDaysDefault;
         days = Math.Min(days, Towns.BanDaysMax);
         var target = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("Nobody by that name");
-        if (target.Identity == ctx.Sender) throw new Exception("You cannot ban yourself");
+        if (target.Identity == Me(ctx)) throw new Exception("You cannot ban yourself");
         foreach (var seat in ctx.Db.TownOffice.ByTown.Filter(mine.TownId))
             if (seat.HolderId == playerId && seat.Office == Social.OfficeMayor) throw new Exception("The Mayor cannot be banned");
         long len = days * (long)WorldTime.DayLengthSeconds * 1_000_000;
@@ -88,8 +88,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LiftTownBan(ReducerContext ctx, uint playerId)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Ban)) throw new Exception("Only the town's Marshal can lift a ban");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can lift a ban");
         var ban = ctx.Db.TownBan.ByTown.Filter(mine.TownId).FirstOrDefault(b => b.BannedId == playerId);
         if (ban.Id == 0) throw new Exception("They are not banned");
         ctx.Db.TownBan.Id.Delete(ban.Id);
@@ -101,8 +101,8 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WriteTownLog(ReducerContext ctx, string text)
     {
-        var mine = SignerOf(ctx, ctx.Sender) ?? throw new Exception("You are not on a town roster");
-        if (!HasTownPower(ctx, mine.TownId, ctx.Sender, TownPower.Log)) throw new Exception("Only the town's Scribe can write in its log");
+        var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Log)) throw new Exception("Only the town's Scribe can write in its log");
         text = Social.StripControl(text).Trim();
         if (text.Length == 0) return;
         if (text.Length > Towns.LogNoteMax) text = text[..Towns.LogNoteMax];
@@ -116,6 +116,6 @@ public static partial class Module
     static bool TownGateKeeperMay(ReducerContext ctx, Claim claim)
     {
         if (ctx.Db.TownSigner.ClaimId.Find(claim.Id) is not { } there) return false;
-        return HasTownPower(ctx, there.TownId, ctx.Sender, TownPower.Gates);
+        return HasTownPower(ctx, there.TownId, Me(ctx), TownPower.Gates);
     }
 }

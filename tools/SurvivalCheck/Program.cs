@@ -40,6 +40,8 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_admin",
                 "SELECT * FROM my_respawn_point",
+                "SELECT * FROM my_skills",
+                "SELECT * FROM player_pos",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -181,5 +183,40 @@ if (!lastError!.Contains("gone")) Fail($"a missing building said: {lastError}");
 Ok($"a building that is not there is refused ({lastError})");
 if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a refused choice must not set a waking place");
 Ok("a refused choice sets nothing (the accepted choice is checked in BuildTest; waking after a death has no check yet)");
+// --- Endurance is trained by running, which the server checks it saw (D-182) ---
+int Endurance() => conn.Db.MySkills.Iter().Where(r => r.Spec == Stamina.Skill).Sum(r => (int)r.Points);
+uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var here = conn.Db.PlayerPos.PlayerId.Find(myId)!;
+float px = here.X, pz = here.Z;
+void Walk(float meters)
+{
+    for (int i = 0; i < (int)(meters / 0.4f); i++)
+    {
+        px += 0.4f;
+        conn.Reducers.Move(px, pz, MathF.PI / 2);
+        Settle(100);
+    }
+}
+int e0 = Endurance();
+Settle((int)(Stamina.RunReportMoveWindow * 1000) + 1000);   // joining counts as having just moved
+conn.Reducers.Ran();
+Settle(500);
+if (Endurance() != e0) Fail("Endurance rose for a run reported by a player who was standing still");
+Ok("a run reported while standing still trains nothing");
+Walk(30);
+conn.Reducers.Ran();
+Pump(() => Endurance() > e0, 5, "Endurance to rise after a real stretch of walking");
+int e1 = Endurance();
+Ok("a run reported after real movement trains Endurance");
+Settle((int)(Stamina.RunPerUse * 0.95f * 1000));
+Walk(5);
+conn.Reducers.Ran();
+Settle(500);
+if (Endurance() != e1) Fail("Endurance rose for a second report from almost the same place");
+Ok("a second report from almost the same place trains nothing");
+Walk(30);
+conn.Reducers.Ran();
+Pump(() => Endurance() > e1, 5, "Endurance to rise after moving on");
+Ok("a report after moving on trains Endurance again");
 
 Console.WriteLine("Survival check passed");

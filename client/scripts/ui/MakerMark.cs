@@ -12,7 +12,8 @@ namespace LifeGame;
 // shared/Marks.cs); this file is the picker's and the tooltip's view of it.
 
 // Who made a thing, as the inspect tooltip shows it.
-public record MakerInfo(string Name, ushort Glyph, Color Color);
+// HasMark is false for a maker who never chose a mark: the tooltip names them without one.
+public record MakerInfo(string Name, ushort Glyph, Color Color, bool HasMark = true);
 
 public interface IMarkLink
 {
@@ -60,12 +61,14 @@ public sealed class ServerMarkLink : IMarkLink
     public void Set(ushort glyph, Color color) => conn.Reducers.SetMark(glyph, Marks.ClampColor(MarkColour.ToRgb(color)));
     public Color Clamp(Color c) => MarkColour.Clamp(c);
 
-    // Makers are stored by the low 16 bits of their player id (Marks.Pack).
+    // A maker is a full player id (the Maker column, crafting-25) or, on older clay rows, the
+    // low 16 bits of one (Marks.Pack).
     public MakerInfo? Maker(uint makerId)
     {
         if (makerId == 0) return null;
         var mark = conn.Db.PlayerMark.PlayerId.Find(makerId) ?? conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == makerId);
-        if (mark == null) return null;
+        if (mark == null)
+            return conn.Db.Player.PlayerId.Find(makerId) is { } p ? new MakerInfo(p.Name, 0, WarmLook.Ink, HasMark: false) : null;
         string name = conn.Db.Player.PlayerId.Find(mark.PlayerId)?.Name ?? "someone";
         return new MakerInfo(name, mark.Glyph, MarkColour.ToColor(mark.Color));
     }
