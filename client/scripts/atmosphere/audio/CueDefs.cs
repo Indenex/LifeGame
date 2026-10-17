@@ -55,4 +55,20 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.22f, 0.07f, 0.25f, 800f, 3500f, 0.01f),
         new CueLayer(Src.Noise, 0.18f, 0.1f, 0.08f, 2000f, 6000f, 0.02f),
     });
+
+    // --- Cues converted from the Cue enum (audio-9 onward): the enum value stays (callers and
+    // saved ids don't change) and SoundMix.Play(Cue) plays the entry below instead of old code.
+
+    // Place: something set on the ground: a dull knock and a scuff.
+    public static readonly CueDef Place = new("cue.place", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.13f, 95f, 95f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.04f, 0.12f, 20f, 1200f, 0.004f),
+    });
+
+    public static CueDef? ForCue(Cue cue) => cue switch
+    {
+        Cue.Place => Place,
+        _ => null,
+    };
 }
