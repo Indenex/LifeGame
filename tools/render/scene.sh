@@ -61,7 +61,7 @@ sleep 2
 echo "scene: $(basename "$scene") with client ${client_opts[*]:-}"
 userdir=$HOME/.local/share/godot/app_userdata/LifeGame
 mkdir -p "$userdir"
-rm -f "$userdir/token_camera.txt" "$work/puppet-token" "$work/live.txt"
+rm -f "$userdir/token_camera.txt" "$userdir/token_127-0-0-1_${port}_camera.txt" "$work/puppet-token" "$work/live.txt"
 # A "live" step in the scene reads further steps appended to $work/live.txt.
 size=${RENDER_SIZE:-1600x900}
 engine_opts=()
@@ -82,6 +82,7 @@ puppet=$!
 if [ $as_puppet = 1 ]; then
   for _ in $(seq 1 60); do [ -s "$work/puppet-token" ] && break; sleep 0.5; done
   cp "$work/puppet-token" "$userdir/token_camera.txt"
+  cp "$work/puppet-token" "$userdir/token_127-0-0-1_${port}_camera.txt"   # newer clients keep one token per server
 fi
 (cd "$tree/client" && DISPLAY=$disp exec "$godot" --path . --resolution "$size" "${engine_opts[@]}" -- \
   "--server=http://127.0.0.1:$port" --db=lifegame --profile=camera "${client_opts[@]}") >>"$log" 2>&1 &
