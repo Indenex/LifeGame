@@ -33,6 +33,8 @@ public enum StructureKind
     SettlingTub,
     CrushingBlock,
     TemperingTrough,
+    // House building: a wooden chest, after Crafting's devices (24; the enum position is the kind number).
+    Chest,
 }
 
 // One material a structure's current stage still needs.

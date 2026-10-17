@@ -192,6 +192,29 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // A wooden chest (building-22): a lidded box of split boards, twice a basket's room. Claim-only like the
+                // rest of the made things; any kind with stacks opens like the basket (BuildingStorage.cs).
+            new StructureDef
+            {
+                // 24: its StructureKind position, after Crafting's devices 21 to 23 (a SpacetimeDB enum takes no explicit values).
+                Kind = 24,
+                Shape = new StructureShape
+                {
+                    Name = "Wooden chest",
+                    Model = "Chest",
+                    Category = "Storage",
+                    Round = true, Radius = 0.45f, Solid = true,
+                    Clearance = 0.9f,
+                    StoreStacks = ChestStacks,
+                    Stages = new[] { "Frame", "Boards and lid" },
+                    // Wooden chest: Frame, Boards and lid
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                        new[] { (Item.Log, 3u), (Item.Cordage, 1u) },
+                    },
+                },
+            },
         };
     }
 }
