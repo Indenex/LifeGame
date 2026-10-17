@@ -67,6 +67,15 @@ JSON
 {
   echo "LifeGame build $build, from main ${sha:0:7}."
   echo
+  echo "## Download"
+  echo
+  echo "- **LifeGame (play)**: \`LifeGamePlayer-Windows.zip\` or \`LifeGamePlayer-Linux.zip\`. For friends joining someone else's world. Unzip, double-click, type the host's server address once; it updates itself and the game, then plays."
+  echo "- **LifeGame Host**: \`LifeGameLauncher-Windows.zip\` or \`LifeGameLauncher-Linux.zip\`. For whoever runs the world: it also runs the server on your computer, updates it, then plays."
+  echo
+  echo "(The other files are what the launchers fetch for themselves; you don't need them.)"
+  echo
+  echo "## What's in this build"
+  echo
   jq -r '.[] | "- #\(.number) \(.title)\(if .wipe then " (world wipe)" else "" end)"' <<<"$prs"
   echo
   if [ "$wipe" = true ]; then
@@ -76,6 +85,6 @@ JSON
     echo "Updates the world in place; nothing is wiped."
   fi
   echo
-  echo "Use the LifeGame launcher to update, or see PLAYING.md for the manual steps."
+  echo "Use a launcher to update, or see PLAYING.md for the manual steps."
 } > "$out/notes.md"
 ls -l "$out"

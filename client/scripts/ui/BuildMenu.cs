@@ -20,6 +20,9 @@ public partial class BuildMenu : CanvasLayer
     public Func<Item, uint> Carried = item => item is Item.Stick or Item.Fiber ? 12u : 0u;
     // Starts placing a kind (House building's ghost).
     public Action<int> Place = _ => { };
+    // True when a kind can't be laid out where the player stands because it needs a claim
+    // (Main sets it from House building's NeedsClaimHere).
+    public Func<int, bool> NeedsClaim = _ => false;
 
     const int Thumb = 112;
     public bool IsOpen => panel.Visible;
@@ -37,12 +40,12 @@ public partial class BuildMenu : CanvasLayer
     // Tabs in this order; any category not listed comes after, so a new one still shows.
     static readonly string[] Preferred = { "Shelter", "Storage", "Crafting", "Fire", "Fences and gates", "Claims" };
     static IEnumerable<string> Order => Preferred
-        .Concat(Enumerable.Range(0, Structures.Shapes.Length).Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
+        .Concat(Structures.Kinds.Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
 
     // Everything it takes, all stages together.
     public static List<(Item item, uint count)> Costs(int kind) =>
-        kind < Structures.StageCosts.Length
-            ? Structures.StageCosts[kind].SelectMany(stage => stage)
+        Structures.Exists(kind)
+            ? Structures.Costs(kind).SelectMany(stage => stage)
                 .GroupBy(c => c.Item).Select(g => (g.Key, (uint)g.Sum(c => c.Count))).ToList()
             : new();
 
@@ -52,12 +55,14 @@ public partial class BuildMenu : CanvasLayer
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
+        Panels.Centre(this, Close);
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-buildmenu")))
             GetTree().CreateTimer(1.5).Timeout += Open;
     }
 
     public void Open()
     {
+        Panels.Opening(this);
         panel.Visible = true;
         if (category == "") category = Order.First(c => Kinds(c).Any());
         Refresh();
@@ -81,7 +86,7 @@ public partial class BuildMenu : CanvasLayer
     }
 
     static IEnumerable<int> Kinds(string category) =>
-        Enumerable.Range(0, Structures.Shapes.Length).Where(k => CategoryOf(k) == category);
+        Structures.Kinds.Where(k => CategoryOf(k) == category);
 
     Control MakePanel()
     {
@@ -99,14 +104,7 @@ public partial class BuildMenu : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
     }
 
@@ -130,7 +128,8 @@ public partial class BuildMenu : CanvasLayer
     {
         var costs = Costs(kind);
         bool afford = costs.All(c => Carried(c.item) >= c.count);
-        var tile = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(Thumb + 24, Thumb + 76) };
+        bool claimless = NeedsClaim(kind);
+        var tile = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(Thumb + 24, Thumb + 76 + (claimless ? 18 : 0)) };
         var style = new StyleBoxFlat { BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f), BorderColor = new Color(Look.Cream, 0.22f) };
         style.SetBorderWidthAll(1);
         style.SetCornerRadiusAll(10);
@@ -140,8 +139,9 @@ public partial class BuildMenu : CanvasLayer
         tile.AddThemeStyleboxOverride("hover", hover);
         tile.AddThemeStyleboxOverride("pressed", hover);
         tile.Pressed += () => { Close(); Place(kind); };
-        tile.Modulate = new Color(1, 1, 1, afford ? 1f : 0.45f);
-        tile.TooltipText = afford ? "" : "You don't carry enough yet";
+        tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
+        tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
+            : afford ? "" : "You don't carry enough yet";
 
         var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -184,6 +184,14 @@ public partial class BuildMenu : CanvasLayer
             row.AddChild(n);
         }
         column.AddChild(row);
+        if (claimless)
+        {
+            var note = Hud.Text("Needs a claim", 12);
+            note.HorizontalAlignment = HorizontalAlignment.Center;
+            note.Modulate = new Color(1f, 0.75f, 0.45f);
+            note.MouseFilter = Control.MouseFilterEnum.Ignore;
+            column.AddChild(note);
+        }
         return tile;
     }
 
@@ -214,7 +222,7 @@ public partial class BuildMenu : CanvasLayer
             },
         });
 
-        for (int kind = 0; kind < Structures.Shapes.Length; kind++)
+        foreach (int kind in Structures.Kinds)
         {
             var model = new StructureView(kind);
             view.AddChild(model);

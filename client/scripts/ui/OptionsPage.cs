@@ -28,6 +28,7 @@ public partial class OptionsPage : Control
     readonly HSlider[] sliders = new HSlider[Levels.Length];
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
+    Button lightRays = null!;
     HSlider view = null!;
     Label viewName = null!;
 
@@ -40,14 +41,7 @@ public partial class OptionsPage : Control
         // The same soft dark panel as the other windows (trade, equipment), centred (D-125).
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.AddThemeConstantOverride("separation", 12);
-        var panel = Hud.Panel(column, Vector2.Zero);
-        var style = (StyleBoxFlat)panel.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 18;
-        style.ContentMarginLeft = style.ContentMarginRight = 28;
-        panel.SetAnchorsPreset(LayoutPreset.Center);
-        panel.GrowHorizontal = GrowDirection.Both;
-        panel.GrowVertical = GrowDirection.Both;
+        var panel = Ui.Window(column, roomy: true);
         AddChild(panel);
 
         var title = new Label { Text = "Options", HorizontalAlignment = HorizontalAlignment.Center };
@@ -96,6 +90,15 @@ public partial class OptionsPage : Control
         viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
+        // Beams of low sunlight through the air (Atmosphere); Off for slower PCs.
+        lightRays = ControlsPage.TextButton(RaysText(), () =>
+        {
+            Atmosphere.GodRays = (Atmosphere.GodRays + 1) % 3;
+            Settings.Set("graphics", "light_rays", Atmosphere.GodRays);
+            lightRays.Text = RaysText();
+        });
+        lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(lightRays);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -109,6 +112,8 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
+
     public void Open()
     {
         for (int i = 0; i < Levels.Length; i++)
@@ -119,6 +124,7 @@ public partial class OptionsPage : Control
         }
         view.SetValueNoSignal((int)ViewDistance.Setting);
         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
+        lightRays.Text = RaysText();
         Visible = true;
     }
 

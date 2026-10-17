@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
@@ -86,16 +87,28 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
+        placing.Terrain = terrain;
+        placing.Me = me;
+        placing.CameraRig = cameraRig;
+        placing.View = view;
+        placing.Note = hud.Note;
+        placing.OverBar = at => hud.Hotbar.RowRect.HasPoint(at);
+        HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
+        hud.Hotbar.PlaceRequested += placing.StartItem;
+        AddChild(placing);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         atmosphere.SeeThrough = building.SeeThroughOf;
+        atmosphere.OtherFigures = () => others.Values;
         AddChild(building);
         // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
         // Added after building, so it sees B first; while the ghost is up, B is building's.
         buildMenu.Place = building.StartPlacing;
-        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        buildMenu.NeedsClaim = building.NeedsClaimHere;
+        buildMenu.Blocked = () => building.Placing || placing.Active || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
         AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
@@ -103,9 +116,9 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning;
         // The hotbar's number keys (ui-19) rest while something else has the keys.
-        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
         // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
         hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
@@ -152,7 +165,7 @@ public partial class Main : Node3D
             || buildMenu.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -355,6 +368,15 @@ public partial class Main : Node3D
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
+        // A maker's mark carries 16 bits of the maker's id; this finds their name (ceramics-15).
+        ItemLook.MakerName = id => conn.Db.Player.Iter().FirstOrDefault(p => (p.PlayerId & 0xFFFFu) == id)?.Name;
+        ClayLook.MarkLookup = id =>
+        {
+            var m = conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == id);
+            int slot = m == null ? -1 : MakerStamp.SlotOf(m.Glyph);
+            if (m == null || slot < 0) return null;
+            return (slot, new Color(((m.Color >> 16) & 0xFF) / 255f, ((m.Color >> 8) & 0xFF) / 255f, (m.Color & 0xFF) / 255f));
+        };
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -377,12 +399,14 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
+        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
@@ -492,7 +516,7 @@ public partial class Main : Node3D
 
     void OnPlayerPos(PlayerPos p, bool inserted)
     {
-        var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
+        var at = new Vector3(p.X, Wading.FeetY(terrain.HeightAt(p.X, p.Z)), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
             // Before spawning we wait for the area around us (see Subscribe).
@@ -550,7 +574,7 @@ public partial class Main : Node3D
         if (items.Has(item.Id)) return;
         float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at), item.Wear);
     }
 
     void RemoveItem(ulong id) => items.Remove(id);
@@ -572,15 +596,33 @@ public partial class Main : Node3D
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
             if (mb.ButtonIndex == MouseButton.WheelDown) cameraRig.Zoom(2f);
         }
-        if (e.IsActionPressed("dig")) Dig();
-        if (e.IsActionPressed("pick_up")) PickUp();
+        if (e.IsActionPressed("dig") && !e.IsEcho()) { digHold.Pressed(me.Position); Dig(); }
+        if (e.IsActionPressed("pick_up") && !e.IsEcho()) { pickHold.Pressed(me.Position); PickUp(); }
         if (e.IsActionPressed("craft")) crafting.Toggle();
     }
+
+    // Hold the dig key to keep digging, one cell at a time as the ground allows (HoldRepeat).
+    readonly HoldRepeat digHold = new();
+    // The same for picking things up off the ground with the Use key when nothing else is on offer.
+    readonly HoldRepeat pickHold = new();
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
         conn?.FrameTick();
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && digHold.Update(Input.IsActionPressed("dig"), dt, World.DigCooldownMicros / 1_000_000f + 0.1f, false, me.Position))
+        {
+            digHold.Acted(me.Position);
+            Dig();
+        }
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && pickHold.Update(Input.IsActionPressed("pick_up") && Use.Shown == null, dt, 0.5f, false, me.Position)
+            && conn != null && conn.Db.WorldItem.Iter().Any(i => new Vector2(i.X - me.Position.X, i.Z - me.Position.Z).Length() <= World.Reach))
+        {
+            pickHold.Acted(me.Position);
+            PickUp();
+        }
 
         if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);
@@ -614,7 +656,7 @@ public partial class Main : Node3D
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
-        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)));
+        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)), SwimmingRank());
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt) * wading;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));

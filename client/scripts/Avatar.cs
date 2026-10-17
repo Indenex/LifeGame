@@ -14,6 +14,7 @@ public partial class Avatar : Node3D
 
     readonly Node3D figure;
     readonly PlayerAnimator animator;
+    readonly PlayerRig rig;
     readonly Label3D nameplate;
     float speed, turnRate, lastHeading;
     Vector3 lastPosition;
@@ -27,7 +28,11 @@ public partial class Avatar : Node3D
         PlayerModel.Wear(body, PlayerModel.Body, 0);
         figure = body;
         AddChild(figure);
-        animator = new PlayerAnimator(new PlayerRig(figure), GetInstanceId());
+        rig = new PlayerRig(figure);
+        PlaceMouth();
+        animator = new PlayerAnimator(rig, GetInstanceId());
+        animator.Impact = (motion, thrown) =>
+            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : workRight) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
         if (figure.FindChild("HeadAttach", true, false) is Node3D head)
             head.AddChild(new Breath { Position = PlayerModel.MouthAt });
@@ -44,6 +49,7 @@ public partial class Avatar : Node3D
             Position = new Vector3(0, 2.05f, 0),
         };
         AddChild(nameplate);
+        PlaceNameplate();
     }
 
     // Set from player_sneaking for other players; tracks the key for your own.
@@ -80,6 +86,16 @@ public partial class Avatar : Node3D
     }
     readonly ushort[] worn = new ushort[2];
 
+    // Fired on every avatar's tool impacts (anim-7): an axe biting the trunk, a spade or
+    // stick going into the ground (thrown: the dirt leaving a spade), a strike landing,
+    // fuel landing on a fire. at is the right hand's tool point in the world; item is
+    // the tool (or fuel) in use, 0 for bare hands. Atmosphere puts chips and dirt there;
+    // Audio plays the thunk and crunch on the same frame.
+    public static event System.Action<Avatar, WorkMotion, Vector3, bool, ushort>? Impact;
+
+    Vector3 ToolPoint() => figure.FindChild("ToolR", true, false) is Node3D tool && tool.IsInsideTree()
+        ? tool.GlobalPosition : GlobalPosition + Vector3.Up;
+
     // Puts items in the hands (null for empty), in the ToolR and ToolL fist frames.
     // A quick action (Act) borrows the right hand and gives it back after.
     public void Hold(Item? right, Item? left)
@@ -98,7 +114,7 @@ public partial class Avatar : Node3D
     // food on its way to the mouth, berries and finds once they are in the hand.
     public void Act(WorkMotion motion, Item? item)
     {
-        animator.Act(motion, WorkMotions.StyleOf(item));
+        animator.Act(motion, WorkMotions.VariantOf(motion, item));
         // An empty-handed action (a flinch) gives back whatever the last one borrowed.
         if (item == null && actItem != null)
         {
@@ -113,7 +129,7 @@ public partial class Avatar : Node3D
 
     void ShowActItem()
     {
-        float left = animator.ActLeft, length = WorkMotions.ActSeconds(actMotion);
+        float left = animator.ActLeft, length = animator.ActLength;
         bool inLeft = WorkMotions.ActItemInLeft(actMotion);
         if (left <= 0f || actItem == null)
         {
@@ -146,8 +162,30 @@ public partial class Avatar : Node3D
     }
 
     // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
-    public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
-    public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
+    public void SetLook(uint playerId) => SetLook(HumanFigure.Appearance.For(playerId));
+    public void SetLook(HumanFigure.Appearance look)
+    {
+        PlayerModel.SetLook((Skeleton3D)figure, look);
+        // A new look may be a differently shaped body: poses that reach the face re-measure it.
+        rig.Measure();
+        PlaceMouth();
+        PlaceNameplate();
+    }
+
+    // The name floats a little above the head, whatever the body's height (a 1.75 m
+    // adult or a 1.35 m chibi): the top of the body mesh plus a gap.
+    void PlaceNameplate()
+    {
+        if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { Mesh: { } mesh })
+            nameplate.Position = new Vector3(0, mesh.GetAabb().End.Y + 0.3f, 0);
+    }
+
+    // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
+    void PlaceMouth()
+    {
+        if (figure is Skeleton3D skeleton && skeleton.FindBone("Head") is var head and >= 0)
+            rig.Mouth = skeleton.GetBoneGlobalRest(head).Origin + PlayerModel.MouthAt;
+    }
 
     public void SetPlayerName(string name) => nameplate.Text = name;
 
@@ -182,6 +220,8 @@ public partial class Avatar : Node3D
         // Hidden avatars (offline players) cost nothing.
         if (IsVisibleInTree())
         {
+            // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
+            animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
         }

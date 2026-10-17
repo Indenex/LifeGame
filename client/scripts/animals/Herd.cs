@@ -67,6 +67,7 @@ public partial class Herd : Node3D
             HitPop.Show(new Vector3(h.X, terrain.HeightAt(h.X, h.Z), h.Z), h.Crit, h.Killed);
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
+        Use.Register(new UseHandler { Id = "animals.eggs", Priority = 15, Find = OfferEggs });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
         Strike.Register("animals.animal", OfferStrike);
         Strike.Register("animals.bow", OfferShot);
@@ -179,7 +180,7 @@ public partial class Herd : Node3D
         }
         if (nearest == null) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Butcher", best, () => conn.Reducers.ButcherCarcass(id));
+        return new UseOffer("Butcher", best, () => conn.Reducers.ButcherCarcass(id), Again: Use.HoldInterval);
     }
 
     static float DistanceTo(Animal a, Vector3 at) => new Vector2(a.X - at.X, a.Z - at.Z).Length();
@@ -198,7 +199,24 @@ public partial class Herd : Node3D
         }
         if (nearest == null) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Shear", best, () => conn.Reducers.ShearSheep(id));
+        return new UseOffer("Shear", best, () => conn.Reducers.ShearSheep(id), Again: Use.HoldInterval);
+    }
+
+    // A hen in reach that is holding an egg.
+    UseOffer? OfferEggs(Vector3 at)
+    {
+        if (conn == null) return null;
+        Animal? nearest = null;
+        float best = World.Reach;
+        foreach (var a in conn.Db.Animal.Iter())
+        {
+            float d = DistanceTo(a, at);
+            if (d <= best && a.Eggs > 0 && AnimalDefs.Get((byte)a.Species).Egg != null)
+                (nearest, best) = (a, d);
+        }
+        if (nearest == null) return null;
+        ulong id = nearest.Id;
+        return new UseOffer("Take eggs", best, () => conn.Reducers.CollectEggs(id), Again: Use.HoldInterval);
     }
 
     void Upsert(Animal a, bool inserted)

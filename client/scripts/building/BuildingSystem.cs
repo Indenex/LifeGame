@@ -412,7 +412,7 @@ public partial class BuildingSystem : Node
         }
         else if (e.IsActionPressed("build_next"))
         {
-            placeKind = (placeKind + 1) % Structures.Shapes.Length;
+            placeKind = Structures.Kinds[(System.Array.IndexOf(Structures.Kinds, placeKind) + 1) % Structures.Kinds.Length];
             MakeGhost();
             GetViewport().SetInputAsHandled();
         }
@@ -431,7 +431,7 @@ public partial class BuildingSystem : Node
     // Starts placing a particular kind (the picture build menu, ui-20); B still starts with the last one.
     public void StartPlacing(int kind)
     {
-        if (kind < 0 || kind >= Structures.Shapes.Length) return;
+        if (!Structures.Exists(kind)) return;
         placeKind = kind;
         StartPlacing();
     }
@@ -476,7 +476,9 @@ public partial class BuildingSystem : Node
         }
         c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
         Sfx.Play(Cue.Place);
-        StopPlacing();
+        // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
+        if (Input.IsKeyPressed(Key.Shift)) MakeGhost();
+        else StopPlacing();
     }
 
     // --- Frame loop -------------------------------------------------------
@@ -662,7 +664,7 @@ public partial class BuildingSystem : Node
         {
             var shape = Structures.Shape(placeKind);
             string name = shape.Name.ToLowerInvariant();
-            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Esc cancel";
+            text = $"Lay out {("aeiou".Contains(name[0]) ? "an" : "a")} {name}    Tab change    T turn    click to place    Shift keeps placing    Esc cancel";
             if (placeProblem != null) text += $"\n{placeProblem}";
             else text += $"\nNeeds {StageList(placeKind)}";
         }
@@ -690,7 +692,7 @@ public partial class BuildingSystem : Node
 
     // What each stage takes, in order: "4 sticks, then 3 plant fiber, then ...".
     static string StageList(int kind) =>
-        string.Join(", then ", Structures.StageCosts[kind].Select(stage =>
+        string.Join(", then ", Structures.Costs(kind).Select(stage =>
             string.Join(" and ", stage.Select(c => $"{c.Count} {ItemName((ushort)c.Item, c.Count)}"))));
 
     static string ItemName(ushort item, uint count) =>

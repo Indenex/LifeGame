@@ -150,7 +150,9 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
             if (MathF.Abs(seen.X - cxw) + MathF.Abs(seen.Z - czw) < 0.8f)
             {
                 float step = MathF.Min(d, 0.3f);
+                float ox0 = cxw, oz0 = czw;
                 cxw += dx / d * step; czw += dz2 / d * step;
+                (cxw, czw) = new BotGround(conn).Slide(ox0, oz0, cxw, czw);
             }
             conn.Reducers.Move(cxw, czw, MathF.Atan2(dx, dz2));
             Pump(100);
@@ -162,6 +164,17 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");
     WalkTo(ex, wz);
     Check(MyPos() is { } far2 && far2.X >= ex - 1f, $"crossed the water from x={wx0} to x={wx1} and came out the other side");
+
+    // Wading trains Swimming (swim-1): the server counts the time spent moving in water and
+    // journals swim.wade (or swim.float over deep water) every Wading.WaterPerUse seconds.
+    Subscribe(new[] { "SELECT * FROM my_journal" }, 20, "journal subscribed");
+    bool Swam() => conn.Db.MyJournal.Iter().Any(j => j.ProcessId == Wading.WadeProcess || j.ProcessId == Wading.FloatProcess);
+    for (int lap = 0; lap < 12 && !Swam(); lap++)
+    {
+        WalkTo(wx0 + 2, wz);
+        WalkTo(wx1 - 2, wz);
+    }
+    WaitFor(Swam, 10, "time spent wading is journalled as swim.wade or swim.float");
 }
 
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");

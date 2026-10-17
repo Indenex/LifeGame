@@ -33,11 +33,13 @@ public static partial class StructureModel
     const float RoofFromY = 2.15f;
 
     static readonly Dictionary<int, List<Piece>> Cache = new();
-    static ShaderMaterial? wood, fiber, thatch, clay, stone;
+    static ShaderMaterial? wood, fiber, thatch, clay, stone, tile;
 
     internal static ShaderMaterial Wood => wood ??= Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f));
     static ShaderMaterial Fiber => fiber ??= Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f);
     static ShaderMaterial Thatch => thatch ??= Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f);
+    // Fired roof tiles (ceramics-10): a rough terracotta until the art direction is settled (D-232).
+    internal static ShaderMaterial Tile => tile ??= Tinted(Look.Ground, new Color(0.70f, 0.34f, 0.21f));
     internal static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
     internal static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
     static ShaderMaterial? weave, paleWood;
@@ -60,11 +62,11 @@ public static partial class StructureModel
             LifeGame.Shared.StationKind.ClayTub => StationMeshes.SettlingTub(0),
             LifeGame.Shared.StationKind.CrushBlock => StationMeshes.CrushingBlock(0),
             LifeGame.Shared.StationKind.TemperTrough => StationMeshes.TemperingTrough(0),
-            _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 5 => BrickHouse(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
+            _ => LifeGame.Shared.Structures.Shape(kind).Model switch { "ClayHut" => ClayHut(), "ClaimMarker" => ClaimMarkerModel.Pieces(), "Kiln" => KilnModel.Pieces(), "Basket" => Basket(), "Jar" => JarModel.Pieces(), "LeanTo" => LeanTo(), "StoneHearth" => StoneHearth(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
         // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
         // the near slope fades and the far slope stays rather than the whole thing clearing.
-        if (kind == (int)SpacetimeDB.Types.StructureKind.LeanTo)
+        if (LifeGame.Shared.Structures.Shape(kind).Model == "LeanTo")
             foreach (var piece in pieces)
                 if (piece.Role == PieceRole.Roof) piece.Role = PieceRole.Wall;
         Cache[kind] = pieces;
@@ -253,7 +255,7 @@ public static partial class StructureModel
             Mesh = mesh,
             Material = material,
             Anchor = new Vector3(aabb.GetCenter().X, aabb.Position.Y, aabb.GetCenter().Z),
-            Role = material == Thatch || aabb.GetCenter().Y > RoofFromY ? PieceRole.Roof : aabb.End.Y < 0.6f ? PieceRole.Fixed : PieceRole.Wall,
+            Role = material == Thatch || material == Tile || aabb.GetCenter().Y > RoofFromY ? PieceRole.Roof : aabb.End.Y < 0.6f ? PieceRole.Fixed : PieceRole.Wall,
         });
     }
 

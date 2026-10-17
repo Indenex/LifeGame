@@ -32,11 +32,17 @@ namespace LifeGame.Shared
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
+        // Hens (animals-19): a raw egg is a snack, a roast chicken a little under mutton.
+        public const float EggFood = 0.08f, RoastChickenFood = 0.3f, BurntChickenFood = 0.08f;
+        // A boiled egg is a better snack than a raw one, still light (crafting-24).
+        public const float BoiledEggFood = 0.2f, BurntEggFood = 0.05f;
         // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than
         // the same food eaten raw or roasted, and it quenches some thirst too.
         public const float BrothFood = 0.45f, BrothWater = 0.3f;
         public const float StewFood = 0.65f, StewWater = 0.3f;
         // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
+        // A hide waterskin (Justin picked it, survival-20): carries less than a pot, 40% of a drink.
+        public const float WaterskinWater = 0.4f;
         public const float PinchPotWater = 0.5f;
         public const float CoilPotWater = 1f;
 

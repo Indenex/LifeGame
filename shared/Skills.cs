@@ -56,22 +56,28 @@ namespace LifeGame.Shared
         // reports it as failed, so a hit teaches twice as much (Skills.Gain).
         public const string Shoot = "animal.shoot";
         public const string Butcher = "animal.butcher";
+        // Taking eggs from a hen (Animals lane, Eggs.cs).
+        public const string Eggs = "animal.eggs";
         // Taking dried leather off its rack (Animals' Leather.cs); not a recipe.
         public const string DryHide = "hide.dry";
         // Running, reported by Survival's stamina every 20 s of actual running (D-123).
         public const string Run = "move.run";
+        // Mending a worn tool at a repair table, reported by Crafting's RepairTool.
+        public const string Repair = "repair.tool";
         public static readonly Specialization[] Specializations =
         {
             new("foraging", "Foraging", true, "Finding and gathering what the land offers, and felling wood.", "gather", "chop"),
             new("earthwork", "Earthwork", true, "Digging and finding clay.", "earth"),
             new("firecraft", "Firecraft", true, "Making fire, keeping it alive and cooking over it.", "fire", "cook"),
-            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft"),
+            new("toolmaking", "Toolmaking", true, "Knapping stone, twisting cord, weaving baskets and mats, carving and lashing simple tools.", "knap", "cord", "weave", "lash", "carve", "haft", Repair),
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
+            // Wading and floating (the swim family): a basic, slow-paced skill.
+            new("swimming", "Swimming", true, "Wading deeper and moving through water with less effort.", "swim"),
             // Animal work is a survival basic (D-049). Husbandry names its processes, so a new
             // animal.* process trains nothing until a skill claims it (CONTENT.md, Skill row).
-            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher),
+            new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher, Eggs),
             // Sneaking up on wary animals and striking before they bolt (skills-12).
             new("stalking", "Stalking", true, "Moving quietly near wary animals and striking before they bolt.", Kill, Sneak),
             // The bow (skills-12): a capped specialty, so it competes for the 300 total.
@@ -110,8 +116,12 @@ namespace LifeGame.Shared
             (Sneak, "Sneaking up on an animal"),
             (Shoot, "Shooting a bow"),
             (Butcher, "Butchering a carcass"),
+            (Eggs, "Gathering eggs"),
             (DryHide, "Drying leather"),
             (Run, "Running"),
+            (Wading.WadeProcess, "Wading"),
+            (Wading.FloatProcess, "Floating"),
+            (Repair, "Mending a tool"),
             // D-127 first-evening step: Claims reports the marker (#174).
             ("claim.mark", "Planting a claim"),
         };
@@ -144,13 +154,16 @@ namespace LifeGame.Shared
             foreach (var (id, _) in ActionsAfterRecipes) yield return id;
             // Building each kind of crafting station (D-098), as Structures reports it.
             var stations = new HashSet<string>();
-            foreach (var shape in Structures.Shapes)
+            foreach (var kind in Structures.Kinds)
+            {
+                var shape = Structures.Shape(kind);
                 if (shape.Station != StationKind.None && stations.Add(StationInfo.BuildProcess(shape.Station)))
                     yield return StationInfo.BuildProcess(shape.Station);
+            }
         }
 
         // Some things can't be picked up by watching someone else do them.
-        public static bool Watchable(string processId) => !processId.StartsWith("move.");
+        public static bool Watchable(string processId) => !processId.StartsWith("move.") && !processId.StartsWith("swim.");
 
         public static Specialization? Spec(string id)
         {
@@ -194,7 +207,7 @@ namespace LifeGame.Shared
             int gain = Math.Max(5, (int)MathF.Round(100f * left * left));
             if (failed) gain = Math.Max(1, gain / 2);
             // One global pace for all skills (Progression.Pace, 1 now for testing); combat skills
-            // level slower (Progression.CombatPaceFactor).
+            // level slower (Progression.SlowPaceFactor).
             return Math.Max(1, (int)MathF.Round(gain * Progression.PaceFor(specId)));
         }
 
