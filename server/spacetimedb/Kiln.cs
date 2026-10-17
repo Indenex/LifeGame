@@ -20,6 +20,8 @@ public static partial class Module
         public byte Form;       // ClayForm
         public byte Quality;
         public uint Owner;      // player id of whoever loaded it; gets the news
+        // The maker's mark the pot carries (shared/Marks.cs); 0 for none.
+        public uint Mark;
     }
 
     // Firing state for a finished kiln structure (StructureKind.Kiln), made the
@@ -98,6 +100,7 @@ public static partial class Module
                         Form = (byte)ClayRules.FormOfUnfired((Item)stack.Item)!.Value,
                         Quality = stack.Quality,
                         Owner = player.PlayerId,
+                        Mark = stack.Wear,
                     });
                     used++;
                 }
@@ -150,7 +153,7 @@ public static partial class Module
             }
             else
             {
-                DropAt(ctx, ox, oz, side, across, slot++, ClayRules.FiredItem(form), ClayRules.KilnFired(pot.Quality));
+                DropAt(ctx, ox, oz, side, across, slot++, ClayRules.FiredItem(form), ClayRules.KilnFired(pot.Quality), pot.Mark);
                 whole++;
             }
         }
@@ -193,11 +196,11 @@ public static partial class Module
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
         int slot = 0;
         foreach (var pot in kiln.Load ?? new List<KilnPot>())
-            DropAt(ctx, kiln.X, kiln.Z, side, across, slot++, ClayRules.UnfiredItem((ClayForm)pot.Form), pot.Quality);
+            DropAt(ctx, kiln.X, kiln.Z, side, across, slot++, ClayRules.UnfiredItem((ClayForm)pot.Form), pot.Quality, pot.Mark);
         ctx.Db.Kiln.StructureId.Delete(kiln.StructureId);
     }
 
-    static void DropAt(ReducerContext ctx, float ox, float oz, float side, float across, int slot, Item item, byte quality)
+    static void DropAt(ReducerContext ctx, float ox, float oz, float side, float across, int slot, Item item, byte quality, uint wear = 0)
     {
         // Alternate left and right of the door, 0.3 m apart.
         float offset = ((slot + 1) / 2) * 0.3f * (slot % 2 == 0 ? 1 : -1);
@@ -206,6 +209,7 @@ public static partial class Module
         {
             Id = 0, Item = (ushort)item, Quality = quality,
             X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
+            Wear = wear,
         });
     }
 }
