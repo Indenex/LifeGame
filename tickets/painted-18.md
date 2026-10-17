@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-18-rock-shade
-PR: (opening)
+PR: #807
 
 ## Goal
 Environment found pale rocks read pink-lilac at every hour, not only at golden hour (painted-17 / #802 covers that), and most on the tall and split forms with many faces turned from the sun. Cause: Painted.Rock's strong blue-violet shade_tint (0.56, 0.53, 0.8) under today's warmer sun and rim. It goes to (0.66, 0.64, 0.76): still a hint of the cards' violet in the shade, lighter and greyer. Lit faces are unchanged. Render: renders/painted-18-rock-shade.png (main above, this branch below, noon).
