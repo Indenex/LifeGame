@@ -21,11 +21,11 @@ public static class PaintedGround
     // The pack's grass tones (Modeling's variant D, from the Golden Skull tiles): the
     // muted mid green each blade is tinted with, and the olive-yellow lit tip the
     // shader paints toward (it holds its own copies, in the band code).
-    static readonly Color GrassMid = new(0.48f, 0.54f, 0.24f), GrassLit = new(0.78f, 0.76f, 0.44f);
+    static readonly Color GrassMid = new(0.45f, 0.55f, 0.24f), GrassLit = new(0.80f, 0.80f, 0.50f);
     // The ground under the carpet, the pack's warm yellow-green a shade darker than the
     // blades, matching their shaded base so the carpet reads fully filled, and the
     // pack's sandy path.
-    public static readonly Color MeadowTop = new(0.44f, 0.49f, 0.22f);
+    public static readonly Color MeadowTop = new(0.41f, 0.50f, 0.22f);
     static readonly Color PathSand = new(0.70f, 0.58f, 0.38f);
 
     static Mesh? twig;
@@ -326,7 +326,7 @@ public static class PaintedGround
             // The base matches the ground between the blades (PaintedGround.Ground), so a
             // patch without a tuft never shows as a square.
             vec3 base = tint * vec3(0.42, 0.44, 0.56);
-            vec3 lit = mix(tint * vec3(1.2, 1.15, 0.95), pow(vec3(0.86, 0.84, 0.54), vec3(2.2)), 0.45 + 0.2 * patch);
+            vec3 lit = mix(tint * vec3(1.15, 1.2, 1.0), pow(vec3(0.88, 0.89, 0.62), vec3(2.2)), 0.5 + 0.2 * patch);
             float low = 0.3 + 0.1 * patch, high = 0.66 + 0.12 * patch;
             vec3 color = mix(base, tint, smoothstep(low - 0.04, low + 0.04, tip));
             color = mix(color, lit, smoothstep(high - 0.04, high + 0.04, tip));
