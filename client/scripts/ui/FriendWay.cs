@@ -87,7 +87,15 @@ public partial class FriendWay : CanvasLayer
         alpha = Mathf.MoveToward(alpha, show ? 1f : 0f, (float)delta * 3f);
         view.Modulate = new Color(1, 1, 1, alpha);
         view.Visible = alpha > 0.01f;
-        view.Position = new Vector2(-Width / 2, 10 + SundialArc.Room) + Mover.Offset("way");
+        // Offsets from the top-centre anchor. Setting Position here put the arrow at x = -100, half
+        // off the left edge, because a Control under a CanvasLayer measures from the screen's
+        // left, not its middle (bugfix-73). ui-85: plus where it was dragged (Alt).
+        var moved = Mover.Offset("way");
+        float top = 10 + SundialArc.Room + moved.Y;
+        view.OffsetLeft = -Width / 2 + moved.X;
+        view.OffsetRight = Width / 2 + moved.X;
+        view.OffsetTop = top;
+        view.OffsetBottom = top + Height;
         if (view.Visible) view.QueueRedraw();
     }
 
