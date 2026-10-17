@@ -63,6 +63,7 @@ Gain is how much better a typical model looks to Justin. Effort is for this lane
 - Use soft seams in a warm dark (cocoa, not black), wide pale bevels on the upper edges, and at most one faint growth ring or grain line per plate.
 - Keep a pastel palette with high values and low contrast between tones. The banded light and violet shade in the shader do the modelling.
 - Use the bakes (AO, normals) for softness, not grit: wide rounded grooves, pillowed plates, and AO kept light.
+- No pitting (Justin, 2026-10-17: "the weird pitted look is not cutesy"): no small dabs, speckle, noise grain or fine displacement noise, in either the albedo or the normal map. Paint clean, smooth colour blocks with soft, broad gradients, soft cocoa seams and gentle highlights. Any brush strokes are few, large and very soft.
 
 For hero pieces (characters and what they wear, tools in hand, furniture, building parts):
 
