@@ -212,6 +212,7 @@ public static partial class Module
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
+        NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
 
     [SpacetimeDB.Reducer]
