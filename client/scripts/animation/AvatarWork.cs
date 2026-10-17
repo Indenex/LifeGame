@@ -49,6 +49,15 @@ public static class AvatarWork
         }
         conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
 
+        // Your equipped tool (crafting-29): the hotbar slot in PlayerEquip, and what is on it.
+        void MyEquip() => me.Equip(Equipped.Item(conn));
+        conn.Db.PlayerEquip.OnInsert += (_, _) => MyEquip();
+        conn.Db.PlayerEquip.OnUpdate += (_, _, _) => MyEquip();
+        conn.Db.PlayerEquip.OnDelete += (_, _) => MyEquip();
+        conn.Db.MyHotbar.OnInsert += (_, _) => MyEquip();
+        conn.Db.MyHotbar.OnUpdate += (_, _, _) => MyEquip();
+        conn.Db.MyHotbar.OnDelete += (_, _) => MyEquip();
+
         // Quick actions anyone did (player_act, anim-4), your own included: the server
         // notes them only once they succeed.
         conn.Db.PlayerAct.OnInsert += (_, act) =>

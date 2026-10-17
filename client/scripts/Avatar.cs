@@ -32,7 +32,7 @@ public partial class Avatar : Node3D
         PlaceMouth();
         animator = new PlayerAnimator(rig, GetInstanceId());
         animator.Impact = (motion, thrown) =>
-            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : workRight) ?? 0));
+            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : RightBase) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
         if (figure.FindChild("HeadAttach", true, false) is Node3D head)
             head.AddChild(new Breath { Position = PlayerModel.MouthAt });
@@ -103,11 +103,38 @@ public partial class Avatar : Node3D
         (workRight, workLeft) = (right, left);
         if (actItem == null)
         {
-            Grip("ToolR", right, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", left, ref heldLeft);
         }
     }
     Item? heldRight, heldLeft, workRight, workLeft;
+
+    // The tool this player has equipped from the hotbar (crafting-29 PlayerEquip), carried
+    // in the right hand when no job or quick action needs the hand. Changing it plays a
+    // quick draw or stow (0.3 s) and the model swaps halfway, as the hand passes the hip.
+    public void Equip(Item? item)
+    {
+        if (item == pendingEquip) return;
+        pendingEquip = item;
+        if (item == equipped) { swapIn = -1f; return; }
+        animator.Swap();
+        swapIn = PlayerAnimator.SwapSeconds * 0.5f;
+    }
+    Item? equipped, pendingEquip;
+    float swapIn = -1f;
+
+    // What the right hand holds when nothing borrows it: the job's tool, else the equipped one.
+    Item? RightBase => workRight ?? equipped;
+
+    void CarryTick(float dt)
+    {
+        if (swapIn >= 0f && (swapIn -= dt) < 0f)
+        {
+            equipped = pendingEquip;
+            if (actItem == null) Grip("ToolR", RightBase, ref heldRight);
+        }
+        animator.Carrying = equipped != null && workRight == null && actItem == null;
+    }
 
     // A quick action from the server's player_act (anim-4): drinking, eating, picking
     // berries, picking something up. item shows in the right hand for its part of it:
@@ -118,7 +145,7 @@ public partial class Avatar : Node3D
         // An empty-handed action (a flinch) gives back whatever the last one borrowed.
         if (item == null && actItem != null)
         {
-            Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", workLeft, ref heldLeft);
         }
         actItem = item;
@@ -134,7 +161,7 @@ public partial class Avatar : Node3D
         if (left <= 0f || actItem == null)
         {
             actItem = null;
-            Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", workLeft, ref heldLeft);
             return;
         }
@@ -149,7 +176,7 @@ public partial class Avatar : Node3D
             _ => true,
         };
         if (inLeft) Grip("ToolL", show ? actItem : workLeft, ref heldLeft);
-        else Grip("ToolR", show ? actItem : workRight, ref heldRight);
+        else Grip("ToolR", show ? actItem : RightBase, ref heldRight);
     }
 
     void Grip(string hand, Item? item, ref Item? held)
@@ -222,6 +249,7 @@ public partial class Avatar : Node3D
         {
             // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
             animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
+            CarryTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
         }
