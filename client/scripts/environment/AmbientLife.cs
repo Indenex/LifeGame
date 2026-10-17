@@ -6,7 +6,8 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Small life in the air round the player (env-30, Justin's cutesy pick #12): butterflies
-// by day over the wildflower patches, pollen and dandelion seeds drifting over open
+// by day over the wildflower patches, dragonflies darting over water (env-35, in
+// AmbientDragonflies.cs), the odd bird flock across the sky (AmbientBirds.cs), pollen and dandelion seeds drifting over open
 // meadows in spring and summer, and more fireflies at dusk near water (Atmosphere's
 // Fireflies, given a higher amount here). Atmosphere's falling leaves and snow already
 // cover autumn and winter. All of it is client-only and only in a box round the player:
@@ -78,6 +79,8 @@ public partial class AmbientLife : Node3D
         (seeds, seedProcess) = Motes(40, 12f, 0.1f, new Color(1f, 0.99f, 0.95f), 0.85f, 0.04f, true);
         AddChild(pollen);
         AddChild(seeds);
+        ReadyDragonflies();
+        ReadyBirds();
     }
 
     // daylight 0 night to 1 day, year 0 to 1, wind 0 to 1 blowing windDir, woods 0 open
@@ -88,10 +91,10 @@ public partial class AmbientLife : Node3D
         if (GetViewport()?.GetCamera3D() is { } camera && camera.GlobalPosition.DistanceSquaredTo(focus) > 60f * 60f)
         {
             pollen.Emitting = seeds.Emitting = false;
-            butterflies.Visible = false;
+            butterflies.Visible = dragonflies.Visible = birds.Visible = false;
             return;
         }
-        butterflies.Visible = true;
+        butterflies.Visible = dragonflies.Visible = birds.Visible = true;
         float density = forced ? 1f : Density;
         float warm = Mathf.SmoothStep(-0.4f, 0.2f, Seasons.Warmth(year));
         float day = Mathf.SmoothStep(0.45f, 0.8f, daylight);
@@ -101,6 +104,12 @@ public partial class AmbientLife : Node3D
         // Butterflies: warm dry days, in the open.
         float wanted = forced ? 1f : warm * day * dry * Mathf.SmoothStep(0.1f, 0.6f, open) * density;
         UpdateButterflies(dt, focus, terrain, Mathf.RoundToInt(wanted * MaxButterflies), wind);
+
+        // Dragonflies (env-35): warm dry days, over water close by.
+        float darting = forced ? 1f : warm * day * dry * Mathf.SmoothStep(0.2f, 0.6f, waterNear) * density;
+        UpdateDragonflies(dt, focus, Mathf.RoundToInt(darting * MaxDragonflies));
+        // The odd flock of birds across the sky (env-35, AmbientBirds.cs).
+        UpdateBirds(dt, focus, daylight, dry, windDir, density);
 
         // Pollen and seeds: spring into high summer, most in the open meadows; light
         // enough that the wind carries them along.
