@@ -162,6 +162,13 @@ void Run(string file, string arguments)
     if (p.ExitCode != 0) Console.WriteLine($"puppet: {file} failed: {p.StandardError.ReadToEnd()}");
 }
 
+bool RunOk(string file, string arguments)
+{
+    using var p = Process.Start(new ProcessStartInfo(file, arguments) { RedirectStandardError = true, RedirectStandardOutput = true })!;
+    while (!p.HasExited) Pump(0.05);
+    return p.ExitCode == 0;
+}
+
 bool Step(string line)
 {
     var parts = line.Split(' ', 2);
@@ -260,7 +267,9 @@ bool Step(string line)
             string quality = n.Length > 2 ? n[2] : "50";
             var owner = me;
             if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0)\"");
+            // Newer commits have slot and on_belt columns; older ones end at wear. Try the new shape first.
+            if (!RunOk("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false)\""))
+                Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0)\"");
             Pump(1.0);
             break;
         }
