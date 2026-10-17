@@ -976,6 +976,11 @@ int PotCheck()
     conn.Reducers.TakeOffPot(simmer.Id);
     Pump(() => lastError != null, 3, "an early take-off to be refused");
     Log($"Too early: {lastError}");
+    // A shared pot (survival-37) can't be ladled before it is done either.
+    lastError = null;
+    conn.Reducers.LadlePot(simmer.Id);
+    Pump(() => lastError != null, 3, "an early ladle to be refused");
+    if (!lastError!.Contains("simmering")) Fail($"an early ladle gave: {lastError}");
     Pump(() => false, ClayRules.BrothSeconds + 1, null);
     lastError = null;
     conn.Reducers.TakeOffPot(simmer.Id);

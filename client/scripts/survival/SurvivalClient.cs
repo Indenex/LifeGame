@@ -116,6 +116,16 @@ public partial class SurvivalClient : Node
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
+        // A pot on a fire, finished and owned by someone in your group: G ladles a bowl (survival-37).
+        Use.Register(new UseHandler
+        {
+            Id = "survival.ladle",
+            Priority = 9,
+            Find = at => conn != null && NearestSharedPot(at) is { } pot
+                ? new UseOffer($"Ladle a bowl of {ClayRules.DishName((Item)pot.Dish)}", new Vector2(pot.X - at.X, pot.Z - at.Z).Length(),
+                    () => conn.Reducers.LadlePot(pot.Id), Target: new Vector3(pot.X, 0, pot.Z), Again: Use.HoldInterval)
+                : null,
+        });
         Use.Register(new UseHandler
         {
             Id = "survival.drink",
@@ -365,6 +375,23 @@ public partial class SurvivalClient : Node
 
     // The smallest pot of water you carry, so the big one is saved for later.
     Item? PotOfWater() => Foods.Pots.FirstOrDefault(p => Carrying(p.Full))?.Full;
+
+    // The nearest finished pot within reach that a group-mate put on a fire (your own comes off whole).
+    SimmerPot? NearestSharedPot(Vector3 at)
+    {
+        if (conn == null) return null;
+        SimmerPot? best = null;
+        float bestD = World.Reach;
+        foreach (var pot in conn.Db.SimmerPot.Iter())
+        {
+            if (pot.PlayerId == Me.PlayerId(conn) || (Item)pot.Dish is not (Item.PotOfBroth or Item.PotOfStew)) continue;
+            if (SecondsSince(pot.PutAt) < ClayRules.SimmerSeconds((Item)pot.Dish)) continue;
+            if (!conn.Db.MyGroup.Iter().Any(m => m.PlayerId == pot.PlayerId)) continue;
+            float d = new Vector2(pot.X - at.X, pot.Z - at.Z).Length();
+            if (d <= bestD) { best = pot; bestD = d; }
+        }
+        return best;
+    }
 
     ForageBush? NearestRipeBush()
     {
