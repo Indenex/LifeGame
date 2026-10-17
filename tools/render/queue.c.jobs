@@ -1,0 +1,36 @@
+# Render C: clips. Run: QUEUE_JOBS=tools/render/queue.c.jobs tools/render/queue.sh
+# Copy tools/render/queue.done.snapshot to $RENDER_WORK/queue.done first so finished jobs are skipped.
+hold-repeat env RENDER_SIZE=1280x720 tools/render/scene.sh hold-repeat 6cd81e2c tools/render/scenes/hold-repeat.txt
+tools-chop env RENDER_SIZE=1280x720 tools/render/scene.sh tools-chop 5db27d6 tools/render/scenes/tools-chop.txt
+tools-dig env RENDER_SIZE=1280x720 tools/render/scene.sh tools-dig 5db27d6 tools/render/scenes/tools-dig.txt
+anim-7-chop-a env RENDER_SIZE=1280x720 tools/render/scene.sh anim-7-chop-a 4175c6f tools/render/scenes/anim-7-chop-a.txt
+anim-7-chop-b env RENDER_SIZE=1280x720 tools/render/scene.sh anim-7-chop-b 4175c6f tools/render/scenes/anim-7-chop-b.txt
+anim-7-dig env RENDER_SIZE=1280x720 tools/render/scene.sh anim-7-dig 4175c6f tools/render/scenes/anim-7-dig.txt
+atmosphere-30 env RENDER_SIZE=1280x720 tools/render/scene.sh atmosphere-30 7d6d3e4 tools/render/scenes/atmosphere-30-0.25.txt
+atmosphere-30-autumn env RENDER_SIZE=1280x720 tools/render/scene.sh atmosphere-30-autumn 7d6d3e4 tools/render/scenes/atmosphere-30-0.62.txt
+atmosphere-26 env RENDER_SIZE=1280x720 tools/render/scene.sh atmosphere-26 2a63394 tools/render/scenes/atmosphere-26-wade.txt
+anim-4-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-4-work 3bb6cca tools/render/scenes/anim-4-work.txt
+anim-4-drink env RENDER_SIZE=1280x720 tools/render/scene.sh anim-4-drink 3bb6cca tools/render/scenes/anim-4-drink.txt
+anim-5-fire env RENDER_SIZE=1280x720 tools/render/scene.sh anim-5-fire 4119518 tools/render/scenes/anim-5-fire.txt
+anim-5-acts env RENDER_SIZE=960x540 tools/render/scene.sh anim-5-acts 4119518 tools/render/scenes/anim-5-acts.txt
+bugfix-25 env RENDER_SIZE=960x540 tools/render/scene.sh bugfix-25 bca0e35 tools/render/scenes/bugfix-25-jump.txt
+atmosphere-19-dusk10 tools/render/scene.sh atmosphere-19-dusk10 682361f tools/render/scenes/atmosphere-19-dusk10.txt
+atmosphere-19-night10 tools/render/scene.sh atmosphere-19-night10 682361f tools/render/scenes/atmosphere-19-night10.txt
+atmosphere-19-night40 tools/render/scene.sh atmosphere-19-night40 682361f tools/render/scenes/atmosphere-19-night40.txt
+atmosphere-19-shut10 tools/render/scene.sh atmosphere-19-shut10 682361f tools/render/scenes/atmosphere-19-shut10.txt
+atmosphere-19-day10 tools/render/scene.sh atmosphere-19-day10 682361f tools/render/scenes/atmosphere-19-day10.txt
+bugfix-23b env RENDER_SIZE=960x540 tools/render/scene.sh bugfix-23b bb7793b tools/render/scenes/bugfix-23-walk.txt
+atmosphere-21-dusk env RENDER_SIZE=1280x720 tools/render/scene.sh atmosphere-21-dusk 9404fa1 tools/render/scenes/atmosphere-21-dusk.txt
+atmosphere-21-day env RENDER_SIZE=1280x720 tools/render/scene.sh atmosphere-21-day 9404fa1 tools/render/scenes/atmosphere-21-day.txt
+integration-4-low env RENDER_PATCH=tools/render/patches/pitch.sh RENDER_PITCH=-16 tools/render/render.sh integration-4-low d6fbfad "--time-of-day=0.45 --rain=0 --cloud=0.3 --debug-position=-4,40 --screenshot-delay=90"
+integration-4-default env RENDER_PATCH=tools/render/patches/pitch.sh RENDER_PITCH=-34 tools/render/render.sh integration-4-default d6fbfad "--time-of-day=0.45 --rain=0 --cloud=0.3 --debug-position=-4,40 --screenshot-delay=90"
+integration-4-steep env RENDER_PATCH=tools/render/patches/pitch.sh RENDER_PITCH=-50 tools/render/render.sh integration-4-steep d6fbfad "--time-of-day=0.45 --rain=0 --cloud=0.3 --debug-position=-4,40 --screenshot-delay=90"
+survival-7 env RENDER_SIZE=1280x720 tools/render/scene.sh survival-7 8a03451 tools/render/scenes/survival-7-run.txt
+atmosphere-13 tools/render/scenes/atmosphere-13.sh
+animals-8 tools/render/scene.sh animals-8 4233255 tools/render/scenes/animals-8-wool.txt
+animals-8-ground tools/render/scene.sh animals-8-ground 4233255 tools/render/scenes/animals-8-ground.txt
+atmosphere-66-clouds tools/render/scene.sh atmosphere-66-clouds dca2a0f tools/render/scenes/atmosphere-66-clouds.txt
+anim-2-side env RENDER_SIZE=1280x720 tools/render/scene.sh anim-2 1eec5b4 tools/render/scenes/anim-2-side.txt
+anim-2-turn env RENDER_SIZE=1280x720 tools/render/scene.sh anim-2-turn 1eec5b4 tools/render/scenes/anim-1-turn.txt
+anim-2-work env RENDER_SIZE=1280x720 tools/render/scene.sh anim-2-work 1eec5b4 tools/render/scenes/anim-1-work.txt
+animals-8-spin tools/render/scene.sh animals-8-spin 4233255 tools/render/scenes/animals-8-spin.txt

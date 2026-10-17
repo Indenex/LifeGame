@@ -7,7 +7,7 @@
 cd "$(dirname "$0")/../.."
 export RENDER_WORK=${RENDER_WORK:-/tmp/lifegame-render} RENDER_OUT=${RENDER_OUT:-$PWD/renders}
 done_file=$RENDER_WORK/queue.done; touch "$done_file"
-jobs=tools/render/queue.jobs
+jobs=${QUEUE_JOBS:-tools/render/queue.jobs}
 # Wait for anything already rendering to finish.
 while pgrep -f "^[^ ]*/Godot_v[^ ]*_mono_linux.x86_64" >/dev/null || [ -n "$(ps -eo args | grep -E '^bash tools/render/(render|scene)\.sh')" ]; do sleep 10; done
 while true; do

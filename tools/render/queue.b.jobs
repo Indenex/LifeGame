@@ -1,0 +1,35 @@
+# Render B: UI and gameplay stills. Run: QUEUE_JOBS=tools/render/queue.b.jobs tools/render/queue.sh
+# Copy tools/render/queue.done.snapshot to $RENDER_WORK/queue.done first so finished jobs are skipped.
+tools-craft env RENDER_SIZE=1280x720 tools/render/render.sh tools-craft 5db27d6 "--offline --time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-craft=1" "--offline --time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-craft=2"
+building-11 tools/render/scene.sh building-11 44b5080 tools/render/scenes/building-11-seethrough.txt
+ui-20-shelter env RENDER_PATCH=tools/render/patches/buildtab.sh "RENDER_TAB=Shelter" RENDER_SIZE=1280x720 tools/render/render.sh ui-20-shelter 9ba4a16 "--offline --time-of-day=0.45 --screenshot-hud --screenshot-buildmenu --render-slowstart=0.05,45 --screenshot-delay=6"
+ui-20-storage env RENDER_PATCH=tools/render/patches/buildtab.sh "RENDER_TAB=Storage" RENDER_SIZE=1280x720 tools/render/render.sh ui-20-storage 9ba4a16 "--offline --time-of-day=0.45 --screenshot-hud --screenshot-buildmenu --render-slowstart=0.05,45 --screenshot-delay=6"
+ui-20-crafting env RENDER_PATCH=tools/render/patches/buildtab.sh "RENDER_TAB=Crafting" RENDER_SIZE=1280x720 tools/render/render.sh ui-20-crafting 9ba4a16 "--offline --time-of-day=0.45 --screenshot-hud --screenshot-buildmenu --render-slowstart=0.05,45 --screenshot-delay=6"
+ui-20-fire env RENDER_PATCH=tools/render/patches/buildtab.sh "RENDER_TAB=Fire" RENDER_SIZE=1280x720 tools/render/render.sh ui-20-fire 9ba4a16 "--offline --time-of-day=0.45 --screenshot-hud --screenshot-buildmenu --render-slowstart=0.05,45 --screenshot-delay=6"
+ui-20-fences env RENDER_PATCH=tools/render/patches/buildtab.sh "RENDER_TAB=Fences and gates" RENDER_SIZE=1280x720 tools/render/render.sh ui-20-fences 9ba4a16 "--offline --time-of-day=0.45 --screenshot-hud --screenshot-buildmenu --render-slowstart=0.05,45 --screenshot-delay=6"
+ui-15b env RENDER_SIZE=1280x720 tools/render/render.sh ui-15b d3ef1ef "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4.3" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4.6" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4.9" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=5.2" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hitpop --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=5.5"
+ui-17 env RENDER_SIZE=1280x720 tools/render/render.sh ui-17 36c7410 "--offline --time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4" "--offline --time-of-day=0.45 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=4 --screenshot-equip"
+ui-17-live env RENDER_SIZE=1280x720 tools/render/scene.sh ui-17-live 36c7410 tools/render/scenes/ui-17-hotbar.txt
+ui-16 env RENDER_SIZE=1280x720 tools/render/render.sh ui-16 cbc1555 "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=6 --screenshot-place" "--offline --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-hud --render-slowstart=0.05,45 --screenshot-delay=6 --screenshot-place=offer"
+building-10 tools/render/scene.sh building-10 8a30003 tools/render/scenes/building-10-cabin.txt
+building-14 tools/render/scene.sh building-14 ffcc663 tools/render/scenes/building-14-bigger.txt
+survival-13-before tools/render/scene.sh survival-13-before 60af766 tools/render/scenes/survival-13-frost.txt
+survival-13-after tools/render/scene.sh survival-13-after d12bdf7 tools/render/scenes/survival-13-frost.txt
+building-9 tools/render/scene.sh building-9 5793230 tools/render/scenes/building-9-hearth.txt
+survival-8 tools/render/scene.sh survival-8 aa3e443 tools/render/scenes/survival-8-arrival.txt
+claims-10 tools/render/scene.sh claims-10 bafe808 tools/render/scenes/claims-10-voice.txt
+bugfix-18f tools/render/scene.sh bugfix-18f 6e56862 tools/render/scenes/bugfix-18-abc.txt
+claims-7 tools/render/scene.sh claims-7 f85c3b9 tools/render/scenes/claims-7-ask.txt
+skills-10 tools/render/scene.sh skills-10 origin/claude/journal-skills-10 tools/render/scenes/skills-10-journal.txt
+ui-12b rm -f $HOME/.local/share/godot/app_userdata/LifeGame/settings.cfg; env RENDER_SIZE=1280x720 tools/render/render.sh ui-12 005572d "--time-of-day=0.45 --screenshot-options --render-slowstart=0.05,45 --screenshot-delay=4"
+ui-10c env RENDER_SIZE=1280x720 tools/render/render.sh ui-10 36e6c09 "--time-of-day=0.45 --screenshot-hud --screenshot-equip=feet --render-slowstart=0.05,45 --screenshot-delay=4"
+building-8 tools/render/scene.sh building-8 969a7ae tools/render/scenes/building-8-fence.txt
+crafting-15 tools/render/scenes/crafting-15.sh 859f25e
+ui-13 tools/render/scenes/ui-13.sh origin/main
+animals-11 tools/render/scene.sh animals-11 de48c3f tools/render/scenes/animals-11-stations.txt
+claims-9 tools/render/scene.sh claims-9 baecf02 tools/render/scenes/claims-9-name.txt
+claims-8 tools/render/scene.sh claims-8 ff0ae8a tools/render/scenes/claims-8-cue.txt
+bugfix-17 tools/render/scene.sh bugfix-17 caaf9ae tools/render/scenes/bugfix-17-pot.txt
+bugfix-17-before tools/render/scene.sh bugfix-17-before 7e79d22 tools/render/scenes/bugfix-17-pot.txt
+ui-9-liveA tools/render/scene.sh ui-9-liveA 88d7cf2 tools/render/scenes/ui-9-live-a.txt
+ui-9-liveB tools/render/scene.sh ui-9-liveB 88d7cf2 tools/render/scenes/ui-9-live-b.txt
