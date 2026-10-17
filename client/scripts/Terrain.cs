@@ -21,6 +21,9 @@ public partial class Terrain : Node3D
 
     static Mesh? trunkMesh, leafyMesh, pineMesh, tuftMesh;
 
+    // The old broadleaf canopy (birches, landmark trees), for Showcase.
+    internal static Mesh LeafyCanopy { get { EnsureMeshes(); return leafyMesh!; } }
+
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
     // Cells whose clearing is drawn by something else (TreeFall), so the chunk shows
@@ -412,7 +415,7 @@ public partial class Terrain : Node3D
                         // Birch and alder by the water: slim, pale and light-leaved. Modeling's
                         // birch trunk is already slim, so only the canopy is narrowed.
                         var slim = at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f));
-                        landmarks.Put(PropMeshes.Birch(Variant(x, z, 25, PropMeshes.BirchVariants)), Look.TreeBark,
+                        landmarks.Put(PropMeshes.Birch(Variant(x, z, 25, PropMeshes.BirchVariants)), Painted.Bark,
                             (at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(Hash01(x, z, 24) * 0.12f), custom));
                         leafy.Add((slim, Look.LeafLight.Lerp(Look.Leaf, Hash01(x, z, 18) * 0.3f), custom with { A = SeasonBroadleaf }));
                     }
@@ -441,17 +444,17 @@ public partial class Terrain : Node3D
                     float size = pebble ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
                     var stone = (at.ScaledLocal(Vector3.One * size), Look.WorldRock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
                     if (pebble)
-                        landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Look.RockSurface,
+                        landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Painted.Rock,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
                     else
-                        landmarks.Put(PropMeshes.Rock(Regional(x, z, 94, PropMeshes.RockVariants)), Look.RockSurface, stone);
+                        landmarks.Put(PropMeshes.Rock(Regional(x, z, 94, PropMeshes.RockVariants)), Painted.Rock, stone);
                     continue;
                 }
                 else if (density > 0.45f && Hash01(x, z, 50) < 0.006f)
                 {
                     // A fallen trunk lying in the forest floor (Modeling's logs lie along x).
                     var lying = new Basis(Vector3.Up, yaw) * Basis.FromScale(Vector3.One * (0.75f + Hash01(x, z, 51) * 0.35f));
-                    landmarks.Put(PropMeshes.FallenLog(Variant(x, z, 27, PropMeshes.FallenLogVariants)), Look.TreeBark,
+                    landmarks.Put(PropMeshes.FallenLog(Variant(x, z, 27, PropMeshes.FallenLogVariants)), Painted.Bark,
                         (new Transform3D(lying, new Vector3(fx, top, fz)), Look.Bark.Darkened(0.1f), custom));
                 }
 
@@ -534,9 +537,9 @@ public partial class Terrain : Node3D
         trunks.AddRange(landmarks.Trunks);
         leafy.AddRange(landmarks.Leafy);
         pines.AddRange(landmarks.Pines);
-        data.Add(trunkMesh!, trunks, Look.TreeBark);
-        data.Add(leafyMesh!, leafy, Look.TreeFoliage);
-        data.Add(pineMesh!, pines, Look.TreeFoliage);
+        data.Add(trunkMesh!, trunks, Painted.Bark);
+        data.Add(leafyMesh!, leafy, Painted.Leaves);
+        data.Add(pineMesh!, pines, Painted.Leaves);
         // Painted trees in full near the camera and as a lighter far version beyond.
         foreach (var ((pine, v), items) in painted)
         {
