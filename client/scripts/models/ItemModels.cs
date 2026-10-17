@@ -210,6 +210,8 @@ public static class ItemModels
         Item.Basket => (Basket, true),
         Item.BowDrill => (BowDrill, false),
         Item.Berries => (Berries, true),
+        // Stand-in until Modeling makes a hazelnut (survival-30).
+        Item.Hazelnuts => (Berries, true),
         Item.RawMutton => (k => Mutton(k, new Color(0.74f, 0.30f, 0.30f), new Color(0.93f, 0.87f, 0.77f), Bone, 1f), true),
         Item.CookedMutton => (k => Mutton(k, new Color(0.50f, 0.27f, 0.12f), new Color(0.74f, 0.54f, 0.28f), new Color(0.86f, 0.78f, 0.64f), 0.95f), true),
         Item.BurntMutton => (k => Mutton(k, new Color(0.10f, 0.08f, 0.07f), new Color(0.17f, 0.13f, 0.10f), new Color(0.32f, 0.28f, 0.23f), 0.88f), true),
