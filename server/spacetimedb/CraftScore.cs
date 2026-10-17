@@ -68,6 +68,7 @@ public static partial class Module
         }
         if (!played)
         {
+            if (score > QuickScoreCap) NoteSuspicion(ctx, playerId, Suspect.QuickScore);
             if (score > QuickScoreCap) Log.Info($"score capped: player {playerId} {processId} sent {score:F2} with no believable play ({(opened ? "too fast" : "no minigame opened")})");
             score = Math.Min(score, QuickScoreCap);
         }
@@ -80,6 +81,7 @@ public static partial class Module
         else ctx.Db.ScoreStreak.PlayerId.Update(streak);
         if (perfect > StreakFree)
         {
+            NoteSuspicion(ctx, playerId, Suspect.PerfectStreak);
             Log.Info($"score softened: player {playerId} {processId} perfect streak {perfect}");
             score = Math.Min(score, StreakFloor + (1f - StreakFloor) * MathF.Pow(StreakDecay, perfect - StreakFree));
         }
