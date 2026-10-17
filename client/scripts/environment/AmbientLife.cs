@@ -84,6 +84,14 @@ public partial class AmbientLife : Node3D
     // to 1 deep woods, rain 0 to 1.
     public void Follow(float dt, Vector3 focus, Terrain? terrain, float daylight, float year, float wind, Vector2 windDir, float woods, float rain)
     {
+        // Nothing to see when the camera is away from the player (free camera, map view).
+        if (GetViewport()?.GetCamera3D() is { } camera && camera.GlobalPosition.DistanceSquaredTo(focus) > 60f * 60f)
+        {
+            pollen.Emitting = seeds.Emitting = false;
+            butterflies.Visible = false;
+            return;
+        }
+        butterflies.Visible = true;
         float density = forced ? 1f : Density;
         float warm = Mathf.SmoothStep(-0.4f, 0.2f, Seasons.Warmth(year));
         float day = Mathf.SmoothStep(0.45f, 0.8f, daylight);
@@ -367,7 +375,9 @@ public partial class AmbientLife : Node3D
                 {
                     BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles,
                     Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    // Lit by the scene, so nothing left drifting at dusk glows in the dark.
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.PerVertex,
+                    Roughness = 1f,
                     AlbedoTexture = texture,
                     AlbedoColor = new Color(color, alpha),
                     VertexColorUseAsAlbedo = true,

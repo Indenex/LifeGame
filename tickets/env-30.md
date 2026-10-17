@@ -28,8 +28,11 @@ CPU, plus two GPU particle systems in a box round the player). Hooks: three line
 - 2026-10-17 07:40: built; local renders at the (-6,-10) meadow show butterflies over the
   flowers. Wingspan 0.34 m (size 0.17), slightly larger than life to read at the default zoom.
 
+- 2026-10-17 08:20: Atmosphere's asks: pollen and seeds lit by the scene (no glow at dusk);
+  skipped when the camera is over 60 m from the player. PM: 34 cm wingspan stands (D-323).
+
 ## Open questions / blockers
-- Butterfly size and how many (14 at Full) are design knobs for Justin via the PM.
+- (none) Butterfly size: 34 cm stands as PM default (D-323); Justin may revisit.
 
 ## Next step
 Wait for PR CI; send the green sha to the PM. Render clip requested (meadow at -6,-10, --life=1).
