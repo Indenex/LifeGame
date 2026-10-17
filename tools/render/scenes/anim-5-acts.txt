@@ -1,0 +1,53 @@
+# anim-5 (PR #398): strikes, bow, dig, shear, butcher, forage, fire feeding. One 12 fps movie;
+# each action is a puppet call of the same reducer the game uses (act ...), the camera is the puppet.
+# Clips are cut between the marks. Items: Spear 9, Flake 6, Bow 16, Arrow 17, DiggingStick 12.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.1 --render-cam=3.0,0.7,60,0.3
+frames 150
+give 9 1 60
+give 6 1 60
+give 16 1 60
+give 17 8 60
+give 12 1 60
+sql UPDATE animal SET fleece = 100.0 WHERE species = 0
+frames +12
+mark spear-start
+act StrikeAnimal sheep
+frames +24
+act StrikeAnimal sheep
+frames +24
+mark spear-end
+mark bow-start
+act ShootAnimal sheep
+frames +24
+act ShootAnimal sheep
+frames +24
+mark bow-end
+mark dig-start
+act Dig cellx cellz
+frames +24
+act Dig cellx cellz
+frames +24
+mark dig-end
+mark forage-start
+act Forage bush
+frames +36
+mark forage-end
+mark shear-start
+act ShearSheep sheep
+frames +48
+mark shear-end
+mark butcher-start
+act StrikeAnimal sheep
+frames +24
+act StrikeAnimal sheep
+frames +24
+act StrikeAnimal sheep
+frames +24
+act StrikeAnimal sheep
+frames +24
+act ButcherCarcass carcass
+frames +48
+mark butcher-end
+frames +12
