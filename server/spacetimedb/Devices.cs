@@ -57,6 +57,9 @@ public static partial class Module
         public ushort Item;
         public byte Quality;
         public uint Count;
+        // Who loaded the batch: its products carry their maker's mark (crafting-25). 0 for none.
+        [Default(0u)]
+        public uint Maker;
     }
 
     // The device the player is standing at, if they may use it: finished, within working
@@ -197,9 +200,9 @@ public static partial class Module
         uint made = Devices.Quantity(def.MakesCount * job.RoundUnits, job.Attended, job.Score, plain);
         // A device taken down mid-batch hands what it made straight to the owner.
         if (ctx.Db.Structure.Id.Find(job.StructureId) is null)
-            AddToInventory(ctx, job.Owner, def.Makes, made, quality);
+            AddToInventory(ctx, job.Owner, def.Makes, made, quality, 0u, job.PlayerId);
         else
-            AddDeviceOutput(ctx, job.StructureId, def.Makes, quality, made);
+            AddDeviceOutput(ctx, job.StructureId, def.Makes, quality, made, job.PlayerId);
         for (int i = 0; i < Devices.SkillReports((int)job.RoundUnits, job.Attended, plain); i++)
             OnProcessPerformed(ctx, job.PlayerId, def.Id, quality, false);
 
@@ -210,15 +213,15 @@ public static partial class Module
             StartDeviceRound(ctx, job);
     }
 
-    static void AddDeviceOutput(ReducerContext ctx, ulong structureId, Item item, byte quality, uint count)
+    static void AddDeviceOutput(ReducerContext ctx, ulong structureId, Item item, byte quality, uint count, uint maker)
     {
         foreach (var row in ctx.Db.DeviceOutput.StructureId.Filter(structureId))
-            if (row.Item == (ushort)item && row.Quality == quality)
+            if (row.Item == (ushort)item && row.Quality == quality && row.Maker == maker)
             {
                 ctx.Db.DeviceOutput.Id.Update(row with { Count = row.Count + count });
                 return;
             }
-        ctx.Db.DeviceOutput.Insert(new DeviceOutput { Id = 0, StructureId = structureId, Item = (ushort)item, Quality = quality, Count = count });
+        ctx.Db.DeviceOutput.Insert(new DeviceOutput { Id = 0, StructureId = structureId, Item = (ushort)item, Quality = quality, Count = count, Maker = maker });
     }
 
     // Takes everything the device has made into the bag.
@@ -231,7 +234,7 @@ public static partial class Module
         if (rows.Count == 0) throw new Exception("There is nothing to collect yet");
         foreach (var row in rows)
         {
-            AddToInventory(ctx, Me(ctx), (Item)row.Item, row.Count, row.Quality);
+            AddToInventory(ctx, Me(ctx), (Item)row.Item, row.Count, row.Quality, 0u, row.Maker);
             ctx.Db.DeviceOutput.Id.Delete(row.Id);
         }
     }

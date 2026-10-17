@@ -706,6 +706,9 @@ if (runStations)
     conn.Reducers.CollectDevice(tub.Id);
     Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the first clay to be collected");
     if (one.Count != 1 || one.Quality != Items.RawQuality) Fail($"one unit made {one.Count} at quality {one.Quality}, not 1 at {Items.RawQuality}");
+    // What a device makes carries the loader's mark, like the same thing made by hand (crafting-25).
+    if (one.Maker != myId || !conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.CleanClay && r.Maker == myId))
+        Fail($"the tub's clean clay lost its maker (output maker {one.Maker}, expected {myId})");
 
     // Five units in a batch: five come out, at the by-hand quality, with no bonus.
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
