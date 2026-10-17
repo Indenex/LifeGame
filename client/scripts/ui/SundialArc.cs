@@ -104,9 +104,6 @@ public partial class ArcView : Control
     {
         float t = ((Time % 1f) + 1f) % 1f;
         bool day = t >= WorldTime.Sunrise && t < WorldTime.Sunset;
-        // How far into the day or the night, along the same arc.
-        float u = day ? (t - WorldTime.Sunrise) / (WorldTime.Sunset - WorldTime.Sunrise)
-            : (((t - WorldTime.Sunset) % 1f + 1f) % 1f) / (1f - (WorldTime.Sunset - WorldTime.Sunrise));
         // Near sunrise and sunset the arc's colours cross between day and night.
         float edge = Mathf.Min(Mathf.Abs(t - WorldTime.Sunrise), Mathf.Abs(t - WorldTime.Sunset));
         float dayness = day ? Mathf.Clamp(0.5f + edge / 0.06f, 0.5f, 1f) : Mathf.Clamp(0.5f - edge / 0.06f, 0f, 0.5f);
@@ -125,19 +122,29 @@ public partial class ArcView : Control
         foreach (float m in new[] { 0f, 0.5f, 1f })
             DrawCircle(At(m), 2f, new Color(Look.Cream, 0.45f));
 
-        var p = At(u);
-        if (day)
+        // The sun sets at the right end as the moon rises at the left (and back at dawn),
+        // fading across about 0.03 of a day, so the glyph never jumps from end to end.
+        const float Fade = 0.015f;
+        float sunAlpha = Mathf.Clamp(Mathf.Min(t - WorldTime.Sunrise, WorldTime.Sunset - t) / Fade + 0.5f, 0f, 1f);
+        float dayU = Mathf.Clamp((t - WorldTime.Sunrise) / (WorldTime.Sunset - WorldTime.Sunrise), 0f, 1f);
+        float nightT = ((t - WorldTime.Sunset) % 1f + 1f) % 1f, nightLength = 1f - (WorldTime.Sunset - WorldTime.Sunrise);
+        float nightU = Mathf.Clamp(nightT / nightLength, 0f, 1f);
+        // Just before sunrise the moon is at the right end; just after sunset it starts on the left.
+        if (nightT > nightLength) nightU = 1f;
+        if (sunAlpha > 0.001f)
         {
-            DrawCircle(p, 11f, new Color(SunCore, 0.18f));
-            DrawCircle(p, 7.5f, new Color(SunCore, 0.35f));
-            DrawCircle(p, 5f, SunCore);
+            var p = At(dayU);
+            DrawCircle(p, 11f, new Color(SunCore, 0.18f * sunAlpha));
+            DrawCircle(p, 7.5f, new Color(SunCore, 0.35f * sunAlpha));
+            DrawCircle(p, 5f, new Color(SunCore, sunAlpha));
         }
-        else
+        if (sunAlpha < 0.999f)
         {
-            // A crescent, drawn as its own shape (the HUD has no backdrop to cut a bite from).
-            DrawCircle(p, 9f, new Color(MoonLight, 0.12f));
+            var m = At(nightU);
+            float a = 1f - sunAlpha;
+            DrawCircle(m, 9f, new Color(MoonLight, 0.12f * a));
             // A thick stroke along the left of a circle reads as a crescent moon.
-            DrawArc(p, 3.8f, Mathf.DegToRad(100), Mathf.DegToRad(260), 16, MoonLight, 3.4f, true);
+            DrawArc(m, 3.8f, Mathf.DegToRad(100), Mathf.DegToRad(260), 16, new Color(MoonLight, a), 3.4f, true);
         }
     }
 }
