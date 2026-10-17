@@ -10,7 +10,7 @@ A hacked client could flood the database by calling `PlaceStructure`, `Drop`, `S
 
 ## Progress log
 - 2026-10-17: implemented; SpawnCheck hammers `set_sneaking` 300 times: 240 refused, play carries on after the bucket refills (3 of 3 local runs, 99-102 s).
-- 2026-10-17: LoadTest, SocialTest, CraftCheck and BuildTest (both parts) pass locally with no "Slow down" in any of their logs; only SpawnCheck's deliberate hammer is refused (240 of 300).
+- 2026-10-17: LoadTest now counts calls refused by the rate limit and fails if any bot was throttled; 20 bots for 20 s (the main-branch setting): 0 refused. LoadTest, SocialTest, CraftCheck and BuildTest (both parts) pass locally with no "Slow down" in any of their logs; only SpawnCheck's deliberate hammer is refused (240 of 300).
 
 ## Open questions / blockers
 - The numbers (burst 60, 30 a second) are constants in `RateLimit.cs`; raise them if a real client ever sees "Slow down".
