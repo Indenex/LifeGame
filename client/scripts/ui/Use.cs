@@ -8,7 +8,10 @@ namespace LifeGame;
 // next to the key ("Pick berries"). Repeat > 0 makes it a hold action that runs again
 // every Repeat seconds while G stays down (adding materials to a blueprint).
 // Target, when given, is where the thing is, so the one you face can win (see Best).
-public sealed record UseOffer(string Prompt, float Distance, Action Use, float Repeat = 0f, Vector3? Target = null);
+// Again > 0 marks an action you can repeat by holding the key: after a short delay it runs
+// again each time the last one is done and at least Again seconds have passed, for as long
+// as the same offer stays valid (HoldRepeat); the server still checks every one.
+public sealed record UseOffer(string Prompt, float Distance, Action Use, float Repeat = 0f, Vector3? Target = null, float Again = 0f);
 
 // A lane's Use action. Find looks at the player's position and returns an offer, or
 // null when there is nothing to do. When several lanes offer, a thing you face wins
@@ -42,6 +45,17 @@ public static class Use
     // The offer the G prompt shows this frame (set by UseKey), so a lane can tell
     // whether its own offer won (bugfix-19).
     public static UseOffer? Shown { get; set; }
+
+    // Whether the last action is still going (a craft job or minigame), so a held key waits
+    // for it rather than starting another. Set by Main.
+    public static Func<bool> Busy { get; set; } = () => false;
+
+    // When a server reducer last failed (Godot ticks, ms); a held key stops on it (HoldRepeat).
+    public static ulong FailedAtMsec { get; private set; }
+    public static void Failed() => FailedAtMsec = Time.GetTicksMsec();
+
+    // Least time between held actions that don't set their own, a little over the server's short cooldowns.
+    public const float HoldInterval = 0.7f;
 
     // Within this angle of the way you face, a thing counts as in front of you.
     const float FrontAngle = 60f;
