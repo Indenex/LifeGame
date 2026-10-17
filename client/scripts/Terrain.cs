@@ -136,6 +136,13 @@ public partial class Terrain : Node3D
         }
 
         PumpRegions();
+        // The far regions are rebuilt a few a frame after the chunks land, so the shot
+        // waits for them too, or the outermost trees would be missing from it.
+        if (shotWaiting && dirtyRegions.Count == 0 && LoadedShot is { } waited)
+        {
+            shotWaiting = false;
+            TakeLoadedShot(waited);
+        }
         // Chunks build on worker threads, nearest first (env-12); the main thread only
         // snapshots what they need and puts finished ones in place.
         if (dirty.Count == 0 && pending.Count == 0) return;
@@ -145,11 +152,12 @@ public partial class Terrain : Node3D
         {
             GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for; {inRegion.Count} far chunks drawn in {regions.Count} regions");
             loading = null;
-            if (LoadedShot is { } shot) TakeLoadedShot(shot);
+            if (LoadedShot != null) shotWaiting = true;
         }
     }
 
     System.Diagnostics.Stopwatch? loading;
+    bool shotWaiting;
 
     // --screenshot-when-loaded=path.png saves one frame once every chunk in view is in
     // place, then quits: for renders of the far view, where a fixed delay may fire
@@ -298,7 +306,10 @@ public partial class Terrain : Node3D
         if (Depth(x, z) > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
 
-        if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
+        // Cleared ground is worn to earth, and the wear fades out over a couple of
+        // metres round it on a ragged line, never along the cell grid (env-26).
+        float worn = cleared is { } c ? (c ? 1f : 0f) : Worn(x, z);
+        color = color.Lerp(Look.Earth, 0.6f * worn);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
@@ -421,7 +432,7 @@ public partial class Terrain : Node3D
                 }
                 float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
+                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? Obstacles.ShoreStones(x, z) : 0f);
                 if (!nearSpawn && roll < sapling)
                 {
                     // Saplings crowd the grove edges, a half to three quarters full size.
@@ -522,30 +533,36 @@ public partial class Terrain : Node3D
                     }
                 }
 
+                // How fully grass covers the cell: it and the flowers thin out toward clay,
+                // cleared and dug ground on a ragged line, so no edge follows the grid (env-26).
+                float cover = GrassCover(x, z);
                 // Wildflowers in patches across the open ground.
-                if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f)
+                if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f * cover)
                 {
                     int kind = (int)(World.Noise(x, z, 18f, 64) * Undergrowth.FlowerColors.Length * 0.999f);
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
                         Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
                 // And the odd lone white flower between the patches (env-17).
-                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < 0.04f)
+                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < 0.04f * cover)
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 68), top, z + 0.5f - Hash01(x, z, 69), yaw, 0.8f + Hash01(x, z, 70) * 0.3f),
                         Look.FlowerWhite.Darkened(Hash01(x, z, 71) * 0.06f), custom with { A = SeasonFlower }));
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
                 // so blades and ground read as one surface.
-                bool grassy = top >= Look.WaterLevel + 0.2f && World.ClayScore(x, z) < 0.7f;
+                bool grassy = top >= Look.WaterLevel + 0.2f && cover > 0.02f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && tufts != null && Hash01(x, z, 40) < 0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail)
+                if (grassy && tufts != null && Hash01(x, z, 40) < (0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail) * Mathf.SmoothStep(0f, 0.6f, cover))
                 {
-                    // Shear the patch onto the slope so every blade stays rooted.
+                    // Shear the patch onto the slope so every blade stays rooted; each patch
+                    // turns its own way and sits a little off centre, so patch edges never
+                    // line up into a grid.
                     float sx = (TileHeight(x + 1, z) - TileHeight(x - 1, z)) * 0.5f;
                     float sz = (TileHeight(x, z + 1) - TileHeight(x, z - 1)) * 0.5f;
-                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail), 0), new Vector3(0, sz, 1));
-                    var g = new Transform3D(slope, new Vector3(x, top, z));
+                    float tall = (0.75f + Hash01(x, z, 42) * 0.5f) * (1f - 0.35f * density) * (1f - 0.45f * heath) * (1f - 0.5f * trail) * Mathf.Lerp(0.45f, 1f, cover);
+                    var slope = new Basis(new Vector3(1, sx, 0), new Vector3(0, tall, 0), new Vector3(0, sz, 1)) * new Basis(Vector3.Up, Hash01(x, z, 45) * Mathf.Tau);
+                    var g = new Transform3D(slope, new Vector3(x + (Hash01(x, z, 46) - 0.5f) * 0.3f, top, z + (Hash01(x, z, 47) - 0.5f) * 0.3f));
                     tufts!.Add((g, TileColor(x, z, top, cleared: false), custom));
                 }
             }
@@ -720,7 +737,7 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
-        tuftMesh = BuildTuft();
+        tuftMesh = BuildTuft(GrassDetail.Keep);
     }
 
     internal static SphereMesh Blob(float radius) => new() { Radius = radius, Height = radius * 1.7f, RadialSegments = 10, Rings = 6 };
@@ -750,7 +767,8 @@ public partial class Terrain : Node3D
 
     // A one-meter patch of thin blades that fills its tile edge to edge. UV.y runs
     // from root to tip so the grass shader can color and bend each blade.
-    static Mesh BuildTuft()
+    // keep: the share of blades drawn (GrassDetail, Options -> Graphics -> Grass).
+    static Mesh BuildTuft(float keep = 1f, ArrayMesh? into = null)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
@@ -758,6 +776,7 @@ public partial class Terrain : Node3D
         for (int gx = 0; gx < grid; gx++)
             for (int gz = 0; gz < grid; gz++)
             {
+                if (keep < 1f && Hash01(gx, gz, 307) >= keep) continue;
                 float px = (gx + 0.5f) / grid - 0.5f + (Hash01(gx, gz, 300) - 0.5f) / grid;
                 float pz = (gz + 0.5f) / grid - 0.5f + (Hash01(gx, gz, 301) - 0.5f) / grid;
                 float angle = Hash01(gx, gz, 302) * Mathf.Pi;
@@ -770,7 +789,7 @@ public partial class Terrain : Node3D
                 Vertex(st, root + side, 0f);
                 Vertex(st, root + lean + new Vector3(0, height, 0), 1f);
             }
-        return st.Commit();
+        return into == null ? st.Commit() : st.Commit(into);
 
         static void Vertex(SurfaceTool st, Vector3 v, float h)
         {
@@ -779,6 +798,14 @@ public partial class Terrain : Node3D
             st.SetColor(Colors.White);
             st.AddVertex(v);
         }
+    }
+
+    // Redraws the grass tufts everywhere with a new share of their blades.
+    internal static void RebuildTufts(float keep)
+    {
+        if (tuftMesh is not ArrayMesh mesh) return;
+        mesh.ClearSurfaces();
+        BuildTuft(keep, mesh);
     }
 
     public static float Hash01(int x, int z, uint salt) => Trees.Hash01(x, z, salt);

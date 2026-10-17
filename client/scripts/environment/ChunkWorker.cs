@@ -132,9 +132,10 @@ public partial class Terrain
         {
             Cx = cx, Cz = cz,
             MinX = cx * n - SnapshotMargin, MinZ = cz * n - SnapshotMargin, Size = n + 2 * SnapshotMargin + 1,
-            // Cleared cells and their easing are read for the chunk's cells and the
-            // ground's far corner row.
-            CellMinX = cx * n, CellMinZ = cz * n, CellSize = n + 1,
+            // Cleared cells and their easing are read for the chunk's cells, the
+            // ground's far corner row, and the few cells round it that soft edges
+            // feather across (SoftEdges.FeatherCells).
+            CellMinX = cx * n - FeatherCells, CellMinZ = cz * n - FeatherCells, CellSize = n + 1 + 2 * FeatherCells,
             Tufts = WantsTufts((cx, cz)),
         };
         s.Depth = new short[s.Size * s.Size];

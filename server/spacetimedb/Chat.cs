@@ -48,7 +48,7 @@ public static partial class Module
     }
 
     [SpacetimeDB.View(Accessor = "MyChat", Public = true)]
-    public static List<ChatHeard> MyChat(ViewContext ctx) => ctx.Db.ChatHeard.ByRecipient.Filter(ctx.Sender).ToList();
+    public static List<ChatHeard> MyChat(ViewContext ctx) => ctx.Db.ChatHeard.ByRecipient.Filter(Me(ctx)).ToList();
 
     // Stores one row per online player (the speaker included) within range of (x, z).
     static void Deliver(ReducerContext ctx, uint senderId, string senderName, string text, float x, float z, float range)

@@ -29,35 +29,38 @@ public static partial class Module
     public static void EquipSlot(ReducerContext ctx, byte index)
     {
         RequirePlayer(ctx);
-        var row = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender);
+        var row = ctx.Db.PlayerEquip.Owner.Find(Me(ctx));
         var held = index < HotbarSlots ? SlotAt(ctx, index) : null;
         if (held is not { Item: not 0 } || (row is { } r && r.Slot == index))
         {
-            if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+            if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(Me(ctx));
+            CheckJobTool(ctx);
             return;
         }
-        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index, Item = held.Value.Item };
+        var next = new PlayerEquip { Owner = Me(ctx), Slot = index, Item = held.Value.Item };
         if (row is null) ctx.Db.PlayerEquip.Insert(next);
         else ctx.Db.PlayerEquip.Owner.Update(next);
+        CheckJobTool(ctx);
     }
 
     // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
     // emptied slot puts the hand away.
     static void SyncEquip(ReducerContext ctx)
     {
-        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return;
+        if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is not { } equip) return;
         if (SlotAt(ctx, equip.Slot) is { Item: not 0 } slot)
         {
             if (slot.Item != equip.Item) ctx.Db.PlayerEquip.Owner.Update(equip with { Item = slot.Item });
         }
         else
-            ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+            ctx.Db.PlayerEquip.Owner.Delete(Me(ctx));
+        CheckJobTool(ctx);
     }
 
     // Using or setting down an item is a click on the item in hand (Justin): refuses any other item.
     static void RequireHeld(ReducerContext ctx, ushort item)
     {
-        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip || equip.Item != item)
+        if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is not { } equip || equip.Item != item)
             throw new Exception("Take it in your hand first: press its number key");
     }
 
@@ -67,7 +70,7 @@ public static partial class Module
     public static void UseHeld(ReducerContext ctx)
     {
         RequirePlayer(ctx);
-        var equip = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) ?? throw new Exception("You are holding nothing");
+        var equip = ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) ?? throw new Exception("You are holding nothing");
         UseItem(ctx, equip.Item);
     }
 
@@ -83,10 +86,10 @@ public static partial class Module
     // bow shot reads it here).
     static InventoryItem? EquippedStack(ReducerContext ctx)
     {
-        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return null;
+        if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is not { } equip) return null;
         if (SlotAt(ctx, equip.Slot) is not { } slot || !Items.IsKnown(slot.Item)) return null;
         InventoryItem? best = null;
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), slot.Item)))
         {
             if (row.OnBelt || row.Count == 0) continue;
             if (Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear)) continue;
@@ -98,9 +101,9 @@ public static partial class Module
     // Why a hunting strike or a bow shot has no weapon: a spent one equipped, or none equipped.
     static string NoWeaponMessage(ReducerContext ctx, string what)
     {
-        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
+        if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
             && Items.IsKnown(slot.Item) && Durability.Wears((Item)slot.Item))
-            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), slot.Item)))
                 if (!row.OnBelt && Durability.IsSpent(row.Quality, row.Wear))
                     return $"Your {Items.Def((Item)slot.Item).Name.ToLowerInvariant()} is spent. Mend it at a repair table.";
         return $"Put {what} on your bar and equip it";
@@ -110,11 +113,11 @@ public static partial class Module
     static InventoryItem EquippedToolOrThrow(ReducerContext ctx, ItemTags tags, string what)
     {
         if (EquippedTool(ctx, tags) is { } tool) return tool;
-        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
+        if (ctx.Db.PlayerEquip.Owner.Find(Me(ctx)) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
             && Items.IsKnown(slot.Item) && (Items.Def((Item)slot.Item).Tags & tags) == tags)
         {
             // The right tool is equipped but spent, or only on the belt.
-            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), slot.Item)))
                 if (!row.OnBelt && Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
                     return throwSpent(slot.Item);
             throw new Exception($"Take your {Items.Def((Item)slot.Item).Name.ToLowerInvariant()} out of the tools belt and into the bag to use it");

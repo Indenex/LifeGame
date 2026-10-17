@@ -9,3 +9,5 @@ server/spacetimedb/SpacetimeDB.Codegen/
 builds/
 # Generated from the server module by tools/gen-bindings.sh; never committed
 client/module_bindings/
+# Python caches from the art build scripts
+tools/art/**/__pycache__/

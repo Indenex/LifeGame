@@ -60,6 +60,8 @@ public partial class CeramicsDemo : Node3D
 
     public override void _Ready()
     {
+        // Offline there is no player_mark table: give every maker a glyph and colour so marks show.
+        ClayLook.MarkLookup ??= maker => ((int)(maker * 7 % Marks.All.Count), MarkColour.ToColor(Marks.Presets[maker % Marks.Presets.Length]));
         AddChild(row);
         if (ShowKilns)
         {
@@ -203,7 +205,7 @@ public partial class CeramicsDemo : Node3D
             {
                 var lamp = new LampView { Position = new Vector3((i - 1.5f) * 1.1f, 0, (i % 2) * 0.4f) };
                 row.AddChild(lamp);
-                lamp.Show((ulong)i + 40, i == 3 ? 0 : PotView.Now + 1800);
+                lamp.Show((ulong)i + 40, i == 3 ? 0 : PotView.Now + 1800, i < 3 ? Marks.Pack((uint)i + 1) : 0u);
             }
             AddChild(camera);
             camera.MakeCurrent();

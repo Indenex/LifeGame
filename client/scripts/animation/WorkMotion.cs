@@ -162,7 +162,7 @@ public static class WorkMotions
 
     // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
     // back; left thigh forward and shin straight down to a planted foot.
-    static void Kneel(Pose p, float legLength)
+    internal static void Kneel(Pose p, float legLength)
     {
         p.HipsOffset = new Vector3(0, -legLength * 0.44f, -0.05f);
         p[Joint.KneeR].X = Mathf.Pi / 2f;
@@ -513,7 +513,7 @@ public static class WorkMotions
     // worked out from this body's own arm lengths, shoulders and mouth: a two-bone
     // reach, so it lands on a tall adult and a short, big-headed chibi alike. apart
     // moves the hand that far off the middle (cupped hands side by side).
-    static (float swing, float sideways, float elbow) ToMouth(PlayerRig body, bool left, float apart)
+    internal static (float swing, float sideways, float elbow) ToMouth(PlayerRig body, bool left, float apart)
     {
         var shoulder = left ? body.ShoulderL : body.ShoulderR;
         var target = body.Mouth + new Vector3(left ? apart : -apart, -0.02f, 0.06f) - shoulder;

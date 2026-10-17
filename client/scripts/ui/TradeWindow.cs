@@ -144,6 +144,8 @@ public partial class TradeWindow : CanvasLayer
 
         accept = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
         accept.AddThemeFontSizeOverride("font_size", 17);
+        // The trade's one main action: coral on warm paper (ui-51).
+        WarmLook.MainButton(accept);
         accept.Pressed += () => { if (Link.Current is { } t) Link.Accept(!t.MineAccepted, t.Version); };
         box.AddChild(accept);
 

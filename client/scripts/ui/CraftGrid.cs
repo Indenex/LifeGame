@@ -247,7 +247,8 @@ public partial class CraftGrid : VBoxContainer
         bool ready = missing == null;
         // A Card keeps its width and grows taller to fit; inputs wrap inside it (ui-33).
         var card = new Card(CardWidth, CardHeight);
-        card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
+        // Can't make it yet: faded, but on warm paper not so far that the picture is lost (ui-51).
+        card.Modulate = new Color(1, 1, 1, ready ? 1f : WarmLook.On ? 0.7f : 0.45f);
         card.SetMeta("tip", Describe(def, missing));
         // Acts on the press, so holding it down can repeat (Held).
         card.ActionMode = BaseButton.ActionModeEnum.Press;

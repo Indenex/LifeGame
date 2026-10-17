@@ -84,6 +84,9 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
+// A returning login waits at the character menu (survival-24): play its character.
+if (conn.Db.Player.Identity.Find(me!.Value) is { Online: false }) conn.Reducers.SelectCharacter(me!.Value);
+Pump(() => conn.Db.Player.Identity.Find(me!.Value) is { Online: true }, 10, "the character in the world");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
 var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
@@ -751,11 +754,16 @@ void TroughCheck(Structure kiln)
     Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot of water");
     if (lastError != null) Fail($"filling a pot: {lastError}");
     WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    uint wearBefore = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPotOfWater).Wear;
     lastError = null;
     conn.Reducers.PourIntoTrough(placed.Id);
     Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 2 }, 3, "the trough to fill");
     if (lastError != null) Fail($"pouring: {lastError}");
     if (CountOf(Item.PinchPot) != 1 || CountOf(Item.PinchPotOfWater) != 0) Fail("the emptied pot did not come back");
+    // The pot's maker (and slip) ride its Wear number: the emptied pot must come back with it.
+    uint wearAfter = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPot).Wear;
+    if (wearAfter != wearBefore) Fail($"the emptied pot lost its maker: {wearAfter:X}, was {wearBefore:X}");
+    Log($"The emptied pot kept its maker ({wearAfter:X})");
     Log("Poured a pot in: the trough holds 2 L");
     Log("STAGE trough-poured");
 
@@ -1046,6 +1054,14 @@ void SetUpBench()
         InMyClaim(sx, sz, 7f) && DistanceTo(sx, sz, marker.X, marker.Z) >= 10f && ClearGround(sx, sz, -3, 6, -2, 4));
     Log($"Built a potter's bench at {bench.X:F1}, {bench.Z:F1}; {CountOf(Item.Stone)} stones left");
     Log("STAGE bench");
+    // The kiln run's pots carry their maker, so the trough steps can check it survives pouring and scooping.
+    if (kilnRun)
+    {
+        lastError = null;
+        conn.Reducers.SetMark(Marks.All[3].Id, Marks.Presets[2]);
+        Pump(() => lastError != null || conn.Db.PlayerMark.PlayerId.Find(myId) != null, 3, "the mark to be set");
+        if (lastError != null) Fail($"setting the mark: {lastError}");
+    }
 }
 
 // Stands where pots are shaped: just on the player's (south) side of the bench.

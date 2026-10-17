@@ -47,7 +47,7 @@ public partial class Main : Node3D
     BuildingSystem building = null!;
 
     DbConnection? conn;
-    Identity? myIdentity;
+    Identity? myIdentity => Me.Key(conn);
     uint myId;
     readonly TradeWindow trade = new();
     readonly AdminPanel admin = new();
@@ -72,6 +72,8 @@ public partial class Main : Node3D
         // First, so it sees every window built after it (the --warm prototype, D-313).
         AddChild(new WarmLook());
         AddChild(new Bounce());
+        // ui-47: a soft "Waking up…" veil until you stand in the world.
+        AddChild(new WakeVeil { Done = () => spawned });
         SetupInput();
         SetupView();
         SetupEnvironment();
@@ -161,6 +163,7 @@ public partial class Main : Node3D
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
+        crafting.PlayerAt = () => me.Position;
         AddChild(station);
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
@@ -208,6 +211,13 @@ public partial class Main : Node3D
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -431,7 +441,9 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        // A dig that lands inside the server's cooldown ("Still working") is not a failure to give up on: a held
+        // key tries again after the next interval, so one early repeat on a laggy link does not end the hold.
+        conn.OnUnhandledReducerError += (_, e) => { if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
@@ -455,7 +467,6 @@ public partial class Main : Node3D
 
     void OnConnected(DbConnection c, Identity identity, string token)
     {
-        myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
@@ -498,8 +509,8 @@ public partial class Main : Node3D
         conn.SubscriptionBuilder()
             .OnApplied(_ =>
             {
-                var at = MyPos();
-                Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+                if (!Me.InWorld(conn)) { AtCharacterMenu(); return; }
+                EnterWorldArea();
             })
             .OnError((_, e) =>
             {
@@ -507,6 +518,24 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+        // Picking a character at the menu puts it in the world: its row goes online.
+        conn.Db.MyPlayer.OnUpdate += (_, _, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+        conn.Db.MyPlayer.OnInsert += (_, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+    }
+
+    void EnterWorldArea()
+    {
+        var at = MyPos();
+        Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+    }
+
+    // The login has characters and none is in the world yet. UX's character menu (Play, New,
+    // Delete) replaces this; until it lands the game plays the last character you had.
+    void AtCharacterMenu()
+    {
+        if (conn == null) return;
+        if (conn.Db.MyActiveCharacter.Iter().FirstOrDefault() is { } active) conn.Reducers.SelectCharacter(active.Key);
+        else if (Me.Characters(conn).FirstOrDefault() is { } first) conn.Reducers.SelectCharacter(first.Key);
     }
 
     // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
@@ -521,9 +550,7 @@ public partial class Main : Node3D
         return null;
     }
 
-    PlayerPos? MyPos() =>
-        conn != null && myIdentity is { } id && conn.Db.Player.Identity.Find(id) is { } p
-            ? conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) : null;
+    PlayerPos? MyPos() => conn?.Db.MyPlayerPos.Iter().FirstOrDefault();
 
     void Subscribe(int chunkX, int chunkZ)
     {
@@ -607,7 +634,7 @@ public partial class Main : Node3D
     bool IsMine(uint playerId)
     {
         if (conn == null || myIdentity == null) return false;
-        if (conn.Db.Player.Identity.Find(myIdentity.Value) is not { } mine) return false;
+        if (Me.Player(conn) is not { } mine) return false;
         myId = mine.PlayerId;
         return mine.PlayerId == playerId;
     }

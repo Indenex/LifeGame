@@ -31,6 +31,7 @@ public partial class Avatar : Node3D
         rig = new PlayerRig(figure);
         PlaceMouth();
         animator = new PlayerAnimator(rig, GetInstanceId());
+        animator.Surroundings = Surroundings;
         animator.Impact = (motion, thrown) =>
             Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : RightBase) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
@@ -52,6 +53,36 @@ public partial class Avatar : Node3D
         PlaceNameplate();
     }
 
+    // Every avatar in the world, for fidgets that notice each other (waving).
+    static readonly System.Collections.Generic.List<Avatar> all = new();
+    public override void _EnterTree() => all.Add(this);
+    public override void _ExitTree() => all.Remove(this);
+
+    // 0 to 1: warmth from burning fires at a spot (AvatarWork sets it from the fire table).
+    public static System.Func<Vector3, float>? FireWarmthAt;
+
+    const float WaveReach = 6f;
+
+    (float, float?) Surroundings()
+    {
+        float warmth = FireWarmthAt?.Invoke(Position) ?? 0f;
+        float? friend = null;
+        float best = WaveReach * WaveReach;
+        foreach (var a in all)
+        {
+            if (a == this || !a.IsVisibleInTree()) continue;
+            var d = a.Position - Position;
+            float d2 = d.X * d.X + d.Z * d.Z;
+            if (d2 >= best || d2 < 0.5f) continue;
+            // Only someone roughly in front: nobody waves over their shoulder.
+            float yaw = Mathf.AngleDifference(Rotation.Y, Mathf.Atan2(d.X, d.Z));
+            if (Mathf.Abs(yaw) > 1.4f) continue;
+            best = d2;
+            friend = yaw;
+        }
+        return (warmth, friend);
+    }
+
     // Set from player_sneaking for other players; tracks the key for your own.
     public bool Sneaking;
     // Your own avatar: fired when you start or stop sneaking, so the server can tell others.
@@ -59,6 +90,33 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
+
+    // Sit or lie down (anim-12), from the player's rest state: seat is the hips' height
+    // when sitting on something (0 on the ground). RestKind.None gets up again. The
+    // figure lies along the way the avatar faces, head forward.
+    public void Rest(RestKind kind, float seat = 0f, bool asleep = false, bool instant = false)
+    {
+        animator.Rest = kind;
+        animator.Seat = seat;
+        animator.Asleep = asleep;
+        if (instant) animator.SettleRest();
+    }
+
+    // Your own avatar: the rest key sits you down, lies you down from sitting, and gets
+    // you up again; walking off also gets you up (the server ends the rest).
+    public event System.Action<RestKind>? RestRequested;
+    public const string RestAction = "rest";
+
+    void RestKey()
+    {
+        if (!InputMap.HasAction(RestAction))
+        {
+            InputMap.AddAction(RestAction);
+            InputMap.ActionAddEvent(RestAction, new InputEventKey { PhysicalKeycode = Key.H });
+        }
+        if (!Input.IsActionJustPressed(RestAction) || GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
+        RestRequested?.Invoke(animator.Rest switch { RestKind.None => RestKind.Sit, RestKind.Sit => RestKind.Lie, _ => RestKind.None });
+    }
 
     // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
     public void Face(float x, float z)
@@ -70,7 +128,34 @@ public partial class Avatar : Node3D
     // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
     // the last landing was (0 to 1, set on the frame you land). The avatar's height is
     // moved by whoever moves it; this only poses the body.
-    public void SetJump(bool airborne, bool rising, float landing) => animator.Jump(airborne, rising, landing);
+    public void SetJump(bool airborne, bool rising, float landing)
+    {
+        animator.Jump(airborne, rising, landing);
+        // A squishy landing (#17): the body squashes down and springs back, keeping
+        // its volume; taking off stretches it a little.
+        if (landing > 0.01f) Squish(-0.16f * Mathf.Clamp(landing, 0.3f, 1f));
+        else if (airborne && rising && !wasRising) Squish(0.07f);
+        wasRising = airborne && rising;
+    }
+
+    float squish, squishTime = 99f;
+    bool wasRising;
+
+    void Squish(float amount)
+    {
+        squish = amount;
+        squishTime = 0f;
+    }
+
+    void SquishTick(float dt)
+    {
+        if (squishTime > 1f) return;
+        squishTime += dt;
+        float y = 1f + squish * Mathf.Exp(-8f * squishTime) * Mathf.Cos(20f * squishTime);
+        if (squishTime > 1f) y = 1f;
+        float side = 1f / Mathf.Sqrt(y);
+        figure.Scale = new Vector3(side, y, side);
+    }
 
     // Lifts the figure off the ground by this many metres without moving the avatar node.
     // Use it for other players' jumps: their node glides toward the server position every
@@ -205,8 +290,14 @@ public partial class Avatar : Node3D
     void PlaceNameplate()
     {
         if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { Mesh: { } mesh })
-            nameplate.Position = new Vector3(0, mesh.GetAabb().End.Y + 0.3f, 0);
+        {
+            rig.Height = mesh.GetAabb().End.Y;
+            nameplateY = rig.Height + 0.3f;
+        }
+        nameplate.Position = new Vector3(0, nameplateY, 0);
     }
+
+    float nameplateY = PlayerModel.Height + 0.3f;
 
     // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
     void PlaceMouth()
@@ -238,6 +329,7 @@ public partial class Avatar : Node3D
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
+        if (!Remote) RestKey();
         // Your own sneak is the key; other players' comes from the server (player_sneaking).
         bool sneaking = Remote ? Sneaking : Input.IsActionPressed(SneakAction);
         if (!Remote && sneaking != Sneaking)
@@ -251,8 +343,13 @@ public partial class Avatar : Node3D
             // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
             animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
             CarryTick(dt);
+            SquishTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
+            // Blinks and expressions on the chibi's face parts (#16); a no-op on bodies without them.
+            if (figure is Skeleton3D skeleton) PlayerModel.SetFace(skeleton, animator.Face);
+            // The name comes down with the head when sitting or lying.
+            nameplate.Position = new Vector3(0, nameplateY - rig.Height * animator.RestLowering, 0);
         }
     }
 }
