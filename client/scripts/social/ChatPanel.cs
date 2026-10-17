@@ -67,10 +67,16 @@ public partial class ChatPanel : CanvasLayer
         column.AddChild(input);
     }
 
-    public void Open()
+    // prefill starts the line, e.g. "/w " from the player menu's Whisper (ui-35).
+    public void Open(string prefill = "")
     {
         input.Visible = true;
         input.GrabFocus();
+        if (prefill.Length > 0)
+        {
+            input.Text = prefill;
+            input.CaretColumn = prefill.Length;
+        }
         // Bring back what was said recently while the box is open.
         for (int i = 0; i < entries.Count; i++)
             entries[i] = (entries[i].node, Mathf.Min(entries[i].age, LineLife - 6f), entries[i].dim);

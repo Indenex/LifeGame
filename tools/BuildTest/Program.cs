@@ -10,7 +10,10 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+// What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
+// lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -46,6 +49,11 @@ void WaitFor(Func<bool> done, int seconds, string what)
 }
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
+foreach (var bot in bots) bot.UsePump(Pump);
+
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+a.WalkTo(0f, 0f, 0.3f, Pump);
+b.WalkTo(1f, 0f, 0.3f, Pump);
 
 // The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
 {
@@ -73,11 +81,11 @@ foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, St
     Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
 }
 
-if (which is "lean-to" or "both")
+if (Wants("lean-to"))
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
-if (which is "clay-hut" or "both")
+if (Wants("clay-hut"))
 {
     ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
@@ -93,7 +101,7 @@ if (which is "clay-hut" or "both")
     LayMat(hut);
     BuildHearth(hut);
 }
-if (which is "basket" or "both")
+if (Wants("basket"))
     StoreInBasket(BuildTogether(StructureKind.Basket,
         new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
         new() { [Item.Fiber] = 9 },
@@ -104,7 +112,7 @@ if (which is "basket" or "both")
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
 
-if (which is "fence" or "both")
+if (Wants("fence"))
 {
     WallsStopWalkers(BuildTogether(StructureKind.Fence,
         new() { [Item.Stick] = 2 },
@@ -115,7 +123,7 @@ if (which is "fence" or "both")
 }
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
-if (which is "brick-house")
+if (Wants("brick-house"))
 {
     ulong house = BuildTogether(StructureKind.BrickHouse,
         new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
@@ -145,7 +153,7 @@ if (which is "brick-house")
 }
 
 // Not in "both": each player makes a stone axe and chops ten logs, which takes minutes (log-cabin).
-if (which is "log-cabin")
+if (Wants("log-cabin"))
 {
     ulong cabin = BuildTogether(StructureKind.LogCabin,
         new() { [Item.Stone] = 7, [Item.Stick] = 7, [Item.Fiber] = 3 },
@@ -255,6 +263,13 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Walk in and check the spot counts as sheltered.
     if (Structures.Shape((int)kind).RainCover > 0)
     {
+        if (kind == StructureKind.LeanTo)
+        {
+            // Its sides and back stop walkers (bugfix-34): come in by the open front.
+            var lean = Structures.Shape((int)kind);
+            var leanFront = Structures.ToWorld(done.X, done.Z, done.Yaw, 0f, lean.HalfDepth + 1.2f);
+            a.WalkTo(leanFront.x, leanFront.z, 0.3f, Pump);
+        }
         a.WalkTo(sx, sz, 0.3f, Pump);
         Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
     }
@@ -269,6 +284,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
+    LeaveHut(hut); // both are still inside after the "standing inside" check; its walls pen them in
     a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
     b.Wants = new();
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
@@ -437,9 +453,9 @@ void BuildHearth(ulong hut)
     double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
     Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
 
-    // Walls stop the server's players (bugfix-27): leave through the doorway, as a player would.
-    a.WalkTo(door.x, door.z, 0.3f, Pump);
-    b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
+    // Walls stop the server's players (bugfix-27): the next stages gather from outside, so go out
+    // through the doorway to the yard, as a player would.
+    LeaveHut(hut);
 }
 
 // The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished
@@ -613,7 +629,9 @@ sealed class Bot
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
-            if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
+            float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
+            if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
+            else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
@@ -632,11 +650,37 @@ sealed class Bot
             targetItem = item?.Id ?? 0;
             if (item == null) return;
         }
-        if (Step(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
+        float itemLeft = StepRouted(item.X, item.Z, dt);
+        if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
+        else if (itemLeft < 1.2f && Lag() < 0.8f && actionTimer <= 0)
         {
             actionTimer = 0.3f;
             Conn.Reducers.PickUp(item.Id);
         }
+    }
+
+    // Gathering is walked a tick at a time, so it cannot use the blocking walk until it is stuck: when the
+    // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
+    // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
+    // Standing at the target (digging, picking up) is not a stall.
+    readonly Stopwatch gatherStill = Stopwatch.StartNew();
+    float gatherMarkX, gatherMarkZ;
+    Action<int>? gatherPump;
+
+    public void UsePump(Action<int> pump) => gatherPump = pump;
+
+    bool GatherStalled(float left, float reach)
+    {
+        if (gatherPump == null || Seen() is not { } srv) return false;
+        if (left < reach || MathF.Abs(srv.X - gatherMarkX) + MathF.Abs(srv.Z - gatherMarkZ) >= BotWalker.StallMetres)
+        {
+            gatherMarkX = srv.X; gatherMarkZ = srv.Z;
+            gatherStill.Restart();
+            return false;
+        }
+        if (gatherStill.Elapsed.TotalSeconds < BotWalker.StallSeconds) return false;
+        gatherStill.Restart();
+        return true;
     }
 
     // A cell the load test or an earlier run already dug to the bottom gives no more clay.
@@ -660,8 +704,28 @@ sealed class Bot
 
     // How far the server still has this player from where the bot thinks it stands.
     float lastSx, lastSz, stuckFor, detourLeft, detourSign = 1f;
+    BotGround? ground;
+    BotGround Ground => ground ??= new BotGround(Conn);
 
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
+
+    // Like Step, but round trunks, boulders and buildings by a route (bugfix-34): follows waypoints
+    // and works the route out again when the target changes or every few seconds. Returns the distance to the target.
+    List<(float X, float Z)> route = new();
+    float routeTx = float.NaN, routeTz, routeAge;
+
+    float StepRouted(float tx, float tz, float dt)
+    {
+        routeAge += dt;
+        if (route.Count == 0 || MathF.Abs(tx - routeTx) > 0.5f || MathF.Abs(tz - routeTz) > 0.5f || routeAge > 3f)
+        {
+            route = Ground.Route(X, Z, tx, tz);
+            routeTx = tx; routeTz = tz; routeAge = 0f;
+        }
+        while (route.Count > 1 && (route[0].X - X) * (route[0].X - X) + (route[0].Z - Z) * (route[0].Z - Z) < 0.16f) route.RemoveAt(0);
+        Step(route[0].X, route[0].Z, dt);
+        return MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z));
+    }
 
     // Moves up to one tick's walk toward a point and returns the distance left.
     float Step(float tx, float tz, float dt)
@@ -698,49 +762,33 @@ sealed class Bot
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
             {
+                float px = X, pz = Z;
                 X += dx / dist * step;
                 Z += dz / dist * step;
+                (X, Z) = Ground.Slide(px, pz, X, Z); // round things and walls, as a player meets them
                 moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         else if (Lag() > 0.05f)
             Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
-        return MathF.Max(0, dist - moved);
+        return moved > 0f ? MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z)) : dist;
     }
 
-    // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
-    // trunk or boulder on the way (they block movement now) can hold the server's position back while
-    // the bot believes it arrived, and every Build after that is "Out of reach". When the server is
-    // still short, adopt where it has us and go round the side, a little wider each time.
+    // Walks to a point and checks the SERVER has the bot there (the shared walk, tools/common/BotWalker.cs:
+    // routes round trunks and walls, sidesteps a stall, and as a last resort puts the bot at the target).
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
     {
-        for (int attempt = 0; attempt < 6; attempt++)
+        if (walker == null || walkerConn != Conn)
         {
-            WalkStraight(tx, tz, within, pump);
-            if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen) return;
-            float left = MathF.Sqrt((seen.X - tx) * (seen.X - tx) + (seen.Z - tz) * (seen.Z - tz));
-            if (left <= within + 0.6f) return;
-            X = seen.X;
-            Z = seen.Z;
-            float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
-            float side = (attempt % 2 == 0 ? 1f : -1f) * (3f + attempt);
-            if (d > 0.1f) WalkStraight(X - dz / d * side, Z + dx / d * side, 0.5f, pump);
+            walker = new BotWalker(Conn, myId, "Building check", name, pump, msg => { Console.WriteLine("FAIL  " + msg); Environment.Exit(1); });
+            walkerConn = Conn;
         }
+        walker.To(ref X, ref Z, tx, tz, within, stand: true);
     }
 
-    void WalkStraight(float tx, float tz, float within, Action<int> pump)
-    {
-        // The cap keeps a bot that is held in place (a wall, the pace) from waiting for ever.
-        for (int guard = 0; Step(tx, tz, 0.1f) > within && guard < 900; guard++) pump(100);
-        // The server limits the pace (bugfix-24): keep reporting until it has us here too.
-        for (int i = 0; i < 300 && Lag() > 0.3f; i++)
-        {
-            Conn.Reducers.Move(X, Z, 0f);
-            pump(100);
-        }
-        pump(300);
-    }
+    BotWalker? walker;
+    DbConnection? walkerConn;
 
     // The nearest standing tree nobody has started on.
     public (int X, int Z) NearestTree()
@@ -781,9 +829,17 @@ sealed class Bot
     // Starts a craft and waits for it to finish. The job row can reach us after the
     // inputs leave the inventory, so an empty job table alone doesn't mean done: wait
     // until the job has come and gone, or the made item has turned up.
+    // World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+    bool axeEquipped;
+
     public void Craft(string processId, Action<int> pump, float score = 0.6f)
     {
         var def = Processes.Find(processId)!;
+        if (def.Outcome == Outcome.Chop)
+        {
+            Conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+            if (!axeEquipped) { Conn.Reducers.EquipSlot(9); axeEquipped = true; }
+        }
         uint before = CountOf(def.Makes);
         Conn.Reducers.StartCraft(processId, score);
         var until = DateTime.UtcNow.AddSeconds(def.Seconds * 1.2f + 5);

@@ -18,13 +18,16 @@ public partial class LookPicker : CanvasLayer
 {
     public Func<DbConnection?> Conn = () => null;
     public Func<uint> MyId = () => 0;
+    // Where the server's answer to SetName goes when it isn't the picker's (/name in chat).
+    public Action<string> Note = _ => { };
     // Options opens it through this; set when the picker is ready.
     public static Action? OpenFromMenu;
 
     public bool IsOpen => panel.Visible;
 
     Control panel = null!;
-    Label title = null!;
+    Label title = null!, welcome = null!;
+    ColorRect scrim = null!;
     SubViewport view = null!;
     Skeleton3D? figure;
     // The chosen race and its option bytes, in player_look's slot order.
@@ -36,15 +39,32 @@ public partial class LookPicker : CanvasLayer
     Button[][] rows = Array.Empty<Button[]>();
     int rowsFor = -1;
     float spin, firstSeen = -1f;
+    // A shell or pattern lives on the back: picking one turns the figure round for a moment.
+    float showBack, yaw;
     bool asked;
+    // The name row at first join (ui-31), Done (kept off until the name is good), and the
+    // name sent and not yet answered.
+    NameField nameField = null!;
+    Button done = null!;
+    bool first, hooked;
+    string? awaitingName;
 
     public override void _Ready()
     {
         Layer = 5;
+        // The world dims behind the picker, so it is plain the game is waiting on this choice
+        // (Justin missed it at first join and found the bag "not working"); it also keeps clicks
+        // off the world while it is up.
+        scrim = new ColorRect { Color = new Color(0.04f, 0.04f, 0.03f, 0.55f), MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
+        scrim.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(scrim);
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
         OpenFromMenu = () => Open(first: false);
+        // One centre window at a time (D-283): opening the bag, journal or build menu puts the picker away (Esc
+        // semantics: you keep the look you had). It never counts as a covering panel, so it can't trap input.
+        Panels.Centre(this, Close);
         // --screenshot-look opens it on a default look, as at first join.
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-look")))
             GetTree().CreateTimer(1.5).Timeout += () => Open(first: true);
@@ -61,11 +81,17 @@ public partial class LookPicker : CanvasLayer
         values[0] = look.Skin; values[1] = look.Hair; values[2] = look.Cut; values[3] = look.Beard ? 1 : 0;
         Fit();
         title.Text = first ? "Choose how you look" : "Your look";
-        panel.Visible = true;
+        if (!first) Panels.Opening(this);
+        welcome.Visible = first;
+        this.first = first;
+        nameField.Visible = first;
+        if (first) nameField.Fill(Conn()?.Db.Player.PlayerId.Find(id)?.Name ?? "");
+        UpdateDone();
+        panel.Visible = scrim.Visible = true;
         Show();
     }
 
-    public void Close() => panel.Visible = false;
+    public void Close() => panel.Visible = scrim.Visible = false;
 
     public override void _Process(double delta)
     {
@@ -77,12 +103,37 @@ public partial class LookPicker : CanvasLayer
             else if (now - firstSeen > 3f)
             {
                 asked = true;
-                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null) Open(first: true);
+                // Once only (bugfix-41): a character that never chose a look is not asked again every session.
+                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null && !Settings.Get("look", "asked", false))
+                {
+                    Settings.Set("look", "asked", true);
+                    Open(first: true);
+                }
             }
         }
+        // The server's word on a name: a refusal of the one sent from here reopens the picker
+        // with the reason under the field; any other (/name in chat) is a note as before.
+        if (!hooked && Conn() is { } conn)
+        {
+            hooked = true;
+            conn.Reducers.OnSetName += (ctx, name) =>
+            {
+                bool mine = awaitingName != null && Names.Key(name) == Names.Key(awaitingName);
+                if (mine) awaitingName = null;
+                if (ctx.Event.Status is not SpacetimeDB.Status.Failed(var reason)) return;
+                if (!mine) { Note(reason); return; }
+                Open(first: true);
+                nameField.Refused(reason);
+                UpdateDone();
+            };
+        }
         if (!IsOpen || figure == null) return;
-        spin += (float)delta * 0.35f;
-        figure.Rotation = new Vector3(0, Mathf.Sin(spin) * 0.6f, 0);
+        float dt = (float)delta;
+        showBack = Mathf.Max(0f, showBack - dt);
+        if (showBack <= 0f) spin += dt * 0.35f;
+        float want = showBack > 0f ? Mathf.Pi : Mathf.Sin(spin) * 0.6f;
+        yaw = Mathf.Lerp(yaw, want, 1f - Mathf.Exp(-dt * 6f));
+        figure.Rotation = new Vector3(0, yaw, 0);
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -96,6 +147,16 @@ public partial class LookPicker : CanvasLayer
 
     void Done()
     {
+        if (first)
+        {
+            if (!nameField.Valid) return;
+            string name = nameField.Value;
+            if (Conn() is { } c && c.Db.Player.PlayerId.Find(MyId())?.Name != name)
+            {
+                awaitingName = name;
+                c.Reducers.SetName(name);
+            }
+        }
         Conn()?.Reducers.SetRaceLook((byte)race, (byte)values[0], (byte)values[1], (byte)values[2], (byte)values[3]);
         Close();
     }
@@ -128,8 +189,19 @@ public partial class LookPicker : CanvasLayer
     {
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 12);
-        title = Hud.Text("Choose how you look", 20);
+        title = Hud.Text("Choose how you look", 26);
         box.AddChild(title);
+        // At first join: say why the game is waiting, and that it isn't final.
+        welcome = Hud.Text("Welcome. Pick how you look before you set out. Done (or Enter) starts your day; you can change it any time in Options.", 15);
+        welcome.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        welcome.CustomMinimumSize = new Vector2(560, 0);
+        welcome.Modulate = new Color(1f, 0.9f, 0.72f, 0.9f);
+        box.AddChild(welcome);
+        // At first join, your name comes first (ui-31).
+        nameField = new NameField { Taken = TakenNames };
+        nameField.Changed += UpdateDone;
+        nameField.Submitted += Done;
+        box.AddChild(nameField);
 
         var columns = new HBoxContainer();
         columns.AddThemeConstantOverride("separation", 26);
@@ -140,10 +212,11 @@ public partial class LookPicker : CanvasLayer
         view = new SubViewport { OwnWorld3D = true, TransparentBg = true, Msaa3D = Viewport.Msaa.Msaa4X, Size = new Vector2I(240, 360) };
         frame.AddChild(view);
         columns.AddChild(frame);
-        // Framed for the 1.35 m race figures.
-        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 0.82f, 3.5f) };
+        // Framed for the 1.35 m race figures. Not in the tree yet, so aim it from a position
+        // rather than with LookAt.
+        var camera = new Camera3D { Fov = 28f };
         view.AddChild(camera);
-        camera.LookAt(new Vector3(0, 0.68f, 0), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(0, 0.82f, 3.5f), new Vector3(0, 0.68f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-35, 30, 0), LightEnergy = 1.1f });
         view.AddChild(new WorldEnvironment
         {
@@ -166,7 +239,7 @@ public partial class LookPicker : CanvasLayer
         options.AddThemeConstantOverride("separation", 10);
         choices.AddChild(options);
         choices.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
-        var done = ControlsPage.TextButton("Done", Done);
+        done = Ui.MainButton("Done", Done);
         done.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
         choices.AddChild(done);
 
@@ -174,15 +247,20 @@ public partial class LookPicker : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.88f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
+    }
+
+    // Names other players have, as lower-case keys.
+    System.Collections.Generic.ICollection<string> TakenNames() =>
+        Conn()?.Db.Player.Iter().Where(p => p.PlayerId != MyId()).Select(p => Names.Key(p.Name)).ToHashSet()
+        ?? new System.Collections.Generic.HashSet<string>();
+
+    // Done stays off until the name is good (at first join); the field says why.
+    void UpdateDone()
+    {
+        bool ok = !first || nameField.Valid;
+        done.Disabled = !ok;
     }
 
     // A labelled row of round colour swatches.
@@ -261,9 +339,15 @@ public partial class LookPicker : CanvasLayer
         {
             int slot = o;
             rows[o] = new Button[opts[o].Count];
+            bool onBack = opts[o].Name is "Shell" or "Pattern";
+            Action<int> pick = i =>
+            {
+                values[slot] = i;
+                if (onBack) showBack = 2.2f;
+            };
             options.AddChild(opts[o].Names is { } names
-                ? Words(opts[o].Name, names, rows[o], i => values[slot] = i)
-                : Swatches(opts[o].Name, Colours(race, o), rows[o], i => values[slot] = i));
+                ? Words(opts[o].Name, names, rows[o], pick)
+                : Swatches(opts[o].Name, Colours(race, o), rows[o], pick));
         }
         rowsFor = race;
     }

@@ -115,6 +115,12 @@ public static partial class Module
         // Tool wear (shared/Durability.cs). Worn and fresh tools are separate stacks.
         [Default(0u)]
         public uint Wear;
+        // Where it sits in the bag (ui-18; the player arranges it, or Sort), or its place on
+        // the tools section of the doll when OnBelt. Belt rows add no weight (Inventory.cs).
+        [Default((ushort)0)]
+        public ushort Slot;
+        [Default(false)]
+        public bool OnBelt;
     }
 
     // Clients read their own inventory through this view; the table itself is private.

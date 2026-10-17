@@ -14,6 +14,9 @@ mkdir -p "$out"
 out=$(cd "$out" && pwd)
 prs=$( [ -n "$prs_file" ] && cat "$prs_file" || echo '[]')
 wipe=$(jq -r 'any(.[]; .wipe)' <<<"$prs")
+# Player-facing patch notes (release-9): merged-prs.sh's note for each PR, minus the skipped
+# ones (scribe, docs, ticket-only, CI-only). Older prs.json without notes falls back to titles.
+notes=$(jq -c '[.[] | select((.skip // false) | not) | (.note // .title)]' <<<"$prs")
 
 # Never ship a game without its .NET assemblies (builds 1092 to 1096 did).
 "$(dirname "$0")/../ci/check-export.sh" "$art/LifeGame-Linux/linux" "$art/LifeGame-Windows/windows"
@@ -56,6 +59,7 @@ cat > "$out/release.json" <<JSON
   "sha": "$sha",
   "world_wipe": $wipe,
   "prs": $(jq -c 'map({number, title, wipe})' <<<"$prs"),
+  "notes": $notes,
   "server": { "file": "StdbModule.wasm", "sha256": "$(sha256 "$out/StdbModule.wasm")" },
   "client": {
     "linux": { "file": "LifeGame-Linux.zip", "exe": "LifeGame.x86_64", "sha256": "$(sha256 "$out/LifeGame-Linux.zip")" },
@@ -67,7 +71,23 @@ JSON
 {
   echo "LifeGame build $build, from main ${sha:0:7}."
   echo
-  jq -r '.[] | "- #\(.number) \(.title)\(if .wipe then " (world wipe)" else "" end)"' <<<"$prs"
+  echo "## Download"
+  echo
+  echo "- **LifeGame (play)**: \`LifeGamePlayer-Windows.zip\` or \`LifeGamePlayer-Linux.zip\`. For friends joining someone else's world. Unzip, double-click, type the host's server address once; it updates itself and the game, then plays."
+  echo "- **LifeGame Host**: \`LifeGameLauncher-Windows.zip\` or \`LifeGameLauncher-Linux.zip\`. For whoever runs the world: it also runs the server on your computer, updates it, then plays."
+  echo
+  echo "(The other files are what the launchers fetch for themselves; you don't need them.)"
+  echo
+  echo "## What's in this build"
+  echo
+  # The launcher shows what's between these markers as its "What's new" panel.
+  echo "<!-- notes -->"
+  if [ "$notes" = "[]" ]; then
+    echo "- Behind-the-scenes changes only."
+  else
+    jq -r '.[] | "- " + .' <<<"$notes"
+  fi
+  echo "<!-- /notes -->"
   echo
   if [ "$wipe" = true ]; then
     echo "<!-- world-wipe -->"
@@ -76,6 +96,6 @@ JSON
     echo "Updates the world in place; nothing is wiped."
   fi
   echo
-  echo "Use the LifeGame launcher to update, or see PLAYING.md for the manual steps."
+  echo "Use a launcher to update, or see PLAYING.md for the manual steps."
 } > "$out/notes.md"
 ls -l "$out"

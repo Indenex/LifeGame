@@ -12,11 +12,12 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
+| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (coming soon). A right click that moves under 6 px within 250 ms is a click; more is a drag | UX/UI | ui-35 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
 | F | Dig | Crafting | same |
-| E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, ask a player to trade or say yes when one asks (Esc says no; ui-9) | all | Was G (Use) and Space (Pick up) until ui-17 |
+| E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, say yes when a player asks to trade (Esc says no; ui-9). Nothing on players themselves: asking to trade is the right-click player menu (ui-35) | all | Was G (Use) and Space (Pick up) until ui-17 |
 | Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
@@ -26,7 +27,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
 | I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
-| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, or set a made thing down (tools work by themselves). Rebindable | UX/UI | new, ui-19 |
+| 1 to 9, 0 | Take what sits on hotbar slot 1 to 10 in hand (gold ring); the same key again puts it away, an empty slot's key puts away what you hold (Justin: every slot equips). Click then uses it: eat, drink, put on, or set a made thing down. With a tool or weapon the click is the strike as before, and E chops, digs, shears or butchers with the tool in hand (crafting-29). Rebindable | UX/UI | ui-19, ui-36 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
@@ -93,6 +94,7 @@ Use.Register(new UseHandler
 - With no offer, the Use key falls through to picking up what lies at your feet (ui-17).
 - Return an offer only when Use would actually do something (e.g. feed fire needs fuel in hand), so the prompt never promises what it can't do.
 - Pass `Target` (where the thing is) so Use picks what the player faces: an offer with a Target within 60° of the player's facing beats one with no Target, which beats one with a Target off to the side; priority and distance decide within that. So a bush in front of you wins over a fire beside you, without a special priority.
+- Hold to repeat (integration-11): an offer with `Again: seconds` (or `Use.HoldInterval`) repeats while the Use key is held: after a 0.4 s delay, each time the last action is done (`Use.Busy`, a craft job) and `Again` has passed, for as long as the same offer is still valid. It stops when the key is released, a reducer fails (target gone or used up, bag full, a tool or need missing), the offer changes, or you walk 1.5 m away. F (dig) repeats the same way. Timings are unchanged: the server checks every action.
 - Hold actions: pass `Repeat` seconds, e.g. `new UseOffer("Add materials", d, AddOne, Repeat: 0.65f)`; it runs on press and again every 0.65 s while the Use key is held.
 - Use is ignored while the crafting minigame runs or a building is being placed.
 - Priorities in use: Building add materials 30, Building doors and baskets (hang, open, shut a door; open a basket) 28, Ceramics load or fire a kiln 26, Crafting take meat off the fire 25, Ceramics feed, light or pick up a clay lamp 24, Survival forage_facing 25 (a stopgap until forage passes a Target), Ceramics set pots in a fire or fire a dry pot beside one 22, Crafting feed fire 20, Ceramics set down a clay lamp 19, Animals shear 15, Ceramics pick up a dry pot or brick 12, Ceramics fill pots 11, Ceramics pick up a fired pot, sherd or dry brick on the ground 10, Survival forage and drink 10, Journal read note 5, Survival drink from your pot 1 (only when thirsty, away from water, carrying a pot of water). A Target you face beats all of these.

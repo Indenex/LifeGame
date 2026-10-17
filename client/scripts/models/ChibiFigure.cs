@@ -279,6 +279,89 @@ public static class ChibiFigure
         return done;
     }
 
+    // Clothes cut to the chibi (D-074 items on the model-6 body): the wool tunic and
+    // the foot wraps. An empty body slot shows the race's own wrap. Pebble's shell
+    // leaves no room at the back, so Pebble wears the tunic as a bib over its belly.
+    static readonly Dictionary<string, ArrayMesh?> GarmentCache = new();
+
+    public static ArrayMesh? Garment(Look look, byte slot, ushort item)
+    {
+        var built = Build(look);
+        if (slot == PlayerModel.Body && item != Garments.WoolTunic) return built.LeafWrap;
+        bool pebble = look.Race == Race.Pebble;
+        string key = $"{(pebble ? 1 : 0)}:{slot}:{item}";
+        if (GarmentCache.TryGetValue(key, out var done)) return done;
+        var wool = new Color(0.78f, 0.74f, 0.64f);
+        var leather = new Color(0.55f, 0.37f, 0.22f);
+        var cord = new Color(0.45f, 0.34f, 0.18f);
+        var k = new MeshKit(false);
+        float hipY = built.HipY, waistY = built.WaistY, chin = Height - Height / Heads;
+        if (slot == PlayerModel.Body && item == Garments.WoolTunic)
+        {
+            if (pebble)
+            {
+                // A bib over the belly plate, hung from a cord round the neck.
+                k.Bone(HumanRig.Spine).Paint(wool).Ellipsoid(new Vector3(0, waistY + 0.0f, 0.165f), new Vector3(0.18f, 0.24f, 0.065f), 14, 8);
+                k.Paint(wool, 0.88f).Tube(new[] { new Vector3(-0.17f, waistY - 0.2f, 0.19f), new Vector3(0, waistY - 0.235f, 0.215f), new Vector3(0.17f, waistY - 0.2f, 0.19f) }, 0.012f, 4);
+                k.Paint(cord).Tube(MeshKit.Circle(new Vector3(0, chin - 0.01f, 0.0f), Vector3.Up, 0.11f, 20), 0.008f, 4, -1f, false);
+            }
+            else
+            {
+                k.Bone(HumanRig.Spine).Paint(wool).Loft(new Vector3(0, waistY - 0.03f, 0), new Vector3(0, chin + 0.01f, 0), new MeshKit.Ring[]
+                {
+                    new(0f, 0.215f, 0.19f), new(0.45f, 0.195f, 0.17f), new(0.85f, 0.155f, 0.135f), new(1f, 0.105f, 0.095f),
+                }, 18, 0.3f);
+                // Short sleeves over the tops of the arms.
+                for (int side = 0; side < 2; side++)
+                {
+                    int u = side == 0 ? HumanRig.ShoulderL : HumanRig.ShoulderR;
+                    Vector3 sh = built.Joints.At[u], el = built.Joints.At[u + 1];
+                    var down = (el - sh).Normalized();
+                    k.Bone(u).Paint(wool, 0.97f).Loft(sh + Vector3.Up * 0.02f, sh + down * 0.09f, new MeshKit.Ring[]
+                    {
+                        new(0f, 0.07f, 0.072f), new(1f, 0.075f, 0.077f),
+                    }, 10, 0.4f);
+                }
+                // The skirt flares from the waist over the hips; a darker hem and a cord belt.
+                k.Bone(HumanRig.Hips).Paint(wool).Loft(new Vector3(0, waistY + 0.04f, 0), new Vector3(0, hipY - 0.15f, 0), new MeshKit.Ring[]
+                {
+                    new(0f, 0.215f, 0.19f), new(0.5f, 0.235f, 0.21f), new(1f, 0.25f, 0.225f),
+                }, 18, 0.05f);
+                k.Paint(wool, 0.88f).Loft(new Vector3(0, hipY - 0.135f, 0), new Vector3(0, hipY - 0.155f, 0), new MeshKit.Ring[]
+                {
+                    new(0f, 0.25f, 0.225f), new(1f, 0.253f, 0.228f),
+                }, 18, 0.05f);
+                k.Paint(cord).Loft(new Vector3(0, waistY - 0.01f, 0), new Vector3(0, waistY + 0.015f, 0), new MeshKit.Ring[]
+                {
+                    new(0f, 0.222f, 0.197f), new(1f, 0.222f, 0.197f),
+                }, 18, 0.05f);
+            }
+        }
+        else if (slot == PlayerModel.Feet && item == Garments.FootWraps)
+        {
+            for (int side = 0; side < 2; side++)
+            {
+                int t = side == 0 ? HumanRig.HipL : HumanRig.HipR;
+                var ankle = built.Joints.At[t + 2];
+                k.Bone(t + 2).Paint(leather).Ellipsoid(new Vector3(ankle.X, 0.052f, 0.03f), new Vector3(0.082f, 0.061f, 0.118f), 12, 6, null, 0.6f);
+                k.Bone(t + 1).Paint(leather, 0.92f).Loft(new Vector3(ankle.X, 0.06f, -0.005f), new Vector3(ankle.X, 0.15f, -0.005f), new MeshKit.Ring[]
+                {
+                    new(0f, 0.066f, 0.066f), new(1f, 0.062f, 0.062f),
+                }, 10, 0.1f);
+                foreach (float y in new[] { 0.085f, 0.13f })
+                    k.Paint(cord).Tube(MeshKit.Circle(new Vector3(ankle.X, y, -0.005f), Vector3.Up, 0.066f, 16), 0.006f, 4, -1f, false);
+            }
+        }
+        ArrayMesh? mesh = null;
+        if (!k.Empty)
+        {
+            mesh = new ArrayMesh();
+            k.Commit(mesh, Painted ? ChibiLook.Material : LifeGame.Look.Solid(Colors.White));
+        }
+        GarmentCache[key] = mesh;
+        return mesh;
+    }
+
     // A ready figure: the skeleton with the body bound, and the starting wrap or scarf.
     public static Skeleton3D Create(Look look)
     {

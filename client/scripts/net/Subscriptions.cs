@@ -19,6 +19,18 @@ public static class Subscriptions
     // really are; it never goes below the near radius or above FarRadiusMax.
     public const int FarRadiusMax = 10;
     static int farRadius = LifeGame.Shared.World.ViewRadiusChunks;
+    // The clock, weather and seasons, and the crafting work sounds (Atmosphere). One failing query fails the
+    // whole subscription, so every table here must be public: the admin table is private since admin-1,
+    // which silently stopped the clock, /time and /season reaching every client (bugfix-39).
+    public static readonly string[] Atmosphere =
+    {
+        "SELECT * FROM world_clock",
+        "SELECT * FROM weather",
+        "SELECT * FROM craft_work",
+        "SELECT * FROM season_clock",
+        "SELECT * FROM season_state",
+    };
+
     public static int FarRadius
     {
         get => farRadius;
@@ -50,12 +62,15 @@ public static class Subscriptions
         $"SELECT * FROM kiln WHERE {range}",
         $"SELECT * FROM simmer_pot WHERE {range}",
         $"SELECT * FROM lamp WHERE {range}",
+        "SELECT * FROM trough_water",
+        "SELECT * FROM player_mark",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
         "SELECT * FROM my_admin",
         // What you wear (animals-12, read by the equipment panel, ui-10).
         "SELECT * FROM my_worn",
         "SELECT * FROM my_hotbar",
+        "SELECT * FROM player_equip",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
         "SELECT * FROM player_look",

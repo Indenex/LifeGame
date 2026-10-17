@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 
@@ -29,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "crowd" or "roster")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -37,6 +38,12 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "hen") Hen();
+            else if (view == "stonehearth") StoneHearthView();
+            else if (view == "treelod") TreeLod();
+            else if (view == "rocks") Rocks();
+            else if (view == "bushes") Bushes();
+            else if (view == "logs") Logs();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -114,9 +121,15 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
+        // --ids=207,211 shows only those items.
+        if (args.TryGetValue("ids", out var only))
+        {
+            var wanted = only.Split(',').Select(t => (LifeGame.Shared.Item)ushort.Parse(t)).ToHashSet();
+            items.RemoveAll(i => !wanted.Contains(i));
+        }
         items.Sort();
         const int columns = 7;
         const float step = 0.62f;
@@ -244,6 +257,166 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // The hen in three feather colours (white, brown, grey, from the sheep's fleece
+    // tints), one pecking and one flapping, beside a sheep and the player for scale.
+    void Hen()
+    {
+        var tints = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f), new Color(0.6f, 0.58f, 0.55f) };
+        for (int i = 0; i < 5; i++)
+        {
+            var hen = HenFigure.Create(Look.Solid(tints[i % 3]));
+            hen.Position = new Vector3(-1.1f + i * 0.55f, 0, 0.4f * (i % 2));
+            hen.Rotation = new Vector3(0, 0.9f - i * 0.25f, 0);
+            if (i == 3) hen.SetBonePoseRotation(HenFigure.HeadBone, Quaternion.FromEuler(new Vector3(1.2f, 0, 0)));
+            if (i == 4)
+                for (int side = 0; side < 2; side++)
+                    hen.SetBonePoseRotation(HenFigure.FirstLegBone + 2 + side, Quaternion.FromEuler(new Vector3(0, 0, side == 0 ? -1.1f : 1.1f)));
+            AddChild(hen);
+        }
+        var sheep = SheepFigure.Create(SheepFigure.Variant, Look.Solid(new Color(0.74f, 0.71f, 0.63f)));
+        sheep.Position = new Vector3(2.2f, 0, -0.3f);
+        sheep.Rotation = new Vector3(0, -0.8f, 0);
+        AddChild(sheep);
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.3f, 1.1f, 3.4f), new Vector3(0.3f, 0.25f, 0), Vector3.Up);
+    }
+
+    // The stone-ringed hearth (model-9, D-286): its first course on the left, the
+    // finished kerb on the right, the player beside for scale.
+    void StoneHearthView()
+    {
+        var pieces = StructureModel.StoneHearth();
+        for (int c = 0; c < 2; c++)
+            foreach (var piece in pieces)
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-0.75f + c * 1.5f, 0, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(2.0f, 0, -0.4f);
+        figure.Rotation = new Vector3(0, -0.6f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.3f, 1.9f, 3.0f), new Vector3(0.3f, 0.15f, 0), Vector3.Up);
+    }
+
+    // The painted trees as the world draws them (model-10): each variant's detailed
+    // version in the front row and its far version behind, pines left, broadleaf right.
+    void TreeLod()
+    {
+        for (int v = 0; v < PaintedTrees.Variants; v++)
+            for (int far = 0; far < 2; far++)
+            {
+                var basis = Basis.FromScale(Vector3.One * 1.5f);
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Pine(v, far == 1), MaterialOverride = PaintedTrees.PineMaterial, Position = new Vector3(-11f + v * 2.8f, 0, -far * 4.5f), Basis = basis });
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Broadleaf(v, far == 1), MaterialOverride = PaintedTrees.BroadleafMaterial, Position = new Vector3(1.5f + v * 3f, 0, -far * 4.5f), Basis = basis });
+            }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Rocks as the world draws them (painted-1): today's material in the back row, the
+    // painted one in front: boulders, outcrops and river stones.
+    void Rocks()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int row = 0; row < 2; row++)
+        {
+            var material = row == 0 ? Look.RockSurface : Painted.Rock;
+            float z = row == 0 ? -3.5f : 0.5f;
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                Place(PropMeshes.Rock(v), material, new Vector3(-6.5f + v * 1.6f, 0, z), Look.WorldRock, 0.9f);
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Outcrop(v), material, new Vector3(0.6f + v * 2.8f, 0, z - 0.6f), Look.Rock);
+            for (int v = 0; v < 4; v++)
+                Place(PropMeshes.RiverStone(v), material, new Vector3(6.2f + v * 0.5f, 0, z + 0.6f), Look.Rock.Lightened(0.1f), 0.9f);
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Bushes as the world draws them (painted-2): today's in the back row (forest bush,
+    // heather, gorse, a stand-in for the old berry bush's sphere lobes), the painted ones
+    // in front, with a berry bush ripe and one picked.
+    void Bushes()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        var leaf = Look.Leaf.Lerp(Look.Pine, 0.2f);
+        for (int row = 0; row < 2; row++)
+        {
+            bool painted = row == 1;
+            float z = painted ? 0.6f : -2.6f;
+            var foliage = painted ? Painted.Foliage : Look.Foliage;
+            for (int i = 0; i < 3; i++)
+            {
+                var tint = leaf.Lerp(Look.Pine, i * 0.2f);
+                if (painted) Place(PaintedBushes.Bush, Painted.Bush, new Vector3(-5.2f + i * 1.3f, 0, z + (i % 2) * 0.4f), PaintedBushes.Tint(tint), 0.8f + i * 0.2f);
+                else Place(Undergrowth.Bush, Look.Foliage, new Vector3(-5.2f + i * 1.3f, 0, z + (i % 2) * 0.4f), Undergrowth.Olive(tint), 0.8f + i * 0.2f);
+            }
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Heather(v), foliage, new Vector3(-1.2f + v * 0.8f, 0, z + 0.3f), Colors.White);
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Gorse(v), foliage, new Vector3(0.9f + v * 1.3f, 0, z), Colors.White);
+        }
+        // Today's berry bush: four faceted sphere lobes, berries left off.
+        var oldLobe = Look.Faceted(new SphereMesh { Radius = 0.42f, Height = 0.6f, RadialSegments = 8, Rings = 4 }, new Color(0.20f, 0.33f, 0.14f));
+        Vector3[] centers = { new(0, 0.3f, 0), new(0.3f, 0.22f, 0.1f), new(-0.25f, 0.2f, 0.18f), new(0.05f, 0.24f, -0.3f) };
+        foreach (var c in centers) AddChild(new MeshInstance3D { Mesh = oldLobe, Position = new Vector3(4.4f, 0, -2.6f) + c, Scale = Vector3.One * 0.9f });
+        AddChild(new BerryBush(424242) { Position = new Vector3(3.9f, 0, 0.7f), Ripe = true });
+        AddChild(new BerryBush(77) { Position = new Vector3(5.2f, 0, 1.4f), Ripe = false });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.2f, 3.4f, 9.8f), new Vector3(0.2f, 0.3f, -0.6f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Bark and leaves as the world draws them (painted-3): today's materials in the back
+    // row, the painted ones in front: birches with their canopies and fallen logs.
+    void Logs()
+    {
+        void Place(Mesh mesh, Material material, Transform3D at, Color tint)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, at);
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int row = 0; row < 2; row++)
+        {
+            var bark = row == 0 ? Look.TreeBark : Painted.Bark;
+            var leaves = row == 0 ? Look.TreeFoliage : Painted.Leaves;
+            float z = row == 0 ? -5f : 0f;
+            for (int v = 0; v < 3; v++)
+            {
+                var at = new Transform3D(new Basis(Vector3.Up, v * 1.3f).Scaled(Vector3.One * 0.6f), new Vector3(-7f + v * 3f, 0, z));
+                Place(PropMeshes.Birch(v % PropMeshes.BirchVariants), bark, at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(v * 0.05f));
+                Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+            }
+            for (int v = 0; v < PropMeshes.FallenLogVariants && v < 3; v++)
+                Place(PropMeshes.FallenLog(v), bark, new Transform3D(new Basis(Vector3.Up, 0.3f + v * 0.5f), new Vector3(3.5f + v * 1.4f, 0, z + 1.5f + v * 0.5f)), Look.Bark.Darkened(0.1f));
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 7f, 18f), new Vector3(0f, 2f, -2.5f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
@@ -529,6 +702,14 @@ public partial class Showcase : Node3D
         for (int i = 0; i < looks.Length; i++)
         {
             var figure = ChibiFigure.Create(looks[i]);
+            // --dressed puts on the wool tunic and the foot wraps.
+            if (args.ContainsKey("dressed"))
+            {
+                figure.GetNode(PlayerModel.SlotNode(PlayerModel.Body)).Free();
+                foreach (var (slot, item) in new[] { (PlayerModel.Body, Garments.WoolTunic), (PlayerModel.Feet, Garments.FootWraps) })
+                    if (ChibiFigure.Garment(looks[i], slot, item) is { } worn)
+                        figure.AddChild(new MeshInstance3D { Mesh = worn, Skeleton = new NodePath("..") });
+            }
             figure.Position = new Vector3(-1.6f + i * 1.25f, 0, 0);
             figure.Rotation = new Vector3(0, yaw + (i % 2 == 1 ? -0.6f : 0f), 0);
             AddChild(figure);

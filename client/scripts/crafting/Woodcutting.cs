@@ -34,7 +34,7 @@ public partial class Woodcutting : Node
             {
                 if (!HasAxe() || TreeNear(at) is not { } tree) return null;
                 float d = new Vector2(tree.X - at.X, tree.Y - at.Z).Length();
-                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y));
+                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y), Again: 0.3f);
             },
         });
     }
@@ -44,8 +44,9 @@ public partial class Woodcutting : Node
         if (t.Felled && felled.Add(t.CellKey)) terrain?.Refresh(t.CellX, t.CellZ);
     }
 
-    bool HasAxe() => conn != null && conn.Db.MyInventory.Iter()
-        .Any(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).Tags.HasFlag(ItemTags.Chopping));
+    // Only an axe that is equipped and still works chops (crafting-29, Equipped.cs); otherwise
+    // the tree is not offered and E goes to the loot near it.
+    bool HasAxe() => Equipped.Has(conn, ItemTags.Chopping);
 
     // The trunk of the nearest standing tree within reach, as the server will pick it.
     Vector2? TreeNear(Vector3 at)

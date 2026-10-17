@@ -9,7 +9,7 @@ namespace LifeGame;
 public sealed class PlayerAnimator
 {
     readonly PlayerRig rig;
-    readonly Pose idle = new(), walk = new(), work = new(), act = new(), pose = new();
+    readonly Pose idle = new(), walk = new(), work = new(), act = new(), swim = new(), gesture = new(), pose = new();
     // Set while a craft job runs; the figure kneels into it and back out.
     public WorkMotion Work;
     WorkMotion shownWork;
@@ -30,12 +30,19 @@ public sealed class PlayerAnimator
     // natural point instead of jumping to the start.
     bool again;
 
-    WorkMotions.StrikeStyle actStyle;
+    // The action's variant (WorkMotions.VariantOf: a strike's style, a dig's tool).
+    byte actVariant;
 
-    public void Act(WorkMotion motion, WorkMotions.StrikeStyle style = WorkMotions.StrikeStyle.Fist)
+    // When a tool meets its work (an axe biting the trunk, a spade going in, a strike
+    // landing), and a spade's dirt leaving the blade (second argument true), so chips,
+    // dirt and thunks land on the frame.
+    public System.Action<WorkMotion, bool>? Impact;
+    float lastWorkCycle;
+
+    public void Act(WorkMotion motion, byte variant = 0)
     {
         if (!WorkMotions.IsAct(motion)) return;
-        actStyle = style;
+        actVariant = variant;
         if (motion == shownAct && actBlend > 0f)
         {
             again = true;
@@ -47,7 +54,14 @@ public sealed class PlayerAnimator
     }
 
     // Seconds left of the action playing now, 0 when none.
-    public float ActLeft => shownAct == WorkMotion.None ? 0f : Mathf.Max(WorkMotions.ActSeconds(shownAct) - actTime, 0f);
+    public float ActLeft => shownAct == WorkMotion.None ? 0f : Mathf.Max(ActLength - actTime, 0f);
+    public float ActLength => WorkMotions.ActSeconds(shownAct, actVariant);
+
+    // How far the feet are below the water line (0 or less on land), set each frame by
+    // the avatar. Wading lifts the knees and holds the arms out; past Wading.FloatDepth
+    // the body floats, treading water, or swims slowly when moving.
+    public float WaterDepth;
+    float wade, afloat;
 
     public void Jump(bool airborne, bool rising, float landing)
     {
@@ -78,11 +92,22 @@ public sealed class PlayerAnimator
         turnLean = Mathf.Lerp(turnLean, Mathf.Clamp(turnRate * speed * 0.035f, -0.2f, 0.2f), k);
         crouch = Mathf.Lerp(crouch, sneaking ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
 
+        float depth = airborne ? 0f : WaterDepth;
+        bool floating = depth > Wading.FloatDepth - 0.03f;
+        wade = Mathf.Lerp(wade, floating ? 0f : Smooth(0.1f, Wading.FloatDepth, depth), 1f - Mathf.Exp(-4f * dt));
+        afloat = Mathf.Lerp(afloat, floating ? 1f : 0f, 1f - Mathf.Exp(-4f * dt));
+
         if (walkBlend < 0.995f) Idle(idle);
         if (walkBlend > 0.005f) Walk(walk);
         pose.Blend(idle, walk, walkBlend > 0.995f ? 1f : walkBlend < 0.005f ? 0f : walkBlend);
 
         if (crouch > 0.005f) Crouch(pose, crouch);
+        if (wade > 0.005f) Wade(pose, wade);
+        if (afloat > 0.005f)
+        {
+            Swim(swim, walkBlend);
+            pose.Blend(pose, swim, afloat > 0.995f ? 1f : afloat);
+        }
 
         // A new job while another still shows: ease out of the old pose first, then into
         // the new one, so nothing snaps.
@@ -92,6 +117,15 @@ public sealed class PlayerAnimator
             workTime = 0f;
         }
         workTime += dt;
+        // The tool's bite in a craft loop (chopping, knapping).
+        var (rate, hit) = WorkMotions.WorkImpact(shownWork);
+        if (rate > 0f)
+        {
+            float cycle = Mathf.PosMod(workTime * rate, 1f);
+            bool crossed = lastWorkCycle < hit ? cycle >= hit || cycle < lastWorkCycle : cycle >= hit && cycle < lastWorkCycle;
+            if (crossed && workBlend > 0.7f) Impact?.Invoke(shownWork, false);
+            lastWorkCycle = cycle;
+        }
         bool working = Work != WorkMotion.None && Work == shownWork && walkBlend < 0.5f;
         workBlend = Mathf.Lerp(workBlend, working ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
         if (workBlend > 0.005f)
@@ -101,6 +135,8 @@ public sealed class PlayerAnimator
         }
         else if (Work == WorkMotion.None) shownWork = WorkMotion.None;
 
+        Carry(dt);
+        Gestures(dt);
         if (shownAct != WorkMotion.None) PlayAct(dt);
         air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
         rise = Mathf.Lerp(rise, rising ? 1f : 0f, 1f - Mathf.Exp(-10f * dt));
@@ -114,16 +150,165 @@ public sealed class PlayerAnimator
         rig.Apply(pose);
     }
 
+    // An equipped tool carried in the right hand (Avatar.Equip): the forearm comes up a
+    // little to hold it out from the leg, and the arm's walking swing is damped. Swap()
+    // plays a quick 0.3 s reach down to the hip and back, to draw or stow it.
+    public bool Carrying;
+    public const float SwapSeconds = 0.3f;
+    float carry, swapTime = -1f;
+
+    public void Swap() => swapTime = 0f;
+
+    void Carry(float dt)
+    {
+        carry = Mathf.MoveToward(carry, Carrying ? 1f : 0f, dt / 0.2f);
+        if (carry > 0f)
+        {
+            float c = Mathf.SmoothStep(0f, 1f, carry) * (1f - workBlend);
+            pose[Joint.ShoulderR].X = Mathf.Lerp(pose[Joint.ShoulderR].X, 0.35f * pose[Joint.ShoulderR].X - 0.18f, c);
+            pose[Joint.ShoulderR].Z = Mathf.Lerp(pose[Joint.ShoulderR].Z, -0.16f, c);
+            pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, Mathf.Min(pose[Joint.ElbowR].X, -0.85f), c);
+            pose[Joint.HandR].X = Mathf.Lerp(pose[Joint.HandR].X, 0.15f, c);
+        }
+        if (swapTime < 0f) return;
+        swapTime += dt;
+        if (swapTime >= SwapSeconds)
+        {
+            swapTime = -1f;
+            return;
+        }
+        // Down and back to the right hip at the midpoint, then up again.
+        float s = Mathf.Sin(swapTime / SwapSeconds * Mathf.Pi);
+        pose[Joint.ShoulderR] += new Vector3(0.45f * s, 0, -0.2f * s);
+        pose[Joint.ElbowR].X -= 0.5f * s;
+        pose[Joint.Spine].Y -= 0.12f * s;
+        pose[Joint.Neck].Y -= 0.25f * s;
+    }
+
+    // Standing about for a while, a figure now and then stretches, looks around or rolls
+    // its shoulders; in the cold it rubs its hands and shivers. Each figure keeps its
+    // own timing (seed), so a crowd never moves in step.
+    enum Gesture { None, Stretch, LookAround, Shoulders, RubHands }
+    Gesture shownGesture;
+    float stillFor, gestureTime, nextGesture = 6f;
+    const float GestureSeconds = 2.6f;
+
+    void Gestures(float dt)
+    {
+        bool still = walkBlend < 0.05f && workBlend < 0.05f && shownAct == WorkMotion.None && afloat < 0.05f && !airborne;
+        stillFor = still ? stillFor + dt : 0f;
+        float cold = Breath.Coldness;
+        if (shownGesture == Gesture.None && still && stillFor > nextGesture)
+        {
+            int pick = (int)Mathf.PosMod(time * 7.3f + seed * 13f, 3f);
+            shownGesture = cold > 0.5f && pick != 1 ? Gesture.RubHands : (Gesture)(pick + 1);
+            gestureTime = 0f;
+            stillFor = 0f;
+            nextGesture = 12f + Mathf.PosMod(seed * 31f + time, 12f);
+        }
+        if (cold > 0.6f && still)
+        {
+            // A fine shiver through the shoulders and chest.
+            float shiver = (cold - 0.6f) * 2.5f * Mathf.Sin(time * 38f);
+            pose[Joint.ShoulderL].Z += 0.025f * shiver;
+            pose[Joint.ShoulderR].Z -= 0.025f * shiver;
+            pose[Joint.Spine].X += 0.01f * shiver;
+        }
+        if (shownGesture == Gesture.None) return;
+        gestureTime += dt;
+        // Any movement or work ends it at once, blending out.
+        float w = still ? Mathf.SmoothStep(0f, 1f, Mathf.Min(gestureTime / 0.4f, (GestureSeconds - gestureTime) / 0.5f)) : 0f;
+        if (gestureTime >= GestureSeconds || !still)
+        {
+            shownGesture = Gesture.None;
+            return;
+        }
+        GesturePose(gesture, shownGesture, gestureTime);
+        // Only the upper body (and a lift onto the toes for a stretch) takes part.
+        for (int i = 0; i < Pose.Count; i++)
+        {
+            var j = (Joint)i;
+            if (j is Joint.HipL or Joint.KneeL or Joint.HipR or Joint.KneeR) continue;
+            pose.Rot[i] = pose.Rot[i].Lerp(gesture.Rot[i], w);
+        }
+        pose.HipsOffset += gesture.HipsOffset * w;
+    }
+
+    static void GesturePose(Pose p, Gesture g, float t)
+    {
+        p.Clear();
+        switch (g)
+        {
+            case Gesture.Stretch:
+            {
+                // Arms up over the head, a lean back, up on the toes.
+                float up = Mathf.Sin(Mathf.Clamp(t / GestureSeconds, 0f, 1f) * Mathf.Pi);
+                p.HipsOffset = new Vector3(0, 0.015f * up, 0);
+                p[Joint.FootL].X = -0.15f * up;
+                p[Joint.FootR].X = -0.15f * up;
+                p[Joint.Spine].X = -0.12f * up;
+                p[Joint.Neck].X = -0.18f * up;
+                p[Joint.ShoulderL] = new Vector3(-2.3f * up, 0, 0.12f + 0.2f * up);
+                p[Joint.ShoulderR] = new Vector3(-2.3f * up, 0, -0.12f - 0.2f * up);
+                p[Joint.ElbowL].X = -0.2f;
+                p[Joint.ElbowR].X = -0.2f;
+                break;
+            }
+            case Gesture.LookAround:
+            {
+                // A slow look over one shoulder, then the other, the chest turning a little.
+                float look = Mathf.Sin(t / GestureSeconds * Mathf.Tau);
+                p[Joint.Neck].Y = 0.6f * look;
+                p[Joint.Spine].Y = 0.18f * look;
+                p[Joint.ShoulderL] = new Vector3(-0.04f, 0, 0.1f);
+                p[Joint.ShoulderR] = new Vector3(-0.04f, 0, -0.1f);
+                p[Joint.ElbowL].X = -0.15f;
+                p[Joint.ElbowR].X = -0.15f;
+                break;
+            }
+            case Gesture.Shoulders:
+            {
+                // Two slow shoulder rolls, the head tipping side to side.
+                float roll = Mathf.Sin(t * 4.8f);
+                p[Joint.ShoulderL] = new Vector3(0.15f * Mathf.Cos(t * 4.8f), 0, 0.18f + 0.1f * roll);
+                p[Joint.ShoulderR] = new Vector3(0.15f * Mathf.Cos(t * 4.8f), 0, -0.18f - 0.1f * roll);
+                p[Joint.ElbowL].X = -0.2f;
+                p[Joint.ElbowR].X = -0.2f;
+                p[Joint.Neck].Z = 0.18f * Mathf.Sin(t * 2.4f);
+                break;
+            }
+            case Gesture.RubHands:
+            {
+                // Hands together in front of the chest, rubbed quickly, a breath blown into them.
+                float rub = Mathf.Sin(t * 14f) * 0.08f;
+                p[Joint.Spine].X = 0.1f;
+                p[Joint.Neck].X = 0.15f;
+                p[Joint.ShoulderL] = new Vector3(-0.6f + rub, 0, 0.12f - 0.35f);
+                p[Joint.ShoulderR] = new Vector3(-0.6f - rub, 0, -0.12f + 0.35f);
+                p[Joint.ElbowL].X = -1.7f;
+                p[Joint.ElbowR].X = -1.7f;
+                break;
+            }
+        }
+    }
+
     void PlayAct(float dt)
     {
+        float before = actTime;
         actTime += dt;
-        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct);
+        if (actBlend > 0.5f)
+        {
+            float hit = WorkMotions.ActImpact(shownAct, actVariant), thrown = WorkMotions.ActThrow(shownAct, actVariant);
+            if (hit >= 0f && before < hit && actTime >= hit) Impact?.Invoke(shownAct, false);
+            if (thrown >= 0f && before < thrown && actTime >= thrown) Impact?.Invoke(shownAct, true);
+        }
+        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct, actVariant);
         if (again && actTime >= loopAt)
         {
             actTime = loopTo + (actTime - loopAt);
             again = false;
         }
-        float length = WorkMotions.ActSeconds(shownAct), fade = WorkMotions.ActFade(shownAct);
+        float length = ActLength, fade = WorkMotions.ActFade(shownAct);
         bool legs = WorkMotions.ActUsesLegs(shownAct);
         // Walking off ends a whole-body action early: it blends out as you go.
         float target = (actTime < length - fade || again) && !(legs && walkBlend > 0.5f) ? 1f : 0f;
@@ -133,7 +318,7 @@ public sealed class PlayerAnimator
             shownAct = WorkMotion.None;
             return;
         }
-        WorkMotions.ActPose(act, shownAct, actTime, rig.LegLength, actStyle);
+        WorkMotions.ActPose(act, shownAct, actTime, rig, actVariant);
         float w = Mathf.SmoothStep(0f, 1f, actBlend);
         if (legs)
         {
@@ -246,6 +431,65 @@ public sealed class PlayerAnimator
         p[Joint.ElbowL].X -= 0.35f * a;
         p[Joint.ElbowR].X -= 0.35f * a;
         p[Joint.Spine].X += (0.1f * up - 0.05f * down) * a;
+    }
+
+    // Wading: the knees come up higher to clear the water and the arms ride out to the
+    // sides for balance, more the deeper it gets. Added on top of idle or walk.
+    void Wade(Pose p, float w)
+    {
+        float s = Mathf.Sin(phase);
+        float lift = 0.35f * w * walkBlend;
+        p[Joint.HipL].X -= lift * Mathf.Max(s, 0f);
+        p[Joint.KneeL].X += 1.6f * lift * Mathf.Max(s, 0f);
+        p[Joint.HipR].X -= lift * Mathf.Max(-s, 0f);
+        p[Joint.KneeR].X += 1.6f * lift * Mathf.Max(-s, 0f);
+        p[Joint.Spine].X += 0.08f * w;
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-0.15f, 0, 0.55f), w * 0.8f);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-0.15f, 0, -0.55f), w * 0.8f);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -0.45f, w * 0.8f);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -0.45f, w * 0.8f);
+    }
+
+    // Afloat in deep water, head and shoulders out: treading water at rest (slow leg
+    // circles, hands sculling at the sides, a gentle bob), a slow breaststroke when moving.
+    void Swim(Pose p, float moving)
+    {
+        p.Clear();
+        float t = time + seed * 7f;
+        float bob = Mathf.Sin(t * 1.6f);
+        // Treading water.
+        float tread = Mathf.Sin(t * 2.4f);
+        p.HipsOffset = new Vector3(0, 0.025f * bob, 0);
+        p[Joint.Spine].X = 0.12f;
+        p[Joint.Neck].X = -0.1f;
+        p[Joint.HipL] = new Vector3(-0.55f + 0.25f * tread, 0, 0.1f);
+        p[Joint.HipR] = new Vector3(-0.55f - 0.25f * tread, 0, -0.1f);
+        p[Joint.KneeL].X = 0.9f - 0.35f * tread;
+        p[Joint.KneeR].X = 0.9f + 0.35f * tread;
+        p[Joint.ShoulderL] = new Vector3(-0.35f, 0, 0.75f + 0.12f * tread);
+        p[Joint.ShoulderR] = new Vector3(-0.35f, 0, -0.75f - 0.12f * tread);
+        p[Joint.ElbowL].X = -0.7f;
+        p[Joint.ElbowR].X = -0.7f;
+        p[Joint.HandL].Y = 0.5f * tread;
+        p[Joint.HandR].Y = -0.5f * tread;
+        if (moving < 0.01f) return;
+
+        // Breaststroke: lean into the water, arms reach forward and sweep out and back,
+        // legs draw up and kick together.
+        float c = Mathf.PosMod(t * 0.9f, 1f);
+        float reach = c < 0.5f ? Mathf.SmoothStep(0f, 1f, c / 0.5f) : 1f - Mathf.SmoothStep(0f, 1f, (c - 0.5f) / 0.5f);
+        float kick = Mathf.Sin(c * Mathf.Tau);
+        float m = moving;
+        p[Joint.Spine].X = Mathf.Lerp(p[Joint.Spine].X, 0.55f, m);
+        p[Joint.Neck].X = Mathf.Lerp(p[Joint.Neck].X, -0.5f, m);
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-2.2f * reach - 0.6f, 0, 0.25f + 0.8f * (1f - reach)), m);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-2.2f * reach - 0.6f, 0, -0.25f - 0.8f * (1f - reach)), m);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -0.2f - 1.0f * (1f - reach), m);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -0.2f - 1.0f * (1f - reach), m);
+        p[Joint.HipL] = p[Joint.HipL].Lerp(new Vector3(-0.3f - 0.4f * Mathf.Max(kick, 0f), 0, 0.2f), m);
+        p[Joint.HipR] = p[Joint.HipR].Lerp(new Vector3(-0.3f - 0.4f * Mathf.Max(kick, 0f), 0, -0.2f), m);
+        p[Joint.KneeL].X = Mathf.Lerp(p[Joint.KneeL].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
+        p[Joint.KneeR].X = Mathf.Lerp(p[Joint.KneeR].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
     }
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,

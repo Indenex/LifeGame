@@ -1111,3 +1111,141 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
 **Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
 **Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
+
+## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
+**Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
+**Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-285 — 2026-10-17 — Pines keep the darker noon look, more lit colour at low sun, tidier bottom ring
+**Decision:** Pines keep the darker noon look (D-282) but let more lit colour through at low sun. The bottom ring of boughs is made more uniform.
+**Who:** Justin: "clean up the bottom ring of leaves and make them more uniform, some are all over the place" (relayed by the PM).
+
+## D-286 — 2026-10-17 — A buildable stone-ringed hearth warms winter nights
+**Decision:** Survival's 2-hour building-session check found hunger and thirst gentle; winter nights in the open are the only friction (a warm-up is needed about every 7 minutes). The fix is a buildable stone-ringed hearth that warms out to about 8 m. House building builds it and Survival sets the numbers. No change to need drain.
+**Who:** Justin, picking the stone-ringed hearth as the fix (relayed by the PM; no direct quote).
+
+## D-287 — 2026-10-17 — A well-fuelled fire puts up a smoke-signal column
+**Decision:** From a playtester idea Justin wants: a fire above 75% fuel puts up a thick, tall smoke column that is visible from far away, like a smoke signal. It is 3D/volumetric and painted. Owner: Atmosphere, who builds it after the water.
+**Who:** Justin, wanting the playtester's idea (relayed by the PM; no direct quote).
+
+## D-288 — 2026-10-17 — Crafting hovers show the recipe chain only for discovered steps
+**Decision:** Crafting hovers show the full recipe chain only for steps already in the player's journal. Undiscovered steps get a nudge naming a place or material to try.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-289 — 2026-10-17 — "Coil pot" is displayed as "Clay pot"
+**Decision:** "Coil pot" is renamed "Clay pot" in display names only. Ids are unchanged.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
+**Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-291 — 2026-10-17 — Morning frost only in autumn, lighter rime
+**Decision:** Morning frost appears only in autumn. It appears randomly by local temperature, deterministic per seed, day and spot, and it is a lighter rime, as at 864924de. The heavy snow look Justin likes is kept for winter ground snow.
+**Who:** Justin, choosing autumn-only lighter rime and keeping the heavy snow look for winter (relayed by the PM; no direct quote).
+
+## D-292 — 2026-10-17 — Top priority: roll out the painted look and textures on everything
+**Decision:** The top priority is rolling out the painted look and textures on everything: ground, trees, rocks, plants, props, animals, structures and items. Order: trees (#544) first, then terrain (Environment) and props (Modeling), then animals, structures and items. Work goes in small PRs per family.
+**Who:** Justin, setting the painted look as top priority (relayed by the PM; no direct quote).
+
+## D-293 — 2026-10-17 — "I'm stuck" command for everyone
+**Decision:** An "I'm stuck" command in the Esc menu and as `/stuck`, for everyone including bots. It moves the player to the nearest free spot within about 12 m, then their claim, then spawn, with a 60 s cooldown, decided on the server (bugfix-44). Test bots use it as their last resort (integration-12).
+**Who:** Justin, asking for the stuck command (relayed by the PM; no direct quote).
+
+## D-294 — 2026-10-17 — The launcher shows patch notes for each release
+**Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
+**Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
+
+## D-295 — 2026-10-17 — Town office powers
+**Decision:** Town office powers. Marshal: timed ban from the town's claims. Gatekeeper: opens or bars town gates for everyone. Scribe: keeps a town log only (the Mayor posts announcements). Elder: breaks tied votes. Treasurer: no power until there is a treasury.
+**Who:** Justin, picking the powers (relayed by the PM; no direct quote).
+
+## D-296 — 2026-10-17 — CI on main builds and releases fast; full checks run on PRs
+**Decision:** CI on pushes to main only builds the module and clients and runs the Upgrade check, then releases. The full gameplay checks run on every PR before merge, and draft PRs get a quick build only.
+**Who:** Justin: "Yes" (to the PM's proposal). Earlier he said: "Merge A is done -> Build -> release as fast as possible."
+
+## D-297 — 2026-10-17 — Players choose their name at character creation
+**Decision:** Players choose their name at character creation (ui-31). Names are 2 to 20 characters and unique, checked by the server.
+**Who:** Justin, asking for name choice at creation (relayed by the PM; no direct quote).
+
+## D-298 — 2026-10-17 — Unity comparison spike, lighting only
+**Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
+**Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
+
+## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
+**Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
+**Who:** Justin: "Every slot equips".
