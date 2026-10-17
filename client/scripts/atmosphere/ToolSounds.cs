@@ -11,8 +11,6 @@ namespace LifeGame;
 // of leaves as it tips, then the impact, on Environment's TreeFall events.
 static class ToolSounds
 {
-    // Crafting's spade (Item.Spade = 18); swap for the enum value once it is on main.
-    const ushort SpadeItem = 18;
     const float TreeHearing = 70f;
 
     public static void Connect(DbConnection c)
@@ -29,7 +27,7 @@ static class ToolSounds
     static CueDef? SoundOf(WorkMotion motion, bool thrown, ushort item) => motion switch
     {
         WorkMotion.Chop => CueDefs.ChopThunk,
-        WorkMotion.Dig => thrown ? CueDefs.DirtThrow : item == SpadeItem ? CueDefs.DigSpade : item != 0 ? CueDefs.DigStick : CueDefs.DigHands,
+        WorkMotion.Dig => thrown ? CueDefs.DirtThrow : item == (ushort)Item.Spade ? CueDefs.DigSpade : item != 0 ? CueDefs.DigStick : CueDefs.DigHands,
         _ => null,
     };
 

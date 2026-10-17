@@ -32,6 +32,10 @@ namespace LifeGame.Shared
         public const string Skill = "endurance";
         public const string RunProcess = "move.run";
         public const float RunPerUse = 20f;
+        // The server's check on that report (D-182): the player moved within the last RunReportMoveWindow
+        // seconds and is at least RunReportMinMeters from where they last reported, so standing still
+        // can't train Endurance. A real run of RunPerUse seconds covers about 110 m.
+        public const float RunReportMoveWindow = 3f, RunReportMinMeters = 25f;
 
         public static float RunSeconds(int rank, bool wellFed) =>
             Lerp(StartRunSeconds, MasterRunSeconds, rank) * (wellFed ? 1f + WellFedBonus : 1f);

@@ -127,7 +127,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         // --ids=207,211 shows only those items.
@@ -187,7 +187,7 @@ public partial class Showcase : Node3D
             AddChild(new MeshInstance3D { Mesh = painted, Position = new Vector3(x, 0, z), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
             AddChild(new Label3D
             {
-                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "Spade",
+                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "?",
                 FontSize = 22, PixelSize = 0.0022f, Modulate = Look.Cream, OutlineSize = 6,
                 OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.8f),
                 Position = new Vector3(x, 0.02f, z + 0.24f), Rotation = new Vector3(-Mathf.Pi / 2f + 0.9f, 0, 0),
