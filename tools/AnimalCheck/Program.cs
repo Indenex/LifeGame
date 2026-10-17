@@ -102,9 +102,10 @@ var here = conn.Db.PlayerPos.PlayerId.Find(Me().PlayerId)!;
 // --- The animal tick stays cheap (animals-32) ---
 // The server counts the compute each reducer uses (wasmtime fuel) and serves it at /v1/metrics. Watch
 // the animal tick for a few seconds with this one character connected and fail if a tick costs far more
-// than it did when it was last trimmed (animals-31: about 100 M fuel with 5 players; this lone character
-// wakes fewer flocks). The ceiling is generous on purpose: it catches a change that makes the tick heavy
-// again, not a small drift. A server that does not serve the metrics skips the check and says so.
+// than it did when it was last trimmed. Measured with this lone character on the animals-31 build: 47 M
+// and 51 M fuel per tick in two runs; with the per-chunk lookups of that PR switched off, 110 M; before
+// it, about 3x the trimmed figure. Fuel counts compute, not time, so a slow CI machine does not move it.
+// The ceiling sits between: well above the run-to-run spread, below a half-lost optimisation. A server that does not serve the metrics skips the check and says so.
 using var metricsHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
 (double Fuel, double Ticks)? TickMetrics()
 {
@@ -127,7 +128,7 @@ using var metricsHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
     }
 }
 
-const double TickFuelCeiling = 300_000_000;
+const double TickFuelCeiling = 90_000_000;
 var tick0 = TickMetrics();
 Settle(8000);
 var tick1 = TickMetrics();
