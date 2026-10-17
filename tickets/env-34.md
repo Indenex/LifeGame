@@ -1,7 +1,7 @@
 # env-34: Mixed shapes for rocks, cattails and ferns (D-166)
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-variety
 PR: #777
 
@@ -24,4 +24,4 @@ far regions).
 - (none)
 
 ## Next step
-Wait for PR CI; send the green sha to the PM; Render request (woodland ferns, a reedy bank, a boulder patch).
+None, merged (checked 2026-10-17 15:05).

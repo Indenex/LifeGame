@@ -42,7 +42,7 @@ public static partial class Module
         EnsureWorldClock(ctx);
         EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
-        EnsureDeviceStatus(ctx);
+        BackfillHiddenValues(ctx);
         BackfillCharacter(ctx, ctx.Sender);
         // A login with no character yet gets its first, named for now; it picks a real name
         // and look at the creator. A login with characters waits at the menu, unless its
@@ -119,6 +119,7 @@ public static partial class Module
             var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
             if (bank is null) ctx.Db.MoveBank.Insert(left);
             else ctx.Db.MoveBank.PlayerId.Update(left);
+            (x, z) = LimitByStamina(ctx, player.PlayerId, fromX, fromZ, x, z);
         }
 
         // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).

@@ -152,8 +152,8 @@ namespace LifeGame.Shared
             return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
         }
 
-        // Standing water; matches the client's Look.WaterLevel.
-        public const float WaterLevel = -1.0f;
+        // Standing water (World.WaterLevel).
+        public const float WaterLevel = World.WaterLevel;
 
         // The skill each stage practices, for the journal and skills (build.* process ids).
         public const string FrameProcess = "build.frame", WattleProcess = "build.wattle",

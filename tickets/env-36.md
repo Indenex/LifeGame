@@ -1,7 +1,7 @@
 # env-36: Grass without stepped bands
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-grass-bands
 PR: #816
 
@@ -22,4 +22,4 @@ with only +-6% jitter per patch; the average height and the blade count are unch
 - (none)
 
 ## Next step
-Wait for PR #816 CI; send the green sha to the PM.
+None, merged as #816 (2026-10-17 14:28).

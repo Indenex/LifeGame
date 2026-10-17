@@ -66,15 +66,6 @@ public static partial class Module
         else ctx.Db.DeviceStatus.StructureId.Update(status);
     }
 
-    // A round already running when DeviceJob went private has no DeviceStatus yet (D-326). The
-    // upgrade drops every client, so the first one back fills them in; after that the counts match.
-    static void EnsureDeviceStatus(ReducerContext ctx)
-    {
-        if (ctx.Db.DeviceStatus.Count == ctx.Db.DeviceJob.Count) return;
-        foreach (var job in ctx.Db.DeviceJob.Iter().ToList())
-            if (ctx.Db.DeviceStatus.StructureId.Find(job.StructureId) is null) SaveDeviceJob(ctx, job);
-    }
-
     static void DeleteDeviceJob(ReducerContext ctx, ulong structureId)
     {
         ctx.Db.DeviceJob.StructureId.Delete(structureId);

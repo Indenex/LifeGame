@@ -61,21 +61,32 @@ public partial class PauseMenu : CanvasLayer
         shade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         root.AddChild(shade);
 
-        column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
-        column.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        column.AddThemeConstantOverride("separation", 10);
+        var list = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
+        list.AddThemeConstantOverride("separation", 10);
+        // On the warm look the entries sit on a paper card, like every other window (ui-68);
+        // the cold look keeps them as words over the dimmed world.
+        if (WarmLook.On)
+        {
+            list.AddThemeConstantOverride("separation", 2);
+            column = Ui.Window(list, roomy: true);
+        }
+        else
+        {
+            column = list;
+            column.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        }
         root.AddChild(column);
 
-        column.AddChild(Entry("Resume", Close));
-        column.AddChild(Entry("Options", ShowOptions));
-        column.AddChild(Entry("Controls", ShowControls));
+        list.AddChild(Entry("Resume", Close));
+        list.AddChild(Entry("Options", ShowOptions));
+        list.AddChild(Entry("Controls", ShowControls));
         // ui-39: back to your characters (Main sets it once the server has a character menu).
-        column.AddChild(Entry("Characters", () => { Close(); ToCharacters(); }));
+        list.AddChild(Entry("Characters", () => { Close(); ToCharacters(); }));
         // The bug report window (bugfix-42, F8); Main sets ReportBug. The menu closes first
         // so the report's picture is of the world, not of this menu.
-        column.AddChild(Entry("Report a bug", () => { Close(); ReportBug?.Invoke(); }));
-        column.AddChild(Entry("I'm stuck", () => { Close(); Unstuck?.Invoke(); }));
-        column.AddChild(Entry("Quit", () => GetTree().Quit()));
+        list.AddChild(Entry("Report a bug", () => { Close(); ReportBug?.Invoke(); }));
+        list.AddChild(Entry("I'm stuck", () => { Close(); Unstuck?.Invoke(); }));
+        list.AddChild(Entry("Quit", () => GetTree().Quit()));
 
         page.Back = HideControls;
         root.AddChild(page);
@@ -91,6 +102,18 @@ public partial class PauseMenu : CanvasLayer
             GetTree().CreateTimer(1).Timeout += () => { Open(); ShowOptions(); };
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--screenshot-controls") >= 0)
             GetTree().CreateTimer(1).Timeout += () => { Open(); ShowControls(); };
+    }
+
+    // Main makes the menu its first child so every panel gets Esc before it does, which
+    // also meant every other key reached the lanes first: C, J, B or K opened panels
+    // behind the open menu (bugfix-38). Shortcut input comes after the GUI (the Controls
+    // page) but before any lane's unhandled input, so keys stop here while it's open.
+    // The menu's own rows take no GUI focus, so it reads their keys itself.
+    public override void _ShortcutInput(InputEvent e)
+    {
+        if (!IsOpen || e is not InputEventKey key || key.PhysicalKeycode == Key.Escape) return;
+        _UnhandledInput(e);
+        GetViewport().SetInputAsHandled();
     }
 
     public override void _UnhandledInput(InputEvent e)

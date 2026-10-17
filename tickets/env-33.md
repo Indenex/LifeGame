@@ -1,9 +1,9 @@
 # env-33: Fallen giant, a new world feature (D-166)
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_progress
+Status: done
 Branch: claude/environment-fallen-giant (merged #718); follow-up claude/environment-giant-log (PR #740)
-PR: (none yet)
+PR: #718, #740 (both merged)
 
 ## Goal
 D-166: repeated features should vary strongly. Only three kinds existed (giant oak,
@@ -37,4 +37,4 @@ Files: `shared/Features.cs` (FeatureId.FallenGiant = 4, appended), `shared/Landm
 - (none)
 
 ## Next step
-Wait for PR #740 CI; send the green sha to the PM. Render A has the still request.
+None, merged (checked 2026-10-17 15:05).

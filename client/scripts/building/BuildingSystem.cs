@@ -457,6 +457,8 @@ public partial class BuildingSystem : Node
         placing = false;
         ghost?.QueueFree();
         ghost = null;
+        string? none = null;
+        ClaimRingHook(null, ref none);
     }
 
     void MakeGhost()
@@ -555,9 +557,14 @@ public partial class BuildingSystem : Node
         ghost.Rotation = new Vector3(0, ghostYaw, 0);
 
         placeProblem = PlaceProblem(ghostPos, ghostYawTarget);
+        ClaimRingHook(ghostPos, ref placeProblem);
         var tint = placeProblem == null ? new Color(0.85f, 1f, 0.8f, 0.38f) : new Color(1f, 0.6f, 0.5f, 0.3f);
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(tint, 1f - Mathf.Exp(-10f * dt));
     }
+
+    // Claims draws the rings of a claim being laid out and its neighbours (social/BuildingSystem.ClaimRings.cs);
+    // at is null when placing stops, and problem is set when the claim would overlap.
+    partial void ClaimRingHook(Vector3? at, ref string? problem);
 
     // A fence laid near the free end of another fence or gate joins on to it, along
     // the ghost's own heading (T turns it, so runs can bend at corners).

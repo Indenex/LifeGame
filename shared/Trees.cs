@@ -31,8 +31,8 @@ namespace LifeGame.Shared
         }
         public const float DeadwoodSeconds = 5 * 60;
 
-        // Water sits at this height; nothing grows within 0.1 m above it. Matches Look.WaterLevel.
-        public const float WaterLevel = -1.0f;
+        // Water sits at this height (World.WaterLevel); nothing grows within 0.1 m above it.
+        public const float WaterLevel = World.WaterLevel;
 
         // The clearing where new players wake up has no trees.
         public static bool NearSpawn(int x, int z) => x * x + z * z < 12 * 12;
