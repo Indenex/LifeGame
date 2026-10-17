@@ -1133,3 +1133,7 @@ Owner: Claims.
 ## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
 **Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
 **Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
