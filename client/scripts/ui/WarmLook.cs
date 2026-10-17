@@ -57,6 +57,26 @@ public partial class WarmLook : Node
         return theme;
     }
 
+    // The one filled button in a window (Ui.MainButton): soft coral with cream words on paper,
+    // like the character page's Play, rather than re-inked (brown on brown would not read).
+    public static void MainButton(Button b)
+    {
+        if (!On) return;
+        b.SetMeta(Keep, true);
+        b.AddThemeFontOverride("font", Ui.Font(800));
+        foreach (var (state, c) in new[] { ("normal", Coral), ("hover", Coral.Lightened(0.1f)), ("pressed", Coral.Darkened(0.06f)), ("disabled", Coral.Lerp(Paper, 0.6f)) })
+        {
+            var s = new StyleBoxFlat { BgColor = c, ShadowColor = new Color(Coral.Darkened(0.4f), 0.3f), ShadowSize = state == "pressed" ? 2 : 5, ShadowOffset = new Vector2(0, state == "pressed" ? 1 : 3) };
+            s.SetCornerRadiusAll(20);
+            b.AddThemeStyleboxOverride(state, s);
+        }
+        foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color" }) b.AddThemeColorOverride(key, new Color(1f, 0.98f, 0.95f));
+        b.AddThemeColorOverride("font_disabled_color", new Color(1f, 0.98f, 0.95f, 0.7f));
+    }
+
+    // Controls that style themselves for paper are left as they are.
+    const string Keep = "warm_keep";
+
     // Content already on paper (a tooltip note): ink it like a window's, without a frame.
     public static void InkInside(Control c)
     {
@@ -137,7 +157,7 @@ public partial class WarmLook : Node
     // looking again changes only what the panel has set since.
     static void Reink(Control c)
     {
-        if (c.HasMeta(Mark)) return;
+        if (c.HasMeta(Mark) || c.HasMeta(Keep)) return;
         foreach (var key in ColourKeys)
         {
             if (!c.HasThemeColorOverride(key)) continue;
