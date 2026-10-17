@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-31-water
-PR: (opening as a draft)
+PR: #517 (draft)
 
 ## Goal
 Justin, verbatim: "the ripple animation is horrible. Can we get 3d water/more interactive water with reflections?" Top priority, coordinated with Environment (water edges). Replace the painted ripple-ring sprites with real stylised 3D water:
@@ -35,4 +35,4 @@ Painted colour bands, not photoreal. Measure the cost, add a Graphics setting fo
 - Environment: their water-edge work. The shore foam and fade now come from the depth behind the water, so the edges need no special mesh.
 
 ## Next step
-Open a draft PR, get CI green, and ask Render C for the before/after wading and floating clip. Tune from it.
+Wait for #517 CI and Render C's before/after clip (requested 04:35). Tune from it, then take it out of draft. Next pieces: floating leaves and stream flow (waiting on Environment's answers).
