@@ -373,6 +373,11 @@ public partial class SocialLayer : Node
     // Whether you own or belong to the claim over this point. Main gives this to Building for door bars.
     public bool HasRightsAt(float x, float z) => ClaimAt(x, z) is { } c && HasRights(c);
 
+    // claims-25: true when no standing claim covers this point, or you own it or are a member the owner
+    // added (not just a townmate), as the server's IsOwnerOrMember. The claim's goods (eggs, leather) are
+    // theirs alone. Only for hiding prompts: the server still decides, and a ban is not mirrored here.
+    public bool ClaimGoodsOpenAt(float x, float z) => ClaimAt(x, z) is not { } c || IsOwnerOrMember(c);
+
     // Whether a standing claim covers this point; claim fences stop non-members even mid-jump (bugfix-25).
     public bool ClaimStandingAt(float x, float z) => ClaimAt(x, z) != null;
 
