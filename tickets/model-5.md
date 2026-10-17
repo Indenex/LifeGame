@@ -21,6 +21,8 @@ Everything a player sees uses the look Justin picks from model-4, matched to doc
 7. **Items, stations, held tools** [Modeling]: they use Look.Solid with relief settings, so step 1 covers them; check icons (ItemIcon renders) still read.
 8. Renders of each step through the Render lane; Justin sees the in-game result before the switch defaults on.
 
+9. **Thatch** [Modeling, agreed with House building 2026-10-17]: when the look is picked, `StructureModel.ThatchRow` returns `ThatchMeshes.Row(low, high, width, thickness * 1.6f, seed)` (one line; House building will not touch ThatchRow). Keep design units (StructureView scales homes 1.25x); roofs stay Role Roof via the Thatch material (#272); if the painted material adds uniforms, Look.StructureGhost must copy them; check cabin and house ridges with the see-through ghost.
+
 ## Progress log
 - 2026-10-17 01:30: plan written at the PM's request while the model-4 renders are made. Nothing converted.
 
