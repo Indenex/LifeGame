@@ -29,6 +29,8 @@ namespace LifeGame.Shared
         // Bow and arrow (animals-15): ids reserved here so Modeling and Animals can build on them.
         Bow = 16,
         Arrow = 17,
+        // A wooden spade with a stone edge (crafting-26): digs faster than a digging stick.
+        Spade = 18,
 
         // Clay and ceramics (tier 3) use 100 to 129.
         CleanClay = 100,
@@ -118,6 +120,8 @@ namespace LifeGame.Shared
         // (crafting-19, shared/Durability.cs). A wearing tool needs HasQuality. Mending
         // takes RepairCost besides the visit, and RepairNeedsTool in hand (a cutting tool).
         public bool Wears;
+        // How fast a digging tool works against bare hands (1 = the same); Dig divides its cooldown by it.
+        public float DigSpeed = 1f;
         public Ingredient[]? RepairCost;
         public ItemTags RepairNeedsTool;
         // What pressing its hotbar key does (ui-19). Clothing wears by Clothing.All,
@@ -201,6 +205,7 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.ClayTrough, Name = "Clay trough", Plural = "Clay troughs", HasQuality = true },
             new ItemDef { Id = Item.Tallow, Name = "Tallow", Plural = "Tallow" },
             new ItemDef { Id = Item.StoneKnife, Name = "Stone knife", Plural = "Stone knives", Tags = ItemTags.Cutting, HasQuality = true, Wears = true, RepairCost = Lashing, Use = UseAction.Tool },
+            new ItemDef { Id = Item.Spade, Name = "Spade", Plural = "Spades", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairCost = Lashing, DigSpeed = 1.25f, Use = UseAction.Tool },
             new ItemDef { Id = Item.DiggingStick, Name = "Digging stick", Plural = "Digging sticks", Tags = ItemTags.Digging, HasQuality = true, Wears = true, RepairNeedsTool = ItemTags.Cutting, Use = UseAction.Tool },
             new ItemDef { Id = Item.Basket, Name = "Basket", Plural = "Baskets", Tags = ItemTags.Container, HasQuality = true, Placeable = true },
             new ItemDef { Id = Item.BowDrill, Name = "Bow drill", Plural = "Bow drills", Tags = ItemTags.FireBow, HasQuality = true, Wears = true, RepairCost = Lashing },
