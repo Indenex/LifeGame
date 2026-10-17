@@ -17,3 +17,6 @@ Pots of broth and stew simmering by fires (ceramics-7) were silent. Soft bubblin
 
 ## Next step
 Send the PM the green sha, then the kiln roar.
+
+## Level fix (pending)
+- The bubble cue gains were on the wrong scale (0.00x; handling cues run 0.03-0.4), so in game they are barely audible. Branch `claude/audio-23-potlevel` (stacked on this one) multiplies them by 4: loudest 50 ms -28.5 dBFS in the `pot:12` scene over a -33 median. Open it as a PR (or fast-forward it into this branch) once #631's CI has settled.
