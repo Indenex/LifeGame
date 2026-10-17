@@ -168,6 +168,12 @@ namespace LifeGame.Shared
         // most ClaimNameMax characters. Empty means unnamed.
         public const int ClaimNameMax = 28;
 
+        // claims-19: town rosters. Claim owners sign a roster; everyone who signed gets builder
+        // rights (build, dig, gates; not stashes, tending or fighting rules) on every signed
+        // claim. One raisable constant each (D-197).
+        public const int TownMaxClaims = 12;
+        public const long TownInviteMicros = 24L * 3600 * 1_000_000;
+
         // claims-16 (D-182): control characters (newlines, escapes, NUL) never reach other
         // players' screens; they read as spaces, so words don't run together.
         public static string StripControl(string text)
