@@ -1,7 +1,7 @@
 # atmosphere-28: Morning frost
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-28-frost
 PR: #459
 
@@ -21,8 +21,17 @@ Option (a), sent to the PM for Justin on 2026-10-17 (recommended: morning frost;
   - (3) Lighter, as in 864924de.
   - (4) He likes the heavy white look for snow: follow-up ticket atmosphere-33.
 
+- 2026-10-17 05:28: #459 merged (green sha b28c7cf0, CI run 39005786023). Winter snow follow-up is atmosphere-33.
+- 2026-10-17 06:55: Render B's re-shoot showed the lighter frost nearly invisible. Justin picked "in between" (follow-up branch claude/atmosphere-28b-frost-strength).
+  - Grass tips are clearly silvered (0.8 strength over the top 65% of the blade).
+  - Rocks and leaves get a white edge on upper faces and raised grain (normal.y 0.1 to 0.6, relief 0.25 to 0.65, strength 0.75).
+  - Flat bare ground keeps a trace (0.2).
+  - The local-cold factor now only halves frost at most, so a frosty morning is visible everywhere.
+
+- 2026-10-17 06:52: #597 merged (green sha 5b609baa, CI run 39011305897).
+
 ## Open questions / blockers
 - (none) Justin picked (a) morning frost (via the PM, 2026-10-17 03:02).
 
 ## Next step
-Wait for #459 CI and send the PM the green sha.
+Done. Winter snow follow-up is atmosphere-33.
