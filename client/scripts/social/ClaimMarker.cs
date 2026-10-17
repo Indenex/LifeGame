@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
@@ -134,18 +135,28 @@ public partial class ClaimMarker : Node3D
         sign.AddChild(new MeshInstance3D { Mesh = boardMesh });
         foreach (float x in new[] { -0.32f, 0.32f })
             sign.AddChild(new MeshInstance3D { Mesh = cordMesh, Position = new Vector3(x, 0.22f, 0) });
-        // Long names shrink to fit the board.
-        float size = 0.0042f * Mathf.Min(1f, 11f / name.Length);
+        // The name is painted on the board: dark, sized to fit inside the plank, on two lines when it is long.
+        string text = name;
+        int split = name.Length > 10 ? name.IndexOf(' ', name.Length / 2 - 3) : -1;
+        if (split < 0 && name.Length > 10) split = name.LastIndexOf(' ', name.Length / 2 + 3);
+        if (split > 0) text = name[..split] + "\n" + name[(split + 1)..];
+        int longest = text.Split('\n').Max(l => l.Length);
+        const int fontSize = 48;
+        // About half a font size of width per letter; leave a margin at each end of the 0.9 m plank.
+        float size = Mathf.Min(0.0045f, 0.74f / (longest * fontSize * 0.55f));
+        if (split > 0) size = Mathf.Min(size, 0.2f / (2 * fontSize * 1.2f));
         for (int side = 0; side < 2; side++)
             sign.AddChild(new Label3D
             {
-                Text = name,
-                FontSize = 48,
+                Text = text,
+                FontSize = fontSize,
                 PixelSize = size,
                 OutlineSize = 0,
-                Modulate = Look.Cream,
+                Modulate = Look.Bark.Darkened(0.35f),
+                Shaded = true,
+                AlphaCut = Label3D.AlphaCutMode.Discard,
                 DoubleSided = false,
-                Position = new Vector3(0, 0, side == 0 ? 0.025f : -0.025f),
+                Position = new Vector3(0, 0, side == 0 ? 0.0215f : -0.0215f),
                 Rotation = new Vector3(0, side == 0 ? 0 : Mathf.Pi, 0),
             });
         post.AddChild(sign);
