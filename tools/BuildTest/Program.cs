@@ -50,6 +50,10 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+a.WalkTo(0f, 0f, 0.3f, Pump);
+b.WalkTo(1f, 0f, 0.3f, Pump);
+
 // The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
 {
     var tiled = Structures.Shape((int)StructureKind.TiledHouse);

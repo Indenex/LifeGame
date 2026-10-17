@@ -1165,3 +1165,15 @@ Owner: Claims.
 ## D-286 — 2026-10-17 — A buildable stone-ringed hearth warms winter nights
 **Decision:** Survival's 2-hour building-session check found hunger and thirst gentle; winter nights in the open are the only friction (a warm-up is needed about every 7 minutes). The fix is a buildable stone-ringed hearth that warms out to about 8 m. House building builds it and Survival sets the numbers. No change to need drain.
 **Who:** Justin, picking the stone-ringed hearth as the fix (relayed by the PM; no direct quote).
+
+## D-287 — 2026-10-17 — A well-fuelled fire puts up a smoke-signal column
+**Decision:** From a playtester idea Justin wants: a fire above 75% fuel puts up a thick, tall smoke column that is visible from far away, like a smoke signal. It is 3D/volumetric and painted. Owner: Atmosphere, who builds it after the water.
+**Who:** Justin, wanting the playtester's idea (relayed by the PM; no direct quote).
+
+## D-288 — 2026-10-17 — Crafting hovers show the recipe chain only for discovered steps
+**Decision:** Crafting hovers show the full recipe chain only for steps already in the player's journal. Undiscovered steps get a nudge naming a place or material to try.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-289 — 2026-10-17 — "Coil pot" is displayed as "Clay pot"
+**Decision:** "Coil pot" is renamed "Clay pot" in display names only. Ids are unchanged.
+**Who:** Relayed by the PM; no direct quote.
