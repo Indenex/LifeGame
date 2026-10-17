@@ -151,13 +151,13 @@ public static partial class Module
     static bool FireInside(ReducerContext ctx, Structure s)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
-        for (int cx = World.ChunkOf(s.X - 3f); cx <= World.ChunkOf(s.X + 3f); cx++)
-        for (int cz = World.ChunkOf(s.Z - 3f); cz <= World.ChunkOf(s.Z + 3f); cz++)
+        for (int cx = World.ChunkOf(s.X - 4f); cx <= World.ChunkOf(s.X + 4f); cx++)
+        for (int cz = World.ChunkOf(s.Z - 4f); cz <= World.ChunkOf(s.Z + 4f); cz++)
         foreach (var fire in ctx.Db.Fire.ByChunk.Filter((cx, cz)))
         {
             if (fire.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, fire.X, fire.Z);
-            if (MathF.Abs(lx) < Structures.HouseWallX && MathF.Abs(lz) < Structures.HouseWallZ) return true;
+            if (MathF.Abs(lx) < Structures.HouseWallXFor((int)s.Kind) && MathF.Abs(lz) < Structures.HouseWallZFor((int)s.Kind)) return true;
         }
         return false;
     }

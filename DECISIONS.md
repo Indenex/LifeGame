@@ -935,3 +935,95 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-230 — 2026-10-16 — Atmosphere next: falling leaves and blossom
 **Decision:** Atmosphere's next work is falling leaves and blossom: leaves drifting under broadleaf trees in autumn, petals in spring, and more of both in wind. Justin chose it over the dawn valley mist and the sky reflected in still water. Owner: Atmosphere.
 **Who:** Justin, picking falling leaves and blossom (relayed by the PM; no direct quote).
+
+## D-231 — 2026-10-16 — Buildings scale about 25% bigger and doorways become a real opening (building-14)
+**Decision:** All house-type buildings scale by about 1.25 (about 25% bigger) with the same material costs. Doorways become a real opening, at least about 2.1 m clear and with nothing across the floor, that players walk through freely. Owner: House building (building-14).
+**Who:** Justin ("the scale of the buildings probably needs to be a bit bigger, and leave an actual doorway opening so the character can walk in, right now he hits his head and his feet on the entrance"), picking about 25% bigger.
+
+## D-232 — 2026-10-16 — Art direction: low-poly shapes with simple painted material textures, Valheim-like (pending Justin's pick of renders, D-154)
+**Decision:** The direction is low-poly shapes with simple, low-res, painted material textures (Valheim-like), a cutesy warm feel, and lighting and atmosphere carrying the awe. Justin did not want flat colour. This is a direction only: per D-154 it is pending Justin's pick of renders, so no art is built past a prototype yet. Modeling is prototyping 2 to 3 texture variants, and Atmosphere is lighting the test renders.
+**Who:** Justin ("I dont like the textures the models are using; I want things to be less textures, but still very stylized with our pretty low poly look." When offered flat colour: "I want things to have material looks/texture still, closer to valheim I think. I want the game to be cutesy and beautiful/awe inspiring with lighting and stuff.")
+
+## D-233 — 2026-10-16 — Players pick their look at first join, from Modeling's carved parts
+**Decision:** Each player picks skin tone, hair colour, cut and beard at first join, from Modeling's carved parts. The server validates the choice. Justin chose this over an automatic look from the player id or keeping everyone identical. Owner: Modeling.
+**Who:** Justin (relayed by the PM; no direct quote), picking the first-join choice.
+
+## D-234 — 2026-10-16 — Lighting: prototype the colour grade, richer sky and god rays; the original reference screenshots are the target look (D-154)
+**Decision:** Prototype all three lighting options: the time-of-day colour grade, the richer sky, and god rays everywhere at low sun with a quality setting. Renders come before anything ships (D-154). Justin's original reference world, terrain and character screenshots are the target look for the game. Owner: Atmosphere.
+**Who:** Justin ("go look back at our original reference world/terrain/character screenshots I sent you. That's what the game should look like."), with his pick of all three lighting options.
+
+## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
+**Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
+**Who:** Justin (shared the images; relayed by the PM, no direct quote).
+
+## D-236 — 2026-10-17 — Bought art packs from Golden Skull Art; Dofus is a second style reference (follows D-234, D-235)
+**Decision:** Justin bought Golden Skull Art's (Max Heyder) 2D Isometric Foliage Pack and Isometric Starter Pack, with a commercial licence and his stated permission to host them in the public repo temporarily. They are in `docs/art-packs/golden-skull/` (#378). Dofus is now a second style reference alongside `docs/art-reference`.
+**Who:** Justin ("Our other inspiration is a game called Dofus. Beautiful, hand crafted artwork, scenery, etc. It's a similar 2d but 3d engine type thing.")
+
+## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
+**Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
+**Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")
+
+## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
+**Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
+**Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
+
+## D-239 — 2026-10-17 — Clay pipes and drains: trough only for now (follows D-238)
+**Decision:** For ceramics-13, Justin picked "Trough only": a fired clay trough filled by hand, with no pipe network for now. The network design (stream to cistern, roof gutters) stays on file in `tickets/ceramics-13.md` for later.
+**Who:** Justin, picking "Trough only" (relayed by the PM; no direct quote).
+
+## D-240 — 2026-10-17 — The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D (extends D-234, D-235, D-236)
+**Decision:** The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D, using whatever technique works, with pack sprites only where they fit. Nothing is copied literally unless it fits, but the overall art theme and direction should be very similar to that work and to Dofus. A unique way of getting the hand-painted style in 3D is fine; Dofus does it and Octopath is similar. Every look image shown to Justin is paired side by side with its reference. The art lanes (Modeling, Environment, Atmosphere) are already on Opus.
+**Who:** Justin ("so far the images I've seen from the environment worker are NOTHING like the reference images/packs I gave you." "Nothing literal unless it fits, but the overall art theme and direction, even though it's '3d' should be VERY similar to his work and Dofus. If it has to come up with a unique way to get the hand painted style in 3d, that's fine, and i know it's perfectly do-able. Dofus does it, Octopath is similar, etc. Maybe it needs to be switched to an opus worker if it isnt already.")
+
+## D-241 — 2026-10-17 — Music direction: cute, whimsical and relaxing, in the spirit of Dofus (audio-8)
+**Decision:** The music is cute, whimsical and relaxing in the spirit of Dofus, with a basic main theme in the mood of Grynpyret's "Kites" (original melody, nothing copied) and a lullaby-like song about naps. The goal is to be very cutesy and relaxing in general, and less Valheim-like. Owner: Audio, ticket audio-8; Audio prototypes clips for Justin's pick before converting.
+**Who:** Justin ("I want some music similar to Dofus, and a basic theme similar to Grynpyret's song Kites, and A song about naps. The goal is to be very cutesy and relaxing in general, less valheim-y music.")
+
+## D-242 — 2026-10-17 — Keep the old dense, wind-swept blade grass and restyle it to the new hand-painted look (extends D-240)
+**Decision:** The previous dense, wind-swept blade grass comes back and is restyled to the new hand-painted look (pack palette, tone bands). Sprite-card tufts are not the grass; flowers and mushrooms are only sparse accents. This answers the painted-ground prototype. Owner: Environment.
+**Who:** Justin ("the modeler/environment's grass is HORRIBLE, I want the old grass back, and make it match the new style, it was really good before")
+
+## D-243 — 2026-10-17 — Music comes from Justin, made with Suno; Audio builds a data-driven player (revises D-241)
+**Decision:** The music will be provided by Justin, made with Suno, instead of being synthesized or composed by Audio. Audio builds a data-driven player for recorded tracks, mood-tagged and cross-faded. This revises D-241: the direction there (cute, whimsical, relaxing, Dofus-like) still guides Justin's tracks. Owner: Audio.
+**Who:** Justin ("These all sound super generic and crappy", on the synthesized music tasters)
+
+## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
+**Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
+**Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).
+
+## D-246 — 2026-10-17 — Restyled grass is a little shorter and denser; the PM sends Justin every screenshot directly (follows D-242)
+**Decision:** (1) The restyled grass is slightly shorter and denser, with no big bare patches. (2) The PM sends Justin every screenshot and render directly. Lanes route images to the PM (or Render to the PM) and never expect Justin to read lane threads. A one-line note to the same effect is added to the Render lane section of `WORKER_LOOP.md`.
+**Who:** Justin ("The grass I saw was better... I want the grass to be a little shorter, and denser, no patch giant open spots" and "I also need you to be sending me screenshots. I dont want to go to its chat.")
+
+## D-247 — 2026-10-17 — New Character concepts lane: 10 fast character mockups (Opus)
+**Decision:** A new Character concepts lane (Opus) makes about 10 fast character model proposals: shorter models, cutesy, maybe even creature-type characters. They are quick mockups, basically storyboarding, with a lineup for Justin, who picks 1 to 3 to develop. This follows D-154: no player model style is built past a rough prototype until Justin picks.
+**Who:** Justin ("can you make a new worker that can create like..10 different new character model proposals? I want shorter models, cutesy, maybe even some kind of creature type things? I want FAST mockups though, dont spend all day on them. This is basically storyboarding, and use opus.")
+
+## D-248 — 2026-10-17 — Speed up merges, CI, builds and releases: all four measures approved
+**Decision:** To speed up merges, CI, builds and releases, Justin approved all four of: (1) a GitHub merge queue plus auto-merge (integration-8); (2) splitting the hot shared files into per-lane files with fixed ids (integration-9); (3) smarter, parallel CI with path filters, parallel server tests and caching (integration-10); (4) a flaky-test rule. The flaky-test rule and a no-push-after-green rule are added to Section 2 of `WORKER_LOOP.md`. Owner: Integration.
+**Who:** Justin (asked how to speed these up and approved all four options; relayed by the PM, no direct quote).
+
+## D-249 — 2026-10-17 — Character concepts round 2: 10 more, with multiple themes on one shared skeleton and base body (follows D-247)
+**Decision:** After seeing the 10 round-1 concepts (Kit, Capling, Bramble, Clover, Pip, Mossle, Puddle, Sprout, Dumpling, Hearthling), Justin wants another 10. Multiple player themes or races are welcome, built on one shared skeleton and base body with swappable parts (ears, tails, hats, heads, colours), so animation and modelling are shared and modelling work is minimised. Round 2 is 10 more concepts on a shared base. Owner: Character concepts.
+**Who:** Justin ("give me another 10. Multiple character models/themes would be nice too I think. I do want a shared model/skeleton etc. though as much as possible to minimize modeling work etc.")
+
+## D-250 — 2026-10-17 — New player characters: chibi proportions at about 1.3 to 1.4 m tall (follows D-247, D-249)
+**Decision:** New player characters keep cute, big-head chibi proportions but are about 1.3 to 1.4 m tall in game, so the 1.75 m-built world (stations, doors, tools, camera) still works with small tweaks. Justin chose this over shrinking the world or truly tiny characters.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-251 — 2026-10-17 — StructureKind ids get explicit values with lane ranges (integration-9)
+**Decision:** `StructureKind` ids get explicit values with lane ranges: House building 100+, Crafting stations 200+, Animals 300+, Claims 400+. Existing kinds keep their values. Owner: Integration (integration-9).
+**Who:** PM technical decision.
+
+## D-252 — 2026-10-17 — Merge queue CI design: doc-only PRs skip their steps; world-wipe PRs are merged by hand (#403)
+**Decision:** In the merge queue's CI design (#403), doc-only PRs run the three checks but skip their steps. World-wipe PRs are merged by hand, outside the queue.
+**Who:** PM technical decision.
+
+## D-253 — 2026-10-17 — Trees stay 3D, restyled to read about 85% like the painted card pines (follows D-240)
+**Decision:** Trees stay 3D (scalloped pines), restyled to read about 85% like the artist's painted card pines: silhouette, colour bands, outline and painted strokes. Modeling iterates with side-by-side renders against the card pines.
+**Who:** Justin ("Can you make the 3d ones look more like the painted card pines? Like, 85% the same or something?")

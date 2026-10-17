@@ -77,17 +77,31 @@ jobs:
           { echo "go=true"; echo "run_id=$run_id"; echo "build=$build"; echo "sha=$sha"; } >> "$GITHUB_OUTPUT"
 
   launcher:
-    name: Launcher (${{ matrix.preset }})
+    name: ${{ matrix.mode == 'player' && 'Player launcher' || 'Launcher' }} (${{ matrix.preset }})
     needs: pick
     if: needs.pick.outputs.go == 'true'
     runs-on: ubuntu-24.04
     strategy:
       matrix:
+        # Two builds of the same script (release-3): the host launcher runs the world server on
+        # the host's computer; the player launcher only updates the game and joins a server.
         include:
           - preset: Linux
+            mode: host
             out: LifeGameLauncher.x86_64
+            artifact: LifeGameLauncher-Linux
           - preset: Windows
+            mode: host
             out: LifeGameLauncher.exe
+            artifact: LifeGameLauncher-Windows
+          - preset: Linux
+            mode: player
+            out: LifeGamePlayer.x86_64
+            artifact: LifeGamePlayer-Linux
+          - preset: Windows
+            mode: player
+            out: LifeGamePlayer.exe
+            artifact: LifeGamePlayer-Windows
     steps:
       - uses: actions/checkout@v5
         with:
@@ -123,11 +137,21 @@ jobs:
 
       # Godot exports even when the script has a parse error, so fail on one here.
       # The launcher compares this stamp with release.json's and updates itself when they differ.
+      # The player build is told its mode, and the server address from the PLAYER_SERVER_URL
+      # repository variable (Settings > Variables; an address, not a secret). With no variable the
+      # player launcher says "No server address yet" and a server.cfg next to it can supply one.
       - name: Export launcher
         working-directory: launcher
+        env:
+          MODE: ${{ matrix.mode }}
+          PLAYER_SERVER_URL: ${{ vars.PLAYER_SERVER_URL }}
         run: |
           mkdir -p out
           ../tools/release/launcher-version.sh > version.txt
+          if [ "$MODE" = player ]; then
+            echo player > mode.txt
+            if [ -n "$PLAYER_SERVER_URL" ]; then printf '%s\n' "$PLAYER_SERVER_URL" > server.txt; fi
+          fi
           "$GODOT" --headless --path . --import 2>&1 | tee import.log
           "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "out/${{ matrix.out }}" 2>&1 | tee export.log
           if grep -q "SCRIPT ERROR" import.log export.log; then echo "::error::launcher.gd has a script error"; exit 1; fi
@@ -135,7 +159,7 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: LifeGameLauncher-${{ matrix.preset }}
+          name: ${{ matrix.artifact }}
           path: launcher/out/
           if-no-files-found: error
 
@@ -167,6 +191,12 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           pattern: LifeGameLauncher-*
+          path: artifacts
+
+      - name: Download the player launcher
+        uses: actions/download-artifact@v7
+        with:
+          pattern: LifeGamePlayer-*
           path: artifacts
 
       # D-130: a world-wipe label on any PR merged since the previous release marks this one,

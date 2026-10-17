@@ -10,7 +10,7 @@ namespace LifeGame;
 // thatched gable roof. +Z is the door side.
 public static partial class StructureModel
 {
-    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.62f;
+    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.78f; // 1.78 x 1.25 = 2.2 m clear (building-14)
     const float HouseEaveZ = Structures.HouseWallZ + 0.5f, HouseEaveX = Structures.HouseWallX + 0.45f;
     static ShaderMaterial? brick;
     static ShaderMaterial Brick => brick ??= Look.Solid(new Color(0.74f, 0.5f, 0.36f));

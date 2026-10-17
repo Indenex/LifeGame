@@ -120,20 +120,24 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
-        float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
-        var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
-        float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
-        float dx = x - fromX, dz = z - fromZ;
-        float dist = MathF.Sqrt(dx * dx + dz * dz);
-        if (dist > allowed)
+        // An admin who is flying (/fly, admin-1) is exempt from the walking pace; nobody else is.
+        if (!IsFlyingAdmin(ctx, player.PlayerId))
         {
-            x = fromX + dx / dist * allowed;
-            z = fromZ + dz / dist * allowed;
-            dist = allowed;
+            float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
+            var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
+            float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
+            float dx = x - fromX, dz = z - fromZ;
+            float dist = MathF.Sqrt(dx * dx + dz * dz);
+            if (dist > allowed)
+            {
+                x = fromX + dx / dist * allowed;
+                z = fromZ + dz / dist * allowed;
+                dist = allowed;
+            }
+            var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
+            if (bank is null) ctx.Db.MoveBank.Insert(left);
+            else ctx.Db.MoveBank.PlayerId.Update(left);
         }
-        var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
-        if (bank is null) ctx.Db.MoveBank.Insert(left);
-        else ctx.Db.MoveBank.PlayerId.Update(left);
 
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
@@ -214,6 +218,7 @@ public static partial class Module
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
+        NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
 
     [SpacetimeDB.Reducer]

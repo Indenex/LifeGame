@@ -24,6 +24,15 @@ When everything is current the button just says **Play**. **Update world only** 
 
 A build labelled as a world wipe (D-130) is never published without asking: the launcher shows "This update wipes the world" with **Keep my world** as the safe choice.
 
+## Two launchers: host and player (release-3)
+
+Each release carries two builds of this launcher:
+
+- **Host** (`LifeGameLauncher-Linux.zip` / `-Windows.zip`): installs, starts and updates SpacetimeDB and the world on this computer, then plays. This is the one above.
+- **Player** (`LifeGamePlayer-Linux.zip` / `-Windows.zip`): no server parts at all (no SpacetimeDB install, no world update, no wipe question). It keeps the game up to date and connects to a server address.
+
+The player launcher finds the address in this order: `--server=URL` on the command line, then the first line of `server.cfg` (next to the launcher, or in its `LifeGame` folder), then the address baked in at export from the repository variable `PLAYER_SERVER_URL` (Settings > Variables; an address, not a secret, never committed). With none, it says "No server address yet" and doesn't start the game. Both builds update themselves from the release (the host from its section of `release.json`, the player from `launcher.player`), have their own shortcut name ("LifeGame" and "LifeGame (player)") and can sit side by side.
+
 ## Options
 
 Pass after `--`, e.g. `LifeGameLauncher.x86_64 -- --no-server --server=http://friend:3000` for a friend joining someone else's world (updates the game only). The full list is at the top of `launcher.gd`.
