@@ -457,6 +457,49 @@ if (runStations)
         if (lastError?.Contains("equip") != true) Fail($"chopping with the axe only in the bag: {lastError}");
         Console.WriteLine($"Axe not equipped: {lastError}");
         EquipTool(Item.StoneAxe);
+
+        // Walking off ends a job in progress (crafting-31): start a chop, step 3 m away from the tree, and the job
+        // stops with no log and no further progress.
+        {
+            var (tx0, tz0) = NearestTree();
+            var trunk0 = Trees.Trunk(tx0, tz0);
+            WalkTo(trunk0.X, trunk0.Z);
+            uint logsBefore = CountOf(Item.Log);
+            lastError = null;
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
+            if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            float awayX = x - trunk0.X, awayZ = z - trunk0.Z;
+            float awayLen = MathF.Max(MathF.Sqrt(awayX * awayX + awayZ * awayZ), 0.01f);
+            awayX /= awayLen; awayZ /= awayLen;
+            float startX = x, startZ = z;
+            for (int step = 1; step <= 6 && conn.Db.MyCraftJob.Count > 0; step++)
+            {
+                x = startX + awayX * 0.5f * step;
+                z = startZ + awayZ * 0.5f * step;
+                conn.Reducers.Move(x, z, 0f);
+                Pump(() => false, 0.25f, null);
+            }
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the player walked off");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a chop the player walked away from still gave a log");
+            if (conn.Db.CraftWork.PlayerId.Find(myId) != null) Fail("the work row stayed after the player walked away");
+            Console.WriteLine("Walking away stopped the chop");
+            // Cancelling by hand stops it too, and putting the axe away mid-chop.
+            WalkTo(trunk0.X, trunk0.Z);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a second chop to start");
+            conn.Reducers.EquipSlot(9);
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop when the axe was put away");
+            EquipTool(Item.StoneAxe);
+            conn.Reducers.StartCraft("chop.log", 0);
+            Pump(() => conn.Db.MyCraftJob.Count > 0, 5, "a third chop to start");
+            conn.Reducers.CancelCraft();
+            Pump(() => conn.Db.MyCraftJob.Count == 0, 5, "the chop to stop on CancelCraft");
+            Pump(() => false, 3f, null);
+            if (CountOf(Item.Log) != logsBefore) Fail("a cancelled chop still gave a log");
+            Console.WriteLine("Putting the axe away and CancelCraft stopped a chop");
+        }
     }
 
     // Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from

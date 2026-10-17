@@ -35,6 +35,11 @@ public partial class CraftingUi : CanvasLayer
     Minigame_? minigame;
     CraftJob? job;
     double jobStartLocal, jobSeconds, roastRefresh;
+    // Where the player stands (Main sets it): moving off ends the job in progress (crafting-31).
+    public Func<Vector3>? PlayerAt;
+    Vector3 jobFrom;
+    bool cancelling;
+    const float JobMoveAway = 0.2f;
 
     public CraftingUi()
     {
@@ -99,6 +104,9 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.MyInventory.OnDelete += (_, _) => Refresh();
         conn.Db.MyCraftJob.OnInsert += (_, j) => StartedJob(j);
         conn.Db.MyCraftJob.OnDelete += (_, j) => FinishedJob(j);
+        // Changing what is in hand stops the job you were doing with it.
+        conn.Db.PlayerEquip.OnUpdate += (_, old, row) => { if (row.Owner == conn.Identity && old.Slot != row.Slot) CancelJob(); };
+        conn.Db.PlayerEquip.OnDelete += (_, row) => { if (row.Owner == conn.Identity) CancelJob(); };
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
         Mending.Register(conn);
@@ -197,7 +205,20 @@ public partial class CraftingUi : CanvasLayer
         {
             double t = Time.GetTicksMsec() / 1000.0 - jobStartLocal;
             progressBar.Value = Math.Clamp(t / Math.Max(jobSeconds, 0.01), 0, 1);
+            // Walking, jumping or opening a full panel stops the work at once (crafting-31).
+            if ((PlayerAt != null && (PlayerAt() - jobFrom).Length() > JobMoveAway) || Panels.Open()) CancelJob();
         }
+    }
+
+    // Stops the job in progress: the server ends it and gives back what it took, and any held
+    // key stops repeating. Safe to call with no job.
+    void CancelJob()
+    {
+        if (job == null || cancelling || conn == null) return;
+        cancelling = true;
+        progressPanel.Visible = false;
+        HoldRepeat.StopAll();
+        conn.Reducers.CancelCraft();
     }
 
     // --- Starting a process ----------------------------------------------
@@ -493,6 +514,8 @@ public partial class CraftingUi : CanvasLayer
     void StartedJob(CraftJob j)
     {
         job = j;
+        cancelling = false;
+        jobFrom = PlayerAt?.Invoke() ?? Vector3.Zero;
         jobStartLocal = Time.GetTicksMsec() / 1000.0;
         jobSeconds = (j.FinishAt.MicrosecondsSinceUnixEpoch - j.StartedAt.MicrosecondsSinceUnixEpoch) / 1_000_000.0;
         progressLabel.Text = Processes.Find(j.ProcessId)?.Doing + "..." + (CraftGrid.Held?.Id == j.ProcessId ? "   (holding: again when done)" : "");
@@ -501,10 +524,22 @@ public partial class CraftingUi : CanvasLayer
 
     void FinishedJob(CraftJob j)
     {
+        double elapsed = Time.GetTicksMsec() / 1000.0 - jobStartLocal;
+        bool stopped = cancelling || elapsed < jobSeconds * 0.75;
         job = null;
+        cancelling = false;
         progressPanel.Visible = false;
         var def = Processes.Find(j.ProcessId);
         if (def == null) return;
+        // Ended early (by me or the server): nothing was made, and nothing repeats.
+        if (stopped)
+        {
+            HoldRepeat.StopAll();
+            string doing = def.Doing.Length > 0 ? char.ToLowerInvariant(def.Doing[0]) + def.Doing[1..] : "working";
+            Notice?.Invoke("Stopped " + doing);
+            Refresh();
+            return;
+        }
         if (j.Failed)
             Notice?.Invoke(def.Outcome == Outcome.Fire ? "The ember dies before it catches" : "It breaks wrong. The material is lost");
         else if (def.Outcome == Outcome.Fire)
