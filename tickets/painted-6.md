@@ -1,7 +1,7 @@
 # painted-6: Items on the painted look
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-6-items
 PR: #584
 

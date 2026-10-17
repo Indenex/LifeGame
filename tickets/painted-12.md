@@ -1,7 +1,7 @@
 # painted-12: Smooth, clean painted surfaces (D-319)
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-12-smooth
 PR: #642
 

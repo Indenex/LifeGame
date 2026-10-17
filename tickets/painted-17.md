@@ -1,7 +1,7 @@
 # painted-17: Warm the painted shade at golden hour
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-17-warm-shade
 PR: #802
 

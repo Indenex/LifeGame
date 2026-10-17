@@ -1,7 +1,7 @@
 # model-17: Spade on Item.Spade
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-17-spade
 PR: (see below)
 

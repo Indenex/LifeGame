@@ -1,7 +1,7 @@
 # model-7: Hen and its items
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_progress
+Status: done
 Branch: claude/model-7-hen
 PR: (opening)
 

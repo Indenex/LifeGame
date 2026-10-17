@@ -1,7 +1,7 @@
 # model-14: Pebble's authored shell (Blender pipeline)
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm); built by Art R&D (art-rnd-1)
-Status: in_review
+Status: done
 Branch: claude/model-14-authored-shell
 PR: #623
 

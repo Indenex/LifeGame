@@ -1,7 +1,7 @@
 # painted-3: Painted bark and leaves (logs, birches, landmark trees)
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-3-props (stacked on painted-1, claude/painted-1-rocks)
 PR: #559
 

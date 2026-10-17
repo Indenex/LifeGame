@@ -1,7 +1,7 @@
 # model-24: Item models keyed by enum name
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-24-enum-ids
 PR: (see below)
 

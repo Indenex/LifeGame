@@ -1,7 +1,7 @@
 # painted-1: Painted prop shader and rocks
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-1-rocks (stacked on #544, claude/model-10-painted-trees)
 PR: (opening)
 

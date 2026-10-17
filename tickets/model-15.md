@@ -1,7 +1,7 @@
 # model-15: Switchable chibi face states
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-15-faces
 PR: #644
 

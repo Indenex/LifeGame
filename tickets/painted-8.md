@@ -1,7 +1,7 @@
 # painted-8: Clay pots in the painted look
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/painted-8-clay
 PR: (see below)
 

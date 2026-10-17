@@ -1,7 +1,7 @@
 # model-20: Inventory icon pass
 Lane: Modeling
 Owner: Modeling lane session
-Status: in_review
+Status: done
 Branch: claude/model-20-icons
 PR: (see below)
 
