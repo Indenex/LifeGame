@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-23 (from main)
-PR: (see below)
+PR: #726
 
 ## Goal
 Late at night (Atmosphere.Night > 0.75), a figure standing still sometimes nods off on its feet, as one of its idle fidgets. Over about 3.5 s its head sinks forward, its shoulders slump and its body sways gently, with its eyes closed. Then it jerks awake with a little start and straightens, eyes open. This is option (c) from the PM's question to Justin. Client only, so others see it too.
