@@ -16,8 +16,10 @@ PM 05:54, for Justin: tools must be equipped to chop, dig, shear, butcher or fig
   - AvatarWork follows your own PlayerEquip and MyHotbar into me.Equip(Equipped.Item(conn)).
   - Client builds.
 
+- 2026-10-17 06:10: Crafting added PlayerEquip.Item (kept in sync by SyncEquip) and the all-rows subscription on #582 (663a440). Merged crafting-equip in. AvatarWork now drives every avatar from PlayerEquip insert, update and delete (Owner to Player to avatar). An avatar coming into view takes its held item instantly, without a draw. Any item can be held (Justin: every slot equips); items without a held model hang from the top. Client builds.
+
 ## Open questions / blockers
-- Other players: PlayerEquip has only {Owner, Slot}, and others' hotbars are private, so their item isn't known. Asked Crafting to add a defaulted `ushort Item` (kept in sync with the slot) and to subscribe to all player_equip rows. Then AvatarWork maps Owner to PlayerId to the avatar and calls Equip(Item).
+- (none)
 
 ## Next step
-Wire other players once Crafting adds PlayerEquip.Item; Render C clip; send the PR to the PM.
+CI on #586 (after #582 and #583 merge, it retargets to main); Render C clip requested.

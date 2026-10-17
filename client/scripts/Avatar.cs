@@ -112,13 +112,14 @@ public partial class Avatar : Node3D
     // The tool this player has equipped from the hotbar (crafting-29 PlayerEquip), carried
     // in the right hand when no job or quick action needs the hand. Changing it plays a
     // quick draw or stow (0.3 s) and the model swaps halfway, as the hand passes the hip.
-    public void Equip(Item? item)
+    // instant: no draw motion (an avatar just come into view already holding it).
+    public void Equip(Item? item, bool instant = false)
     {
         if (item == pendingEquip) return;
         pendingEquip = item;
         if (item == equipped) { swapIn = -1f; return; }
-        animator.Swap();
-        swapIn = PlayerAnimator.SwapSeconds * 0.5f;
+        if (!instant) animator.Swap();
+        swapIn = instant ? 0f : PlayerAnimator.SwapSeconds * 0.5f;
     }
     Item? equipped, pendingEquip;
     float swapIn = -1f;
