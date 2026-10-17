@@ -198,14 +198,15 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
+        // The equipped digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick (Equip.cs).
+        var stickTool = EquippedTool(ctx, ItemTags.Digging);
+        float toolSpeed = stickTool is { } held ? Items.Def((Item)held.Item).DigSpeed : 1f;
         // Skilled diggers work faster.
-        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros * DurationScale(ctx, player.PlayerId, Skills.Dig)));
+        var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros / toolSpeed * DurationScale(ctx, player.PlayerId, Skills.Dig)));
 
         long key = World.CellKey(cellX, cellZ);
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
-        // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        var stickTool = EquippedTool(ctx, ItemTags.Digging);
         bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
