@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-6-items
-PR: (not opened)
+PR: #584
 
 ## Goal
 The last family of the painted rollout (painted-1 rocks, -2 bushes, -3 ground props, -4 animals, -5 structures, -6 items): tools and items in the hand, items lying on the ground, and the inventory/hotbar icons (ItemIcon renders them at runtime from the ground mesh, so they follow) all draw with the shared painted shader (`Painted.Of`), tuned per material family and kept readable at item size. Justin sees painted axes, knives, stones, cord, hides and food in the world and the inventory.
