@@ -31,7 +31,7 @@ Console.WriteLine($"First gain: general {Skills.Gain(0, false, "toolmaking")}, s
 if (Skills.Gain(0, false, "archery") >= Skills.Gain(0, false, "toolmaking")) { Console.WriteLine("FAIL: combat not slower"); failures++; }
 if (Skills.Gain(0, false, "swimming") >= Skills.Gain(0, false, "toolmaking")) { Console.WriteLine("FAIL: swimming not slow"); failures++; }
 if (Progression.Pace != 1f) Console.WriteLine($"Pace {Progression.Pace}: first gain {Skills.Gain(0, false)} points");
-if (Skills.SpecFor(Skills.Wade)?.Id != "swimming" || Skills.SpecFor(Skills.Repair)?.Id != "toolmaking" || Skills.SpecFor(Skills.Run)?.Id != "endurance") { Console.WriteLine("FAIL: swimming/repair mapping"); failures++; }
+if (Skills.SpecFor(Wading.WadeProcess)?.Id != "swimming" || Skills.SpecFor(Wading.FloatProcess)?.Id != "swimming" || Skills.SpecFor(Skills.Repair)?.Id != "toolmaking" || Skills.SpecFor(Skills.Run)?.Id != "endurance") { Console.WriteLine("FAIL: swimming/repair mapping"); failures++; }
 if (Wading.SpeedFactor(0.4f) != Wading.SpeedFactor(0.4f, 0) || Wading.SpeedFactor(2f, 100) <= Wading.SpeedFactor(2f, 0)) { Console.WriteLine("FAIL: wading rank effect"); failures++; }
 if (Skills.SpecFor(Skills.Shoot)?.Id != "archery") { Console.WriteLine("FAIL: archery mapping"); failures++; }
 Console.WriteLine(failures == 0 ? "OK" : $"{failures} failure(s)");

@@ -60,8 +60,6 @@ namespace LifeGame.Shared
         public const string DryHide = "hide.dry";
         // Running, reported by Survival's stamina every 20 s of actual running (D-123).
         public const string Run = "move.run";
-        // Walking or floating in water, reported by Bug fixes from the Wading movement (swimming).
-        public const string Wade = "move.wade";
         // Mending a worn tool at a repair table, reported by Crafting's RepairTool.
         public const string Repair = "repair.tool";
         public static readonly Specialization[] Specializations =
@@ -73,8 +71,8 @@ namespace LifeGame.Shared
             new("potter", "Potter", false, "Shaping clay and firing it hard.", "clay"),
             new("builder", "Builder", false, "Raising frames, walls and roofs.", "build"),
             new("endurance", "Endurance", true, "Running farther and catching your breath faster.", "move"),
-            // Wading and floating (exact id beats the "move" family above): a basic, slow-paced skill.
-            new("swimming", "Swimming", true, "Wading deeper and moving through water with less effort.", Wade),
+            // Wading and floating (the swim family): a basic, slow-paced skill.
+            new("swimming", "Swimming", true, "Wading deeper and moving through water with less effort.", "swim"),
             // Animal work is a survival basic (D-049). Husbandry names its processes, so a new
             // animal.* process trains nothing until a skill claims it (CONTENT.md, Skill row).
             new("husbandry", "Husbandry", true, "Keeping animals calm and shearing them cleanly.", Shear, Butcher),
@@ -118,7 +116,8 @@ namespace LifeGame.Shared
             (Butcher, "Butchering a carcass"),
             (DryHide, "Drying leather"),
             (Run, "Running"),
-            (Wade, "Wading and swimming"),
+            (Wading.WadeProcess, "Wading"),
+            (Wading.FloatProcess, "Floating"),
             (Repair, "Mending a tool"),
             // D-127 first-evening step: Claims reports the marker (#174).
             ("claim.mark", "Planting a claim"),

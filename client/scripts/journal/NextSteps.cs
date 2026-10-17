@@ -21,7 +21,8 @@ public static class NextSteps
     {
         [Skills.Forage] = "Sticks, stones and plant fiber lie all around. {pick_up} picks them up.",
         [Skills.Run] = "Hold {run} to run. The more you run, the farther you can go.",
-        [Skills.Wade] = "Shallow water slows you, but a patient wader gets across, and deep water will carry you if you let it.",
+        [Wading.WadeProcess] = "Shallow water slows you, but a patient wader gets across.",
+        [Wading.FloatProcess] = "Where the water is deep, you can let it carry you across.",
         [Skills.Repair] = "A tool gone soft in the hand is made good again at a table with a length of cord.",
         [Skills.Berries] = "Some bushes carry ripe berries. Food for the road.",
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
@@ -101,7 +102,8 @@ public static class NextSteps
         [Skills.Berries] = Array.Empty<string[]>(),
         [Skills.Dig] = Array.Empty<string[]>(),
         [Skills.Run] = Array.Empty<string[]>(),
-        [Skills.Wade] = Array.Empty<string[]>(),
+        [Wading.WadeProcess] = Array.Empty<string[]>(),
+        [Wading.FloatProcess] = new[] { new[] { Wading.WadeProcess } },
         [Skills.Repair] = new[] { new[] { "build.table" } },
         [ClayRules.PitFireProcess] = new[] { new[] { "fire.hand_drill", "fire.bow_drill" }, new[] { "clay.pinch_pot", "clay.coil_pot" } },
         [ClayRules.FillProcess] = new[] { new[] { ClayRules.PitFireProcess, ClayRules.KilnFireProcess } },
@@ -154,7 +156,7 @@ public static class NextSteps
     // Rough tier for activities outside Processes.List, so hints come in a sensible order.
     static readonly Dictionary<string, int> Tier = new()
     {
-        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Wade] = 1, [Skills.Repair] = 3, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
+        [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Wading.WadeProcess] = 1, [Wading.FloatProcess] = 1, [Skills.Repair] = 3, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
         [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
