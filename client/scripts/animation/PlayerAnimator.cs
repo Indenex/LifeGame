@@ -168,7 +168,7 @@ public sealed class PlayerAnimator
             shownGesture = cold > 0.5f && pick != 1 ? Gesture.RubHands : (Gesture)(pick + 1);
             gestureTime = 0f;
             stillFor = 0f;
-            nextGesture = 9f + Mathf.PosMod(seed * 31f + time, 9f);
+            nextGesture = 12f + Mathf.PosMod(seed * 31f + time, 12f);
         }
         if (cold > 0.6f && still)
         {
@@ -207,13 +207,13 @@ public sealed class PlayerAnimator
             {
                 // Arms up over the head, a lean back, up on the toes.
                 float up = Mathf.Sin(Mathf.Clamp(t / GestureSeconds, 0f, 1f) * Mathf.Pi);
-                p.HipsOffset = new Vector3(0, 0.025f * up, 0);
-                p[Joint.FootL].X = -0.25f * up;
-                p[Joint.FootR].X = -0.25f * up;
-                p[Joint.Spine].X = -0.18f * up;
-                p[Joint.Neck].X = -0.25f * up;
-                p[Joint.ShoulderL] = new Vector3(-2.8f * up, 0, 0.12f + 0.25f * up);
-                p[Joint.ShoulderR] = new Vector3(-2.8f * up, 0, -0.12f - 0.25f * up);
+                p.HipsOffset = new Vector3(0, 0.015f * up, 0);
+                p[Joint.FootL].X = -0.15f * up;
+                p[Joint.FootR].X = -0.15f * up;
+                p[Joint.Spine].X = -0.12f * up;
+                p[Joint.Neck].X = -0.18f * up;
+                p[Joint.ShoulderL] = new Vector3(-2.3f * up, 0, 0.12f + 0.2f * up);
+                p[Joint.ShoulderR] = new Vector3(-2.3f * up, 0, -0.12f - 0.2f * up);
                 p[Joint.ElbowL].X = -0.2f;
                 p[Joint.ElbowR].X = -0.2f;
                 break;
@@ -222,8 +222,8 @@ public sealed class PlayerAnimator
             {
                 // A slow look over one shoulder, then the other, the chest turning a little.
                 float look = Mathf.Sin(t / GestureSeconds * Mathf.Tau);
-                p[Joint.Neck].Y = 0.85f * look;
-                p[Joint.Spine].Y = 0.25f * look;
+                p[Joint.Neck].Y = 0.6f * look;
+                p[Joint.Spine].Y = 0.18f * look;
                 p[Joint.ShoulderL] = new Vector3(-0.04f, 0, 0.1f);
                 p[Joint.ShoulderR] = new Vector3(-0.04f, 0, -0.1f);
                 p[Joint.ElbowL].X = -0.15f;
