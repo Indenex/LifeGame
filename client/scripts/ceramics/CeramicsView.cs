@@ -90,7 +90,7 @@ public partial class CeramicsView : Node
     {
         get
         {
-            if (myId == 0 && conn?.Identity is { } identity && conn.Db.Player.Identity.Find(identity) is { } p)
+            if (myId == 0 && Me.Key(conn) is { } identity && conn.Db.Player.Identity.Find(identity) is { } p)
                 myId = p.PlayerId;
             return myId;
         }
