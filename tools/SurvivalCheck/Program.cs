@@ -309,11 +309,19 @@ if (winded > cap) Fail($"a sprint without end still covered {winded:F1} m in its
 if (winded < 50f) Fail($"the bot got stuck while winded ({winded:F1} m in 20 s)");
 Ok($"a sprint without end is capped at a walk ({winded:F1} m in 20 s once winded, a sprint without limit would cover 118)");
 // Run dry only caps pace; an honest rhythm of a short run and a rest is never slowed.
-Settle(14_000);
-float honest = PaceFor(0.56f, 5);
-Settle(12_000);
-honest += PaceFor(0.56f, 5);
-float wanted = fresh * 2 * 0.9f;
+// A trunk or an unlucky turn can cost a stretch of one pair of runs (46.5 of 47.4 m once, bugfix-69), so a
+// short pair tries the next lane; a real slow-down from the server's bar shows on every lane.
+float honest = 0, wanted = fresh * 2 * 0.9f;
+for (int lane = 0; lane < 3; lane++)
+{
+    Settle(14_000);
+    honest = PaceFor(0.56f, 5);
+    Settle(12_000);
+    honest += PaceFor(0.56f, 5);
+    if (honest >= wanted) break;
+    Console.WriteLine($"  an honest run, rest, run came to {honest:F1} m of {wanted:F1}; trying the next lane");
+    pz += 3; startX = ServerX(); dir = 1;
+}
 if (honest < wanted) Fail($"an honest run, rest, run was slowed: {honest:F1} m, expected at least {wanted:F1} m");
 Ok($"an honest run and rest pattern is never slowed ({honest:F1} m)");
 
