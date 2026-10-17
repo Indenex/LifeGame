@@ -367,7 +367,7 @@ bool Step(string line)
             // like sql, but prints the result table: puppet: sqlout | <line>
             using var q = Process.Start(new ProcessStartInfo("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"") { RedirectStandardError = true, RedirectStandardOutput = true })!;
             var outText = q.StandardOutput.ReadToEnd(); q.WaitForExit();
-            foreach (var line in outText.Split('\n')) if (line.Trim().Length > 0) Console.WriteLine($"puppet: sqlout | {line.TrimEnd()}");
+            foreach (var row in outText.Split('\n')) if (row.Trim().Length > 0) Console.WriteLine($"puppet: sqlout | {row.TrimEnd()}");
             Pump(0.5);
             break;
         }
