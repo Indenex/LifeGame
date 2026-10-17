@@ -20,6 +20,11 @@ public static class JournalCheck
             if (!NoSkill.Contains(id) && Skills.SpecFor(id) == null)
             { Console.WriteLine("no skill: " + id); bad++; }
 
+        // A skill named on a ProcessDef must be a real one.
+        foreach (var id in all)
+            if (Processes.Find(id)?.Skill is { } named && Skills.Spec(named) == null)
+            { Console.WriteLine($"{id} names unknown skill {named}"); bad++; }
+
         // Walk the hints the way a player would, taking the first, then the third, suggestion.
         foreach (int pick in new[] { 0, 2 })
         {

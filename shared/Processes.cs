@@ -100,6 +100,9 @@ namespace LifeGame.Shared
         // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
         // guess from the id; set it on new processes.
         public WorkMotion Motion;
+        // The skill (a Specialization id) this process trains. It wins over the guess from the
+        // id when set; null = inferred from the id by Skills.SpecFor.
+        public string? Skill;
     }
 
     public static class Processes
