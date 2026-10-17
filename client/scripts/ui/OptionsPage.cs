@@ -168,6 +168,16 @@ public partial class OptionsPage : Control
         });
         motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(motion);
+        // ui-85: windows drag by their top edge, HUD pieces with Alt held; this puts them all back.
+        Button layout = null!;
+        layout = ControlsPage.TextButton("Reset layout", () =>
+        {
+            Mover.Reset();
+            layout.Text = "Layout reset";
+        });
+        layout.TooltipText = "Windows move by dragging their top edge; hold Alt to move the rings, sundial and other HUD pieces";
+        layout.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(layout);
 
         // Water reflections (Atmosphere, atmosphere-31): off, normal or high.
         Button reflections = null!;

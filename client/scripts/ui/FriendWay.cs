@@ -43,6 +43,8 @@ public partial class FriendWay : CanvasLayer
         view.GrowHorizontal = Control.GrowDirection.Both;
         view.Size = new Vector2(Width, Height);
         AddChild(view);
+        // ui-85: Alt and drag moves it; placed here each frame, so it adds the offset itself.
+        Mover.Hud(view, "way", ownerPlaces: true);
         if (Preview) { Target = uint.MaxValue; name = "Mara"; }
     }
 
@@ -87,10 +89,12 @@ public partial class FriendWay : CanvasLayer
         view.Visible = alpha > 0.01f;
         // Offsets from the top-centre anchor. Setting Position here put the arrow at x = -100, half
         // off the left edge, because a Control under a CanvasLayer measures from the screen's
-        // left, not its middle (bugfix-73).
-        float top = 10 + SundialArc.Room;
-        view.OffsetLeft = -Width / 2;
-        view.OffsetRight = Width / 2;
+        // left, not its middle (bugfix-73). ui-85: plus where it was dragged (Alt).
+        var moved = Mover.Offset("way");
+        // Under the status line (Hud, 18 px below the sundial), so "Connected" never sits under it.
+        float top = 44 + SundialArc.Room + moved.Y;
+        view.OffsetLeft = -Width / 2 + moved.X;
+        view.OffsetRight = Width / 2 + moved.X;
         view.OffsetTop = top;
         view.OffsetBottom = top + Height;
         if (view.Visible) view.QueueRedraw();

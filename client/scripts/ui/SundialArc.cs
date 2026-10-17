@@ -36,6 +36,8 @@ public partial class SundialArc : CanvasLayer
         view.Position = new Vector2(-Width / 2, 8);
         view.Size = new Vector2(Width, Height);
         AddChild(view);
+        // ui-85: Alt and drag moves it.
+        Mover.Hud(view, "sundial");
         // --screenshot-sundial shows it without a sundial; =dawn, =noon, =dusk or =night picks the hour.
         foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--screenshot-sundial")))
         {
