@@ -29,11 +29,13 @@ using LifeGame;
 
 // Soak test (audio-hotfix-1): hours of game time of random weather, seasons and events
 // through the mix, checking every block stays finite and nothing throws.
+//   dotnet run -c Release -- --music-test (the recorded-music director's rules, with fake tracks)
 //   dotnet run -c Release -- --edges      (every setting at its limits; must report no faults)
 //   dotnet run -c Release -- --soak=6 [--seed=1] [--fuzz] [--inject]    (6 game hours)
 // --fuzz hands the mix NaN, infinite and out-of-range inputs; --inject makes bad blocks and
 // exceptions on purpose to prove the mix recovers.
 if (args.Contains("--edges")) Environment.Exit(Soak.Edges());
+if (args.Contains("--music-test")) Environment.Exit(MusicTest.Run());
 if (args.FirstOrDefault(a => a.StartsWith("--soak=")) is { } soakArg)
 {
     double hours = double.Parse(soakArg[7..], System.Globalization.CultureInfo.InvariantCulture);

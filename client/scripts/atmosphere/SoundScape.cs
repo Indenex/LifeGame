@@ -29,13 +29,17 @@ public partial class SoundScape : Node
     // Levels are plain floats the synth thread reads each block; a stale read just
     // eases in one block later.
     public float Daylight { set => mix.Daylight = value; }
-    public float Rain { set => mix.Rain = value; }
+    public float Rain { set { mix.Rain = value; RainNow = value; } }
+    public float RainNow { get; private set; }
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
-    public float Cover { set => mix.Cover = value; }
-    public float TimeOfDay { set => mix.TimeOfDay = value; }
+    public float Cover { set { mix.Cover = value; CoverNow = value; } }
+    public float CoverNow { get; private set; }
+    public float TimeOfDay { set { mix.TimeOfDay = value; TimeOfDayNow = value; } }
+    public float TimeOfDayNow { get; private set; }
     public float Foliage { set => mix.Foliage = value; }
-    public float Fire { set => mix.Fire = value; }
+    public float Fire { set { mix.Fire = value; FireNow = value; } }
+    public float FireNow { get; private set; }
     public float FirePan { set => mix.FirePan = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
@@ -77,6 +81,7 @@ public partial class SoundScape : Node
     {
         Load();
         Sfx.Attach(this);
+        AddChild(new MusicPlayer(this)); // the recorded music (audio-8)
         SoundMix.Fault = what => Fault(what);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
