@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-32-smoke-signal
-PR: (none yet)
+PR: #524
 
 ## Goal
 From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I want to be able to see like a smoke signal kinda thing." A fire whose fuel is above 75% of the most a fire can hold (`Fires.MasterMaxSeconds`, or that times `Structures.HearthFuelScale` for a fire on a raised hearth) puts up a tall, thick, soft smoke column, about 30 to 36 m, leaning with the wind and spreading at the top, readable from as far as the camera sees (300 m). Below 75% the fire keeps today's light smoke (AtmosphereHomes). Between 70% and 80% the column swells and thins smoothly. Campfires send it up from the fire; a home sends it up from its smoke outlet (chimney) when the fire inside is stoked. Client only, no server change. Justin sees a pale, painted, sun-lit column over a stoked camp, warm at the foot, grey and wide higher up.
@@ -16,4 +16,4 @@ From a playtester, via Justin: "if a fire is above 75%, make it smoke more ... I
 - The camera far plane is 300 m and depth fog (0.006) thins the far column past about 200 m; neither is this lane's file.
 
 ## Next step
-Lane coordinator reviews, opens the PR, and asks Render C for a near and far clip of a fire stoked over 75% (use --smoke-signal=1).
+Wait for #524 CI and Render C's near and far clip (queued after the #517 water clip). Questions for Justin (via the PM, 04:55): signal threshold for new players, and whether self-feeding hearths should signal.
