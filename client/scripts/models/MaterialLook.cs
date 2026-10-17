@@ -184,15 +184,15 @@ public static class MaterialLook
         uniform sampler2D card : source_color, filter_linear_mipmap, repeat_disable;
         uniform sampler2D brush : filter_linear_mipmap, repeat_enable;
         // Colours picked from the card.
-        uniform vec3 shade_col : source_color = vec3(0.16, 0.2, 0.14);
-        uniform vec3 base_col : source_color = vec3(0.23, 0.3, 0.2);
-        uniform vec3 lit_col : source_color = vec3(0.33, 0.4, 0.26);
+        uniform vec3 shade_col : source_color = vec3(0.11, 0.155, 0.145);
+        uniform vec3 base_col : source_color = vec3(0.16, 0.22, 0.2);
+        uniform vec3 lit_col : source_color = vec3(0.22, 0.29, 0.24);
         uniform vec3 ink : source_color = vec3(0.1, 0.11, 0.08);
         uniform vec3 bark_dark : source_color = vec3(0.24, 0.16, 0.19);
         uniform vec3 bark_lit : source_color = vec3(0.39, 0.31, 0.27);
         // Shade leans violet, as a painter's would; lit tips lean warm.
         uniform vec3 shade_tint : source_color = vec3(0.72, 0.7, 0.9);
-        uniform vec3 warm_tint : source_color = vec3(1.0, 0.96, 0.86);
+        uniform vec3 warm_tint : source_color = vec3(1.0, 0.98, 0.92);
         // How many metres one repeat of the brush noise spans.
         uniform float brush_size = 3.5;
         // How much the light follows the whole tree's cone instead of each bough,
