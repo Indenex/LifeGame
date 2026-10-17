@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling lane (session_01Y3HWfLh47B52ViBgWpzWrz, from 2026-10-17 15:00 on this account)
 Status: in_progress
 Branch: claude/modeling-i8ox5v
-PR: (not yet)
+PR: #836
 
 ## Goal
 D-292 rollout sweep: the last world props still drawn on plain Look or StandardMaterial3D, now on the painted shader like the rest:
