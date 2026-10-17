@@ -30,9 +30,12 @@ public sealed class PlayerAnimator
     // natural point instead of jumping to the start.
     bool again;
 
-    public void Act(WorkMotion motion)
+    WorkMotions.StrikeStyle actStyle;
+
+    public void Act(WorkMotion motion, WorkMotions.StrikeStyle style = WorkMotions.StrikeStyle.Fist)
     {
         if (!WorkMotions.IsAct(motion)) return;
+        actStyle = style;
         if (motion == shownAct && actBlend > 0f)
         {
             again = true;
@@ -130,7 +133,7 @@ public sealed class PlayerAnimator
             shownAct = WorkMotion.None;
             return;
         }
-        WorkMotions.ActPose(act, shownAct, actTime, rig.LegLength);
+        WorkMotions.ActPose(act, shownAct, actTime, rig.LegLength, actStyle);
         float w = Mathf.SmoothStep(0f, 1f, actBlend);
         if (legs)
         {

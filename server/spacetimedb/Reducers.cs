@@ -214,6 +214,7 @@ public static partial class Module
 
         if (stickTool is { } digger) WearTool(ctx, digger);
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 

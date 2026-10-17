@@ -33,6 +33,7 @@ public static partial class Module
         byte quality = Math.Min(tool.Quality, cap);
         AddToInventory(ctx, ctx.Sender, Item.Wool, animal.Fleece >= 100 ? 2u : 1u, quality);
         OnProcessPerformed(ctx, player.PlayerId, ShearProcess, quality, false);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Shear, (Item)tool.Item);
         WearTool(ctx, tool);
 
         // A shorn sheep stands looking a bit put out, but it isn't frightened off.

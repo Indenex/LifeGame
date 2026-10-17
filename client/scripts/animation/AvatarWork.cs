@@ -52,9 +52,12 @@ public static class AvatarWork
         // notes them only once they succeed.
         conn.Db.PlayerAct.OnInsert += (_, act) =>
         {
-            var avatar = act.PlayerId == MyPlayerId(conn) ? me : other(act.PlayerId);
-            avatar?.Act((WorkMotion)act.Motion, act.Item == 0 ? null : (Item)act.Item);
+            AvatarOf(conn, me, other, act.PlayerId)?.Act((WorkMotion)act.Motion, act.Item == 0 ? null : (Item)act.Item);
         };
+        // A bow shot (ArrowShot, hit or miss) and a struck player's flinch come from
+        // events other lanes already send.
+        conn.Db.ArrowShot.OnInsert += (_, shot) => AvatarOf(conn, me, other, shot.PlayerId)?.Act(WorkMotion.Shoot, Item.Bow);
+        conn.Db.StrikeEvent.OnInsert += (_, hit) => AvatarOf(conn, me, other, hit.VictimId)?.Act(WorkMotion.Flinch, null);
         conn.Db.WornItem.OnDelete += (_, w) => Changed(w);
     }
 
@@ -74,6 +77,9 @@ public static class AvatarWork
             }
         if (best < 3f * 3f) avatar.Face(bx, bz);
     }
+
+    static Avatar? AvatarOf(DbConnection conn, Avatar me, Func<uint, Avatar?> other, uint playerId) =>
+        playerId == MyPlayerId(conn) ? me : other(playerId);
 
     static uint? MyPlayerId(DbConnection conn) =>
         conn.Identity is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;

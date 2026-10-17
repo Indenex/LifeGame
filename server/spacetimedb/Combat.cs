@@ -127,6 +127,7 @@ public static partial class Module
         float left = theirs.Health - damage;
         bool killed = left <= 0f;
         ctx.Db.StrikeEvent.Insert(new StrikeEvent { AttackerId = attacker.PlayerId, VictimId = victim.PlayerId, X = b.X, Z = b.Z, Killed = killed });
+        NoteAct(ctx, attacker.PlayerId, WorkMotion.Strike, Has(Item.Spear) ? Item.Spear : Has(Item.HandAxe) ? Item.HandAxe : Has(Item.Flake) ? Item.Flake : 0);
 
         if (!killed)
         {
