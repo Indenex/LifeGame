@@ -1,7 +1,7 @@
 # crafting-5: Time-to-fired-pot playtest
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-pot-playtest
 PR: (not yet)
 
@@ -22,4 +22,4 @@ Play current main as a brand-new player, from waking up to a fired clay pot, usi
 - (none; D-054 settled the fire time)
 
 ## Next step
-Open the PR, send the PM the time-to-pot and friction list, drive CI green.
+None. Merged to main; kept for history.

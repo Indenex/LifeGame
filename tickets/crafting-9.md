@@ -1,7 +1,7 @@
 # crafting-9: Chop wood with the stone axe
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-chop-wood
 PR: #70
 
@@ -32,4 +32,4 @@ The stone axe finally has a use. Standing next to a tree with an axe (anything t
 - (none) Felling vs deadwood answered: D-060, trees fall after 3 logs.
 
 ## Next step
-Wait for CI on PR #70's new head, then send the PM the green sha.
+None. Merged to main; kept for history.
