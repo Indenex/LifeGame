@@ -54,6 +54,7 @@ public static class Subscriptions
         "SELECT * FROM my_inventory",
         // What you wear (animals-12, read by the equipment panel, ui-10).
         "SELECT * FROM my_worn",
+        "SELECT * FROM my_hotbar",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
         "SELECT * FROM player_look",
