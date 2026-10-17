@@ -171,8 +171,21 @@ namespace LifeGame.Shared
         // claims-19: town rosters. Claim owners sign a roster; everyone who signed gets builder
         // rights (build, dig, gates; not stashes, tending or fighting rules) on every signed
         // claim. One raisable constant each (D-197).
-        public const int TownMaxClaims = 12;
+        public const int TownMaxClaims = 64;                       // a soft cap, for server cost
+        public const float TownNearMetres = 60f;                   // marker to marker; touching is 40
         public const long TownInviteMicros = 24L * 3600 * 1_000_000;
+        // Offices are voted for by the signers (open ballot). A majority wins at once; otherwise
+        // the term's end decides by most votes. Office ids are append-only data (D-206).
+        public const byte OfficeMayor = 0;
+        public const long TownTermMicros = 7L * 24 * 3600 * 1_000_000;
+        public const long TownVacancyMicros = 24L * 3600 * 1_000_000;
+
+        // Whether two claim markers are near enough for the same town.
+        public static bool TownNear(float x1, float z1, float x2, float z2)
+        {
+            float dx = x1 - x2, dz = z1 - z2;
+            return dx * dx + dz * dz <= TownNearMetres * TownNearMetres;
+        }
 
         // claims-16 (D-182): control characters (newlines, escapes, NUL) never reach other
         // players' screens; they read as spaces, so words don't run together.

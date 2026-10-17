@@ -175,6 +175,7 @@ a.LastError = null;
 a.Conn.Reducers.SendChat("/me");
 Wait(() => b.Conn.Db.MyChat.Iter().Count() > chatCount || a.LastError != null, 1.5);
 Check(b.Conn.Db.MyChat.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.TownNear(0, 0, 41, 0) && !Social.TownNear(0, 0, 61, 0), "claims within 60 m can join the same town");
 Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
@@ -564,13 +565,26 @@ else
             ExpectError(a, () => a.Conn.Reducers.TendClaim(bClaim.Id), "owner and members", "a signer cannot tend another claim's marker");
             ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId + 1000), "not on this roster", "the founder cannot remove someone who is not on the roster");
 
-            // Leaving the roster takes the rights away.
-            b.Conn.Reducers.LeaveTown();
-            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "B leaves the roster");
-            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "after B leaves, A cannot build on B's land again");
+            // The Mayor: A, the founder, starts as Mayor. Only the Mayor removes; the signers vote.
+            var mayorNow = a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor);
+            Check(mayorNow.HolderId == a.PlayerId, "the founder starts as Mayor");
+            ExpectError(b, () => b.Conn.Reducers.RemoveFromTown(a.PlayerId), "Mayor", "a signer who is not Mayor cannot remove anyone");
+            b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, b.PlayerId);
+            Check(Wait(() => b.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId && v.VoterId == b.PlayerId), 5), "B votes for B");
+            Check(a.Conn.Db.TownOffice.Iter().First(o => o.TownId == townId && o.Office == Social.OfficeMayor).HolderId == a.PlayerId, "one vote of two is not a majority, so A stays Mayor");
+            a.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, b.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == Social.OfficeMayor && o.HolderId == b.PlayerId), 5), "two votes of two make B the Mayor");
+            Check(!a.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId), "the ballot clears once the seat is filled");
+            ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId), "Mayor", "A is no longer Mayor and cannot remove B");
+            ExpectError(b, () => b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, 999999), "not on this roster", "a vote must name a signer");
+
+            // The Mayor removes a signer; the rights go with them.
+            b.Conn.Reducers.RemoveFromTown(a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "the Mayor removes A from the roster");
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "after being removed, A cannot build on B's land");
             // The last signer leaving closes the town.
-            a.Conn.Reducers.LeaveTown();
-            Check(Wait(() => !a.Conn.Db.Town.Iter().Any(t => t.Id == townId), 5), "the town closes when the last claim leaves");
+            b.Conn.Reducers.LeaveTown();
+            Check(Wait(() => !a.Conn.Db.Town.Iter().Any(t => t.Id == townId) && !a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId), 5), "the town and its offices close when the last claim leaves");
         }
     }
 }
@@ -621,7 +635,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

@@ -1,7 +1,7 @@
 # claims-19: Town rosters (Justin: "Add neighbors together via a roster everyone signs")
 Lane: Claims, chat and PvP rules
 Owner: Claims lane (Sonnet session)
-Status: in_review (server, rights and tests); panel UI to follow
+Status: in_review (server: roster, rights, Mayor, voting, distance); other offices, merge and panel wait for the PM
 Branch: claude/claims-19-town-roster
 PR: (see below)
 
@@ -15,20 +15,20 @@ Neighbouring claim owners form a town. A claim owner starts a roster (a town, wi
 - Client: `SocialLayer.HasRights` includes town signers (building, gates, land chip, fence snap); marker tending and the claim panel stay owner and members only. Subscriptions added for `town`, `town_signer`, `my_town_invites`.
 - SocialTest: a town section at the very end (two fresh claims, since claims last 30 s in CI): sign needs an invitation; invitations private; rights before and after signing and after leaving; no stash and no tending; closing the town.
 
-## Details sent to the PM as options (recommended version built)
-1. Who invites: any signer [built] / founder only.
-2. Who removes: the founder removes others, anyone leaves [built]; the founder's role passes to the longest-standing signer; the town closes when the last claim leaves.
-3. Touching claims required: no [built] / must touch or be within N m of a signed claim. A cap of 12 claims keeps it small.
-4. A signer's claim falling removes them from the roster [built].
-5. One roster per claim owner [built]; invitations last 24 h.
+## Justin's answers (via the PM, 2026-10-17)
+1. Invites: any signer. Built.
+2. Removal: "There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." Built so far: the Mayor office (the founder starts as Mayor), open-ballot voting, Mayor-only removal. The other nine offices are proposed to the PM and wait for the go-ahead (see the proposal in the PM thread: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe, Elder; one data row each, D-206).
+3. Distance: "They should be nearby, but the idea is cousins can merge into very large towns" (read as towns). Built: a claim may join if its marker is within 60 m of a signed marker (`Social.TownNearMetres`); soft cap 64 claims. Merging two towns by vote of both: proposed, not built.
+
+Vote rules built: a majority of the signers wins at once; otherwise the term's end (7 days, `Social.TownTermMicros`) goes to the most votes (a tie to the longest-standing signer); no votes means the holder stays; a vacant seat gets 24 h. The hourly `TownTerms` reducer (RequireServer) settles terms.
 
 ## Progress log
 - 2026-10-17: server and tests done; the server module builds, bindings generate, SocialTest passes on a fresh database; the client also builds locally (`dotnet build client/LifeGame.csproj`, 0 errors; no Godot needed, the Godot SDK comes from NuGet).
 - Toolchain recipe is in tickets/claims-13.md; add the client build line above.
 
 ## Open questions / blockers
-- PM answers on the details above.
+- PM go-ahead on the other nine offices, the merge rule and the panel look (2 to 3 written descriptions sent).
 - The panel (a "Town" section in the claim panel: start, invite a neighbour, pending invitations with sign or decline, the roster with leave and, for the founder, remove) is a player-visual job for an Opus helper; not built yet. Until then the reducers work but have no UI.
 
 ## Next step
-Wait for CI on the PR and send the PM the green sha; then brief an Opus helper for the claim panel's Town section.
+Wait for CI on #469 and send the PM the green sha. Then, on the PM's answer: the remaining offices as data, the merge vote, and the panel (Opus helper).
