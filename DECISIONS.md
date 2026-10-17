@@ -1115,3 +1115,13 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
 **Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
 **Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
