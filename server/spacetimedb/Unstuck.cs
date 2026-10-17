@@ -118,11 +118,13 @@ public static partial class Module
     }
 
     // Whether a body of this size can stand here: ground that is dry or only wading depth, no
-    // structure footprint (grown by margin), and no claim the caller has no rights in.
+    // structure footprint or trunk or boulder (grown by margin), and no claim the caller has no rights in.
     static bool StandingFree(ReducerContext ctx, float x, float z, float margin)
     {
         float ground = Structures.GroundAt(x, z, (i, j) => DepthAt(ctx, i, j));
         if (Wading.Floating(Wading.Depth(ground))) return false;
+        // Not in a tree trunk or boulder (shared/Obstacles.cs, the rule the server enforces on steps).
+        if (Obstacles.PushOut(new ServerGround(ctx), margin, x, z, 0f) != (x, z)) return false;
         foreach (var s in StructuresNear(ctx, x, z))
         {
             // A plan that has only been marked out has nothing to bump into yet.

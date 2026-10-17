@@ -151,7 +151,7 @@ public partial class Atmosphere
         if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
         else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
         else if (AnimalDefs.Get((byte)a.Species).Model == "hen")
-            Hens.Seen(a.Id, a.X, a.Z, a.State switch { AnimalState.Graze => HenVoices.Mood.Peck, AnimalState.Walk => HenVoices.Mood.Walk, AnimalState.Run => HenVoices.Mood.Run, _ => HenVoices.Mood.Idle });
+            Hens.Seen(a.Id, a.X, a.Z, a.State switch { AnimalState.Graze => HenVoices.Mood.Peck, AnimalState.Walk => HenVoices.Mood.Walk, AnimalState.Run => HenVoices.Mood.Run, AnimalState.Roost => HenVoices.Mood.Roost, _ => HenVoices.Mood.Idle });
     }
 
     // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,

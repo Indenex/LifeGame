@@ -141,6 +141,21 @@ public partial class WarmLook : Node
         InkInside(p);
     }
 
+    // Words floating in the world (names, chat bubbles, cues, "Your waking place", claim
+    // markers; ui-56): the warm look's rounded Nunito, and a soft brown edge instead of a near
+    // black one, so they sit in the warm light like the HUD's words do. A slanted font (emotes,
+    // cues) stays slanted. Colours are left alone.
+    static void WarmWorldWords(Label3D l)
+    {
+        if (l.HasMeta(Keep)) return;
+        l.SetMeta(Keep, true);
+        l.Font = l.Font is FontVariation slant && slant.BaseFont == null
+            ? new FontVariation { BaseFont = Ui.Font(800), VariationTransform = slant.VariationTransform }
+            : l.Font == null ? Ui.Font(800) : l.Font;
+        var edge = l.OutlineModulate;
+        if (edge.Luminance < 0.2f) l.OutlineModulate = new Color(0.24f, 0.13f, 0.07f, edge.A);
+    }
+
     // Controls that style themselves for paper are left as they are.
     const string Keep = "warm_keep";
 
@@ -176,6 +191,12 @@ public partial class WarmLook : Node
 
     void Added(Node node)
     {
+        if (node is Label3D words)
+        {
+            // After whoever made it has set its font and colours.
+            Callable.From(() => { if (IsInstanceValid(words)) WarmWorldWords(words); }).CallDeferred();
+            return;
+        }
         if (node is not Control c) return;
         // After the panel has set its own colours.
         Callable.From(() =>
