@@ -20,7 +20,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
-| B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |
+| B | Build menu: pictures by category (Shelter, Storage, Crafting, Fire, Fences and gates, Claims), costs on each tile, greyed when short; click one to lay it out (T turns, Tab next, click places, Esc or B cancels). B or Esc closes the menu | Building, UX/UI (ui-20) | Justin picked the picture panel |
 | K | Claim panel | Claims | T |
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
