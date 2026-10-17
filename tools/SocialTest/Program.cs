@@ -87,7 +87,7 @@ void ExpectError(Tester t, Action call, string contains, string what)
 }
 
 // The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
-// last resort puts the bot at its target (the bots are made admins for that).
+// last resort asks the server to shake the bot free (unstuck).
 var walkers = new Dictionary<Tester, BotWalker>();
 void Walk(Tester t, float x, float z)
 {
@@ -98,7 +98,6 @@ void Walk(Tester t, float x, float z)
             for (var until = Stopwatch.StartNew(); until.ElapsedMilliseconds < ms; Thread.Sleep(5))
                 foreach (var u in all) u.Tick();
         }, msg => { Console.WriteLine($"FAIL  {msg} (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})"); Environment.Exit(1); });
-        w.MakeAdmin(uri, db);
     }
     Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1})");
     w.To(ref t.X, ref t.Z, x, z, 0.3f, stand: true);
@@ -109,43 +108,6 @@ Pump(() => a.Ready && b.Ready, 20, "connections");
 Walk(a, 0f, 0f);
 Walk(b, 1f, 0f);
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
-
-// admin_teleport (integration-12) is what the check bots fall back on when a walk is stuck: it must work for
-// an admin and be refused for everyone else (D-182). A is an admin by now (the walker made it one).
-{
-    var rule = new Func<Tester, float, float, bool>((t, x, z) =>
-    {
-        t.LastError = null;
-        t.Conn.Reducers.AdminTeleport(x, z);
-        return true;
-    });
-    // The walkers made A and B admins, so the refusal is checked with a third player who is not.
-    var c = new Tester("C", uri, db);
-    var wait = Stopwatch.StartNew();
-    while (!c.Ready && wait.Elapsed.TotalSeconds < 20) { c.Tick(); foreach (var t in all) t.Tick(); Thread.Sleep(5); }
-    Check(c.Ready, "a third player connects");
-    var cBefore = c.Conn.Db.PlayerPos.PlayerId.Find(c.PlayerId);
-    rule(c, 30f, 30f);
-    wait.Restart();
-    while (c.LastError == null && wait.Elapsed.TotalSeconds < 5) { c.Tick(); foreach (var t in all) t.Tick(); Thread.Sleep(5); }
-    Check(c.LastError?.Contains("Only an admin") == true, $"a player who is not an admin cannot teleport ({c.LastError ?? "no error"})");
-    Check(c.Conn.Db.PlayerPos.PlayerId.Find(c.PlayerId) is { } still && cBefore is { } was && MathF.Abs(still.X - was.X) < 0.5f && MathF.Abs(still.Z - was.Z) < 0.5f, "and stays where they were");
-    c.Conn.Disconnect();
-    rule(a, 12f, 7f);
-    Check(Wait(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId) is { } p && MathF.Abs(p.X - 12f) < 0.5f && MathF.Abs(p.Z - 7f) < 0.5f, 5), "an admin can teleport");
-    rule(a, float.NaN, 0f);
-    Check(Wait(() => a.LastError != null, 5), "a teleport to nowhere is refused");
-    // A walk that always stalls takes the fallback: two sidesteps, then A is put at the target (and a warning is logged).
-    a.X = 12f; a.Z = 7f;
-    int before = BotWalker.Fallbacks;
-    BotWalker.StallMetres = 1000f;
-    Walk(a, 100f, 7f);
-    BotWalker.StallMetres = 0.3f;
-    Check(BotWalker.Fallbacks == before + 1 && MathF.Abs(a.X - 100f) < 0.6f && MathF.Abs(a.Z - 7f) < 0.6f, "a walk that stalls is repositioned at its target");
-    rule(a, 0f, 0f);
-    Check(Wait(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.PlayerId) is { } home && MathF.Abs(home.X) < 0.5f && MathF.Abs(home.Z) < 0.5f, 5), "and can be put back");
-    a.X = 0f; a.Z = 0f;
-}
 
 // A gathers what a marker needs (and a second marker's worth for the town check at the end, claims-19); B gathers one marker's worth.
 foreach (var gatherer in new[] { a, b })

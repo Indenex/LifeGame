@@ -1,11 +1,11 @@
 // One way for every check bot to walk (integration-12). The tools used to carry five copies of a walk, and
 // each could wedge a bot on a trunk, wall or the server's pace and fail a check that was testing something
 // else. This walk routes round obstacles (BotGround), watches the SERVER's position for a stall (under
-// StallMetres in StallSeconds), sidesteps and re-routes twice, and only then puts the bot at its target with
-// the admin-only admin_teleport, logging a ::warning:: so the stuck spot still gets seen and fixed. A strict
-// walker never teleports: a stall is a failure. Exactly one tool (SpawnCheck's water walk) is strict, because
-// it is the one place walking itself is tested. Linked into each tool with
-// <Compile Include="../common/*.cs" LinkBase="Common" />.
+// StallMetres in StallSeconds), sidesteps and re-routes, and then asks the server to shake the bot free with
+// the player-facing `unstuck` reducer (bugfix-44: nearest free spot within about 12 m, 60 s cooldown), logging
+// a ::warning:: each time so a stuck spot still gets seen and fixed. A strict walker fails on the first stall:
+// exactly one tool (SpawnCheck's water walk) is strict, because it is the one place walking itself is tested.
+// Linked into each tool with <Compile Include="../common/*.cs" LinkBase="Common" />.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,10 +16,8 @@ using SpacetimeDB.Types;
 public sealed class BotWalker
 {
     // No progress of this far in this long counts as a stall.
-    // (A field, so the social check can make every walk stall once to exercise the fallback.)
-    public static float StallMetres = 0.3f;
+    public const float StallMetres = 0.3f;
     public const double StallSeconds = 3.0;
-    const int Sidesteps = 2;
 
     readonly DbConnection conn;
     readonly uint myId;
@@ -29,8 +27,15 @@ public sealed class BotWalker
     readonly bool strict;
 
     public BotGround Ground { get; }
-    // Times the walker had to put its bot at the target; for a summary line at the end of a run.
+    // Times a walker had to use the reposition fallback; for a summary line at the end of a run.
     public static int Fallbacks { get; private set; }
+
+    // The unstuck reducer exists once bugfix-44 has merged; until then the step is switched off and a stuck
+    // walk fails after its sidesteps. Found by name so this file builds against bindings without it.
+    static readonly System.Reflection.MethodInfo? unstuckCall = typeof(SpacetimeDB.Types.RemoteReducers).GetMethod("Unstuck", Type.EmptyTypes);
+    public static bool UnstuckAvailable => unstuckCall != null;
+
+    string? lastError;
 
     // pump(ms) lets the tool's connection run for that long; fail(message) ends the run with the tool's own failure.
     public BotWalker(DbConnection conn, uint playerId, string tool, string bot, Action<int> pump, Action<string> fail, bool strict = false)
@@ -43,45 +48,8 @@ public sealed class BotWalker
         this.fail = fail;
         this.strict = strict;
         Ground = new BotGround(conn);
+        conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
     }
-
-    // Makes this bot an admin through the CLI as the database owner, so the teleport fallback is allowed.
-    // The bot's name must be unique among players (make_admin finds it by name); a bot that shares one is
-    // renamed. Returns false when it could not be done, and the walker then fails with the stall instead.
-    public bool MakeAdmin(string uri, string db)
-    {
-        string name = conn.Db.Player.PlayerId.Find(myId)?.Name ?? "";
-        if (name.Length == 0 || conn.Db.Player.Iter().Count(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) != 1)
-        {
-            name = $"{tool.Replace(" ", "")}{Random.Shared.Next(10000, 99999)}";
-            conn.Reducers.SetName(name);
-            for (int i = 0; i < 50 && conn.Db.Player.PlayerId.Find(myId)?.Name != name; i++) pump(100);
-        }
-        // Runs from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
-        var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, "make_admin", "\"" + name + "\"" })
-        {
-            WorkingDirectory = System.IO.Path.GetTempPath(),
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-        };
-        try
-        {
-            using var p = Process.Start(info);
-            if (p == null) return false;
-            p.StandardOutput.ReadToEnd();
-            string err = p.StandardError.ReadToEnd();
-            p.WaitForExit();
-            if (p.ExitCode != 0) Console.WriteLine($"::warning::{tool} {bot}: make_admin failed ({err.Trim()}); a stuck walk will fail instead of repositioning");
-            admin = p.ExitCode == 0;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"::warning::{tool} {bot}: could not run spacetimedb-cli ({e.Message}); a stuck walk will fail instead of repositioning");
-        }
-        return admin;
-    }
-
-    bool admin;
 
     // Walks to within `near` of a spot and waits until the server agrees where the bot is. x and z are the
     // bot's own idea of where it stands (the tool's variables), kept in step with the server.
@@ -99,23 +67,46 @@ public sealed class BotWalker
             ok = ok && Leg(ref x, ref z, tx, tz, near) && Settle(ref x, ref z);
             if (ok) return;
 
-            if (attempt < Sidesteps)
+            string where = $"{tool} {bot} stuck walking from ({startX:F1}, {startZ:F1}) to ({tx:F1}, {tz:F1}): bot ({x:F1}, {z:F1}), server {ServerAt()}";
+            if (strict || attempt >= Attempts) fail(where + (strict ? " (strict walk: no recovery)" : " (after sidesteps and unstuck)") + "\n  near: " + Describe(x, z));
+
+            // Take the server's word for where we are.
+            AdoptServer(ref x, ref z);
+            if (attempt == UnstuckAttempt && UnstuckAvailable) ShakeFree(ref x, ref z, where);
+            else
             {
-                // Take the server's word for where we are, step aside (alternating sides, wider each time), re-route.
-                AdoptServer(ref x, ref z);
+                // Step aside (alternating sides, wider each time), then work the route out again.
                 float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
                 if (d > 0.1f)
                 {
                     float side = (attempt % 2 == 0 ? 1f : -1f) * (2f + attempt);
                     Leg(ref x, ref z, x - dz / d * side, z + dx / d * side, 0.5f, giveUpAfter: 40);
                 }
-                continue;
             }
+        }
+    }
 
-            string where = $"{tool} {bot} stuck walking from ({startX:F1}, {startZ:F1}) to ({tx:F1}, {tz:F1}): bot ({x:F1}, {z:F1}), server {ServerAt()}";
-            if (strict || !admin) fail(where + (strict ? " (strict walk: no repositioning)" : " (bot is not an admin, so it cannot be repositioned)") + "\n  near: " + Describe(x, z));
-            Teleport(ref x, ref z, tx, tz, where);
-            return;
+    // Sidestep and re-route this many times; the unstuck call comes after the first two.
+    const int Attempts = 5, UnstuckAttempt = 2;
+
+    // Asks the server to move the bot to the nearest free spot (60 s cooldown per player: waits it out once).
+    void ShakeFree(ref float x, ref float z, string where)
+    {
+        for (int tries = 0; tries < 2; tries++)
+        {
+            Fallbacks++;
+            Console.WriteLine($"::warning::bot walk fallback: {where}; calling unstuck. Near: {Describe(x, z)}");
+            lastError = null;
+            unstuckCall!.Invoke(conn.Reducers, null);
+            for (var wait = Stopwatch.StartNew(); lastError == null && wait.Elapsed.TotalSeconds < 3; ) pump(100);
+            AdoptServer(ref x, ref z);
+            if (lastError is not { } err) return;
+            // "You shake yourself free again in N s": wait that long, once.
+            var m = System.Text.RegularExpressions.Regex.Match(err, @"again in (\d+) s");
+            if (!m.Success || tries == 1) return;
+            int secs = Math.Min(int.Parse(m.Groups[1].Value), 65);
+            Console.WriteLine($"::warning::{tool} {bot}: unstuck is cooling down; waiting {secs} s");
+            for (var wait = Stopwatch.StartNew(); wait.Elapsed.TotalSeconds < secs + 1; ) pump(100);
         }
     }
 
@@ -175,21 +166,6 @@ public sealed class BotWalker
     void AdoptServer(ref float x, ref float z)
     {
         if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p) { x = p.X; z = p.Z; }
-    }
-
-    void Teleport(ref float x, ref float z, float tx, float tz, string where)
-    {
-        Fallbacks++;
-        Console.WriteLine($"::warning::bot walk fallback: {where}; repositioned to the target. Near: {Describe(x, z)}");
-        conn.Reducers.AdminTeleport(tx, tz);
-        for (var wait = Stopwatch.StartNew(); wait.Elapsed.TotalSeconds < 10; pump(100))
-            if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - tx) < 0.5f && MathF.Abs(p.Z - tz) < 0.5f)
-            {
-                x = p.X;
-                z = p.Z;
-                return;
-            }
-        fail(where + "; and admin_teleport did not move the bot (is it an admin?)");
     }
 
     string ServerAt() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } p ? $"({p.X:F1}, {p.Z:F1})" : "(unknown)";

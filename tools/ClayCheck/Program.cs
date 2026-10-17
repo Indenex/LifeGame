@@ -90,7 +90,6 @@ float x = start.X, z = start.Z;
 // Every run begins from the same place (bugfix-31): new players wake at a random spot in the
 // spawn clearing, so walk to the origin first, at a pace the server accepts.
 var walker = new BotWalker(conn, myId, "Clay check", "bot", ms => Pump(() => false, ms / 1000f, null), Fail);
-walker.MakeAdmin(uri, db);
 WalkTo(0f, 0f, 0.1f);
 
 if (goTo != null)

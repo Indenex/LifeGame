@@ -782,7 +782,6 @@ sealed class Bot
         if (walker == null || walkerConn != Conn)
         {
             walker = new BotWalker(Conn, myId, "Building check", name, pump, msg => { Console.WriteLine("FAIL  " + msg); Environment.Exit(1); });
-            walker.MakeAdmin(uri, db);
             walkerConn = Conn;
         }
         walker.To(ref X, ref Z, tx, tz, within, stand: true);
