@@ -13,6 +13,8 @@ public partial class ClaimPanel : CanvasLayer
 {
     public DbConnection? Conn;
     public Func<uint> MyId = () => 0;
+    // claims-19: opens the Town panel (SocialLayer.Town).
+    public Action? OpenTown;
     public Claim? Claim { get; private set; }
     public bool IsOpen => box.Visible;
     // True while the owner is typing a name, so Main stops walking.
@@ -190,6 +192,8 @@ public partial class ClaimPanel : CanvasLayer
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "bag",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+                // A click takes one back into the bag, Shift+click the whole stack (as baskets do).
+                Clicked = (s, all) => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             };
             stashBag = new BagGrid
             {
@@ -199,6 +203,8 @@ public partial class ClaimPanel : CanvasLayer
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "stash",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+                // A click stores one in the stash, Shift+click the whole stack.
+                Clicked = (s, all) => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             };
             foreach (var (title, grid) in new[] { ("In the stash", stashGrid), ("You carry", stashBag) })
             {
@@ -306,6 +312,7 @@ public partial class ClaimPanel : CanvasLayer
         }
 
         content.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
+        if (OpenTown != null) content.AddChild(Button("Town", OpenTown));
         if (owner)
             content.AddChild(Button(confirmAbandon ? "Really take the marker down?" : "Take the marker down", () =>
             {

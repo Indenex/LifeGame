@@ -8,6 +8,12 @@ public static partial class Module
     [SpacetimeDB.Reducer(ReducerKind.Init)]
     public static void Init(ReducerContext ctx)
     {
+        // A mis-appended structure kind fails the first publish (CI load test) instead of breaking a world.
+        var enumKinds = Enum.GetValues<StructureKind>().Select(k => (int)k).OrderBy(k => k);
+        if (!enumKinds.SequenceEqual(Structures.Kinds))
+            throw new InvalidOperationException(
+                "StructureKind enum and the StructureDefs in shared/structures/ disagree: enum "
+                + string.Join(",", enumKinds) + " defs " + string.Join(",", Structures.Kinds));
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -92,10 +98,15 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetName(ReducerContext ctx, string name)
     {
-        name = Social.StripControl(name).Trim();
-        if (name.Length < 1 || name.Length > 24)
-            throw new Exception("Name must be 1 to 24 characters");
+        // The picker at first join and /name later (ui-31). The rules are shared (Names), so
+        // the picker's field says the same thing before asking; the reason is the error.
+        name = Names.Normalize(name);
+        if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
+        string key = Names.Key(name);
+        foreach (var other in ctx.Db.Player.Iter())
+            if (other.PlayerId != player.PlayerId && Names.Key(other.Name) == key)
+                throw new Exception("That name is taken");
         ctx.Db.Player.Identity.Update(player with { Name = name });
     }
 
@@ -183,8 +194,8 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         RequireReach(RequirePos(ctx, player), cellX * World.CellSize, cellZ * World.CellSize);
         RequireClaimAccess(ctx, cellX * World.CellSize, cellZ * World.CellSize);
-        // A digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick.
-        var stickTool = BestDigger(ctx);
+        // The equipped digging tool reaches one level deeper than hands (D-041), and a spade works faster than a stick (Equip.cs).
+        var stickTool = EquippedTool(ctx, ItemTags.Digging);
         float toolSpeed = stickTool is { } held ? Items.Def((Item)held.Item).DigSpeed : 1f;
         // Skilled diggers work faster.
         var state = RequireCooldown(ctx, player, (long)(World.DigCooldownMicros / toolSpeed * DurationScale(ctx, player.PlayerId, Skills.Dig)));
@@ -217,21 +228,6 @@ public static partial class Module
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
         NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
-    }
-
-    // The quickest digging tool that still works, then the better made.
-    static InventoryItem? BestDigger(ReducerContext ctx)
-    {
-        InventoryItem? best = null;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
-        {
-            if (!Items.IsKnown(row.Item) || (Items.Def((Item)row.Item).Tags & ItemTags.Digging) == 0) continue;
-            if (Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear)) continue;
-            if (best is not { } b) { best = row; continue; }
-            float speed = Items.Def((Item)row.Item).DigSpeed, bestSpeed = Items.Def((Item)b.Item).DigSpeed;
-            if (speed > bestSpeed || (speed == bestSpeed && row.Quality > b.Quality)) best = row;
-        }
-        return best;
     }
 
     [SpacetimeDB.Reducer]

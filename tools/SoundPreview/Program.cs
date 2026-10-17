@@ -70,6 +70,7 @@ foreach (var scene in scenes)
         "rain" or "storm" or "crack" or "stormroof" => (0.6f, 1f, 0.9f, 1f, 0.45f),
         "dusk" => (0.35f, 0f, 0.3f, 0.2f, 0.76f),
         "fire" => (0f, 0f, 0.2f, 0.1f, 0.9f),
+        "firestoked" => (0f, 0f, 0.2f, 0.1f, 0.9f),
         "firerain" => (0.1f, 0.4f, 0.4f, 0.7f, 0.85f),
         "night" => (0f, 0f, 0.25f, 0.1f, 0.95f),
         "dawn" => (0.55f, 0f, 0.15f, 0.3f, 0.27f),
@@ -126,7 +127,8 @@ foreach (var scene in scenes)
         mix.Wetness += (wet - mix.Wetness) * k;
         mix.Cover = parts[0] is "roof" or "hut" or "stormroof" ? 1f : 0f;
         mix.TimeOfDay += (time - mix.TimeOfDay) * k;
-        mix.Fire = parts[0] is "fire" or "firerain" ? 0.85f : 0f;
+        mix.Fire = parts[0] is "fire" or "firerain" or "firestoked" ? 0.85f : 0f;
+    mix.FireStoke = parts[0] == "firestoked" ? 1f : 0f;
         mix.FirePan = -0.3f;
         double t = done / (double)rate;
         // Ponds lie a little to the left; walking up to one, it grows from nothing.
