@@ -215,6 +215,7 @@ public partial class Atmosphere : Node3D
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
         ToolSounds.Connect(conn);
+        StorageSounds.Connect(conn);
         StructureSounds.Connect(conn);
     }
 
