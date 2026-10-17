@@ -1,7 +1,7 @@
 # env-32: Grass detail setting
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-grass-detail
 PR: #682
 
@@ -20,4 +20,4 @@ step can come with it).
 - (none)
 
 ## Next step
-Wait for PR CI; send the green sha to the PM.
+None, merged (checked 2026-10-17 15:05).
