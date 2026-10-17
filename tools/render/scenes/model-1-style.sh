@@ -6,7 +6,8 @@ ticket=${TICKET:-model-1-style}; ref=${1:-eb8b399}
 source "$here/lib.sh"
 n=0
 views=${VIEWS:-row,people,faces,sheep,walk,items,items --old,held,clothes}
-IFS=, read -r -a specs <<<"$views"
+sep=,; case "$views" in *";"*) sep=";" ;; esac   # use ";" between views when an argument holds commas
+IFS=$sep read -r -a specs <<<"$views"
 for spec in "${specs[@]}"; do
   read -r view extra <<<"$spec"
   n=$((n + 1)); out=$RENDER_OUT/$ticket-$sha-$n-$view${extra:+-${extra//[^a-z0-9]/}}.png
