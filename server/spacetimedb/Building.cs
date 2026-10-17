@@ -22,6 +22,7 @@ public enum StructureKind
     PottersBench,
     LogCabin,
     RepairTable,
+    TiledHouse,
 }
 
 // One material a structure's current stage still needs.
