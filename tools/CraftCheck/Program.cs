@@ -52,6 +52,7 @@ conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
@@ -581,10 +582,22 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within reach of a spot.
 void WalkTo(float tx, float tz)
 {
-    while (true)
+    for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 1.5f) break;
+        if (guard > 900)
+        {
+            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
+            var near = new List<string>();
+            for (int ix = (int)x - 3; ix <= (int)x + 3; ix++)
+                for (int iz = (int)z - 3; iz <= (int)z + 3; iz++)
+                    if (Obstacles.At(ground, ix, iz, out float ox, out float oz, out float r, out float h)) near.Add($"{(h == float.MaxValue ? "trunk" : "rock")}@({ox:F1},{oz:F1}) r{r:F2}");
+            foreach (var st in conn.Db.Structure.Iter())
+                if (MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6) near.Add($"{st.Kind}@({st.X:F1},{st.Z:F1}) done={st.Complete} stage={st.Stage}");
+            Console.WriteLine("  near: " + string.Join("; ", near));
+            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left");
+        }
         float step = Math.Min(d - 1f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
@@ -592,6 +605,7 @@ void WalkTo(float tx, float tz)
         {
             x += dx / d * step;
             z += dz / d * step;
+            (x, z) = ground.Slide(x, z); // round trunks and boulders, as a player does
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);

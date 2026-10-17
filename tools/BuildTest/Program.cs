@@ -255,6 +255,13 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Walk in and check the spot counts as sheltered.
     if (Structures.Shape((int)kind).RainCover > 0)
     {
+        if (kind == StructureKind.LeanTo)
+        {
+            // Its sides and back stop walkers (bugfix-34): come in by the open front.
+            var lean = Structures.Shape((int)kind);
+            var leanFront = Structures.ToWorld(done.X, done.Z, done.Yaw, 0f, lean.HalfDepth + 1.2f);
+            a.WalkTo(leanFront.x, leanFront.z, 0.3f, Pump);
+        }
         a.WalkTo(sx, sz, 0.3f, Pump);
         Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
     }
@@ -653,6 +660,8 @@ sealed class Bot
 
     // How far the server still has this player from where the bot thinks it stands.
     float lastSx, lastSz, stuckFor, detourLeft, detourSign = 1f;
+    BotGround? ground;
+    BotGround Ground => ground ??= new BotGround(Conn);
 
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
 
@@ -693,13 +702,14 @@ sealed class Bot
             {
                 X += dx / dist * step;
                 Z += dz / dist * step;
+                (X, Z) = Ground.Slide(X, Z); // round trunks and boulders, as a player does
                 moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         else if (Lag() > 0.05f)
             Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
-        return MathF.Max(0, dist - moved);
+        return moved > 0f ? MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z)) : dist;
     }
 
     // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree

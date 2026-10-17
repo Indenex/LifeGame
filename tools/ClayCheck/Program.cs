@@ -82,6 +82,7 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
@@ -581,6 +582,7 @@ void HuntMutton()
             float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
             x += dx / d * 0.15f;
             z += dz / d * 0.15f;
+            (x, z) = ground.Slide(x, z);
             conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
             Pump(() => false, 0.1f, null);
             a = conn.Db.Animal.Id.Find(id);
@@ -1063,6 +1065,7 @@ void WalkTo(float tx, float tz, float near)
         {
             x += dx / d * step;
             z += dz / d * step;
+            (x, z) = ground.Slide(x, z); // round trunks and boulders, as a player does
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);

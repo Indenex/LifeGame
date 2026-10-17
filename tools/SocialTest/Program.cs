@@ -543,6 +543,8 @@ sealed class Tester
     public Claim? MyClaim() => Conn.Db.Claim.Iter().FirstOrDefault(c => c.OwnerPlayerId == PlayerId);
 
     // One 10 Hz step toward a point; true once the server has us close enough.
+    BotGround? ground;
+
     public bool StepToward(float tx, float tz)
     {
         var pos = Conn.Db.PlayerPos.PlayerId.Find(PlayerId);
@@ -552,7 +554,7 @@ sealed class Tester
         lastMove = clock.Elapsed.TotalSeconds;
         float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
         float step = MathF.Min(d, 5f * 0.1f);
-        if (d > 0.001f) { X += dx / d * step; Z += dz / d * step; }
+        if (d > 0.001f) { X += dx / d * step; Z += dz / d * step; (X, Z) = (ground ??= new BotGround(Conn)).Slide(X, Z); }
         Conn.Reducers.Move(X, Z, 0);
         return false;
     }
