@@ -116,12 +116,14 @@ public static class LandmarkProps
     public static void FallenGiant(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
     {
         int variant = Pick(x, z, 500, PropMeshes.FallenLogVariants);
-        float yaw = H(x, z, 501) * Mathf.Tau;
-        float length = Range(x, z, 502, 3.0f, 4.3f), girth = Range(x, z, 503, 2.6f, 3.7f);
+        // Its direction, length and girth come from shared/LandmarkBlocks.cs, which the server's
+        // collision reads too (bugfix-49).
+        var shape = LandmarkBlocks.FallenGiantOf(x, z);
+        float yaw = shape.Yaw, length = shape.Length, girth = shape.Girth;
         float rot = H(x, z, 504);
         // Modeling's log lies along x, about 3 m long and 0.4 m thick at scale 1.
-        var axis = new Vector3(Mathf.Cos(yaw), 0f, -Mathf.Sin(yaw));
-        float half = 1.5f * length;
+        var axis = new Vector3(shape.AxisX, 0f, shape.AxisZ);
+        float half = shape.Half;
         float h0 = heightAt(at.X - axis.X * half, at.Z - axis.Z * half), h1 = heightAt(at.X + axis.X * half, at.Z + axis.Z * half);
         float pitch = Mathf.Atan2(h1 - h0, 2f * half);
         var basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, pitch)
@@ -130,10 +132,8 @@ public static class LandmarkProps
         var bark = Look.Bark.Darkened(Range(x, z, 506, 0.08f, 0.25f)).Lerp(Look.Moss, rot * 0.35f);
         into.Put(PropMeshes.FallenLog(variant), Painted.Bark, (new Transform3D(basis, middle), bark, custom));
 
-        // It blocks the way along its whole length, a circle every metre or so.
-        float radius = 0.2f * girth;
-        for (float t = -half + radius; t <= half - radius * 0.5f; t += radius * 1.2f)
-            into.Blocks.Add((at.X + axis.X * t, at.Z + axis.Z * t, radius));
+        // It blocks the way along its whole length (LandmarkBlocks.Circles).
+        float radius = shape.Radius;
 
         // Ferns crowd along its sides, more on an old rotten one.
         var side = new Vector3(-axis.Z, 0f, axis.X);
@@ -149,13 +149,8 @@ public static class LandmarkProps
         }
 
         // A stone or two by one end.
-        int stones = (int)(H(x, z, 640) * 3f);
-        for (int k = 0; k < stones; k++)
-        {
-            float end = H(x, z, 641 + (uint)k) < 0.5f ? -1f : 1f;
-            var p = at + axis * (end * half * Range(x, z, 645 + (uint)k, 0.7f, 1.1f)) + side * Range(x, z, 650 + (uint)k, -2f, 2f);
-            Rock(x * 13 + k, z * 7, p with { Y = heightAt(p.X, p.Z) }, Range(x, z, 655 + (uint)k, 0.3f, 0.7f), into, custom);
-        }
+        foreach (var p in LandmarkBlocks.FallenGiantStones(x, z, at.X, at.Z))
+            Rock(p.SeedX, p.SeedZ, new Vector3(p.X, heightAt(p.X, p.Z), p.Z), p.Size, into, custom);
     }
 
     // A rock outcrop on the heath, in one of three kinds: a rounded cluster, a

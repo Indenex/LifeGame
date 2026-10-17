@@ -92,14 +92,60 @@ namespace LifeGame.Shared
             return pieces;
         }
 
-        // The blocking circles of the feature standing on cell (x, z): an outcrop's stones. A giant
+        // A huge old trunk lying across a glade (env-33): its direction, length and girth come from its
+        // own seed, and it blocks along its whole length. Axis is a unit direction in x and z.
+        public readonly record struct FallenGiantShape(float Yaw, float AxisX, float AxisZ, float Length, float Girth, float Half, float Radius);
+
+        public static FallenGiantShape FallenGiantOf(int x, int z)
+        {
+            float yaw = H(x, z, 501) * MathF.Tau;
+            float length = Range(x, z, 502, 3.0f, 4.3f), girth = Range(x, z, 503, 2.6f, 3.7f);
+            // Modeling's log lies along x, about 3 m long and 0.4 m thick at scale 1.
+            return new FallenGiantShape(yaw, MathF.Cos(yaw), -MathF.Sin(yaw), length, girth, 1.5f * length, 0.2f * girth);
+        }
+
+        // The stone or two by one end of a fallen giant.
+        public static List<Piece> FallenGiantStones(int x, int z, float atX, float atZ)
+        {
+            var g = FallenGiantOf(x, z);
+            float sideX = -g.AxisZ, sideZ = g.AxisX;
+            var pieces = new List<Piece>();
+            int stones = (int)(H(x, z, 640) * 3f);
+            for (int k = 0; k < stones; k++)
+            {
+                float end = H(x, z, 641 + (uint)k) < 0.5f ? -1f : 1f;
+                float along = end * g.Half * Range(x, z, 645 + (uint)k, 0.7f, 1.1f), off = Range(x, z, 650 + (uint)k, -2f, 2f);
+                pieces.Add(new Piece(PieceKind.Rock, x * 13 + k, z * 7, atX + g.AxisX * along + sideX * off, atZ + g.AxisZ * along + sideZ * off, Range(x, z, 655 + (uint)k, 0.3f, 0.7f), false));
+            }
+            return pieces;
+        }
+
+        // The blocking circles of the feature standing on cell (x, z): an outcrop's stones, or a
+        // fallen giant's row of circles along its trunk and its stones. A giant
         // oak's trunk is handled by Obstacles.At, and the stones round its foot never blocked.
         public static List<(float X, float Z, float R)> Circles(FeatureDef feature, int x, int z)
         {
             var circles = new List<(float X, float Z, float R)>();
             if (feature.Block != FeatureBlock.Stones) return circles;
             var (fx, fz) = Trees.Trunk(x, z);
-            foreach (var p in feature.Model switch { "landmark.outcrop" => Outcrop(x, z, fx, fz), _ => new List<Piece>() })
+            List<Piece> pieces;
+            switch (feature.Model)
+            {
+                case "landmark.outcrop":
+                    pieces = Outcrop(x, z, fx, fz);
+                    break;
+                case "landmark.fallen_giant":
+                    // It blocks the way along its whole length, a circle every metre or so.
+                    var g = FallenGiantOf(x, z);
+                    for (float t = -g.Half + g.Radius; t <= g.Half - g.Radius * 0.5f; t += g.Radius * 1.2f)
+                        circles.Add((fx + g.AxisX * t, fz + g.AxisZ * t, g.Radius));
+                    pieces = FallenGiantStones(x, z, fx, fz);
+                    break;
+                default:
+                    pieces = new List<Piece>();
+                    break;
+            }
+            foreach (var p in pieces)
             {
                 float r = p.Kind == PieceKind.Formation ? FormationRadius(p.SeedX, p.SeedZ, p.Size) : RockRadius(p.SeedX, p.SeedZ, p.Size);
                 if (p.Kind == PieceKind.Formation || r >= 0.2f) circles.Add((p.X, p.Z, r));
