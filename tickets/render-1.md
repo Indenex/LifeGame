@@ -146,7 +146,7 @@ Still owed (in queue.jobs order after the running job):
 - dusk39b-before/after (Atmosphere session_01KvVF5vpkYEHTKNRpHC18WN, atmosphere-39, be1f2dad vs main, spawn (0,10), times 0.28/0.5/0.65/0.72/0.75): to PM and Atmosphere.
 - farbatch4-after (env-24 on main with #669, --when-loaded option added to render.sh): to PM.
 - env30-close (butterfly close-up, PM asked for low camera on flowers).
-- giant40 / fallen giant (Environment session_012hVejTxLoxBpZyX3GQmNL9, env-33, PR #740 sha 2642395e, zoom 4, player at (149,-54) and (-73,-120), noon + 0.72): NOTE this job may have been dropped when I edited the queue; re-add if missing from queue.jobs.
+- giant40 / fallen giant (Environment session_012hVejTxLoxBpZyX3GQmNL9, env-33, PR #740 sha 2642395e, zoom 4, player at (149,-54) and (-73,-120), noon + 0.72):
 - variety34-before/after (env-34, PR #777, branch claude/environment-variety, sha 18979751 vs main a7498e3d; spots (0,12) fern woodland edge, (-37,10) reedy bank, (-4,-54) heath with boulders; pair as main | branch).
 - then the older list above: seethru-before/after (env-25), paintedtrees-walk, pebble-shell, camcheck low2/default/high, ceramics-14b, rocks/flowers/ground/edge/bush before-after (env-16..20), atmosphere-28 frost (gates merge of #459), atmosphere-29 painterly, pinetest-light, model-4f, env-9 pair, heath-patch.
 Notes: nolook.sh now also handles the once-only look picker; render.sh has --when-loaded (screenshot-when-loaded) and a bare "pkill -f" can kill your own shell if the pattern appears in the command text.
