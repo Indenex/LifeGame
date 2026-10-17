@@ -38,3 +38,6 @@ Compare the PR's run time with the before figures, fix anything the run shows, t
 
 ## integration-13 update: smart priority (Justin picked A)
 Pausing on every main push starved PRs (main merges every 3-5 min, a PR run takes ~9). Now `priority.yml` pauses PR Builds only while a main Build (push) or a Release has a queued run or queued jobs (main is waiting for a runner), and leaves any PR run that has been running 4 minutes or more to finish. It resumes (re-runs the newest cancelled run per open PR head) when no main Build or Release is queued or running. Also triggered by pull_request pushes and a 5-minute schedule, since starvation can begin after the push.
+
+## integration-16: merge queue with batches (Justin: "Merge queue + batches"), supersedes the pausing in integration-13
+priority.yml is deleted (no more cancelling PR runs). GitHub's merge queue lands PRs in batches of 3 to 5 (10-minute wait to fill), one combined check run per batch, one main push, one Build and one Release per batch. build.yml: the Upgrade check also runs on `merge_group` (batch tip over the queue's base) and on a main push compares with the push's `before`. Needs Justin's ruleset clicks (docs/MERGE_QUEUE.md). Until the ruleset exists, merging works as before.
