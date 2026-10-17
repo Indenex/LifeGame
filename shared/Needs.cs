@@ -28,6 +28,12 @@ namespace LifeGame.Shared
         public const float BerryFood = 0.12f;
         public const float BerryWater = 0.02f;
         public const float SipWater = 0.2f;
+        // Hazelnuts (survival-30, a PM default): a nibble, a little under a berry; only the hazel bushes
+        // (about one in HazelEvery) have them, and only in autumn.
+        public const float HazelnutFood = 0.08f;
+        public const int HazelnutsPerPick = 3, HazelEvery = 3;
+        public static bool IsHazelBush(ulong bushId) => bushId % HazelEvery == 0;
+        public static bool HazelnutsRipe(Season season) => season == Season.Autumn;
         // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
