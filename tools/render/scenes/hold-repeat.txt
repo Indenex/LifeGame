@@ -1,0 +1,31 @@
+# integration-11 (PR #495): hold-to-repeat. Hold E at a berry bush, hold F (dig) on clay ground,
+# hold E at a tree with a stone axe. 12 fps movie, camera = puppet at the default distance.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=4.5,1.6,35,0.8
+frames 300
+give 10 1 60
+walkto bush
+frames +24
+mark bush-start
+keydown e
+frames +96
+keyup e
+mark bush-end
+frames +24
+mark dig-start
+keydown f
+frames +96
+keyup f
+mark dig-end
+frames +24
+sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
+frames +120
+face 90
+frames +12
+mark tree-start
+keydown e
+frames +120
+keyup e
+mark tree-end
+frames +24

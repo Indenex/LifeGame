@@ -45,6 +45,7 @@
 //   act StrikeAnimal sheep   call any reducer of this commit by name (reflection, so old commits still build):
 //                     arguments: numbers, or sheep / animal / bush / carcass (walks to 1 m from the nearest and faces it,
 //                     passes its id), cellx / cellz (the cell under me); "act Dig cellx cellz", "act Forage bush"
+//   walkto bush        walk to 1 m from the nearest bush (sheep / animal / carcass too) and face it
 //   place 6 0 2.5 0   lay out structure kind 6 at dx, dz from me, facing yaw (degrees)
 //   build             add materials to my newest structure (once per call)
 //   store 2 50 5      put 5 of item 2 (quality 50) into my newest structure (basket, jar)
@@ -416,6 +417,29 @@ bool Step(string line)
             }
             m.Invoke(conn.Reducers, args);
             Pump(0.8);
+            break;
+        }
+        case "walkto":
+        {
+            // walkto sheep|animal|bush|carcass: walk to 1 m from the nearest and face it
+            string tok = rest.Trim();
+            string table = tok == "bush" ? "ForageBush" : tok == "carcass" ? "AnimalCarcass" : "Animal";
+            var tbl = conn.Db.GetType().GetProperty(table)?.GetValue(conn.Db);
+            var rows = (tbl?.GetType().GetMethod("Iter")?.Invoke(tbl, null) as System.Collections.IEnumerable)?.Cast<object>().ToList();
+            object? best = null; float bd = 1e9f;
+            foreach (var r in rows ?? new List<object>())
+            {
+                float rx = Convert.ToSingle(r.GetType().GetField("X")!.GetValue(r)), rz = Convert.ToSingle(r.GetType().GetField("Z")!.GetValue(r));
+                if (tok == "sheep" && r.GetType().GetField("Species") is { } sp && Convert.ToInt32(sp.GetValue(r)) != 0) continue;
+                float d = MathF.Sqrt((rx - x) * (rx - x) + (rz - z) * (rz - z));
+                if (d < bd) { bd = d; best = r; }
+            }
+            if (best == null) { Console.WriteLine($"puppet: no {tok} found"); break; }
+            float bx = Convert.ToSingle(best.GetType().GetField("X")!.GetValue(best)), bz = Convert.ToSingle(best.GetType().GetField("Z")!.GetValue(best));
+            float dd = MathF.Max(bd, 0.01f);
+            if (bd > 1.0f) WalkTo(bx + (x - bx) / dd * 1.0f, bz + (z - bz) / dd * 1.0f);
+            conn.Reducers.Move(x, z, MathF.Atan2(bx - x, bz - z));
+            Pump(0.6);
             break;
         }
         case "place":
