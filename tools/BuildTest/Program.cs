@@ -618,6 +618,9 @@ sealed class Bot
     public uint MyId => myId;
     uint myId;
     ulong targetItem;
+    readonly HashSet<ulong> gone = new();
+    // What each bot is heading for, so two bots do not race for the same ground item.
+    static readonly Dictionary<string, ulong> gatherTargets = new();
     (int x, int z)? digCell;
     float actionTimer;
 
@@ -716,14 +719,23 @@ sealed class Bot
             return;
         }
 
-        var item = Conn.Db.WorldItem.Id.Find(targetItem);
-        if (item == null || !missing.Contains((Item)item.Item))
+        // The other bot got there first ("That item is gone"): never go for that one again, and pick another.
+        if (targetItem != 0 && LastError?.Contains("That item is gone") == true)
         {
-            item = Conn.Db.WorldItem.Iter()
-                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay)
-                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z))
-                .FirstOrDefault();
+            gone.Add(targetItem);
+            targetItem = 0;
+            LastError = null;
+        }
+        var item = Conn.Db.WorldItem.Id.Find(targetItem);
+        if (item == null || !missing.Contains((Item)item.Item) || gone.Contains(item.Id))
+        {
+            // Nearest item neither of us has lost, and not the one the other bot is already heading for.
+            var candidates = Conn.Db.WorldItem.Iter()
+                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay && !gone.Contains(i.Id))
+                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z)).ToList();
+            item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
+            gatherTargets[name] = targetItem;
             if (item == null) return;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
