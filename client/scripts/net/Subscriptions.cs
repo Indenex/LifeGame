@@ -66,6 +66,7 @@ public static class Subscriptions
         $"SELECT * FROM lamp WHERE {range}",
         "SELECT * FROM trough_water",
         "SELECT * FROM player_mark",
+        "SELECT * FROM structure_mark",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
         "SELECT * FROM my_admin",

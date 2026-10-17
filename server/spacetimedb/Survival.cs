@@ -156,7 +156,7 @@ public static partial class Module
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
-            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
+            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear, stack.Maker);
         }
         else
             Take(ctx, (Item)item, 1);
@@ -202,7 +202,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         RemoveFromStack(ctx, stack, 1);
-        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
+        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear, stack.Maker);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 

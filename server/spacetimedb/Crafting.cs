@@ -29,6 +29,12 @@ public static partial class Module
         // the exact tool (Animation, anim-3).
         [Default((ushort)0)]
         public ushort Tool;
+        // That vessel's Wear number (its maker and slip) and Maker column, so the pot comes back as
+        // it went in (ceramics-7, crafting-25). 0 for none.
+        [Default(0u)]
+        public uint VesselWear;
+        [Default(0u)]
+        public uint VesselMaker;
     }
 
     // Clients see only their own job, to show its progress.
@@ -164,8 +170,11 @@ public static partial class Module
         float inputQuality = 0f;
         uint taken = 0;
         byte vesselQuality = 0;
+        uint vesselWear = 0, vesselMaker = 0;
         foreach (var input in def.Consumes)
         {
+            // Which pot is about to go in, before it does (Ceramics): its maker and slip come back with it.
+            if (ClayRules.IsVessel(input.Item)) PeekVessel(ctx, input.Item, out vesselWear, out vesselMaker);
             float q = TakeFor(ctx, station, input.Item, input.Count);
             if (ClayRules.IsVessel(input.Item)) vesselQuality = (byte)Math.Round(q / input.Count);
             inputQuality += q;
@@ -224,6 +233,8 @@ public static partial class Module
             X = fx,
             Z = fz,
             VesselQuality = vesselQuality,
+            VesselWear = vesselWear,
+            VesselMaker = vesselMaker,
             Tool = toolUsed,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });

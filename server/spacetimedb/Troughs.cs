@@ -47,7 +47,7 @@ public static partial class Module
         var state = RequireCooldown(ctx, player);
 
         RemoveFromStack(ctx, stack.Value, 1);
-        AddToInventory(ctx, ctx.Sender, Foods.FindPot(filled)!.Empty, 1, stack.Value.Quality, stack.Value.Wear);
+        AddToInventory(ctx, ctx.Sender, Foods.FindPot(filled)!.Empty, 1, stack.Value.Quality, stack.Value.Wear, stack.Value.Maker);
         SetTroughLitres(ctx, structureId, have + litres);
         TouchStructure(ctx, structureId);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
@@ -90,7 +90,7 @@ public static partial class Module
             int n = (int)Math.Min(stack.Count, have / each);
             if (n <= 0) continue;
             RemoveFromStack(ctx, stack, (uint)n);
-            AddToInventory(ctx, ctx.Sender, filled, (uint)n, stack.Quality, stack.Wear);
+            AddToInventory(ctx, ctx.Sender, filled, (uint)n, stack.Quality, stack.Wear, stack.Maker);
             have -= n * each;
             any = true;
         }
