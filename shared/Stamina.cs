@@ -37,6 +37,12 @@ namespace LifeGame.Shared
         // can't train Endurance. A real run of RunPerUse seconds covers about 110 m.
         public const float RunReportMoveWindow = 3f, RunReportMinMeters = 25f;
 
+        // The server's own bar (D-182): it works out how fast a player has been moving over the last
+        // ServerAverageSeconds, counts pace above the walk as running, and drains at ServerDrainFactor
+        // times the client's rate, so it runs dry 25% later and honest play is never caught short.
+        // A winded player may move WalkPace (walk + 10%).
+        public const float ServerAverageSeconds = 2f, ServerDrainFactor = 0.8f, WalkPace = 4.2f * 1.1f;
+
         public static float RunSeconds(int rank, bool wellFed) =>
             Lerp(StartRunSeconds, MasterRunSeconds, rank) * (wellFed ? 1f + WellFedBonus : 1f);
 

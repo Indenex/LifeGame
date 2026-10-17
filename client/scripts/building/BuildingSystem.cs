@@ -185,9 +185,9 @@ public partial class BuildingSystem : Node
         c.Db.Structure.OnInsert += (_, s) => Upsert(s, fresh: s.Stage == 0 && s.Builders == 0 && s.Needs.All(n => n.Have == 0));
         c.Db.Structure.OnUpdate += (_, _, s) => Upsert(s, fresh: false);
         c.Db.Structure.OnDelete += (_, s) => Remove(s);
-        c.Db.DeviceJob.OnInsert += (_, j) => RefreshDevice(j.StructureId);
-        c.Db.DeviceJob.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
-        c.Db.DeviceJob.OnDelete += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnInsert += (_, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnUpdate += (_, _, j) => RefreshDevice(j.StructureId);
+        c.Db.DeviceStatus.OnDelete += (_, j) => RefreshDevice(j.StructureId);
         c.Db.DeviceOutput.OnInsert += (_, o) => RefreshDevice(o.StructureId);
         c.Db.DeviceOutput.OnUpdate += (_, _, o) => RefreshDevice(o.StructureId);
         c.Db.DeviceOutput.OnDelete += (_, o) => RefreshDevice(o.StructureId);
@@ -231,7 +231,7 @@ public partial class BuildingSystem : Node
     void ShowDevice(Structure s, StructureView v)
     {
         if (conn() is not { } db) return;
-        var job = db.Db.DeviceJob.StructureId.Find(s.Id);
+        var job = db.Db.DeviceStatus.StructureId.Find(s.Id);
         bool waiting = db.Db.DeviceOutput.Iter().Any(o => o.StructureId == s.Id);
         uint units = job?.Remaining ?? 0;
         int fill = waiting ? 3 : units == 0 ? 0 : units <= 3 ? 1 : units <= 7 ? 2 : 3;
@@ -457,6 +457,8 @@ public partial class BuildingSystem : Node
         placing = false;
         ghost?.QueueFree();
         ghost = null;
+        string? none = null;
+        ClaimRingHook(null, ref none);
     }
 
     void MakeGhost()
@@ -555,9 +557,14 @@ public partial class BuildingSystem : Node
         ghost.Rotation = new Vector3(0, ghostYaw, 0);
 
         placeProblem = PlaceProblem(ghostPos, ghostYawTarget);
+        ClaimRingHook(ghostPos, ref placeProblem);
         var tint = placeProblem == null ? new Color(0.85f, 1f, 0.8f, 0.38f) : new Color(1f, 0.6f, 0.5f, 0.3f);
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(tint, 1f - Mathf.Exp(-10f * dt));
     }
+
+    // Claims draws the rings of a claim being laid out and its neighbours (social/BuildingSystem.ClaimRings.cs);
+    // at is null when placing stops, and problem is set when the claim would overlap.
+    partial void ClaimRingHook(Vector3? at, ref string? problem);
 
     // A fence laid near the free end of another fence or gate joins on to it, along
     // the ghost's own heading (T turns it, so runs can bend at corners).

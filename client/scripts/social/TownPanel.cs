@@ -81,8 +81,9 @@ public partial class TownPanel : CanvasLayer
         window.Visible = false;
         votingFor = null;
         selected = 0;
-        nameBox.ReleaseFocus();
-        sayBox.ReleaseFocus();
+        // The name and say boxes are only in the panel on some pages; Panels.Opening closes it from anywhere (bugfix-62).
+        if (nameBox.IsInsideTree()) nameBox.ReleaseFocus();
+        if (sayBox.IsInsideTree()) sayBox.ReleaseFocus();
     }
 
     public void MarkDirty() => dirty = true;

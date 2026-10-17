@@ -33,7 +33,7 @@ public static class DeviceUse
                 var device = best;
                 var kind = Structures.Shape((int)device.Kind).Station;
                 string name = StationInfo.Name(kind);
-                var job = conn.Db.DeviceJob.StructureId.Find(device.Id);
+                var job = conn.Db.DeviceStatus.StructureId.Find(device.Id);
 
                 if (conn.Db.DeviceOutput.Iter().Any(o => o.StructureId == device.Id))
                     return new UseOffer($"Collect from the {name}", bestD, () => conn.Reducers.CollectDevice(device.Id));
