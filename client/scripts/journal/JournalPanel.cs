@@ -55,7 +55,10 @@ public partial class JournalPanel : Control
         var header = new HBoxContainer();
         header.AddChild(Text("Journal", Ui.TitleSize, Ink));
         header.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        header.AddChild(Text($"{Controls.KeyFor("journal") ?? "Esc"} to close", 14, Faint));
+        // Written on each open, so it names the key as the player has it bound (ui-77).
+        var closeHint = Text("", 14, Faint);
+        header.AddChild(closeHint);
+        VisibilityChanged += () => closeHint.Text = $"{Controls.KeyFor("journal") ?? "Esc"} to close";
         rows.AddChild(header);
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };

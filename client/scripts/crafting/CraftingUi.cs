@@ -62,7 +62,10 @@ public partial class CraftingUi : CanvasLayer
         grid.Make = Begin;
         grid.HandsOn = HandsOn;
         box.AddChild(grid);
-        box.AddChild(Text($"Click one to make it, or press its number.  Tab switches category.  {Controls.OrEsc("craft")} closes.", 13, 0.65f));
+        // Written on each open, so it names the key as the player has it bound (ui-77).
+        var closeHint = Text("", 13, 0.65f);
+        box.AddChild(closeHint);
+        panel.VisibilityChanged += () => closeHint.Text = $"Click one to make it, or press its number.  Tab switches category.  {Controls.OrEsc("craft")} closes.";
         panel.AddChild(box);
         panel.Visible = false;
 
