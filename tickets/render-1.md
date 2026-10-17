@@ -160,6 +160,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:05: requests from the PM: env-35 (Environment, sha 7d68a4b0; its client code is identical to 47bafb11, so shot on 47bafb11) pond dragonflies + dusk bird flock; ui-69 (UX, PR #829, claude/ux-ui-coal5x 5854923c) paper windows warm/cold, right after env-35. UX's hotbar before/after (Justin's request) jumps the queue when it arrives.
 
+- 2026-10-17 15:06: env-31 ground before (--ground=old) / after on 8288687b, noon and 0.7, at spawn meadow (-6,-10), deer-trail path edge (-22,-38), stream bank (-44,-20); Justin's pick, after env-35, before ui-69.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
