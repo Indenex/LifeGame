@@ -296,8 +296,8 @@ public partial class CharacterMenu : CanvasLayer
         name.CustomMinimumSize = new Vector2(card.Inner, twoLines);
         WarmLook.KeepColours(name);
         column.AddChild(name);
-        var badges = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
-        badges.AddThemeConstantOverride("separation", 6);
+        // The badges wrap inside the card rather than widen it (ui-62: "Played 2 days ago" did).
+        var badges = card.Wrap();
         // The race badge shows once #471's rows reach the character list.
         if (c.Race.Length > 0) badges.AddChild(Badge(c.Race, Grounds[index % Grounds.Length].Darkened(0.08f)));
         badges.AddChild(Badge(Played(c.LastPlayed), new Color(Ink, 0.08f)));
