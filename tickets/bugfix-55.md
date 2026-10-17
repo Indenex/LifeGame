@@ -1,9 +1,9 @@
 # bugfix-55: Old-account lane's three fixes (were bugfix-37 to 39 there)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-rnwmoa-2
-PR: (none yet; the old PR #491 was closed unmerged)
+PR: #831 (merged)
 
 ## Goal
 Land the three fixes from /mnt/project-files/handoff/bugfix-old-lane/ (made against 50495cc), none of which is on main yet:
@@ -18,4 +18,4 @@ Land the three fixes from /mnt/project-files/handoff/bugfix-old-lane/ (made agai
 - (none)
 
 ## Next step
-Wait for CI on the PR, then send the PM the green sha.
+Done: merged in #831. Nothing left on this ticket.
