@@ -1,0 +1,15 @@
+# survival-38 (main fb1f51df): a signal fire beside a normal campfire, daylight, camera looking up the
+# smoke. Run with RENDER_PATCH=tools/render/patches/cabin.sh (SeedFire). The second fire is made a
+# signal fire by owner SQL (fire.signal = true). The camera player stands ~2.5 m south of the fires.
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --debug-position=-3.4,-8.2 --render-cam=4.5,1.9,45,2.2
+name B
+find
+wait 35
+act SeedFire -6 -8
+act SeedFire -8.4 -8.2
+sql UPDATE fire SET signal = true WHERE x < -8
+sqlout SELECT id, x, z, signal FROM fire
+wait 45
+snap
+wait 15
+snap
