@@ -387,7 +387,7 @@ bool Step(string line)
                 object? v;
                 switch (tok)
                 {
-                    case "sheep": case "animal": case "bush": case "carcass":
+                    case "sheep": case "hen": case "animal": case "bush": case "carcass":
                     {
                         string table = tok == "bush" ? "ForageBush" : tok == "carcass" ? "AnimalCarcass" : "Animal";
                         var tbl = conn.Db.GetType().GetProperty(table)?.GetValue(conn.Db);
@@ -396,7 +396,7 @@ bool Step(string line)
                         foreach (var r in rows ?? new List<object>())
                         {
                             float rx = Convert.ToSingle(r.GetType().GetField("X")!.GetValue(r)), rz = Convert.ToSingle(r.GetType().GetField("Z")!.GetValue(r));
-                            if (tok == "sheep" && r.GetType().GetField("Species") is { } sp && Convert.ToInt32(sp.GetValue(r)) != 0) continue;
+                            if ((tok == "sheep" || tok == "hen") && r.GetType().GetField("Species") is { } sp && Convert.ToInt32(sp.GetValue(r)) != (tok == "hen" ? 2 : 0)) continue;
                             float d = MathF.Sqrt((rx - x) * (rx - x) + (rz - z) * (rz - z));
                             if (d < bd) { bd = d; best = r; }
                         }
@@ -430,7 +430,7 @@ bool Step(string line)
             foreach (var r in rows ?? new List<object>())
             {
                 float rx = Convert.ToSingle(r.GetType().GetField("X")!.GetValue(r)), rz = Convert.ToSingle(r.GetType().GetField("Z")!.GetValue(r));
-                if (tok == "sheep" && r.GetType().GetField("Species") is { } sp && Convert.ToInt32(sp.GetValue(r)) != 0) continue;
+                if ((tok == "sheep" || tok == "hen") && r.GetType().GetField("Species") is { } sp && Convert.ToInt32(sp.GetValue(r)) != (tok == "hen" ? 2 : 0)) continue;
                 float d = MathF.Sqrt((rx - x) * (rx - x) + (rz - z) * (rz - z));
                 if (d < bd) { bd = d; best = r; }
             }

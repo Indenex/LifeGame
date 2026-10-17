@@ -1,16 +1,18 @@
-# animals-19 (PR #497): the yard flock of four hens near (-8,7), daylight, camera 5 m east of the player.
-# Then the player runs at them to startle one (w = walk toward -x,-z).
+# animals-19 (PR #497): the yard flock of four hens near (-8,7). walkto hen finds the nearest hen
+# by species (2) and stands 1 m from it; the camera is 3.5 m back at standing-player height.
 client-as-puppet
-client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=5,1.5,45,0.5
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.5,1.4,45,0.4
 wait 35
 sql UPDATE player_pos SET x = -4.0, z = 7.0, chunk_x = -1, chunk_z = 0
-wait 25
-burst 4 2
+wait 20
+walkto hen
+wait 3
+burst 4 1.5
 keydown shift
 keydown w
-wait 2
-burst 4 0.7
+wait 1.2
+burst 5 0.5
 keyup w
 keyup shift
-wait 1
-burst 4 1
+wait 2
+burst 3 1
