@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_review
 Branch: claude/environment-variety
-PR: (opening)
+PR: #777
 
 ## Goal
 Wire Modeling's new variants so no patch is one shape stamped over and over (D-166):
