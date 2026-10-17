@@ -46,7 +46,7 @@ public static class HearthModel
                 k.Paint(Scorch, 1f).Ellipsoid(at - dir * radii.Z * 0.42f, radii * new Vector3(0.7f, 0.8f, 0.6f), 6, 3, turn, 0.5f);
             }
             ring = new ArrayMesh();
-            k.Commit(ring, Relief(5f, 0.6f, 0.25f));
+            k.Commit(ring, PaintedStructures.Of(Relief(5f, 0.6f, 0.25f), PaintedStructures.Family.Stone));
             return ring;
         }
     }
@@ -83,8 +83,8 @@ public static class HearthModel
             }
 
             coldAsh = new ArrayMesh();
-            ash.Commit(coldAsh, Relief(9f, 0.35f, 0.2f));
-            wood.Commit(coldAsh, Relief(7f, 0.9f, 0.35f));
+            ash.Commit(coldAsh, PaintedStructures.Of(Relief(9f, 0.35f, 0.2f), PaintedStructures.Family.Clay));
+            wood.Commit(coldAsh, PaintedStructures.Of(Relief(7f, 0.9f, 0.35f), PaintedStructures.Family.Wood));
             return coldAsh;
         }
     }
