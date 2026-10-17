@@ -249,13 +249,16 @@ public static class PropMeshes
                 int n = ring == 0 ? count : Mathf.Max(4, count * 2 / 3);
                 for (int i = 0; i < n; i++)
                 {
-                    float rnd = H(v * 131 + t * 17 + ring * 7, i + 500);
+                    // The bottom ring stays even (Justin, D-285): spacing, length and droop
+                    // vary far less there than in the tiers above.
+                    float calm = t == 0 ? 0.2f : 1f;
+                    float rnd = 0.5f + (H(v * 131 + t * 17 + ring * 7, i + 500) - 0.5f) * calm;
                     float a = (i + (ring == 0 ? 0f : 0.5f) + (rnd - 0.5f) * 0.4f) * Mathf.Tau / n + turn;
                     var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-                    float full = 1f + fullAmount * Mathf.Cos(a - fullAngle);
+                    float full = 1f + fullAmount * calm * Mathf.Cos(a - fullAngle);
                     if (t == gapTier && ring == 0 && Mathf.Abs(Mathf.AngleDifference(a, gapAngle)) < 0.55f) continue;
                     // Hem lobes of uneven length, some hanging well below the rest, as on the card.
-                    float hang = H(v * 53 + t * 11, i + 700);
+                    float hang = t == 0 ? 0f : H(v * 53 + t * 11, i + 700);
                     float len = length * full * (ring == 0 ? 0.8f + rnd * 0.3f + (hang > 0.75f ? 0.18f : 0f) : 0.55f);
                     float y = rootY + (ring == 0 ? 0f : step * 0.5f) + (rnd - 0.5f) * step * 0.25f;
                     f.Bough(new Vector3(0, y, 0) + dir * length * 0.08f, dir, len, droop * (ring == 0 ? 0.85f + rnd * 0.3f + (hang > 0.75f ? 0.25f : 0f) : 0.7f), wide * (ring == 0 ? 1f : 0.85f), rnd);

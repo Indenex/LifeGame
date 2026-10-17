@@ -280,7 +280,13 @@ public static class MaterialLook
         // brush; the light's own colour and strength stay smooth. Shade leans
         // violet. Ambient is left to the scene.
         void light() {
-            float wrapped = clamp(dot(NORMAL, LIGHT) * 0.6 + 0.4, 0.0, 1.0);
+            // At low sun (morning, evening) the light wraps further round and the
+            // shade band lifts, so trees keep their colour instead of going to
+            // near-black silhouettes (Justin, D-285); at noon nothing changes.
+            float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
+            float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
+            float wrap = mix(0.4, 0.85, low_sun);
+            float wrapped = clamp(dot(NORMAL, LIGHT) * (1.0 - wrap) + wrap, 0.0, 1.0);
             // Passing cloud shadows move the band edges, as on the ground.
             float sky = LIGHT_IS_DIRECTIONAL ? cloud_shadow(world_pos) : 1.0;
             float l = wrapped * ATTENUATION * sky + (dab - 0.5) * 0.22;
@@ -289,12 +295,19 @@ public static class MaterialLook
             float lit = smoothstep(0.62 - soft, 0.62 + soft, l);
             // A low floor, so a pine in shadow is dark like the ground under it; the
             // scene's blue-violet ambient carries the shade.
-            float band = 0.1 + 0.36 * mid + 0.3 * lit;
+            float band = 0.1 + 0.3 * low_sun + 0.36 * mid + 0.3 * lit;
             vec3 tone = mix(shade_tint, vec3(1.0), mid);
             // A fire or doorway light fades out with its distance falloff instead of
             // lighting every needle in range evenly.
             float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
             DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;
+            // Needles let light through: a tree between you and a low sun glows a
+            // little at its edges and through its boughs instead of going black.
+            if (LIGHT_IS_DIRECTIONAL) {
+                float back = max(0.0, dot(VIEW, -LIGHT));
+                float edge = 1.0 - abs(dot(NORMAL, VIEW));
+                DIFFUSE_LIGHT += LIGHT_COLOR * sky * (back * back * (0.35 + 0.5 * edge)) * mix(0.25, 1.0, low_sun) / PI;
+            }
         }
         """;
 
