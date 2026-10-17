@@ -1,7 +1,7 @@
 # atmosphere-19: Warm homes at night
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-19b-homes (follow-up; first part claude/atmosphere-19-warm-homes, #281 merged)
 PR: #281 (merged), follow-up #407
 
@@ -20,9 +20,10 @@ Justin's pick (2026-10-16, via the PM), order 19 warm homes, 20 wet world, 21 st
   - Door light energy and the doorway glow quad are multiplied by (1 - BuildingSystem.SeeThroughOf(id)), so a home faded out of the camera's way doesn't leave its glow hanging in the air. Smoke does not fade.
   - Hook: `Atmosphere.SeeThrough` (Func<ulong, float>), set in Main with one line next to the existing Sheltered hook.
   - Client 0 errors.
+- 2026-10-17 01:36: CI run 38989999770 green on 178563f; follow-up PR #407 merged.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for #407 CI and send the PM the green sha.
+Done. Tune glow and smoke from Render shots when they arrive.
