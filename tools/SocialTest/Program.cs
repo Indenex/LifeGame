@@ -658,7 +658,7 @@ Walk(a, b.X + 2, b.Z);
 a.LastError = null;
 a.Conn.Reducers.InviteToGroup(b.PlayerId);
 Check(Wait(() => b.Conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == a.PlayerId), 5), $"B sees A's group invitation ({a.LastError ?? "ok"})");
-Check(a.Conn.Db.MyGroupInvites.Iter().Any(i => i.InviteeId == b.PlayerId), "A sees the invitation it sent");
+Check(Wait(() => a.Conn.Db.MyGroupInvites.Iter().Any(i => i.InviteeId == b.PlayerId), 5), "A sees the invitation it sent");
 var groupInvite = b.Conn.Db.MyGroupInvites.Iter().First(i => i.FromId == a.PlayerId);
 b.Conn.Reducers.AnswerGroup(groupInvite.Id, true);
 Check(Wait(() => a.Conn.Db.MyGroup.Count == 2 && b.Conn.Db.MyGroup.Count == 2, 5), "accepting forms a group of two that both see");
