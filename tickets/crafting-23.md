@@ -31,4 +31,4 @@ Justin (D-195, revised by D-209): cleaning clay, crushing stone, tempering and s
 - Batch size, time and skill gain go through Progression.Effect once Journal's shared/Progression.cs is on main (one placeholder function until then).
 
 ## Next step
-Open the PR, send the PM the green sha, tell Ceramics (session_01Sc3N1RCsurSszfX5YwGzMU), Modeling (models for SettlingTub, CrushingBlock, TemperingTrough; shapes in shared/Structures.cs) and UX (a panel to choose process and count; today the Use key loads a full batch of the first thing the device can make).
+Merge order set by the PM (2026-10-17): #285 goes LAST in its round, after ClayTrough 17 (#417), HenCoop 18 (#479) and StoneHearth 19 (#518). Then: git merge origin/main, renumber the three device kinds to 20, 21, 22 (StructuresCrafting.cs `Kind =` and their positions in StructureKind in server/spacetimedb/Building.cs: append after the others), rebuild, run tools/CraftCheck and tools/upgrade-check.sh origin/main, push, send the PM the green sha. (SpacetimeDB enums cannot carry explicit values, so an id is the enum position.) Do not merge as 17-19.
