@@ -729,13 +729,13 @@ public static class Look
                     // tips, and a pale sheen where a wave bends the blades over.
                     float big = texture(clouds, world_pos.xz * 0.007).r;
                     float mid = texture(clouds, world_pos.xz * 0.031 + vec2(0.37, 0.61)).r;
-                    vec3 warm_field = vec3(0.42, 0.56, 0.12);
-                    vec3 cool_field = vec3(0.12, 0.3, 0.19);
+                    vec3 warm_field = vec3(0.36, 0.52, 0.07);
+                    vec3 cool_field = vec3(0.06, 0.24, 0.09);
                     vec3 field = mix(cool_field, warm_field, smoothstep(0.3, 0.72, big + (mid - 0.5) * 0.35));
-                    field = mix(field, tint, 0.3);
-                    color = mix(field * 0.45, field, smoothstep(0.0, 0.55, tip));
-                    color = mix(color, field * vec3(1.3, 1.25, 0.9) + vec3(0.03, 0.03, 0.0), smoothstep(0.65, 1.0, tip));
-                    color += vec3(0.1, 0.11, 0.07) * gust * tip * tip;
+                    field = mix(field, tint, 0.2);
+                    color = mix(field * 0.4, field, smoothstep(0.0, 0.55, tip));
+                    color = mix(color, field * vec3(1.2, 1.17, 0.85) + vec3(0.015, 0.015, 0.0), smoothstep(0.65, 1.0, tip));
+                    color += vec3(0.06, 0.07, 0.03) * gust * tip * tip;
                 } else if (look > 1.5) {
                     // Ghibli: rich painted greens in gentle blooms, warm light-green
                     // patches and deeper pools, soft from root to tip.

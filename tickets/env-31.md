@@ -25,8 +25,12 @@ Built on top of env-27 (merged in) so `PaintedTerrain.Chosen` picks the style.
 ## Progress log
 - 2026-10-17 08:40: first build; local renders at (-6,-10) running.
 
+- 2026-10-17 08:50: first local renders at (-6,-10): botw too pale and minty, so I made it
+  richer; ghibli grass good, ground too blotchy, so I softened it (SoftPaint); ghibli flowers 1.35x.
+  Paired stills requested from Render A.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Check the local renders, tune, then send Render A the paired-still request and run the view bench.
+Wait for Render A's paired stills; run --view-bench for each look (old, botw, ghibli) and report draws/frame cost to the PM.

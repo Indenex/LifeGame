@@ -97,7 +97,7 @@ public static class PaintedTerrain
         string code = Look.PaintedCode;
         code = Painted.Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_GROUND" + (tiles ? "\n#define TILE_GROUND" : ""));
         code = Painted.Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Painted.Declarations + Declarations);
-        code = Painted.Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", tiles ? TileColor : PaintColor);
+        code = Painted.Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", tiles ? TileColor : Chosen == Style.Ghibli ? SoftPaint : PaintColor);
         code = Painted.Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_GROUND\n" + Painted.Light + "\n#else\n");
         code = code.TrimEnd();
         return code[..^1] + "#endif\n}\n";
@@ -144,6 +144,13 @@ public static class PaintedTerrain
                 float stroke = texture(dabs, sp * vec2(0.9, 0.22)).r;
                 vec3 color = base * (1.0 + (stroke - 0.5) * 0.5 + paint * 0.4);
         """;
+
+    // The Ghibli prototype's ground (env-31): A's patches, but soft wide blends and gentle
+    // value changes, nothing blotchy.
+    static string SoftPaint => PaintColor
+        .Replace("smoothstep(0.45, 0.55, band + (dab - 0.5) * 0.18)", "smoothstep(0.2, 0.8, band + (dab - 0.5) * 0.1)")
+        .Replace("mix(0.84, 1.12,", "mix(0.93, 1.06,")
+        .Replace("(stroke - 0.5) * 0.5", "(stroke - 0.5) * 0.18");
 
     // B+: grass, dirt and sand tile paintings by how green, bright or brown the ground's
     // own colour is, blended by a brush-broken height; the ground's colour laid over the

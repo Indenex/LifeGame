@@ -69,6 +69,7 @@ public partial class Terrain
     static readonly float FlowerPatch = Ghibli ? 0.52f : 0.62f;
     static readonly float FlowerFill = Ghibli ? 0.75f : 0.45f;
     static readonly float FlowerLone = Ghibli ? 0.06f : 0.04f;
+    static readonly float FlowerSize = Ghibli ? 1.35f : 1f;
 
     // The lone flowers are white, or in the Ghibli look any of the four colours.
     static Color LoneFlower(int x, int z) => Ghibli
