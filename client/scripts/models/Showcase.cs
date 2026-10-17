@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -37,6 +37,7 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "hen") Hen();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -243,6 +244,31 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // The hen in three feather colours (white, brown, grey, from the sheep's fleece
+    // tints), one pecking and one flapping, beside a sheep and the player for scale.
+    void Hen()
+    {
+        var tints = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f), new Color(0.6f, 0.58f, 0.55f) };
+        for (int i = 0; i < 5; i++)
+        {
+            var hen = HenFigure.Create(Look.Solid(tints[i % 3]));
+            hen.Position = new Vector3(-1.1f + i * 0.55f, 0, 0.4f * (i % 2));
+            hen.Rotation = new Vector3(0, 0.9f - i * 0.25f, 0);
+            if (i == 3) hen.SetBonePoseRotation(HenFigure.HeadBone, Quaternion.FromEuler(new Vector3(1.2f, 0, 0)));
+            if (i == 4)
+                for (int side = 0; side < 2; side++)
+                    hen.SetBonePoseRotation(HenFigure.FirstLegBone + 2 + side, Quaternion.FromEuler(new Vector3(0, 0, side == 0 ? -1.1f : 1.1f)));
+            AddChild(hen);
+        }
+        var sheep = SheepFigure.Create(SheepFigure.Variant, Look.Solid(new Color(0.74f, 0.71f, 0.63f)));
+        sheep.Position = new Vector3(2.2f, 0, -0.3f);
+        sheep.Rotation = new Vector3(0, -0.8f, 0);
+        AddChild(sheep);
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.3f, 1.1f, 3.4f), new Vector3(0.3f, 0.25f, 0), Vector3.Up);
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
