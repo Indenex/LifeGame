@@ -1324,3 +1324,4 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
 1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
 2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
+3. Shadow quality defaults to Medium: 4096, 4 cascades, 50 m, about today's cost. The other levels, Low and High, are in Options. High would be crisper but costs about 60% more shadow draw calls. (PM default while Justin asleep; revisit)
