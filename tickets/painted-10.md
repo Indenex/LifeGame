@@ -1,7 +1,7 @@
 # painted-10: Soft rim light
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-10-rim
 PR: #620
 

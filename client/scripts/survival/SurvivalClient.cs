@@ -16,6 +16,9 @@ public partial class SurvivalClient : Node
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
     readonly RestSpotView restSpots = new();
+    readonly DeathMarker deathMarker = new();
+    // Whether the death card says which way your things lie; Justin picked line and light (2026-10-17).
+    const bool DeathCardDirection = true;
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -28,7 +31,8 @@ public partial class SurvivalClient : Node
     DbConnection? conn;
     Vitals? vitals;
     uint deathsSeen = uint.MaxValue;
-    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened;
+    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened, wasInWater;
+    long coldWaterNotedAt;
     float ripenTimer;
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
@@ -67,6 +71,22 @@ public partial class SurvivalClient : Node
         this.hud = hud;
         wetLook = WetLook.On(player);
         restSpots.Setup(world, terrain, player, hud);
+        world.AddChild(deathMarker);
+        // --death-preview=SECONDS shows the death card and marker that long after start,
+        // as if you had just died 13 m to the northwest. For screenshots only.
+        var preview = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--death-preview="));
+        if (preview != null && float.TryParse(preview["--death-preview=".Length..], out var at))
+        {
+            var timer = new Timer { WaitTime = at, OneShot = true, Autostart = true };
+            AddChild(timer);
+            timer.Timeout += () =>
+            {
+                var p = player.Position;
+                var fell = new Vector3(p.X - 8f, terrain.HeightAt(p.X - 8f, p.Z - 10f), p.Z - 10f);
+                needsHud.ShowDeath("cold", RestSpots.WokeAtEdge, DeathMarker.Direction(new Vector2(p.X, p.Z), new Vector2(fell.X, fell.Z)));
+                deathMarker.Show(fell, player);
+            };
+        }
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -88,7 +108,7 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", Mathf.Max(0f, new Vector2(bush.X - at.X, bush.Z - at.Z).Length() - Needs.BushRadius), () => conn.Reducers.Forage(bush.Id),
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
@@ -149,13 +169,24 @@ public partial class SurvivalClient : Node
         vitals = v;
         if (deathsSeen != uint.MaxValue && v.Deaths > deathsSeen)
         {
-            needsHud.ShowDeath(v.LastDeath, v.WakeKind);
+            // Point back to where your things fell: a line on the card and a faint light over the spot.
+            var fell = new Vector2(v.DiedX, v.DiedZ);
+            needsHud.ShowDeath(v.LastDeath, v.WakeKind, DeathCardDirection ? DeathMarker.Direction(new Vector2(v.WokeX, v.WokeZ), fell) : null);
+            deathMarker.Show(new Vector3(v.DiedX, terrain.HeightAt(v.DiedX, v.DiedZ), v.DiedZ), player);
             // Wake at the edge of the wilderness. Main follows the player from here.
             player.Position = new Vector3(v.WokeX, terrain.HeightAt(v.WokeX, v.WokeZ), v.WokeZ);
             warnedCold = warnedFood = warnedWater = false;
         }
         deathsSeen = v.Deaths;
         if (v.NearHeat && !wasNearHeat) hud.Note("The fire's warmth seeps into you");
+        // Cold water bites fast, so say so as you step in, well before the "freezing" warning
+        // (at most once a minute, and only while the water is chilling you).
+        if (v.Wet && !wasInWater && v.WarmthRate < 0f && NowMicros - coldWaterNotedAt > 60_000_000)
+        {
+            hud.Note("The water is bitterly cold");
+            coldWaterNotedAt = NowMicros;
+        }
+        wasInWater = v.Wet;
         wasNearHeat = v.NearHeat;
     }
 
@@ -336,7 +367,7 @@ public partial class SurvivalClient : Node
         if (conn == null) return null;
         var p = player.Position;
         ForageBush? best = null;
-        float bestDistance = Needs.BushReach - 0.2f;
+        float bestDistance = Needs.BushPickDistance - 0.2f;
         foreach (var b in conn.Db.ForageBush.Iter())
         {
             float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();

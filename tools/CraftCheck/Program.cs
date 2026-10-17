@@ -43,7 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
-                "SELECT * FROM device_job",
+                "SELECT * FROM device_status",
                 "SELECT * FROM device_output",
                 "SELECT * FROM player_equip",
                 "SELECT * FROM my_skills",
@@ -716,7 +716,7 @@ if (runStations)
     // Clean clay has no minigame by hand, so the tub is a plain queue (D-209): the same
     // output as by hand, loaded and left, and nothing to play.
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
-    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start");
+    Pump(() => conn.Db.DeviceStatus.StructureId.Find(tub.Id) != null, 5, "the tub to start");
     lastError = null;
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
     Pump(() => lastError != null, 5, "loading a working tub to be refused");
@@ -735,7 +735,7 @@ if (runStations)
 
     // Five units in a batch: five come out, at the by-hand quality, with no bonus.
     conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
-    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
+    Pump(() => conn.Db.DeviceStatus.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
     Pump(() => Waiting().Length > 0, 60, "the batch to finish");
     var batch = Waiting().Single();
     conn.Reducers.CollectDevice(tub.Id);

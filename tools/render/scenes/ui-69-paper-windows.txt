@@ -1,0 +1,39 @@
+# ui-69: the three paper windows Render B's sweeps couldn't reach (ui-67): the storage
+# basket, the claim panel (K) and the journal (J), with something in each.
+# The camera logs in as the puppet, so the windows show the puppet's own basket and claim.
+# For a warm/cold pair, run it again with --cold added to the client line.
+# If the claim is refused ("too close"), the spawn is in a no-claim zone: add a
+# "goto" a little further out before the second "place".
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 3 16 50
+give 8 4 50
+give 1 10 50
+give 160 8 60
+# A storage basket with berries and sticks in it, opened with E.
+place 4 0 2.2 0
+build
+build
+store 160 60 5
+store 1 50 4
+face 0
+wait 3
+key e
+burst 3 1.5
+key Escape
+wait 1
+# A claim marker, then the claim panel (K) with the stash.
+face 180
+place 2 0 -2.5 180
+build
+build
+wait 3
+key k
+burst 3 1.5
+key Escape
+wait 1
+# The journal.
+key j
+burst 3 1.5
+key Escape

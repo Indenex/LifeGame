@@ -1,7 +1,7 @@
 # painted-5: Painted structures
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/painted-5-structures (painted-1 is on main)
 PR: #573
 

@@ -39,3 +39,20 @@ Cost to measure: view recomputation per Move; check LoadTest CPU per player befo
 
 ## Next step
 Open the PR for the PlayerHealth family, wait for CI, send the PM the green sha, then start DeviceJob/Roast after telling Crafting.
+
+## Family 3 plan (BasketItem, ClayPiece) - not started; waits for the new PM
+Status of the other families: PlayerHealth merged (#811, 875cb23); DeviceJob and Roast in #819 (see tickets/bugfix-54.md).
+
+Technique that passed the Upgrade check each time: never remove a column. Either make the table private and add a small public table of what clients draw plus a `my_...` view (PlayerHealth), or keep the public table, write 0 into the hidden column and keep the real value in a private side table (Roast.Quality to RoastQuality). Add the rows for already-live data in `BackfillHiddenValues` (HiddenBackfill.cs, runs on every connection) so a running world carries on. Test: tools/upgrade-check.sh origin/main, the lane's check tool, and a throwaway reducer for the backfill (never committed).
+
+Plan for the two tables (decision from the PM: Maker stays public, only Quality and Wear move):
+1. `BasketItem` (BuildingStorage.cs: Id, StructureId, Item, Quality, Count, Wear, Maker). Keep the table public with Quality and Wear written 0; private `BasketItemDetail(Id, Quality, Wear)`; a view `my_basket_detail` for the baskets the caller may open (owner, or claim member by the same rule the Take reducer uses). Server reads of Quality and Wear (BasketPut, BasketTake and anything that moves items) switch to the detail table. Client reads: StorageSounds.cs, BuildingSystem.Use.cs, Stations.cs; tools: ClayCheck, BuildTest.
+2. `ClayPiece` (Ceramics): same pattern with Quality; client reads CeramicsView.cs and CeramicsView.Slip.cs; tools ClayCheck, BuildTest.
+
+## Open lane questions (relay through the PM; none answered yet)
+- Ceramics: what in CeramicsView.cs and CeramicsView.Slip.cs reads ClayPiece.Quality (a tooltip? the piece's colour?). If it is only a tooltip for the maker, a view for the piece's owner is enough.
+- Crafting (baskets): does Stations.cs or any tool read BasketItem.Quality or Wear for baskets that are not the player's own?
+- Both: is any "quality" shown for another player's basket contents or pot? If yes, it stays public (rule: anything another client draws stays public).
+
+## Stage B (unchanged, after stage A, Integration owns Subscriptions.cs)
+See the plan above. Nothing started.

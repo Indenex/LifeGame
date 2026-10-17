@@ -435,6 +435,8 @@ public partial class Sheep : Node3D
     {
         var puff = new CpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Emitting = true,
             OneShot = true,
             Amount = 18,

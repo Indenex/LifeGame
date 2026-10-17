@@ -152,6 +152,8 @@ public partial class BagGrid : GridContainer
     // A worn piece dragged back onto the bag is taken off; a hotbar slot dragged here is cleared.
     public Action<ClothingSlot> TakeOff = _ => { };
     public Action<int> ClearHotbar = _ => { };
+    // The kind of item in your hand (the hotbar's), so the bag rings it as the bar does (ui-71).
+    public Func<Item?> InHand = () => null;
 
     string shown = "";
     internal (Item item, byte quality)? Dragging;
@@ -173,7 +175,8 @@ public partial class BagGrid : GridContainer
         var stacks = (Source?.Invoke() ?? Link.Carried())
             .OrderBy(s => placed ? s.Slot : 0).ThenBy(s => Group(s.Item)).ThenBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
         int room = Capacity?.Invoke() ?? 0;
-        string now = $"{placed}|{room}|" + string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}:{s.Slot}"));
+        var held = Kind == "bag" ? InHand() : null;
+        string now = $"{placed}|{room}|{held}|" + string.Join(",", stacks.Select(s => $"{(int)s.Item}:{s.Quality}:{s.Count}:{s.Slot}"));
         if (now == shown) return;
         shown = now;
         foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
@@ -190,11 +193,13 @@ public partial class BagGrid : GridContainer
             int last = cells.Count == 0 ? -1 : cells.Keys.Max();
             // A fixed number of places (the belt), or room for everything plus a free row to drag into.
             int count = room > 0 ? Math.Max(room, last + 1) : ((last + Width) / Width + 1) * Width;
+            var ringAt = cells.Where(c => c.Value.Item == held).Select(c => c.Key).DefaultIfEmpty(-1).Min();
             for (int i = 0; i < count; i++)
-                AddChild(new BagSlotView { Stack = cells.GetValueOrDefault(i), Cell = i, Grid = this });
+                AddChild(new BagSlotView { Stack = cells.GetValueOrDefault(i), Cell = i, Grid = this, InHand = i == ringAt });
             return;
         }
-        foreach (var s in stacks) AddChild(new BagSlotView { Stack = s, Grid = this });
+        var ringed = stacks.FirstOrDefault(s => s.Item == held);
+        foreach (var s in stacks) AddChild(new BagSlotView { Stack = s, Grid = this, InHand = s == ringed });
         for (int i = stacks.Count; i < room; i++) AddChild(new BagSlotView { Grid = this });
         if (stacks.Count == 0 && room == 0)
         {
@@ -241,6 +246,8 @@ public partial class BagSlotView : PanelContainer
     public BagGrid Grid = null!;
     // Its place in a positioned grid, -1 otherwise.
     public int Cell = -1;
+    // The stack in your hand wears the bar's ring (ui-71).
+    public bool InHand;
 
     public override void _Ready()
     {
@@ -269,7 +276,16 @@ public partial class BagSlotView : PanelContainer
         picture.SetAnchorsPreset(LayoutPreset.FullRect);
         picture.OffsetLeft = picture.OffsetTop = 2;
         picture.OffsetRight = picture.OffsetBottom = -2;
+        // On a soft light plate in full colour, like the hotbar (ui-70).
+        var (plate, shadow) = SlotLook.Behind(stack, picture, BagGrid.Slot);
         stack.AddChild(picture);
+        SlotLook.Set(plate, shadow, picture, picture.Texture, true);
+        if (InHand)
+        {
+            var ring = new ActiveRing { Radius = BagGrid.Slot / 2 + 4 };
+            stack.AddChild(ring);
+            ring.SetOn(true);
+        }
         if (Stack.Count > 1)
         {
             var count = Hud.Text(Stack.Count.ToString(), 13);

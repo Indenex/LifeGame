@@ -112,8 +112,9 @@ public static partial class Module
 
         if (load.Count == 0)
             throw new Exception("The kiln is empty. Bring dry pots to load it.");
-        BurnFuel(ctx, ClayRules.KilnFireSeconds);
-        var finish = ctx.Timestamp + new TimeDuration((long)(ClayRules.KilnFireSeconds * 1_000_000));
+        float firing = ClayRules.KilnFireSeconds / TestSpeed(ctx); // bot checks only; 1 in play
+        BurnFuel(ctx, firing);
+        var finish = ctx.Timestamp + new TimeDuration((long)(firing * 1_000_000));
         ctx.Db.Kiln.StructureId.Update(kiln with
         {
             State = (byte)KilnState.Firing,

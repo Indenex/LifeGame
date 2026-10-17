@@ -101,18 +101,26 @@ namespace LifeGame.Shared
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;
         public const int BushesPerChunk = 2;
-        // How close you must stand to pick a bush. The client offers it a little
-        // inside this so a picking never gets refused for being a step too far.
+        // How close you must stand to pick a bush, measured to its leafy edge (its
+        // center less BushRadius), so the prompt shows when you look like you touch
+        // it. The client offers it a little inside this so a picking never gets
+        // refused for being a step too far.
         public const float BushReach = 2.5f;
+        public const float BushRadius = 0.6f;
+        public const float BushPickDistance = BushReach + BushRadius;
         // The process id picking berries reports, so it trains Foraging. Not a crafting
         // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
         public const string ForageProcess = "gather.berries";
 
-        // The surface of rivers and ponds, in meters. Matches Look.WaterLevel on the client.
-        public const float WaterLevel = -1.0f;
+        // The surface of rivers and ponds, in meters (World.WaterLevel).
+        public const float WaterLevel = World.WaterLevel;
 
         // Below this a need is worth warning about.
         public const float Low = 0.25f;
+
+        // After dying you wake where no tree stands within this many cells, if such
+        // a spot exists near the edge of the starting area (D-081: death is mild).
+        public const int WakeOpenRadius = 4;
 
         // What eating one of an item gives: (food, water). Zero for anything inedible.
         public static (float food, float water) Nourishment(Item item) =>

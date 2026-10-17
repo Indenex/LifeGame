@@ -199,10 +199,15 @@ public static class ItemModels
     // inventory. SnareSet and SnareSprung are the snare pegged out on a run.
     public static Item? SnareItem;
 
+    // Picked mushrooms (model-34, for Survival's survival-35): MushroomItem points their item
+    // id at three mushrooms lying together (Mushrooms.Pile) for the ground, hand and inventory.
+    public static Item? MushroomItem;
+
     static (Action<Kit>? Build, bool Upright) Recipe(Item item) =>
         BowItem.HasValue && item == BowItem.Value ? (Bow, false)
         : ArrowItem.HasValue && item == ArrowItem.Value ? (Arrow, false)
         : SnareItem.HasValue && item == SnareItem.Value ? (SnareBundle, true)
+        : MushroomItem.HasValue && item == MushroomItem.Value ? (k => Mushrooms.PileInto(k.Plain), true)
         : KnownRecipe(item);
 
     static (Action<Kit>? Build, bool Upright) KnownRecipe(Item item) => item switch

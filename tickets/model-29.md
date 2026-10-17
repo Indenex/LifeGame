@@ -1,7 +1,7 @@
 # model-29: More fallen-log shapes (D-166)
 Lane: Modeling
 Owner: Modeling lane (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-29-fallen-log-variety
 PR: #764
 

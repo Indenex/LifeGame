@@ -120,16 +120,19 @@ public partial class FireView : Node3D
 
     // A chunk of meat on a green stick over the coals, browning and then
     // blackening as it cooks (see Roasting for the timings).
-    partial class RoastView : Node3D
+    internal partial class RoastView : Node3D
     {
         static readonly Color Raw = new(0.78f, 0.36f, 0.34f);
         static readonly Color Cooked = new(0.50f, 0.27f, 0.12f);
         static readonly Color Charred = new(0.09f, 0.07f, 0.06f);
         readonly long putAtMicros;
-        readonly ShaderMaterial meat = Look.Solid(Raw);
+        // Painted food (painted-19), one copy per roast since each browns on its own clock.
+        static readonly ShaderMaterial MeatSource = Look.Solid(Raw);
+        readonly ShaderMaterial meat = (ShaderMaterial)PaintedItems.Of(MeatSource, PaintedItems.Family.Food).Duplicate();
 
         // Previews hold one doneness instead of cooking in real time.
         public float? FixedAge;
+        static Mesh? Stick;
 
         public RoastView(long putAtMicros) => this.putAtMicros = putAtMicros;
 
@@ -137,7 +140,7 @@ public partial class FireView : Node3D
         {
             AddChild(new MeshInstance3D
             {
-                Mesh = Look.Faceted(new CylinderMesh { TopRadius = 0.012f, BottomRadius = 0.015f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.3f)),
+                Mesh = Stick ??= PaintedItems.Paint(Look.Faceted(new CylinderMesh { TopRadius = 0.012f, BottomRadius = 0.015f, Height = 0.9f, RadialSegments = 5 }, Look.Bark.Lightened(0.3f)), PaintedItems.Family.Wood),
                 Rotation = new Vector3(0, 0, Mathf.Pi / 2f - 0.5f),
                 Position = new Vector3(0.18f, -0.1f, 0),
             });
@@ -211,6 +214,8 @@ public partial class FireView : Node3D
             ramp.SetColor(1, new Color(0.7f, 0.7f, 0.68f, 0f));
             return new CpuParticles3D
             {
+                // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 Amount = 8,
                 Lifetime = 4f,
                 Mesh = new QuadMesh
@@ -329,6 +334,8 @@ public partial class FireView : Node3D
             ramp.SetColor(1, new Color(0.9f, 0.25f, 0.05f, 0f));
             return new CpuParticles3D
             {
+                // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 Amount = amount,
                 Lifetime = lifetime,
                 Mesh = new QuadMesh { Size = Vector2.One * size, Material = material },
