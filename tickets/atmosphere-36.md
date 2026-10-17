@@ -3,7 +3,7 @@ Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_review
 Branch: claude/atmosphere-36-glow
-PR: (opening)
+PR: #612
 
 ## Goal
 Justin's cutesy picks from D-313:
@@ -24,4 +24,4 @@ What's in `client/scripts/atmosphere/AtmosphereLens.cs`:
 - Modeling's rim shader needs `global uniform vec4 rim_tint;`, with its rim colour × rim_tint.rgb and strength × rim_tint.a. Asked via the PM.
 
 ## Next step
-Open the PR and ask Render for before/after stills (default vs `--soft-glow=0 --vignette=0`) at noon, golden hour facing the sun, and night by a fire.
+Wait for CI on #612 and Render B's before/after stills (requested 07:37), then tune.
