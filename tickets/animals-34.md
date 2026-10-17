@@ -1,7 +1,7 @@
 # animals-34: the rabbit snare
 Lane: Animals
 Owner: Animals thread
-Status: in_progress
+Status: in_review
 Branch: claude/animals-snare-5gkntn
 PR: #820 (https://github.com/Indenex/LifeGame/pull/820)
 
@@ -28,5 +28,5 @@ PM item (the rabbit pitch Justin's default accepted: "easy first meal, snare tra
 - The snare is only checked while a player is online near enough to wake the animal tick (same as animals).
 
 ## Next step
-1. Check #820's CI (it should be green; if red read the failing job's log; AnimalCheck is the likely place, run it locally: dotnet at /tmp/dn from dotnet-install.sh, CLI at /root/stdb, `tools/gen-bindings.sh`, publish, `cd tools/AnimalCheck && dotnet run -c Release`) and send the PM the full green sha.
+1. #820 was green on all 14 checks at 16e69efa6de0d622c524860c7cecdee2f6224b33 (2026-10-17 14:51) and the sha went to the PM; if it has not merged, check for a conflict with main and merge main in.
 2. After #818 (Modeling) and #817 (Audio) are on main: merge main into the branch; in `client/scripts/animals/Snares.cs` draw the caught state with `ItemModels.SnareSprungWith(...)` instead of the lying `Sheep` stand-in and make sure the placed snare shows `ItemModels.SnareSet` (check how the generic placed world item is drawn); call `Sfx.PlayBy` for set (on SnareState insert), snap (on Caught going 0 to non-zero) and collect (on Caught going back to 0 or delete). Build the client, push, tell the PM.
