@@ -21,7 +21,7 @@ public partial class RestSpotView : CanvasLayer
     Node3D player = null!;
     Hud hud = null!;
     PanelContainer panel = null!;
-    Label body = null!;
+    Label title = null!, body = null!, hint = null!;
     Button setButton = null!;
     Button rollButton = null!;
     Node3D? marker;
@@ -96,13 +96,14 @@ public partial class RestSpotView : CanvasLayer
     {
         bool already = IsMyPoint(mat);
         Panels.Opening(this);
+        title.Text = already ? "Your waking place" : "Wake here after a fall?";
         body.Text = already
-            ? "This is your waking place. If you fall, you wake here."
+            ? "If you fall, you wake here."
             : "If you fall, you wake here instead of at the edge of the wilderness.";
-        setButton.Text = already ? "Wake here (set)" : "Set";
-        setButton.Disabled = already;
+        // Once it's set there's nothing to choose, only the mat to roll up.
+        setButton.Visible = !already;
+        hint.Text = already ? "Esc closes" : "Enter wakes here    Esc not now";
         panel.Visible = true;
-        (already ? rollButton : setButton).GrabFocus();
     }
 
     void Close() => panel.Visible = false;
@@ -120,28 +121,33 @@ public partial class RestSpotView : CanvasLayer
         Close();
     }
 
+    // The shared frame (ui-37): the title, a soft line, one filled button for the choice and
+    // quiet text buttons for the rest, and the keys underneath like every other window.
     void BuildPanel()
     {
-        var title = Ui.Title("Wake here after a fall?");
-        body = Hud.Text("", 16);
-        body.CustomMinimumSize = new Vector2(360, 0);
+        title = Ui.Title("");
+        body = Hud.Text("", 15);
+        body.Modulate = new Color(1, 1, 1, 0.8f);
+        body.CustomMinimumSize = new Vector2(380, 0);
         body.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        setButton = new Button { Text = "Set", CustomMinimumSize = new Vector2(110, 0) };
-        setButton.Pressed += Set;
-        var notNow = new Button { Text = "Not now", CustomMinimumSize = new Vector2(110, 0) };
-        notNow.Pressed += Close;
-        rollButton = new Button { Text = "Roll up the mat" };
-        rollButton.Pressed += RollUp;
-        var buttons = new HBoxContainer();
-        buttons.AddThemeConstantOverride("separation", 10);
+        setButton = Ui.MainButton("Wake here", Set);
+        var notNow = ControlsPage.TextButton("Not now", Close);
+        rollButton = ControlsPage.TextButton("Roll up the mat", RollUp);
+        var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        buttons.AddThemeConstantOverride("separation", 18);
         buttons.AddChild(setButton);
         buttons.AddChild(notNow);
         buttons.AddChild(rollButton);
+        hint = Hud.Text("", 13);
+        hint.Modulate = new Color(1, 1, 1, 0.55f);
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 10);
         column.AddChild(title);
         column.AddChild(body);
+        column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
         column.AddChild(buttons);
+        column.AddChild(hint);
         panel = Ui.Window(column);
         panel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         panel.GrowHorizontal = Control.GrowDirection.Both;
@@ -154,6 +160,7 @@ public partial class RestSpotView : CanvasLayer
     {
         if (!panel.Visible || e is not InputEventKey { Pressed: true, Echo: false }) return;
         if (e.IsActionPressed("ui_cancel")) Close();
+        else if (e is InputEventKey { PhysicalKeycode: Key.Enter or Key.KpEnter } && setButton.Visible) Set();
         else return;
         GetViewport().SetInputAsHandled();
     }
@@ -180,6 +187,9 @@ public partial class RestSpotView : CanvasLayer
             Text = "Your waking place",
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             PixelSize = 0.004f,
+            FontSize = 30,
+            OutlineSize = 8,
+            OutlineModulate = new Color(0.08f, 0.09f, 0.07f, 0.6f),
             Position = new Vector3(0, 0.9f, 0),
             Modulate = new Color(1f, 0.93f, 0.7f, 0f),
             NoDepthTest = true,
