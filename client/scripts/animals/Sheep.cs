@@ -114,8 +114,6 @@ public partial class Sheep : Node3D
         bool stag = deer && IsStag(id);
         BuildMeshes();
         if (deer) BuildDeerMeshes();
-        var headAt = hen ? HenFigure.HeadAt : rabbit ? RabbitFigure.HeadAt : deer ? DeerHeadAt : HeadAt;
-        var hips = hen ? HenFigure.Hips : rabbit ? RabbitFigure.Hips : deer ? DeerHips : Hips;
 
         int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
         if (!WoolMaterials.TryGetValue(color, out var wool))
@@ -129,6 +127,8 @@ public partial class Sheep : Node3D
                 CoatMaterials[coat] = wool = PaintedAnimals.Coat(Look.Solid(Coats[coat]));
             woolColor = Coats[coat];
         }
+
+        var (headAt, hips, figure) = Figure(def.Model, stag, wool);
 
         // A shorn sheep is a slim pink body; the fleece bone shrinks into it when
         // shorn and swells back out as the wool regrows.
@@ -146,7 +146,7 @@ public partial class Sheep : Node3D
         }
         skeleton.ResetBonePoses();
         AddChild(skeleton);
-        var mesh = new MeshInstance3D { Mesh = hen ? HenFigure.Build(wool) : rabbit ? RabbitFigure.Build(wool) : deer ? (stag ? stagMesh : deerMesh) : sheepMesh, Skeleton = new NodePath("..") };
+        var mesh = new MeshInstance3D { Mesh = figure, Skeleton = new NodePath("..") };
         mesh.SetSurfaceOverrideMaterial(0, wool);
         skeleton.AddChild(mesh);
 
@@ -154,6 +154,16 @@ public partial class Sheep : Node3D
         adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f + (stag ? 0.1f : 0f);
         Scale = Vector3.One * adultSize;
     }
+
+    // The figure each model plan (AnimalDef.Model) draws: where the head and the four leg bones sit, and the
+    // skinned mesh, all on the one bone layout (body, fleece, head, four legs). A new model plan is one arm here.
+    static (Vector3 HeadAt, Vector3[] Hips, ArrayMesh Mesh) Figure(string model, bool stag, Material coat) => model switch
+    {
+        "hen" => (HenFigure.HeadAt, HenFigure.Hips, HenFigure.Build(coat)),
+        "rabbit" => (RabbitFigure.HeadAt, RabbitFigure.Hips, RabbitFigure.Build(coat)),
+        "deer" => (DeerHeadAt, DeerHips, stag ? stagMesh! : deerMesh!),
+        _ => (HeadAt, Hips, sheepMesh!),
+    };
 
     // Lambs are born at 35 and grow to 100. A lamb is a little over half size.
     static float GrownFraction(byte growth) => Mathf.Lerp(0.55f, 1f, Mathf.Clamp((growth - 35) / 65f, 0f, 1f));
