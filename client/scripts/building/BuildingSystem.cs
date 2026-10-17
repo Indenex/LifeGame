@@ -492,7 +492,7 @@ public partial class BuildingSystem : Node
     // The world-space box a shelter fills, roof included, for the see-through test.
     static Aabb Footprint(Structure s, StructureShape shape, float ground)
     {
-        const float height = 3.7f, eave = 0.5f; // up to the ridge cap, and out past the eaves
+        float height = 3.7f * shape.Scale, eave = 0.5f * shape.Scale; // up to the ridge cap, and out past the eaves (homes are 1.25x, building-14)
         float hx = (shape.Round ? shape.Radius : shape.HalfWidth) + eave, hz = (shape.Round ? shape.Radius : shape.HalfDepth) + eave;
         float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
         foreach (var (lx, lz) in new[] { (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
