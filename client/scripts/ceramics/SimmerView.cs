@@ -11,6 +11,8 @@ public partial class SimmerView : Node3D
 {
     public static readonly Color Broth = new(0.42f, 0.12f, 0.16f);
     public static readonly Color Stew = new(0.40f, 0.26f, 0.13f);
+    // Rendered mutton fat: a pale, creamy melt (ceramics-9).
+    public static readonly Color Tallow = new(0.80f, 0.72f, 0.50f);
 
     readonly MeshInstance3D body = new();
     readonly MeshInstance3D surface = new();
@@ -54,9 +56,9 @@ public partial class SimmerView : Node3D
         body.MaterialOverride = ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, id);
         var line = PotMesh.WaterLine(ClayForm.CoilPot) * PotView.Size;
         surface.Mesh = new CylinderMesh { TopRadius = line.X, BottomRadius = line.X, Height = 0.004f, RadialSegments = 24 };
-        surface.MaterialOverride = Look.Solid(dish == Item.PotOfStew ? Stew : Broth);
+        surface.MaterialOverride = Look.Solid(dish == Item.PotOfStew ? Stew : dish == Item.Tallow ? Tallow : Broth);
         surface.Position = new Vector3(0, line.Y, 0);
-        floaters.Mesh = CookingMeshes.Floaters(dish == Item.PotOfStew ? CookingMeshes.Dish.Stew : CookingMeshes.Dish.Broth, line.X);
+        floaters.Mesh = CookingMeshes.Floaters(dish == Item.PotOfStew ? CookingMeshes.Dish.Stew : dish == Item.Tallow ? CookingMeshes.Dish.Tallow : CookingMeshes.Dish.Broth, line.X);
         floaters.Position = new Vector3(0, line.Y + 0.002f, 0);
         steam.Position = new Vector3(0, PotMesh.Height(ClayForm.CoilPot) * PotView.Size, 0);
         steam.Emitting = true;
