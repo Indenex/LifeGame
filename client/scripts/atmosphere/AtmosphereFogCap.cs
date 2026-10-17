@@ -17,7 +17,8 @@ namespace LifeGame;
 public partial class Atmosphere
 {
     // Extinction per metre: depth fog and volumetric fog, and the two together.
-    const float MaxFogDensity = 0.008f, MaxMistDensity = 0.009f, MaxAirDensity = 0.012f;
+    // (Combined cap lowered from 0.012 in atmosphere-37: distant trees nearly vanished at dawn.)
+    const float MaxFogDensity = 0.008f, MaxMistDensity = 0.009f, MaxAirDensity = 0.010f;
     // How strongly the sun lights the fog, how far forward it scatters, and the bloom.
     const float MaxSunInFog = 1.6f, MaxAnisotropy = 0.7f, MaxGlowBloom = 0.1f, MaxGlowIntensity = 0.9f, MinGlowThreshold = 1.0f;
 

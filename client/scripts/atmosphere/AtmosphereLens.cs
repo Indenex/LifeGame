@@ -30,7 +30,12 @@ public partial class Atmosphere
     ImageTexture? warmGlow;
     readonly float[] glowLevels = new float[7];
     // The soft glow's weights: the tight levels down, the wide ones up.
-    static readonly float[] SoftLevels = { 0f, 0.5f, 0.8f, 1.1f, 1.0f, 0.6f, 0f };
+    static readonly float[] SoftLevels = { 0f, 0.5f, 0.8f, 1.1f, 0.8f, 0.3f, 0f };
+    // Whole-screen bloom with soft glow on (atmosphere-37). GlowBloom feeds every pixel
+    // into the glow, not just bright light; spread over the wide levels and tinted warm,
+    // that laid a creamy veil over the whole view, noon included (Modeling's world check).
+    // With soft glow, only bright light (sun, fire, lamps) glows.
+    const float SoftBloom = 0.015f;
 
     static readonly StringName NLeakDir = "leak_dir", NLeakAmount = "amount", NTint = "tint", NRimTint = "rim_tint", NHalo = "halo";
 
@@ -77,6 +82,7 @@ public partial class Atmosphere
         env.GlowMap = SoftGlow ? warmGlow : null;
         env.GlowMapStrength = SoftGlow ? 0.45f : 0f;
         for (int i = 0; i < glowLevels.Length; i++) env.SetGlowLevel(i, SoftGlow ? SoftLevels[i] : glowLevels[i]);
+        if (SoftGlow) env.GlowBloom = Mathf.Min(env.GlowBloom, SoftBloom);
         sky.SetShaderParameter(NHalo, SoftGlow ? 1f : 0f);
 
         // Light leaks from the screen edge nearest the low sun, only when it's near
