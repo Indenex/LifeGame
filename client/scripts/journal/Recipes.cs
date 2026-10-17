@@ -32,6 +32,7 @@ public static class Recipes
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Sneak] = "Hold {sneak} and creep toward a wary animal. The closer you get before it bolts, the better you learn.",
         [Skills.Shoot] = "{strike} with a bow in hand to loose an arrow at an animal.",
+        [Skills.Eggs] = "{use} beside a hen that has laid to take its eggs.",
         [Skills.Butcher] = "Butcher a carcass with a cutting edge.",
         ["build.table"] = "{build_mode} to lay out a crafting table in your claim, then add its materials with {use}.",
         ["build.bench"] = "{build_mode} to lay out a potter's bench in your claim, then add its materials with {use}.",

@@ -40,15 +40,16 @@ public partial class ClaimPanel : CanvasLayer
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
 
+        // The shared window look (ui/Ui.cs, ui-25), docked to the right.
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.10f, 0.11f, 0.09f, 0.72f),
+            BgColor = Ui.Frame,
             ContentMarginLeft = 22,
             ContentMarginRight = 22,
             ContentMarginTop = 16,
             ContentMarginBottom = 18,
         };
-        style.SetCornerRadiusAll(16);
+        style.SetCornerRadiusAll(Ui.Corner);
         box.AddThemeStyleboxOverride("panel", style);
         box.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         box.GrowHorizontal = Control.GrowDirection.Begin;
