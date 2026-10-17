@@ -39,3 +39,6 @@ Merge order set by the PM (2026-10-17): #285 goes LAST in its round, after ClayT
 
 ## Note 2026-10-17: subscriptions moved (#527)
 Client subscription queries no longer go in `Subscriptions.cs`. When main is next merged into this branch, move `device_job` and `device_output` out of that list into a `[SubscriptionQueries] static IEnumerable<string> CraftingQueries(string range, string farRange)` in `client/scripts/net/Subscriptions.Crafting.cs` (see docs/CONTENT.md).
+
+## Note 2026-10-17: showcase views moved (#679)
+New showcase views go in `client/scripts/models/Showcase.Crafting.cs` as `[ShowcaseView("name")]` methods, not in `Showcase.cs`'s list. If this branch adds device views to `Showcase.cs`, move them there when main is next merged (with the renumber to 21–23 and the `Subscriptions.Crafting.cs` move above).
