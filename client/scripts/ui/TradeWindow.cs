@@ -159,7 +159,7 @@ public partial class TradeWindow : CanvasLayer
         carryTitle.Modulate = new Color(1, 1, 1, 0.75f);
         box.AddChild(carryTitle);
         carryRow = new HFlowContainer { CustomMinimumSize = new Vector2(600, 0) };
-        carryRow.AddThemeConstantOverride("h_separation", 6);
+        carryRow.AddThemeConstantOverride("h_separation", 2);
         carryRow.AddThemeConstantOverride("v_separation", 6);
         box.AddChild(carryRow);
 
@@ -294,8 +294,9 @@ public partial class TradeWindow : CanvasLayer
             FocusMode = Control.FocusModeEnum.None,
             Disabled = move == null,
         };
-        button.AddThemeFontSizeOverride("font_size", 15);
-        button.AddThemeConstantOverride("icon_max_width", 30);
+        // A touch smaller (ui-59), so what you carry fits one row on the warm look's rounder buttons.
+        button.AddThemeFontSizeOverride("font_size", 14);
+        button.AddThemeConstantOverride("icon_max_width", 26);
         button.AddThemeColorOverride("font_disabled_color", Look.Cream);
         if (move != null)
             button.Pressed += () => move(s, Input.IsKeyPressed(Key.Shift) ? s.Count : 1);

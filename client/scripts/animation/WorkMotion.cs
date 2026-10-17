@@ -4,9 +4,10 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // What the hands are doing while a craft job runs (the WorkMotion enum is in shared/).
-// Small crafts kneel on the right knee with the left foot planted and loop their own arm
-// motion; Station stands working at a waist-high station (crafting table, spindle,
-// drying rack: D-098). Hands hold nothing.
+// Hand motions loop their own arm motion, worked kneeling on the right knee with the left
+// foot planted, or standing at a station's top (crafting table, spindle, drying rack:
+// D-098). Station and Chop have their own full-body poses. What the hands hold comes from
+// HeldTools. Quick actions and emotes are further down.
 
 public static class WorkMotions
 {
@@ -205,12 +206,9 @@ public static class WorkMotions
     // levers, a spade is stepped into, levered and the dirt thrown aside.
     public enum DigStyle : byte { Hands, Stick, Spade }
 
-    // The spade is Crafting's (id appended when it lands); found by name so this needs
-    // no change then. Any other digging tool is used like a stick.
-    static readonly Item? SpadeItem = System.Enum.TryParse<Item>("Spade", out var spade) ? spade : null;
-
+    // Any digging tool but the spade is used like a stick.
     public static DigStyle DigStyleOf(Item? tool) =>
-        tool is not { } t ? DigStyle.Hands : t == SpadeItem ? DigStyle.Spade : DigStyle.Stick;
+        tool is not { } t ? DigStyle.Hands : t == Item.Spade ? DigStyle.Spade : DigStyle.Stick;
 
     // The variant of an action its item picks: a strike's style, a dig's style.
     public static byte VariantOf(WorkMotion m, Item? item) => m switch
@@ -255,7 +253,6 @@ public static class WorkMotions
     // loopTo, two moments with the same pose (hands back at the water, at the side).
     public static (float loopAt, float loopTo) ActLoop(WorkMotion m, byte variant) => m switch
     {
-        WorkMotion.Dig => (ActSeconds(m, variant), 0f),
         WorkMotion.Drink => (2.3f, 0.3f),
         WorkMotion.Eat => (1.15f, 0.15f),
         WorkMotion.Pluck => (0.85f, 0f),
@@ -265,8 +262,7 @@ public static class WorkMotions
     };
 
     // When the tool meets its work, for chips, dirt and thunks to land on the frame
-    // (Avatar.Impact): seconds into a quick action, or the point in a craft loop's cycle
-    // (0 to 1) with how many cycles it plays a second. A negative time means no impact.
+    // (Avatar.Impact): seconds into a quick action. A negative time means no impact.
     public static float ActImpact(WorkMotion m, byte variant) => m switch
     {
         WorkMotion.Strike => 0.21f,
@@ -282,6 +278,8 @@ public static class WorkMotions
 
     const float PoundRate = 1.2f;
 
+    // Craft loops: how many cycles play a second, and the point in the cycle (0 to 1)
+    // where the tool bites. A negative point means no impact.
     public static (float rate, float phase) WorkImpact(WorkMotion m) => m switch
     {
         WorkMotion.Chop => (ChopRate, ChopHit),
@@ -300,7 +298,8 @@ public static class WorkMotions
 
     // Whether the legs take part. A pick-up bends only the back and arms (with a slight
     // knee dip), so it plays over walking; the others stop when you walk off.
-    // Strikes, shots, feeding a fire and flinching are upper-body too.
+    // Strikes, shots, feeding a fire, flinching and the hand emotes (wave, clap, shrug,
+    // point) are upper-body too.
     public static bool ActUsesLegs(WorkMotion m) =>
         m is not (WorkMotion.PickUp or WorkMotion.Strike or WorkMotion.Shoot or WorkMotion.Feed or WorkMotion.Flinch or WorkMotion.Wave
             or WorkMotion.Clap or WorkMotion.Shrug or WorkMotion.Point);

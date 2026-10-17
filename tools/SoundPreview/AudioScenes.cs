@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "rabbit", "rest", "clap", "deer" };
+    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "clap", "rest", "deer", "pound", "rabbit" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -98,6 +98,10 @@ static class AudioScenes
                 if (At(8)) mix.Play(CueDefs.RestUp);
                 if (At(10)) mix.Play(CueDefs.RestLieMat);
                 if (At(13)) mix.Play(CueDefs.RestUp);
+                break;
+            // Pound scene: six blows, 1.2 a second, from 1 s.
+            case "pound":
+                for (int i = 0; i < 6; i++) if (At(1.0 + i / 1.2)) mix.Play(CueDefs.PoundThud);
                 break;
             // Store scene: basket put and take, jar put and take, 1.5 s apart.
             case "store":
