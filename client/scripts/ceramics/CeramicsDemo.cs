@@ -27,6 +27,10 @@ public partial class CeramicsDemo : Node3D
     // --ceramics-demo=lamp shows three lit clay lamps and a cold one, for judging the glow at night (ceramics-9).
     static bool ShowLamps => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=lamp");
 
+    // --ceramics-demo=slip shows kiln-fired pots with a band of slip in three earth tones beside
+    // plain ones, for judging the banded-rim look (ceramics-14, a prototype until Justin picks).
+    static bool ShowSlip => OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--ceramics-demo=slip");
+
     public CeramicsDemo(Terrain terrain, Node3D anchor)
     {
         this.terrain = terrain;
@@ -49,6 +53,33 @@ public partial class CeramicsDemo : Node3D
                 var pot = new PotView { Position = new Vector3(-0.6f + i * 0.45f, 0, 1.2f) };
                 row.AddChild(pot);
                 pot.Show((ulong)i + 20, i == 1 ? ClayForm.PinchPot : ClayForm.CoilPot, ClayStage.Fired, FireKind.Kiln, 0f, 0, 0f, i == 2);
+            }
+            AddChild(camera);
+            camera.MakeCurrent();
+            return;
+        }
+        if (ShowSlip)
+        {
+            // Top row: coil pots with a band in each slip, then a plain one; bottom row: pinch pots.
+            (ClayForm form, int slip)[] pots =
+            {
+                (ClayForm.CoilPot, 0), (ClayForm.CoilPot, 1), (ClayForm.CoilPot, 2), (ClayForm.CoilPot, -1),
+                (ClayForm.PinchPot, 0), (ClayForm.PinchPot, 1), (ClayForm.PinchPot, 2), (ClayForm.PinchPot, -1),
+            };
+            for (int i = 0; i < pots.Length; i++)
+            {
+                var (form, slip) = pots[i];
+                int col = i % 4, line = i / 4;
+                ulong id = (ulong)(60 + i);
+                row.AddChild(new MeshInstance3D
+                {
+                    Mesh = PotMesh.For(form, id),
+                    MaterialOverride = slip < 0
+                        ? ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, id)
+                        : ClayLook.Slipped(ClayStage.Fired, FireKind.Kiln, 0f, id, slip),
+                    Position = new Vector3((col - 1.5f) * 0.6f, 0, line * 0.7f),
+                    Scale = Vector3.One * PotView.Size,
+                });
             }
             AddChild(camera);
             camera.MakeCurrent();
@@ -142,7 +173,7 @@ public partial class CeramicsDemo : Node3D
             child.Position = new Vector3(child.Position.X, terrain.HeightAt(p.X, p.Z) - at.Y + lift, child.Position.Z);
         }
         anchor.Visible = false;
-        if (ShowLamps)
+        if (ShowLamps || ShowSlip)
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
             camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);

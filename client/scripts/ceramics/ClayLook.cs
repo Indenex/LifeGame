@@ -42,6 +42,32 @@ public static class ClayLook
         return m;
     }
 
+    // Earth-tone slips (ceramics-14 prototype): red ochre, pale kaolin, charcoal.
+    public static readonly Color[] Slips =
+    {
+        new(0.55f, 0.20f, 0.10f), new(0.86f, 0.82f, 0.72f), new(0.14f, 0.11f, 0.09f),
+    };
+
+    static readonly Dictionary<(ClayStage, FireKind, int, int, int), ShaderMaterial> SlippedMaterials = new();
+
+    // The same clay as For, with a band of slip round the rim and shoulder. A prototype look
+    // until Justin picks one (D-154): band is the lower and upper height, 0 base to 1 rim.
+    public static ShaderMaterial Slipped(ClayStage stage, FireKind fire, float moisture, ulong id, int slipIndex, Vector2? band = null)
+    {
+        var b = band ?? new Vector2(0.62f, 0.97f);
+        var baseMat = For(stage, fire, moisture, id);
+        var key = (stage, fire, Mathf.RoundToInt(moisture * 10f), (int)(id % 3), slipIndex * 1000 + Mathf.RoundToInt(b.X * 100));
+        if (SlippedMaterials.TryGetValue(key, out var m)) return m;
+        m = new ShaderMaterial { Shader = Shader };
+        foreach (var name in new[] { "albedo", "wetness", "clouds", "broken", "seed", "glow" })
+            m.SetShaderParameter(name, baseMat.GetShaderParameter(name));
+        var c = Slips[slipIndex % Slips.Length];
+        m.SetShaderParameter("slip", new Color(c.R, c.G, c.B, 1f));
+        m.SetShaderParameter("slip_band", b);
+        SlippedMaterials[key] = m;
+        return m;
+    }
+
     // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
     // through. t is how far the firing has got, 0 to 1.
     public static ShaderMaterial Firing(float t, ulong id)
@@ -98,6 +124,9 @@ public static class ClayLook
             uniform float broken = 0.0;
             uniform float seed = 0.0;
             uniform float glow = 0.0;
+            // A band of coloured slip round the rim and shoulder (ceramics-14 prototype): alpha 0 is none.
+            uniform vec4 slip : source_color = vec4(0.0);
+            uniform vec2 slip_band = vec2(0.62, 0.97);
 
             varying vec3 local_pos;
             varying float height;
@@ -141,6 +170,14 @@ public static class ClayLook
                 float grain = noise(p * 1.6);
                 color *= 0.95 + grain * 0.08;
                 color *= 0.96 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.08;
+
+                // Slip: a hand-painted band with a slightly wavering lower edge.
+                if (slip.a > 0.0) {
+                    float wobble = (fbm(vec3(local_pos.xz * 14.0, seed + 3.0)) - 0.5) * 0.07;
+                    float lo = slip_band.x + wobble;
+                    float inband = smoothstep(lo - 0.012, lo + 0.012, height) * (1.0 - smoothstep(slip_band.y - 0.01, slip_band.y + 0.01, height));
+                    color = mix(color, slip.rgb * (0.94 + grain * 0.1), inband * slip.a);
+                }
 
                 // Smoke clouds from an open fire: soft dark patches, heavier low down.
                 float cloud = smoothstep(0.38, 0.7, fbm(p * 0.25)) * clouds;
