@@ -117,9 +117,10 @@ public partial class LookPicker : CanvasLayer
         view = new SubViewport { OwnWorld3D = true, TransparentBg = true, Msaa3D = Viewport.Msaa.Msaa4X, Size = new Vector2I(240, 360) };
         frame.AddChild(view);
         columns.AddChild(frame);
-        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 1.05f, 4.4f) };
+        var camera = new Camera3D { Fov = 28f };
         view.AddChild(camera);
-        camera.LookAt(new Vector3(0, 0.92f, 0), Vector3.Up);
+        // Not in the tree yet, so aim it from a position rather than with LookAt.
+        camera.LookAtFromPosition(new Vector3(0, 1.05f, 4.4f), new Vector3(0, 0.92f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-35, 30, 0), LightEnergy = 1.1f });
         view.AddChild(new WorldEnvironment
         {
