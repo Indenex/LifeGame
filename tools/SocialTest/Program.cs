@@ -195,6 +195,9 @@ a.Conn.Reducers.SendChat("/me");
 Wait(() => b.Conn.Db.MyChat.Iter().Count() > chatCount || a.LastError != null, 1.5);
 Check(b.Conn.Db.MyChat.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
 Check(Social.TownNear(0, 0, 41, 0) && !Social.TownNear(0, 0, 61, 0), "claims within 60 m can join the same town");
+Check(Social.MayBarGate(true, false, false, false, false) && Social.MayBarGate(false, true, false, false, false) && Social.MayBarGate(false, false, true, true, false), "the owner, a member and the Gatekeeper bar a gate");
+Check(!Social.MayBarGate(false, false, true, false, false) && !Social.MayBarGate(false, false, false, true, false), "a plain signer cannot bar a gate, nor a Gatekeeper outside the town");
+Check(!Social.MayBarGate(false, true, false, false, true) && !Social.MayBarGate(false, false, true, true, true) && Social.MayBarGate(true, false, false, false, true), "a ban takes the member's and the Gatekeeper's rights, never the owner's");
 Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
