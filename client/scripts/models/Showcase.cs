@@ -552,7 +552,7 @@ public partial class Showcase : Node3D
         }
         var rng = new RandomNumberGenerator { Seed = 7 };
         // A card `height` metres tall standing on its bottom edge at `at`.
-        void Card(string name, Vector3 at, float height, bool shadow = true)
+        void Card(string name, Vector3 at, float height, bool shadow = true, float light = 1f)
         {
             var tex = Tex(name);
             var sprite = new Sprite3D
@@ -569,6 +569,7 @@ public partial class Showcase : Node3D
                 Offset = new Vector2(-tex.GetWidth() * 0.5f, 0),
                 Position = at,
                 FlipH = rng.Randf() < 0.5f,
+                Modulate = new Color(light, light, light * 0.9f),
             };
             AddChild(sprite);
         }
@@ -576,7 +577,7 @@ public partial class Showcase : Node3D
         // Ground: the pack's grass tile painted over the plane, in D's banded light.
         foreach (var child in GetChildren())
             if (child is MeshInstance3D { Mesh: PlaneMesh } ground)
-                ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Grass, MaterialLook.Variant.E);
+                ground.MaterialOverride = MaterialLook.For(MaterialLook.Pattern.Grass, MaterialLook.Variant.D, new Color(0.52f, 0.57f, 0.26f));
 
         // The cabin, sheep and player in variant D.
         int cabin = 0;
@@ -602,8 +603,34 @@ public partial class Showcase : Node3D
             if (child is MeshInstance3D mi)
                 mi.MaterialOverride = MaterialLook.For(mi.Name == PlayerModel.SlotNode(PlayerModel.Body) ? MaterialLook.Pattern.Leaves : MaterialLook.Pattern.Skin, MaterialLook.Variant.D);
 
+        // A soft dark outline round the 3D models, like the sprites' painted edge:
+        // the mesh drawn again a little larger, back faces only, in dark brown.
+        var outline = new ShaderMaterial { Shader = new Shader { Code = """
+            shader_type spatial;
+            render_mode cull_front;
+            void vertex() { VERTEX += NORMAL * 0.03; }
+            void fragment() { ALBEDO = vec3(0.13, 0.09, 0.1); }
+            """ } };
+        void Outline(Node node)
+        {
+            foreach (var child in node.GetChildren())
+            {
+                if (child is MeshInstance3D mi)
+                {
+                    if (mi.MaterialOverride is ShaderMaterial m) { var copy = (ShaderMaterial)m.Duplicate(); copy.NextPass = outline; mi.MaterialOverride = copy; }
+                    for (int i = 0; i < mi.GetSurfaceOverrideMaterialCount(); i++)
+                        if (mi.GetSurfaceOverrideMaterial(i) is ShaderMaterial sm) { var copy = (ShaderMaterial)sm.Duplicate(); copy.NextPass = outline; mi.SetSurfaceOverrideMaterial(i, copy); }
+                }
+                Outline(child);
+            }
+        }
+        Outline(cabinRoot);
+        Outline(player);
+        foreach (int i in new[] { 0, 1 })
+            if (sheep.GetSurfaceOverrideMaterial(i) is ShaderMaterial sm) { var copy = (ShaderMaterial)sm.Duplicate(); copy.NextPass = outline; sheep.SetSurfaceOverrideMaterial(i, copy); }
+
         // A forest edge behind, a meadow in front.
-        string[] needles = { "Forest_big_tree_needle_03", "Forest_big_tree_needle_04" };
+        string[] needles = { "Forest_big_tree_needle_04", "Forest_big_tree_needle_04" };
         string[] cypress = { "Forest_big_cypress_01", "Forest_big_cypress_02", "Forest_big_cypress_03" };
         foreach (var (x, z) in new[] { (-6.5f, -6f), (-8.5f, -3f), (-4.5f, -9f), (7f, -7.5f), (-10f, -8f), (9.5f, -4f), (4f, -10f) })
             Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), 6.5f + rng.Randf() * 1.5f);
@@ -623,19 +650,20 @@ public partial class Showcase : Node3D
         // Thick ground cover: grass tufts, clover, ferns, flowers and mushrooms.
         string[] cover = { "Forest_small_grass_01", "Forest_small_grass_02", "Forest_small_grass_03", "Forest_small_grass_04", "Forest_small_grass_05", "Forest_small_grass_06", "Forest_small_grass_07", "Forest_small_grass_08" };
         string[] extras = { "Forest_small_clover_01", "Forest_small_fern_01", "Forest_small_fern_02", "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03" };
-        for (int i = 0; i < 520; i++)
+        for (int i = 0; i < 7000; i++)
         {
-            var at = new Vector3(rng.RandfRange(-12f, 12f), 0, rng.RandfRange(-11f, 6f));
+            var at = new Vector3(rng.RandfRange(-14f, 14f), 0, rng.RandfRange(-16f, 6f));
             // Keep the cabin floor and the spot by the player clear.
             if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
             bool extra = rng.Randf() < 0.14f;
-            Card(extra ? extras[rng.RandiRange(0, extras.Length - 1)] : cover[rng.RandiRange(0, cover.Length - 1)], at, extra ? 0.3f + rng.Randf() * 0.15f : 0.35f + rng.Randf() * 0.25f, false);
+            Card(extra ? extras[rng.RandiRange(0, extras.Length - 1)] : cover[rng.RandiRange(0, cover.Length - 1)], at, extra ? 0.3f + rng.Randf() * 0.15f : 0.4f + rng.Randf() * 0.3f, false, 2.0f);
         }
 
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        // The reference art's high three-quarter view.
+        // The reference art's high three-quarter view, the far distance softly blurred.
         camera.LookAtFromPosition(new Vector3(2.5f, 7.5f, 11f), new Vector3(0, 0.8f, -2f), Vector3.Up);
+        camera.Attributes = new CameraAttributesPractical { DofBlurFarEnabled = true, DofBlurFarDistance = 17f, DofBlurFarTransition = 10f, DofBlurAmount = 0.1f };
         if (!args.ContainsKey("time-of-day")) return;
         AddChild(new Atmosphere());
     }
