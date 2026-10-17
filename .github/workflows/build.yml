@@ -156,17 +156,27 @@ jobs:
       - name: Build structures with two players
         run: cd tools/BuildTest && dotnet run -c Release -- ${{ matrix.parts }}
 
+  # The crafting check in two parts (tools, fires and chopping / claim, stations, wear and repair) so it
+  # isn't the longest job; the second makes the few tools it needs itself.
   craft-test:
-    name: Crafting check
+    name: Crafting check (${{ matrix.part }})
     needs: module
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: tools
+          - part: stations
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
         with:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
-      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
+      - name: Crafting check (${{ matrix.part }})
+        env:
+          CRAFTCHECK_PART: ${{ matrix.part }}
         run: cd tools/CraftCheck && dotnet run -c Release
 
   # Justin publishes each merge over his world without --delete-data (bugfix-3).
