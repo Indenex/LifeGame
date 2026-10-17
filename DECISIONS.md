@@ -1213,3 +1213,59 @@ Owner: Claims.
 ## D-298 — 2026-10-17 — Unity comparison spike, lighting only
 **Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
 **Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
+
+## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
+**Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
+**Who:** Justin: "Every slot equips".
+
+## D-308 — 2026-10-17 — Frost "in between": silvered grass tips, white-edged rocks and leaves
+**Decision:** Frost sits "in between": grass tips clearly silvered, rocks and leaf tops white-edged, never snow-like (#597).
+**Who:** Justin, choosing the in-between frost look (relayed by the PM; no direct quote).
+
+## D-309 — 2026-10-17 — Character menu as a "Cutesy page"
+**Decision:** The character menu is a "Cutesy page": pastel paper, polaroid or sticker frames, chibis bobbing, doodles (ui-39).
+**Who:** Justin, choosing the Cutesy page (relayed by the PM; no direct quote).
+
+## D-310 — 2026-10-17 — No move to Unity; work on Godot shadows
+**Decision:** No move to Unity. The spike's conclusion is accepted. "Shadows might be nice", so Godot shadow quality work goes ahead (atmos-shadows-1). Merged meshes come via env-24.
+**Who:** Justin: "Shadows might be nice" (relayed by the PM).
+
+## D-311 — 2026-10-17 — Pot slip decoration is a banded rim with a free colour picker
+**Decision:** Pot slip decoration is a banded rim (one or two bands), with colours from a free picker in the mark's allowed range (ceramics-14).
+**Who:** Justin, choosing the banded rim (relayed by the PM; no direct quote).
+
+## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
+**Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
+**Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
