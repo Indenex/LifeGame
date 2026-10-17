@@ -42,6 +42,7 @@ public partial class CraftingUi : CanvasLayer
         style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
         style.ContentMarginTop = style.ContentMarginBottom = 14;
         style.ContentMarginLeft = style.ContentMarginRight = 18;
+        style.SetCornerRadiusAll(12); // the build menu's frame (Hud.Panel)
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         box.AddChild(Text("Crafting", 20));
@@ -120,6 +121,7 @@ public partial class CraftingUi : CanvasLayer
         panel.Visible = true;
         Refresh();
         grid.NextCategory(onTier);
+        grid.Preview();
         Refresh();
     }
 

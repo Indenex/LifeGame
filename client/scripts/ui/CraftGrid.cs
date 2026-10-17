@@ -73,6 +73,35 @@ public partial class CraftGrid : VBoxContainer
     // The search box holds the keyboard while you type in it.
     public bool Typing => search.HasFocus();
 
+    // Screenshots (--screenshot-craft): --screenshot-craft-search=axe types into the search
+    // box, and --screenshot-craft-hover pins the first can't-make card's hover text beside it,
+    // since a still can't point the mouse.
+    public void Preview()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--screenshot-craft-search="))
+            {
+                search.Text = arg["--screenshot-craft-search=".Length..];
+                Refresh();
+            }
+        if (!OS.GetCmdlineUserArgs().Contains("--screenshot-craft-hover")) return;
+        GetTree().CreateTimer(0.5).Timeout += () =>
+        {
+            int i = Shown.FindIndex(p => Missing(p) != null);
+            if (i < 0 || grid.GetChild(i) is not Control card) return;
+            var tip = new PanelContainer { TopLevel = true, MouseFilter = MouseFilterEnum.Ignore };
+            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.95f), BorderColor = new Color(Look.Cream, 0.3f) };
+            style.SetBorderWidthAll(1);
+            style.SetCornerRadiusAll(6);
+            style.ContentMarginLeft = style.ContentMarginRight = 10;
+            style.ContentMarginTop = style.ContentMarginBottom = 6;
+            tip.AddThemeStyleboxOverride("panel", style);
+            tip.AddChild(Hud.Text(card.TooltipText, 14));
+            AddChild(tip);
+            tip.GlobalPosition = card.GlobalPosition + new Vector2(card.Size.X * 0.6f, card.Size.Y * 0.7f);
+        };
+    }
+
     public void ClearSearch()
     {
         search.Text = "";
