@@ -13,7 +13,9 @@ A small claim-only hen coop (Justin picked option 1; Animals' hens #454 roost in
 - Tests: BuildTest `coop` mode (and `both`) checks the shared numbers and builds it with two players inside a claim; passes locally (53 s). Upgrade check passes. Server and client build.
 - Not seen in Godot yet; a render request will go to the Render lane. The model is a rough prototype until Justin picks the animal/structure look (D-154 does not cover a hen coop beyond that).
 
-- 2026-10-17: merged main with the StructureDef registry (#422). The def is in shared/structures/StructuresHouse.cs as `Kind = 17`, and `HenCoop` is the next StructureKind position. NOTE: a SpacetimeDB enum cannot carry explicit values (the build refuses `HenCoop = 100`: BSATN0002), so the 100+ House range cannot be used; a def's Kind has to equal its enum position. Raised with the PM/Integration.
+- 2026-10-17: merged main with the StructureDef registry (#422). The def is in shared/structures/StructuresHouse.cs as `Kind = 18` (after ClayTrough = 17), and `HenCoop` is the StructureKind position after it. NOTE: a SpacetimeDB enum cannot carry explicit values (the build refuses `HenCoop = 100`: BSATN0002), so the 100+ House range cannot be used; a def's Kind has to equal its enum position. Raised with the PM/Integration.
+
+- 2026-10-17: PM fixed the kind order (ClayTrough 17, HenCoop 18, StoneHearth 19, devices 20-22). This branch carries Ceramics' #417 (ClayTrough) merged in so HenCoop = 18 is right in isolation; #417 must merge first or alongside.
 
 ## Open questions / blockers
 - Stacked on #445 (building-12 step 2: the `Model` field). Merge #445 first.

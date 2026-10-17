@@ -49,7 +49,10 @@ namespace LifeGame.Shared
         // How far a fire on this hearth warms, in meters; 0 means the plain fire's Fires.WarmthRadius.
         public float HeatRadius;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
-        public bool Kiln, Jar;
+        public bool Kiln, Jar, Trough;
+        // Extra metres of ground cleared of grass and trees round the footprint, beyond the usual
+        // margin: a low basin needs room so tall grass doesn't hide its rim (ceramics-13).
+        public float ClearExtra;
         // A round walled hut: walls on a circle of HutWallRadius with a doorway on +Z (the clay hut).
         public bool Hut;
         // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
@@ -90,7 +93,7 @@ namespace LifeGame.Shared
         static Dictionary<int, StructureDef> BuildDefs()
         {
             var all = new Dictionary<int, StructureDef>();
-            foreach (var def in CoreDefs().Concat(HouseDefs()).Concat(CraftingDefs()).Concat(AnimalsDefs()).Concat(ClaimsDefs()))
+            foreach (var def in CoreDefs().Concat(HouseDefs()).Concat(CraftingDefs()).Concat(AnimalsDefs()).Concat(ClaimsDefs()).Concat(CeramicsDefs()))
             {
                 if (!all.TryAdd(def.Kind, def))
                     throw new InvalidOperationException($"Structure kind {def.Kind} is defined twice");
@@ -133,6 +136,16 @@ namespace LifeGame.Shared
         public const int MaxOpenSites = 3;
         // A builder may work on a structure from this far outside its footprint.
         public const float WorkReach = 2.2f;
+
+        // Litres a trough holds: its own quality sets the size, quicker at first then
+        // slowly (D-075), as a jar's stacks do.
+        public static int TroughLitres(byte quality)
+        {
+            float t = Math.Clamp((int)quality, 1, 100) / 100f;
+            float curve = 1f - (1f - t) * (1f - t);
+            return ClayRules.TroughMin + (int)MathF.Round((ClayRules.TroughMax - ClayRules.TroughMin) * curve);
+        }
+
         // Standing water; matches the client's Look.WaterLevel.
         public const float WaterLevel = -1.0f;
 

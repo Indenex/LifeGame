@@ -119,9 +119,8 @@ namespace LifeGame.Shared
                 // with a pop-hole and ramp at the front. Animals walk to Entry and settle at Roost.
             new StructureDef
             {
-                // 17: the next enum position (a SpacetimeDB enum cannot carry explicit values, so a def's Kind
-                // is its StructureKind position; see the note in tickets/building-16.md).
-                Kind = 17,
+                // 18: its StructureKind position, after ClayTrough = 17 (a SpacetimeDB enum takes no explicit values).
+                Kind = 18,
                 Shape = new StructureShape
                 {
                     Name = "Hen coop",
