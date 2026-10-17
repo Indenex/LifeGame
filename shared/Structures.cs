@@ -54,6 +54,9 @@ namespace LifeGame.Shared
         public bool Hut;
         // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
         public string Model = "";
+        // For a structure animals use (the hen coop): where they walk to go in, and where they settle
+        // inside, as offsets in the structure's own frame (+Z is its front). Scaled with the shape.
+        public (float X, float Z) Entry, Roost;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -116,6 +119,8 @@ namespace LifeGame.Shared
             shape.Clearance *= k;
             shape.DoorwayZ *= k;
             shape.SmokeY *= k;
+            shape.Entry = (shape.Entry.X * k, shape.Entry.Z * k);
+            shape.Roost = (shape.Roost.X * k, shape.Roost.Z * k);
         }
 
         public static float ScaleOf(int kind) => Shape(kind).Scale;
@@ -208,6 +213,8 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
             _ when Shape(kind).Model == "Basket" => WeaveProcess,
+            // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
+            _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
             _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.

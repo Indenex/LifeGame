@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "coop" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -38,6 +38,7 @@ public partial class Showcase : Node3D
             else if (view == "env") EnvProps();
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
+            else if (view == "coop") Coop();
             else if (view == "hen") Hen();
             else if (view == "stonehearth") StoneHearthView();
             else if (view == "wear") WearRows();
@@ -252,6 +253,20 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 1.8f, 6.0f), new Vector3(0, 0.9f, 0), Vector3.Up);
+    }
+
+    // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
+    // turned a little so the pop-hole, ramp and side show.
+    void Coop()
+    {
+        int kind = (int)SpacetimeDB.Types.StructureKind.HenCoop;
+        for (int c = 0; c < 3; c++)
+            foreach (var piece in StructureModel.Pieces(kind))
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-2.6f + c * 2.6f, 0, 0), Rotation = new Vector3(0, 0.55f, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.2f), new Vector3(0, 0.55f, 0), Vector3.Up);
     }
 
     // The hen in three feather colours (white, brown, grey, from the sheep's fleece

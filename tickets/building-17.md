@@ -14,6 +14,8 @@ Justin's D-286: a buildable outdoor stone-ringed hearth so builders can work thr
 - Tests: BuildTest `stone-hearth` (also `both`) checks the shared numbers, builds it with two players outside any claim, lights a fire on it and checks the server's NearHeat for a player 9.3 m away (cold) and 6.8 m away (warm). Passes locally (32 s). Upgrade check passes. Server and client build.
 - No new process id, so no Things to try line. Audio: reusing the fire's crackle; no new cue asked.
 
+- 2026-10-17: merged main with the StructureDef registry (#422) and the coop (#479): the hearth def is in shared/structures/StructuresHouse.cs as `Kind = 18` (HenCoop = 17); a SpacetimeDB enum cannot carry explicit values, so a def's Kind equals its enum position (see building-16). The cold check in BuildTest moved to 10.5 m now the radius is 9. `both` now includes coop and stone-hearth.
+
 ## Open questions / blockers
 - #513 (Survival) must merge first: it adds the hook and the constant.
 - Stacked on #513 and #516 (merged into this branch). Merge those first, or this PR carries their commits.

@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|stone-hearth|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|stone-hearth|coop|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -13,7 +13,7 @@ using SpacetimeDB.Types;
 // What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
-bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" or "stone-hearth" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -63,6 +63,16 @@ b.WalkTo(1f, 0f, 0.3f, Pump);
     Check(tiled.Costs[3].Length == 1 && tiled.Costs[3][0] == (Item.RoofTile, 12u), "its roof takes 12 roof tiles");
     for (int i = 0; i < 3; i++) Check(tiled.Costs[i].SequenceEqual(brick.Costs[i]), $"its stage {i + 1} costs what the brick house's does");
     Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
+}
+
+// The hen coop (building-16): claim-only, with the entry and roost points Animals target.
+{
+    var coop = Structures.Shape((int)StructureKind.HenCoop);
+    Check(!coop.Wild, "the hen coop has to stand inside a claim");
+    Check(coop.Stages.Length == 3 && coop.Costs.Length == 3, "the hen coop goes up in three stages");
+    Check(coop.Entry.Z > coop.HalfDepth && coop.Entry.Z < coop.HalfDepth + 2f, "the coop's entry is just outside its front");
+    Check(MathF.Abs(coop.Roost.X) < coop.HalfWidth && MathF.Abs(coop.Roost.Z) < coop.HalfDepth, "the roost is inside the coop");
+    Check(Structures.StageProcess((int)StructureKind.HenCoop, 1) == Structures.WattleProcess && Structures.StageProcess((int)StructureKind.HenCoop, 2) == Structures.RoofProcess, "its walls are wattle work and its roof is roofing");
 }
 
 // The stone-ringed hearth (D-286): wild like the campfire, a hearth, and a fire on it warms out to 8 m.
@@ -131,7 +141,12 @@ if (Wants("fence"))
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
 
-if (which is "stone-hearth" or "both")
+if (Wants("coop"))
+    BuildTogether(StructureKind.HenCoop,
+        new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
+        new() { [Item.Stick] = 4, [Item.Fiber] = 5 });
+
+if (Wants("stone-hearth"))
     WarmByStoneHearth(BuildTogether(StructureKind.StoneHearth,
         new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
         new() { [Item.Stone] = 3 }));
@@ -417,7 +432,7 @@ void WarmByStoneHearth(ulong id)
     WaitFor(() => a.Conn.Db.Fire.Count > fires, 10, "lit a fire beside the stone-ringed hearth");
     var fire = a.Conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
     Check(MathF.Abs(fire.X - hearth.X) < 0.01f && MathF.Abs(fire.Z - hearth.Z) < 0.01f, "the fire sits on the stone-ringed hearth");
-    foreach (var (distance, warm) in new[] { (9.5f, false), (6.5f, true) })
+    foreach (var (distance, warm) in new[] { (10.5f, false), (6.5f, true) })
     {
         b.WalkTo(hearth.X + distance, hearth.Z, 0.5f, Pump);
         var seen = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
