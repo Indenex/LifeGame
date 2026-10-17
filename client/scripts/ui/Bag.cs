@@ -10,7 +10,7 @@ namespace LifeGame;
 // One stack in the bag panel: what it is, how good, how many (ui-18). Id is its row
 // (a basket's item row, or the bag's own row once the bag keeps an order), Slot its
 // place in the bag or on the tools belt, -1 for none.
-public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0)
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0, uint Decor = 0)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -100,7 +100,8 @@ public sealed class ServerBagLink : IBagLink
 
     IEnumerable<BagStack> Rows(bool belt) => conn.Db.MyInventory.Iter()
         .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
-        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear)));
+        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear),
+            ClayItemLook.Decoration((Item)i.Item, i.Wear)));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
@@ -258,7 +259,7 @@ public partial class BagSlotView : PanelContainer
         AddChild(stack);
         var picture = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -333,7 +334,7 @@ public partial class BagSlotView : PanelContainer
         if (Stack == null) return default;
         var preview = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item, Stack.Maker),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             Size = new Vector2(BagGrid.Slot, BagGrid.Slot),
