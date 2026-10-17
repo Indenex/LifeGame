@@ -1,0 +1,9 @@
+# atmosphere-30 (PR #486): --impacts=2 throws wood chips, dig clods and a felled tree's dust ring and leaves
+# every 2 s in front of the player. Season 0.25. 12 fps movie, a little closer than default.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.4 --rain=0 --cloud=0.2 --wind=0.1 --season=0.25 --impacts=2 --render-cam=5,2.2,35,0.8
+frames 240
+mark impacts-start
+frames +96
+mark impacts-end
