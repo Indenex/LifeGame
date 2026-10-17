@@ -22,6 +22,8 @@ public partial class UseKey : CanvasLayer
     Control panel = null!;
     UseOffer? offer;
     float repeatTimer, alpha;
+    readonly HoldRepeat hold = new();
+    string? holdPrompt;
 
     public override void _Ready()
     {
@@ -78,6 +80,19 @@ public partial class UseKey : CanvasLayer
             }
         }
         else repeatTimer = 0f;
+
+        // Hold the key to repeat a repeatable action (Justin). Only the same action again: if
+        // what is offered changes (the bush is bare and a pond is next), the hold ends.
+        bool down = Input.IsActionPressed(NUse);
+        if (!down) holdPrompt = null;
+        if (offer is { Again: > 0f } again && holdPrompt == again.Prompt && !Blocked()
+            && hold.Update(down, dt, again.Again, Use.Busy(), Player()))
+        {
+            hold.Acted(Player());
+            again.Use();
+        }
+        else if (down && holdPrompt != null && (offer == null || offer.Prompt != holdPrompt))
+            hold.Update(false, dt, 0f, false, Player());
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -86,7 +101,15 @@ public partial class UseKey : CanvasLayer
         // keeps the key, so it never also picks up what lies at your feet (ui-17: with
         // nothing to use, the same key falls through to Main's pick-up).
         if (!e.IsActionPressed("use") || offer == null) return;
-        if (!e.IsEcho() && offer.Repeat <= 0f) offer.Use();
+        if (!e.IsEcho() && offer.Repeat <= 0f)
+        {
+            if (offer.Again > 0f)
+            {
+                hold.Pressed(Player());
+                holdPrompt = offer.Prompt;
+            }
+            offer.Use();
+        }
         GetViewport().SetInputAsHandled();
     }
 
