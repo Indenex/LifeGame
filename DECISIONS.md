@@ -1153,3 +1153,19 @@ Owner: Claims.
 ## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
 **Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
 **Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-285 — 2026-10-17 — Pines keep the darker noon look, more lit colour at low sun, tidier bottom ring
+**Decision:** Pines keep the darker noon look (D-282) but let more lit colour through at low sun. The bottom ring of boughs is made more uniform.
+**Who:** Justin: "clean up the bottom ring of leaves and make them more uniform, some are all over the place" (relayed by the PM).
+
+## D-286 — 2026-10-17 — A buildable stone-ringed hearth warms winter nights
+**Decision:** Survival's 2-hour building-session check found hunger and thirst gentle; winter nights in the open are the only friction (a warm-up is needed about every 7 minutes). The fix is a buildable stone-ringed hearth that warms out to about 8 m. House building builds it and Survival sets the numbers. No change to need drain.
+**Who:** Justin, picking the stone-ringed hearth as the fix (relayed by the PM; no direct quote).
+
+## D-287 — 2026-10-17 — A well-fuelled fire puts up a smoke-signal column
+**Decision:** From a playtester idea Justin wants: a fire above 75% fuel puts up a thick, tall smoke column that is visible from far away, like a smoke signal. It is 3D/volumetric and painted. Owner: Atmosphere, who builds it after the water.
+**Who:** Justin, wanting the playtester's idea (relayed by the PM; no direct quote).
