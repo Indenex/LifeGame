@@ -5,5 +5,7 @@ namespace LifeGame.Shared
     {
         // Items one admin_give call may add.
         public const uint GiveMax = 999;
+        // How far from the origin admin_teleport may put a player (a sanity bound, not a world edge).
+        public const float TeleportMax = 20000f;
     }
 }
