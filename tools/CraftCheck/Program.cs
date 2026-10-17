@@ -221,6 +221,7 @@ if (runTools)
     var trunk = Trees.Trunk(treeX, treeZ);
     WalkTo(trunk.X, trunk.Z);
     int chops = Trees.Felling ? Trees.LogsPerTree : 1;
+    uint sticksBeforeChop = CountOf(Item.Stick), fiberBeforeChop = CountOf(Item.Fiber);
     for (int i = 0; i < chops; i++) Craft("chop.log", 0, Item.Log);
     if (Trees.Felling)
     {
@@ -229,6 +230,10 @@ if (runTools)
         bool FelledNear() => conn.Db.ChoppedTree.Iter().Any(t => t.Felled && Math.Abs(t.CellX * World.CellSize - x) < 6f && Math.Abs(t.CellZ * World.CellSize - z) < 6f);
         Pump(FelledNear, 3, $"a tree to fall near ({x:F1}, {z:F1}) (walked to the tree at {treeX}, {treeZ})");
         Console.WriteLine($"Felled a tree near the bot after {chops} logs");
+        // A tree coming down also gives branches and bark fiber (survival-38).
+        Pump(() => CountOf(Item.Stick) >= sticksBeforeChop + Trees.FellSticks, 3, "sticks from the felled tree");
+        if (CountOf(Item.Fiber) < fiberBeforeChop + Trees.FellFiber) Fail($"a felled tree gave {CountOf(Item.Fiber) - fiberBeforeChop} fiber, expected {Trees.FellFiber}");
+        Console.WriteLine($"The felled tree gave {Trees.FellSticks} sticks and {Trees.FellFiber} fiber");
     }
     WalkTo(bowFire.X, bowFire.Z);
     RefusedFeed(bowFire, Item.Log);
@@ -246,6 +251,22 @@ if (runTools)
     Pump(() => lastError != null || conn.Db.Fire.Id.Find(fire.Id)?.FuelUntil.MicrosecondsSinceUnixEpoch > fuelBefore, 5, "fuel to be added");
     if (lastError != null) Fail($"feeding the fire: {lastError}");
     Console.WriteLine("Fed the fire a stick");
+
+    // A signal fire (survival-38) lights from fiber alone, burns a fraction as long as a campfire, and takes no fuel.
+    Gather(Item.Fiber, Fires.SignalFiber);
+    Gather(Item.Stick, 1);
+    int firesBeforeSignal = conn.Db.Fire.Count;
+    FireCraft("fire.signal", 1f);
+    Pump(() => conn.Db.Fire.Count > firesBeforeSignal, 5, "a signal fire to be lit");
+    var signalFire = conn.Db.Fire.Iter().First(f => f.Signal);
+    OffRocks(signalFire);
+    float signalLife = (signalFire.FuelUntil.MicrosecondsSinceUnixEpoch - signalFire.LitAt.MicrosecondsSinceUnixEpoch) / 1_000_000f;
+    if (MathF.Abs(signalLife - Fires.SignalSeconds) > 2f) Fail($"a signal fire burns {signalLife:F0} s, expected {Fires.SignalSeconds:F0}");
+    lastError = null;
+    conn.Reducers.FeedFire(signalFire.Id, (ushort)Item.Stick);
+    Pump(() => lastError != null, 5, "a signal fire to refuse fuel");
+    if (lastError?.Contains("nothing to feed") != true) Fail($"feeding a signal fire: {lastError}");
+    Console.WriteLine($"Signal fire burns {signalLife:F0} s and takes no fuel");
 
 }
 

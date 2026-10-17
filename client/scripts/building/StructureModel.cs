@@ -35,12 +35,13 @@ public static partial class StructureModel
     static readonly Dictionary<int, List<Piece>> Cache = new();
     static ShaderMaterial? wood, fiber, thatch, clay, stone, tile;
 
-    internal static ShaderMaterial Wood => wood ??= Painted(Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f)), PaintedStructures.Family.Wood);
+    // Timber and daub wear the village kit's painted wood grain and plaster strokes (building-26).
+    internal static ShaderMaterial Wood => wood ??= Kit(Painted(Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f)), PaintedStructures.Family.Wood), PaintedStructures.Surface.WoodLight, 0.35f);
     static ShaderMaterial Fiber => fiber ??= Painted(Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f), PaintedStructures.Family.Thatch);
     static ShaderMaterial Thatch => thatch ??= Painted(Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f), PaintedStructures.Family.Thatch);
     // Fired roof tiles (ceramics-10): a rough terracotta until the art direction is settled (D-232).
     internal static ShaderMaterial Tile => tile ??= Painted(Tinted(Look.Ground, new Color(0.70f, 0.34f, 0.21f)), PaintedStructures.Family.Clay);
-    internal static ShaderMaterial Clay => clay ??= Painted(Tinted(Look.Ground, Look.Clay.Lightened(0.06f)), PaintedStructures.Family.Clay);
+    internal static ShaderMaterial Clay => clay ??= Kit(Painted(Tinted(Look.Ground, Look.Clay.Lightened(0.06f)), PaintedStructures.Family.Clay), PaintedStructures.Surface.Plaster, 0.85f);
     internal static ShaderMaterial Stone => stone ??= Painted(Tinted(Look.RockSurface, Look.Rock), PaintedStructures.Family.Stone);
     static ShaderMaterial? weave, paleWood;
     // Freshly cut wood, for things that should catch the eye (a door's bar).
@@ -159,6 +160,9 @@ public static partial class StructureModel
             float y0 = -0.05f + c * (wallTop + 0.05f) / courses, y1 = -0.05f + (c + 1) * (wallTop + 0.05f) / courses;
             Add(list, 2, Clay, Wall(r, 0.17f, y0, y1, door - 0.06f, Mathf.Tau - door + 0.06f, top: c == courses - 1));
         }
+
+        // A hewn door frame set into the daub (building-26, the village kit's chunky trim).
+        DoorFrame(list, 2, Mathf.Sin(door - 0.08f) * r - 0.06f, wallTop - 0.08f, Mathf.Cos(door) * r + 0.06f);
 
         // Roof: rafters to a peak, then a thatched cone in layers from the eaves up.
         const float peak = 3.15f, eave = 2.25f;
@@ -285,6 +289,8 @@ public static partial class StructureModel
         var u = Mathf.Abs(dir.Y) < 0.9f ? dir.Cross(Vector3.Up).Normalized() : dir.Cross(Vector3.Right).Normalized();
         var v = dir.Cross(u);
         float bend = (Hash((int)(length * 100), 9) - 0.5f) * 0.05f * length;
+        // Each stick starts somewhere else on the grain, never at 0 (0 means "no UVs" to the shader).
+        var grain = new Vector2(0.37f + Hash((int)(a.X * 97 + a.Z * 31 + b.Y * 13), 4) * 3f, 0.11f + Hash((int)(b.X * 53 + a.Y * 71), 5));
 
         Vector3 Center(float t) => a + axis * t + u * (Mathf.Sin(t * Mathf.Pi) * bend);
         float Radius(float t) => radius * (1.1f - 0.25f * t);
@@ -301,8 +307,12 @@ public static partial class StructureModel
                 var p01 = Center(t0) + n01 * Radius(t0);
                 var p10 = Center(t1) + n00 * Radius(t1);
                 var p11 = Center(t1) + n01 * Radius(t1);
-                Vert(st, p00, n00, shade); Vert(st, p10, n00, shade); Vert(st, p11, n01, shade);
-                Vert(st, p00, n00, shade); Vert(st, p11, n01, shade); Vert(st, p01, n01, shade);
+                // UVs in metres: along the grain, then round the stick (kit wood, building-26).
+                float c0 = radius * a0 * 2f, c1 = radius * a1 * 2f; // the grain texture is twice as wide as tall
+                Vector2 uv00 = grain + new Vector2(t0 * length, c0), uv01 = grain + new Vector2(t0 * length, c1);
+                Vector2 uv10 = grain + new Vector2(t1 * length, c0), uv11 = grain + new Vector2(t1 * length, c1);
+                Vert(st, p00, n00, shade, uv00); Vert(st, p10, n00, shade, uv10); Vert(st, p11, n01, shade, uv11);
+                Vert(st, p00, n00, shade, uv00); Vert(st, p11, n01, shade, uv11); Vert(st, p01, n01, shade, uv01);
             }
         }
         // Cut ends, a little lighter like fresh wood.
@@ -463,6 +473,15 @@ public static partial class StructureModel
     {
         st.SetNormal(n);
         st.SetColor(c);
+        st.SetUV(Vector2.Zero);
+        st.AddVertex(p);
+    }
+
+    static void Vert(SurfaceTool st, Vector3 p, Vector3 n, Color c, Vector2 uv)
+    {
+        st.SetNormal(n);
+        st.SetColor(c);
+        st.SetUV(uv);
         st.AddVertex(p);
     }
 
@@ -485,6 +504,9 @@ public static partial class StructureModel
     // A structure material on the painted look (painted-5), tuned for its family.
     static ShaderMaterial Painted(ShaderMaterial source, PaintedStructures.Family family) =>
         (ShaderMaterial)PaintedStructures.Of(source, family);
+
+    static ShaderMaterial Kit(ShaderMaterial painted, PaintedStructures.Surface surface, float hue) =>
+        (ShaderMaterial)PaintedStructures.WithSurface(painted, surface, 1f, hue);
 
     static ShaderMaterial Tinted(ShaderMaterial source, Color color, float? sway = null)
     {

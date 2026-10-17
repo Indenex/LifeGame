@@ -22,12 +22,15 @@ public static class NatureKit
 
     static readonly Dictionary<(string, bool), Mesh?> Meshes = new();
 
-    // The world's trees drawn from the kit (naturekit-1, behind a setting until Justin picks):
-    // --naturekit on the command line, or graphics/naturekit_trees = 1 in the settings.
-    static readonly bool Wanted = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--naturekit") >= 0;
-    public static bool Trees => Wanted || Settings.Get("graphics", "naturekit_trees", 0) == 1;
-    // The world's boulders from the kit: --naturekit too, or graphics/naturekit_rocks = 1.
-    public static bool Rocks => Wanted || Settings.Get("graphics", "naturekit_rocks", 0) == 1;
+    // The world's trees drawn from the kit, the default look since Justin picked it
+    // (naturekit-2). Our painted trees stay as the fallback: graphics/naturekit_trees = 0 in
+    // the settings, or --painted-world on the command line (--naturekit forces the kit on).
+    static readonly string[] CmdArgs = OS.GetCmdlineUserArgs();
+    static readonly bool Wanted = System.Array.IndexOf(CmdArgs, "--naturekit") >= 0;
+    static readonly bool PaintedWorld = System.Array.IndexOf(CmdArgs, "--painted-world") >= 0;
+    public static bool Trees => Wanted || !PaintedWorld && Settings.Get("graphics", "naturekit_trees", 1) == 1;
+    // The world's boulders from the kit too; graphics/naturekit_rocks = 0 for our painted ones.
+    public static bool Rocks => Wanted || !PaintedWorld && Settings.Get("graphics", "naturekit_rocks", 1) == 1;
 
     // Our boulder variants (PropMeshes.Rock: kind v % RockKinds, second form above that) as
     // the kit's six: the first forms are its four medium rocks, the second its two big

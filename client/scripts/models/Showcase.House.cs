@@ -74,4 +74,28 @@ public partial class Showcase
         camera.LookAtFromPosition(new Vector3(0.4f, 2.1f, 2.4f), new Vector3(-0.2f, 0.4f, 0.1f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
+
+    // Homes side by side, finished (building-26, the village kit's look): lean-to, clay hut,
+    // log cabin, from the game's three-quarter view. --yaw turns them.
+    [ShowcaseView("homes")]
+    void HomesView()
+    {
+        float yaw = args.TryGetValue("yaw", out var y) ? Mathf.DegToRad(float.Parse(y, System.Globalization.CultureInfo.InvariantCulture)) : 0.35f;
+        var kinds = new[] { SpacetimeDB.Types.StructureKind.LeanTo, SpacetimeDB.Types.StructureKind.ClayHut, SpacetimeDB.Types.StructureKind.LogCabin };
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            var view = new StructureView((int)kinds[i]) { Position = new Vector3(-8.5f + i * 8.5f, 0, i == 1 ? -1.5f : 0f), Rotation = new Vector3(0, yaw, 0) };
+            AddChild(view);
+            view.Show(StructureModel.StageCount((int)kinds[i]), 1f, complete: true, animate: false);
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        // --focus=0..2 frames one of them close up.
+        if (args.TryGetValue("focus", out var f) && int.TryParse(f, out int i0) && i0 is >= 0 and < 3)
+        {
+            var at = new Vector3(-8.5f + i0 * 8.5f, 1.3f, i0 == 1 ? -1.5f : 0f);
+            camera.LookAtFromPosition(at + new Vector3(1.6f, args.ContainsKey("low") ? 0.4f : 2.6f, args.ContainsKey("low") ? 5f : 8.5f), at + new Vector3(0, -0.3f, 0), Vector3.Up);
+        }
+        else camera.LookAtFromPosition(new Vector3(0, 10f, 19f), new Vector3(0, 1.2f, 0), Vector3.Up);
+    }
 }

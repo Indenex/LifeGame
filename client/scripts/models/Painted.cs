@@ -154,14 +154,16 @@ public static class Painted
         string code = Look.PaintedCode;
         code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : "") + (structure ? "\n#define STRUCTURE_GHOST" : ""));
         if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
-        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + RimUniform);
+        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + Surface + "\n" + RimUniform);
+        code = Splice(code, "world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);", "world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);\n                surface_pos = VERTEX; surface_nrm = NORMAL; surface_uv = UV;");
         code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", $$"""
             dab = dab_at(world_pos);
                 // Clean colour (D-319): the brush only drifts the colour in broad, soft
                 // patches, the faces that look up are a touch lighter in a wide wash, and the
                 // whole shape shades softly from its top to its underside.
                 float lift = smoothstep(0.35, 0.8, dab) * smoothstep(0.2, 0.9, world_normal.y);
-                vec3 color = mix(tint, base_paint * dot(tint, vec3(0.3, 0.59, 0.11)) / 0.45, base_mix) * (1.0 + paint * {{F(Smooth.Paint)}}) * (1.0 + lit_dabs * {{F(Smooth.LitDabs)}} * lift);
+                vec3 painted_tint = surface_mix > 0.0 ? surface_tint_of(tint) : tint;
+                vec3 color = mix(painted_tint, base_paint * dot(painted_tint, vec3(0.3, 0.59, 0.11)) / 0.45, base_mix) * (1.0 + paint * {{F(Smooth.Paint)}}) * (1.0 + lit_dabs * {{F(Smooth.LitDabs)}} * lift);
                 color *= mix(1.0 - {{F(Smooth.TopGradient)}}, 1.0 + {{F(Smooth.TopGradient)}}, smoothstep(-0.6, 0.9, world_normal.y));
             """);
         code = Splice(code, "color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));", $$"""
@@ -225,6 +227,38 @@ public static class Painted
             vec2 a = vec2(p.x + p.y * 0.3, p.z - p.y * 0.2) / (dab_size * DAB_SCALE);
             vec2 b = vec2(p.z * 0.9, p.y * 1.2) / (dab_size * DAB_SCALE) + 0.37;
             return mix(texture(dabs, a).r, texture(dabs, b).r, 0.45);
+        }
+        """;
+
+    // A painted texture laid over a surface (building-26: the Quaternius village kit's wood,
+    // plaster and stone on what players build). Meshes with UVs (sticks and logs: along the
+    // grain, round the stick, in metres) use them; the rest take it projected from three
+    // sides in the mesh's own space, so it turns with the building. surface_hue keeps the
+    // surface's own colour and takes only the texture's strokes (1), or the texture's colour (0).
+    // The per-piece shade (vertex colour) still varies each stick and course.
+    internal const string Surface = """
+        uniform sampler2D surface_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+        uniform float surface_mix = 0.0;
+        uniform float surface_scale = 1.0;
+        uniform float surface_hue = 0.0;
+        uniform vec3 surface_mean : source_color = vec3(0.5);
+        varying vec3 surface_pos;
+        varying vec3 surface_nrm;
+        varying vec2 surface_uv;
+
+        vec3 surface_sample() {
+            if (surface_uv != vec2(0.0)) return texture(surface_tex, surface_uv / surface_scale).rgb;
+            vec3 w = pow(abs(normalize(surface_nrm)), vec3(4.0));
+            w /= (w.x + w.y + w.z);
+            vec3 q = surface_pos / surface_scale;
+            return texture(surface_tex, q.zy).rgb * w.x + texture(surface_tex, q.xz).rgb * w.y + texture(surface_tex, q.xy).rgb * w.z;
+        }
+
+        vec3 surface_tint_of(vec3 base) {
+            float piece = dot(base / max(albedo.rgb, vec3(0.001)), vec3(0.3, 0.59, 0.11));
+            vec3 tex = surface_sample();
+            vec3 own = base * tex / max(surface_mean, vec3(0.001));
+            return mix(base, mix(tex * piece, own, surface_hue), surface_mix);
         }
         """;
 

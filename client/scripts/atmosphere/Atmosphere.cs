@@ -90,6 +90,8 @@ public partial class Atmosphere : Node3D
     public Func<Vector3, bool>? Sheltered;
 
     readonly System.Collections.Generic.Dictionary<ulong, (float X, float Z, long FuelUntil)> fires = new();
+    // Signal fires (survival-38): their column stands for as long as they burn.
+    readonly System.Collections.Generic.HashSet<ulong> signalFires = new();
     Vector2 cloudOffset;
     // Which way the wind blows (x, z), shared with shaders as wind_dir. Fixed for now;
     // the clouds drift with it.
@@ -208,9 +210,9 @@ public partial class Atmosphere : Node3D
         // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
         conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
-        conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
-        conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
-        conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
+        conn.Db.Fire.OnInsert += (_, f) => { fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch); if (f.Signal) signalFires.Add(f.Id); };
+        conn.Db.Fire.OnUpdate += (_, _, f) => { fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch); if (f.Signal) signalFires.Add(f.Id); };
+        conn.Db.Fire.OnDelete += (_, f) => { fires.Remove(f.Id); signalFires.Remove(f.Id); };
         HearFireCaps(conn);
         HearKilns(conn);
         conn.SubscriptionBuilder()
