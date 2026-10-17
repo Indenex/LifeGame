@@ -355,6 +355,7 @@ public static class NatureKit
         global uniform vec2 wind_dir;
         global uniform float season_autumn;
         global uniform float wetness;
+        global uniform float world_seconds;
         uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
         uniform bool has_tex = true;
         uniform vec4 albedo : source_color = vec4(1.0);
@@ -443,6 +444,28 @@ public static class NatureKit
                 // falls on the canopy as one rounded mass, as a painter would light it.
                 vec3 heart = vec3(0.0, max(VERTEX.y * 0.6, 0.5 * sway_height), 0.0);
                 NORMAL = normalize(mix(NORMAL, normalize(VERTEX - heart), 0.75 * crown_normals));
+            }
+            // A tree or rock on a cell just cleared goes away rather than vanishing, and one
+            // coming back grows in, as Look's painted trees do. Custom data: x when it
+            // started, y +1 going or -1 coming, z 1 for rocks.
+            if (INSTANCE_CUSTOM.x > 0.0) {
+                float age = world_seconds - INSTANCE_CUSTOM.x;
+                if (INSTANCE_CUSTOM.y < 0.0) {
+                    VERTEX *= smoothstep(0.0, 1.6, age);
+                } else if (INSTANCE_CUSTOM.z > 0.5) {
+                    float k = smoothstep(0.0, 1.6, age);
+                    VERTEX.y -= k * 1.4;
+                    VERTEX *= 1.0 - k * k;
+                } else {
+                    float k = clamp(age / 2.4, 0.0, 1.0);
+                    float dir = fract(sin(dot(floor(MODEL_MATRIX[3].xz + 0.5), vec2(12.9898, 78.233))) * 43758.5453) * 6.2832;
+                    vec3 axis = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(sin(dir), 0.0, -cos(dir)));
+                    float angle = 1.45 * smoothstep(0.0, 0.7, k) * smoothstep(0.0, 0.7, k);
+                    float cs = cos(angle), sn = sin(angle);
+                    VERTEX = VERTEX * cs + cross(axis, VERTEX) * sn + axis * dot(axis, VERTEX) * (1.0 - cs);
+                    NORMAL = NORMAL * cs + cross(axis, NORMAL) * sn + axis * dot(axis, NORMAL) * (1.0 - cs);
+                    VERTEX *= 1.0 - smoothstep(0.6, 1.0, k);
+                }
             }
             fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
         #ifdef GHOST

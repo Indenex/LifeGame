@@ -27,8 +27,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 17:35: kit trees fade out of the camera's way like ours. Each world copy of a kit tree has see-through surfaces (Look's fade test, sized by fade_size = 1/kit scale), plus a ghost mesh drawn see-through. Terrain.AddMulti draws the ghost beside a null-material batch when NatureKit.GhostOf(mesh) has one (small hook, Environment's file). Checked in the showcase: ghost shader compiles, solid hides and ghost draws at 55%.
 
+- 2026-10-17 17:45: kit trees and rocks topple, sink and grow in on cleared or regrown cells as Look's painted ones do (INSTANCE_CUSTOM x/y/z, world_seconds).
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Watch CI on PR #853 and send the green sha to the PM; then the kit trees' grow-in and topple-on-clear (INSTANCE_CUSTOM.x/y as Look's PaintedCode) in NatureKit's shader.
+Watch CI on PR #853 and send the green sha to the PM. Then: a sawn-off kit tree for TreeFall (cut the mesh above the stump), and Justin's picks on twisted/birch and giant-pine colours.
