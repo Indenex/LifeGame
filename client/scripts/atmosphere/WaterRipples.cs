@@ -83,7 +83,7 @@ public partial class WaterRipples : Node
         if (impulses.Count >= MaxImpulses || strength <= 0f) return;
         var uv = (new Vector2(at.X, at.Z) - origin) / Size;
         if (uv.X < 0f || uv.Y < 0f || uv.X > 1f || uv.Y > 1f) return;
-        impulses.Add(new Vector4(uv.X, uv.Y, Mathf.Max(radius, Texel * 1.5f) / Size, Mathf.Min(strength, 1f) * 0.3f));
+        impulses.Add(new Vector4(uv.X, uv.Y, Mathf.Max(radius, Texel * 2.5f) / Size, Mathf.Min(strength, 1f) * 0.3f));
     }
 
     // Each frame from Atmosphere: follow the focus, add the rain's drops, take a step.

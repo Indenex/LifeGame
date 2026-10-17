@@ -54,6 +54,8 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
 
 - 2026-10-17 15:55: CI on 4d1f443e green (14/14), https://github.com/Indenex/LifeGame/actions/runs/39045459794; green sha sent to the PM.
 
+- 2026-10-17 16:30: Render's pond frame at 7107848a: water teal, not milky, no shader errors. Fixed the two flaws it showed: stair-stepped foam streaks from the wave grid (sim now sampled with four smoothing taps, wider minimum splash, softer crest foam) and dragonflies reading as crossed sticks (oval wings with a dark rim and tip spot, a head, thorax and banded tapering tail).
+
 ## Open questions / blockers
 - Godot shader errors only show at runtime, so the Render lane's "after" shots are the
   first real check of the shader.

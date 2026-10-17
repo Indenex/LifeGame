@@ -164,7 +164,12 @@ public static class WaterLook
             vec2 uv = (p - water_sim_rect.xy) / water_sim_rect.z;
             if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return 0.0;
             float edge = smoothstep(0.0, 0.08, min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y)));
-            return (textureLod(water_sim, uv, 0.0).r - 0.5) * 0.25 * edge;
+            // Four taps about a texel apart (WaterRipples.Res is 256) smooth away the grid's jagged high
+            // ripples, which otherwise show as stair-stepped streaks of foam.
+            vec2 px = vec2(1.0 / 256.0);
+            float h = textureLod(water_sim, uv + px * vec2(-0.75, -0.25), 0.0).r + textureLod(water_sim, uv + px * vec2(0.75, 0.25), 0.0).r
+                + textureLod(water_sim, uv + px * vec2(0.25, -0.75), 0.0).r + textureLod(water_sim, uv + px * vec2(-0.25, 0.75), 0.0).r;
+            return (h * 0.25 - 0.5) * 0.25 * edge;
         }
 
         // Rain rings for the water beyond the simulation.
@@ -336,7 +341,7 @@ public static class WaterLook
             // It stays on the bank's slope, shallower than any stream or pond bed.
             float lap_at = 0.07 + 0.08 * lap;
             foam = max(foam, (1.0 - smoothstep(0.0, 0.012, abs(depth - lap_at))) * (1.0 - lap) * 0.7 * shore_lap);
-            foam = max(foam, smoothstep(0.05, 0.09, abs(sim(p))) * 0.5);
+            foam = max(foam, smoothstep(0.06, 0.12, abs(sim(p))) * 0.4);
             // Pale streaks of foam slide down a running stream.
             float fl = length(f);
             if (fl > 0.02) {
