@@ -528,6 +528,8 @@ public static class NatureKit
                 color = mix(color, turned, smoothstep(0.0, 0.6, season_autumn));
             }
             if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
+            // Each kit tree a shade lighter or darker than its neighbours, as ours are.
+            if (kit_light) color *= 0.9 + 0.1 * tree_seed;
             color *= mix(1.0, 0.8, wetness);
             ALBEDO = color;
         #ifdef GHOST
