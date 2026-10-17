@@ -499,7 +499,22 @@ public static class PaintedTrees
         return code[..^1] + "#endif\n}\n";
     }
 
-    const string Declarations = """
+    // D-319 on the trees: the boughs keep their one lighter patch each, but its edge is
+    // soft, the small dab spots are gone and the light bands blend instead of stepping.
+    // These are the one set to tune; the old values are in brackets.
+    internal static class Smooth
+    {
+        public const float PatchSoft = 0.12f;  // lit patch edge width (0.04)
+        public const float Spots = 0f;         // the small lit spots across boughs (1)
+        public const float DabScale = 1.8f;    // brush patches this many times larger (1)
+        public const float PatchBreak = 0.1f;  // how much the brush wobbles the patch edge (0.25)
+        public const float BandSoft = 0.1f;    // light-band edge width (0.025)
+        public const float BandBreak = 0.08f;  // how much the brush breaks the bands (0.22)
+    }
+
+    static string F(float v) => v.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
+
+    static readonly string Declarations = $$"""
         uniform sampler2D dabs : filter_linear_mipmap, repeat_enable;
         // Colours picked from the card pine; the broadleaf sets its own.
         uniform vec3 shade_col : source_color = vec3(0.11, 0.155, 0.145);
@@ -512,6 +527,7 @@ public static class PaintedTrees
         uniform vec3 shade_tint : source_color = vec3(0.72, 0.7, 0.9);
         uniform vec3 warm_tint : source_color = vec3(1.0, 0.98, 0.92);
         uniform float dab_size = 3.5;
+        const float DAB_SCALE = {{F(Smooth.DabScale)}};
         uniform float cone_light = 0.75;
         uniform float crown_y = -1.0;
         uniform float tree_height = 4.4;
@@ -522,8 +538,8 @@ public static class PaintedTrees
         // The brush noise at a world point, read on two planes so it sticks to the tree
         // from every side; stretched a little sideways, like short strokes.
         float dab_at(vec3 p) {
-            vec2 a = vec2(p.x * 0.8, p.y * 1.3) / dab_size;
-            vec2 b = vec2(p.z * 0.8, p.y * 1.3) / dab_size + 0.37;
+            vec2 a = vec2(p.x * 0.8, p.y * 1.3) / (dab_size * DAB_SCALE);
+            vec2 b = vec2(p.z * 0.8, p.y * 1.3) / (dab_size * DAB_SCALE) + 0.37;
             return mix(texture(dabs, a).r, texture(dabs, b).r, 0.5);
         }
 
@@ -539,11 +555,11 @@ public static class PaintedTrees
             }
             if (uv2.x < 1.5) return shade_col;
             float across = abs(uv.x), along = uv.y, rnd = uv2.y;
-            float edge = 0.55 + 0.25 * (dab - 0.5) + 0.12 * rnd;
-            float patch = (1.0 - smoothstep(edge - 0.04, edge + 0.04, across))
-                * smoothstep(0.2 + 0.12 * rnd, 0.28 + 0.12 * rnd, along)
-                * (1.0 - smoothstep(0.8, 0.86, along));
-            float spots = smoothstep(0.6, 0.63, dab) * smoothstep(0.1, 0.3, along);
+            float edge = 0.55 + {{F(Smooth.PatchBreak)}} * (dab - 0.5) + 0.12 * rnd;
+            float patch = (1.0 - smoothstep(edge - {{F(Smooth.PatchSoft)}}, edge + {{F(Smooth.PatchSoft)}}, across))
+                * smoothstep(0.2 + 0.12 * rnd, 0.28 + 0.12 * rnd + {{F(Smooth.PatchSoft)}}, along)
+                * (1.0 - smoothstep(0.8 - {{F(Smooth.PatchSoft)}}, 0.86, along));
+            float spots = {{F(Smooth.Spots)}} * smoothstep(0.6, 0.63, dab) * smoothstep(0.1, 0.3, along);
             patch = max(patch * 0.85, spots);
             patch *= front ? smoothstep(0.05, 0.3, up) : 0.0;
             vec3 col = mix(base_col, lit_col, patch);
@@ -561,14 +577,14 @@ public static class PaintedTrees
     // the light's own colour stays smooth and ambient is left to the scene. At low sun
     // the light wraps further and the shade lifts, and the needles let light through when
     // a tree stands against the sun (D-285). Fires and doorways fade with their falloff.
-    const string Light = """
+    static readonly string Light = $$"""
             float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
             float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
             float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
             float wrap = mix(0.4, 0.85, low_sun);
             float wrapped = clamp(dot(NORMAL, LIGHT) * (1.0 - wrap) + wrap, 0.0, 1.0);
-            float l = wrapped * ATTENUATION * sky + (dab - 0.5) * 0.22;
-            float soft = 0.025;
+            float l = wrapped * ATTENUATION * sky + (dab - 0.5) * {{F(Smooth.BandBreak)}};
+            float soft = {{F(Smooth.BandSoft)}};
             float mid = smoothstep(0.3 - soft, 0.3 + soft, l);
             float lit = smoothstep(0.62 - soft, 0.62 + soft, l);
             float band = 0.1 + 0.3 * low_sun + 0.36 * mid + 0.3 * lit;
