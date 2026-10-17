@@ -19,6 +19,40 @@ public static class NatureKit
     public enum Kind { Leaves, Bark, Rock, Plant, Flower }
 
     static readonly Dictionary<(string, bool), Mesh?> Meshes = new();
+
+    // The world's trees drawn from the kit (naturekit-1, behind a setting until Justin picks):
+    // --naturekit on the command line, or graphics/naturekit_trees = 1 in the settings.
+    static readonly bool Wanted = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--naturekit") >= 0;
+    public static bool Trees => Wanted || Settings.Get("graphics", "naturekit_trees", 0) == 1;
+
+    // Our tree variants drawn as the kit's: broadleaf v as CommonTree_(v+1), pine v as Pine_(v+1).
+    static string TreeName(bool pine, int v) => pine ? $"Pine_{v + 1}" : $"CommonTree_{v + 1}";
+    static readonly Dictionary<(bool, int), (Mesh Mesh, float Scale)> TreeMeshes = new();
+
+    // Loads the kit trees on the main thread (ChunkWorker.Prewarm), so chunk workers only read.
+    public static void Prewarm()
+    {
+        if (!Trees) return;
+        for (int v = 0; v < PaintedTrees.Variants; v++)
+            foreach (bool pine in new[] { false, true })
+                if (Mesh(TreeName(pine, v)) is { } mesh)
+                {
+                    // Stand as tall as our tree of the same scale (PaintedTrees.Height), so
+                    // placement, collision and the canopy fade keep their sizes.
+                    float tall = mesh.GetAabb().End.Y;
+                    lock (TreeMeshes) TreeMeshes[(pine, v)] = (mesh, PaintedTrees.Height / tall);
+                }
+    }
+
+    // The kit tree for one of our tree variants and the extra scale it stands at, or null.
+    public static (Mesh Mesh, float Scale)? Tree(bool pine, int variant)
+    {
+        lock (TreeMeshes) return TreeMeshes.TryGetValue((pine, variant), out var t) ? t : null;
+    }
+
+    // Terrain's tree placements scaled by a kit tree's extra scale.
+    public static List<(Transform3D, Color, Color)> Scaled(List<(Transform3D, Color, Color)> items, float scale) =>
+        items.ConvertAll(i => (new Transform3D(i.Item1.Basis * Basis.FromScale(Vector3.One * scale), i.Item1.Origin), i.Item2, i.Item3));
     static readonly Dictionary<(Texture2D?, Kind), ShaderMaterial> Materials = new();
 
     // The model's mesh with the blended look (or the kit's own materials), null if the asset
@@ -46,14 +80,22 @@ public static class NatureKit
         var found = Find(scene);
         scene.Free();
         if (found == null) return null;
-        var mesh = new ArrayMesh();
+        if (!raw)
+        {
+            // Our materials on the imported mesh itself, so it keeps the LODs Godot made for it.
+            for (int s = 0; s < found.GetSurfaceCount(); s++)
+                if (found.SurfaceGetMaterial(s) is var source && source is not ShaderMaterial)
+                    found.SurfaceSetMaterial(s, Blended(source, KindOf(name, source)));
+            return found;
+        }
+        // The kit's own look: a copy, its materials as they came.
+        var copy = new ArrayMesh();
         for (int s = 0; s < found.GetSurfaceCount(); s++)
         {
-            mesh.AddSurfaceFromArrays(Godot.Mesh.PrimitiveType.Triangles, found.SurfaceGetArrays(s));
-            var source = found.SurfaceGetMaterial(s);
-            mesh.SurfaceSetMaterial(s, raw ? source : Blended(source, KindOf(name, source)));
+            copy.AddSurfaceFromArrays(Godot.Mesh.PrimitiveType.Triangles, found.SurfaceGetArrays(s));
+            copy.SurfaceSetMaterial(s, found.SurfaceGetMaterial(s));
         }
-        return mesh;
+        return copy;
     }
 
     static ArrayMesh? Find(Node node)

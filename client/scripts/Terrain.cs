@@ -595,6 +595,12 @@ public partial class Terrain : Node3D
         // Painted trees in full near the camera and as a lighter far version beyond.
         foreach (var ((pine, v), items) in painted)
         {
+            // Or the nature kit's tree, in our light, behind a setting (Modeling's naturekit-1).
+            if (NatureKit.Trees && NatureKit.Tree(pine, v) is var (kitMesh, kitScale))
+            {
+                data.Add(kitMesh, NatureKit.Scaled(items, kitScale), null!);
+                continue;
+            }
             var material = pine ? PaintedTrees.PineMaterial : PaintedTrees.BroadleafMaterial;
             data.Add(pine ? PaintedTrees.Pine(v, false) : PaintedTrees.Broadleaf(v, false), items, material, range: (0f, PaintedTrees.NearRange));
             data.Add(pine ? PaintedTrees.Pine(v, true) : PaintedTrees.Broadleaf(v, true), items, material, range: (PaintedTrees.NearRange, 0f));
