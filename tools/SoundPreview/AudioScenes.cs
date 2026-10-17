@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp" };
+    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -63,6 +63,14 @@ static class AudioScenes
                 foreach (double t in new[] { 3.0, 7.0, 10.0 }) if (At(t)) mix.Play(CueDefs.LampFlutter);
                 foreach (double t in new[] { 5.0, 9.0, 12.0 }) if (At(t)) mix.Play(CueDefs.LampTick);
                 if (At(14)) mix.Play(CueDefs.LampOut);
+                break;
+            // Clay dig scene: a spade in clay (dig, dig, throw) then bare hands in clay.
+            case "clay":
+                foreach (double t in new[] { 1.0, 3.0 }) if (At(t)) { mix.Play(CueDefs.DigSpade); mix.Play(CueDefs.DigClay); }
+                if (At(4.2)) { mix.Play(CueDefs.DirtThrow); mix.Play(CueDefs.ClayThrow); }
+                if (At(6.5)) { mix.Play(CueDefs.DigHands); mix.Play(CueDefs.DigClay); }
+                if (At(8.0)) mix.Play(CueDefs.DigClay);       // the clay layers alone, for levels
+                if (At(9.0)) mix.Play(CueDefs.ClayThrow);
                 break;
             // Store scene: basket put and take, jar put and take, 1.5 s apart.
             case "store":
