@@ -1,7 +1,7 @@
 # env-30: Ambient life (butterflies, pollen and seeds, fireflies by water)
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-ambient-life
 PR: #656
 
@@ -35,4 +35,4 @@ CPU, plus two GPU particle systems in a box round the player). Hooks: three line
 - (none) Butterfly size: 34 cm stands as PM default (D-323); Justin may revisit.
 
 ## Next step
-Wait for PR CI; send the green sha to the PM. Render clip requested (meadow at -6,-10, --life=1).
+None, merged (checked 2026-10-17 15:05).
