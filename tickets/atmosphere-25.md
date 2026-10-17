@@ -22,6 +22,18 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - Gentle bloom: HDR threshold 1.1 to 0.85, so fire glows; intensity +0.15 and bloom +0.06, swelling further at low sun.
   - The far land gets a little softer: the camera's existing far depth-of-field blur goes 0.05 to 0.08.
   - There is no lava in the game, so the emissive glow applies to fires and lit doorways.
+- 2026-10-17 00:15: checked against Justin's licensed Golden Skull packs (docs/art-packs/golden-skull/, #378) by sampling dominant colours.
+  - Grass: olive-yellow, lit (0.65, 0.68, 0.44) and (0.81, 0.79, 0.44), mid (0.47, 0.47, 0.33).
+  - Darks are violet-tinted, (0.22, 0.20, 0.24); stone is violet-grey, (0.31, 0.27, 0.35) to (0.62, 0.62, 0.62).
+  - Snow is warm white (0.96) with blue shade (0.63, 0.69, 0.83); earth is warm brown (0.27, 0.18, 0.12).
+  - The violet-lifted darks and blue-violet shadows match, so they stay. The pack is muted, so the grade now lowers saturation (-0.06) instead of raising it.
+  - Our grass palette (Look.GrassLow (0.30, 0.46, 0.13), GrassHigh (0.48, 0.58, 0.17)) is greener and more saturated than the pack's olive-yellow. That is a palette (D-154) call for Environment and Modeling; flagged to the PM.
+- 2026-10-17 00:35: Modeling's combined test scene (Showcase --view=painted on claude/model-4-materials) shows the grass dark and grey-green against reference 02's bright yellow-green. Changes:
+  - The curve's mids are nudged warm, (0.54, 0.53, 0.46) instead of neutral 0.5, so greens lean yellow.
+  - Daytime violet ambient halved (0.15), with less of the sky's share removed (0.1); golden-hour and night casts are kept.
+  - Saturation no longer lowered.
+  - Exposure x1.06.
+  The shadows stay blue-violet. I can't render here, so Modeling tests it in its view.
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.

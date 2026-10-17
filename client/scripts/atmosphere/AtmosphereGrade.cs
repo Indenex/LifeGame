@@ -28,13 +28,14 @@ public partial class Atmosphere
     int raysApplied = -1;
 
     // The faded warm curve: each channel's darks lifted toward violet, its lights
-    // eased toward cream, the mids left alone.
+    // eased toward cream, and the mids nudged warm (a little more red and green, less
+    // blue), so lit grass reads bright yellow-green as in reference 02.
     static GradientTexture1D FadedCurve() => new()
     {
         Gradient = new Gradient
         {
             Offsets = new[] { 0f, 0.5f, 1f },
-            Colors = new[] { new Color(0.075f, 0.065f, 0.11f), new Color(0.51f, 0.50f, 0.49f), new Color(0.98f, 0.96f, 0.89f) },
+            Colors = new[] { new Color(0.075f, 0.065f, 0.11f), new Color(0.54f, 0.53f, 0.46f), new Color(0.99f, 0.97f, 0.88f) },
         },
     };
 
@@ -57,15 +58,17 @@ public partial class Atmosphere
         sun.LightEnergy *= 1f + 0.15f * lowSun;
         // Shadows take a blue-violet cast all day, more at golden hour, deep blue at night.
         env.AmbientLightColor = env.AmbientLightColor
-            .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.3f * grade + 0.3f * lowSun)
+            .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.15f * grade + 0.3f * lowSun)
             .Lerp(new Color(0.12f, 0.16f, 0.40f), 0.35f * night);
-        env.AmbientLightSkyContribution = 0.75f - 0.2f * grade - 0.2f * lowSun - 0.1f * night;
+        env.AmbientLightSkyContribution = 0.75f - 0.1f * grade - 0.2f * lowSun - 0.1f * night;
         // Gentle bloom: a softer threshold so fire and bright light glow, swelling at low sun.
         env.GlowIntensity += 0.15f * grade + 0.3f * lowSun;
         env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;
         env.GlowHdrThreshold = 1.1f - 0.25f * grade;
         // Faded and warm: a touch less contrast, darks lifted, lights creamy.
-        env.AdjustmentSaturation += 0.04f * grade;
+        // The Golden Skull packs are muted, but lighting already greys them in engine, so
+        // saturation stays where it is; the curve's warm mids do the yellowing.
+        env.TonemapExposure *= 1f + 0.06f * grade;
         env.AdjustmentContrast = 1.08f - 0.12f * grade;
         env.AdjustmentColorCorrection = grade > 0.5f ? (curve ??= FadedCurve()) : null;
         if (GetViewport()?.GetCamera3D()?.Attributes is CameraAttributesPractical lens)
