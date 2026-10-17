@@ -36,7 +36,9 @@ public static partial class Module
         var keep = new HashSet<ulong>();
         foreach (var fire in ctx.Db.Fire.Iter())
         {
-            long until = fire.FuelUntil.MicrosecondsSinceUnixEpoch - (long)(SignalShare * FireCapSeconds(fire) * 1_000_000);
+            // Only a signal fire (survival-38) sends smoke up, for as long as it burns.
+            if (!fire.Signal) continue;
+            long until = fire.FuelUntil.MicrosecondsSinceUnixEpoch;
             if (until <= now || FireIndoors(ctx, fire)) continue;
             keep.Add(fire.Id);
             var row = new SignalFire { FireId = fire.Id, X = fire.X, Z = fire.Z, Until = new Timestamp(until) };

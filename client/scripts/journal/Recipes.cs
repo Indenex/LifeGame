@@ -67,7 +67,7 @@ public static class Recipes
 
         string makes = def.Outcome switch
         {
-            Outcome.Fire => "Makes a campfire.",
+            Outcome.Fire => def.Signal ? "Makes a signal fire: a short blaze with a tall, thick column of smoke." : "Makes a campfire.",
             Outcome.Roast => "Roasts over a burning fire.",
             Outcome.Placed => "Sets it down in front of you.",
             _ => $"Makes {Some(def.Makes, def.MakesCount)}.",

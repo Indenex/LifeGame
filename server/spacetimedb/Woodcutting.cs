@@ -98,7 +98,12 @@ public static partial class Module
         };
         if (row is null) ctx.Db.ChoppedTree.Insert(next);
         else ctx.Db.ChoppedTree.CellKey.Update(next);
-        if (felled) News(ctx, job.PlayerId, "The tree comes down.");
+        if (felled)
+        {
+            AddToInventory(ctx, job.Owner, Item.Stick, Trees.FellSticks, Items.RawQuality);
+            AddToInventory(ctx, job.Owner, Item.Fiber, Trees.FellFiber, Items.RawQuality);
+            News(ctx, job.PlayerId, "The tree comes down. You strip some branches and bark fiber from it.");
+        }
         EnsureTreeTimer(ctx);
     }
 

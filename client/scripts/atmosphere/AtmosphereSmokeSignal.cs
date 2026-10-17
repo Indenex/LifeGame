@@ -238,7 +238,7 @@ public partial class Atmosphere
     // Whether a fire puts up the column. An ordinary campfire does not, however stoked (Justin,
     // bugfix-72): the signal fire is its own thing, and its fire kind switches this on. Until
     // then only --smoke-signal raises a column.
-    static bool CanSignal(ulong fireId) => false;
+    bool CanSignal(ulong fireId) => signalFires.Contains(fireId);
 
     // The stoked fires near the player, nearest first, a few at most.
     void FindSignals(Vector3 focus)
@@ -252,7 +252,6 @@ public partial class Atmosphere
             float dist = new Vector2(f.X - focus.X, f.Z - focus.Z).Length();
             if (dist > SignalReach) continue;
             // Only fires out in the open signal (Justin): none from inside a home.
-            float most = FireMost(id);
             bool indoors = false;
             if (homesConn != null)
                 foreach (var s in homesConn.Db.Structure.Iter())
@@ -262,8 +261,9 @@ public partial class Atmosphere
                         break;
                     }
             if (indoors) continue;
+            // Only a signal fire (survival-38) puts up the column, and holds it until its last seconds.
             if (!CanSignal(id) && signalForce <= 0f) continue;
-            float signal = Math.Max(Mathf.SmoothStep(0.70f, 0.80f, left / most), signalForce);
+            float signal = Math.Max(Mathf.Clamp(left / 10f, 0f, 1f), signalForce);
             if (signal < 0.01f) continue;
             float ground = terrain?.TileHeight(World.CellOf(f.X), World.CellOf(f.Z)) ?? World.BaseHeight(World.CellOf(f.X), World.CellOf(f.Z));
             signalPicks.Add((id, new Vector3(f.X, ground + 0.9f, f.Z), signal, dist, false));
@@ -274,7 +274,7 @@ public partial class Atmosphere
             foreach (var row in homesConn.Db.SignalFire.Iter())
             {
                 if (fires.ContainsKey(row.FireId)) continue;
-                if (!CanSignal(row.FireId) && signalForce <= 0f) continue;
+                // The server lists only signal fires.
                 float dist = new Vector2(row.X - focus.X, row.Z - focus.Z).Length();
                 if (dist > SignalFarReach) continue;
                 float left = (row.Until.MicrosecondsSinceUnixEpoch - now) / 1_000_000f;

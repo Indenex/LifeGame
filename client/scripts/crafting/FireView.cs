@@ -166,7 +166,7 @@ public partial class FireView : Node3D
     {
         if (!fires.TryGetValue(f.Id, out var node))
         {
-            node = new Campfire { Position = new Vector3(f.X, heightAt(f.X, f.Z), f.Z) };
+            node = new Campfire { Position = new Vector3(f.X, heightAt(f.X, f.Z), f.Z), Signal = f.Signal };
             fires[f.Id] = node;
             AddChild(node);
         }
@@ -247,6 +247,10 @@ public partial class FireView : Node3D
     partial class Campfire : Node3D
     {
         public long FuelUntilMicros;
+        // A signal fire (survival-38): a small blaze in a bundle of fiber, no ring of stones.
+        public bool Signal;
+        static Mesh? bundle;
+        static Mesh Bundle => bundle ??= Look.Faceted(new SphereMesh { Radius = 0.3f, Height = 0.3f, RadialSegments = 7, Rings = 3 }, new Color(0.62f, 0.55f, 0.3f));
         readonly OmniLight3D light = new()
         {
             LightColor = new Color(1.0f, 0.58f, 0.24f),
@@ -262,15 +266,24 @@ public partial class FireView : Node3D
 
         public override void _Ready()
         {
-            // A ring of stones around crossed logs.
-            AddRing(this);
-            for (int i = 0; i < 3; i++)
-                AddChild(new MeshInstance3D
-                {
-                    Mesh = Log,
-                    Position = new Vector3(0, 0.1f, 0),
-                    Rotation = new Vector3(0.35f, i * Mathf.Tau / 3f, 0),
-                });
+            if (Signal)
+            {
+                // A flat heap of dry fiber, burning.
+                AddChild(new MeshInstance3D { Mesh = Bundle, Position = new Vector3(0, 0.04f, 0) });
+                light.OmniRange = 6f;
+            }
+            else
+            {
+                // A ring of stones around crossed logs.
+                AddRing(this);
+                for (int i = 0; i < 3; i++)
+                    AddChild(new MeshInstance3D
+                    {
+                        Mesh = Log,
+                        Position = new Vector3(0, 0.1f, 0),
+                        Rotation = new Vector3(0.35f, i * Mathf.Tau / 3f, 0),
+                    });
+            }
             flames.Position = new Vector3(0, 0.12f, 0);
             sparks.Position = new Vector3(0, 0.25f, 0);
             AddChild(flames);
@@ -286,10 +299,11 @@ public partial class FireView : Node3D
             // Full strength with a minute or more of fuel, fading to embers as it runs out.
             float strength = Math.Clamp(left / 60f, 0.15f, 1f);
             float flicker = Atmosphere.FireFlicker(time);
-            light.LightEnergy = 2.6f * strength * flicker;
+            float size = Signal ? 0.55f : 1f;
+            light.LightEnergy = 2.6f * strength * flicker * size;
             // Firelight carries further in the dark: about 10 m by day, 14 m at night (D-180).
-            light.OmniRange = 10f + 4f * Atmosphere.Night;
-            flames.ScaleAmountMax = 1.6f * strength;
+            light.OmniRange = (10f + 4f * Atmosphere.Night) * size;
+            flames.ScaleAmountMax = 1.6f * strength * size;
             flames.Emitting = left > 0;
             sparks.Emitting = left > 2;
         }

@@ -79,6 +79,9 @@ public static partial class Module
         // from before this column.
         [Default(0f)]
         public float FuelCapSeconds;
+        // A signal fire (survival-38): burns briefly, can't be fed, and always sends up its smoke.
+        [Default(false)]
+        public bool Signal;
     }
 
     [SpacetimeDB.Table(Accessor = "FireTimer", Scheduled = nameof(BurnOutFires), ScheduledAt = nameof(ScheduledAt))]
@@ -266,7 +269,7 @@ public static partial class Module
         if (job.Failed) return;
 
         if (def.Outcome == Outcome.Fire)
-            LightFire(ctx, job.PlayerId, job.X, job.Z);
+            LightFire(ctx, job.PlayerId, job.X, job.Z, def.Signal);
         else if (def.Outcome == Outcome.Placed)
         {
             OnPlaced(ctx, job, def);
@@ -291,6 +294,7 @@ public static partial class Module
         var pos = RequirePos(ctx, RequirePlayer(ctx));
         var fire = ctx.Db.Fire.Id.Find(fireId) ?? throw new Exception("That fire is out");
         RequireReach(pos, fire.X, fire.Z);
+        if (fire.Signal) throw new Exception("A bundle of fiber burns down fast. There is nothing to feed");
         if (!Items.IsKnown(item) || Items.Def((Item)item).FuelSeconds <= 0)
             throw new Exception("That will not burn");
         if (CountOf(ctx, (Item)item) < 1)
@@ -323,7 +327,7 @@ public static partial class Module
             // A fire on a raised hearth feeds itself from storage nearby (D-149, Building).
             var fire = row;
             var until = fire.FuelUntil;
-            FireTopUpHook(ctx, fire, ref until);
+            if (!fire.Signal) FireTopUpHook(ctx, fire, ref until);
             if (until.MicrosecondsSinceUnixEpoch != fire.FuelUntil.MicrosecondsSinceUnixEpoch)
             {
                 fire = fire with { FuelUntil = until };
@@ -333,7 +337,8 @@ public static partial class Module
             {
                 DropRoasts(ctx, fire);
                 ctx.Db.Fire.Id.Delete(fire.Id);
-                LeaveColdHearth(ctx, fire);
+                // A signal fire burns to a scrap of ash, leaving no hearth behind.
+                if (!fire.Signal) LeaveColdHearth(ctx, fire);
             }
         }
         ClearOldHearths(ctx);
@@ -366,9 +371,27 @@ public static partial class Module
     static partial void FireWarmthAt(ReducerContext ctx, float x, float z, ref float warmth) =>
         warmth = Math.Max(warmth, WarmthAt(ctx, x, z));
 
-    static void LightFire(ReducerContext ctx, uint playerId, float x, float z)
+    static void LightFire(ReducerContext ctx, uint playerId, float x, float z, bool signal = false)
     {
         RekindleAt(ctx, x, z);
+        if (signal)
+        {
+            ctx.Db.Fire.Insert(new Fire
+            {
+                Id = 0,
+                X = x,
+                Z = z,
+                ChunkX = World.ChunkOf(x),
+                ChunkZ = World.ChunkOf(z),
+                LitBy = playerId,
+                LitAt = ctx.Timestamp,
+                FuelUntil = ctx.Timestamp + new TimeDuration((long)(Fires.SignalSeconds * 1_000_000)),
+                FuelCapSeconds = Fires.SignalSeconds,
+                Signal = true,
+            });
+            EnsureFireTimer(ctx);
+            return;
+        }
         float scale = 1f;
         FireFuelScaleHook(ctx, x, z, ref scale);
         ctx.Db.Fire.Insert(new Fire
