@@ -32,4 +32,4 @@ The chop and dig effects fire on Animation's impact frame: anim-7's `Avatar.Impa
 - anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 is PR #496) in ConnectImpacts. The handler is ready.
 
 ## Next step
-Open the PR from claude/atmosphere-30c-tree-landed, wait for CI, send the PM the green sha.
+Wait for #551 CI, send the PM the green sha.
