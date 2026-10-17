@@ -729,7 +729,7 @@ public partial class Showcase : Node3D
     {
         int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
         var look = new ChibiFigure.Look((ChibiFigure.Race)Arg("race", 1), Arg("main", 0), Arg("second", 0), Arg("style", 1));
-        var yaws = new[] { -35f, -90f, -145f, 180f, 90f };
+        var yaws = new[] { 25f, -35f, -95f, -125f, 145f };
         for (int i = 0; i < yaws.Length; i++)
         {
             var figure = ChibiFigure.Create(look);
@@ -739,6 +739,6 @@ public partial class Showcase : Node3D
         }
         var camera = new Camera3D { Fov = 30f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0, 1.45f, 8.2f), new Vector3(0, 0.72f, 0), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
     }
 }
