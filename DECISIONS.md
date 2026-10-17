@@ -1099,3 +1099,37 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
 **Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
 **Who:** PM default (Justin not yet asked).
+
+## D-272 — 2026-10-17 — Maker's mark: players pick from a glyph panel with a colour picker; inspecting an item shows its maker (refines D-266)
+**Decision:** Players pick their maker's mark from a panel with many glyphs (fantasy, scientific and more) and a colour picker. Inspecting any made item tells you who made it. Owner: Ceramics.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-273 — 2026-10-17 — Atmosphere builds morning frost next
+**Decision:** Atmosphere builds morning frost next (atmosphere-28).
+**Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
+
+## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
+**Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
+**Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
+
+## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
+**Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
+**Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
