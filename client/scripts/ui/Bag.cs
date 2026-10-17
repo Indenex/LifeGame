@@ -93,22 +93,22 @@ public sealed class ServerBagLink : IBagLink
     readonly DbConnection conn;
     public ServerBagLink(DbConnection conn) => this.conn = conn;
 
-    public IEnumerable<BagStack> Carried() => conn.Db.MyInventory.Iter()
-        .Where(i => i.Count > 0 && Items.IsKnown(i.Item))
-        // Pots from different makers stay apart (Ceramics keeps the maker in Wear).
-        .GroupBy(i => (i.Item, i.Quality, Maker: Marks.MakerOf((Item)i.Item, i.Wear)))
-        .Select(g => new BagStack((Item)g.Key.Item, g.Key.Quality, (uint)g.Sum(i => i.Count), Maker: g.Key.Maker));
+    // The bag's rows in their places, and the tools on the doll (ui-18, server/spacetimedb/Inventory.cs).
+    // Each row is one stack; pots carry their maker in Wear (Ceramics), shown as "Made by" (ui-23).
+    public IEnumerable<BagStack> Carried() => Rows(belt: false);
+    public IEnumerable<BagStack> Belt() => Rows(belt: true);
+
+    IEnumerable<BagStack> Rows(bool belt) => conn.Db.MyInventory.Iter()
+        .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
+        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear)));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
-    // The bag's order and the tools belt need the server's Slot and OnBelt columns
-    // (ui-18, after #267); until then the bag sorts itself and the belt stays hidden.
-    public bool Arranges => false;
-    public IEnumerable<BagStack> Belt() => Enumerable.Empty<BagStack>();
-    public void MoveTo(ulong id, int slot) { }
-    public void Sort() { }
-    public void ToBelt(ulong id, int slot) { }
-    public void FromBelt(ulong id, int slot) { }
+    public bool Arranges => true;
+    public void MoveTo(ulong id, int slot) => conn.Reducers.MoveInBag(id, (ushort)Math.Max(slot, 0));
+    public void Sort() => conn.Reducers.SortBag();
+    public void ToBelt(ulong id, int slot) => conn.Reducers.PutOnBelt(id, slot < 0 ? (byte)255 : (byte)slot);
+    public void FromBelt(ulong id, int slot) => conn.Reducers.TakeOffBelt(id, slot < 0 ? ushort.MaxValue : (ushort)slot);
 }
 
 // Everything you carry as a grid of round slots, sorted by kind (ui-18). Drag a slot
@@ -162,13 +162,7 @@ public partial class BagGrid : GridContainer
     }
 
     // Sorted by kind: what you use (food, drink, tools, clothes) first, then the rest by item.
-    public static int Group(Item item) => Items.UseOf(item) switch
-    {
-        UseAction.Eat or UseAction.Drink => 0,
-        UseAction.Tool => 1,
-        UseAction.Wear => 2,
-        _ => 3,
-    };
+    public static int Group(Item item) => LifeGame.Shared.Bag.Group(item);
 
     public void Refresh()
     {
