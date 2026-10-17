@@ -157,8 +157,9 @@ public partial class ClaimPanel : CanvasLayer
         Claim = null;
         confirmAbandon = false;
         nameBox.Text = "";
-        nameBox.ReleaseFocus();
-        placeBox.ReleaseFocus();
+        // The name and place boxes are only in the panel for owners (bugfix-37).
+        if (nameBox.IsInsideTree()) nameBox.ReleaseFocus();
+        if (placeBox.IsInsideTree()) placeBox.ReleaseFocus();
     }
 
     public void MarkDirty() => dirty = true;

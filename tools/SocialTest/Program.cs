@@ -227,7 +227,20 @@ long workEvery = Math.Min(Social.WorkTendEverySeconds, (beforeWork.ExpiresAt.Mic
 var workAfter = DateTime.UtcNow.AddMilliseconds((beforeWork.TendedAt.MicrosecondsSinceUnixEpoch + workEvery) / 1000 - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 500);
 Pump(() => DateTime.UtcNow > workAfter, 90, "wait to tend by work");
 a.LastError = null;
-int digX = (int)MathF.Round(a.X) + 1, digZ = (int)MathF.Round(a.Z);
+// Other checks dig clay out on this database first, so take a cell in reach
+// that isn't already dug as deep as hands go (bugfix-39).
+(int, int) DiggableNear(Tester t)
+{
+    int px = (int)MathF.Round(t.X), pz = (int)MathF.Round(t.Z);
+    return Enumerable.Range(-2, 5).SelectMany(dx => Enumerable.Range(-2, 5).Select(dz => (x: px + dx, z: pz + dz)))
+        .Where(c => (c.x != px || c.z != pz) && t.Depth(c.x, c.z) < World.MaxDigDepth)
+        .Select(c => (c, d: new Vector(c.x * World.CellSize - t.X, c.z * World.CellSize - t.Z).Length))
+        .Where(e => e.d <= World.Reach - 0.3f)
+        .OrderBy(e => e.d)
+        .Select(e => e.c)
+        .First();
+}
+var (digX, digZ) = DiggableNear(a);
 short depth = a.Depth(digX, digZ);
 a.Conn.Reducers.Dig(digX, digZ);
 Pump(() => a.Depth(digX, digZ) > depth || a.LastError != null, 5, "owner dig");
@@ -465,7 +478,7 @@ if (decay)
     Pump(() => a.Conn.Db.WorldItem.Iter().Any(i => i.Item == (ushort)Item.Stone && Social.InClaim(claim.X, claim.Z, i.X, i.Z)), 5, "spill");
     Check(true, "the stash spilled onto the ground");
     b.LastError = null;
-    digX = (int)MathF.Round(b.X); digZ = (int)MathF.Round(b.Z) + 1;
+    (digX, digZ) = DiggableNear(b);
     depth = b.Depth(digX, digZ);
     b.Conn.Reducers.Dig(digX, digZ);
     Pump(() => b.Depth(digX, digZ) > depth || b.LastError != null, 5, "dig after decay");
