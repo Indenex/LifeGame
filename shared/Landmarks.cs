@@ -54,15 +54,23 @@ namespace LifeGame.Shared
         public static bool OutcropFits(int x, int z) => Forest.Heath(x, z) > 0.55f && x * x + z * z > 20 * 20;
 
         // A huge old trunk lying across a glade (env-33), one at most in each 56 m square:
-        // in the open just off a wood, on dry ground, away from the spawn clearing and trails.
+        // in an open glade with the wood not far off, on dry ground, away from the spawn
+        // clearing and trails.
         public const int FallenGiantSquare = 56;
 
         public static bool FallenGiantFits(int x, int z)
         {
             if (x * x + z * z < 24 * 24 || Trees.GrowsAt(x, z)) return false;
             float density = Forest.Density(x, z);
-            return density > 0.08f && density < 0.26f && Forest.Heath(x, z) < 0.5f && Forest.Wetland(x, z) < 0.3f
-                && World.BaseHeight(x, z) > World.WaterLevel + 0.5f && Trail(x, z) < 0.3f;
+            if (density > 0.2f || Forest.Heath(x, z) > 0.5f || Forest.Wetland(x, z) > 0.3f
+                || World.BaseHeight(x, z) < World.WaterLevel + 0.5f || Trail(x, z) > 0.3f) return false;
+            // Room for a trunk up to 13 m long whichever way it fell: open ground all round.
+            for (int k = 0; k < 8; k++)
+            {
+                float a = k * MathF.PI / 4f;
+                if (Forest.Density(x + (int)(MathF.Cos(a) * 6f), z + (int)(MathF.Sin(a) * 6f)) > 0.3f) return false;
+            }
+            return true;
         }
 
         public static int SquareOf(int cell, int size) => FloorDiv(cell, size);

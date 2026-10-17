@@ -19,11 +19,11 @@ Files: `shared/Features.cs` (FeatureId.FallenGiant = 4, appended), `shared/Landm
 (FallenGiantFits), `client/scripts/environment/LandmarkProps.cs` (FallenGiant builder).
 
 ## Progress log
-- 2026-10-17 09:45: built; 37 instances in the 9x9 squares round spawn, nearest (-28,13),
-  (31,-20). Local renders running.
+- 2026-10-17 09:45: built; first renders landed in woodland (crowns over the trunk).
+- 2026-10-17 09:55: Fits tightened to open glades (density < 0.2 at the cell, < 0.3 six metres out all round); 30 in the 9x9 squares, nearest (-151,-42).
 
 ## Open questions / blockers
 - Which feature kind comes first went to the PM as options (fallen giant recommended).
 
 ## Next step
-Check renders at (-24,16) and (35,-17), tune, open the PR, request a Render still pair.
+Check the render at (-151,-42), tune, open the PR, request a Render still pair.
