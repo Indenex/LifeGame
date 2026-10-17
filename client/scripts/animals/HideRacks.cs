@@ -59,7 +59,7 @@ public partial class HideRacks : Node3D
         }
         if (nearest == null || !racks.TryGetValue(nearest.Id, out var node) || node.Moisture > 0f) return null;
         ulong id = nearest.Id;
-        return new UseOffer("Take the leather", best, () => conn.Reducers.TakeLeather(id));
+        return new UseOffer("Take the leather", best, () => conn.Reducers.TakeLeather(id), Again: Use.HoldInterval);
     }
 
     partial class Rack : Node3D
