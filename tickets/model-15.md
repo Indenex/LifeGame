@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/model-15-faces
-PR: (not opened)
+PR: #644
 
 ## Goal
 Justin's pick #16: the chibi blinks, has a happy face when eating, and a sleepy face at night or lying down, in the D-313 direction (cutesy, relaxing, with a hint of realism). Modeling gives Animation four switchable faces on every chibi figure: `Face.Open` (today's eyes), `Face.Closed` (a blink), `Face.Happy` (^ ^ eyes and a small open smile), `Face.Sleepy` (half-closed lids and a small "o" mouth), switched with `PlayerModel.SetFace(figure, face)`. Done when the branch is merged and Animation drives the faces in game.
