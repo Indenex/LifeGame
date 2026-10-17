@@ -196,6 +196,7 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:18: ui-74 F1 keys (#851 560dd5c9), low priority, end of queue before the playtest.
 - 2026-10-17 16:22: env-38 pond frame (7107848a) saved as screenshots/env-38-pond-water.png: water teal with ripples, no pink, no shader errors; sent to the PM and Environment. Mushrooms job switched to main 272feaf.
+- 2026-10-17 16:40: env-39 sky A/B (7107848a) saved as screenshots/env-39-sky-A/-B/-A-cover02.png: painted clouds (quality 1) render as plain cream haze, flat (0) shows clouds; sent to Environment and the PM. Queued env38-pond3 on #843 head 198e5ed0 (env38-after/dragonflies moved there too), survival-36 roots (#856 b90563e8, scenes survival-36-roots[-wide].txt) after mushrooms, ui-76 trade before c6a5ede / after 6c6a8530 at the end.
 
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
