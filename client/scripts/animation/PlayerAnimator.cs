@@ -644,6 +644,29 @@ public sealed class PlayerAnimator
         p[Joint.HipR] = p[Joint.HipR].Lerp(new Vector3(-0.3f - 0.4f * Mathf.Max(kick, 0f), 0, -0.2f), m);
         p[Joint.KneeL].X = Mathf.Lerp(p[Joint.KneeL].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
         p[Joint.KneeR].X = Mathf.Lerp(p[Joint.KneeR].X, 0.2f + 1.2f * Mathf.Max(kick, 0f), m);
+        // A small round body doggy-paddles instead (anim-17): head held high and
+        // bobbing side to side, hands paddling in turn under the chin, quick little kicks.
+        if (Bounce >= 1f) DoggyPaddle(p, t, m);
+    }
+
+    void DoggyPaddle(Pose p, float t, float m)
+    {
+        float paddle = t * Mathf.Tau * 1.6f;
+        float l = Mathf.Sin(paddle), r = Mathf.Sin(paddle + Mathf.Pi);
+        float kick = Mathf.Sin(paddle * 1.5f);
+        p.HipsOffset.Y += 0.015f * Mathf.Abs(l) * m;
+        p[Joint.Spine] = p[Joint.Spine].Lerp(new Vector3(0.3f, 0, 0.05f * l), m);
+        p[Joint.Neck] = p[Joint.Neck].Lerp(new Vector3(-0.4f, 0.12f * l, 0.1f * l), m);
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-1.5f - 0.5f * l, 0, 0.15f), m);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-1.5f - 0.5f * r, 0, -0.15f), m);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -0.9f + 0.5f * l, m);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -0.9f + 0.5f * r, m);
+        p[Joint.HandL].X = Mathf.Lerp(p[Joint.HandL].X, -0.6f, m);
+        p[Joint.HandR].X = Mathf.Lerp(p[Joint.HandR].X, -0.6f, m);
+        p[Joint.HipL] = p[Joint.HipL].Lerp(new Vector3(-0.5f + 0.35f * kick, 0, 0.1f), m);
+        p[Joint.HipR] = p[Joint.HipR].Lerp(new Vector3(-0.5f - 0.35f * kick, 0, -0.1f), m);
+        p[Joint.KneeL].X = Mathf.Lerp(p[Joint.KneeL].X, 0.6f - 0.3f * kick, m);
+        p[Joint.KneeR].X = Mathf.Lerp(p[Joint.KneeR].X, 0.6f + 0.3f * kick, m);
     }
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,
