@@ -1125,3 +1125,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 - **Town panel look:** "Map first", a top-down map of the town's claims.
 Owner: Claims.
 **Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
