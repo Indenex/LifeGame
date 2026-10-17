@@ -486,7 +486,7 @@ public partial class Main : Node3D
         {
             myId = p.PlayerId;
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else me.SetLook(p.PlayerId);
         }
         if (others.TryGetValue(p.PlayerId, out var avatar))
@@ -499,7 +499,7 @@ public partial class Main : Node3D
     // A player's chosen look (model-3): applied to their avatar over the id default.
     void OnPlayerLook(PlayerLook l)
     {
-        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard, l.Race);
         if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
         else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
@@ -521,7 +521,7 @@ public partial class Main : Node3D
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);

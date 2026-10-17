@@ -29,7 +29,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "wear" or "devices" or "crowd" or "roster")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -40,6 +40,7 @@ public partial class Showcase : Node3D
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
+            else if (view == "roster") Roster();
             else if (view == "items") ItemGrid(args.ContainsKey("old"));
             else if (view == "held") HeldTools();
             else Clothes();
@@ -507,5 +508,35 @@ public partial class Showcase : Node3D
         GetViewport().GetTexture().GetImage().SavePng(shot);
         GD.Print($"Showcase: saved {shot}");
         GetTree().Quit();
+    }
+
+    // The chibi player base (model-6) beside today's figure and a 0.75 m table:
+    // Bramble and Pebble, each in a couple of looks, front and three-quarter.
+    void Roster()
+    {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-20"), System.Globalization.CultureInfo.InvariantCulture));
+        var today = PlayerModel.Build();
+        today.Position = new Vector3(-2.6f, 0, 0);
+        today.Rotation = new Vector3(0, yaw, 0);
+        AddChild(today);
+        // --flat draws them with today's shader, to compare with the painted look.
+        ChibiFigure.Painted = !args.ContainsKey("flat");
+        var looks = new[]
+        {
+            new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 1, 1),
+            new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 1, 1, 1),
+        };
+        for (int i = 0; i < looks.Length; i++)
+        {
+            var figure = ChibiFigure.Create(looks[i]);
+            figure.Position = new Vector3(-1.6f + i * 1.25f, 0, 0);
+            figure.Rotation = new Vector3(0, yaw + (i % 2 == 1 ? -0.6f : 0f), 0);
+            AddChild(figure);
+        }
+        foreach (var piece in StationMeshes.CraftingTable())
+            if (piece.Stage >= 0) AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(4f, 0, -0.3f) });
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.6f, 1.7f, 7.4f), new Vector3(0.6f, 0.85f, 0), Vector3.Up);
     }
 }
