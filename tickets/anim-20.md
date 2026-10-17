@@ -1,7 +1,7 @@
 # anim-20: Pebble waddles
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_review
+Status: done
 Branch: claude/anim-20 (from main)
 PR: #710
 

@@ -284,7 +284,10 @@ public partial class Avatar : Node3D
     {
         PlayerModel.SetLook((Skeleton3D)figure, look);
         // Pebble (the shell-backed chibi) waddles: its hips rock side to side as it walks (anim-20).
-        animator.Waddle = PlayerModel.Chibi && PlayerModel.ChibiLook(look).Race == ChibiFigure.Race.Pebble ? 1f : 0f;
+        bool pebble = PlayerModel.Chibi && PlayerModel.ChibiLook(look).Race == ChibiFigure.Race.Pebble;
+        animator.Waddle = pebble ? 1f : 0f;
+        // Its shell is in the way of anything reaching behind the back (anim-21).
+        animator.Shell = pebble;
         // A new look may be a differently shaped body: poses that reach the face re-measure it.
         rig.Measure();
         PlaceMouth();
