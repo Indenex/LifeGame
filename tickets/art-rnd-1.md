@@ -24,6 +24,8 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 - 2026-10-17: Modeling landed the shell as PR #623 (claude/model-14-authored-shell, from 94479019); #594 closed. PM: Modeling lands the shell (option a). Shell colours re-picked to the D-313 palette (54381e65): caramel (0.54,0.42,0.28), honey (0.6,0.5,0.29), sage-olive (0.41,0.43,0.27); image renders/art-rnd-1-shell-colours.png.
 - 2026-10-17: Justin asked for more Blender showcase pieces. Added PaintedAsset.cs and Showcase --view=art --piece=<p> (class LifeGame.Art<P>: Today(), Authored(), Spacing, Height). Three Opus helpers on worktree branches: trees (birch + pine), heads (Bramble, Pebble, faces with 4 expressions), sheep (+ axe). Each lands as tools/art/<piece>/, client/assets/art/<piece>/, client/scripts/models/art/Art<Piece>.cs and renders/art-rnd-1-<piece>.png; the coordinator merges them into claude/art-rnd-1 and sends links one at a time.
 
+- 2026-10-17: merged sheep + stone axe (1ccca5b0): renders/art-rnd-1-sheep.png, renders/art-rnd-1-axe.png; sent to the PM.
+
 ## Open questions / blockers
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
