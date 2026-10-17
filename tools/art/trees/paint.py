@@ -101,12 +101,12 @@ img = np.zeros((SIZE * SIZE, 3))
 COCOA = c(92, 64, 58)
 if TREE == "birch":
     # deep (violet-leaning), shade, mid, lit, highlight
-    LEAF = np.array([c(74, 86, 104), c(88, 128, 86), c(120, 166, 82), c(164, 200, 94), c(204, 224, 128)])
+    LEAF = np.array([c(70, 82, 104), c(80, 122, 80), c(112, 160, 74), c(156, 196, 88), c(198, 222, 122)])
     EDGES = [0.2, 0.42, 0.66, 0.9]
     CLUSTER = np.array([0.36, 0.26, 0.36])
     BARK = dict(lit=c(244, 238, 224), mid=c(224, 216, 206), shade=c(182, 174, 196), mark=c(86, 66, 64), foot=c(146, 130, 132))
 else:
-    LEAF = np.array([c(46, 58, 78), c(50, 86, 74), c(66, 114, 78), c(100, 146, 84), c(138, 176, 102)])
+    LEAF = np.array([c(40, 50, 70), c(42, 74, 66), c(56, 98, 70), c(84, 128, 76), c(120, 158, 92)])
     EDGES = [0.2, 0.42, 0.66, 0.92]
     CLUSTER = np.array([0.3, 0.17, 0.3])
     BARK = dict(lit=c(182, 124, 84), mid=c(148, 96, 68), shade=c(112, 76, 72), mark=c(86, 56, 52), foot=c(120, 84, 66))
@@ -138,8 +138,8 @@ lit = 0.5 + 0.5 * n[:, 1]
 col = ramp(lit, np.array([BARK["shade"], BARK["mid"], BARK["lit"]]), [0.42, 0.62], 0.05)
 if TREE == "birch":
     # A few soft cocoa marks across the trunk, wider than tall, and a darker foot.
-    d1, d2, off, rnd = cells(p, np.array([0.3, 0.13, 0.3]), 31)
-    mark = (rnd < 0.3) * smooth(0.5, 0.36, np.linalg.norm(off / np.array([1.0, 0.28, 1.0]), axis=1) / 0.3) * (p[:, 1] > 0.35)
+    d1, d2, off, rnd = cells(p, np.array([0.26, 0.11, 0.26]), 31)
+    mark = (rnd < 0.5) * smooth(0.5, 0.36, np.linalg.norm(off / np.array([1.0, 0.28, 1.0]), axis=1) / 0.3) * (p[:, 1] > 0.35)
     col = mix(col, np.repeat(BARK["mark"][None], len(a), 0), 0.85 * mark)
     col = mix(col, np.repeat(BARK["foot"][None], len(a), 0), smooth(0.45, 0.12, p[:, 1]))
 else:
