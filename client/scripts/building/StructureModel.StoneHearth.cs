@@ -48,8 +48,8 @@ public static partial class StructureModel
     }
 
     // Grey ash over the fire bed, and dark clay mud pressed between the stones.
-    static ShaderMaterial Ash => ash ??= Tinted(Look.Ground, new Color(0.36f, 0.33f, 0.3f));
-    static ShaderMaterial Mud => mud ??= Tinted(Look.Ground, Look.Clay.Darkened(0.55f));
+    static ShaderMaterial Ash => ash ??= Painted(Tinted(Look.Ground, new Color(0.36f, 0.33f, 0.3f)), PaintedStructures.Family.Clay);
+    static ShaderMaterial Mud => mud ??= Painted(Tinted(Look.Ground, Look.Clay.Darkened(0.55f)), PaintedStructures.Family.Clay);
     static ShaderMaterial? ash, mud;
 
     // A filled, shallow dish for the fire bed: its rim at rimY, sinking to midY in the middle,

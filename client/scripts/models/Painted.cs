@@ -53,6 +53,15 @@ public static class Painted
         }
     }
 
+    // The see-through copy of a painted twin on a building (StructureView's cutaway, D-168):
+    // Look.StructureGhost's render mode, Painted's look, so a fading wall stays painted.
+    // Null for anything that isn't a painted twin.
+    public static ShaderMaterial? StructureGhostOf(ShaderMaterial material) =>
+        material.Shader == Shader ? Look.Ghost(material, StructureGhostShader) : null;
+
+    // Whether a material is already one of Painted's twins.
+    public static bool IsPainted(Material? material) => material is ShaderMaterial m && m.Shader == Shader;
+
     // Look's rock, painted: boulders, outcrops, river stones and pebbles.
     public static ShaderMaterial Rock => rock ??= MakeRock();
     static ShaderMaterial? rock;
@@ -70,9 +79,10 @@ public static class Painted
         return twin;
     }
 
-    static Shader Shader => shader ??= Look.MakeShader(Code(ghost: false));
-    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: true));
-    static Shader? shader, ghostShader;
+    static Shader Shader => shader ??= Look.MakeShader(Code(ghost: null));
+    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_draw_always;"));
+    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;"));
+    static Shader? shader, ghostShader, structureGhostShader;
 
     static NoiseTexture2D Dabs => dabs ??= new NoiseTexture2D
     {
@@ -81,7 +91,8 @@ public static class Painted
     };
     static NoiseTexture2D? dabs;
 
-    static string Code(bool ghost)
+    // ghost: the render mode of a see-through variant, or null for the solid.
+    static string Code(string? ghost)
     {
         string code = Look.PaintedCode;
         string Put(string text, string anchor, string replacement)
@@ -91,8 +102,8 @@ public static class Painted
                 throw new System.InvalidOperationException($"Painted: Look's shader changed near '{anchor}'");
             return text[..at] + replacement + text[(at + anchor.Length)..];
         }
-        code = Put(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost ? "\n#define GHOST" : ""));
-        if (ghost) code = Put(code, "render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;");
+        code = Put(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
+        if (ghost != null) code = Put(code, "render_mode cull_disabled;", ghost);
         code = Put(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
         code = Put(code, "vec3 color = tint * (1.0 + paint * 2.0);", """
             dab = dab_at(world_pos);
