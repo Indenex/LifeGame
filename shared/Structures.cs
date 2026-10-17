@@ -48,6 +48,9 @@ namespace LifeGame.Shared
         public bool Hut;
         // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
         public string Model = "";
+        // For a structure animals use (the hen coop): where they walk to go in, and where they settle
+        // inside, as offsets in the structure's own frame (+Z is its front). Scaled with the shape.
+        public (float X, float Z) Entry, Roost;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -353,26 +356,6 @@ namespace LifeGame.Shared
                     new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
                 },
             },
-            // A hen coop (building-16, Justin: claim-only, hens roost in it at night): a small shed on legs
-            // with a pop-hole and ramp at the front. Animals walk to Entry and settle at Roost.
-            new StructureShape
-            {
-                Name = "Hen coop",
-                Model = "Coop",
-                Category = "Animals",
-                HalfWidth = 0.9f, HalfDepth = 0.7f,
-                Clearance = 1.5f,
-                RainCover = 1f, Warmth = 0.2f,
-                Entry = (0f, 1.5f), Roost = (0f, -0.1f),
-                Stages = new[] { "Frame", "Wattle walls", "Thatch roof" },
-                // Hen coop: Frame, Wattle walls, Thatch roof (a little less than a lean-to, D-075)
-                Costs = new (Item Item, uint Count)[][]
-                {
-                    new[] { (Item.Stick, 5u) },
-                    new[] { (Item.Stick, 4u), (Item.Fiber, 4u) },
-                    new[] { (Item.Fiber, 6u) },
-                },
-            },
             // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
             // instead of thatch. Same room, door and shelter; claim-only like the brick house.
             new StructureShape
@@ -395,6 +378,26 @@ namespace LifeGame.Shared
                     new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
                     new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                     new[] { (Item.RoofTile, 12u) },
+                },
+            },
+            // A hen coop (building-16, Justin: claim-only, hens roost in it at night): a small shed on legs
+            // with a pop-hole and ramp at the front. Animals walk to Entry and settle at Roost.
+            new StructureShape
+            {
+                Name = "Hen coop",
+                Model = "Coop",
+                Category = "Animals",
+                HalfWidth = 0.9f, HalfDepth = 0.7f,
+                Clearance = 1.5f,
+                RainCover = 1f, Warmth = 0.2f,
+                Entry = (0f, 1.5f), Roost = (0f, -0.1f),
+                Stages = new[] { "Frame", "Wattle walls", "Thatch roof" },
+                // Hen coop: Frame, Wattle walls, Thatch roof (a little less than a lean-to, D-075)
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stick, 5u) },
+                    new[] { (Item.Stick, 4u), (Item.Fiber, 4u) },
+                    new[] { (Item.Fiber, 6u) },
                 },
             },
         });
@@ -516,6 +519,8 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
             _ when Shape(kind).Model == "Basket" => WeaveProcess,
+            // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
+            _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
             _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.

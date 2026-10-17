@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|coop|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -56,6 +56,16 @@ WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
     Check(tiled.Costs[3].Length == 1 && tiled.Costs[3][0] == (Item.RoofTile, 12u), "its roof takes 12 roof tiles");
     for (int i = 0; i < 3; i++) Check(tiled.Costs[i].SequenceEqual(brick.Costs[i]), $"its stage {i + 1} costs what the brick house's does");
     Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
+}
+
+// The hen coop (building-16): claim-only, with the entry and roost points Animals target.
+{
+    var coop = Structures.Shape((int)StructureKind.HenCoop);
+    Check(!coop.Wild, "the hen coop has to stand inside a claim");
+    Check(coop.Stages.Length == 3 && coop.Costs.Length == 3, "the hen coop goes up in three stages");
+    Check(coop.Entry.Z > coop.HalfDepth && coop.Entry.Z < coop.HalfDepth + 2f, "the coop's entry is just outside its front");
+    Check(MathF.Abs(coop.Roost.X) < coop.HalfWidth && MathF.Abs(coop.Roost.Z) < coop.HalfDepth, "the roost is inside the coop");
+    Check(Structures.StageProcess((int)StructureKind.HenCoop, 1) == Structures.WattleProcess && Structures.StageProcess((int)StructureKind.HenCoop, 2) == Structures.RoofProcess, "its walls are wattle work and its roof is roofing");
 }
 
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
@@ -113,6 +123,11 @@ if (which is "fence" or "both")
         new() { [Item.Stick] = 3 },
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
+
+if (which is "coop" or "both")
+    BuildTogether(StructureKind.HenCoop,
+        new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
+        new() { [Item.Stick] = 4, [Item.Fiber] = 5 });
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (which is "brick-house")
