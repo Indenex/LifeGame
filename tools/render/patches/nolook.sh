@@ -8,4 +8,6 @@ grep -q RENDER_NOLOOK "$f" && exit 0
 sed -i 's|if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null) Open(first: true);|/* RENDER_NOLOOK */|' "$f"
 # newer main: asked-once gate (bugfix-41)
 sed -i 's|Find(MyId()) == null \&\& !Settings.Get("look", "asked", false))|Find(MyId()) == null \&\& false /* RENDER_NOLOOK */)|' "$f"
+# newer form: if (PlayerLook ... == null && !Settings.Get("look", "asked", false)) { ... Open(first: true); }
+sed -i 's|if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null \&\& |/* RENDER_NOLOOK */ if (false \&\& |' "$f"
 grep -q RENDER_NOLOOK "$f"

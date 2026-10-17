@@ -1,0 +1,18 @@
+# atmosphere-31 (PR #517): the stream west of spawn. At z=10 it runs between x -47 and -41, flowing roughly along z.
+# Start on the east bank and wade across (w walks -x,-z), stand, wade back (s). Camera at +z looking along it. 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.38 --cloud=0.2 --wind=0.4 --render-cam=2.8,0.6,-45,0.3
+frames 30
+sql UPDATE player_pos SET x = -38.0, z = 12.0, chunk_x = -3, chunk_z = 0
+frames +60
+mark water-stream-start
+keydown w
+frames +48
+keyup w
+frames +30
+keydown s
+frames +54
+keyup s
+frames +12
+mark water-stream-end

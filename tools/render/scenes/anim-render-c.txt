@@ -1,0 +1,15 @@
+# claude/anim-render: sit (Rest 1), fidgets while sitting, lie (Rest 2, sleepy), stand (StandUp). Plain daytime; the fire part of anim-15 could not be lit by the
+# puppet (craft fire.hand_drill gave no fire in the recording). Chibi, camera in front-ish (yaw 200) so the face shows.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.4,0.9,200,0.5
+frames 48
+mark sit-start
+act Rest 1
+frames +144
+act Rest 2
+frames +84
+act StandUp
+frames +48
+mark sit-end
+frames +12

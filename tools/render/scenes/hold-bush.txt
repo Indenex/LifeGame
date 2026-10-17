@@ -1,0 +1,13 @@
+# integration-11 (PR #495): hold E at a berry bush (bush-only rerun; the first run found no bush). 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.5,1.2,35,0.6
+frames 48
+walkto bush
+frames +36
+mark bush-start
+keydown e
+frames +96
+keyup e
+mark bush-end
+frames +12

@@ -86,7 +86,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure", "SELECT * FROM world_item"
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM forage_bush", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure", "SELECT * FROM world_item"
 #if HAS_TRADE
                 , "SELECT * FROM my_trade"
 #endif
@@ -154,6 +154,12 @@ void WalkTo(float tx, float tz)
 int shots = 0;
 string? movieDir = Environment.GetEnvironmentVariable("PUPPET_MOVIE_DIR");
 int Frames() => movieDir != null && Directory.Exists(movieDir) ? Directory.GetFiles(movieDir, "*.png").Length : 0;
+bool SqlOk(string q)
+{
+    using var p = Process.Start(new ProcessStartInfo("spacetimedb-cli", $"sql --server {uri} {db} \"{q}\"") { RedirectStandardError = true, RedirectStandardOutput = true })!;
+    p.StandardOutput.ReadToEnd(); p.StandardError.ReadToEnd(); p.WaitForExit();
+    return p.ExitCode == 0;
+}
 string Display() => Environment.GetEnvironmentVariable("DISPLAY") ?? ":99";
 void Run(string file, string arguments)
 {
@@ -247,7 +253,11 @@ bool Step(string line)
             string quality = n.Length > 2 ? n[2] : "50";
             var owner = me;
             if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]})\"");
+            // inventory_item gained columns over time (wear, slot, on_belt, then maker): try the newest shape first.
+            string vals = $"(0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false";
+            if (!SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt, maker) VALUES {vals}, 0)")
+                && !SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES {vals})"))
+                Console.WriteLine($"puppet: give {rest} failed (inventory_item columns changed?)");
             Pump(1.0);
             break;
         }
@@ -362,6 +372,15 @@ bool Step(string line)
             Run("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"");
             Pump(0.5);
             break;
+        case "sqlout":
+        {
+            // like sql, but prints the result table: puppet: sqlout | <line>
+            using var q = Process.Start(new ProcessStartInfo("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"") { RedirectStandardError = true, RedirectStandardOutput = true })!;
+            var outText = q.StandardOutput.ReadToEnd(); q.WaitForExit();
+            foreach (var row in outText.Split('\n')) if (row.Trim().Length > 0) Console.WriteLine($"puppet: sqlout | {row.TrimEnd()}");
+            Pump(0.5);
+            break;
+        }
         case "call":
             Run("spacetimedb-cli", $"call --server {uri} {db} {rest}");
             Pump(0.5);
@@ -434,7 +453,7 @@ bool Step(string line)
                 float d = MathF.Sqrt((rx - x) * (rx - x) + (rz - z) * (rz - z));
                 if (d < bd) { bd = d; best = r; }
             }
-            if (best == null) { Console.WriteLine($"puppet: no {tok} found"); break; }
+            if (best == null) { Console.WriteLine($"puppet: no {tok} found (table {table}: {(tbl == null ? "no such property" : rows == null ? "no Iter" : rows.Count + " rows")})"); break; }
             float bx = Convert.ToSingle(best.GetType().GetField("X")!.GetValue(best)), bz = Convert.ToSingle(best.GetType().GetField("Z")!.GetValue(best));
             float dd = MathF.Max(bd, 0.01f);
             if (bd > 1.0f) WalkTo(bx + (x - bx) / dd * 1.0f, bz + (z - bz) / dd * 1.0f);

@@ -61,7 +61,7 @@ sleep 2
 echo "scene: $(basename "$scene") with client ${client_opts[*]:-}"
 userdir=$HOME/.local/share/godot/app_userdata/LifeGame
 mkdir -p "$userdir"
-rm -f "$userdir/token_camera.txt" "$work/puppet-token" "$work/live.txt"
+rm -f "$userdir/token_camera.txt" "$userdir/token_127-0-0-1_${port}_camera.txt" "$work/puppet-token" "$work/live.txt"
 # A "live" step in the scene reads further steps appended to $work/live.txt.
 size=${RENDER_SIZE:-1600x900}
 engine_opts=()
@@ -69,7 +69,7 @@ movie_dir=$work/movie-$sha
 if [ "$movie_fps" != 0 ]; then
   # Every frame is a fixed 1/fps of game time, so the game's own physics rate is
   # kept (lib.sh's 20 Hz override would make walking stutter in the clip).
-  printf '[autoload]\n\nRenderCam="*res://render_cam.gd"\n' > "$tree/client/override.cfg"
+  printf '[autoload]\n\nRenderCam="*res://render_cam.gd"\n\n[display]\n\nwindow/size/viewport_width=%s\nwindow/size/viewport_height=%s\nwindow/size/window_width_override=%s\nwindow/size/window_height_override=%s\n' "${size%x*}" "${size#*x}" "${size%x*}" "${size#*x}" > "$tree/client/override.cfg"
   rm -rf "$movie_dir"; mkdir -p "$movie_dir"
   engine_opts=(--write-movie "$movie_dir/frame.png" --fixed-fps "$movie_fps")
 fi
@@ -82,6 +82,7 @@ puppet=$!
 if [ $as_puppet = 1 ]; then
   for _ in $(seq 1 60); do [ -s "$work/puppet-token" ] && break; sleep 0.5; done
   cp "$work/puppet-token" "$userdir/token_camera.txt"
+  cp "$work/puppet-token" "$userdir/token_127-0-0-1_${port}_camera.txt"   # newer clients keep one token per server
 fi
 (cd "$tree/client" && DISPLAY=$disp exec "$godot" --path . --resolution "$size" "${engine_opts[@]}" -- \
   "--server=http://127.0.0.1:$port" --db=lifegame --profile=camera "${client_opts[@]}") >>"$log" 2>&1 &
@@ -100,7 +101,7 @@ if [ "$movie_fps" != 0 ]; then
     name=${m%-start}; a=${f#frame=}
     b=$(grep -oE "mark $name-end frame=[0-9]+" "$work/puppet.log" | head -1 | sed 's/.*frame=//')
     [ -n "$b" ] || continue
-    ffmpeg -loglevel error -y -framerate "$movie_fps" -start_number "$a" -i "$movie_dir/frame%08d.png" -frames:v "$((b - a))" \
+    ffmpeg -nostdin -loglevel error -y -framerate "$movie_fps" -start_number "$a" -i "$movie_dir/frame%08d.png" -frames:v "$((b - a))" \
       -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "$RENDER_OUT/$ticket-$sha-$name.mp4" && echo "saved $RENDER_OUT/$ticket-$sha-$name.mp4"
   done
 fi

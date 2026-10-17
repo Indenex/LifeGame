@@ -1,0 +1,29 @@
+# claude/anim-render (anim-12..16): spade equip and two digs at the end; idle fidgets and blinks, a walk across the frame (hop), jumps (squash). Chibi, side view.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,0.8,90,0.5
+frames 48
+mark idle-start
+frames +168
+keydown w
+frames +72
+keyup w
+frames +24
+key space
+frames +36
+key space
+frames +36
+mark idle-end
+frames +12
+give 18 1 60
+act SetHotbarSlot 0 18
+frames +12
+mark spade-start
+act EquipSlot 0
+frames +30
+act Dig cellx cellz
+frames +60
+act Dig cellx cellz
+frames +60
+mark spade-end
+frames +12

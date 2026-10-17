@@ -1,0 +1,11 @@
+# atmosphere-32 (PR #524): smoke signal FAR. The demo column is created once (about 12 m ahead of the spawn camera, near
+# (-4,-4)); the puppet is then moved ~200 m back along the camera line to (137,137) so the far painted column shows above the trees.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.9 --cloud=0.2 --wind=0.5 --smoke-signal=1 --render-cam=3,1.2,0,9
+frames 48
+sql UPDATE player_pos SET x = 137.0, z = 137.0, chunk_x = 8, chunk_z = 8
+frames +96
+mark smoke-night-start
+frames +120
+mark smoke-night-end

@@ -1,0 +1,33 @@
+# anim-11 (PR #586): equip and stow in hand. Chibi (default). Axe on bar slot 1 (key 1), spear on slot 2 (key 2).
+# Part 1 (equip-swap): draw the axe, walk with it carried, swap to the spear, put it away. Part 2 (equip-chop): axe drawn, chop the pine at (14.2,-2).
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,1.0,90,0.7
+frames 48
+give 10 1 60
+give 9 1 60
+act SetHotbarSlot 0 10
+act SetHotbarSlot 1 9
+frames +24
+mark equip-swap-start
+frames +12
+act EquipSlot 0
+frames +30
+keydown w
+frames +60
+keyup w
+frames +24
+act EquipSlot 1
+frames +36
+act EquipSlot 1
+frames +36
+mark equip-swap-end
+sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
+frames +60
+face 90
+act EquipSlot 0
+frames +24
+mark equip-chop-start
+craftloop chop.log +96
+mark equip-chop-end
+frames +12

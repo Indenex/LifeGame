@@ -1,0 +1,11 @@
+# integration-11 (PR #495): hold F (dig) on the clay under the spawn point. 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,1.0,35,0.5
+frames 60
+mark dig-start
+keydown f
+frames +144
+keyup f
+mark dig-end
+frames +12

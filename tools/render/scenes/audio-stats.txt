@@ -1,0 +1,9 @@
+# Audio #794: --audio-stats logs per-cue play counts every minute and on quit. Real-time run on main: walk, stand, wait past a minute.
+client-as-puppet
+client --time-of-day=0.45 --audio-stats
+wait 45
+keydown w
+wait 10
+keyup w
+wait 25
+snap

@@ -1,0 +1,14 @@
+# integration-11 (PR #495): how many digs does holding F do? The clay count in the bag before and after (movie time runs
+# slower than the server, so count the items, not the animation). 12 fps.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,1.0,35,0.5
+frames 60
+sqlout SELECT item, count FROM inventory_item
+mark dig-count-start
+keydown f
+frames +144
+keyup f
+mark dig-count-end
+sqlout SELECT item, count FROM inventory_item
+frames +12

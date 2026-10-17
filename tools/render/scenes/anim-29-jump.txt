@@ -1,0 +1,22 @@
+# anim-29: jumps, true side view. The figure first steps along w (-x,-z) so it faces along the walk direction and the camera (yaw 90) sees its
+# profile; then one standing jump and one walking jump (Space; the jump plays locally, the server refuses the camera's reducers here). Chibi.
+# Run on claude/anim-jump-windup and on main; composite side by side.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=4.2,0.9,90,0.6
+frames 48
+keydown w
+frames +10
+keyup w
+frames +30
+mark jump-start
+key space
+frames +36
+keydown w
+frames +18
+key space
+frames +36
+keyup w
+frames +12
+mark jump-end
+frames +12
