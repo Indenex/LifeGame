@@ -329,6 +329,8 @@ public static class Look
         // once the ground is soaked and lingers after the rain stops.
         global uniform float puddles;
         const vec3 SNOW = vec3(0.86, 0.89, 0.94);
+        // Snow on faces turned away from the sky, and in grass roots: a cool blue shade.
+        const vec3 SNOW_SHADE = vec3(0.70, 0.78, 0.91);
 
         // How bare broadleaf trees are: bare through winter, leafing out again early
         // in spring.
@@ -539,7 +541,25 @@ public static class Look
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
-                color = mix(color, SNOW * (1.0 + paint), snow);
+                // Heavy winter snow (atmosphere-33, from the full-frost look Justin
+                // liked): on the land, rocks and canopies (people, animals and made
+                // things, with no cavity, keep only the light cover above) it lies as
+                // an even soft white down the sides too, drifting in from soft-edged
+                // patches as it builds, with the brush texture still showing, a cool
+                // blue on the faces turned from the sky and tiny glints as you move.
+                if (snow_cover > 0.0 && cavity > 0.01) {
+                    float drift = texture(detail, world_pos.xz * 0.06).r;
+                    float even = smoothstep(drift - 0.15, drift + 0.15, snow_cover * 1.3 - 0.15);
+                    even *= smoothstep(-0.1, 0.55, world_normal.y) * mix(0.7, 1.0, h);
+                    snow = max(snow, even * 0.92);
+                }
+                vec3 snow_col = mix(SNOW_SHADE, SNOW, smoothstep(0.15, 0.9, world_normal.y)) * (1.0 + paint);
+                color = mix(color, snow_col, snow);
+                if (snow > 0.0) {
+                    vec3 cell = floor(world_pos * 28.0);
+                    float sparkle = step(0.985, fract(sin(dot(cell + floor(view_camera_position * 3.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453));
+                    color = mix(color, vec3(1.0), sparkle * snow * 0.7);
+                }
                 wet *= 1.0 - snow;
                 // Morning frost whitens what faces the open sky, thickest on the bumps,
                 // and melts back in patches; people, animals and made things (no
@@ -722,7 +742,8 @@ public static class Look
                 // Grass fades to straw in the cold and wears snow on its tips.
                 vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
                 color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
-                color = mix(color, SNOW, snow_cover * (0.55 + 0.45 * tip));
+                // Heavy snow (atmosphere-33): white to the tips, a cool blue at the roots.
+                color = mix(color, mix(SNOW_SHADE, SNOW, smoothstep(0.1, 0.7, tip)), snow_cover * (0.75 + 0.25 * tip));
                 // Frost silvers the blades, most at the tips, gone first where it melts.
                 if (frost > 0.0) {
                     float patches = texture(clouds, world_pos.xz * 0.035).r;
