@@ -63,6 +63,10 @@ public static partial class Module
         public uint Count;
         [Default(0u)]
         public uint Wear;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // Owners and members see their claims' stashes; nobody else does.
@@ -386,10 +390,10 @@ public static partial class Module
         {
             uint n = Math.Min(left, stack.Count);
             RemoveFromStack(ctx, stack, n);
-            if (FindStash(ctx, claim.Id, item, quality, stack.Wear) is { } row)
+            if (FindStash(ctx, claim.Id, item, quality, stack.Wear, stack.Maker) is { } row)
                 ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + n });
             else
-                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear });
+                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear, Maker = stack.Maker });
             left -= n;
         }
         LogStash(ctx, claim.Id, item, (int)count);
@@ -413,7 +417,7 @@ public static partial class Module
                 ctx.Db.ClaimStash.Id.Delete(row.Id);
             else
                 ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - n });
-            AddToInventory(ctx, Me(ctx), (Item)item, n, quality, row.Wear);
+            AddToInventory(ctx, Me(ctx), (Item)item, n, quality, row.Wear, row.Maker);
             left -= n;
         }
         LogStash(ctx, claim.Id, item, -(int)count);
@@ -459,7 +463,7 @@ public static partial class Module
                 float angle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
                 float r = 0.4f + (float)ctx.Rng.NextDouble() * 1.2f;
                 float x = claim.X + MathF.Cos(angle) * r, z = claim.Z + MathF.Sin(angle) * r;
-                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
+                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, Maker = row.Maker, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
             }
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         }
@@ -526,10 +530,11 @@ public static partial class Module
         return found;
     }
 
-    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear)
+    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear, uint maker)
     {
+        var key = new StackKey(item, quality, wear, maker);
         foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
-            if (row.Quality == quality && row.Wear == wear)
+            if (KeyOf(row) == key)
                 return row;
         return null;
     }

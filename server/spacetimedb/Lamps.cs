@@ -24,6 +24,9 @@ public static partial class Module
         public int ChunkX;
         public int ChunkZ;
         public Timestamp BurnsUntil;
+        // The maker (shared/Marks.cs) from the lamp's Wear number, so a lamp keeps who made it when set down and picked up.
+        [Default(0u)]
+        public uint Mark;
     }
 
     [SpacetimeDB.Table(Accessor = "LampTimer", Scheduled = nameof(RefillLamps), ScheduledAt = nameof(ScheduledAt))]
@@ -51,6 +54,7 @@ public static partial class Module
             throw new Exception("You have set down enough lamps already");
 
         byte quality = lamp.Quality;
+        uint mark = lamp.Wear;
         RemoveFromStack(ctx, lamp, 1);
         Take(ctx, Item.Tallow, 1);
         ctx.Db.Lamp.Insert(new Lamp
@@ -64,6 +68,7 @@ public static partial class Module
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
             BurnsUntil = ctx.Timestamp + new TimeDuration((long)(ClayRules.LampSecondsPerTallow * 1_000_000)),
+            Mark = mark,
         });
         if (ctx.Db.LampTimer.Count == 0)
             ctx.Db.LampTimer.Insert(new LampTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromSeconds(ClayRules.LampRefillCheckSeconds)) });
@@ -137,7 +142,7 @@ public static partial class Module
         if (left > 0) throw new Exception("It is burning. Bring tallow to keep it going");
         RequireClaimAccess(ctx, lamp.X, lamp.Z);
         ctx.Db.Lamp.Id.Delete(lamp.Id);
-        AddToInventory(ctx, Me(ctx), Item.ClayLamp, 1, lamp.Quality);
+        AddToInventory(ctx, Me(ctx), Item.ClayLamp, 1, lamp.Quality, lamp.Mark);
     }
 
     // A burning fire or a lit lamp close enough to light a lamp from.

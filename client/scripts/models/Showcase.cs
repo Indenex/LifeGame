@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots")
         {
             if (view == "faces") ChibiFaces();
             else
@@ -48,6 +48,7 @@ public partial class Showcase : Node3D
             else if (view == "animals") Animals();
             else if (view == "bushes") Bushes();
             else if (view == "logs") Logs();
+            else if (view == "pots") Pots();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -564,6 +565,29 @@ public partial class Showcase : Node3D
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0f, 7f, 18f), new Vector3(0f, 2f, -2.5f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Ceramics' clay under ClayLook (painted-8): one row per form, wet, dry, pit-fired,
+    // kiln-fired and cracked left to right, and a slip-banded coil pot at the end.
+    void Pots()
+    {
+        var forms = new[] { ClayForm.CoilPot, ClayForm.PinchPot, ClayForm.Lamp };
+        var looks = new[]
+        {
+            ClayLook.For(ClayStage.Drying, FireKind.Pit, 1f, 0), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 0),
+            ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 1), ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, 2),
+            ClayLook.For(ClayStage.Cracked, FireKind.Pit, 0f, 0),
+        };
+        for (int f = 0; f < forms.Length; f++)
+        {
+            for (int s = 0; s < looks.Length; s++)
+                AddChild(new MeshInstance3D { Mesh = PotMesh.For(forms[f], (ulong)s), Scale = Vector3.One * PotView.Size, MaterialOverride = looks[s], Position = new Vector3((s - 2.5f) * 0.55f, 0, (f - 1) * 0.6f) });
+        }
+        var slip = ClayLook.Decorate(looks[3], ClayForm.CoilPot, -1, Colors.White, 3, 2);
+        AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 9), Scale = Vector3.One * PotView.Size, MaterialOverride = slip, Position = new Vector3(3 * 0.55f, 0, -0.6f) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.6f, 2.6f), new Vector3(0, 0.1f, 0), Vector3.Up);
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish

@@ -35,6 +35,10 @@ public static partial class Module
         public uint Count;
         [Default(0u)]
         public uint Wear;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // Weaves a door into a finished clay hut's doorway from carried sticks and fiber.
@@ -119,13 +123,13 @@ public static partial class Module
         {
             uint n = Math.Min(count, stack.Count);
             var inside = ctx.Db.BasketItem.StructureId.Filter(structureId).ToList();
-            var same = inside.Where(b => b.Item == item && b.Quality == quality && b.Wear == stack.Wear).Select(b => (BasketItem?)b).FirstOrDefault();
+            var same = inside.Where(b => KeyOf(b) == KeyOf(stack)).Select(b => (BasketItem?)b).FirstOrDefault();
             if (same is { } match)
                 ctx.Db.BasketItem.Id.Update(match with { Count = match.Count + n });
             else if (inside.Count >= Structures.StoreStacksFor((int)s.Kind, ctx.Db.StructureProgress.StructureId.Find(s.Id)?.Quality ?? Items.RawQuality))
                 throw new Exception($"The {Structures.Shape((int)s.Kind).Name.ToLowerInvariant()} is full");
             else
-                ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = n, Wear = stack.Wear });
+                ctx.Db.BasketItem.Insert(new BasketItem { Id = 0, StructureId = structureId, Item = item, Quality = quality, Count = n, Wear = stack.Wear, Maker = stack.Maker });
             RemoveFromStack(ctx, stack, n);
             count -= n;
         }
@@ -143,7 +147,7 @@ public static partial class Module
         if (count == 0) return;
         if (count == row.Count) ctx.Db.BasketItem.Id.Delete(row.Id);
         else ctx.Db.BasketItem.Id.Update(row with { Count = row.Count - count });
-        AddToInventory(ctx, Me(ctx), (Item)row.Item, count, row.Quality, row.Wear);
+        AddToInventory(ctx, Me(ctx), (Item)row.Item, count, row.Quality, row.Wear, row.Maker);
         TouchStructure(ctx, s.Id);
     }
 
@@ -180,6 +184,7 @@ public static partial class Module
                     Item = row.Item,
                     Quality = row.Quality,
                     Wear = row.Wear,
+                    Maker = row.Maker,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),
