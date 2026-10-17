@@ -29,6 +29,7 @@ public partial class OptionsPage : Control
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
     Button lightRays = null!;
+    Button softGlow = null!, vignette = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -100,6 +101,23 @@ public partial class OptionsPage : Control
         });
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
+        // A soft lens (Atmosphere, D-313): warm glow and light leaks, and a vignette.
+        softGlow = ControlsPage.TextButton(OnOff("Soft glow", Atmosphere.SoftGlow), () =>
+        {
+            Atmosphere.SoftGlow = !Atmosphere.SoftGlow;
+            Settings.Set("graphics", "soft_glow", Atmosphere.SoftGlow ? 1 : 0);
+            softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        });
+        softGlow.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(softGlow);
+        vignette = ControlsPage.TextButton(OnOff("Vignette", Atmosphere.Vignette), () =>
+        {
+            Atmosphere.Vignette = !Atmosphere.Vignette;
+            Settings.Set("graphics", "vignette", Atmosphere.Vignette ? 1 : 0);
+            vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        });
+        vignette.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(vignette);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -118,6 +136,8 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
+
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
     public void Open()
@@ -132,6 +152,8 @@ public partial class OptionsPage : Control
         view.SetValueNoSignal((int)ViewDistance.Setting);
         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
         lightRays.Text = RaysText();
+        softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
         Visible = true;
     }
 

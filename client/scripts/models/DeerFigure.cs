@@ -27,7 +27,7 @@ public static class DeerFigure
     public static ArrayMesh Build(bool stag, Material coat)
     {
         if (Cache.TryGetValue(stag, out var done)) return done;
-        plain ??= Look.Solid(Colors.White);
+        plain ??= PaintedAnimals.Skin;
         var mesh = new ArrayMesh();
 
         // Coat.

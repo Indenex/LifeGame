@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -42,6 +42,7 @@ public partial class Showcase : Node3D
             else if (view == "stonehearth") StoneHearthView();
             else if (view == "treelod") TreeLod();
             else if (view == "rocks") Rocks();
+            else if (view == "animals") Animals();
             else if (view == "bushes") Bushes();
             else if (view == "logs") Logs();
             else if (view == "wear") WearRows();
@@ -379,6 +380,58 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // The animals painted (painted-4): today's look in the back row, the painted one in
+    // front: a sheep in two fleece colours, a deer hind and a stag, and two hens.
+    void Animals()
+    {
+        ShaderMaterial Wool(Color color)
+        {
+            // As Sheep.WoolLook, before painting.
+            var wool = Look.Solid(color);
+            wool.SetShaderParameter("detail_scale", 1.5f);
+            wool.SetShaderParameter("bump", 0.15f);
+            wool.SetShaderParameter("cavity", 0.08f);
+            return wool;
+        }
+        // The meshes are shared, so each animal wears its materials on its own instance.
+        void Put(Skeleton3D animal, Material outer, Material inner, Vector3 at, float yaw)
+        {
+            foreach (var child in animal.GetChildren())
+                if (child is MeshInstance3D mesh)
+                {
+                    mesh.SetSurfaceOverrideMaterial(0, outer);
+                    if (mesh.Mesh.GetSurfaceCount() > 1) mesh.SetSurfaceOverrideMaterial(1, inner);
+                }
+            animal.Position = at;
+            animal.Rotation = new Vector3(0, yaw, 0);
+            AddChild(animal);
+        }
+        var cream = new Color(0.74f, 0.71f, 0.63f);
+        var dark = new Color(0.34f, 0.27f, 0.22f);
+        var coat = new Color(0.47f, 0.30f, 0.19f);
+        var hens = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f) };
+        var oldSkin = Look.Solid(Colors.White);
+        for (int row = 0; row < 2; row++)
+        {
+            bool painted = row == 1;
+            float z = painted ? 0.6f : -2.4f;
+            Material W(Color c) => painted ? PaintedAnimals.Wool(Wool(c)) : Wool(c);
+            Material C(Color c) => painted ? PaintedAnimals.Coat(Look.Solid(c)) : Look.Solid(c);
+            Material skin = painted ? PaintedAnimals.Skin : oldSkin;
+            Put(SheepFigure.Create(SheepFigure.Variant, oldSkin), W(cream), skin, new Vector3(-3.3f, 0, z), 1.2f);
+            Put(SheepFigure.Create(SheepFigure.Variant, oldSkin), W(dark), skin, new Vector3(-2.0f, 0, z + 0.3f), 0.9f);
+            Put(DeerFigure.Create(false, oldSkin), C(coat), skin, new Vector3(-0.4f, 0, z), 1.3f);
+            Put(DeerFigure.Create(true, oldSkin), C(coat), skin, new Vector3(1.4f, 0, z - 0.3f), 1.0f);
+            for (int i = 0; i < 2; i++)
+                Put(HenFigure.Create(oldSkin), W(hens[i]), skin, new Vector3(2.9f + i * 0.6f, 0, z + 0.5f), 0.7f - i * 0.6f);
+            Label(painted ? "Painted" : "Today", new Vector3(-3.0f, painted ? -2.05f : -1.2f, z + (painted ? 1.0f : 0.4f)));
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 2.3f, 6.6f), new Vector3(0f, 0.55f, -0.9f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
