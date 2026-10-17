@@ -118,6 +118,15 @@ public partial class OptionsPage : Control
         });
         vignette.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(vignette);
+        // Bouncy windows, squishy buttons, wiggling items (D-314); off for a calmer screen.
+        Button motion = null!;
+        motion = ControlsPage.TextButton(OnOff("Reduce motion", Bounce.Reduce), () =>
+        {
+            Bounce.Reduce = !Bounce.Reduce;
+            motion.Text = OnOff("Reduce motion", Bounce.Reduce);
+        });
+        motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(motion);
 
         // Water reflections (Atmosphere, atmosphere-31): off, normal or high.
         Button reflections = null!;
