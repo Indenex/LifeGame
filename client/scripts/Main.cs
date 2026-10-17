@@ -206,6 +206,12 @@ public partial class Main : Node3D
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-48: the emote wheel (Q). Until Animation's emote motions land, an emote is a "/me" line.
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.SendChat("/me " + EmoteWheel.All[(int)e].act),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
