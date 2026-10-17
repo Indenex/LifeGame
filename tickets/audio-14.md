@@ -29,3 +29,6 @@ Check the sounds for chopping, felling and digging and add what is missing, as C
 
 ## Next step
 Wait for CI, send the PM the green sha.
+
+## audio-17 (tree fall on Environment's events)
+- 2026-10-17: branch claude/audio-17-treefall = main + Environment's #537 (`TreeFall.Falling` / `Landed`). `ToolSounds` drops the felled-row timer: Falling plays `TreeCreak` at the foot and the new `TreeRush` (the crown hissing down through the air, builds over the 1.6 s fall) a little way along the fall; Landed plays the new `TreeImpact` at the crown (thud, branch crackle, a small second thud at +0.17 s for the bounce, leaves settling). `TreeCrash` is removed. Levels (loudest 50 ms over the bed, dBFS): creak -30, rush -35 late in the fall, impact -19. Trees already felled on arrival don't fall, so they are silent. PR opens once #537 is on main (so the diff is only the audio).
