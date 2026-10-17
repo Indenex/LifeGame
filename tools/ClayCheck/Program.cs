@@ -746,9 +746,15 @@ void TroughCheck(Structure kiln)
     Log("STAGE trough-poured");
 
     // A drink: either a sip, or "not thirsty" if the bot is not.
-    lastError = null;
-    conn.Reducers.DrinkFromTrough(placed.Id);
-    Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 1 }, 3, "a drink");
+    // Actions share a short cooldown: wait it out, as a player would.
+    for (int tries = 0; tries < 6; tries++)
+    {
+        Pump(() => false, 1.0f, null);
+        lastError = null;
+        conn.Reducers.DrinkFromTrough(placed.Id);
+        Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 1 }, 3, "a drink");
+        if (lastError != "Still working") break;
+    }
     if (lastError != null && !lastError.Contains("not thirsty")) Fail($"drinking: {lastError}");
     int litres = (int)(conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0);
     Log(lastError != null ? $"Drink: {lastError}" : $"Drank a sip; {litres} L left");
@@ -756,9 +762,14 @@ void TroughCheck(Structure kiln)
     // Scoop the empty pot full again from what's left (a pinch pot holds 2 L).
     if (litres >= 2)
     {
-        lastError = null;
-        conn.Reducers.ScoopFromTrough(placed.Id);
-        Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot scooped full");
+        for (int tries = 0; tries < 6; tries++)
+        {
+            Pump(() => false, 1.0f, null);
+            lastError = null;
+            conn.Reducers.ScoopFromTrough(placed.Id);
+            Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot scooped full");
+            if (lastError != "Still working") break;
+        }
         if (lastError != null) Fail($"scooping: {lastError}");
         if ((conn.Db.TroughWater.StructureId.Find(placed.Id)?.Litres ?? 0) != litres - 2) Fail("the trough level did not drop by a pot");
         Log("Scooped a pot back out");
