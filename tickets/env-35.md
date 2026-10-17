@@ -13,14 +13,22 @@ setting (D-145 next item, option (b) sent to the PM):
   1.1 m above the surface. Soft jewel bodies (teal, sky blue, amber), pale see-through
   shimmering wings. `client/scripts/environment/AmbientDragonflies.cs` (partial of
   AmbientLife), hooked from AmbientLife.cs.
-- A small bird flock crossing the sky by day: asked Atmosphere first whether birds are
-  theirs or planned.
+- Bird flocks (AmbientBirds.cs): 5 to 12 in a loose skein, 25 to 45 m up, drifting roughly
+  downwind across the sky; rare (one per 2 to 3 min of clear daylight at Full, likelier at
+  dawn and dusk), none at night or in rain; lit, soft grey-brown. Atmosphere confirmed birds
+  are ours (none in Atmosphere); PM approved both, subtle and rare.
+- Sound hooks for Audio (session_01SXcxtoyeqDmypiHxkHedU6, who will build an [AudioSounds]
+  class against them): `AmbientLife.DragonflyDart(Vector3)` once per dart, and
+  `AmbientLife.FlockPassing(Vector3, float)` once per flock at its closest point.
 
 ## Progress log
-- 2026-10-17 12:45: dragonflies built; local render at (-36,-16) by the nearest pond running.
+- 2026-10-17 12:45: dragonflies built (1bf5b59f).
+- 2026-10-17 14:35: birds, Audio events, dragonflies scaled to 0.3 committed (wrap-up). Builds
+  locally. NOT yet seen in a render: two renders at the pond (-36,-16 and -46,-22) did not
+  show them clearly (tree in the way / timed out). Nearest water to spawn: (-39,-18).
 
 ## Open questions / blockers
-- Atmosphere: birds theirs or mine?
+- (none waiting on Justin.) Audio waits for the branch to land to build its sounds.
 
 ## Next step
-Check the dragonfly render, open the PR, Render clip request.
+Render at the pond with --life=1 (e.g. `--debug-position=-44,-20 --camera-zoom=2 --time-of-day=0.5`) to confirm dragonflies show (add a temporary GD.Print of the visible count if not); then open the PR, send Audio the sha, request a Render clip (pond by day; a flock at dusk with --life=1, which spawns flocks 20x as often), and send the green sha to the PM.

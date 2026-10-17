@@ -10,6 +10,9 @@ public partial class AmbientLife
 {
     const int MaxDragonflies = 6;
 
+    // Raised on the main thread once per dart, where it starts (Audio's soft wing whirr).
+    public static event System.Action<Vector3>? DragonflyDart;
+
     struct Dragonfly
     {
         public Vector3 Home, Position, Target;
@@ -73,7 +76,7 @@ public partial class AmbientLife
                 continue;
             }
             Dart(ref d, dt);
-            var basis = new Basis(Vector3.Up, d.Heading) * Basis.FromScale(Vector3.One * 0.24f * d.Shown);
+            var basis = new Basis(Vector3.Up, d.Heading) * Basis.FromScale(Vector3.One * 0.3f * d.Shown);
             multi.SetInstanceTransform(i, new Transform3D(basis, d.Position));
             multi.SetInstanceCustomData(i, new Color(d.Phase, 0f, 0f, 0f));
             visible = i + 1;
@@ -103,6 +106,7 @@ public partial class AmbientLife
             float x = d.Home.X + Mathf.Cos(angle) * dist, z = d.Home.Z + Mathf.Sin(angle) * dist;
             if (!Water(World.CellOf(x), World.CellOf(z))) continue;
             d.Target = new Vector3(x, World.WaterLevel + Rand(0.25f, 1.1f), z);
+            DragonflyDart?.Invoke(d.Position);
             break;
         }
     }
