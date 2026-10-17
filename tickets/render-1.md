@@ -186,6 +186,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:00: naturekit-1 (Modeling session_01Y3HWfLh47B52ViBgWpzWrz, claude/modeling-i8ox5v 20a3514c): offline at (-30,-30), noon and 0.72 with and without --naturekit, plus zoom 6 pair; after claims-27. Reply to Modeling and the PM.
 
+- 2026-10-17 16:05: ui-72 BEFORE (UX session_01XAS3LxWb4DQeesL22s27k4) on main f49f9c6e, warm/cold: trade (+asked), player menu (+inspect), claim panel (ui-69 scene), Town panel (seedtown). AFTER on claude/ux-ui-coal5x when UX pushes ui-72 (+ --screenshot-playermenu=hover). After naturekit.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
