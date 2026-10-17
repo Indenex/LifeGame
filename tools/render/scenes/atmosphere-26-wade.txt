@@ -6,8 +6,6 @@ client-movie 12
 client --time-of-day=0.45 --cloud=0.2 --rain=0 --wind=0.1 --debug-position=29,75 --render-cam=3.2,0.8,35,0.3
 sql UPDATE player_pos SET x = 29.0, z = 75.0, chunk_x = 1, chunk_z = 4
 frames 360
-key Return
-frames +12
 mark wade-start
 keydown s
 frames +60
