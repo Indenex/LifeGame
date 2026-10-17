@@ -9,7 +9,9 @@ namespace LifeGame;
 // env-9 measurement: --view-bench builds every chunk out to each radius in turn,
 // all at once, and prints what it costs: build time, instances, triangles and draw
 // calls (before culling; the camera sees roughly a third of them), with grass tufts
-// only where WantsTufts puts them. Then quits.
+// only where WantsTufts puts them. Then quits. With --view-hash it instead prints one
+// hash of every chunk out to 4 from the player (ground and instances), to prove a
+// change to chunk building leaves the world bit for bit the same.
 public partial class Terrain
 {
     static readonly bool BenchWanted = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--view-bench");
@@ -19,6 +21,34 @@ public partial class Terrain
     void RunViewBench(int chunkX, int chunkZ)
     {
         center = (chunkX, chunkZ);
+        if (OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).Contains("--view-hash"))
+        {
+            ulong all = 14695981039346656037UL;
+            for (int cx = chunkX - 4; cx <= chunkX + 4; cx++)
+                for (int cz = chunkZ - 4; cz <= chunkZ + 4; cz++)
+                {
+                    var node = BuildChunk(cx, cz);
+                    foreach (var child in node.GetChildren())
+                    {
+                        if (child is MultiMeshInstance3D mmi && mmi.Multimesh is { } mm)
+                        {
+                            Mix(ref all, mm.InstanceCount);
+                            Mix(ref all, mm.Mesh.GetSurfaceCount());
+                            foreach (float f in mm.Buffer) Mix(ref all, BitConverter.SingleToInt32Bits(f));
+                        }
+                        else if (child is MeshInstance3D mi)
+                        {
+                            var a = mi.Mesh.SurfaceGetArrays(0);
+                            foreach (var v in a[(int)Mesh.ArrayType.Vertex].AsVector3Array()) { Mix(ref all, BitConverter.SingleToInt32Bits(v.X)); Mix(ref all, BitConverter.SingleToInt32Bits(v.Y)); }
+                            foreach (var c in a[(int)Mesh.ArrayType.Color].AsColorArray()) Mix(ref all, BitConverter.SingleToInt32Bits(c.R + c.G * 3 + c.B * 7));
+                        }
+                    }
+                    node.Free();
+                }
+            GD.Print($"[hash] {all:X16}");
+            GetTree().Quit();
+            return;
+        }
         foreach (int r in new[] { 3, 4, 5, 6, 8, 10, 12 })
         {
             long tris = 0, grassTris = 0, instances = 0, draws = 0, shadowDraws = 0;
@@ -63,6 +93,8 @@ public partial class Terrain
         }
         GetTree().Quit();
     }
+
+    static void Mix(ref ulong h, long v) { h ^= (ulong)v; h *= 1099511628211UL; }
 
     long Tris(Mesh mesh)
     {

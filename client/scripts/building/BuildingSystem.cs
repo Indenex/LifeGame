@@ -401,6 +401,14 @@ public partial class BuildingSystem : Node
         }
     }
 
+    // Starts placing a particular kind (the picture build menu, ui-20); B still starts with the last one.
+    public void StartPlacing(int kind)
+    {
+        if (kind < 0 || kind >= Structures.Shapes.Length) return;
+        placeKind = kind;
+        StartPlacing();
+    }
+
     void StartPlacing()
     {
         if (conn() == null)
