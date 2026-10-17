@@ -312,6 +312,8 @@ public static partial class Module
                     Id = 0,
                     Item = stack.Item,
                     Quality = stack.Quality,
+                    Wear = stack.Wear,
+                    Maker = stack.Maker,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),

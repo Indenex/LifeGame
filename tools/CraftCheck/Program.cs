@@ -324,6 +324,11 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     Pump(() => CountOf(Item.StoneAxe) == 1, 5, "the axe back out of the stash");
     var backAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
     if (backAxe.Wear != spentAxe.Wear) Fail($"the axe came back with different wear ({spentAxe.Wear} -> {backAxe.Wear})");
+    // The maker (crafting-25): made by this player, kept through the stash; raw things have none.
+    if (spentAxe.Maker != myId) Fail($"the axe's maker is {spentAxe.Maker}, not {myId}");
+    if (stashedAxe.Maker != myId || backAxe.Maker != myId) Fail("the axe lost its maker in the stash");
+    if (conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.Log).Any(r => r.Maker != 0)) Fail("a chopped log has a maker");
+    Console.WriteLine($"The axe is made by player {myId} and kept that through the stash");
     Console.WriteLine("The axe kept its wear through the stash");
 
     // Spend the digging stick too, then show a spent stick no longer reaches the deeper level.
@@ -361,6 +366,7 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     if (lastError != null) Fail($"mending the axe: {lastError}");
     var mendedAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
     if (!mendedAxe.OnBelt) Fail("the mended axe fell off the belt into the bag");
+    if (mendedAxe.Maker != myId) Fail("the mended axe lost its maker");
     byte expectQ = Durability.RepairedQuality(oldAxe.Quality, oldAxe.Wear);
     if (Durability.IsSpent(mendedAxe.Quality, mendedAxe.Wear) || Durability.Used(mendedAxe.Wear) != 0) Fail("the mended axe still shows wear");
     if (mendedAxe.Quality != expectQ || mendedAxe.Quality > oldAxe.Quality) Fail($"mended axe quality {mendedAxe.Quality}, expected {expectQ} (was {oldAxe.Quality})");

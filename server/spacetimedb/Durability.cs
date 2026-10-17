@@ -95,7 +95,7 @@ public static partial class Module
         else
         {
             RemoveFromStack(ctx, again, 1);
-            AddToInventory(ctx, ctx.Sender, (Item)item, 1, mendedQuality, mendedWear);
+            AddToInventory(ctx, ctx.Sender, (Item)item, 1, mendedQuality, mendedWear, again.Maker);
         }
     }
 }
