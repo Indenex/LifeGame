@@ -1197,3 +1197,19 @@ Owner: Claims.
 ## D-294 — 2026-10-17 — The launcher shows patch notes for each release
 **Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
 **Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
+
+## D-295 — 2026-10-17 — Town office powers
+**Decision:** Town office powers. Marshal: timed ban from the town's claims. Gatekeeper: opens or bars town gates for everyone. Scribe: keeps a town log only (the Mayor posts announcements). Elder: breaks tied votes. Treasurer: no power until there is a treasury.
+**Who:** Justin, picking the powers (relayed by the PM; no direct quote).
+
+## D-296 — 2026-10-17 — CI on main builds and releases fast; full checks run on PRs
+**Decision:** CI on pushes to main only builds the module and clients and runs the Upgrade check, then releases. The full gameplay checks run on every PR before merge, and draft PRs get a quick build only.
+**Who:** Justin: "Yes" (to the PM's proposal). Earlier he said: "Merge A is done -> Build -> release as fast as possible."
+
+## D-297 — 2026-10-17 — Players choose their name at character creation
+**Decision:** Players choose their name at character creation (ui-31). Names are 2 to 20 characters and unique, checked by the server.
+**Who:** Justin, asking for name choice at creation (relayed by the PM; no direct quote).
+
+## D-298 — 2026-10-17 — Unity comparison spike, lighting only
+**Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
+**Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
