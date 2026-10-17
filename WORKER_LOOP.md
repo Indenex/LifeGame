@@ -29,7 +29,8 @@ Repeat until the ticket's goal is met:
 3. When it finishes: **[WRITE]** update the ticket. Green: open or update the PR, set `in_review`, and ask the PM for the merge. Red: note the failing step in the ticket first, then fix. Never sit idle while a PR waits: send the PM the green head sha (the PM merges, D-119), then start your next ticket right away, stacked on your branch if needed.
 4. Never idle (D-145): when your ticket is done or waiting, pick your next item from the milestones or the design docs, start it, and tell the PM.
 5. Any random or flaky test failure gets an owner within the hour (Integration or Bug fixes); test bots use fixed seeds; never just re-run and move on (D-248).
-5b. **A cancelled run is not red.** While a main Build or Release is running, the Main priority workflow cancels pull request builds ("paused for a main build; re-runs automatically") and re-runs them when main is idle. Don't treat a cancelled run as a failure and don't push to restart it; wait for the re-run.
+5a. **Every PR body carries a `Player note:` line** (the template has it): one plain sentence a player would notice, or `Player note: none`. It becomes the patch note of the build the PR ships in; `none` and the `ci-only`, `scribe`, `docs` and `ticket-only` labels keep a PR out of the patch notes.
+5b. **Merging is a queue (docs/MERGE_QUEUE.md).** Send the PM the green sha as before; the PM adds the PR to GitHub's merge queue, which builds batches of 3 to 5 PRs, runs the checks once on the combined state and lands them in one push (one Build and one Release). A PR that fails in the queue is removed and comes back to you: fix it and tell the PM again. Nothing merges straight into `main` any more.
 6. Don't push to a PR after reporting it green unless the PM asks; put ticket edits in your next code push (D-248).
 
 ## 3. Session-end checklist

@@ -140,7 +140,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && parts[0] != "roast" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && parts[0] != "roast" && parts[0] != "doors" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -234,6 +234,16 @@ foreach (var scene in scenes)
                 if (prng.NextDouble() < spit * 0.05) mix.Play(CueDefs.RoastSpit);
                 if (prng.NextDouble() < drip * 0.05) mix.Play(CueDefs.RoastDrip);
             }
+        }
+        // Doors scene: open, shut, bar, unbar.
+        if (parts[0] == "doors")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.DoorOpen);
+            if (At(3)) mix.Play(CueDefs.DoorShut);
+            if (At(5)) mix.Play(CueDefs.DoorBar);
+            if (At(7)) mix.Play(CueDefs.DoorUnbar);
         }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")

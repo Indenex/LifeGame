@@ -19,5 +19,7 @@ namespace LifeGame.Shared
         // blade slash, fist), drawing and loosing a bow, digging, shearing, butchering,
         // feeding a fire, and flinching from a blow.
         Strike, Shoot, Dig, Shear, Butcher, Feed, Flinch,
+        // Emotes (anim-16, shared/Emotes.cs): played once on request, seen by everyone.
+        Wave, Cheer, Dance, Bow,
     }
 }

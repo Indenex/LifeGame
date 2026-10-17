@@ -375,6 +375,40 @@ public static partial class CueDefs
         new CueLayer(Src.Noise, 0.22f, 0.025f, 0.11f, 1500f, 5000f, 0.003f),
     });
 
+    // --- Doors (audio-16): a hung door of sticks and fibre, swinging 0.6 s (StructureView.SetDoor).
+
+    // Open: a creak of dry wood on its lashings as it swings, and a soft knock at the stop.
+    public static readonly CueDef DoorOpen = new("door.open", 0.8f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.25f, 0.056f, 300f, 240f, 0.08f),
+        new CueLayer(Src.Tone, 0.03f, 0.2f, 0.032f, 470f, 380f, 0.08f),
+        new CueLayer(Src.Noise, 0f, 0.2f, 0.096f, 600f, 1500f, 0.1f),
+        new CueLayer(Src.Noise, 0.32f, 0.04f, 0.112f, 100f, 800f, 0.004f),
+    });
+
+    // Shut: the swing and, as it meets the frame, a clack and a low knock.
+    public static readonly CueDef DoorShut = new("door.shut", 0.8f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.2f, 0.04f, 200f, 1200f, 0.15f),
+        new CueLayer(Src.Noise, 0.38f, 0.02f, 0.22f, 300f, 2500f, 0.003f),
+        new CueLayer(Src.Tone, 0.38f, 0.05f, 0.12f, 160f, 110f, 0.004f),
+    });
+
+    // Bar: a stout pole dropping into its pegs: a short slide and a heavy wooden thunk.
+    public static readonly CueDef DoorBar = new("door.bar", 0.6f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.1f, 0.03f, 400f, 1500f, 0.05f),
+        new CueLayer(Src.Tone, 0.12f, 0.09f, 0.11f, 120f, 80f, 0.004f),
+        new CueLayer(Src.Noise, 0.12f, 0.05f, 0.125f, 100f, 1200f, 0.004f),
+    });
+
+    // Unbar: the pole lifted out, a slide and a small knock as it is set down.
+    public static readonly CueDef DoorUnbar = new("door.unbar", 0.5f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.12f, 0.144f, 400f, 1800f, 0.08f),
+        new CueLayer(Src.Noise, 0.22f, 0.03f, 0.16f, 200f, 1000f, 0.004f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,
