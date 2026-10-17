@@ -5,8 +5,9 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// One stack in your hands: what it is, how many, and what to call it.
-public record InventoryEntry(Item Item, string Label, uint Count);
+// One stack in your hands: what it is, how many, and what to call it. Left is a tool's life left
+// (Durability.Left, the best of its stacks), 1 for anything that doesn't wear (ui-79).
+public record InventoryEntry(Item Item, string Label, uint Count, float Left = 1f);
 
 // What you carry, as a quiet row of round slots with a picture of each item and a
 // small count (D-045). The row dims when nothing changes and brightens when you
