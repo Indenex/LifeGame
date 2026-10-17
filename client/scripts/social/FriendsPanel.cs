@@ -17,6 +17,9 @@ public partial class FriendsPanel : CanvasLayer
     public Func<uint> MyId = () => 0;
     public Func<Vector3> MyPos = () => Vector3.Zero;
     public Action<string> Note = _ => { };
+    // ui-82: show the way to a friend who is here (FriendWay), and who it is showing now.
+    public Action<uint> ShowWay = _ => { };
+    public Func<uint> Showing = () => 0;
 
     VBoxContainer list = null!;
     LineEdit nameBox = null!;
@@ -48,11 +51,13 @@ public partial class FriendsPanel : CanvasLayer
         addRow.AddChild(nameBox);
         addRow.AddChild(Small("Add", Add));
         box.AddChild(addRow);
-        var hint = Hud.Text("Friends who add you back see when you're here and which way you are.    Esc closes", 13);
+        var hint = Hud.Text("", 13);
         hint.Modulate = new Color(1, 1, 1, 0.6f);
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(hint);
         AddChild(Ui.Window(box));
+        // Written on open, so a rebound O shows (saved keys load after _Ready).
+        VisibilityChanged += () => hint.Text = $"Friends who add you back see when you're here and which way you are.    {Controls.OrEsc("friends")} closes";
         if (Preview) CallDeferred(MethodName.Open);
     }
 
@@ -97,7 +102,7 @@ public partial class FriendsPanel : CanvasLayer
         if (tick > 0f) return;
         tick = 0.5f;
         var (friends, asked, markedMe) = Read();
-        string key = string.Join("|", friends.Select(f => $"{f.Id}:{f.Here}:{f.Far}")) + "/" + string.Join(",", asked.Select(a => a.Id)) + "/" + string.Join(",", markedMe.Select(m => m.Id));
+        string key = string.Join("|", friends.Select(f => $"{f.Id}:{f.Here}:{f.Far}")) + "/" + string.Join(",", asked.Select(a => a.Id)) + "/" + string.Join(",", markedMe.Select(m => m.Id)) + "/" + Showing();
         if (key == shown) return;
         shown = key;
         Fill(friends, asked, markedMe);
@@ -131,7 +136,17 @@ public partial class FriendsPanel : CanvasLayer
         if (friends.Count == 0 && asked.Count == 0 && markedMe.Count == 0)
             list.AddChild(Faint("No friends yet. Add someone by name below, or from their menu."));
         foreach (var f in friends)
-            list.AddChild(Row($"{f.Name}   {(f.Here ? f.Far ?? "here" : "(away)")}", f.Here ? 0.95f : 0.5f, ("Remove", () => Conn?.Reducers.RemoveFriend(f.Id))));
+        {
+            var row = Row($"{f.Name}   {(f.Here ? f.Far ?? "here" : "(away)")}", f.Here ? 0.95f : 0.5f, ("Remove", () => Conn?.Reducers.RemoveFriend(f.Id)));
+            if (f.Here)
+            {
+                bool showing = Showing() == f.Id;
+                var way = Small(showing ? "Stop showing" : "Show the way", () => { ShowWay(f.Id); if (!showing) Close(); shown = ""; });
+                row.AddChild(way);
+                row.MoveChild(way, 1);
+            }
+            list.AddChild(row);
+        }
         if (asked.Count > 0)
         {
             list.AddChild(Heading("Asked"));
