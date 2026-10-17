@@ -468,7 +468,7 @@ public partial class Atmosphere : Node3D
     void FireSound(Vector3 listener, Vector3 right)
     {
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-        float total = 0f, nearest = 0f, pan = 0f;
+        float total = 0f, nearest = 0f, pan = 0f, stoke = 0f;
         foreach (var (x, z, fuelUntil) in fires.Values)
         {
             float left = (fuelUntil - now) / 1_000_000f;
@@ -481,11 +481,14 @@ public partial class Atmosphere : Node3D
             if (g > nearest)
             {
                 nearest = g;
+                // Stoked: fuel left against what a fire holds at most (a well-fed fire roars).
+                stoke = Mathf.Clamp(left / Fires.MaxSeconds, 0f, 1f);
                 pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
             }
         }
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
+        sound.FireStoke = stoke;
     }
 
     // How much of night it is, 0 full day to 1 full night, for other lanes that
