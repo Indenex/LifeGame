@@ -59,14 +59,14 @@ public static partial class Module
     // Everyone in your group, you included; empty when you are in none.
     [SpacetimeDB.View(Accessor = "MyGroup", Public = true)]
     public static List<GroupMember> MyGroup(ViewContext ctx) =>
-        ctx.Db.GroupMember.Member.Find(ctx.Sender) is { } me ? ctx.Db.GroupMember.GroupId.Filter(me.GroupId).ToList() : new List<GroupMember>();
+        ctx.Db.GroupMember.Member.Find(Me(ctx)) is { } me ? ctx.Db.GroupMember.GroupId.Filter(me.GroupId).ToList() : new List<GroupMember>();
 
     // Invitations to you, and the ones you sent that wait for an answer.
     [SpacetimeDB.View(Accessor = "MyGroupInvites", Public = true)]
     public static List<GroupInvite> MyGroupInvites(ViewContext ctx)
     {
-        var result = ctx.Db.GroupInvite.Invitee.Filter(ctx.Sender).ToList();
-        result.AddRange(ctx.Db.GroupInvite.From.Filter(ctx.Sender));
+        var result = ctx.Db.GroupInvite.Invitee.Filter(Me(ctx)).ToList();
+        result.AddRange(ctx.Db.GroupInvite.From.Filter(Me(ctx)));
         return result;
     }
 
@@ -90,22 +90,22 @@ public static partial class Module
         var me = RequirePlayer(ctx);
         var myPos = RequirePos(ctx, me);
         var them = ctx.Db.Player.PlayerId.Find(playerId) ?? throw new Exception("No such player");
-        if (them.Identity == ctx.Sender) throw new Exception("You can't invite yourself");
+        if (them.Identity == Me(ctx)) throw new Exception("You can't invite yourself");
         if (!them.Online) throw new Exception($"{them.Name} isn't here");
         var theirPos = ctx.Db.PlayerPos.PlayerId.Find(playerId) ?? throw new Exception($"{them.Name} isn't here");
         float dx = theirPos.X - myPos.X, dz = theirPos.Z - myPos.Z;
         if (dx * dx + dz * dz > Groups.InviteReach * Groups.InviteReach) throw new Exception($"Walk closer to {them.Name} to invite them");
         if (ctx.Db.GroupMember.Member.Find(them.Identity) is { } theirs)
-            throw new Exception(ctx.Db.GroupMember.Member.Find(ctx.Sender) is { } mine && mine.GroupId == theirs.GroupId
+            throw new Exception(ctx.Db.GroupMember.Member.Find(Me(ctx)) is { } mine && mine.GroupId == theirs.GroupId
                 ? $"{them.Name} is already in your group"
                 : $"{them.Name} is already in a group");
-        if (ctx.Db.GroupMember.Member.Find(ctx.Sender) is { } my && ctx.Db.GroupMember.GroupId.Filter(my.GroupId).Count() >= Groups.MaxMembers)
+        if (ctx.Db.GroupMember.Member.Find(Me(ctx)) is { } my && ctx.Db.GroupMember.GroupId.Filter(my.GroupId).Count() >= Groups.MaxMembers)
             throw new Exception($"A group holds at most {Groups.MaxMembers}");
-        foreach (var old in ctx.Db.GroupInvite.From.Filter(ctx.Sender).Where(i => i.Invitee == them.Identity).ToList())
+        foreach (var old in ctx.Db.GroupInvite.From.Filter(Me(ctx)).Where(i => i.Invitee == them.Identity).ToList())
             ctx.Db.GroupInvite.Id.Delete(old.Id);
         ctx.Db.GroupInvite.Insert(new GroupInvite
         {
-            Id = 0, Invitee = them.Identity, From = ctx.Sender, InviteeId = them.PlayerId, FromId = me.PlayerId,
+            Id = 0, Invitee = them.Identity, From = Me(ctx), InviteeId = them.PlayerId, FromId = me.PlayerId,
             FromName = me.Name, At = ctx.Timestamp,
         });
     }
@@ -116,11 +116,11 @@ public static partial class Module
         InitGroups(ctx);
         var me = RequirePlayer(ctx);
         var invite = ctx.Db.GroupInvite.Id.Find(inviteId) ?? throw new Exception("That invitation is gone");
-        if (invite.Invitee != ctx.Sender) throw new Exception("That invitation isn't yours");
+        if (invite.Invitee != Me(ctx)) throw new Exception("That invitation isn't yours");
         ctx.Db.GroupInvite.Id.Delete(invite.Id);
         if (!accept) return;
         if (InviteLapsed(ctx, invite)) throw new Exception("That invitation has expired. Ask for a new one");
-        if (ctx.Db.GroupMember.Member.Find(ctx.Sender) != null) throw new Exception("Leave your group first");
+        if (ctx.Db.GroupMember.Member.Find(Me(ctx)) != null) throw new Exception("Leave your group first");
         var inviter = ctx.Db.Player.Identity.Find(invite.From) ?? throw new Exception("They're gone");
 
         ulong groupId;
@@ -140,17 +140,17 @@ public static partial class Module
         }
         ctx.Db.GroupMember.Insert(new GroupMember
         {
-            Member = ctx.Sender, PlayerId = me.PlayerId, GroupId = groupId, Name = me.Name, JoinedAt = ctx.Timestamp,
+            Member = Me(ctx), PlayerId = me.PlayerId, GroupId = groupId, Name = me.Name, JoinedAt = ctx.Timestamp,
         });
         // One group at a time: other invitations to you lapse.
-        foreach (var other in ctx.Db.GroupInvite.Invitee.Filter(ctx.Sender).ToList())
+        foreach (var other in ctx.Db.GroupInvite.Invitee.Filter(Me(ctx)).ToList())
             ctx.Db.GroupInvite.Id.Delete(other.Id);
     }
 
     [SpacetimeDB.Reducer]
     public static void LeaveGroup(ReducerContext ctx)
     {
-        var mine = ctx.Db.GroupMember.Member.Find(ctx.Sender) ?? throw new Exception("You're not in a group");
+        var mine = ctx.Db.GroupMember.Member.Find(Me(ctx)) ?? throw new Exception("You're not in a group");
         RemoveFromGroup(ctx, mine);
     }
 
