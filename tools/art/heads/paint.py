@@ -66,29 +66,6 @@ def noise3(p, seed=0):
     return y0 * (1 - f[..., 2]) + y1 * f[..., 2]
 
 
-def voronoi_edge(p, cell, seed=4):
-    """Distance (cells) to the nearest Voronoi edge in 3D (F2 - F1), and the cell id."""
-    q = p / cell
-    qi = np.floor(q).astype(int)
-    rng = np.random.default_rng(seed)
-    jit = rng.random((32, 32, 32, 3))
-    d1 = np.full(q.shape[:-1], 9.0)
-    d2 = np.full(q.shape[:-1], 9.0)
-    cid = np.zeros(q.shape[:-1], int)
-    for dx in (-1, 0, 1):
-        for dy in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                n = qi + np.array([dx, dy, dz])
-                k = n & 31
-                fp = n + jit[k[..., 0], k[..., 1], k[..., 2]]
-                d = np.linalg.norm(q - fp, axis=-1)
-                closer = d < d1
-                d2 = np.where(closer, d1, np.minimum(d2, d))
-                cid = np.where(closer, k[..., 0] * 1024 + k[..., 1] * 32 + k[..., 2], cid)
-                d1 = np.minimum(d1, d)
-    return d2 - d1, cid
-
-
 def load(bake, name):
     g = {k: np.load(os.path.join(bake, f"{name}_{k}.npy")) for k in ("id", "pos", "nrm", "curv", "ao")}
     part = np.rint(g["id"][..., 0] * 10).astype(int)
@@ -127,11 +104,13 @@ def tones(light, shade_c, mid_c, lit_c, lo=0.33, hi=0.68, edge=0.025):
 
 
 # ---- Bramble -----------------------------------------------------------------------
-B_SKIN = dict(shade=c(0.86, 0.66, 0.6), mid=c(0.96, 0.8, 0.66), lit=c(0.99, 0.88, 0.75))
+# The mid tones are the body's own colours (ChibiFigure.Skins[0], PebbleSkins[0]), so the
+# head matches the neck and hands; the lit and shade tones only touch the crown and chin.
+B_SKIN = dict(shade=c(0.84, 0.64, 0.6), mid=c(0.93, 0.76, 0.62), lit=c(0.97, 0.84, 0.71))
 BLUSH = c(0.98, 0.62, 0.56)
-B_HAIR = dict(shade=c(0.45, 0.27, 0.25), mid=c(0.62, 0.37, 0.23), lit=c(0.76, 0.5, 0.31))
+B_HAIR = dict(shade=c(0.4, 0.24, 0.23), mid=c(0.54, 0.32, 0.21), lit=c(0.67, 0.43, 0.28))
 HAIR_LINE = c(0.33, 0.19, 0.18)
-HAIR_SHINE = c(0.88, 0.66, 0.44)
+HAIR_SHINE = c(0.8, 0.6, 0.42)
 CREASE = c(0.55, 0.36, 0.32)
 
 
@@ -182,7 +161,7 @@ def bramble(part, pos, nrm, curv, ao):
 
 
 # ---- Pebble ------------------------------------------------------------------------
-P_SKIN = dict(shade=c(0.53, 0.61, 0.55), mid=c(0.68, 0.78, 0.5), lit=c(0.8, 0.88, 0.6))
+P_SKIN = dict(shade=c(0.52, 0.6, 0.52), mid=c(0.66, 0.76, 0.48), lit=c(0.76, 0.85, 0.56))
 BEAK = c(0.84, 0.85, 0.6)
 SCALE_LINE = c(0.5, 0.6, 0.42)
 PETAL_C = dict(shade=c(0.82, 0.8, 0.9), mid=c(0.96, 0.94, 0.9), lit=c(1.0, 0.99, 0.96))
@@ -194,18 +173,12 @@ def pebble(part, pos, nrm, curv, ao):
     img = np.zeros(part.shape + (3,))
     skin = part == SKIN
     col = paint_skin(pos, nrm, ao, P_SKIN, 3)
-    # Soft scales on the crown and the back of the head: big friendly cells, a faint
-    # line round each and a slightly paler middle.
-    edge, cid = voronoi_edge(pos, 0.11)
-    crown = smooth(-0.02, 0.12, pos[..., 2] + 0.6 * pos[..., 1])
-    col = mix(col, SCALE_LINE, (1 - smooth(0.03, 0.12, edge)) * crown * 0.3)
-    col = col * (1 + ((cid % 7) / 6 - 0.5) * 0.05 * crown)[..., None]
     # The beak: the snout's front paler and warmer, with a crisp edge.
     beak = smooth(0.012, 0.0, np.hypot((pos[..., 0]) / 0.1, (pos[..., 2] + 0.1) / 0.055) - 1) * smooth(0.0, 0.1, -pos[..., 1] - 0.12)
     col = mix(col, BEAK, beak * 0.6)
     # A pale painted highlight on the upper forehead, as on the turnaround.
     d = np.hypot((pos[..., 0] + 0.08) / 0.065, (pos[..., 2] - 0.14) / 0.04)
-    col = mix(col, P_SKIN["lit"] * 1.08, (1 - smooth(0.8, 1.0, d)) * smooth(0.0, 0.3, -nrm[..., 1]) * 0.8)
+    col = mix(col, P_SKIN["lit"] * 1.04, (1 - smooth(0.7, 1.0, d)) * smooth(0.0, 0.3, -nrm[..., 1]) * 0.6)
     # Cheek blush, softer on the green.
     for side in (-1, 1):
         d = np.hypot((pos[..., 0] - side * 0.13) / 0.045, (pos[..., 2] + 0.035) / 0.028)

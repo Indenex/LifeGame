@@ -146,7 +146,7 @@ def bramble():
     for side in (-1, 1):
         for az, low in ((84, -0.035), (104, -0.06), (124, -0.08)):
             root = on_head(side * az, 0.12, 0.0)
-            tip = on_head(side * (az + 6), low, 0.065)
+            tip = on_head(side * (az + 6), low, 0.045)
             ctrl = on_head(side * az, 0.0, 0.025)
             balls += chain(root, tip, ctrl, 0.056, 0.021, 11)
     # The back: long locks to the nape, their ends turning out a little.
@@ -156,7 +156,7 @@ def bramble():
         ctrl = on_head(az, -0.06, 0.03)
         balls += chain(root, tip, ctrl, 0.064, 0.024, 12)
     # The crown tuft: a fat lock standing up and curling back, like the turnaround's.
-    balls += chain((0.0, 0.0, 0.2), (0.04, 0.09, 0.345), (0.01, -0.03, 0.36), 0.065, 0.016, 14)
+    balls += chain((0.0, 0.0, 0.21), (0.03, 0.075, 0.325), (0.01, -0.035, 0.345), 0.05, 0.015, 14)
     hair = meta("BrambleHair", balls)
     smooth_mesh(hair, 6, ratio=0.1)
     bpy.context.view_layer.objects.active = hair
@@ -170,7 +170,7 @@ def pebble():
     # gentle brow ridges.
     balls = [
         ball((0, 0.0, 0.0), (0.25, 0.236, 0.236)),
-        ball((0, -0.12, -0.075), (0.15, 0.13, 0.11)),
+        ball((0, -0.14, -0.075), (0.15, 0.125, 0.1)),
         ball((0, -0.205, -0.108), (0.045, 0.035, 0.03)),
     ]
     for side in (-1, 1):
@@ -192,9 +192,9 @@ def pebble():
         d = Vector((math.cos(a), math.sin(a), 0.0))
         bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=1.0)
         p = bpy.context.active_object
-        p.scale = (0.046, 0.018, 0.007)
+        p.scale = (0.056, 0.022, 0.008)
         p.rotation_euler = (0.0, -0.28, a)
-        p.location = top + d * 0.046 + Vector((0, 0, 0.004))
+        p.location = top + d * 0.056 + Vector((0, 0, 0.004))
         petals.append(p)
     for p in petals:
         bpy.context.view_layer.objects.active = p
@@ -211,7 +211,7 @@ def pebble():
     set_part(petal, PETAL)
     bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=1.0, location=top + Vector((0, 0, 0.009)))
     heart = bpy.context.active_object
-    heart.scale = (0.024, 0.024, 0.013)
+    heart.scale = (0.029, 0.029, 0.015)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     bpy.ops.object.shade_smooth()
     heart.name = "PebbleHeart"

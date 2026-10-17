@@ -80,8 +80,15 @@ public static class ChibiFace
 
     public static void SetExpression(Node node, Expression expression) => SetExpression(node, (int)expression);
 
-    public static void SetExpression(Node node, int expression) =>
-        Face(node)?.SetInstanceShaderParameter("expression", expression);
+    // The uniform is a float: an int Variant would not reach it.
+    // A head not yet in the scene gets it again as it enters.
+    public static void SetExpression(Node node, int expression)
+    {
+        if (Face(node) is not { } face) return;
+        face.SetInstanceShaderParameter("expression", (float)expression);
+        if (!face.IsInsideTree())
+            face.Connect(Node.SignalName.TreeEntered, Callable.From(() => face.SetInstanceShaderParameter("expression", (float)expression)), (uint)GodotObject.ConnectFlags.OneShot);
+    }
 
     static Vector3 Ratio(Color want, Color painted) => new(
         Mathf.Pow(want.R / painted.R, 2.2f), Mathf.Pow(want.G / painted.G, 2.2f), Mathf.Pow(want.B / painted.B, 2.2f));
