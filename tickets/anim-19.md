@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-19 (from main)
-PR: (see below)
+PR: #705
 
 ## Goal
 Three more emotes on the emote wheel (UX's, hold Q). All are upper body only, so they play while walking, and everyone nearby sees them:
