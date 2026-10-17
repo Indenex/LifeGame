@@ -54,6 +54,9 @@ public class HenVoices
         hen.Mood = mood;
     }
 
+    // A hen has just laid an egg: its egg song.
+    public void Laid(float x, float z) => Play(CueDefs.HenLay, new Vector2(x, z), CluckHearing + 4f, 1f);
+
     public void Gone(ulong id) => hens.Remove(id);
 
     // Call once a frame.

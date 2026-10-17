@@ -282,6 +282,20 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.48f, 0.035f, 0.0382f, 200f, 1400f, 0.012f),
     }, Send: 0.1f);
 
+    // Lay: a hen's egg song, three quick rising clucks and one drawn-out proud "bu-gawk".
+    public static readonly CueDef HenLay = new("hen.lay", 1.0f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.0525f, 700f, 520f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.17f, 0.05f, 0.0562f, 780f, 590f, 0.006f),
+        new CueLayer(Src.Noise, 0.17f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.34f, 0.055f, 0.06f, 860f, 650f, 0.006f),
+        new CueLayer(Src.Noise, 0.34f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.55f, 0.13f, 0.0638f, 640f, 980f, 0.015f),
+        new CueLayer(Src.Tone, 0.55f, 0.08f, 0.03f, 1300f, 1900f, 0.015f),
+        new CueLayer(Src.Noise, 0.55f, 0.1f, 0.0525f, 900f, 3000f, 0.012f),
+    });
+
     // Roosting murmur: a sleepy hen settling, a low warbling purr that swells and fades.
     public static readonly CueDef HenRoost = new("hen.roost", 1.6f, new[]
     {

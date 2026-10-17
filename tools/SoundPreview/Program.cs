@@ -201,6 +201,7 @@ foreach (var scene in scenes)
             if (At(5)) mix.Play(CueDefs.HenClucks);
             if (At(7.5)) mix.Play(CueDefs.HenSquawk);
             if (At(10)) mix.Play(CueDefs.HenRoost);
+            if (At(12.5)) mix.Play(CueDefs.HenLay);
         }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")

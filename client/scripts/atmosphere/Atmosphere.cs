@@ -185,7 +185,11 @@ public partial class Atmosphere : Node3D
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
         conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
-        conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
+        conn.Db.Animal.OnUpdate += (_, was, a) =>
+        {
+            HearAnimal(a);
+            if (a.Eggs > was.Eggs && AnimalDefs.Get((byte)a.Species).Model == "hen") Hens.Laid(a.X, a.Z);
+        };
         conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); Hens.Gone(a.Id); };
         // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
         conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
