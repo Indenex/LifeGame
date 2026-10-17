@@ -41,8 +41,8 @@
    "daylight": 1.0,
    "cloud_cover": 0.200000002980232,
    "cloud_offset": [
-    -503.978607177734,
-    -671.971435546875
+    -504.172119140625,
+    -672.229553222656
    ],
    "stars": 0.0,
    "clouds": "tex_01.png",
@@ -571,6 +571,15 @@
    ],
    "cut_floor": 0.850000023841858,
    "puddles_ok": 0.0
+  }
+ },
+ {
+  "id": 15,
+  "class": "ShaderMaterial",
+  "shader": "shader_07.gdshader",
+  "params": {
+   "shade_tint": null,
+   "rim_dark": null
   }
  }
 ]
