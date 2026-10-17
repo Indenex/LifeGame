@@ -979,3 +979,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-241 — 2026-10-17 — Music direction: cute, whimsical and relaxing, in the spirit of Dofus (audio-8)
 **Decision:** The music is cute, whimsical and relaxing in the spirit of Dofus, with a basic main theme in the mood of Grynpyret's "Kites" (original melody, nothing copied) and a lullaby-like song about naps. The goal is to be very cutesy and relaxing in general, and less Valheim-like. Owner: Audio, ticket audio-8; Audio prototypes clips for Justin's pick before converting.
 **Who:** Justin ("I want some music similar to Dofus, and a basic theme similar to Grynpyret's song Kites, and A song about naps. The goal is to be very cutesy and relaxing in general, less valheim-y music.")
+
+## D-242 — 2026-10-17 — Keep the old dense, wind-swept blade grass and restyle it to the new hand-painted look (extends D-240)
+**Decision:** The previous dense, wind-swept blade grass comes back and is restyled to the new hand-painted look (pack palette, tone bands). Sprite-card tufts are not the grass; flowers and mushrooms are only sparse accents. This answers the painted-ground prototype. Owner: Environment.
+**Who:** Justin ("the modeler/environment's grass is HORRIBLE, I want the old grass back, and make it match the new style, it was really good before")
+
+## D-243 — 2026-10-17 — Music comes from Justin, made with Suno; Audio builds a data-driven player (revises D-241)
+**Decision:** The music will be provided by Justin, made with Suno, instead of being synthesized or composed by Audio. Audio builds a data-driven player for recorded tracks, mood-tagged and cross-faded. This revises D-241: the direction there (cute, whimsical, relaxing, Dofus-like) still guides Justin's tracks. Owner: Audio.
+**Who:** Justin ("These all sound super generic and crappy", on the synthesized music tasters)
+
+## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
+**Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
+**Who:** Justin ("The other things look ok so far")

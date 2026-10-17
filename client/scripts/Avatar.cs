@@ -80,6 +80,23 @@ public partial class Avatar : Node3D
     }
     readonly ushort[] worn = new ushort[2];
 
+    // Puts items in the hands (null for empty), in the ToolR and ToolL fist frames.
+    public void Hold(Item? right, Item? left)
+    {
+        Grip("ToolR", right, ref heldRight);
+        Grip("ToolL", left, ref heldLeft);
+    }
+    Item? heldRight, heldLeft;
+
+    void Grip(string hand, Item? item, ref Item? held)
+    {
+        if (item == held) return;
+        held = item;
+        if (figure.FindChild(hand, true, false) is not Node3D fist) return;
+        foreach (var child in fist.GetChildren()) child.QueueFree();
+        if (item is { } it) fist.AddChild(new MeshInstance3D { Mesh = ItemModels.HeldMesh(it) });
+    }
+
     // This player's own look (skin, hair, cut, beard), from their player id (Modeling).
     public void SetLook(uint playerId) => PlayerModel.SetLook((Skeleton3D)figure, HumanFigure.Appearance.For(playerId));
     public void SetLook(HumanFigure.Appearance look) => PlayerModel.SetLook((Skeleton3D)figure, look);
