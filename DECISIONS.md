@@ -1237,3 +1237,7 @@ Owner: Claims.
 ## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
 **Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
 **Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
