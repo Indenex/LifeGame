@@ -10,7 +10,10 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+// What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
+// lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -73,11 +76,11 @@ foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, St
     Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
 }
 
-if (which is "lean-to" or "both")
+if (Wants("lean-to"))
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
-if (which is "clay-hut" or "both")
+if (Wants("clay-hut"))
 {
     ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
@@ -93,7 +96,7 @@ if (which is "clay-hut" or "both")
     LayMat(hut);
     BuildHearth(hut);
 }
-if (which is "basket" or "both")
+if (Wants("basket"))
     StoreInBasket(BuildTogether(StructureKind.Basket,
         new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
         new() { [Item.Fiber] = 9 },
@@ -104,7 +107,7 @@ if (which is "basket" or "both")
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
 
-if (which is "fence" or "both")
+if (Wants("fence"))
 {
     WallsStopWalkers(BuildTogether(StructureKind.Fence,
         new() { [Item.Stick] = 2 },
@@ -115,7 +118,7 @@ if (which is "fence" or "both")
 }
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
-if (which is "brick-house")
+if (Wants("brick-house"))
 {
     ulong house = BuildTogether(StructureKind.BrickHouse,
         new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
@@ -145,7 +148,7 @@ if (which is "brick-house")
 }
 
 // Not in "both": each player makes a stone axe and chops ten logs, which takes minutes (log-cabin).
-if (which is "log-cabin")
+if (Wants("log-cabin"))
 {
     ulong cabin = BuildTogether(StructureKind.LogCabin,
         new() { [Item.Stone] = 7, [Item.Stick] = 7, [Item.Fiber] = 3 },
@@ -269,6 +272,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
+    LeaveHut(hut); // both are still inside after the "standing inside" check; its walls pen them in
     a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
     b.Wants = new();
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
@@ -437,9 +441,9 @@ void BuildHearth(ulong hut)
     double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
     Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
 
-    // Walls stop the server's players (bugfix-27): leave through the doorway, as a player would.
-    a.WalkTo(door.x, door.z, 0.3f, Pump);
-    b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
+    // Walls stop the server's players (bugfix-27): the next stages gather from outside, so go out
+    // through the doorway to the yard, as a player would.
+    LeaveHut(hut);
 }
 
 // The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished

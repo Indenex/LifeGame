@@ -23,7 +23,7 @@ public static class AvatarWork
                 me.Face(st.X, st.Z);
         };
         conn.Db.MyCraftJob.OnDelete += (_, _) => Start(me, null);
-        conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId); };
+        conn.Db.CraftWork.OnInsert += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, w.ProcessId, tool: w.Tool); };
         conn.Db.CraftWork.OnDelete += (_, w) => { if (other(w.PlayerId) is { } a) Start(a, null); };
 
         me.SneakChanged += sneaking => conn.Reducers.SetSneaking(sneaking);
@@ -35,7 +35,8 @@ public static class AvatarWork
         {
             if (other(p.PlayerId) is not { } a) return;
             a.Sneaking = conn.Db.PlayerSneaking.PlayerId.Find(p.PlayerId) is not null;
-            Start(a, conn.Db.CraftWork.PlayerId.Find(p.PlayerId)?.ProcessId);
+            var work = conn.Db.CraftWork.PlayerId.Find(p.PlayerId);
+            Start(a, work?.ProcessId, tool: work?.Tool ?? 0);
             Dress(conn, a, p.PlayerId);
         };
 
@@ -98,10 +99,12 @@ public static class AvatarWork
     }
 
     // conn only for your own avatar: your inventory says which tool you work with.
-    static void Start(Avatar avatar, string? processId, DbConnection? conn = null)
+    // Other players' craft_work says which tool they hold (tool, 0 if not known).
+    static void Start(Avatar avatar, string? processId, DbConnection? conn = null, ushort tool = 0)
     {
         avatar.Work = WorkMotions.For(processId);
         var (right, left) = HeldTools.For(processId, conn?.Db.MyInventory.Iter().Select(i => (i.Item, i.Quality)));
+        if (tool != 0 && Items.IsKnown(tool)) right = (Item)tool;
         avatar.Hold(right, left);
     }
 }
