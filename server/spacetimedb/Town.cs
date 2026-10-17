@@ -122,6 +122,40 @@ public static partial class Module
         public Timestamp LastAt;
     }
 
+    // Private: lets the server admin shorten terms for a playtest (and for the SocialTest).
+    [SpacetimeDB.Table(Accessor = "TownConfig")]
+    public partial struct TownConfig
+    {
+        [PrimaryKey]
+        public byte Id;
+        public long TermMicros;
+        public long VacancyMicros;
+    }
+
+    static long TermMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.TermMicros ?? Social.TownTermMicros;
+    static long VacancyMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.VacancyMicros ?? Social.TownVacancyMicros;
+
+    // Database owner only: how long an office term (and a vacant seat's wait) lasts, in seconds.
+    // 0 puts the defaults back. Applies to seats filled from now on.
+    [SpacetimeDB.Reducer]
+    public static void SetTownTerm(ReducerContext ctx, long seconds)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        if (seconds < 0) throw new Exception("Seconds cannot be negative");
+        var row = new TownConfig { Id = 0, TermMicros = seconds == 0 ? Social.TownTermMicros : seconds * 1_000_000, VacancyMicros = seconds == 0 ? Social.TownVacancyMicros : seconds * 1_000_000 };
+        if (ctx.Db.TownConfig.Id.Find(0) == null) ctx.Db.TownConfig.Insert(row); else ctx.Db.TownConfig.Id.Update(row);
+    }
+
+    // Database owner only: settle the terms that have ended now rather than at the next hourly pass.
+    [SpacetimeDB.Reducer]
+    public static void SettleTownTermsNow(ReducerContext ctx)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can do this");
+        SettleTerms(ctx);
+    }
+
     [SpacetimeDB.Table(Accessor = "TownTermTimer", Scheduled = nameof(TownTerms), ScheduledAt = nameof(ScheduledAt))]
     public partial struct TownTermTimer
     {
@@ -182,13 +216,14 @@ public static partial class Module
         EnsureTownTimer(ctx);
         var town = ctx.Db.Town.Insert(new Town { Id = 0, Name = name, StartedAt = ctx.Timestamp });
         Sign(ctx, town.Id, claim, player);
+        TownLogLine(ctx, town.Id, $"{player.Name} started the town");
         // Invitations to other towns no longer apply once you have started your own.
         foreach (var invite in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList()) ctx.Db.TownInvite.Id.Delete(invite.Id);
         // The founder is the first Mayor until the signers vote.
         ctx.Db.TownOffice.Insert(new TownOffice
         {
             Id = 0, TownId = town.Id, Office = Social.OfficeMayor, Holder = player.Identity, HolderId = player.PlayerId,
-            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownTermMicros),
+            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(TermMicros(ctx)),
         });
     }
 
@@ -242,6 +277,7 @@ public static partial class Module
         if (ctx.Db.TownSigner.ByTown.Filter(town.Id).Count() >= Social.TownMaxClaims)
             throw new Exception($"A town holds at most {Social.TownMaxClaims} claims");
         Sign(ctx, town.Id, claim, player);
+        TownLogLine(ctx, town.Id, $"{player.Name} signed the roster");
         foreach (var mine in ctx.Db.TownInvite.Invitee.Filter(ctx.Sender).ToList())
             ctx.Db.TownInvite.Id.Delete(mine.Id);
     }
@@ -290,7 +326,7 @@ public static partial class Module
     }
 
     static IEnumerable<Identity> HoldersWith(ReducerContext ctx, ulong townId, TownPower power) =>
-        ctx.Db.TownOffice.ByTown.Filter(townId).ToList()
+        ctx.Db.TownOffice.ByTown.Filter(townId).ToList().OrderBy(o => o.Office)
             .Where(o => o.HolderId != 0 && Towns.Get(o.Office) is { } d && (d.Powers & power) != 0).Select(o => o.Holder);
 
     [SpacetimeDB.Reducer]
@@ -302,6 +338,7 @@ public static partial class Module
         if (name.Length == 0) throw new Exception("Give the town a name");
         var town = ctx.Db.Town.Id.Find(mine.TownId) ?? throw new Exception("That town is gone");
         ctx.Db.Town.Id.Update(town with { Name = name });
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} renamed the town {name}");
     }
 
     // The Herald (or Mayor) sends one word to every signer, not more than once a minute.
@@ -341,6 +378,7 @@ public static partial class Module
         if (ctx.Db.TownSigner.ByTown.Filter(mine.TownId).Any(r => r.Owner == s.Owner)) throw new Exception("Its builder is still on the roster");
         foreach (var row in ctx.Db.BasketItem.StructureId.Filter(s.Id).ToList()) ctx.Db.BasketItem.Id.Delete(row.Id);
         RemoveStructure(ctx, s);
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} cleared a ruin");
     }
 
     // Two towns join when a majority of each town's signers say yes within three days.
@@ -412,8 +450,11 @@ public static partial class Module
         if (ctx.Db.TownVoice.TownId.Find(gone.Id) != null) ctx.Db.TownVoice.TownId.Delete(gone.Id);
         foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == gone.Id || m.ToTownId == gone.Id || m.FromTownId == keep.Id || m.ToTownId == keep.Id).ToList())
             DeleteMerge(ctx, m);
+        foreach (var ban in ctx.Db.TownBan.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownBan.Id.Update(ban with { TownId = keep.Id });
+        foreach (var line in ctx.Db.TownLog.ByTown.Filter(gone.Id).ToList()) ctx.Db.TownLog.Id.Update(line with { TownId = keep.Id });
         ctx.Db.Town.Id.Delete(gone.Id);
-        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+        TownLogLine(ctx, keep.Id, $"{gone.Name} joined {keep.Name}");
+        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // Vote for who should hold an office. Open ballot: one vote per signer per office, changeable.
@@ -425,7 +466,7 @@ public static partial class Module
         var me = SignerOf(ctx, ctx.Sender) ?? throw new Exception("Only signers vote");
         // An office nobody holds yet gets a vacant seat on its first vote, so its term can end.
         if (OfficeOf(ctx, me.TownId, office) == null)
-            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
         var candidate = ctx.Db.TownSigner.ByTown.Filter(me.TownId).FirstOrDefault(r => r.PlayerId == candidatePlayerId);
         if (candidate.Id == 0) throw new Exception("They are not on this roster");
         foreach (var old in ctx.Db.TownVote.ByTown.Filter(me.TownId).Where(v => v.Office == office && v.Voter == ctx.Sender).ToList())
@@ -440,7 +481,9 @@ public static partial class Module
     // The winner takes the seat for a full term; the ballot starts afresh.
     static void SeatOffice(ReducerContext ctx, ulong townId, byte office, TownSigner winner)
     {
-        var term = ctx.Timestamp + new TimeDuration(Social.TownTermMicros);
+        var term = ctx.Timestamp + new TimeDuration(TermMicros(ctx));
+        if (OfficeOf(ctx, townId, office) is not { } held || held.HolderId != winner.PlayerId)
+            TownLogLine(ctx, townId, $"{winner.OwnerName} became {Towns.Get(office)?.Name ?? "an officer"}");
         if (OfficeOf(ctx, townId, office) is { } seat)
             ctx.Db.TownOffice.Id.Update(seat with { Holder = winner.Owner, HolderId = winner.PlayerId, HolderName = winner.OwnerName, TermEndsAt = term });
         else
@@ -455,7 +498,13 @@ public static partial class Module
     public static void TownTerms(ReducerContext ctx, TownTermTimer timer)
     {
         RequireServer(ctx);
+        SettleTerms(ctx);
+    }
+
+    static void SettleTerms(ReducerContext ctx)
+    {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        ExpireBans(ctx);
         foreach (var merge in ctx.Db.TownMerge.Iter().Where(m => m.ExpiresAt.MicrosecondsSinceUnixEpoch <= now).ToList())
             DeleteMerge(ctx, merge);
         foreach (var seat in ctx.Db.TownOffice.Iter().Where(o => o.TermEndsAt.MicrosecondsSinceUnixEpoch <= now).ToList())
@@ -467,7 +516,7 @@ public static partial class Module
             {
                 int best = tally.Max(t => t.n);
                 var tied = signers.Where(sg => tally.Any(t => t.id == sg.PlayerId && t.n == best)).ToList();
-                // A tie goes to whoever the Judge voted for, else to the longest-standing signer.
+                // A tie goes to whoever the Judge (or, with no Judge voting, the Elder) voted for, else to the longest-standing signer.
                 var judgeVote = HoldersWith(ctx, seat.TownId, TownPower.BreakTies)
                     .Select(j => ctx.Db.TownVote.ByTown.Filter(seat.TownId).FirstOrDefault(v => v.Office == seat.Office && v.Voter == j))
                     .FirstOrDefault(v => v.Id != 0);
@@ -476,7 +525,7 @@ public static partial class Module
                     : tied.OrderBy(sg => sg.SignedAt.MicrosecondsSinceUnixEpoch).FirstOrDefault();
                 if (winner.Id != 0) { SeatOffice(ctx, seat.TownId, seat.Office, winner); continue; }
             }
-            long wait = seat.HolderId == 0 ? Social.TownVacancyMicros : Social.TownTermMicros;
+            long wait = seat.HolderId == 0 ? VacancyMicros(ctx) : TermMicros(ctx);
             ctx.Db.TownOffice.Id.Update(seat with { TermEndsAt = ctx.Timestamp + new TimeDuration(wait) });
         }
     }
@@ -486,6 +535,7 @@ public static partial class Module
     static void DropSigner(ReducerContext ctx, TownSigner row)
     {
         ctx.Db.TownSigner.Id.Delete(row.Id);
+        TownLogLine(ctx, row.TownId, $"{row.OwnerName} left the roster");
         foreach (var v in ctx.Db.TownVote.ByTown.Filter(row.TownId).Where(v => v.Voter == row.Owner || v.CandidateId == row.PlayerId).ToList())
             ctx.Db.TownVote.Id.Delete(v.Id);
         if (!ctx.Db.TownSigner.ByTown.Filter(row.TownId).Any())
@@ -496,12 +546,14 @@ public static partial class Module
                 ctx.Db.TownOffice.Id.Delete(seat.Id);
             foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == row.TownId || m.ToTownId == row.TownId).ToList()) DeleteMerge(ctx, m);
             if (ctx.Db.TownVoice.TownId.Find(row.TownId) != null) ctx.Db.TownVoice.TownId.Delete(row.TownId);
+            foreach (var ban in ctx.Db.TownBan.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownBan.Id.Delete(ban.Id);
+            foreach (var line in ctx.Db.TownLog.ByTown.Filter(row.TownId).ToList()) ctx.Db.TownLog.Id.Delete(line.Id);
             ctx.Db.Town.Id.Delete(row.TownId);
             return;
         }
         // A seat the leaver held falls vacant for a day, while the signers vote.
         foreach (var seat in ctx.Db.TownOffice.ByTown.Filter(row.TownId).Where(o => o.HolderId == row.PlayerId).ToList())
-            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // A claim that falls or is taken down leaves its roster.
