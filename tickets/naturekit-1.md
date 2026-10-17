@@ -17,8 +17,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 - 2026-10-17 15:45: imported 52 models (18 MB with textures). NatureKit.cs loader + blended shader. Showcase `naturekit` (--kit=ours|raw|blend, --time-of-day). Renders: /mnt/project-files/screenshots/naturekit-1-trio-0.5.png and -0.72.png (top ours, middle kit as-is, bottom kit in our light). In our light the kit's ferns and grass lose their black back faces at golden hour. Local build 0 errors.
 - 2026-10-17 15:55: #836 merged; branch restarted on main with the naturekit commits. Kit trees in the world behind a setting: Terrain's painted-tree loop draws NatureKit.Tree(pine, v) (CommonTree_1-4, Pine_1-4, scaled to PaintedTrees.Height) when `--naturekit` or graphics/naturekit_trees = 1; ChunkWorker.Prewarm loads them. Not yet: TreeFall (chopped kit trees don't fall), the see-through ghost, a far LOD. Game-camera shots rendering.
 
+- 2026-10-17 16:10: switched to the Source/Godot pack (8d28456e), now in client/assets/quaternius/nature with License_Nature_Source.txt (CC0); import script tools/art/quaternius/import.py. Ported the kit's Godot shaders into NatureKit's blended shader (a8687198): flat leaf greens + blue-green low colour, card spread, sun-driven leaf glow, bark foot tint + normal maps, grass gradients and wind lines. Shots: /mnt/project-files/screenshots/naturekit/kit-shaders-blend-{noon,golden}.png. Build clean locally (after tools/gen-bindings.sh).
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Look at the game shots (offline client, --time-of-day=0.5 and 0.72, with and without --naturekit), send them to the PM; run --view-bench with and without --naturekit for vertex and draw-call cost; then the ghost and TreeFall for kit trees.
+Run `--view-bench` with and without `--naturekit` and record vertex and draw-call numbers here; then the rocks swap behind a setting.
