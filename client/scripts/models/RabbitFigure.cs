@@ -24,6 +24,14 @@ public static class RabbitFigure
     };
     static readonly Vector3 Center = new(0, 0.085f, -0.02f);
 
+    // Wild rabbit coats (model-27): the brown-grey agouti of a wild rabbit, warmer or
+    // greyer per animal. Draw the fur surface with PaintedAnimals.Coat of one of these,
+    // as the deer's coats are, rather than a sheep's fleece colours.
+    public static readonly Color[] Coats =
+    {
+        new(0.5f, 0.39f, 0.28f), new(0.46f, 0.37f, 0.29f), new(0.54f, 0.43f, 0.31f), new(0.43f, 0.36f, 0.3f),
+    };
+
     static readonly Color Belly = new(0.93f, 0.89f, 0.82f);
     static readonly Color InnerEar = new(0.9f, 0.66f, 0.62f);
     static readonly Color Nose = new(0.62f, 0.38f, 0.36f);
