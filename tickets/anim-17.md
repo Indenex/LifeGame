@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_review
 Branch: claude/anim-17 (from main)
-PR: (see below)
+PR: #689
 
 ## Goal
 A small round chibi swimming through deep water does a doggy paddle instead of the adult breaststroke: head held high and bobbing side to side, hands paddling in turn under the chin, quick little kicks. Treading water at rest is unchanged. Option (b) from the PM's list of next items.
