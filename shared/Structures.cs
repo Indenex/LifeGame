@@ -46,6 +46,8 @@ namespace LifeGame.Shared
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
         // mud-brick house and the log cabin share the walls, door and fire-warms-the-room rule.
         public bool Room;
+        // Sun-dried brick walls (a Daub-work stage) and, if TileRoof, a roof of fired clay tiles, not thatch.
+        public bool BrickWalls, TileRoof;
         public string[] Stages = Array.Empty<string>();
         // What each stage takes, in the same order as Stages (the server builds each stage's needs from
         // this; the client shows it before you lay out). Fiber stands in for thatch; the hut's walls are daub.
@@ -151,6 +153,7 @@ namespace LifeGame.Shared
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
                 Room = true,
+                BrickWalls = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
                 // Brick house: Footings, Brick walls, Rafters, Thatch
@@ -329,6 +332,30 @@ namespace LifeGame.Shared
                     new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
                 },
             },
+            // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
+            // instead of thatch. Same room, door and shelter; claim-only like the brick house.
+            new StructureShape
+            {
+                Name = "Tiled house",
+                Category = "Shelter",
+                Scale = 1.25f,
+                HalfWidth = 2.4f, HalfDepth = 2.0f,
+                Clearance = 3.2f,
+                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                DoorwayZ = 1.8f,
+                Room = true,
+                BrickWalls = true,
+                TileRoof = true,
+                SmokeY = 3.3f,
+                Stages = new[] { "Footings", "Brick walls", "Rafters", "Roof tiles" },
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                    new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                    new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                    new[] { (Item.RoofTile, 12u) },
+                },
+            },
         });
 
         // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
@@ -443,8 +470,8 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             2 => Social.MarkProcess,
             4 => WeaveProcess,
-            // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
-            5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
+            _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
             _ when Shape(kind).Room => stage >= 3 ? RoofProcess : FrameProcess,
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.

@@ -44,8 +44,19 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
+{
+    var tiled = Structures.Shape((int)StructureKind.TiledHouse);
+    var brick = Structures.Shape((int)StructureKind.BrickHouse);
+    Check(tiled.Room && tiled.BrickWalls && tiled.TileRoof && !brick.TileRoof, "the tiled house is a brick-walled home with a tile roof");
+    Check(tiled.Stages.Length == brick.Stages.Length && tiled.Costs.Length == tiled.Stages.Length, "the tiled house has the brick house's stages");
+    Check(tiled.Costs[3].Length == 1 && tiled.Costs[3][0] == (Item.RoofTile, 12u), "its roof takes 12 roof tiles");
+    for (int i = 0; i < 3; i++) Check(tiled.Costs[i].SequenceEqual(brick.Costs[i]), $"its stage {i + 1} costs what the brick house's does");
+    Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
+}
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
-foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin })
+foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin, StructureKind.TiledHouse })
 {
     int k = (int)kind;
     var shape = Structures.Shape(k);
