@@ -40,6 +40,7 @@ public static class LandmarkProps
         ["landmark.giant_tree"] = new(GiantTree, GiantGirth),
         ["landmark.outcrop"] = new(Outcrop),
         ["landmark.ford"] = new(Ford),
+        ["landmark.fallen_giant"] = new(FallenGiant),
     };
 
     public static Prop For(FeatureDef feature) => Props[feature.Model];
@@ -106,6 +107,55 @@ public static class LandmarkProps
             var lying = new Basis(Vector3.Up, H(x, z, 98) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 99, 0.6f, 1.0f));
             into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(lying, new Vector3(px, heightAt(px, pz), pz)), Look.Bark.Darkened(0.2f), custom));
+        }
+    }
+
+    // A huge old trunk lying across a glade (env-33): Modeling's fallen log made giant,
+    // straight with a splintered end or broken with its root plate torn up. Each has its
+    // own length, girth, direction and lie on the slope, its own rot (from fresh bark to
+    // a soft, moss-green hulk), ferns crowding along its sides and the odd stone.
+    public static void FallenGiant(int x, int z, Vector3 at, Func<float, float, float> heightAt, Lists into, Color custom)
+    {
+        int variant = Pick(x, z, 500, PropMeshes.FallenLogVariants);
+        float yaw = H(x, z, 501) * Mathf.Tau;
+        float length = Range(x, z, 502, 3.0f, 4.3f), girth = Range(x, z, 503, 2.6f, 3.7f);
+        float rot = H(x, z, 504);
+        // Modeling's log lies along x, about 3 m long and 0.4 m thick at scale 1.
+        var axis = new Vector3(Mathf.Cos(yaw), 0f, -Mathf.Sin(yaw));
+        float half = 1.5f * length;
+        float h0 = heightAt(at.X - axis.X * half, at.Z - axis.Z * half), h1 = heightAt(at.X + axis.X * half, at.Z + axis.Z * half);
+        float pitch = Mathf.Atan2(h1 - h0, 2f * half);
+        var basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, pitch)
+            * Basis.FromScale(new Vector3(length, girth * Range(x, z, 505, 0.85f, 1.05f), girth));
+        var middle = new Vector3(at.X, (h0 + h1) * 0.5f - 0.12f * girth - 0.1f * rot, at.Z);
+        var bark = Look.Bark.Darkened(Range(x, z, 506, 0.08f, 0.25f)).Lerp(Look.Moss, rot * 0.35f);
+        into.Put(PropMeshes.FallenLog(variant), Painted.Bark, (new Transform3D(basis, middle), bark, custom));
+
+        // It blocks the way along its whole length, a circle every metre or so.
+        float radius = 0.2f * girth;
+        for (float t = -half + radius; t <= half - radius * 0.5f; t += radius * 1.2f)
+            into.Blocks.Add((at.X + axis.X * t, at.Z + axis.Z * t, radius));
+
+        // Ferns crowd along its sides, more on an old rotten one.
+        var side = new Vector3(-axis.Z, 0f, axis.X);
+        int ferns = 4 + (int)(H(x, z, 510) * (4f + 5f * rot));
+        for (int k = 0; k < ferns; k++)
+        {
+            float t = Range(x, z, 520 + (uint)k, -0.9f, 0.9f) * half;
+            float off = (H(x, z, 540 + (uint)k) < 0.5f ? -1f : 1f) * (radius + Range(x, z, 560 + (uint)k, 0.2f, 1.1f));
+            var p = at + axis * t + side * off;
+            var fern = new Basis(Vector3.Up, H(x, z, 580 + (uint)k) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 600 + (uint)k, 1.6f, 2.6f));
+            into.Put(Undergrowth.Fern, Look.Grass, (new Transform3D(fern, p with { Y = heightAt(p.X, p.Z) }),
+                Look.Leaf.Lerp(Look.LeafLight, Range(x, z, 620 + (uint)k, 0f, 0.4f)), custom));
+        }
+
+        // A stone or two by one end.
+        int stones = (int)(H(x, z, 640) * 3f);
+        for (int k = 0; k < stones; k++)
+        {
+            float end = H(x, z, 641 + (uint)k) < 0.5f ? -1f : 1f;
+            var p = at + axis * (end * half * Range(x, z, 645 + (uint)k, 0.7f, 1.1f)) + side * Range(x, z, 650 + (uint)k, -2f, 2f);
+            Rock(x * 13 + k, z * 7, p with { Y = heightAt(p.X, p.Z) }, Range(x, z, 655 + (uint)k, 0.3f, 0.7f), into, custom);
         }
     }
 

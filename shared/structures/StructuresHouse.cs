@@ -167,6 +167,31 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // A sundial (building-19, Justin): a flat stone and a stick. Everyone in its claim, and its
+                // town, sees the time of day on their screen while it stands. Claim-only: it only counts there.
+            new StructureDef
+            {
+                // 20: its StructureKind position for now (the plan is 23 once the devices 20-22 land; the
+                // startup check will catch a mismatch).
+                Kind = 20,
+                Shape = new StructureShape
+                {
+                    Name = "Sundial",
+                    Model = "Sundial",
+                    Category = "Crafting",
+                    Sundial = true,
+                    FixedYaw = true,
+                    Round = true, Radius = 0.4f, Solid = true,
+                    Clearance = 0.8f,
+                    Stages = new[] { "Plinth", "Dial" },
+                    // Sundial: Plinth, Dial (a flat stone and a stick for the gnomon, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 3u) },
+                        new[] { (Item.Stone, 1u), (Item.Stick, 1u) },
+                    },
+                },
+            },
         };
     }
 }

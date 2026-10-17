@@ -25,6 +25,10 @@ public partial class Atmosphere
 
     static readonly Color ChipLight = new(0.80f, 0.64f, 0.40f), ChipBark = new(0.36f, 0.25f, 0.17f);
     static readonly Color Clod = new(0.34f, 0.25f, 0.16f), Dust = new(0.72f, 0.64f, 0.50f);
+    // Crushed grit and grog: a pale stone grey.
+    static readonly Color Grit = new(0.66f, 0.64f, 0.60f);
+    // Animation's WorkMotion.Pound (#732), by number until that lands on main.
+    const WorkMotion Pound = (WorkMotion)31;
     static readonly Color Flint = new(0.55f, 0.56f, 0.58f), Ember = new(1f, 0.62f, 0.22f), Ash = new(0.55f, 0.53f, 0.50f);
 
     DbConnection? impactConn;
@@ -123,6 +127,13 @@ public partial class Atmosphere
                 // Grey flakes chip off the core.
                 Burst(at, (Vector3.Up + facing * 0.5f).Normalized(), 70f, 0.8f, 1.8f, 5, 0.6f,
                     new BoxMesh { Size = new Vector3(0.03f, 0.008f, 0.025f) }, Flint, Flint.Lightened(0.25f), spin: true);
+                break;
+            case Pound:
+                // Each blow on the grit (1.2 a second, low in front of a kneeling
+                // worker): a small grey puff and a few flecks that hop and settle.
+                Puff(at, 0.1f, 3, 0.8f, Grit, 0.22f);
+                Burst(at, Vector3.Up, 60f, 0.4f, 0.9f, 4, 0.45f,
+                    new BoxMesh { Size = new Vector3(0.012f, 0.008f, 0.012f) }, Grit, Grit.Darkened(0.25f), spin: true);
                 break;
             case WorkMotion.Feed:
             {

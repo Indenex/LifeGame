@@ -146,6 +146,17 @@ public static class WorkMotions
                 p[Joint.HandR].Y = 0.5f * Mathf.Sin(t * 0.8f);
                 break;
             }
+            case WorkMotion.Pound:
+            {
+                // A stone in both hands, raised to the chest and brought down onto the
+                // pile in front, the back bending into each blow.
+                float u = Mathf.PosMod(t * PoundRate, 1f);
+                float raise = u < 0.7f ? Mathf.SmoothStep(0f, 1f, u / 0.7f) : 1f - (u - 0.7f) / 0.3f;
+                lean = 0.65f - 0.25f * raise;
+                Arm(p, true, -1.05f - 0.5f * raise, -0.3f, -0.4f - 0.9f * raise);
+                Arm(p, false, -1.05f - 0.5f * raise, 0.3f, -0.4f - 0.9f * raise);
+                break;
+            }
             default: // Gather, and anything new: rummaging at the ground, hands taking turns.
             {
                 lean = 0.6f;
@@ -263,10 +274,13 @@ public static class WorkMotions
     public static float ActThrow(WorkMotion m, byte variant) =>
         m == WorkMotion.Dig && (DigStyle)variant == DigStyle.Spade ? 1.02f : -1f;
 
+    const float PoundRate = 1.2f;
+
     public static (float rate, float phase) WorkImpact(WorkMotion m) => m switch
     {
         WorkMotion.Chop => (ChopRate, ChopHit),
         WorkMotion.Knap => (1.3f, 0.99f),
+        WorkMotion.Pound => (PoundRate, 0.99f),
         _ => (0f, -1f),
     };
 

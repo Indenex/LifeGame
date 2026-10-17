@@ -453,6 +453,7 @@ public static partial class Module
         }
 
         if (t.Roosts && RoostDecide(ctx, ref body, ref mind, flock, now)) return;
+        if (t.BedsAtMidday && MiddayBed(ctx, ref body, ref mind, now)) return;
 
         if (now < mind.StateUntil && !straggling) return;
 

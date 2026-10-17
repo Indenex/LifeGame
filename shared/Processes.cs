@@ -291,7 +291,7 @@ namespace LifeGame.Shared
             {
                 Id = "hide.scrape_deer", Name = "Scrape a deer hide", Doing = "Scraping the deer hide clean", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.DeerHide) }, NeedsTool = ItemTags.Cutting,
-                Seconds = 8, Makes = Item.ScrapedHide,
+                Seconds = 8, Makes = Item.ScrapedHide, Motion = WorkMotion.Scrape,
             },
             new ProcessDef
             {
@@ -351,13 +351,13 @@ namespace LifeGame.Shared
             {
                 Id = "clay.grit", Name = "Crush stone grit", Doing = "Crushing stone into grit", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
-                Seconds = Base(3, 0.25f), Makes = Item.Grit, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.Grit, MakesCount = 2, Motion = WorkMotion.Pound,
             },
             new ProcessDef
             {
                 Id = "clay.grog", Name = "Crush sherds into grog", Doing = "Crushing potsherds into grog", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.Potsherd) }, NeedsTool = ItemTags.Hammer,
-                Seconds = Base(3, 0.25f), Makes = Item.Grog, MakesCount = 2,
+                Seconds = Base(3, 0.25f), Makes = Item.Grog, MakesCount = 2, Motion = WorkMotion.Pound,
             },
             new ProcessDef
             {

@@ -44,6 +44,11 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // A sundial: a standing one tells the time of day to everyone in its claim and town (building-19).
+        public bool Sundial;
+        // Always laid out facing world north (yaw 0), whatever way the player turns the ghost: a sundial's marks
+        // only read true that way.
+        public bool FixedYaw;
         // A fire lit within reach goes onto it and its fuel burns longer (the raised and stone-ringed hearths).
         public bool Hearth;
         // How far a fire on this hearth warms, in meters; 0 means the plain fire's Fires.WarmthRadius.
@@ -238,6 +243,8 @@ namespace LifeGame.Shared
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
             // A stone-ringed hearth: ring and kerb are both stone laid up like a frame.
             _ when Shape(kind).Hearth => FrameProcess,
+            // A sundial: plinth and dial are both cut and set stone.
+            _ when Shape(kind).Sundial => FrameProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             // Each crafting station reports its own id, so the journal knows it is built.
             _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),
