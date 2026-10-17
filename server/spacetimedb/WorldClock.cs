@@ -192,7 +192,7 @@ public static partial class Module
     }
 
     static bool IsWorldAdmin(ReducerContext ctx) =>
-        ctx.Db.ClaimConfig.Id.Find(0)?.Admin == ctx.Sender || ctx.Db.WorldAdmin.Identity.Find(ctx.Sender) is not null;
+        ctx.Db.ClaimConfig.Id.Find(0)?.Admin == Me(ctx) || ctx.Db.WorldAdmin.Identity.Find(Me(ctx)) is not null;
 
     [SpacetimeDB.Reducer]
     public static void MakeAdmin(ReducerContext ctx, string playerName)

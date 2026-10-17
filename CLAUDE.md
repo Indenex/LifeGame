@@ -64,6 +64,7 @@ Each lane works in its own files so lanes don't collide:
 - Server code in `server/spacetimedb/<Feature>.cs` as `partial class Module`.
 - Client code under `client/scripts/<feature>/`.
 - Shared files (`client/scripts/Main.cs`, `client/scripts/Hud.cs`, `server/spacetimedb/Tables.cs`, `shared/World.cs`) only get small hooks: add a node or a call, no rewrites. The Integration lane owns these, CI and builds.
+- A login can have several characters (survival-24). On the server the caller is `Me(ctx)` (the key of the character being played, the owner of everything), never raw `ctx.Sender` (the login); `tools/check-ctx-sender.sh` fails otherwise. In the client use `Me.Key(conn)` (`client/scripts/net/Me.cs`) instead of `conn.Identity`, and `my_player` / `my_player_pos` instead of `player WHERE identity = :sender`.
 - Items are `LifeGame.Shared.Item` ids in `shared/Items.cs`; process ids are dotted strings in `shared/Processes.cs`. Add new ones with new numbers; never renumber or rename.
 - When you add a process id, send the Journal and skills lane one 'Things to try' line for it (D-105): one sentence naming the goal without the recipe, e.g. 'A dry pot set in a fire comes out hard. A wet one cracks.'
 - `client/module_bindings/` is generated, not committed. Run `tools/gen-bindings.sh` after cloning, after merging main, and after changing the server module, before building the client or tools.

@@ -76,7 +76,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var roast = ctx.Db.Roast.Id.Find(roastId) ?? throw new Exception("That is gone");
-        if (roast.Owner != ctx.Sender)
+        if (roast.Owner != Me(ctx))
             throw new Exception("That isn't yours");
         RequireReach(pos, roast.X, roast.Z);
         float seconds = SecondsBetween(roast.PutAt, ctx.Timestamp);
@@ -84,7 +84,7 @@ public static partial class Module
             throw new Exception("It isn't cooked yet");
         ctx.Db.Roast.Id.Delete(roast.Id);
         var (item, quality) = RoastResult(ctx, roast, seconds);
-        AddToInventory(ctx, ctx.Sender, item, 1, quality);
+        AddToInventory(ctx, Me(ctx), item, 1, quality);
     }
 
     static (Item item, byte quality) RoastResult(ReducerContext ctx, Roast roast, float seconds)

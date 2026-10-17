@@ -145,7 +145,7 @@ public partial class BuildingSystem
                         ? new UseOffer("Hang a door", d, () => c.Reducers.HangDoor(s.Id), Target: doorway)
                         : null;
                 // Whoever hung it, or a member of the claim it stands in, may bar it, as the server's CanLock (bugfix-15).
-                bool mine = door.HungBy == c.Identity || MayBar(s.X, s.Z);
+                bool mine = door.HungBy == Me.Key(c) || MayBar(s.X, s.Z);
                 // Shift+G bars and unbars; members of the claim can too, the server decides.
                 Action act = () =>
                 {

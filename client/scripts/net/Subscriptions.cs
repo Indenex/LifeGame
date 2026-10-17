@@ -4,11 +4,19 @@ namespace LifeGame;
 // tools/ run exactly what the game runs.
 public static class Subscriptions
 {
-    // Your own player row and position, wherever you are. Subscribed first and kept
+    // Your own character's player row and position, wherever you are (views since survival-24:
+    // a login can have several characters). Subscribed first and kept
     // for the whole session, so a player saved far from the origin, or woken on the
     // rim after dying, always gets their own row and the area can follow it.
     public static readonly string[] Self =
     {
+        "SELECT * FROM my_player",
+        "SELECT * FROM my_player_pos",
+        "SELECT * FROM my_active_character",
+        "SELECT * FROM my_characters",
+        "SELECT * FROM my_character_looks",
+        // Only a login's first character matches these (its key is the login). Kept so the bot
+        // tools, which only ever play that one, still find their own Player row first.
         "SELECT * FROM player WHERE identity = :sender",
         "SELECT player_pos.* FROM player_pos JOIN player ON player_pos.player_id = player.player_id WHERE player.identity = :sender",
     };

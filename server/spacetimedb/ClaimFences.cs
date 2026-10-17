@@ -9,7 +9,7 @@ public static partial class Module
 {
     // Whether the caller may open or shut a gate at this structure's spot.
     static bool ClaimGateAllows(ReducerContext ctx, Structure gate) =>
-        ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, ctx.Sender);
+        ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx));
 
     // Declared in BuildingStorage.cs (building-9, #202).
     static partial void GateOpenHook(ReducerContext ctx, Structure s, ref bool allowed)

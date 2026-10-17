@@ -28,7 +28,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyHotbar", Public = true)]
     public static System.Collections.Generic.List<HotbarSlot> MyHotbar(ViewContext ctx) =>
-        ctx.Db.HotbarSlot.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.HotbarSlot.Owner.Filter(Me(ctx)).ToList();
 
     // Puts a kind of item on a slot (0 clears it). If that item sat on another slot,
     // the two slots swap, so an item is only ever on one slot.
@@ -40,7 +40,7 @@ public static partial class Module
         if (item != 0 && !Items.IsKnown(item)) throw new Exception("Unknown item");
         var here = SlotAt(ctx, index);
         var there = item == 0 ? null
-            : ctx.Db.HotbarSlot.Owner.Filter(ctx.Sender).Where(s => s.Item == item).Cast<HotbarSlot?>().FirstOrDefault();
+            : ctx.Db.HotbarSlot.Owner.Filter(Me(ctx)).Where(s => s.Item == item).Cast<HotbarSlot?>().FirstOrDefault();
         if (there is { } t)
         {
             if (t.Index == index) return;
@@ -54,7 +54,7 @@ public static partial class Module
             else ctx.Db.HotbarSlot.Id.Update(old with { Item = item });
         }
         else if (item != 0)
-            ctx.Db.HotbarSlot.Insert(new HotbarSlot { Id = 0, Owner = ctx.Sender, Index = index, Item = item });
+            ctx.Db.HotbarSlot.Insert(new HotbarSlot { Id = 0, Owner = Me(ctx), Index = index, Item = item });
     }
 
     // Swaps what two slots hold (dragging one slot onto another).
@@ -88,10 +88,10 @@ public static partial class Module
     }
 
     static HotbarSlot? SlotAt(ReducerContext ctx, byte index) =>
-        ctx.Db.HotbarSlot.ByOwnerIndex.Filter((ctx.Sender, index)).Cast<HotbarSlot?>().FirstOrDefault();
+        ctx.Db.HotbarSlot.ByOwnerIndex.Filter((Me(ctx), index)).Cast<HotbarSlot?>().FirstOrDefault();
 
     // The best carried stack of an item.
     static InventoryItem? BestStack(ReducerContext ctx, Item item) =>
-        ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item))
+        ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item))
             .Where(s => s.Count > 0).OrderByDescending(s => s.Quality).Cast<InventoryItem?>().FirstOrDefault();
 }
