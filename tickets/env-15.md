@@ -1,9 +1,9 @@
 # env-15: Light stylise of the old grass
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-grass-stylise
-PR: #425
+PR: #425 (merged)
 
 ## Goal
 Justin: "for the grass, just go back to the old one, and try to stylize it a bit to match references." Main's blade grass keeps its shape, height, density and wind; only the colour of the near grass tufts (`Look.GrassTufts`) changes toward the art references: muted olive and warm yellow-green, a blue-violet shade at the roots, warm lit tips, in soft tone bands. No other ground changes. The painted-ground rework (env-13, `claude/environment-painted-ground`) is parked and not to be merged.
@@ -16,4 +16,4 @@ Justin: "for the grass, just go back to the old one, and try to stylize it a bit
 - Flowers or clover: not added, to keep this to colour only. Can follow if Justin wants them.
 
 ## Next step
-Wait for the PM to merge #425 and for Justin's verdict on Render's before/after; tune colours if he asks.
+Done; merged as #425.
