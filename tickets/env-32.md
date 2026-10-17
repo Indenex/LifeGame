@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
 Status: in_review
 Branch: claude/environment-grass-detail
-PR: (opening)
+PR: #682
 
 ## Goal
 Options -> Graphics -> "Grass: Low / Normal" (Settings graphics/grass_detail, default
