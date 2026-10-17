@@ -21,6 +21,7 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+bool axeEquipped = false; // World tool actions need the tool equipped (crafting-29)
 string uri = args.Length > 0 ? args[0] : "http://127.0.0.1:3000";
 string db = args.Length > 1 ? args[1] : "lifegame";
 string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
@@ -90,18 +91,8 @@ float x = start.X, z = start.Z;
 
 // Every run begins from the same place (bugfix-31): new players wake at a random spot in the
 // spawn clearing, so walk to the origin first, at a pace the server accepts.
-for (var go = Stopwatch.StartNew(); go.Elapsed.TotalSeconds < 60; )
-{
-    float dx = -x, dz = -z, d = MathF.Sqrt(dx * dx + dz * dz);
-    if (d < 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } at && MathF.Abs(at.X - x) + MathF.Abs(at.Z - z) < 0.1f) break;
-    if (d >= 0.05f && conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen0 && MathF.Abs(seen0.X - x) + MathF.Abs(seen0.Z - z) < 1.5f)
-    {
-        float step = Math.Min(d, 0.5f);
-        x += dx / d * step; z += dz / d * step;
-    }
-    conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-    Pump(() => false, 0.1f, null);
-}
+var walker = new BotWalker(conn, myId, "Clay check", "bot", ms => Pump(() => false, ms / 1000f, null), Fail);
+WalkTo(0f, 0f, 0.1f);
 
 if (goTo != null)
 {
@@ -628,6 +619,7 @@ void HuntMutton()
         }
         if (a == null) continue;
         lastError = null;
+        EquipAxe();
         conn.Reducers.StrikeAnimal(id);
         Pump(() => false, 1.1f, null);
         if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
@@ -635,6 +627,7 @@ void HuntMutton()
     var carcass = conn.Db.AnimalCarcass.Iter().First(c => c.AnimalId == id);
     WalkTo(carcass.X, carcass.Z, 1.5f);
     lastError = null;
+    EquipAxe();
     conn.Reducers.ButcherCarcass(carcass.Id);
     Pump(() => lastError != null || CountOf(Item.RawMutton) >= 2 || conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)Item.RawMutton) >= 3, 5, "the butchering");
     if (lastError != null) Fail($"butchering: {lastError}");
@@ -1182,8 +1175,18 @@ short DepthAt(int cx, int cz) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(
 
 static float DistanceTo(float ax, float az, float bx, float bz) => MathF.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
+// World tool actions need the tool on the bar and equipped (crafting-29). Equipping toggles, so only once.
+void EquipAxe()
+{
+    conn.Reducers.SetHotbarSlot(9, (ushort)Item.StoneAxe);
+    if (axeEquipped) return;
+    conn.Reducers.EquipSlot(9);
+    axeEquipped = true;
+}
+
 void Craft(string processId, float score, Item? expect)
 {
+    if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipAxe();
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     conn.Reducers.StartCraft(processId, score);
@@ -1221,51 +1224,8 @@ void Gather(Item item, uint want)
     }
 }
 
-// Walks at a safe pace until within `near` of a spot.
-void WalkTo(float tx, float tz, float near)
-{
-    // Round trunks and boulders by a route, then straight in (bugfix-34).
-    var route = ground.Route(x, z, tx, tz);
-    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
-    Leg(tx, tz, near);
-}
-
-void Leg(float tx, float tz, float near)
-{
-    int lagged = 0;
-    while (true)
-    {
-        float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d <= near) break;
-        float step = Math.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
-        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
-        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
-        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
-        {
-            // The server has not followed for a second: it refused the last step (something solid in the
-            // way). Take its word for where we are and carry on from there, like a player would.
-            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
-        }
-        else lagged = 0;
-        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
-        {
-            float px = x, pz = z;
-            x += dx / d * step;
-            z += dz / d * step;
-            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
-        }
-        conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
-        Pump(() => false, 0.1f, null);
-    }
-    for (var settle = Stopwatch.StartNew(); ; )
-    {
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
-        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
-        conn.Reducers.Move(x, z, 0f);
-        Pump(() => false, 0.1f, null);
-    }
-}
+// Walks at a safe pace until within `near` of a spot (the shared walk: routes, stall detection, last-resort reposition).
+void WalkTo(float tx, float tz, float near) => walker.To(ref x, ref z, tx, tz, near);
 
 void Pump(Func<bool> until, float seconds, string? what)
 {

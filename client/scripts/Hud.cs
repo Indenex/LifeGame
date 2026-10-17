@@ -136,6 +136,8 @@ public partial class Hud : CanvasLayer
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
+        // Under the sundial's arc while it shows (ui-32).
+        status.Position = new Vector2(status.Position.X, 18 + SundialArc.Room);
     }
 
     // The lanes along the bottom, from the edge up: the inventory row, the name of a
