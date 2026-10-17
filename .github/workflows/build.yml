@@ -161,6 +161,9 @@ jobs:
           # Until its BuildTest part is on main this job finds nothing to run and passes at once.
           - part: wooden chest
             parts: chest
+          # The straw bed (about 105 s) has its own entry too; like the chest it passes at once until its part exists.
+          - part: straw bed
+            parts: bed
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
