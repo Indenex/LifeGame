@@ -28,9 +28,9 @@ int failures = 0;
 
 // Calls an admin reducer as the CLI's identity, which published the database. Runs
 // from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
-void AsOwner(string reducer, string value)
+void AsOwner(string reducer, params string[] values)
 {
-    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer, value })
+    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer }.Concat(values).ToArray())
     {
         WorkingDirectory = Path.GetTempPath(),
         RedirectStandardOutput = true,
@@ -40,10 +40,10 @@ void AsOwner(string reducer, string value)
     run.WaitForExit();
     if (run.ExitCode != 0)
     {
-        Console.WriteLine($"FAIL  {reducer} {value} as the database owner: {output.Trim()}");
+        Console.WriteLine($"FAIL  {reducer} {string.Join(" ", values)} as the database owner: {output.Trim()}");
         Environment.Exit(1);
     }
-    Console.WriteLine($"Set {reducer} {value}");
+    Console.WriteLine($"Set {reducer} {string.Join(" ", values)}");
 }
 
 void Pump(Func<bool> until, double seconds, string what)
@@ -623,6 +623,34 @@ else
             b.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
             Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 1 && o.HolderId == a.PlayerId), 5), "the signers elect a Deputy");
             ExpectError(a, () => a.Conn.Reducers.VoteTownOffice(77, a.PlayerId), "no such office", "an unknown office cannot be voted on");
+            // Terms end (the admin shortens terms to a second for this check, then restores them).
+            AsOwner("set_town_term", "1");
+            TownOffice? Seat(byte office) => a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == office);
+            // A tie for Warden: no majority, so the term's end decides, and the longer-standing signer (A) wins.
+            a.Conn.Reducers.VoteTownOffice(4, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(4, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 4) == 2, 5);
+            Check(Seat(4)?.HolderId == 0, "a tied vote leaves the seat empty until the term ends");
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(4)?.HolderId == a.PlayerId, 5), "at the term's end a tie goes to the longest-standing signer");
+            // The Judge breaks a tie: both vote B in as Judge (a majority), then split over the Marshal.
+            a.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            Check(Wait(() => Seat(2)?.HolderId == b.PlayerId, 5), "the signers elect B as Judge");
+            a.Conn.Reducers.VoteTownOffice(5, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(5, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 5) == 2, 5);
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(5)?.HolderId == b.PlayerId, 5), "a tied vote goes to the one the Judge voted for, even over the longer-standing signer");
+            // No votes: the holder stays on, with a fresh term.
+            long judgeTermEnd = Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0;
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => (Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0) > judgeTermEnd, 5) && Seat(2)?.HolderId == b.PlayerId, "with no votes the holder stays on for another term");
+            AsOwner("set_town_term", "0");
+
             // The Mayor: A, the founder, starts as Mayor. Only the Mayor removes; the signers vote.
             var mayorNow = a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor);
             Check(mayorNow.HolderId == a.PlayerId, "A is Mayor of the signed town");

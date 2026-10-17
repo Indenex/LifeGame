@@ -122,6 +122,40 @@ public static partial class Module
         public Timestamp LastAt;
     }
 
+    // Private: lets the server admin shorten terms for a playtest (and for the SocialTest).
+    [SpacetimeDB.Table(Accessor = "TownConfig")]
+    public partial struct TownConfig
+    {
+        [PrimaryKey]
+        public byte Id;
+        public long TermMicros;
+        public long VacancyMicros;
+    }
+
+    static long TermMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.TermMicros ?? Social.TownTermMicros;
+    static long VacancyMicros(ReducerContext ctx) => ctx.Db.TownConfig.Id.Find(0)?.VacancyMicros ?? Social.TownVacancyMicros;
+
+    // Database owner only: how long an office term (and a vacant seat's wait) lasts, in seconds.
+    // 0 puts the defaults back. Applies to seats filled from now on.
+    [SpacetimeDB.Reducer]
+    public static void SetTownTerm(ReducerContext ctx, long seconds)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can change this");
+        if (seconds < 0) throw new Exception("Seconds cannot be negative");
+        var row = new TownConfig { Id = 0, TermMicros = seconds == 0 ? Social.TownTermMicros : seconds * 1_000_000, VacancyMicros = seconds == 0 ? Social.TownVacancyMicros : seconds * 1_000_000 };
+        if (ctx.Db.TownConfig.Id.Find(0) == null) ctx.Db.TownConfig.Insert(row); else ctx.Db.TownConfig.Id.Update(row);
+    }
+
+    // Database owner only: settle the terms that have ended now rather than at the next hourly pass.
+    [SpacetimeDB.Reducer]
+    public static void SettleTownTermsNow(ReducerContext ctx)
+    {
+        var config = ctx.Db.ClaimConfig.Id.Find(0) ?? throw new Exception("Claims are not set up");
+        if (config.Admin != ctx.Sender) throw new Exception("Only the server admin can do this");
+        SettleTerms(ctx);
+    }
+
     [SpacetimeDB.Table(Accessor = "TownTermTimer", Scheduled = nameof(TownTerms), ScheduledAt = nameof(ScheduledAt))]
     public partial struct TownTermTimer
     {
@@ -188,7 +222,7 @@ public static partial class Module
         ctx.Db.TownOffice.Insert(new TownOffice
         {
             Id = 0, TownId = town.Id, Office = Social.OfficeMayor, Holder = player.Identity, HolderId = player.PlayerId,
-            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownTermMicros),
+            HolderName = player.Name, TermEndsAt = ctx.Timestamp + new TimeDuration(TermMicros(ctx)),
         });
     }
 
@@ -413,7 +447,7 @@ public static partial class Module
         foreach (var m in ctx.Db.TownMerge.Iter().Where(m => m.FromTownId == gone.Id || m.ToTownId == gone.Id || m.FromTownId == keep.Id || m.ToTownId == keep.Id).ToList())
             DeleteMerge(ctx, m);
         ctx.Db.Town.Id.Delete(gone.Id);
-        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+        ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = keep.Id, Office = Social.OfficeMayor, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // Vote for who should hold an office. Open ballot: one vote per signer per office, changeable.
@@ -425,7 +459,7 @@ public static partial class Module
         var me = SignerOf(ctx, ctx.Sender) ?? throw new Exception("Only signers vote");
         // An office nobody holds yet gets a vacant seat on its first vote, so its term can end.
         if (OfficeOf(ctx, me.TownId, office) == null)
-            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Insert(new TownOffice { Id = 0, TownId = me.TownId, Office = office, Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
         var candidate = ctx.Db.TownSigner.ByTown.Filter(me.TownId).FirstOrDefault(r => r.PlayerId == candidatePlayerId);
         if (candidate.Id == 0) throw new Exception("They are not on this roster");
         foreach (var old in ctx.Db.TownVote.ByTown.Filter(me.TownId).Where(v => v.Office == office && v.Voter == ctx.Sender).ToList())
@@ -440,7 +474,7 @@ public static partial class Module
     // The winner takes the seat for a full term; the ballot starts afresh.
     static void SeatOffice(ReducerContext ctx, ulong townId, byte office, TownSigner winner)
     {
-        var term = ctx.Timestamp + new TimeDuration(Social.TownTermMicros);
+        var term = ctx.Timestamp + new TimeDuration(TermMicros(ctx));
         if (OfficeOf(ctx, townId, office) is { } seat)
             ctx.Db.TownOffice.Id.Update(seat with { Holder = winner.Owner, HolderId = winner.PlayerId, HolderName = winner.OwnerName, TermEndsAt = term });
         else
@@ -455,6 +489,11 @@ public static partial class Module
     public static void TownTerms(ReducerContext ctx, TownTermTimer timer)
     {
         RequireServer(ctx);
+        SettleTerms(ctx);
+    }
+
+    static void SettleTerms(ReducerContext ctx)
+    {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         foreach (var merge in ctx.Db.TownMerge.Iter().Where(m => m.ExpiresAt.MicrosecondsSinceUnixEpoch <= now).ToList())
             DeleteMerge(ctx, merge);
@@ -476,7 +515,7 @@ public static partial class Module
                     : tied.OrderBy(sg => sg.SignedAt.MicrosecondsSinceUnixEpoch).FirstOrDefault();
                 if (winner.Id != 0) { SeatOffice(ctx, seat.TownId, seat.Office, winner); continue; }
             }
-            long wait = seat.HolderId == 0 ? Social.TownVacancyMicros : Social.TownTermMicros;
+            long wait = seat.HolderId == 0 ? VacancyMicros(ctx) : TermMicros(ctx);
             ctx.Db.TownOffice.Id.Update(seat with { TermEndsAt = ctx.Timestamp + new TimeDuration(wait) });
         }
     }
@@ -501,7 +540,7 @@ public static partial class Module
         }
         // A seat the leaver held falls vacant for a day, while the signers vote.
         foreach (var seat in ctx.Db.TownOffice.ByTown.Filter(row.TownId).Where(o => o.HolderId == row.PlayerId).ToList())
-            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(Social.TownVacancyMicros) });
+            ctx.Db.TownOffice.Id.Update(seat with { Holder = default, HolderId = 0, HolderName = "", TermEndsAt = ctx.Timestamp + new TimeDuration(VacancyMicros(ctx)) });
     }
 
     // A claim that falls or is taken down leaves its roster.
