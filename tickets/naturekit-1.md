@@ -2,7 +2,7 @@
 Lane: Modeling
 Owner: Modeling lane (session_01Y3HWfLh47B52ViBgWpzWrz)
 Status: in_progress
-Branch: claude/modeling-i8ox5v (after #836 merges)
+Branch: claude/modeling-i8ox5v
 PR: (not yet)
 
 ## Goal
@@ -15,9 +15,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 ## Progress log
 - 2026-10-17 15:45: imported 52 models (18 MB with textures). NatureKit.cs loader + blended shader. Showcase `naturekit` (--kit=ours|raw|blend, --time-of-day). Renders: /mnt/project-files/screenshots/naturekit-1-trio-0.5.png and -0.72.png (top ours, middle kit as-is, bottom kit in our light). In our light the kit's ferns and grass lose their black back faces at golden hour. Local build 0 errors.
+- 2026-10-17 15:55: #836 merged; branch restarted on main with the naturekit commits. Kit trees in the world behind a setting: Terrain's painted-tree loop draws NatureKit.Tree(pine, v) (CommonTree_1-4, Pine_1-4, scaled to PaintedTrees.Height) when `--naturekit` or graphics/naturekit_trees = 1; ChunkWorker.Prewarm loads them. Not yet: TreeFall (chopped kit trees don't fall), the see-through ghost, a far LOD. Game-camera shots rendering.
 
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Once #836 merges, push this branch; then wire kit trees and rocks into Terrain's placement behind a setting (with Environment), and measure a forest chunk.
+Look at the game shots (offline client, --time-of-day=0.5 and 0.72, with and without --naturekit), send them to the PM; run --view-bench with and without --naturekit for vertex and draw-call cost; then the ghost and TreeFall for kit trees.
