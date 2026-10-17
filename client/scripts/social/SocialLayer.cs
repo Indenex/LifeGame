@@ -36,7 +36,7 @@ public partial class SocialLayer : Node
     float landTimer;
 
     // True while the chat box or the claim panel's name box has focus, so Main can stop walking.
-    public bool Typing => chat.Typing || panel.Typing || town.Typing || stall.Typing;
+    public bool Typing => chat.Typing || panel.Typing || town.Typing;
 
     public static long NowMicros => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
 
@@ -71,7 +71,6 @@ public partial class SocialLayer : Node
         AttachFighting();
         AttachTrading();
         AttachTown(connection);
-        AttachStall(connection);
 
         // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
         Use.Register(new UseHandler
@@ -115,7 +114,6 @@ public partial class SocialLayer : Node
         ReadyFighting();
         ReadyPlaces();
         ReadyTown();
-        ReadyStall();
     }
 
     static void Bind(string action, params Key[] keys)
@@ -131,12 +129,11 @@ public partial class SocialLayer : Node
         myPos = position;
         myId = playerId;
         if (conn is not { IsActive: true } || myId == 0) return;
-        TrackStall();
 
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store", "SELECT * FROM stall_lot", "SELECT * FROM my_stall_till", "SELECT * FROM my_stall_sales" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store" });
     }
 
     public Func<bool> HideChip = () => false;

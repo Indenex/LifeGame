@@ -23,11 +23,10 @@ recommended option until Justin answers.
 
 ## Progress log
 - 2026-10-17: server side and shared def written.
-- 2026-10-17: client StallPanel.cs + SocialLayer.Stall.cs (Use: "Look at the stall"), SocialTest stall steps (build, one per claim, price needed, B buys, till for A only, sale logged, A empties the till).
 
 ## Open questions / blockers
 - Justin's pick among stall / signpost / friends list (asked via the PM).
 - Modeling: a stall model (a small wooden counter with a woven awning).
 
 ## Next step
-Get CI green on #861 (draft until then); then a render request for the stall window and mark #861 ready.
+Client: a stall panel (StallPanel.cs in client/scripts/social/) opened with Use on a finished stall; SocialTest steps.

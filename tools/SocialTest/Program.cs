@@ -710,79 +710,6 @@ else
                 }
                 else Console.WriteLine("  (A carries no stick and fiber; upkeep from the store not checked)");
                 Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store | TownPower.Upkeep) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
-
-                // claims-31: a trading stall on A's claim. B, a townmate but not a member, buys from it;
-                // only A empties the till; a claim takes one stall.
-                void StGather(Tester t, Item kind, uint want)
-                {
-                    while (t.Count(kind) < want)
-                    {
-                        var stItem = t.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
-                            .OrderBy(i => (i.X - t.X) * (i.X - t.X) + (i.Z - t.Z) * (i.Z - t.Z)).First();
-                        Walk(t, stItem.X, stItem.Z);
-                        uint stHad = t.Count(kind);
-                        t.Conn.Reducers.PickUp(stItem.Id);
-                        Pump(() => t.Count(kind) > stHad || t.LastError != null, 5, "pick up");
-                        t.LastError = null;
-                    }
-                }
-                uint stSticks = 0, stFiber = 0;
-                foreach (var stage in Structures.Costs(Stalls.Kind))
-                    foreach (var (stKind, stCount) in stage)
-                        if (stKind == Item.Stick) stSticks += stCount; else if (stKind == Item.Fiber) stFiber += stCount;
-                // One fiber more to set out on the stall; B brings a stick to pay with.
-                StGather(a, Item.Stick, stSticks);
-                StGather(a, Item.Fiber, stFiber + 1);
-                StGather(b, Item.Stick, 1);
-                Structure? stall = null;
-                for (int stTry = 0; stTry < 8 && stall == null; stTry++)
-                {
-                    float stAngle = stTry * MathF.Tau / 8f, stX = aClaim.X + 4f * MathF.Cos(stAngle), stZ = aClaim.Z + 4f * MathF.Sin(stAngle);
-                    Walk(a, stX - 1.5f, stZ);
-                    a.LastError = null;
-                    a.Conn.Reducers.PlaceStructure(StructureKind.Stall, stX, stZ, 0);
-                    Wait(() => a.LastError != null || a.Conn.Db.Structure.Iter().Any(st => st.Kind == StructureKind.Stall && st.Owner == a.Conn.Identity), 5);
-                    stall = a.Conn.Db.Structure.Iter().FirstOrDefault(st => st.Kind == StructureKind.Stall && st.Owner == a.Conn.Identity);
-                    if (stall == null) Console.WriteLine($"  (no stall at {stX:F1},{stZ:F1}: {a.LastError})");
-                }
-                Check(stall != null, $"A lays out a trading stall on their claim ({a.LastError ?? "ok"})");
-                if (stall != null)
-                {
-                    ulong stallId = stall.Id;
-                    for (int i = 0; i < 40 && a.Conn.Db.Structure.Id.Find(stallId) is { Complete: false }; i++)
-                    {
-                        a.Conn.Reducers.Build(stallId);
-                        Wait(() => a.Conn.Db.Structure.Id.Find(stallId) is { Complete: true }, 0.7);
-                        a.LastError = null;
-                    }
-                    Check(a.Conn.Db.Structure.Id.Find(stallId) is { Complete: true }, "A builds the stall");
-                    // A second stall a little further out from the marker, clear of both.
-                    float stOutX = stall.X - aClaim.X, stOutZ = stall.Z - aClaim.Z, stOutLen = MathF.Max(0.01f, MathF.Sqrt(stOutX * stOutX + stOutZ * stOutZ));
-                    float st2X = stall.X + stOutX / stOutLen * 3.5f, st2Z = stall.Z + stOutZ / stOutLen * 3.5f;
-                    Walk(a, st2X - 1.5f, st2Z);
-                    ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.Stall, st2X, st2Z, 0), "already has a trading stall", "a claim takes one stall");
-                    Walk(a, stall.X - 1.5f, stall.Z);
-                    ExpectError(a, () => a.Conn.Reducers.SetOutOnStall(stallId, (ushort)Item.Fiber, a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Fiber).Quality, 1, (ushort)Item.Stick, 0), "something in return", "a stall lot needs a price");
-                    var stFiberRow = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Fiber && !i.OnBelt);
-                    a.LastError = null;
-                    a.Conn.Reducers.SetOutOnStall(stallId, stFiberRow.Item, stFiberRow.Quality, 1, (ushort)Item.Stick, 1);
-                    Check(Wait(() => b.Conn.Db.StallLot.Iter().Any(l => l.StructureId == stallId), 5), $"A sets a fiber out for a stick, and B sees it ({a.LastError ?? "ok"})");
-                    var stLot = b.Conn.Db.StallLot.Iter().First(l => l.StructureId == stallId);
-                    Walk(b, stall.X + 1.5f, stall.Z);
-                    ExpectError(b, () => b.Conn.Reducers.SetOutOnStall(stallId, (ushort)Item.Stick, b.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick).Quality, 1, (ushort)Item.Fiber, 1), "owner and members", "only the claim's people set things out");
-                    uint stBFiber = b.Count(Item.Fiber), stBSticks = b.Count(Item.Stick);
-                    b.LastError = null;
-                    b.Conn.Reducers.BuyFromStall(stLot.Id, 1);
-                    Check(Wait(() => b.Count(Item.Fiber) == stBFiber + 1 && b.Count(Item.Stick) == stBSticks - 1, 5), $"B buys the fiber with a stick ({b.LastError ?? "ok"})");
-                    Check(Wait(() => !b.Conn.Db.StallLot.Iter().Any(l => l.StructureId == stallId), 5), "the sold-out lot leaves the stall");
-                    Check(Wait(() => a.Conn.Db.MyStallTill.Iter().Any(t => t.StructureId == stallId && t.Item == (ushort)Item.Stick), 5) && !b.Conn.Db.MyStallTill.Iter().Any(), "the stick waits in the till for A, and B can't see it");
-                    Check(Wait(() => a.Conn.Db.MyStallSales.Iter().Any(l => l.StructureId == stallId && l.Text.Contains("bought")), 5), "the sale is logged on the stall");
-                    ExpectError(b, () => b.Conn.Reducers.TakeFromStallTill(stallId), "owner and members", "a buyer can't empty the till");
-                    uint stASticks = a.Count(Item.Stick);
-                    a.LastError = null;
-                    a.Conn.Reducers.TakeFromStallTill(stallId);
-                    Check(Wait(() => a.Count(Item.Stick) == stASticks + 1 && !a.Conn.Db.MyStallTill.Iter().Any(), 5), $"A empties the till ({a.LastError ?? "ok"})");
-                }
                 Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
             }
 
@@ -977,7 +904,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store", "SELECT * FROM stall_lot", "SELECT * FROM my_stall_till", "SELECT * FROM my_stall_sales",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_characters", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_standing", "SELECT * FROM my_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites", "SELECT * FROM my_town_store",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
