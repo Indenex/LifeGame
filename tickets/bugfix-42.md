@@ -1,9 +1,9 @@
 # bugfix-42: In-game bug report (F8)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-42
-PR: (not yet)
+PR: #541 (merged)
 
 ## Goal
 F8 (and later an Esc-menu entry) takes a screenshot, asks "What went wrong?", then writes
@@ -21,4 +21,4 @@ for an admin). Admin `/bugs` lists the newest five. The auth token is never incl
 - Launcher version comes from env LIFEGAME_LAUNCHER, build from `--build=` / LIFEGAME_BUILD; Release lane must set them.
 
 ## Next step
-Push, wait for CI, send the green sha to the PM, ping UX, request a Render B still (F8 window over the world).
+Done: merged in #541. Nothing left on this ticket.
