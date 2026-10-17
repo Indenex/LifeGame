@@ -151,7 +151,7 @@ public static class Painted
         string code = Look.PaintedCode;
         code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
         if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
-        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
+        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + RimUniform);
         code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", $$"""
             dab = dab_at(world_pos);
                 // Clean colour (D-319): the brush only drifts the colour in broad, soft
@@ -175,7 +175,7 @@ public static class Painted
         // what read as pitting.
         code = Splice(code, "NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);", $"NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035 * {F(Smooth.Relief)});");
         code = Splice(code, "AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);", $"AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6 * {F(Smooth.Relief)});");
-        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
+        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n" + Rim + "\n#else\n");
         code = code.TrimEnd();
         if (!code.EndsWith("}")) throw new System.InvalidOperationException("Painted: Look's shader no longer ends with light()");
         return code[..^1] + "#endif\n}\n";
@@ -223,6 +223,24 @@ public static class Painted
             vec2 b = vec2(p.z * 0.9, p.y * 1.2) / (dab_size * DAB_SCALE) + 0.37;
             return mix(texture(dabs, a).r, texture(dabs, b).r, 0.45);
         }
+        """;
+
+    // The soft rim light (D-313, Justin's pick): a thin warm glow round the edges of a shape
+    // that face away from the sun, strongest when it is backlit, as the cards outline their
+    // figures against the light. Characters (ChibiLook), animals, props, buildings and items
+    // all add it; trees and the ground do not. Its colour is the sun's times Atmosphere's
+    // global rim_tint (cream by day, peach at golden hour, rose at dusk, cool blue at night;
+    // its alpha scales the strength, #612). RimStrength is the one constant to raise.
+    // Shaders that splice Rim declare RimUniform once at the top level.
+    internal const float RimStrength = 0.5f;
+    internal const string RimUniform = "global uniform vec4 rim_tint;";
+    internal static readonly string Rim = $$"""
+            if (LIGHT_IS_DIRECTIONAL) {
+                float rim_edge = smoothstep(0.5, 0.9, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0));
+                float rim_back = smoothstep(-0.2, 0.8, dot(-VIEW, LIGHT));
+                float rim_away = 1.0 - smoothstep(0.0, 0.5, dot(NORMAL, LIGHT));
+                DIFFUSE_LIGHT += LIGHT_COLOR * rim_tint.rgb * rim_edge * mix(0.5, 1.0, rim_back) * rim_away * rim_tint.a * {{RimStrength.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture)}} / PI;
+            }
         """;
 
     // Stepped light as on the painted trees: shade, mid and lit with brush-broken edges,
