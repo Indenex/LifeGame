@@ -583,7 +583,7 @@ public static partial class Module
     // speed check by this, matching the client's slowdown.
     static float CarryWalkFactor(ReducerContext ctx, Identity owner)
     {
-        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Select(i => ((Item)i.Item, i.Count)));
+        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Where(i => !i.OnBelt).Select(i => ((Item)i.Item, i.Count)));
         return Carry.WalkFactor(load, limit);
     }
 }
