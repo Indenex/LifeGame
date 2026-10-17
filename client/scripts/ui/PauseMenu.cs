@@ -18,6 +18,8 @@ public partial class PauseMenu : CanvasLayer
     public Func<bool> OthersOpen = () => false;
     // Opens the bug report window (Main sets it).
     public Action? ReportBug;
+    // Frees you when you're wedged in something (bugfix-44); Main sets it. The server's note says how it went.
+    public Action? Unstuck;
     public KeyHelp Keys = null!;
     // The world's music (Atmosphere's SoundScape), for the music slider; Main sets it.
     public Func<SoundScape?> Sound = () => null;
@@ -68,6 +70,7 @@ public partial class PauseMenu : CanvasLayer
         // The bug report window (bugfix-42, F8); Main sets ReportBug. The menu closes first
         // so the report's picture is of the world, not of this menu.
         column.AddChild(Entry("Report a bug", () => { Close(); ReportBug?.Invoke(); }));
+        column.AddChild(Entry("I'm stuck", () => { Close(); Unstuck?.Invoke(); }));
         column.AddChild(Entry("Quit", () => GetTree().Quit()));
 
         page.Back = HideControls;

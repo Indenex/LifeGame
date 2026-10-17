@@ -25,7 +25,7 @@ public partial class MarkPicker : CanvasLayer
     static readonly Color[] Presets = Marks.Presets.Select(MarkColour.ToColor).ToArray();
 
     Control panel = null!;
-    HBoxContainer tabs = null!;
+    HFlowContainer tabs = null!;
     GridContainer grid = null!;
     PotStamp pot = null!;
     HueStrip hue = null!;
@@ -34,6 +34,10 @@ public partial class MarkPicker : CanvasLayer
     int group;
     ushort glyph;
     Color ink = MarkColour.ToColor(Marks.DefaultColor);
+
+    // Glyph tiles: four big ones across, so a group of ten fills the left side as tall as the
+    // pot and colours on the right (the first version left most of the panel empty).
+    const int Columns = 4, Tile = 100, Gap = 10;
 
     public override void _Ready()
     {
@@ -93,22 +97,24 @@ public partial class MarkPicker : CanvasLayer
         box.AddChild(columns);
 
         // Left: the glyphs, by group.
-        var left = new VBoxContainer { CustomMinimumSize = new Vector2(5 * 56 + 4 * 8, 0) };
+        float across = Columns * Tile + (Columns - 1) * Gap;
+        var left = new VBoxContainer { CustomMinimumSize = new Vector2(across, 0) };
         left.AddThemeConstantOverride("separation", 10);
         columns.AddChild(left);
-        tabs = new HBoxContainer();
-        tabs.AddThemeConstantOverride("separation", 6);
+        tabs = new HFlowContainer { CustomMinimumSize = new Vector2(across, 0) };
+        tabs.AddThemeConstantOverride("h_separation", 6);
+        tabs.AddThemeConstantOverride("v_separation", 2);
         left.AddChild(tabs);
-        grid = new GridContainer { Columns = 5 };
-        grid.AddThemeConstantOverride("h_separation", 8);
-        grid.AddThemeConstantOverride("v_separation", 8);
+        grid = new GridContainer { Columns = Columns };
+        grid.AddThemeConstantOverride("h_separation", Gap);
+        grid.AddThemeConstantOverride("v_separation", Gap);
         left.AddChild(grid);
 
         // Right: the mark on a pot, its name, and the colour.
         var right = new VBoxContainer { CustomMinimumSize = new Vector2(260, 0) };
         right.AddThemeConstantOverride("separation", 10);
         columns.AddChild(right);
-        pot = new PotStamp { CustomMinimumSize = new Vector2(260, 200) };
+        pot = new PotStamp { CustomMinimumSize = new Vector2(260, 170) };
         right.AddChild(pot);
         glyphName = Hud.Text("", 15);
         glyphName.HorizontalAlignment = HorizontalAlignment.Center;
@@ -117,10 +123,12 @@ public partial class MarkPicker : CanvasLayer
         var presets = new GridContainer { Columns = 6 };
         presets.AddThemeConstantOverride("h_separation", 6);
         presets.AddThemeConstantOverride("v_separation", 6);
-        foreach (var c in Presets)
+        // Presets go through the same clamp as the square, so every swatch is a colour a mark may have.
+        foreach (var c in Presets.Select(MarkColour.Clamp))
         {
             var swatch = new Button { CustomMinimumSize = new Vector2(30, 30), FocusMode = Control.FocusModeEnum.None };
-            var style = new StyleBoxFlat { BgColor = c, BorderColor = new Color(Look.Cream, 0.3f) };
+            WarmLook.KeepColours(swatch);
+            var style = new StyleBoxFlat { BgColor = c, BorderColor = WarmLook.RingColour(0.3f) };
             style.SetBorderWidthAll(1);
             style.SetCornerRadiusAll(15);
             foreach (var state in new[] { "normal", "hover", "pressed" }) swatch.AddThemeStyleboxOverride(state, style);
@@ -129,6 +137,12 @@ public partial class MarkPicker : CanvasLayer
             presets.AddChild(swatch);
         }
         right.AddChild(presets);
+
+        var range = Hud.Text("Or any shade from the square: marks keep to earthy, readable colours", 12);
+        range.Modulate = new Color(1, 1, 1, 0.55f);
+        range.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        range.CustomMinimumSize = new Vector2(260, 0);
+        right.AddChild(range);
 
         shade = new ShadeSquare { CustomMinimumSize = new Vector2(260, 110) };
         shade.Picked += (s, v) => { ink = Link.Clamp(Color.FromHsv(hue.Hue, s, v)); UpdatePreview(); };
@@ -163,7 +177,7 @@ public partial class MarkPicker : CanvasLayer
         foreach (var child in grid.GetChildren()) { grid.RemoveChild(child); child.QueueFree(); }
         foreach (var g in Link.Groups[group].Glyphs)
         {
-            var tile = new Button { CustomMinimumSize = new Vector2(56, 56), FocusMode = Control.FocusModeEnum.None, TooltipText = g.Name };
+            var tile = new Button { CustomMinimumSize = new Vector2(Tile, Tile), FocusMode = Control.FocusModeEnum.None, TooltipText = g.Name };
             var style = new StyleBoxFlat
             {
                 BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f),
@@ -172,11 +186,11 @@ public partial class MarkPicker : CanvasLayer
             style.SetBorderWidthAll(g.Id == glyph ? 2 : 1);
             style.SetCornerRadiusAll(10);
             foreach (var state in new[] { "normal", "hover", "pressed" }) tile.AddThemeStyleboxOverride(state, style);
-            var view = new MarkView { Width = 2f };
+            var view = new MarkView { Width = 3f };
             view.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            view.OffsetLeft = view.OffsetTop = 9;
-            view.OffsetRight = view.OffsetBottom = -9;
-            view.Show(g, Look.Cream);
+            view.OffsetLeft = view.OffsetTop = 16;
+            view.OffsetRight = view.OffsetBottom = -16;
+            view.Show(g, WarmLook.On ? WarmLook.Ink : Look.Cream);
             tile.AddChild(view);
             var chosen = g.Id;
             tile.Pressed += () => { glyph = chosen; Refresh(); };

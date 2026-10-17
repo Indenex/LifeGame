@@ -133,7 +133,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log" });
     }
 
     public Func<bool> HideChip = () => false;
@@ -155,6 +155,9 @@ public partial class SocialLayer : Node
                 panel.Close();
         }
     }
+
+    // Opens the chat line already started, for the player menu's Whisper (ui-35).
+    public void OpenChat(string prefill) => chat.Open(prefill);
 
     public override void _UnhandledInput(InputEvent e)
     {
@@ -191,7 +194,7 @@ public partial class SocialLayer : Node
             hud.Note("Name changed");
             return;
         }
-        if (text.StartsWith('/') && (TimeCommands.Try(conn, text, hud.Note) || AdminCommands.Try(conn, text, hud.Note) || BugReportPanel.Try(conn, text, hud.Note))) return;
+        if (text.StartsWith('/') && (TimeCommands.Try(conn, text, hud.Note) || AdminCommands.Try(conn, text, hud.Note) || StuckCommand.Try(text, hud.Note) || BugReportPanel.Try(conn, text, hud.Note))) return;
         conn.Reducers.SendChat(text);
     }
 

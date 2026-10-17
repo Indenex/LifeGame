@@ -140,25 +140,10 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     var (wx0, wx1, wz) = crossing!.Value;
     float sx = wx0 - 2, ex = wx1 + 2;
     float cxw = MyPos()!.X, czw = MyPos()!.Z;
-    void WalkTo(float tx, float tz)
-    {
-        for (int guard = 0; guard < 2000; guard++)
-        {
-            float dx = tx - cxw, dz2 = tz - czw, d = MathF.Sqrt(dx * dx + dz2 * dz2);
-            if (d < 0.2f) break;
-            var seen = MyPos()!;
-            if (MathF.Abs(seen.X - cxw) + MathF.Abs(seen.Z - czw) < 0.8f)
-            {
-                float step = MathF.Min(d, 0.3f);
-                float ox0 = cxw, oz0 = czw;
-                cxw += dx / d * step; czw += dz2 / d * step;
-                (cxw, czw) = new BotGround(conn).Slide(ox0, oz0, cxw, czw);
-            }
-            conn.Reducers.Move(cxw, czw, MathF.Atan2(dx, dz2));
-            Pump(100);
-        }
-        WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - tx) + MathF.Abs(p.Z - tz) < 1.0f, 15, $"server has us at ({tx:F0}, {tz:F0})");
-    }
+    // Walking itself is tested here and nowhere else (integration-12): this walker is strict, so a stall
+    // fails the check instead of repositioning the bot as the other tools' walkers would.
+    var walker = new BotWalker(conn, myId, "Spawn check", "bot", Pump, msg => { Check(false, msg); }, strict: true);
+    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f, stand: true);
     WalkTo(sx, wz);
     WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
     Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");

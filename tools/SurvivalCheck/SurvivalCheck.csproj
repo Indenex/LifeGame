@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SpacetimeDB.ClientSDK" Version="2.12.*" />
+    <Compile Include="../../client/module_bindings/**/*.cs" LinkBase="Bindings" />
+    <Compile Include="../../shared/**/*.cs" LinkBase="Shared" />
+    <Compile Include="../common/*.cs" LinkBase="Common" />
+  </ItemGroup>
+
+</Project>

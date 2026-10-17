@@ -137,6 +137,8 @@ public partial class Hud : CanvasLayer
         toast.Modulate = new Color(1, 1, 1, Mathf.Clamp(toastTime * 1.5f, 0f, 1f));
         statusTime -= dt;
         status.Modulate = new Color(1, 1, 1, Mathf.Clamp(statusTime * 0.7f, 0f, 1f));
+        // Under the sundial's arc while it shows (ui-32).
+        status.Position = new Vector2(status.Position.X, 18 + SundialArc.Room);
     }
 
     // The lanes along the bottom, from the edge up: the inventory row, the name of a
@@ -172,7 +174,7 @@ public partial class Hud : CanvasLayer
     internal static void Soft(Label label, int size, float alpha)
     {
         Style(label, size, alpha);
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.5f) : new Color(0, 0, 0, 0.45f));
         label.AddThemeConstantOverride("shadow_outline_size", 7);
         label.AddThemeConstantOverride("shadow_offset_y", 2);
     }
@@ -188,7 +190,9 @@ public partial class Hud : CanvasLayer
     {
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", new Color(Look.Cream, alpha));
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.35f));
+        // D-313: the HUD stays light and boxless, in Nunito with a soft warm shadow.
+        if (WarmLook.On) label.AddThemeFontOverride("font", Ui.Font(700));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.4f) : new Color(0, 0, 0, 0.35f));
         label.AddThemeConstantOverride("shadow_offset_y", 1);
     }
 

@@ -12,8 +12,8 @@ public sealed class HoldRepeat
 {
     // Before the first repeat, so a tap still does one action.
     public const float Delay = 0.4f;
-    // Walking this far from where the hold began stops it.
-    const float MoveAway = 1.5f;
+    // Walking this far from where the hold began stops it (a step, not a stroll: crafting-31).
+    const float MoveAway = 0.3f;
 
     // Every hold in the game (Use, dig, pick up), so Active can say whether any is repeating.
     static readonly System.Collections.Generic.List<HoldRepeat> all = new();
@@ -29,6 +29,13 @@ public sealed class HoldRepeat
                 if (h.Armed) return true;
             return false;
         }
+    }
+
+    // Stops every hold at once (a job was cancelled by walking off, a panel or a change of hand);
+    // each starts again only when its key is pressed anew.
+    public static void StopAll()
+    {
+        foreach (var h in all) h.stopped = true;
     }
 
     bool Armed => held >= Delay && !stopped;
