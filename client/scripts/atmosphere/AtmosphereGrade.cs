@@ -61,15 +61,22 @@ public partial class Atmosphere
 
         // Lit tips read warm and bright, as in reference 02: a warmer, stronger sun.
         sun.LightColor = sun.LightColor.Lerp(new Color(1f, 0.93f, 0.78f), 0.25f * grade * daylight).Lerp(new Color(1f, 0.70f, 0.40f), 0.35f * lowSun);
-        sun.LightEnergy *= 1f + 0.1f * grade + 0.15f * lowSun;
-        // Shadows take a blue-violet cast all day, more at golden hour, deep blue at night.
+        sun.LightEnergy *= 1f + 0.1f * grade * daylight + 0.15f * lowSun;
+        // Moonlight is a readable blue-violet fill, not near-black: the moon (the same
+        // light at night) shines brighter, so cabins and people keep their silhouettes.
+        sun.LightEnergy *= 1f + 0.6f * night;
+        // Shade is purple-grey by day, blue-violet at golden hour, a soft moonlit
+        // blue-violet at night.
         env.AmbientLightColor = env.AmbientLightColor
-            .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.15f * grade + 0.3f * lowSun)
-            .Lerp(new Color(0.12f, 0.16f, 0.40f), 0.35f * night);
+            .Lerp(new Color(0.48f, 0.44f, 0.60f), 0.2f * grade * daylight)
+            .Lerp(new Color(0.40f, 0.42f, 0.66f), 0.3f * lowSun)
+            .Lerp(new Color(0.30f, 0.32f, 0.58f), 0.45f * night);
         env.AmbientLightSkyContribution = 0.75f - 0.1f * grade - 0.2f * lowSun - 0.1f * night;
         // Deeper shade: less fill light and stronger contact shadows, so darks hold their
         // value instead of going milky (Environment's env-13 comparison with reference 02).
-        env.AmbientLightEnergy *= 1f - 0.25f * grade;
+        // Less fill by day for deep shade; more at night so the dark stays readable.
+        env.AmbientLightEnergy *= (1f - 0.25f * grade * daylight) * (1f + 0.7f * night);
+        env.TonemapExposure *= 1f + 0.15f * night;
         env.SsaoIntensity = 1.8f + 1.2f * grade;
         env.SsaoRadius = 1.6f + 0.6f * grade;
         // Clear air near the camera by day: thinner distance fog and haze, keeping the

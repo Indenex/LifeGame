@@ -43,6 +43,11 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
 - 2026-10-17 01:10: Environment rendered with --grade=1 (renders/env-13/env-13-grass-before-after-ref02.png on claude/environment-painted-ground, 79e0508): a clear win, the veil gone and the grass warm and bright. Remaining gaps against 02 and changes:
   - Shade between leaves: SSAO intensity up to 3.0 and radius 1.6 to 2.2.
   - Far haze too bright and cool: fog aerial perspective 0.5 to 0.2, so less sky blue; by day the fog light leans 35% toward warm beige (0.78, 0.72, 0.60).
+- 2026-10-17 01:20: Render's read via Modeling: night in the combined scene was far too dark (cabin and player barely readable), and day shade should be purple-grey.
+  - The day-only cuts (ambient x0.75, sun +10%) now scale with daylight.
+  - At night: ambient energy x1.7 toward a soft blue-violet (0.30, 0.32, 0.58) instead of a dark (0.12, 0.16, 0.40); moonlight +60%; exposure +15%.
+  - By day, shade leans purple-grey (0.48, 0.44, 0.60) at 20%. Golden hour stays blue-violet.
+  - Test: `--view=painted --time-of-day=0.92 --cloud=0.1 --grade=1` on Modeling's branch.
 
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
