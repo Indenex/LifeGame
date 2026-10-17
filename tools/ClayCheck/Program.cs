@@ -60,6 +60,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
                 "SELECT * FROM lamp",
+                "SELECT * FROM maker_mark",
                 "SELECT * FROM animal",
                 "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",
@@ -671,6 +672,11 @@ int PotCheck()
     var coilPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).ToList();
     var coils = coilPieces.Select(p => p.Id).ToList();
     if (coils.Count != 2) Fail($"expected 2 coil pots drying, have {coils.Count}");
+    // Each pot carries its maker's mark (ceramics-15): this player's id and the glyph worked out from it.
+    uint expectedMark = Marks.Pack(myId, Marks.DefaultGlyph(myId));
+    foreach (var cp in coilPieces)
+        if (cp.Mark != expectedMark) Fail($"coil pot mark {cp.Mark:X}, expected {expectedMark:X}");
+    Log($"Pots carry the mark of a {Marks.GlyphName(expectedMark)} (maker {Marks.Maker(expectedMark)})");
     LightFireNear(coilPieces.Average(p => p.X) + 1.3f, coilPieces.Average(p => p.Z));
     if (coilPieces.Any(p => DistanceTo(p.X, p.Z, fire.X, fire.Z) > ClayRules.FireReach)) Fail("coil pot set down out of the fire's reach");
     KeepFireGoing();
@@ -706,12 +712,28 @@ int PotCheck()
         return 0;
     }
     Gather(Item.CoilPot, 1);
+    var firedRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CoilPot);
+    if (firedRow.Wear != expectedMark) Fail($"the fired pot lost its mark: {firedRow.Wear:X}, expected {expectedMark:X}");
+    Log("The fired pot kept its mark through the pit fire and the pick-up");
     WalkTo(waterX, waterZ, 1.5f);
     lastError = null;
     conn.Reducers.FillPots();
     Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
     if (lastError != null) Fail($"filling: {lastError}");
+    var filledRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.CoilPotOfWater);
+    if (filledRow.Wear != expectedMark) Fail($"the filled pot lost its mark: {filledRow.Wear:X}");
     Log("STAGE pot-of-water");
+
+    // Back at the bench, change to the next glyph: the next pot would carry it.
+    AtBench();
+    Pump(() => false, 1.5f, null);
+    lastError = null;
+    conn.Reducers.NextMakerMark();
+    byte wantGlyph = (byte)((Marks.DefaultGlyph(myId) + 1) % Marks.Glyphs);
+    Pump(() => lastError != null || conn.Db.MakerMark.PlayerId.Find(myId)?.Glyph == wantGlyph, 3, "the mark to change");
+    if (lastError != null) Fail($"changing the mark: {lastError}");
+    Log($"Changed mark to a {Marks.GlyphNames[wantGlyph]}");
+    Log("STAGE mark-changed");
 
     // Berries from the nearest ripe bushes.
     watch.Restart();
