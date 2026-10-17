@@ -21,7 +21,7 @@ namespace LifeGame;
 // outer leaves shiver. PaintedAsset's shader ignores COLOR.a today, so the tree stands still.
 public static class ArtBirch
 {
-    public static float Spacing = 3.9f;
+    public static float Spacing = 4.7f;
     public static float Height = 4.6f;
 
     const string Dir = "res://assets/art/trees/";

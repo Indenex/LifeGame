@@ -72,7 +72,9 @@ def save(col, name):
 
 
 # ---------------------------------------------------------------- wool
-WOOL = dict(lit=c(0.95, 0.92, 0.84), mid=c(0.86, 0.81, 0.73), shade=c(0.71, 0.66, 0.72), line=c(0.55, 0.43, 0.38), curl=c(0.78, 0.72, 0.68))
+# Lit and mid sit about 8% lower than first painted (0.95/0.86), so the puffs keep their
+# form in full sun; still a warm cream, not grey.
+WOOL = dict(lit=c(0.88, 0.85, 0.77), mid=c(0.8, 0.75, 0.67), shade=c(0.71, 0.66, 0.72), line=c(0.55, 0.43, 0.38), curl=c(0.78, 0.72, 0.68))
 ao, p, n, pid = load("wool")
 col = np.ones((len(ao), 3)) * WOOL["mid"]
 for which, key in ((1, "puffs"), (2, "tuft")):
@@ -87,8 +89,18 @@ for which, key in ((1, "puffs"), (2, "tuft")):
     k = np.argmin(dist, 1)
     d = q - cen[k]
     d /= np.maximum(np.linalg.norm(d, axis=-1, keepdims=True), 1e-6)
+    # Where two puffs meet, blend the light direction of the nearest two over a short band,
+    # so the tones don't jump in a hard edge at the seam (the cocoa crevice line stays).
+    order = np.argsort(dist, 1)
+    k2 = order[:, 1]
+    d2 = q - cen[k2]
+    d2 /= np.maximum(np.linalg.norm(d2, axis=-1, keepdims=True), 1e-6)
+    gap = np.take_along_axis(dist, k2[:, None], 1)[:, 0] - np.take_along_axis(dist, k[:, None], 1)[:, 0]
+    w2 = 0.5 * (1 - smooth(0.0, 0.25 * rad[k], gap))
+    ds = d + (d2 - d) * w2[:, None]
+    ds /= np.maximum(np.linalg.norm(ds, axis=-1, keepdims=True), 1e-6)
     wob = noise3(q, 14, 3) * 0.05
-    s = 0.6 * (d @ LIGHT) + 0.4 * (n[m] @ LIGHT) + wob
+    s = 0.6 * (ds @ LIGHT) + 0.4 * (n[m] @ LIGHT) + wob
     a = ao[m]
     lit = smooth(0.4, 0.46, s)
     shade = 1 - smooth(-0.1, -0.04, s - (0.75 - a) * 0.8)
