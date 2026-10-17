@@ -237,7 +237,10 @@ public static class Painted
             float soft = BAND_SOFT;
             float mid = smoothstep(0.32 - soft, 0.32 + soft, l);
             float lit = smoothstep(0.64 - soft, 0.64 + soft, l);
-            float band = 0.12 + 0.2 * low_sun + 0.4 * mid + 0.36 * lit;
+            // At low sun the shade lifts (it wraps further), but the lit side does not: the
+            // golden light is bright enough, and lifting both washed sunlit faces out to a
+            // pale peach at dusk (painted-11).
+            float band = 0.12 + 0.2 * low_sun * (1.0 - mid) + 0.4 * mid * (1.0 - 0.2 * low_sun) + 0.36 * lit * (1.0 - 0.5 * low_sun);
             vec3 tone = mix(shade_tint, vec3(1.0), mid);
             float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
             DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;
