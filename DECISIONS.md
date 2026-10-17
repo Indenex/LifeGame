@@ -1277,3 +1277,14 @@ Owner: Claims.
 ## D-314 — 2026-10-17 — UI look: "Warm paper windows"
 **Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
 **Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
+
+## D-315 — 2026-10-17 — Cutesy extras picked
+**Decision:** Cutesy extras picked, with owners:
+- #1 soft rim light (Modeling, with Atmosphere).
+- #8 soft bloom and light leaks, and #10 gentle vignette (Atmosphere, each with a toggle).
+- #12 ambient life: butterflies, fireflies, pollen, falling leaves, snow (Environment).
+- #15 idle fidgets, #16 blinking and expressions, and #17 hop and squish movement (Animation).
+- #18 bouncy UI with reduce-motion (UX).
+
+Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
+**Who:** Justin, picking the extras (relayed by the PM; no direct quote).
