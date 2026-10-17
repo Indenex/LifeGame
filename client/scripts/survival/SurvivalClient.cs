@@ -15,6 +15,7 @@ public partial class SurvivalClient : Node
 {
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
+    readonly RestSpotView restSpots = new();
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -53,6 +54,7 @@ public partial class SurvivalClient : Node
     public static IEnumerable<string> Queries(string range) => new[]
     {
         "SELECT * FROM my_vitals",
+        "SELECT * FROM my_respawn_point",
         "SELECT * FROM drenched",
         $"SELECT * FROM forage_bush WHERE {range}",
     };
@@ -64,6 +66,7 @@ public partial class SurvivalClient : Node
         this.player = player;
         this.hud = hud;
         wetLook = WetLook.On(player);
+        restSpots.Setup(world, terrain, player, hud);
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -72,6 +75,7 @@ public partial class SurvivalClient : Node
         Bind("eat", Key.X);
         AddChild(needsHud);
         AddChild(staminaBar);
+        AddChild(restSpots);
         RegisterUse();
     }
 
@@ -111,6 +115,7 @@ public partial class SurvivalClient : Node
     public void Attach(DbConnection connection)
     {
         conn = connection;
+        restSpots.Attach(connection);
         conn.Db.MyVitals.OnInsert += (_, v) => OnVitals(v);
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
         conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
@@ -144,7 +149,7 @@ public partial class SurvivalClient : Node
         vitals = v;
         if (deathsSeen != uint.MaxValue && v.Deaths > deathsSeen)
         {
-            needsHud.ShowDeath(v.LastDeath);
+            needsHud.ShowDeath(v.LastDeath, v.WakeKind);
             // Wake at the edge of the wilderness. Main follows the player from here.
             player.Position = new Vector3(v.WokeX, terrain.HeightAt(v.WokeX, v.WokeZ), v.WokeZ);
             warnedCold = warnedFood = warnedWater = false;

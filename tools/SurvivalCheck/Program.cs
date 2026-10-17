@@ -39,6 +39,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_vitals",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_admin",
+                "SELECT * FROM my_respawn_point",
                 "SELECT * FROM my_skills",
                 "SELECT * FROM player_pos",
             });
@@ -165,6 +166,23 @@ conn.Reducers.DrinkFrom((ushort)Item.Stick);
 Pump(() => lastError != null, 5, "drinking from a stick to be refused");
 Ok($"drinking from a stick is refused ({lastError})");
 
+// --- Waking places (survival-23): none to start, and the server refuses nonsense ---
+if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a new character should have no waking place");
+if (V().WakeKind != RestSpots.WokeAtEdge) Fail("a new character has not woken anywhere yet");
+Ok("a new character has no waking place");
+var matSpot = RestSpots.OfItem(Item.SleepingMat) ?? throw new Exception("the sleeping mat is a rest spot");
+lastError = null;
+conn.Reducers.SetRespawn(60000, 1);
+Pump(() => lastError != null, 5, "an unknown rest spot to be refused");
+if (!lastError!.Contains("not somewhere to sleep")) Fail($"unknown rest spot said: {lastError}");
+Ok($"an unknown rest spot is refused ({lastError})");
+lastError = null;
+conn.Reducers.SetRespawn(matSpot.Id, 9_999_999);
+Pump(() => lastError != null, 5, "a missing building to be refused");
+if (!lastError!.Contains("gone")) Fail($"a missing building said: {lastError}");
+Ok($"a building that is not there is refused ({lastError})");
+if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a refused choice must not set a waking place");
+Ok("a refused choice sets nothing (the accepted choice is checked in BuildTest; waking after a death has no check yet)");
 // --- Endurance is trained by running, which the server checks it saw (D-182) ---
 int Endurance() => conn.Db.MySkills.Iter().Where(r => r.Spec == Stamina.Skill).Sum(r => (int)r.Points);
 uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;

@@ -545,7 +545,21 @@ void LayMat(ulong hut)
     a.Conn.Reducers.RollUpMat();
     WaitFor(() => a.CountOf(Item.SleepingMat) == 1 && a.Conn.Db.SleepingMat.PlayerId.Find(me) is null, 10, "rolled it up again");
     a.Conn.Reducers.LayMat(hut);
-    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
+    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out");
+
+    // Laying a mat does not choose your waking place; A is asked, and the server checks the answer (survival-23).
+    Check(!a.Conn.Db.MyRespawnPoint.Iter().Any(), "laying a mat does not set the waking place by itself");
+    var mat = RestSpots.OfItem(Item.SleepingMat)!;
+    b.LastError = null;
+    b.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B choosing a mat that is not theirs to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => a.Conn.Db.MyRespawnPoint.Iter().Any(), 10, "A set the mat as their waking place");
+    var point = a.Conn.Db.MyRespawnPoint.Iter().First();
+    var laid = a.Conn.Db.SleepingMat.PlayerId.Find(me)!;
+    Check(point.StructureId == hut && point.Spot == mat.Id && MathF.Abs(point.X - laid.X) < 0.01f && MathF.Abs(point.Z - laid.Z) < 0.01f,
+        $"the waking place is the mat in the hut ({point.X:F1}, {point.Z:F1})");
 }
 
 // A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
@@ -662,6 +676,7 @@ sealed class Bot
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
+                        "SELECT * FROM my_respawn_point",
                         "SELECT * FROM fire",
                         "SELECT * FROM chopped_tree",
                         "SELECT * FROM clay_piece",
