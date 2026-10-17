@@ -126,6 +126,18 @@ if (runTools)
     if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
     OffRocks(fire);
 
+    // Lighting a fire where the player chose (crafting-28): a spot out of reach, and a process
+    // that is not a fire, are refused before anything is used up.
+    lastError = null;
+    conn.Reducers.StartFireAt("fire.hand_drill", 1f, x + 300f, z);
+    Pump(() => lastError != null, 5, "a fire out of reach to be refused");
+    if (lastError?.Contains("out of reach") != true) Fail($"a fire far away: {lastError}");
+    lastError = null;
+    conn.Reducers.StartFireAt("cord.twist", 0f, x, z);
+    Pump(() => lastError != null, 5, "a spot for a non-fire to be refused");
+    if (lastError?.Contains("Only a fire") != true) Fail($"a spot for cord.twist: {lastError}");
+    Console.WriteLine($"Choosing a spot: {lastError}");
+
     // A failed drill loses its inputs and lights nothing.
     Gather(Item.Fiber, 2);
     Gather(Item.Stick, 3);
