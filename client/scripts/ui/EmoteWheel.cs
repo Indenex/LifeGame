@@ -120,7 +120,9 @@ public partial class EmoteWheel : CanvasLayer
     partial class WheelDrawing : Control
     {
         public int? Hovered;
-        const float Ring = 112f, Petal = 50f;
+        const float Petal = 50f;
+        // The ring widens as emotes are added, so petals never overlap (seven fit at about 132).
+        static float Ring => Mathf.Max(112f, Petal * 1.15f / Mathf.Sin(Mathf.Pi / Mathf.Max(All.Count, 1)));
         float[] grow = new float[All.Count];
         float open, time;
 
@@ -184,7 +186,7 @@ public partial class EmoteWheel : CanvasLayer
                 Wobbly(at, r, new Color(WarmLook.Ink.Lerp(WarmLook.Coral, grow[i]), (0.35f + 0.65f * grow[i]) * alpha), 2.5f + grow[i], 32);
                 // The bob only on the chosen one.
                 var icon = at + new Vector2(0, -8 * pop + Mathf.Sin(time * 6f) * 2f * grow[i]);
-                Doodle(motion, icon, pop * (1f + 0.12f * grow[i]), new Color(WarmLook.Ink, alpha));
+                Doodle(motion, name, icon, pop * (1f + 0.12f * grow[i]), new Color(WarmLook.Ink, alpha));
                 var size = font.GetStringSize(name, HorizontalAlignment.Center, -1, 15);
                 DrawString(font, at + new Vector2(-size.X / 2, r * 0.62f), name, HorizontalAlignment.Center, -1, 15, new Color(WarmLook.Ink, alpha));
             }
@@ -212,7 +214,7 @@ public partial class EmoteWheel : CanvasLayer
         }
 
         // Little ink doodles, one per emote, drawn around `c` at scale `s`.
-        void Doodle(WorkMotion e, Vector2 c, float s, Color ink)
+        void Doodle(WorkMotion e, string name, Vector2 c, float s, Color ink)
         {
             const float w = 2.6f;
             switch (e)
@@ -252,6 +254,38 @@ public partial class EmoteWheel : CanvasLayer
                     DrawLine(c + new Vector2(6, -6) * s, c + new Vector2(6, 14) * s, ink, w, true);
                     DrawLine(c + new Vector2(0, -4) * s, c + new Vector2(-2, 6) * s, ink, w, true);
                     Heart(c + new Vector2(12, -15) * s, 4 * s, new Color(WarmLook.Coral, ink.A));
+                    break;
+                // anim-18 (#705) emotes, matched by name so they draw as soon as they're in the list.
+                case var _ when name == "Clap":
+                    // Two palms meeting, with little burst lines.
+                    DrawSetTransform(c + new Vector2(-4, 2) * s, 0.35f, Vector2.One);
+                    DrawArc(Vector2.Zero, 7 * s, 0f, Mathf.Tau, 18, ink, w, true);
+                    DrawSetTransform(c + new Vector2(4, 2) * s, -0.35f, Vector2.One);
+                    DrawArc(Vector2.Zero, 7 * s, 0f, Mathf.Tau, 18, ink, w, true);
+                    DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+                    for (int b = 0; b < 3; b++)
+                    {
+                        var d = Vector2.FromAngle(-Mathf.Pi / 2 + (b - 1) * 0.55f);
+                        DrawLine(c + d * 13 * s, c + d * 18 * s, new Color(WarmLook.Butter.Darkened(0.25f), ink.A), 2.2f, true);
+                    }
+                    break;
+                case var _ when name == "Shrug":
+                    // A head between raised shoulders, both palms up, and a small question mark.
+                    DrawCircle(c + new Vector2(0, -4) * s, 5 * s, ink);
+                    DrawPolyline(new[] { c + new Vector2(-15, -6) * s, c + new Vector2(-9, 4) * s, c + new Vector2(9, 4) * s, c + new Vector2(15, -6) * s }, ink, w, true);
+                    DrawLine(c + new Vector2(-15, -6) * s, c + new Vector2(-19, -8) * s, ink, w, true);
+                    DrawLine(c + new Vector2(15, -6) * s, c + new Vector2(19, -8) * s, ink, w, true);
+                    DrawLine(c + new Vector2(0, 4) * s, c + new Vector2(0, 14) * s, ink, w, true);
+                    DrawArc(c + new Vector2(12, -18) * s, 3 * s, -Mathf.Pi, Mathf.Pi * 0.4f, 10, new Color(WarmLook.Coral, ink.A), 2f, true);
+                    DrawCircle(c + new Vector2(12, -11) * s, 1.2f * s, new Color(WarmLook.Coral, ink.A));
+                    break;
+                case var _ when name == "Point":
+                    // A fist with the first finger out, and a dotted line to where it points.
+                    DrawArc(c + new Vector2(-8, 2) * s, 6 * s, 0f, Mathf.Tau, 16, ink, w, true);
+                    DrawLine(c + new Vector2(-3, -1) * s, c + new Vector2(8, -1) * s, ink, w, true);
+                    for (int d = 0; d < 3; d++)
+                        DrawCircle(c + new Vector2(12 + d * 4, -1) * s, 1.2f * s, new Color(WarmLook.Coral, ink.A));
+                    DrawPolyline(new[] { c + new Vector2(20, -5) * s, c + new Vector2(24, -1) * s, c + new Vector2(20, 3) * s }, new Color(WarmLook.Coral, ink.A), 2f, true);
                     break;
                 default:
                     // A new emote without a doodle yet: a star.
