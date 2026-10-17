@@ -554,26 +554,48 @@ public partial class Showcase : Node3D
         }
         var rng = new RandomNumberGenerator { Seed = 7 };
         // A card `height` metres tall standing on its bottom edge at `at`.
+        // Cards face the camera around the upright axis but take light as if they faced
+        // mostly up, like the grass, so they catch sun, sky and moonlight instead of
+        // going dark whenever the light is behind them.
+        var cardShader = new Shader { Code = """
+            shader_type spatial;
+            render_mode cull_disabled;
+            uniform sampler2D tex : source_color, filter_linear_mipmap;
+            uniform vec3 tint = vec3(1.0);
+            uniform bool flip = false;
+            void vertex() {
+                vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), INV_VIEW_MATRIX[2].xyz));
+                vec3 back = normalize(cross(right, vec3(0.0, 1.0, 0.0)));
+                vec3 scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+                vec3 world = MODEL_MATRIX[3].xyz + right * VERTEX.x * scale.x + vec3(0.0, VERTEX.y * scale.y, 0.0);
+                VERTEX = (inverse(MODEL_MATRIX) * vec4(world, 1.0)).xyz;
+                NORMAL = (inverse(MODEL_MATRIX) * vec4(normalize(vec3(0.0, 1.0, 0.0) + back * 0.5), 0.0)).xyz;
+                if (flip) UV.x = 1.0 - UV.x;
+            }
+            void fragment() {
+                vec4 c = texture(tex, UV);
+                ALBEDO = c.rgb * tint;
+                ALPHA = c.a;
+                ALPHA_SCISSOR_THRESHOLD = 0.5;
+                ROUGHNESS = 0.95;
+                SPECULAR = 0.1;
+            }
+            """ };
         void Card(string name, Vector3 at, float height, bool shadow = true, float light = 1f)
         {
             var tex = Tex(name);
-            var sprite = new Sprite3D
+            float width = height * tex.GetWidth() / tex.GetHeight();
+            var material = new ShaderMaterial { Shader = cardShader };
+            material.SetShaderParameter("tex", tex);
+            material.SetShaderParameter("tint", new Vector3(light, light, light * 0.9f));
+            material.SetShaderParameter("flip", rng.Randf() < 0.5f);
+            AddChild(new MeshInstance3D
             {
-                Texture = tex,
-                PixelSize = height / tex.GetHeight(),
-                Billboard = BaseMaterial3D.BillboardModeEnum.FixedY,
-                Shaded = true,
-                DoubleSided = true,
-                AlphaCut = SpriteBase3D.AlphaCutMode.Discard,
-                TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
-                CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
-                Centered = false,
-                Offset = new Vector2(-tex.GetWidth() * 0.5f, 0),
+                Mesh = new QuadMesh { Size = new Vector2(width, height), CenterOffset = new Vector3(0, height * 0.5f, 0) },
+                MaterialOverride = material,
                 Position = at,
-                FlipH = rng.Randf() < 0.5f,
-                Modulate = new Color(light, light, light * 0.9f),
-            };
-            AddChild(sprite);
+                CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+            });
         }
 
         // Ground: the pack's grass tile painted over the plane, in D's banded light.
