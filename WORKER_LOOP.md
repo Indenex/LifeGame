@@ -43,6 +43,7 @@ Repeat until the ticket's goal is met:
 3. Save images as /mnt/project-files/screenshots/<ticket>-<short sha>-<n>.png.
 4. Send the PM: requester's summary, the image paths, and anything that looked wrong. Never judge design; report what you saw.
 5. If the build or run fails, tell the requesting lane and the PM what failed; don't fix their code.
+6. Justin does not read lane threads (D-246): images go to the PM, who sends Justin every screenshot and render directly.
 
 ## PM loop
 
