@@ -356,7 +356,7 @@ public static class PaintedTrees
     // The see-through copy Terrain draws for a tree in the way, like Look's tree ghosts.
     public static ShaderMaterial? GhostOf(Material material) =>
         material == PineMaterial ? pineGhost ??= Look.Ghost(PineMaterial, GhostShader) :
-        material == BroadleafMaterial ? broadleafGhost ??= Look.Ghost(BroadleafMaterial, GhostShader) : null;
+        material == BroadleafMaterial ? broadleafGhost ??= Look.Ghost(BroadleafMaterial, GhostShader) : Painted.GhostOf(material);
 
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: false));
     static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: true));

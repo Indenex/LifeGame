@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -41,6 +41,7 @@ public partial class Showcase : Node3D
             else if (view == "hen") Hen();
             else if (view == "stonehearth") StoneHearthView();
             else if (view == "treelod") TreeLod();
+            else if (view == "rocks") Rocks();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -312,6 +313,34 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Rocks as the world draws them (painted-1): today's material in the back row, the
+    // painted one in front: boulders, outcrops and river stones.
+    void Rocks()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int row = 0; row < 2; row++)
+        {
+            var material = row == 0 ? Look.RockSurface : Painted.Rock;
+            float z = row == 0 ? -3.5f : 0.5f;
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                Place(PropMeshes.Rock(v), material, new Vector3(-6.5f + v * 1.6f, 0, z), Look.WorldRock, 0.9f);
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Outcrop(v), material, new Vector3(0.6f + v * 2.8f, 0, z - 0.6f), Look.Rock);
+            for (int v = 0; v < 4; v++)
+                Place(PropMeshes.RiverStone(v), material, new Vector3(6.2f + v * 0.5f, 0, z + 0.6f), Look.Rock.Lightened(0.1f), 0.9f);
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 

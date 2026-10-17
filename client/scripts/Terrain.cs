@@ -441,10 +441,10 @@ public partial class Terrain : Node3D
                     float size = pebble ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
                     var stone = (at.ScaledLocal(Vector3.One * size), Look.WorldRock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
                     if (pebble)
-                        landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Look.RockSurface,
+                        landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Painted.Rock,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
                     else
-                        landmarks.Put(PropMeshes.Rock(Regional(x, z, 94, PropMeshes.RockVariants)), Look.RockSurface, stone);
+                        landmarks.Put(PropMeshes.Rock(Regional(x, z, 94, PropMeshes.RockVariants)), Painted.Rock, stone);
                     continue;
                 }
                 else if (density > 0.45f && Hash01(x, z, 50) < 0.006f)
