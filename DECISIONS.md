@@ -1027,3 +1027,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-253 — 2026-10-17 — Trees stay 3D, restyled to read about 85% like the painted card pines (follows D-240)
 **Decision:** Trees stay 3D (scalloped pines), restyled to read about 85% like the artist's painted card pines: silhouette, colour bands, outline and painted strokes. Modeling iterates with side-by-side renders against the card pines.
 **Who:** Justin ("Can you make the 3d ones look more like the painted card pines? Like, 85% the same or something?")
+
+## D-254 — 2026-10-17 — Characters, look: back to round 2's animal and humanoid concepts, slightly less cute (revises D-249, D-250)
+**Decision:** Round 3 (realistic, about 4 heads tall) was rejected. The direction is now round 2's animal and humanoid concepts, slightly less cute: head at 85% size (about 2.8 heads tall), still chibi, 1.35 m tall on the shared 16-bone base (D-249, D-250). The first roster is still to be picked. Owner: Character concepts.
+**Who:** Justin ("this new version is even worse. Go back to the old animal/humanoid look, just slightly less cute, chibiish is fine.")
