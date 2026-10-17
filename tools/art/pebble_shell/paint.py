@@ -29,13 +29,14 @@ def c(*rgb):
     return np.array(rgb, float)
 
 
-# The palette, after the Golden Skull tiles: warm browns, ochre lights, shade leaning
-# violet, seams nearly black-brown.
-PLATE = dict(lit=c(0.63, 0.5, 0.33), mid=c(0.47, 0.35, 0.24), shade=c(0.34, 0.24, 0.18), seam=c(0.17, 0.11, 0.12), bevel=c(0.8, 0.67, 0.47))
-MARG = dict(lit=c(0.74, 0.6, 0.39), mid=c(0.6, 0.46, 0.29), shade=c(0.42, 0.3, 0.21), seam=c(0.17, 0.11, 0.12), bevel=c(0.86, 0.75, 0.55))
-PLAS = dict(lit=c(0.96, 0.9, 0.7), mid=c(0.9, 0.82, 0.58), shade=c(0.75, 0.63, 0.43), seam=c(0.5, 0.38, 0.27), bevel=c(1.0, 0.96, 0.82))
-INNER = c(0.3, 0.21, 0.17)
-EDGE = c(0.78, 0.64, 0.43)
+# The palette (D-313, "cutesy, relaxing, with a hint of realism"): warm, pastel-leaning
+# caramel and honey, soft cocoa seams rather than near-black, cream bevels; the shade
+# leans violet as in the Golden Skull tiles.
+PLATE = dict(lit=c(0.9, 0.74, 0.5), mid=c(0.78, 0.59, 0.4), shade=c(0.64, 0.47, 0.37), seam=c(0.46, 0.31, 0.27), bevel=c(0.98, 0.88, 0.68))
+MARG = dict(lit=c(0.96, 0.86, 0.64), mid=c(0.89, 0.76, 0.54), shade=c(0.76, 0.61, 0.46), seam=c(0.5, 0.35, 0.29), bevel=c(1.0, 0.94, 0.78))
+PLAS = dict(lit=c(0.99, 0.94, 0.78), mid=c(0.95, 0.87, 0.66), shade=c(0.84, 0.73, 0.55), seam=c(0.7, 0.56, 0.42), bevel=c(1.0, 0.98, 0.9))
+INNER = c(0.42, 0.31, 0.26)
+EDGE = c(0.9, 0.79, 0.6)
 
 
 def smooth(e0, e1, x):
@@ -56,7 +57,7 @@ def value_noise(x, y, seed):
     return (a * (1 - fx) + b * fx) * (1 - fy) + (cc * (1 - fx) + d * fx) * fy
 
 
-def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.3, 0.46, 0.62, 0.78), cen=None):
+def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.42,), cen=None):
     """Shared plate painting. dist: m to the nearest seam; maxd: that plate's largest
     dist; direc: unit direction towards the seam (y up)."""
     f = dist / np.maximum(maxd, 1e-6)
@@ -71,27 +72,27 @@ def paint_plates(pal, dist, maxd, direc, region, worn, uvx, uvy, rings=(0.3, 0.4
     col = col + (pal["shade"] - pal["mid"])[None] * ((1 - smooth(0.13, 0.17, f + wob * 0.5)) * contrast)[:, None]
     # Bevel: the upper edge of each plate catches the light, the lower edge falls in shade.
     up = direc[:, 1]
-    band = 1 - smooth(0.006, 0.011, dist)
-    hi = band * smooth(0.25, 0.6, up) * (0.4 if worn else 0.75)
-    lo = band * smooth(0.25, 0.6, -up) * (0.2 if worn else 0.35)
+    band = 1 - smooth(0.008, 0.016, dist)
+    hi = band * smooth(0.25, 0.6, up) * (0.35 if worn else 0.6)
+    lo = band * smooth(0.25, 0.6, -up) * (0.1 if worn else 0.18)
     col = col + (pal["bevel"] - col) * hi[:, None]
     col = col * (1 - lo)[:, None]
     # Growth rings following the plate's outline, a little wobbly.
     if not worn:
         for k, at in enumerate(rings):
-            line = 1 - smooth(0.0, 0.0022, np.abs(dist - maxd * at - wob * 0.02))
-            col = col * (1 - 0.16 * line * (1 - 0.15 * k))[:, None]
+            line = 1 - smooth(0.0, 0.003, np.abs(dist - maxd * at - wob * 0.02))
+            col = col * (1 - 0.09 * line)[:, None]
     # Strokes along the rings: colour varies across them, little along them.
     stroke = value_noise(dist * 900 + uvx * 3, uvy * 3 + region * 7.3, 5) - 0.5
-    col = col * (1 + stroke * (0.05 if worn else 0.08))[:, None]
+    col = col * (1 + stroke * (0.03 if worn else 0.045))[:, None]
     # Each plate a touch different.
     # Each plate a touch lighter or darker, a little warmer or cooler.
     rng = np.random.default_rng(11)
-    value, warm = rng.normal(0, 0.035, 64), rng.normal(0, 0.012, 64)
+    value, warm = rng.normal(0, 0.025, 64), rng.normal(0, 0.008, 64)
     col = col * (1 + value[region % 64])[:, None] + np.stack([warm, warm * 0.3, -warm], -1)[region % 64]
     # The seam: a dark painted line.
-    seam_w = 0.0028 if worn else 0.0034
-    line = 1 - smooth(seam_w * 0.6, seam_w, dist)
+    seam_w = 0.0032 if worn else 0.0042
+    line = 1 - smooth(seam_w * 0.45, seam_w, dist)
     seam = pal["seam"] if not worn else pal["seam"] * 0.45 + pal["mid"] * 0.55
     col = col + (seam - col) * line[:, None]
     return col
@@ -130,8 +131,8 @@ def main(bake_dir, out_dir):
         # Painted light: the top of the dome a touch warmer and lighter.
         col = col * (1 + 0.07 * (1 - np.minimum(rho, 1) ** 2))[:, None]
         # The AO over everything, then the rim's underside a little darker.
-        col = col * (0.6 + 0.4 * ao[idx] ** 1.4)[:, None]
-        col = col * (1 - 0.18 * smooth(0.93, 1.0, rho))[:, None]
+        col = col * (0.72 + 0.28 * ao[idx] ** 1.4)[:, None]
+        col = col * (1 - 0.1 * smooth(0.93, 1.0, rho))[:, None]
         img[idx] = col
         # Plastron.
         loc = np.stack([(uvx - geom.PLAS_UV[0]) / geom.PLAS_K, (uvy - geom.PLAS_UV[1]) / geom.PLAS_K], -1)
@@ -153,7 +154,7 @@ def main(bake_dir, out_dir):
         pmax = np.zeros(64)
         np.maximum.at(pmax, pregion, pdist)
         pcol = paint_plates(PLAS, pdist, pmax[pregion], pdir, pregion, worn, uvx[pidx], uvy[pidx], rings=(0.45,))
-        pcol = pcol * (0.6 + 0.4 * ao[pidx] ** 1.4)[:, None]
+        pcol = pcol * (0.72 + 0.28 * ao[pidx] ** 1.4)[:, None]
         img[pidx] = pcol
         out = Image.fromarray((np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8)).resize((SIZE, SIZE), Image.LANCZOS)
         name = "shell_worn.png" if worn else "shell_scutes.png"

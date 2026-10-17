@@ -11,8 +11,9 @@ Its scutes are laid out in "surface" coordinates L: arc length from the dome's t
 along each radial line, in metres. So seams have an even width all over the dome, and
 the texture (UV = centre + K * L) has no stretch at the steep sides.
 
-Real tortoise layout: 5 vertebral scutes down the spine, 4 costal scutes a side, and a
-ring of 24 marginal scutes, the nuchal one centred at the neck.
+Cute, after D-313 ("cutesy, relaxing, with a hint of realism"): a tortoise's layout
+simplified to big friendly plates: 3 vertebral scutes down the spine, 2 costal scutes a
+side, and a chunky ring of 16 marginal scutes, the nuchal one centred at the neck.
 """
 import numpy as np
 
@@ -21,9 +22,9 @@ A = 0.345          # half height (y)
 B = 0.29           # half width (x)
 H = 0.37          # dome height (outwards, -z): a high tortoise dome
 YC = 0.525         # centre height
-RING_F = 0.83      # fraction of the arc from the top to the rim where the marginal ring starts
-N_MARG = 24
-SCALLOP = 0.035    # how far each marginal's outer edge bulges between seams
+RING_F = 0.76      # fraction of the arc from the top to the rim where the marginal ring starts
+N_MARG = 16
+SCALLOP = 0.045    # how far each marginal's outer edge bulges between seams
 THICK = 0.022      # shell wall
 
 # Texture atlas (1024 px square): the carapace, the plastron, and two flat patches.
@@ -112,8 +113,8 @@ def ring_arc(theta):
 
 _XI = float(ring_arc(0.0))
 _YI = float(ring_arc(np.pi / 2))
-VERT = np.array([[0.0, f * _YI] for f in (0.8, 0.4, 0.0, -0.4, -0.8)])
-COST = np.array([[s * 0.66 * _XI, f * _YI] for s in (-1, 1) for f in (0.62, 0.21, -0.21, -0.62)])
+VERT = np.array([[0.0, f * _YI] for f in (0.62, 0.0, -0.62)])
+COST = np.array([[s * 0.68 * _XI, f * _YI] for s in (-1, 1) for f in (0.33, -0.33)])
 SEEDS = np.concatenate([VERT, COST])
 
 
@@ -122,7 +123,7 @@ def scutes(rho, theta):
     direction from the point towards that seam (unit, in L), distance from the
     region's centre normalised 0..1 by its size).
 
-    Ids: 0-4 vertebral (top to bottom), 5-12 costal, 13+ marginal (13 is the nuchal)."""
+    Ids: 0-2 vertebral (top to bottom), 3-6 costal, 13+ marginal (13 is the nuchal)."""
     rho = np.asarray(rho, float)
     theta = np.asarray(theta, float)
     L = surface_L(rho, theta)
@@ -150,7 +151,7 @@ def scutes(rho, theta):
     better = dr < dist_in
     dist_in = np.where(better, dr, dist_in)
     dir_in = np.where(better[..., None], radial, dir_in)
-    size_in = np.where(own < 5, 0.5 * _YI * 0.4, 0.5 * 0.34 * _XI)
+    size_in = np.where(own < len(VERT), 0.5 * _YI * 0.62, 0.5 * 0.5 * _XI)
     cen_in = np.clip(np.sqrt(((L - so) ** 2).sum(-1)) / (size_in * 1.6), 0, 1)
     # Marginal ring: radial seams every 15 degrees, the ring boundary inside.
     step = 2 * np.pi / N_MARG
@@ -173,9 +174,9 @@ def scutes(rho, theta):
     return region, np.maximum(dist, 0), direc, cen
 
 
-def groove(dist, depth=0.006, width=0.006, pillow=0.004):
+def groove(dist, depth=0.006, width=0.013, pillow=0.009):
     """Relief of the carved shell: a V groove on each seam, each scute a little domed."""
-    return -depth * (1 - _smooth(0, width, dist)) + pillow * _smooth(0.0, 0.045, dist)
+    return -depth * (1 - _smooth(0, width, dist)) + pillow * _smooth(0.0, 0.07, dist)
 
 
 def cara_normal(rho, theta, inner=False, e=1e-3):
@@ -249,9 +250,9 @@ PW, PH, PY = 0.15, 0.2, 0.55
 _BODY_Y = np.array([0.30, 0.393, 0.518, 0.611, 0.70, 0.845])
 _BODY_D = np.array([0.13, 0.19, 0.195, 0.175, 0.155, 0.12])
 _BODY_W = np.array([0.15, 0.215, 0.22, 0.2, 0.18, 0.14])
-# Seams across the plastron (y, top to bottom): gular, humeral, pectoral, abdominal,
-# femoral, anal plates between them.
-PSEAMS = np.array([0.135, 0.06, 0.015, -0.095, -0.145])
+# Seams across the plastron (y, top to bottom): four rows of plates, a cute reading of
+# the real six (D-313).
+PSEAMS = np.array([0.1, -0.03, -0.13])
 
 
 def plas_outline(theta):
@@ -273,7 +274,7 @@ def plas_point(rho, theta, relief=False):
     w = np.interp(y, _BODY_Y, _BODY_W)
     z = d * np.sqrt(np.clip(1 - (x / w) ** 2, 0, 1)) + 0.004 + 0.02 * np.sqrt(np.clip(1 - rho ** 2, 0, 1))
     if relief:
-        z = z + groove(plas_seams(x, yo)[0], depth=0.004, width=0.005, pillow=0.002)
+        z = z + groove(plas_seams(x, yo)[0], depth=0.004, width=0.009, pillow=0.004)
     return np.stack([x, y, z], -1)
 
 

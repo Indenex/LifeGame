@@ -79,10 +79,10 @@ public static class ChibiShell
         render_mode cull_disabled;
         uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
         uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap, repeat_disable;
-        uniform float normal_strength = 0.55;
+        uniform float normal_strength = 0.5;
         uniform vec3 tint = vec3(1.0);
         uniform vec3 shade_tint : source_color = vec3(0.6, 0.56, 0.84);
-        uniform float rim_dark = 0.7;
+        uniform float rim_dark = 0.8;
         varying vec3 world_n;
         void vertex() {
             world_n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
