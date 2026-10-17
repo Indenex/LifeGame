@@ -90,6 +90,7 @@ public partial class Main : Node3D
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
+        atmosphere.SeeThrough = building.SeeThroughOf;
         AddChild(building);
         // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
         // Added after building, so it sees B first; while the ghost is up, B is building's.
@@ -547,7 +548,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.Has(item.Id)) return;
-        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
@@ -591,6 +592,8 @@ public partial class Main : Node3D
         if (conn != null && spawned)
         {
             Subscribe(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
+            heartbeatTimer -= dt;
+            if (heartbeatTimer <= 0f) { heartbeatTimer = 20f; conn.Reducers.Heartbeat(); }
             sendTimer -= dt;
             if (sendTimer <= 0f)
             {
@@ -603,6 +606,8 @@ public partial class Main : Node3D
             }
         }
     }
+
+    float heartbeatTimer; // tells the server we're still here (see Presence.cs)
 
     void Walk(float dt)
     {
@@ -725,7 +730,8 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions.
+    // One identity per install, so you keep your character between sessions. It lives in the
+    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
     static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
 
     static string? LoadToken()
@@ -738,6 +744,13 @@ public partial class Main : Node3D
 
     static void SaveToken(string token)
     {
+        // A different token from the one on disk (server wiped, key changed) keeps the old one as
+        // a .bak, so a character is never lost for good by an overwrite.
+        if (LoadToken() is { } old && old != token)
+        {
+            using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
+            bak.StoreString(old);
+        }
         using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Write);
         file.StoreString(token);
     }
