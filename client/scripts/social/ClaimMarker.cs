@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
@@ -14,7 +15,7 @@ public partial class ClaimMarker : Node3D
     static readonly Color Foreign = new(0.86f, 0.52f, 0.38f);
     static readonly Color ClothFresh = new(0.72f, 0.36f, 0.22f);
     static readonly Color ClothWorn = new(0.62f, 0.58f, 0.50f);
-    static Mesh? postMesh, barMesh, stakeMesh, stoneMesh;
+    static Mesh? postMesh, barMesh, stakeMesh, stoneMesh, boardMesh, cordMesh;
 
     readonly Terrain terrain;
     readonly Node3D post = new();
@@ -44,6 +45,10 @@ public partial class ClaimMarker : Node3D
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
         VertexColorUseAsAlbedo = true,
     };
+
+    // claims-33: the town's main marker carries a signboard with the town's name.
+    Node3D? sign;
+    string signName = "";
 
     Claim claim = null!;
     bool friendly;
@@ -112,6 +117,49 @@ public partial class ClaimMarker : Node3D
         }
         lastRingBuiltFrom = new Vector3(float.NaN, 0, 0);
         lineClock = 0f;
+    }
+
+    // The town's name on a little board hung from the post, readable from both sides and from afar.
+    // Null takes the board down again (a marker that is not the main one, or a town that closed).
+    public void SetSign(string? name)
+    {
+        name ??= "";
+        if (name == signName) return;
+        signName = name;
+        sign?.QueueFree();
+        sign = null;
+        if (name.Length == 0) return;
+        boardMesh ??= Look.Faceted(new BoxMesh { Size = new Vector3(0.9f, 0.3f, 0.04f) }, Look.Bark.Lightened(0.22f));
+        cordMesh ??= Look.Faceted(new CylinderMesh { TopRadius = 0.012f, BottomRadius = 0.012f, Height = 0.14f, RadialSegments = 4 }, Look.LeafWarm);
+        sign = new Node3D { Position = new Vector3(0, 1.28f, 0.1f) };
+        sign.AddChild(new MeshInstance3D { Mesh = boardMesh });
+        foreach (float x in new[] { -0.32f, 0.32f })
+            sign.AddChild(new MeshInstance3D { Mesh = cordMesh, Position = new Vector3(x, 0.22f, 0) });
+        // The name is painted on the board: dark, sized to fit inside the plank, on two lines when it is long.
+        string text = name;
+        int split = name.Length > 10 ? name.IndexOf(' ', name.Length / 2 - 3) : -1;
+        if (split < 0 && name.Length > 10) split = name.LastIndexOf(' ', name.Length / 2 + 3);
+        if (split > 0) text = name[..split] + "\n" + name[(split + 1)..];
+        int longest = text.Split('\n').Max(l => l.Length);
+        const int fontSize = 48;
+        // About half a font size of width per letter; leave a margin at each end of the 0.9 m plank.
+        float size = Mathf.Min(0.0045f, 0.74f / (longest * fontSize * 0.55f));
+        if (split > 0) size = Mathf.Min(size, 0.2f / (2 * fontSize * 1.2f));
+        for (int side = 0; side < 2; side++)
+            sign.AddChild(new Label3D
+            {
+                Text = text,
+                FontSize = fontSize,
+                PixelSize = size,
+                OutlineSize = 0,
+                Modulate = Look.Bark.Darkened(0.35f),
+                Shaded = true,
+                AlphaCut = Label3D.AlphaCutMode.Discard,
+                DoubleSided = false,
+                Position = new Vector3(0, 0, side == 0 ? 0.0215f : -0.0215f),
+                Rotation = new Vector3(0, side == 0 ? 0 : Mathf.Pi, 0),
+            });
+        post.AddChild(sign);
     }
 
     // Short stakes around the edge, so the boundary reads even without the ring.
