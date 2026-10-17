@@ -503,6 +503,18 @@ if (runStations)
         // World tool actions need the tool equipped (crafting-29): put the axe away and a chop is refused.
         conn.Reducers.EquipSlot(9);
         Pump(() => conn.Db.PlayerEquip.Owner.Find(me!.Value) is null, 5, "the axe to be put away");
+
+        // A slot holding an item the player does not carry puts nothing in hand (what other players see is real).
+        conn.Reducers.SetHotbarSlot(8, (ushort)Item.Bow);
+        Pump(() => false, 0.5f, null);
+        if (CountOf(Item.Bow) == 0)
+        {
+            conn.Reducers.EquipSlot(8);
+            Pump(() => false, 1f, null);
+            if (conn.Db.PlayerEquip.Owner.Find(me!.Value) is not null) Fail("equipping a slot whose item is not carried put something in hand");
+            Console.WriteLine("A slot with an item that is not carried equips nothing");
+        }
+        conn.Reducers.SetHotbarSlot(8, 0);
         lastError = null;
         conn.Reducers.StartCraft("chop.log", 0);
         Pump(() => lastError != null, 5, "a chop without the axe equipped to be refused");
