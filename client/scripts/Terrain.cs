@@ -204,11 +204,11 @@ public partial class Terrain : Node3D
                 float h = TileHeight(x, z);
                 heights[i, j] = h;
                 normals[i, j] = NormalAt(x, z);
-                colors[i, j] = TileColor(x, z, h);
+                colors[i, j] = UnderGrass(x, z, h, TileColor(x, z, h));
                 // A cell whose clearing just changed carries its old color and when it
                 // changed, and the ground shader blends from one to the other.
                 changes[i, j] = ClearChange(x, z) is { } c
-                    ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
+                    ? UnderGrass(x, z, h, TileColor(x, z, h, cleared: !c.Cleared)) with { A = c.At }
                     : new Color(0, 0, 0, 0);
             }
 
@@ -276,6 +276,26 @@ public partial class Terrain : Node3D
         if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+    }
+
+    // How strongly the ground under the grass leans toward the tufts' own olive
+    // (env-18), so the odd cell without a tuft doesn't show as a lighter square.
+    const float UnderGrassMatch = 0.7f;
+
+    // The ground's color where grass grows, toward the tufts' muted olive in proportion
+    // to how much grass the cell is likely to carry: full in the open meadow, fading
+    // under the trees, on trails and wet ground. Mirrors Look's grass shader (stylised).
+    Color UnderGrass(int x, int z, float top, Color color)
+    {
+        if (top < Look.WaterLevel + 0.2f || World.ClayScore(x, z) >= 0.7f || Depth(x, z) > 0) return color;
+        float cover = Mathf.Clamp(0.93f - 0.5f * Forest.Density(x, z) - 0.5f * Forest.Wetland(x, z) - 0.6f * Landmarks.Trail(x, z), 0f, 1f);
+        var lin = color.SrgbToLinear();
+        float lum = lin.R * 0.3f + lin.G * 0.59f + lin.B * 0.11f;
+        var olive = new Color(
+            Mathf.Lerp(lin.R, lum * 1.1f, 0.3f),
+            Mathf.Lerp(lin.G, lum * 1.05f, 0.3f),
+            Mathf.Lerp(lin.B, lum * 0.55f, 0.3f)) * 0.9f;
+        return lin.Lerp(olive with { A = lin.A }, cover * UnderGrassMatch).LinearToSrgb();
     }
 
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
@@ -424,7 +444,11 @@ public partial class Terrain : Node3D
                     // Ferns under the trees and bushes where a grove opens into a glade;
                     // heather and gorse on the heath; sedge on wet ground.
                     float plant = Hash01(x, z, 52);
-                    float fernChance = (0.10f * Mathf.SmoothStep(0.2f, 0.6f, density) + 0.12f * edge) * (1f - heath);
+                    // Where the meadow meets the wood a loose, patchy band of ferns and low
+                    // shrubs softens the line between grass and leaf litter (env-19).
+                    float rim = Mathf.SmoothStep(0.08f, 0.2f, density) * (1f - Mathf.SmoothStep(0.3f, 0.45f, density))
+                        * Mathf.SmoothStep(0.42f, 0.62f, World.Noise(x - 1907, z + 2633, 7f, 98)) * (1f - heath);
+                    float fernChance = (0.10f * Mathf.SmoothStep(0.2f, 0.6f, density) + 0.12f * edge) * (1f - heath) + 0.22f * rim;
                     // Heather grows in a few irregular patches with plenty of open grass
                     // between them, never sprinkled evenly (Justin's playtest); gorse is
                     // rarer still, in its own scattered clumps.
@@ -443,7 +467,7 @@ public partial class Terrain : Node3D
                         reeds.Add((Plant(fx, top, fz, yaw, 0.45f + Hash01(x, z, 53) * 0.2f), Look.Sedge.Lerp(Look.LeafWarm, Hash01(x, z, 54) * 0.2f), custom));
                     else if (plant < heather + gorse + sedge + fernChance)
                         ferns.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
-                    else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density)
+                    else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density + 0.08f * rim)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
                 }
                 else if (shore && Hash01(x, z, 60) < 0.25f)
@@ -489,6 +513,8 @@ public partial class Terrain : Node3D
         data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
         data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
+        // Bushes lean toward the grass tufts' muted olive (env-20).
+        for (int i = 0; i < bushes.Count; i++) bushes[i] = bushes[i] with { Item2 = Undergrowth.Olive(bushes[i].Item2) };
         data.Add(Undergrowth.Bush, bushes, Look.Foliage);
     }
 

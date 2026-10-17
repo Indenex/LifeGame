@@ -1,9 +1,9 @@
 # env-17: A few lone white flowers in the meadows
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-white-flowers
-PR: (opening)
+PR: #458 (merged)
 
 ## Goal
 After the art references: the odd lone white flower scattered between the existing wildflower patches on open ground (about 1 per 25 m² of meadow, none in forest, heath or on shores). Same flower mesh, season and wind as the patches; grass and patches unchanged.
@@ -15,4 +15,4 @@ After the art references: the odd lone white flower scattered between the existi
 - (none)
 
 ## Next step
-Wait for CI on the PR, send the green sha to the PM, ask Render for a before/after (main vs this branch).
+Done; merged.

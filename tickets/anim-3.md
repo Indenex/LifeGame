@@ -16,3 +16,5 @@ anim-2's goals are all merged (station pose, chop swing, breath, sheep motion, w
 
 ## Next step
 Done (#372 merged). Follow-ups live in later anim tickets.
+
+- 2026-10-17 03:55 follow-up (claude/anim-8): CraftWork.Tool is on main (Crafting); other players now show the exact tool from it.

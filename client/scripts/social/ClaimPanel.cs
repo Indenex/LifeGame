@@ -42,15 +42,16 @@ public partial class ClaimPanel : CanvasLayer
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
 
+        // The shared window look (ui/Ui.cs, ui-25), docked to the right.
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.10f, 0.11f, 0.09f, 0.72f),
+            BgColor = Ui.Frame,
             ContentMarginLeft = 22,
             ContentMarginRight = 22,
             ContentMarginTop = 16,
             ContentMarginBottom = 18,
         };
-        style.SetCornerRadiusAll(16);
+        style.SetCornerRadiusAll(Ui.Corner);
         box.AddThemeStyleboxOverride("panel", style);
         box.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
         box.GrowHorizontal = Control.GrowDirection.Begin;
@@ -196,7 +197,7 @@ public partial class ClaimPanel : CanvasLayer
             {
                 Kind = "bag", Width = 5, Empty = "Nothing",
                 Source = () => Conn != null
-                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "stash",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },

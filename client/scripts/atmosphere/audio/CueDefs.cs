@@ -181,6 +181,200 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0f, 0.05f, 0.18f, 20f, 1000f, 0.004f),
     });
 
+    // --- Water (audio-12): wading, splashing and floating. Louder and lower the deeper it is.
+
+    // Wade, ankle deep (under 0.3 m): a light splash and a few drops.
+    public static readonly CueDef WadeShallow = new("water.wade.shallow", 0.4f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.08f, 0.25f, 700f, 4000f, 0.006f),
+        new CueLayer(Src.Noise, 0.03f, 0.06f, 0.08f, 2500f, 7000f, 0.004f),
+        new CueLayer(Src.Tone, 0.02f, 0.05f, 0.05f, 350f, 900f, 0.004f),
+    });
+
+    // Wade, knee deep (0.3 to 0.65 m): a heavier slosh with a swirl behind it.
+    public static readonly CueDef WadeKnee = new("water.wade.knee", 0.65f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.16f, 0.3f, 200f, 2500f, 0.015f),
+        new CueLayer(Src.Noise, 0.08f, 0.2f, 0.2f, 100f, 900f, 0.08f),
+        new CueLayer(Src.Noise, 0.2f, 0.07f, 0.06f, 2500f, 6500f, 0.004f),
+    });
+
+    // Wade, waist deep (over 0.65 m): a slow, deep push through the water.
+    public static readonly CueDef WadeDeep = new("water.wade.deep", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.25f, 0.35f, 80f, 1500f, 0.03f),
+        new CueLayer(Src.Noise, 0.1f, 0.3f, 0.25f, 60f, 600f, 0.12f),
+        new CueLayer(Src.Tone, 0.25f, 0.08f, 0.04f, 200f, 120f, 0.01f),
+    });
+
+    // Splash in: something (or you) hits the water: a crack of spray, a low whump and a sheet of drops.
+    public static readonly CueDef SplashIn = new("water.splash", 1.0f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.14f, 0.27f, 300f, 5000f, 0.004f),
+        new CueLayer(Src.Tone, 0f, 0.12f, 0.12f, 140f, 70f, 0.006f),
+        new CueLayer(Src.Noise, 0.1f, 0.25f, 0.07f, 2000f, 7000f, 0.05f),
+        new CueLayer(Src.Noise, 0.3f, 0.1f, 0.036f, 2500f, 7000f, 0.02f),
+    }, Send: 0.1f);
+
+    // Climb out: the water running off, a few drips.
+    public static readonly CueDef Drip = new("water.drip", 0.7f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.15f, 0.12f, 300f, 2200f, 0.03f),
+        new CueLayer(Src.Noise, 0.2f, 0.04f, 0.05f, 2500f, 7000f, 0.003f),
+        new CueLayer(Src.Tone, 0.22f, 0.04f, 0.03f, 500f, 1200f, 0.003f),
+    });
+
+    // Paddle: one soft stroke while afloat and moving, a swish and a trickle off the hand.
+    public static readonly CueDef Paddle = new("water.paddle", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.25f, 0.13f, 300f, 2200f, 0.12f),
+        new CueLayer(Src.Noise, 0.35f, 0.15f, 0.05f, 1500f, 5000f, 0.05f),
+        new CueLayer(Src.Tone, 0.4f, 0.08f, 0.04f, 200f, 130f, 0.01f),
+    });
+
+    // Float: afloat and still, the water lapping softly at you.
+    public static readonly CueDef Lap = new("water.lap", 1.4f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.5f, 0.06f, 100f, 900f, 0.4f),
+    });
+
+    // --- Hen (audio-13, Animals' hen): small, soft and domestic. All quieter than a sheep.
+
+    // Cluck: one soft "buk", a short voiced note that dips and a breath of throat.
+    public static readonly CueDef HenCluck = new("hen.cluck", 0.25f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.07f, 820f, 560f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.035f, 1700f, 1150f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.07f, 800f, 2800f, 0.005f),
+    });
+
+    // Clucks: an idle hen's run of three, each a little different in length and level.
+    public static readonly CueDef HenClucks = new("hen.clucks", 0.8f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.075f, 800f, 540f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.0375f, 1650f, 1100f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.075f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.19f, 0.06f, 0.0638f, 880f, 600f, 0.006f),
+        new CueLayer(Src.Tone, 0.19f, 0.04f, 0.03f, 1800f, 1200f, 0.006f),
+        new CueLayer(Src.Noise, 0.19f, 0.03f, 0.06f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.4f, 0.07f, 0.0562f, 760f, 500f, 0.006f),
+        new CueLayer(Src.Noise, 0.4f, 0.03f, 0.0525f, 800f, 2600f, 0.005f),
+    });
+
+    // Peck: the beak tapping the ground, a dry tick and a hollow tap under it.
+    public static readonly CueDef HenPeck = new("hen.peck", 0.15f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.008f, 0.11f, 1500f, 4500f, 0.001f),
+        new CueLayer(Src.Tone, 0f, 0.015f, 0.025f, 420f, 300f, 0.002f),
+    });
+
+    // Squawk: startled. A harsh, falling cry with a rasp, and a flurry of wingbeats under it.
+    public static readonly CueDef HenSquawk = new("hen.squawk", 0.9f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.22f, 0.102f, 1050f, 640f, 0.01f),
+        new CueLayer(Src.Tone, 0f, 0.12f, 0.051f, 2100f, 1300f, 0.01f),
+        new CueLayer(Src.Noise, 0f, 0.18f, 0.102f, 1000f, 4000f, 0.01f),
+        new CueLayer(Src.Noise, 0.06f, 0.035f, 0.1105f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.13f, 0.035f, 0.102f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.2f, 0.035f, 0.085f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.28f, 0.035f, 0.0723f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.37f, 0.035f, 0.0553f, 200f, 1400f, 0.012f),
+        new CueLayer(Src.Noise, 0.48f, 0.035f, 0.0382f, 200f, 1400f, 0.012f),
+    }, Send: 0.1f);
+
+    // Lay: a hen's egg song, three quick rising clucks and one drawn-out proud "bu-gawk".
+    public static readonly CueDef HenLay = new("hen.lay", 1.0f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.05f, 0.0525f, 700f, 520f, 0.006f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.17f, 0.05f, 0.0562f, 780f, 590f, 0.006f),
+        new CueLayer(Src.Noise, 0.17f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.34f, 0.055f, 0.06f, 860f, 650f, 0.006f),
+        new CueLayer(Src.Noise, 0.34f, 0.03f, 0.0525f, 800f, 2800f, 0.005f),
+        new CueLayer(Src.Tone, 0.55f, 0.13f, 0.0638f, 640f, 980f, 0.015f),
+        new CueLayer(Src.Tone, 0.55f, 0.08f, 0.03f, 1300f, 1900f, 0.015f),
+        new CueLayer(Src.Noise, 0.55f, 0.1f, 0.0525f, 900f, 3000f, 0.012f),
+    });
+
+    // Roosting murmur: a sleepy hen settling, a low warbling purr that swells and fades.
+    public static readonly CueDef HenRoost = new("hen.roost", 1.6f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.025f, 360f, 330f, 0.25f),
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.025f, 372f, 342f, 0.25f),
+        new CueLayer(Src.Noise, 0.05f, 0.4f, 0.02f, 250f, 800f, 0.3f),
+    });
+
+    // --- Tool work (audio-14): chopping, felling, digging. Timed off Animation's contact moments.
+
+    // Chop: the axe bites the trunk (contact at 0.918 s of each 1.176 s swing): a dull "thock" of
+    // wood, the sharp bite of the blade and a few chips flying.
+    public static readonly CueDef ChopThunk = new("tool.chop", 0.5f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.128f, 190f, 110f, 0.003f),
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.192f, 800f, 3500f, 0.002f),
+        new CueLayer(Src.Noise, 0.02f, 0.06f, 0.0768f, 300f, 1500f, 0.004f),
+    });
+
+    // Tree creak: the trunk giving way, a low groan that slides down with stutters of fibres tearing,
+    // ending in the snap.
+    public static readonly CueDef TreeCreak = new("tool.treecreak", 1.1f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.075f, 260f, 190f, 0.3f),
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.0625f, 273f, 200f, 0.3f),
+        new CueLayer(Src.Noise, 0.1f, 0.05f, 0.075f, 400f, 1200f, 0.01f),
+        new CueLayer(Src.Noise, 0.35f, 0.05f, 0.0875f, 400f, 1400f, 0.01f),
+        new CueLayer(Src.Noise, 0.6f, 0.05f, 0.1f, 500f, 1600f, 0.01f),
+        new CueLayer(Src.Noise, 0.85f, 0.015f, 0.3125f, 2000f, 6000f, 0.002f),
+    });
+
+    // Tree crash: a rush of branches and leaves, the heavy thud of the trunk and the crackle and
+    // rustle settling after.
+    public static readonly CueDef TreeCrash = new("tool.treecrash", 2.2f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.5f, 0.09f, 800f, 5000f, 0.5f),
+        new CueLayer(Src.Tone, 0.9f, 0.25f, 0.18f, 70f, 40f, 0.01f),
+        new CueLayer(Src.Noise, 0.9f, 0.3f, 0.2025f, 60f, 900f, 0.01f),
+        new CueLayer(Src.Noise, 0.9f, 0.15f, 0.0675f, 1500f, 6000f, 0.005f),
+        new CueLayer(Src.Noise, 1.1f, 0.5f, 0.045f, 1000f, 4000f, 0.1f),
+    }, Send: 0.3f);
+
+    // Dig with a stick: the point goes in (Animation's Impact, stick in the ground), then a little
+    // lever and the soil crumbling off it.
+    public static readonly CueDef DigStick = new("tool.dig.stick", 0.7f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.195f, 300f, 2000f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.078f, 110f, 80f, 0.006f),
+        new CueLayer(Src.Noise, 0.17f, 0.2f, 0.052f, 800f, 4000f, 0.15f),
+        new CueLayer(Src.Noise, 0.32f, 0.02f, 0.065f, 1500f, 5000f, 0.003f),
+        new CueLayer(Src.Noise, 0.42f, 0.02f, 0.052f, 1500f, 5000f, 0.003f),
+    });
+
+    // Dig with a spade: the blade slices in, deeper and crunchier than a stick, with a root or two.
+    public static readonly CueDef DigSpade = new("tool.dig.spade", 0.6f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.07f, 0.221f, 200f, 2600f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.09f, 0.104f, 95f, 65f, 0.006f),
+        new CueLayer(Src.Noise, 0.04f, 0.03f, 0.078f, 1500f, 5500f, 0.003f),
+        new CueLayer(Src.Noise, 0.14f, 0.15f, 0.0455f, 800f, 4000f, 0.1f),
+    });
+
+    // The spade's load thrown off (Impact with thrown): a soft scatter of dirt landing.
+    public static readonly CueDef DirtThrow = new("tool.dig.throw", 0.7f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.12f, 0.16f, 400f, 3500f, 0.03f),
+        new CueLayer(Src.Noise, 0.08f, 0.03f, 0.08f, 1500f, 5000f, 0.004f),
+        new CueLayer(Src.Noise, 0.16f, 0.03f, 0.06f, 1500f, 5000f, 0.004f),
+        new CueLayer(Src.Noise, 0.26f, 0.03f, 0.04f, 1500f, 5000f, 0.004f),
+    });
+
+    // Dig with bare hands: a scuff of fingers in loose earth.
+    public static readonly CueDef DigHands = new("tool.dig.hands", 0.5f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.18f, 0.19f, 1000f, 5000f, 0.04f),
+        new CueLayer(Src.Noise, 0.05f, 0.1f, 0.24f, 400f, 2000f, 0.02f),
+        new CueLayer(Src.Noise, 0.22f, 0.025f, 0.11f, 1500f, 5000f, 0.003f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,
