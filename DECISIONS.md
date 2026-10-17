@@ -991,3 +991,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
 **Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
 **Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).
