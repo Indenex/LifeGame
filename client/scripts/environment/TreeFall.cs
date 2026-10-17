@@ -22,6 +22,9 @@ public partial class Terrain
             if (material == Look.TreeBark || material == Look.TreeFoliage)
                 AddMulti(root, mesh, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
         if (root.GetChildCount() == 0) { root.Free(); return null; }
+        // A tree near the player fades out of the camera's way and its see-through copy
+        // draws it; with one tree, that copy can simply stay on.
+        if (root.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghosts.Visible = true;
         return root;
     }
 
@@ -39,7 +42,7 @@ public partial class Terrain
 // Felled trees (env-22). When a ChoppedTree row turns Felled the tree tips over away
 // from whoever chopped it, falls with weight, bounces once and lies as a log for a
 // few seconds before sinking away; a stump stays. Over the regrow time (Trees.RegrowSeconds)
-// a sapling comes up beside the stump and grows into a young tree, so when the server
+// the stump rots away and a sapling comes up in its place and grows into a young tree, so when the server
 // clears the row the full tree only has its last step to take. All client-side: the
 // chunk draws the felled cell as cleared at once (Terrain.NoEase) and this draws the rest.
 public partial class TreeFall : Node3D
@@ -69,6 +72,8 @@ public partial class TreeFall : Node3D
         public float FallStart;
         public Vector3 Axis;
         public Vector3 Direction;
+        public Vector3 Foot;
+        public float Radius;
         public bool HasLanded;
         public Node3D? Stump;
         public Node3D? Growth;   // the young tree, scaled about its foot
@@ -136,8 +141,12 @@ public partial class TreeFall : Node3D
                 : Vector2.FromAngle(Terrain.Hash01(x, z, 73) * Mathf.Tau);
             f.Direction = new Vector3(away.X, 0, away.Y);
             f.Axis = Vector3.Up.Cross(f.Direction).Normalized();
-            f.Fall = new Node3D { Position = foot };
-            tree.Position = -foot;
+            // It pivots at the top of the stump; what is below goes into the ground.
+            f.Foot = foot;
+            f.Radius = Terrain.TrunkFoot(x, z);
+            var hinge = foot + Vector3.Up * StumpHeight;
+            f.Fall = new Node3D { Position = hinge };
+            tree.Position = -hinge;
             f.Fall.AddChild(tree);
             AddChild(f.Fall);
             f.FallStart = Look.Clock;
@@ -167,7 +176,7 @@ public partial class TreeFall : Node3D
                 if (now - f.Removing > 0.6f) (gone ??= new()).Add(key);
                 continue;
             }
-            if (f.Fall != null) Animate(f, now - f.FallStart);
+            if (f.Fall != null) Animate(f, DebugPose is { } pose ? Mathf.Min(now - f.FallStart, pose) : now - f.FallStart);
             Grow(f, (float)((wall - f.ChoppedAt) / Trees.RegrowSeconds));
         }
         if (gone != null)
@@ -181,6 +190,7 @@ public partial class TreeFall : Node3D
             }
         foreach (var key in regrown.Where(r => now - r.Value > 10f).Select(r => r.Key).ToList()) regrown.Remove(key);
         if (DebugFell is { } debug && now > debug.At) { DebugFell = null; FellNearest(debug.X, debug.Z); }
+        if (DebugStages is { } st && now > 2f) { DebugStages = null; ShowStages(st.X, st.Z); }
     }
 
     // Tips over slowly, then faster, as a tree does; bounces once off its crown, lies
@@ -198,29 +208,36 @@ public partial class TreeFall : Node3D
             if (!f.HasLanded)
             {
                 f.HasLanded = true;
-                Landed?.Invoke(f.Fall!.Position + f.Direction * 4f, f.Direction);
+                Landed?.Invoke(f.Foot + f.Direction * 4f, f.Direction);
+                if (DebugLog) GD.Print($"[treefall] landed at clock {Look.Clock:F2}");
             }
             float b = (t - FallSeconds) / BounceSeconds;
             angle = FallAngle - (b < 1f ? 0.09f * Mathf.Sin(Mathf.Pi * b) : 0f);
         }
         f.Fall!.Basis = new Basis(f.Axis, angle);
+        // As it goes over, the butt slides off the stump and drops to the ground in
+        // front of it, so the log lies beside the stump, not on it.
+        float over = Mathf.Clamp(angle / FallAngle, 0f, 1f);
+        over *= over;
+        f.Fall.Position = f.Foot + Vector3.Up * Mathf.Lerp(StumpHeight, f.Radius * 0.8f, over)
+            + f.Direction * (StumpHeight + f.Radius * 1.6f) * over;
         float sinkAt = FallSeconds + BounceSeconds + LieSeconds;
         if (t > sinkAt)
         {
             float s = Mathf.Clamp((t - sinkAt) / SinkSeconds, 0f, 1f);
             f.Fall.Basis = f.Fall.Basis.Scaled(Vector3.One * (1f - s * s));
-            f.Fall.Position = f.Fall.Position with { Y = terrain.TileHeight(f.X, f.Z) - s * 0.6f };
+            f.Fall.Position = f.Fall.Position with { Y = f.Fall.Position.Y - s * 0.6f };
             if (s >= 1f) { f.Fall.QueueFree(); f.Fall = null; }
         }
     }
 
-    // Regrowth in stages over the regrow time: a stump alone, then a sapling beside
-    // it, a young tree, and a nearly full one; the stump weathers away meanwhile.
+    // Regrowth in stages over the regrow time: a stump alone, which rots away, then a
+    // sapling in its place, a young tree, and a nearly full one.
     void Grow(Felled f, float p)
     {
         p = Mathf.Clamp(p, 0f, 1f);
-        float size = p < 0.2f ? 0f
-            : p < 0.5f ? Mathf.Lerp(0.15f, 0.4f, (p - 0.2f) / 0.3f)
+        float size = p < 0.28f ? 0f
+            : p < 0.5f ? Mathf.Lerp(0.12f, 0.4f, (p - 0.28f) / 0.22f)
             : p < 0.85f ? Mathf.Lerp(0.4f, 0.78f, (p - 0.5f) / 0.35f)
             : Mathf.Lerp(0.78f, 0.97f, (p - 0.85f) / 0.15f);
         if (size > 0f && f.Fall == null)
@@ -238,8 +255,8 @@ public partial class TreeFall : Node3D
         }
         if (f.Stump != null)
         {
-            // The stump sinks into the ground through the young-tree stage.
-            float weather = Mathf.Clamp((p - 0.5f) / 0.35f, 0f, 1f);
+            // The stump rots down into the ground before the sapling comes up in its place.
+            float weather = Mathf.Clamp((p - 0.14f) / 0.14f, 0f, 1f);
             f.Stump.Visible = weather < 1f;
             f.Stump.Scale = new Vector3(1f, 1f - weather, 1f);
         }
@@ -274,10 +291,20 @@ public partial class TreeFall : Node3D
     // --debug-fell=x,z[,seconds]: a player standing at (x, z) fells the nearest tree
     // after that many seconds (default 6), without a server: for renders of the fall.
     (float X, float Z, float At)? DebugFell;
+    bool DebugLog;
+    float? DebugPose;
 
     public override void _Ready()
     {
-        var arg = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--debug-fell="));
+        var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToList();
+        if (args.FirstOrDefault(a => a.StartsWith("--debug-stages=")) is { } stages)
+        {
+            var at = stages["--debug-stages=".Length..].Split(',');
+            if (at.Length >= 2 && float.TryParse(at[0], out float sx) && float.TryParse(at[1], out float sz)) DebugStages = (sx, sz);
+        }
+        // --debug-fall-pose=t holds every fall at t seconds, for stills.
+        if (args.FirstOrDefault(a => a.StartsWith("--debug-fall-pose=")) is { } pose && float.TryParse(pose["--debug-fall-pose=".Length..], out float t)) DebugPose = t;
+        var arg = args.FirstOrDefault(a => a.StartsWith("--debug-fell="));
         if (arg == null) return;
         var parts = arg["--debug-fell=".Length..].Split(',');
         if (parts.Length < 2 || !float.TryParse(parts[0], out float x) || !float.TryParse(parts[1], out float z)) return;
@@ -285,12 +312,39 @@ public partial class TreeFall : Node3D
         DebugFell = (x, z, Look.Clock + after);
     }
 
+    // --debug-stages=x,z: the four trees nearest (x, z) as if felled a while ago, one at
+    // each regrowth stage (stump, sapling, young, nearly full), for renders.
+    (float X, float Z)? DebugStages;
+
+    void ShowStages(float x, float z)
+    {
+        var cells = new List<(float D, int X, int Z)>();
+        for (int i = (int)x - 14; i <= (int)x + 14; i++)
+            for (int j = (int)z - 14; j <= (int)z + 14; j++)
+                if (Trees.GrowsAt(i, j))
+                {
+                    var (tx, tz) = Trees.Trunk(i, j);
+                    cells.Add((new Vector2(tx - x, tz - z).Length(), i, j));
+                }
+        var before = terrain.Cleared;
+        var keys = new HashSet<long>();
+        float[] stages = { 0.08f, 0.35f, 0.65f, 0.92f };
+        foreach (var (stage, cell) in stages.Zip(cells.OrderBy(c => c.D).Take(4)))
+        {
+            Fell(cell.X, cell.Z, Now - stage * Trees.RegrowSeconds, null, false);
+            keys.Add(World.CellKey(cell.X, cell.Z));
+            terrain.Refresh(cell.X, cell.Z);
+            GD.Print($"[treefall] stage {stage} at ({cell.X}, {cell.Z})");
+        }
+        terrain.Cleared = (i, j) => before?.Invoke(i, j) == true || keys.Contains(World.CellKey(i, j));
+    }
+
     void FellNearest(float x, float z)
     {
         (int, int)? best = null;
-        float bestD = 8f;
-        for (int i = (int)x - 6; i <= (int)x + 6; i++)
-            for (int j = (int)z - 6; j <= (int)z + 6; j++)
+        float bestD = 14f;
+        for (int i = (int)x - 14; i <= (int)x + 14; i++)
+            for (int j = (int)z - 14; j <= (int)z + 14; j++)
             {
                 if (!Trees.GrowsAt(i, j) || felled.ContainsKey(World.CellKey(i, j))) continue;
                 var (tx, tz) = Trees.Trunk(i, j);
@@ -298,7 +352,8 @@ public partial class TreeFall : Node3D
                 if (d < bestD) { bestD = d; best = (i, j); }
             }
         if (best is not { } cell) { GD.Print("[treefall] no tree near the debug chopper"); return; }
-        GD.Print($"[treefall] felling {cell}");
+        GD.Print($"[treefall] felling {cell}, {bestD:F1} m from the chopper, at clock {Look.Clock:F2}");
+        DebugLog = true;
         Fell(cell.Item1, cell.Item2, Now, new Vector2(x, z), true);
         var before = terrain.Cleared;
         long key = World.CellKey(cell.Item1, cell.Item2);
