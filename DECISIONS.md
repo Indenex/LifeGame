@@ -1107,3 +1107,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-273 — 2026-10-17 — Atmosphere builds morning frost next
 **Decision:** Atmosphere builds morning frost next (atmosphere-28).
 **Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
+
+## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
+**Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
+**Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
