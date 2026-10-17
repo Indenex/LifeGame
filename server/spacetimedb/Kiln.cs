@@ -20,8 +20,6 @@ public static partial class Module
         public byte Form;       // ClayForm
         public byte Quality;
         public uint Owner;      // player id of whoever loaded it; gets the news
-        // The maker's mark the pot carries (shared/Marks.cs); 0 for none.
-        public uint Mark;
     }
 
     // Firing state for a finished kiln structure (StructureKind.Kiln), made the
@@ -88,6 +86,7 @@ public static partial class Module
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FormOfUnfired((Item)i.Item) is not null)
             .ToList();
         var load = kiln.Load ?? new List<KilnPot>();
+        var loadMarks = KilnLoadMarks(ctx, structureId, load.Count);
         if (pots.Count > 0 && load.Count < ClayRules.KilnCapacity)
         {
             foreach (var stack in pots)
@@ -95,18 +94,19 @@ public static partial class Module
                 uint used = 0;
                 while (used < stack.Count && load.Count < ClayRules.KilnCapacity)
                 {
+                    loadMarks.Add(stack.Wear);
                     load.Add(new KilnPot
                     {
                         Form = (byte)ClayRules.FormOfUnfired((Item)stack.Item)!.Value,
                         Quality = stack.Quality,
                         Owner = player.PlayerId,
-                        Mark = stack.Wear,
                     });
                     used++;
                 }
                 if (used > 0) RemoveFromStack(ctx, stack, used);
             }
             ctx.Db.Kiln.StructureId.Update(kiln with { Load = load });
+            SaveKilnMarks(ctx, structureId, loadMarks);
             return;
         }
 
@@ -130,6 +130,8 @@ public static partial class Module
         RequireServer(ctx);
         if (ctx.Db.Kiln.StructureId.Find(timer.KilnId) is not { } kiln) return;
         var load = kiln.Load ?? new List<KilnPot>();
+        var loadMarks = KilnLoadMarks(ctx, kiln.StructureId, load.Count);
+        ctx.Db.KilnMarks.StructureId.Delete(kiln.StructureId);
         // Taken down while firing: the pots still come out, and the state goes.
         if (ctx.Db.Structure.Id.Find(kiln.StructureId) is null)
             ctx.Db.Kiln.StructureId.Delete(kiln.StructureId);
@@ -140,8 +142,10 @@ public static partial class Module
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
         float ox = kiln.X + MathF.Sin(kiln.Yaw) * 1.1f, oz = kiln.Z + MathF.Cos(kiln.Yaw) * 1.1f;
         int whole = 0, cracked = 0, slot = 0;
-        foreach (var pot in load)
+        for (int index = 0; index < load.Count; index++)
         {
+            var pot = load[index];
+            uint mark = loadMarks[index];
             var form = (ClayForm)pot.Form;
             bool crack = ctx.Rng.NextDouble() < ClayRules.CrackChance(FireKind.Kiln, pot.Quality);
             OnProcessPerformed(ctx, pot.Owner, ClayRules.KilnFireProcess, pot.Quality, crack);
@@ -153,7 +157,7 @@ public static partial class Module
             }
             else
             {
-                DropAt(ctx, ox, oz, side, across, slot++, ClayRules.FiredItem(form), ClayRules.KilnFired(pot.Quality), pot.Mark);
+                DropAt(ctx, ox, oz, side, across, slot++, ClayRules.FiredItem(form), ClayRules.KilnFired(pot.Quality), mark);
                 whole++;
             }
         }
@@ -195,8 +199,11 @@ public static partial class Module
         if (kiln.State == (byte)KilnState.Firing) return;
         float side = MathF.Cos(kiln.Yaw), across = -MathF.Sin(kiln.Yaw);
         int slot = 0;
-        foreach (var pot in kiln.Load ?? new List<KilnPot>())
-            DropAt(ctx, kiln.X, kiln.Z, side, across, slot++, ClayRules.UnfiredItem((ClayForm)pot.Form), pot.Quality, pot.Mark);
+        var removedLoad = kiln.Load ?? new List<KilnPot>();
+        var removedMarks = KilnLoadMarks(ctx, kiln.StructureId, removedLoad.Count);
+        for (int index = 0; index < removedLoad.Count; index++)
+            DropAt(ctx, kiln.X, kiln.Z, side, across, slot++, ClayRules.UnfiredItem((ClayForm)removedLoad[index].Form), removedLoad[index].Quality, removedMarks[index]);
+        ctx.Db.KilnMarks.StructureId.Delete(kiln.StructureId);
         ctx.Db.Kiln.StructureId.Delete(kiln.StructureId);
     }
 
@@ -211,5 +218,31 @@ public static partial class Module
             X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
             Wear = wear,
         });
+    }
+
+    // The maker's marks of the pots in a kiln's load, in the same order as Load. They live in a
+    // table of their own so the Kiln row keeps its shape (ceramics-15).
+    [SpacetimeDB.Table(Accessor = "KilnMarks")]
+    public partial struct KilnMarks
+    {
+        [PrimaryKey]
+        public ulong StructureId;
+        public List<uint> Marks;
+    }
+
+    // The marks for the first `count` pots of the load, 0 for any with none.
+    static List<uint> KilnLoadMarks(ReducerContext ctx, ulong structureId, int count)
+    {
+        var marks = new List<uint>(ctx.Db.KilnMarks.StructureId.Find(structureId)?.Marks ?? new List<uint>());
+        while (marks.Count < count) marks.Add(0);
+        if (marks.Count > count) marks.RemoveRange(count, marks.Count - count);
+        return marks;
+    }
+
+    static void SaveKilnMarks(ReducerContext ctx, ulong structureId, List<uint> marks)
+    {
+        var row = new KilnMarks { StructureId = structureId, Marks = marks };
+        if (ctx.Db.KilnMarks.StructureId.Find(structureId) is null) ctx.Db.KilnMarks.Insert(row);
+        else ctx.Db.KilnMarks.StructureId.Update(row);
     }
 }
