@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using LifeGame.Shared;
@@ -80,10 +81,8 @@ public partial class Terrain
         return stones;
     }
 
-    // How likely a bank cell holds a stone: pebbles gather in beds along the waterline
-    // with bare stretches between (env-21), about as many in all as before. Shared
-    // with AddVegetation.
-    static float ShoreStones(int x, int z) => 0.02f + 0.24f * Mathf.SmoothStep(0.55f, 0.75f, World.Noise(x - 3121, z + 1877, 5f, 100));
+    // How far a felled tree on a cell has grown back (0 to 1), or -1 (TreeFall sets it).
+    public Func<int, int, float>? FelledProgress;
 
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
     // stones, ferns and fallen trunks never block.
@@ -92,7 +91,10 @@ public partial class Terrain
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
         height = float.MaxValue; // trunks are never hopped
-        if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        if (depths.ContainsKey(World.CellKey(x, z))) return false;
+        // A felled tree's stump, then its regrowth, blocks by the shared rule (env-29).
+        if (FelledProgress?.Invoke(x, z) is float felled and >= 0f) return Obstacles.Regrowing(x, z, felled, out radius, out height);
+        if (Cleared?.Invoke(x, z) == true) return false;
         float top = TileHeight(x, z);
         if (top < Look.WaterLevel + 0.1f) return false;
         // Features (env-5, env-10): a giant tree's broad trunk; an outcrop's middle cell
@@ -122,7 +124,7 @@ public partial class Terrain
         }
         bool shore = NearWater(x, z, top);
         float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
+        float rock = sapling + 0.004f + 0.07f * rocky + (shore ? Obstacles.ShoreStones(x, z) : 0f);
         if (roll >= rock) return false;
         float size = shore && rocky < 0.5f ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
         radius = RockRadius(scale * size);

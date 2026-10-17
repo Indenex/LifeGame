@@ -35,7 +35,7 @@ public static class HenFigure
     public static ArrayMesh Build(Material feathers)
     {
         if (mesh != null) return mesh;
-        plain ??= Look.Solid(Colors.White);
+        plain ??= PaintedAnimals.Skin;
         mesh = new ArrayMesh();
 
         // Feathers: a round body leaning back, a breast, a neck up to the head, the

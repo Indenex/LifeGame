@@ -1,9 +1,9 @@
 # atmosphere-34: Fog cap (blinding fog fix)
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: done
 Branch: claude/atmosphere-34-fog-cap
-PR: (opening)
+PR: #565 (merged)
 
 ## Goal
 An urgent bug in the released build. Justin: "fog is awful and blinding at some points" (screenshot renders/justin/2026-10-17-fog.webp at 9311b22e: near-white cream fog toward a low sun, the player barely visible 15 m away, the scene washed out). Fix:
@@ -25,8 +25,10 @@ Done: the PR merged and Render shows it fixed.
   - `Mist.cs`: each layer's alpha is capped at 0.22 (three together reach at most about 52%), thinned to 30% within 6 to 40 m of the camera, and the scatter glow is halved and kept at or below 1.
 - The client builds with 0 errors.
 
+- 2026-10-17 05:43: #565 merged (green sha ce770013, CI run 39007120219). Render B's before/after stills are requested; tune from them in a follow-up if needed.
+
 ## Open questions / blockers
 - The see-through big pine in the screenshot is the trees' camera fade (Environment's); the PM is raising it with them.
 
 ## Next step
-Open the PR, ask Render for before/after stills, and send the PM the green sha.
+Done. Check Render B's before/after stills when they arrive.

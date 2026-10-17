@@ -12,6 +12,23 @@ namespace LifeGame.Shared
         public const bool Felling = true;
         public const int LogsPerTree = 3;
         public const float RegrowSeconds = 2 * 60 * 60;
+
+        // How a felled tree comes back over RegrowSeconds, as a fraction p of that time
+        // (env-22, env-29), shared by the client's drawing (TreeFall) and collision
+        // (Obstacles): a stump that rots into the ground, then a sapling in its place
+        // growing into a young tree and a nearly full one.
+        public const float StumpHeight = 0.32f;
+        // How much of the stump is left: all of it until 14%, gone by 28%.
+        public static float StumpLeft(float p) => 1f - Math.Clamp((p - 0.14f) / 0.14f, 0f, 1f);
+        // The regrowing tree's size against the full tree: none until 28%.
+        public static float RegrowSize(float p)
+        {
+            p = Math.Clamp(p, 0f, 1f);
+            return p < 0.28f ? 0f
+                : p < 0.5f ? 0.12f + 0.28f * (p - 0.28f) / 0.22f
+                : p < 0.85f ? 0.4f + 0.38f * (p - 0.5f) / 0.35f
+                : 0.78f + 0.19f * (p - 0.85f) / 0.15f;
+        }
         public const float DeadwoodSeconds = 5 * 60;
 
         // Water sits at this height; nothing grows within 0.1 m above it. Matches Look.WaterLevel.
