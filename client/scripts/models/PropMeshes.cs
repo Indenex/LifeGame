@@ -65,7 +65,7 @@ public static class PropMeshes
     // A weathered boulder about 1 m across, settled into the ground with moss on
     // top. Four shapes, since boulders are everywhere: worn lumps, a tall split
     // stone, a low slab, and a round stone cracked in two.
-    public const int RockVariants = 4, FallenLogVariants = 2;
+    public const int RockVariants = 4, FallenLogVariants = 2, FallenGiantLogVariants = 6;
 
     public static Mesh Rock(int variant) => Variant("rock", variant, RockVariants, BuildRock);
 
@@ -155,6 +155,213 @@ public static class PropMeshes
             }, 6, 0.3f);
         }
         return Done(k);
+    }
+
+    // Hazelnuts on the bush (model-21, for Survival's autumn hazels, D-323): two or three
+    // tan nuts in their frilled green husks on a short stem, in the berry clusters' frame
+    // (BerryBush): local -Z points out of the bush, the stem runs back into it along +Z.
+    // Built 1.5x life size (about 12 cm across) so it reads from 5 to 10 m, like the
+    // berries. Colours are in the vertices; draw it with HazelMaterial.
+    public static Mesh HazelCluster(int variant) => Variant("hazelcluster", variant, HazelClusterVariants, BuildHazelCluster);
+    public const int HazelClusterVariants = 3;
+    public static Material HazelMaterial => hazelMaterial ??= Painted.Of(Look.Solid(Colors.White));
+    static Material? hazelMaterial;
+
+    static ArrayMesh BuildHazelCluster(int v)
+    {
+        var k = new MeshKit(false) { Skinned = false };
+        const float life = 1.5f;
+        var shell = new Color(0.56f, 0.42f, 0.27f);
+        var husk = new Color(0.3f, 0.4f, 0.15f);
+        k.Paint(Look.Bark.Lightened(0.15f)).Tube(new[] { new Vector3(0, 0, 0.05f), new Vector3(0, 0.005f, 0.01f), new Vector3(0, 0, -0.01f) }, 0.004f, 4, 0.003f);
+        int count = 2 + v % 2;
+        for (int i = 0; i < count; i++)
+        {
+            float a = i * Mathf.Tau / count + v;
+            var dir = new Vector3(Mathf.Cos(a) * 1.4f, Mathf.Sin(a) * 1.4f, -1f).Normalized();
+            var at = dir * 0.028f + new Vector3(0, 0, -0.005f);
+            var tilt = MeshKit.Aim(dir) * new Basis(Vector3.Right, Mathf.Pi / 2f);
+            var up = tilt * Vector3.Up;
+            k.Paint(shell, 0.9f + H(v * 3 + i, 40) * 0.15f).Ellipsoid(at + up * 0.006f, new Vector3(0.016f, 0.018f, 0.016f), 8, 5, tilt);
+            k.Paint(shell.Lightened(0.18f)).Ellipsoid(at + up * 0.014f, new Vector3(0.0135f, 0.01f, 0.0135f), 8, 4, tilt);
+            k.Paint(shell.Darkened(0.2f)).Ellipsoid(at + up * 0.024f, new Vector3(0.004f, 0.005f, 0.004f), 5, 3, tilt);
+            // The husk: a leafy cup round the lower half, a frill of short teeth at its lip.
+            k.Paint(husk).Loft(at - up * 0.017f, at + up * 0.004f, new MeshKit.Ring[]
+            {
+                new(0f, 0.006f, 0.006f), new(0.45f, 0.018f, 0.018f), new(1f, 0.021f, 0.021f),
+            }, 9, 0.3f);
+            for (int j = 0; j < 7; j++)
+            {
+                float b = j * Mathf.Tau / 7f + v;
+                var side = tilt * new Vector3(Mathf.Cos(b), 0, Mathf.Sin(b));
+                var lip = at + up * 0.003f + side * 0.02f;
+                k.Paint(husk, 0.9f + H(v * 7 + j, 43) * 0.2f).Blade(lip, lip + up * (0.008f + H(j, 41) * 0.005f) + side * 0.006f, side, 0.008f, 0.002f);
+            }
+        }
+        var arrays = k.CommitToArrays();
+        var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        for (int n = 0; n < verts.Length; n++) verts[n] *= life;
+        arrays[(int)Mesh.ArrayType.Vertex] = verts;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
+    }
+
+    // A fallen giant (model-19, for Environment's env-33 landmark, drawn 3 to 4 times
+    // bigger): FallenLog's trunk, but torn up whole and long fallen. The butt end carries
+    // a root plate, a ragged, lopsided disc of earth and roots (thin root tubes read as
+    // spikes at that scale), and the bark is weathered grey-brown with moss along the top.
+    // Even variants are straight with a splintered crown end, odd ones broken in two with
+    // a forked crown lying apart; every variant has its own plate (D-166). About 3 m long
+    // at scale 1, like FallenLog, so the same placement fits.
+    public static Mesh FallenGiantLog(int variant) => Variant("fallengiantlog", variant, FallenGiantLogVariants, BuildFallenGiantLog);
+
+    // Unlike FallenLog the giant carries its own colours (weathered grey-brown wood, the
+    // ground's own earth, moss, grey stones), so it is drawn on Painted.Bark with a white
+    // instance tint, GiantTint, a little darker or lighter per instance if wanted.
+    public static readonly Color GiantTint = Colors.White;
+    static readonly Color Weathered = new(0.42f, 0.36f, 0.31f);
+    static readonly Color Soil = Look.Earth.Darkened(0.1f);
+    static readonly Color GiantMoss = Look.Moss.Lightened(0.2f);
+    static readonly Color Pebble = new(0.55f, 0.53f, 0.5f);
+
+    static ArrayMesh BuildFallenGiantLog(int v)
+    {
+        var k = Kit();
+        var butt = new Vector3(-1.5f, 0.3f, 0);
+        RootPlate(k, butt, v);
+        if (v % 2 == 0)
+        {
+            k.Paint(Weathered, 0.8f).Loft(butt, new Vector3(1.5f, 0.17f, 0.06f), new MeshKit.Ring[]
+            {
+                new(0f, 0.3f, 0.29f), new(0.12f, 0.23f, 0.22f), new(0.6f, 0.2f, 0.19f, 0f, 0.01f), new(1f, 0.16f, 0.15f),
+            }, 10, 0.05f);
+            Splinters(k, new Vector3(1.5f, 0.17f, 0.06f), Vector3.Right, 0.09f);
+            GiantMossTop(k, new Vector3(-1.2f, 0.5f, 0.0f), new Vector3(0.8f, 0.36f, 0.03f), v);
+        }
+        else
+        {
+            k.Paint(Weathered, 0.8f).Loft(butt, new Vector3(-0.1f, 0.21f, 0.05f), new MeshKit.Ring[]
+            {
+                new(0f, 0.3f, 0.29f), new(0.15f, 0.22f, 0.21f), new(1f, 0.19f, 0.18f),
+            }, 10, 0.05f);
+            Splinters(k, new Vector3(-0.1f, 0.21f, 0.05f), Vector3.Right, 0.11f);
+            var crown = new Vector3(0.15f, 0.17f, 0.2f);
+            k.Paint(Weathered, 0.8f).Loft(crown, crown + new Vector3(1.1f, -0.02f, 0.25f), new MeshKit.Ring[]
+            {
+                new(0f, 0.17f, 0.16f), new(1f, 0.13f, 0.12f),
+            }, 8, 0.05f);
+            Splinters(k, crown, Vector3.Left, 0.1f);
+            var fork = crown + new Vector3(1.1f, -0.02f, 0.25f);
+            k.Paint(Weathered, 0.76f).Tube(new[] { fork, fork + new Vector3(0.5f, -0.04f, 0.35f), fork + new Vector3(0.9f, -0.08f, 0.45f) }, 0.1f, 6, 0.04f);
+            k.Paint(Weathered, 0.76f).Tube(new[] { fork, fork + new Vector3(0.55f, 0.0f, -0.12f), fork + new Vector3(0.95f, -0.06f, -0.3f) }, 0.09f, 6, 0.035f);
+            GiantMossTop(k, new Vector3(-1.15f, 0.5f, 0.0f), new Vector3(-0.3f, 0.39f, 0.04f), v);
+            GiantMossTop(k, crown + new Vector3(0.1f, 0.15f, 0), crown + new Vector3(0.9f, 0.12f, 0.2f), v + 7);
+        }
+        return Done(k);
+    }
+
+    // A long soft band of moss along the top of a lying trunk, with a few cushions.
+    static void GiantMossTop(MeshKit k, Vector3 from, Vector3 to, int seed)
+    {
+        k.Paint(GiantMoss).Loft(from, to, new MeshKit.Ring[]
+        {
+            new(0f, 0.02f, 0.1f), new(0.5f, 0.035f, 0.15f), new(1f, 0.015f, 0.06f),
+        }, 6, 0.3f);
+        for (int i = 0; i < 3; i++)
+        {
+            var at = from.Lerp(to, 0.2f + 0.3f * i + H(seed, 80 + i) * 0.1f) + new Vector3(0, 0.01f, (H(seed, 83 + i) - 0.5f) * 0.12f);
+            k.Paint(GiantMoss, 0.9f + H(i, 86) * 0.15f).Ellipsoid(at, new Vector3(0.09f, 0.035f, 0.07f), 7, 3, null, 0.5f);
+        }
+    }
+
+    // A torn-up root plate standing on edge at a trunk's butt, facing back along -X: a
+    // wide, flat, lopsided disc of packed earth, taller on one side, its rim broken and ragged; a few
+    // thick roots wandering out across it, uneven and off-centre, with earth clods and
+    // stones caught between them; thin root ends dangling off the rim; moss along its top;
+    // and heaped earth where its foot leans in the ground. Its roll, size and roots come
+    // from the variant, so no two fallen giants match.
+    static void RootPlate(MeshKit k, Vector3 butt, int v)
+    {
+        float roll = (H(v, 60) - 0.5f) * 1.6f;     // which way the tall side leans
+        float size = 0.85f + H(v, 61) * 0.3f;
+        // A flat disc on edge, its face 0.28 deep along the trunk and about 2.5 trunk widths
+        // across, the trunk coming out of its middle.
+        const float depth = 0.28f;
+        var center = butt + new Vector3(-0.1f, 0.12f, 0);
+        var tall = new Vector3(0, Mathf.Cos(roll), Mathf.Sin(roll));
+        var across = new Vector3(0, -Mathf.Sin(roll), Mathf.Cos(roll));
+        Vector3 Rim(float a, float r) => center + (tall * Mathf.Cos(a) + across * Mathf.Sin(a)) * r;
+
+        // The plate: a flat-faced disc of earth and a second, smaller one pushed up to the
+        // tall side, each with flat caps on both faces.
+        void Disc(Vector3 at, float ry, float rz, float shade)
+        {
+            var front = at + new Vector3(-depth / 2f, 0, 0);
+            var back = at + new Vector3(depth / 2f, 0, 0);
+            var (ringY, ringZ) = (ry * size, rz * size);
+            k.Paint(Soil, shade).Loft(front, back, new MeshKit.Ring[]
+            {
+                new(0f, ringY * 0.88f, ringZ * 0.88f), new(0.2f, ringY, ringZ), new(0.8f, ringY, ringZ), new(1f, ringY * 0.9f, ringZ * 0.9f),
+            }, 12, 0.15f);
+            k.Paint(Soil, shade * 0.95f).Ellipsoid(front, new Vector3(0.02f, ringY * 0.9f, ringZ * 0.9f), 12, 2);
+            k.Paint(Soil, shade * 0.9f).Ellipsoid(back, new Vector3(0.02f, ringY * 0.92f, ringZ * 0.92f), 12, 2);
+        }
+        Disc(center, 0.66f, 0.74f, 0.95f);
+        Disc(center + tall * 0.3f * size + across * 0.1f + new Vector3(0.02f, 0, 0), 0.42f, 0.4f, 1.02f);
+
+        // Lumps of earth and root round the rim, some missing where it broke away.
+        int lobes = 13 + v % 4;
+        for (int i = 0; i < lobes; i++)
+        {
+            if (H(v * 13 + i, 62) < 0.22f) continue;
+            float a = i * Mathf.Tau / lobes + (H(v * 13 + i, 63) - 0.5f) * 0.5f;
+            float r = (0.6f + H(v * 13 + i, 64) * 0.1f + (Mathf.Cos(a) > 0 ? 0.1f * Mathf.Cos(a) : 0f)) * size;
+            var at = Rim(a, r);
+            var dir = (at - center).Normalized();
+            bool earthy = H(v * 13 + i, 65) < 0.55f;
+            // Flat, in the plane of the plate, so the rim reads ragged rather than beaded.
+            k.Paint(earthy ? Soil : Weathered, 0.8f + H(i, 66) * 0.15f).Ellipsoid(at, new Vector3(0.11f, 0.06f + H(i, 67) * 0.06f, 0.1f + H(i, 68) * 0.08f) * size, 6, 3, new Basis(Vector3.Right, a));
+            // Thin root ends dangling off the rim, sagging under their own weight.
+            if (H(v * 13 + i, 69) < 0.6f)
+            {
+                var tip = at + dir * (0.18f + H(i, 70) * 0.14f) * size + new Vector3(-0.04f, -0.12f - H(i, 71) * 0.1f, 0);
+                k.Paint(Weathered, 0.7f).Tube(new[] { at, at + dir * 0.1f * size + new Vector3(-0.02f, -0.02f, 0), tip }, 0.022f, 4, 0.004f);
+            }
+        }
+
+        // A few thick roots wandering across the face from off-centre, uneven in length.
+        int roots = 3 + v % 3;
+        var heart = center + new Vector3(-depth / 2f - 0.01f, 0, 0) + tall * 0.05f;
+        for (int i = 0; i < roots; i++)
+        {
+            float a = H(v * 7 + i, 72) * Mathf.Tau;
+            float len = (0.4f + H(v * 7 + i, 73) * 0.32f) * size;
+            var dir = tall * Mathf.Cos(a) + across * Mathf.Sin(a);
+            var bend = heart + dir * len * 0.5f + across * (H(i, 74) - 0.5f) * 0.12f;
+            k.Paint(Weathered, 0.72f).Tube(new[] { heart + dir * 0.04f, bend, heart + dir * len + new Vector3(0.02f, 0, 0) }, 0.055f + H(i, 75) * 0.025f, 5, 0.02f);
+        }
+
+        // Dark earth packed between the roots, and stones caught in it.
+        for (int i = 0; i < 14; i++)
+        {
+            float a = H(v * 11 + i, 76) * Mathf.Tau;
+            float r = (0.1f + H(v * 11 + i, 77) * 0.5f) * size;
+            var at = Rim(a, r) + new Vector3(-depth / 2f - 0.01f - H(i, 78) * 0.02f, 0, 0);
+            k.Paint(Soil, 0.85f + H(i, 79) * 0.15f).Ellipsoid(at, new Vector3(0.04f, 0.04f + H(i, 80) * 0.04f, 0.06f + H(i, 81) * 0.05f) * size, 6, 3, new Basis(Vector3.Right, a));
+        }
+        for (int i = 0; i < 3 + v % 3; i++)
+        {
+            float a = H(v * 5 + i, 82) * Mathf.Tau;
+            var at = Rim(a, (0.15f + H(v * 5 + i, 83) * 0.45f) * size) + new Vector3(-depth / 2f - 0.03f, 0, 0);
+            k.Paint(Pebble, 0.85f + H(i, 84) * 0.25f).Ellipsoid(at, new Vector3(0.035f, 0.03f, 0.04f) * (0.8f + H(i, 85) * 0.8f), 6, 3);
+        }
+
+        // Moss and grass still on the plate's top edge, where the forest floor was.
+        for (int i = 0; i < 3; i++)
+            k.Paint(GiantMoss, 0.9f + H(v + i, 86) * 0.15f).Ellipsoid(Rim((i - 1) * 0.3f, 0.74f * size), new Vector3(0.16f, 0.05f, 0.16f), 7, 3, new Basis(Vector3.Right, roll));
+        // The heaped earth where the plate's foot leans in the ground.
+        k.Paint(Soil, 0.9f).Ellipsoid(new Vector3(center.X - 0.05f, 0.0f, across.Z * 0.05f), new Vector3(0.32f, 0.07f, 0.7f) * size, 9, 4, null, 0.5f);
     }
 
     // Pale splinters sticking out of a broken end.

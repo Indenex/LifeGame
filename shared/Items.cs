@@ -69,6 +69,8 @@ namespace LifeGame.Shared
         // A hide waterskin (survival-20): carries a little water before pottery.
         Waterskin = 161,
         WaterskinOfWater = 162,
+        // Autumn wild food from some bushes (survival-30).
+        Hazelnuts = 163,
 
         // Animals (190-219); mutton is cooked by Crafting
         RawMutton = 190,
@@ -96,6 +98,11 @@ namespace LifeGame.Shared
         // A boiled egg, roasted on a fire like meat (crafting-24); eggs left on too long burn.
         BoiledEgg = 212,
         BurntEgg = 213,
+        // Rabbit (animals-22): raw, roast and burnt meat, and a scrap of fur.
+        RawRabbit = 214,
+        CookedRabbit = 215,
+        BurntRabbit = 216,
+        RabbitFur = 217,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -214,6 +221,7 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Arrow, Name = "Arrow", Plural = "Arrows", HasQuality = true, ArrowPower = 0.65f },
             new ItemDef { Id = Item.SleepingMat, Name = "Sleeping mat", Plural = "Sleeping mats" },
             new ItemDef { Id = Item.Berries, Name = "Berries", Plural = "Berries", Use = UseAction.Eat },
+            new ItemDef { Id = Item.Hazelnuts, Name = "Hazelnut", Plural = "Hazelnuts", Use = UseAction.Eat },
             new ItemDef { Id = Item.RawMutton, Name = "Raw mutton", Plural = "Raw mutton", HasQuality = true },
             new ItemDef { Id = Item.CookedMutton, Name = "Roast mutton", Plural = "Roast mutton", HasQuality = true, Use = UseAction.Eat },
             new ItemDef { Id = Item.BurntMutton, Name = "Burnt mutton", Plural = "Burnt mutton", Use = UseAction.Eat },
@@ -237,7 +245,11 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.BoiledEgg, Name = "Boiled egg", Plural = "Boiled eggs", HasQuality = true },
             new ItemDef { Id = Item.BurntEgg, Name = "Burnt egg", Plural = "Burnt eggs", HasQuality = true },
             new ItemDef { Id = Item.CookedChicken, Name = "Roast chicken", Plural = "Roast chicken", HasQuality = true },
-            new ItemDef { Id = Item.BurntChicken, Name = "Burnt chicken", Plural = "Burnt chicken" });
+            new ItemDef { Id = Item.BurntChicken, Name = "Burnt chicken", Plural = "Burnt chicken" },
+            new ItemDef { Id = Item.RawRabbit, Name = "Raw rabbit", Plural = "Raw rabbit", HasQuality = true },
+            new ItemDef { Id = Item.CookedRabbit, Name = "Roast rabbit", Plural = "Roast rabbit", HasQuality = true },
+            new ItemDef { Id = Item.BurntRabbit, Name = "Burnt rabbit", Plural = "Burnt rabbit" },
+            new ItemDef { Id = Item.RabbitFur, Name = "Rabbit fur", Plural = "Rabbit fur", HasQuality = true });
 
         public static ItemDef Def(Item item) => All[item];
 

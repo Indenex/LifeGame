@@ -13,7 +13,7 @@ public static partial class CueDefs
     // Two quick claps of the hands.
     public static readonly CueDef EmoteClap = new("emote.clap", 0.35f, new[]
     {
-        new CueLayer(Src.Noise, 0f, 0.012f, 0.420f, 1500f, 6000f, 0.001f),
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.360f, 1500f, 6000f, 0.001f),
         new CueLayer(Src.Tone, 0f, 0.02f, 0.070f, 800f, 600f, 0.001f),
         new CueLayer(Src.Noise, 0.11f, 0.012f, 0.364f, 1500f, 6000f, 0.001f),
         new CueLayer(Src.Tone, 0.11f, 0.02f, 0.063f, 800f, 600f, 0.001f),
@@ -24,5 +24,12 @@ public static partial class CueDefs
     {
         new CueLayer(Src.Tone, 0f, 0.04f, 0.1f, 130f, 85f, 0.003f),
         new CueLayer(Src.Noise, 0f, 0.02f, 0.1f, 300f, 1500f, 0.002f),
+    });
+
+    // One clap of the hands (the Clap emote's five come one at a time, about 0.31 s apart).
+    public static readonly CueDef EmoteHandClap = new("emote.handclap", 0.2f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.36f, 1500f, 6000f, 0.001f),
+        new CueLayer(Src.Tone, 0f, 0.02f, 0.07f, 800f, 600f, 0.001f),
     });
 }

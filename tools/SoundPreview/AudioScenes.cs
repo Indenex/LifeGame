@@ -5,7 +5,7 @@ using LifeGame;
 // lanes' edits there. Program.cs calls Owns (to leave the walking off) and Render once per block.
 static class AudioScenes
 {
-    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "rest" };
+    static readonly string[] scenes = { "roast", "store", "pot", "emote", "lamp", "clay", "rabbit", "rest", "clap", "deer" };
 
     public static bool Owns(string scene) => Array.IndexOf(scenes, scene) >= 0;
 
@@ -71,6 +71,24 @@ static class AudioScenes
                 if (At(6.5)) { mix.Play(CueDefs.DigHands); mix.Play(CueDefs.DigClay); }
                 if (At(8.0)) mix.Play(CueDefs.DigClay);       // the clay layers alone, for levels
                 if (At(9.0)) mix.Play(CueDefs.ClayThrow);
+                break;
+            // Rabbit scene: rustling (1, 2.5 s), a bolt thump (4 s), a squeak (6 s).
+            case "rabbit":
+                if (At(1)) mix.Play(CueDefs.RabbitRustle);
+                if (At(2.5)) mix.Play(CueDefs.RabbitRustle);
+                if (At(4)) mix.Play(CueDefs.RabbitThump);
+                if (At(6)) mix.Play(CueDefs.RabbitSqueak);
+                break;
+            // Clap and shrug scene: five claps from 1 s, a shrug at 4 s (times as in EmoteSounds).
+            case "clap":
+                for (int i = 0; i < 5; i++) if (At(1.25 + i / 3.2)) mix.Play(CueDefs.EmoteHandClap);
+                if (At(4.25)) mix.Play(CueDefs.EmoteSwish, 0.8f);
+                if (At(5.05)) mix.Play(CueDefs.EmoteSwish, 0.65f);
+                break;
+            // Deer grazing scene: crunches every 2 s, a snort at 8 s.
+            case "deer":
+                for (int i = 0; i < 6; i++) if (At(1.0 + 2.0 * i)) mix.Play(CueDefs.DeerCrunch);
+                if (At(8)) mix.Play(CueDefs.DeerSnort);
                 break;
             // Rest scene: sit (1 s), get up (3 s), lie on the ground (5 s), get up (8 s), lie on a mat (10 s), get up (13 s).
             case "rest":

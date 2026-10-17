@@ -41,6 +41,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_admin",
                 "SELECT * FROM my_respawn_point",
                 "SELECT * FROM my_skills",
+                "SELECT * FROM forage_bush",
                 "SELECT * FROM player_pos",
             });
     })
@@ -129,6 +130,21 @@ if (MathF.Abs((v1.Water - water0) - Needs.BerryWater) > 0.01f)
     Fail($"berries gave {v1.Water - water0:F3} water, expected {Needs.BerryWater:F3}");
 Ok($"berries give {Needs.BerryFood:P0} food and {Needs.BerryWater:P0} water (from Foods)");
 
+// --- Hazelnuts (survival-30): a nibble from the data, from about one bush in three ---
+Give(Item.Hazelnuts);
+float foodH = V().Food;
+conn.Reducers.Eat((ushort)Item.Hazelnuts);
+Pump(() => CountOf(Item.Hazelnuts) == 0, 5, "the hazelnut to be eaten");
+Settle(200);
+if (MathF.Abs((V().Food - foodH) - Needs.HazelnutFood) > 0.01f)
+    Fail($"a hazelnut gave {V().Food - foodH:F3} food, expected {Needs.HazelnutFood:F3}");
+Ok($"a hazelnut gives {Needs.HazelnutFood:P0} food (from Foods)");
+var allBushes = conn.Db.ForageBush.Iter().ToList();
+int hazels = allBushes.Count(b => Needs.IsHazelBush(b.Id));
+if (allBushes.Count < 6 || hazels * 5 < allBushes.Count || hazels * 2 > allBushes.Count)
+    Fail($"{hazels} of {allBushes.Count} bushes are hazel; expected about a third");
+Ok($"{hazels} of {allBushes.Count} bushes are hazel, the rest bear berries");
+
 // --- Stew: a good meal, the pot comes back at its quality ---
 Give(Item.PotOfStew, 77);
 conn.Reducers.Eat((ushort)Item.PotOfStew);
@@ -182,7 +198,7 @@ Pump(() => lastError != null, 5, "a missing building to be refused");
 if (!lastError!.Contains("gone")) Fail($"a missing building said: {lastError}");
 Ok($"a building that is not there is refused ({lastError})");
 if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a refused choice must not set a waking place");
-Ok("a refused choice sets nothing (the accepted choice is checked in BuildTest; waking after a death has no check yet)");
+Ok("a refused choice sets nothing (the accepted choice and waking after a death are checked in BuildTest)");
 // --- Endurance is trained by running, which the server checks it saw (D-182) ---
 int Endurance() => conn.Db.MySkills.Iter().Where(r => r.Spec == Stamina.Skill).Sum(r => (int)r.Points);
 uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;

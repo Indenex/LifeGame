@@ -256,13 +256,17 @@ public static partial class Module
         float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
         if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
             throw new Exception("Out of reach");
+        bool hazel = Needs.IsHazelBush(bush.Id);
+        if (hazel && !Needs.HazelnutsRipe(SeasonNow(ctx).Season))
+            throw new Exception("The hazelnuts are not ripe until autumn");
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
-            throw new Exception("No ripe berries yet");
+            throw new Exception(hazel ? "No ripe hazelnuts yet" : "No ripe berries yet");
         var state = RequireCooldown(ctx, player);
 
+        var yield = hazel ? Item.Hazelnuts : Item.Berries;
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, Me(ctx), Item.Berries, 3, Items.RawQuality);
-        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, Item.Berries);
+        AddToInventory(ctx, Me(ctx), yield, hazel ? (uint)Needs.HazelnutsPerPick : 3, Items.RawQuality);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -312,6 +316,16 @@ public static partial class Module
     }
 
     // --- Death -------------------------------------------------------------
+
+    // For tests (survival-29): an admin ends their own character's life, so the waking place can be checked
+    // without waiting for hunger or a fight. Admins only, like AdminGive.
+    [SpacetimeDB.Reducer]
+    public static void AdminDie(ReducerContext ctx)
+    {
+        if (!IsWorldAdmin(ctx)) throw new Exception("Only an admin can do that");
+        var player = RequirePlayer(ctx);
+        Die(ctx, player, RequireVitals(ctx, player), RequirePos(ctx, player), "an admin's test");
+    }
 
     // Everything carried falls where the player died. They wake naked at the edge
     // of the wilderness; what they know stays with them.
