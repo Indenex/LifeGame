@@ -1,9 +1,9 @@
 # env-22: Felled trees fall, leave a stump, and regrow in stages
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-tree-fall
-PR: (opening)
+PR: #537 (merged)
 
 ## Goal
 Part of Justin's "interact with the world more" push (PM). A felled tree no longer vanishes: it tips over away from the chopper (so "Stand clear when it falls" reads), falls with weight over 1.6 s, bounces once, lies as a log 4 s, then sinks away; a stump stays. Over Trees.RegrowSeconds (2 h) it regrows in stages: stump, sapling beside it, young tree, nearly full; the server's row delete brings the full tree. Pines, broadleaf and birches. Client only, from ChoppedTree (Felled, LastChop); no server change.
@@ -14,7 +14,7 @@ Part of Justin's "interact with the world more" push (PM). A felled tree no long
 - 2026-10-17: Renders with `--debug-fell=-10,0,4 --debug-fall-pose=t` (t holds the fall at t s) at -10,0 zoom -4: a pine tips away from the player, butt slides off the stump, lies beside it. Fixed: the falling tree's see-through copy stays on (it was fading out near the camera); pivot at the stump top. `--debug-stages=x,z` shows the four regrowth stages on the nearest trees: stump rots away (14-28% of regrow time), sapling from 28%, young, nearly full.
 
 ## Open questions / blockers
-- The trunk mesh's root flare shows at the butt of the lying log; a root-less "cut" trunk would need Modeling. Flagged to the PM.
+- Root flare on the lying log: fixed in env-23 with Modeling's cut trunks.
 
 ## Next step
-Wait for CI on the PR; send the green sha to the PM.
+Done; merged as #537.
