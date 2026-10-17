@@ -23,9 +23,8 @@ namespace LifeGame.Shared
             // The water is a flat plane, so a stream runs in a valley: within about
             // 26 m of its line the hills sink toward a floor just above the water,
             // then a channel about 6 m wide slopes gently down to a bed below it.
-            // The bed stays shallow enough to wade (the client turns players back
-            // below WaterLevel - 0.3), so a stream never walls anyone in; ponds
-            // are deeper and are walked round.
+            // Water can be walked into (Wading): shallow beds are waded, and anything
+            // deeper than Wading.FloatDepth is floated over, so no water walls anyone in.
             float meters = RiverDistance(x, z);
             float valley = 1f - SmoothStep(4f, 26f, meters);
             // The channel narrows and widens along its length, so the banks never run

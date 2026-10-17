@@ -1,8 +1,8 @@
-// Building kinds, shapes and stage costs: The first shelters, stores and fences (ids 0-8 except the claim marker, brick house).
-// One StructureDef per kind: its fixed id (never renumbered or reused), its footprint and rules,
-// and what each stage takes. Shared by the server module and the client; keep this file free of
-// engine and SpacetimeDB types. To add a kind, add a def here and list it in StructureKind
-// (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
+// Building kinds: The first shelters, stores and fences.
+// One StructureDef per kind: its fixed id (never renumbered or reused) and its StructureShape
+// (footprint, rules, stage names and what each stage takes). Shared by the server module and the
+// client; keep this file free of engine and SpacetimeDB types. To add a kind, add a def here and
+// list it in StructureKind (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
 using System.Collections.Generic;
 
 namespace LifeGame.Shared
@@ -11,7 +11,6 @@ namespace LifeGame.Shared
     {
         static IEnumerable<StructureDef> CoreDefs() => new[]
         {
-                // Lean-to: Frame, Lashing, Ribs, Thatch
             new StructureDef
             {
                 Kind = 0,
@@ -23,16 +22,16 @@ namespace LifeGame.Shared
                     Clearance = 1.9f,
                     RainCover = 0.6f, Warmth = 0.2f,
                     Stages = new[] { "Frame", "Lashing", "Ribs", "Thatch" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 4u) },
-                    new[] { (Item.Fiber, 3u) },
-                    new[] { (Item.Stick, 6u) },
-                    new[] { (Item.Fiber, 8u) },
+                    // Lean-to: Frame, Lashing, Ribs, Thatch
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 4u) },
+                        new[] { (Item.Fiber, 3u) },
+                        new[] { (Item.Stick, 6u) },
+                        new[] { (Item.Fiber, 8u) },
+                    },
                 },
             },
-                // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
             new StructureDef
             {
                 Kind = 1,
@@ -46,16 +45,16 @@ namespace LifeGame.Shared
                     DoorwayZ = 1.7f,
                     SmokeY = 2.9f,
                     Stages = new[] { "Posts", "Wattle", "Daub", "Roof" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
-                    new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
-                    new[] { (Item.Daub, 12u) },
-                    new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
+                    // Clay hut (wattle and daub): Posts, Wattle, Daub, Roof
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 6u), (Item.Stone, 2u) },
+                        new[] { (Item.Stick, 10u), (Item.Fiber, 4u) },
+                        new[] { (Item.Daub, 12u) },
+                        new[] { (Item.Stick, 6u), (Item.Fiber, 10u) },
+                    },
                 },
             },
-                // Updraft kiln (Ceramics): Base, Dome
             new StructureDef
             {
                 Kind = 3,
@@ -69,14 +68,14 @@ namespace LifeGame.Shared
                     Clearance = 1.2f,
                     Solid = true,
                     Stages = new[] { "Base", "Dome" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Brick, 4u) },
-                    new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
+                    // Updraft kiln (Ceramics): Base, Dome
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Brick, 4u) },
+                        new[] { (Item.Brick, 4u), (Item.Daub, 2u) },
+                    },
                 },
             },
-                // Storage basket: Weave
             new StructureDef
             {
                 Kind = 4,
@@ -89,15 +88,15 @@ namespace LifeGame.Shared
                     Solid = true,
                     StoreStacks = BasketStacks,
                     Stages = new[] { "Weave" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+                    // Storage basket: Weave
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Fiber, 6u), (Item.Cordage, 2u) },
+                    },
                 },
             },
                 // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
                 // Outside a claim it weathers like everything else.
-                // Storage jar (Ceramics): set down one kiln-fired jar
             new StructureDef
             {
                 Kind = 6,
@@ -112,15 +111,15 @@ namespace LifeGame.Shared
                     // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
                     StoreStacks = JarStacksMax,
                     Stages = new[] { "Set the jar" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.StorageJar, 1u) },
+                    // Storage jar (Ceramics): set down one kiln-fired jar
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.StorageJar, 1u) },
+                    },
                 },
             },
                 // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
                 // sheep and mark out a yard (building-8).
-                // Fence: Posts, Rails
             new StructureDef
             {
                 Kind = 7,
@@ -132,15 +131,15 @@ namespace LifeGame.Shared
                     Clearance = 0.25f,
                     Fence = true,
                     Stages = new[] { "Posts", "Rails" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 2u) },
-                    new[] { (Item.Stick, 2u), (Item.Fiber, 1u) },
+                    // Fence: Posts, Rails
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 2u) },
+                        new[] { (Item.Stick, 2u), (Item.Fiber, 1u) },
+                    },
                 },
             },
                 // A fence length with a woven hurdle gate in it that opens and bars like a door.
-                // Gate: Posts, Gate (a hurdle like a hut door)
             new StructureDef
             {
                 Kind = 8,
@@ -152,11 +151,12 @@ namespace LifeGame.Shared
                     Clearance = 0.25f,
                     Fence = true, Gate = true,
                     Stages = new[] { "Posts", "Gate" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 2u) },
-                    new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
+                    // Gate: Posts, Gate (a hurdle like a hut door)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 2u) },
+                        new[] { (Item.Stick, 3u), (Item.Fiber, 2u) },
+                    },
                 },
             },
         };

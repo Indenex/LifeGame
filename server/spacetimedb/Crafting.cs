@@ -25,6 +25,10 @@ public static partial class Module
         // quality, so Ceramics can hand it back unchanged (ceramics-7). 0 for none.
         [Default((byte)0)]
         public byte VesselQuality;
+        // The tool in hand for the job (an item id, BestTool), 0 for none, so other players see
+        // the exact tool (Animation, anim-3).
+        [Default((ushort)0)]
+        public ushort Tool;
     }
 
     // Clients see only their own job, to show its progress.
@@ -167,10 +171,12 @@ public static partial class Module
             seconds *= Processes.QualityTimeScale(quality);
         DurationFor(ctx, player.PlayerId, def.Id, ref seconds);
         // A better tool works faster (D-089).
+        ushort toolUsed = 0;
         if (def.NeedsTool != ItemTags.None && BestTool(ctx, def.NeedsTool) is { } tool)
         {
             if (Items.Def((Item)tool.Item).HasQuality)
                 seconds *= 1f - Processes.ToolSpeedup(tool.Quality);
+            toolUsed = tool.Item;
             WearTool(ctx, tool);
         }
         seconds = Math.Max(seconds, 0.5f);
@@ -187,6 +193,7 @@ public static partial class Module
             X = fx,
             Z = fz,
             VesselQuality = vesselQuality,
+            Tool = toolUsed,
         });
         ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
         OnCraftStarted(ctx, started);

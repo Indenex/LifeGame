@@ -49,22 +49,24 @@ namespace LifeGame.Shared
         // mud-brick house and the log cabin share the walls, door and fire-warms-the-room rule.
         public bool Room;
         public string[] Stages = Array.Empty<string>();
+        // What each stage takes, in the same order as Stages (the server builds each stage's needs from
+        // this; the client shows it before you lay out). Fiber stands in for thatch; the hut's walls are daub.
+        public (Item Item, uint Count)[][] Costs = Array.Empty<(Item Item, uint Count)[]>();
     }
 
-    // One building kind: its fixed id, footprint and rules, and what each stage takes.
+    // One building kind: its fixed id and its shape (which also carries the stage costs).
     public sealed class StructureDef
     {
         public int Kind;
         public StructureShape Shape = new();
-        public (Item Item, uint Count)[][] Stages = Array.Empty<(Item, uint)[]>();
     }
 
     public static partial class Structures
     {
         // Every kind, keyed by its fixed id. The defs live in one file per lane (shared/structures/);
-        // an id is never renumbered or reused, and a duplicate fails the first time this class loads.
-        // Id ranges: 0-99 the original kinds, House building 100+, Crafting stations 200+,
-        // Animals 300+, Claims 400+ (PM, integration-9). Server and client both read this.
+        // an id is never renumbered or reused, and a duplicate, or a shape whose stages and costs don't
+        // line up, fails the first time this class loads. Id ranges: 0-99 the original kinds, House
+        // building 100+, Crafting stations 200+, Animals 300+, Claims 400+ (PM, integration-9).
         static readonly Dictionary<int, StructureDef> defs = BuildDefs();
         // Every registered kind, in id order.
         public static readonly int[] Kinds = defs.Keys.OrderBy(k => k).ToArray();
@@ -76,6 +78,8 @@ namespace LifeGame.Shared
             {
                 if (!all.TryAdd(def.Kind, def))
                     throw new InvalidOperationException($"Structure kind {def.Kind} is defined twice");
+                if (def.Shape.Costs.Length != def.Shape.Stages.Length)
+                    throw new InvalidOperationException($"{def.Shape.Name}: {def.Shape.Stages.Length} stages but {def.Shape.Costs.Length} costs");
                 Scale(def.Shape);
             }
             return all;
@@ -83,9 +87,10 @@ namespace LifeGame.Shared
 
         public static bool Exists(int kind) => defs.ContainsKey(kind);
 
-        // What each stage takes, in order: the server builds each stage's needs from this and
-        // the client shows it before you lay out. Fiber stands in for thatch.
-        public static (Item Item, uint Count)[][] Costs(int kind) => defs[kind].Stages;
+        // What each stage takes, in order: the server builds each stage's needs from this and the
+        // client shows it before you lay out. Fiber stands in for thatch; the hut's walls are daub.
+        public static (Item Item, uint Count)[][] Costs(int kind) => defs[kind].Shape.Costs;
+
 
         // Multiplies a shape's lengths by its Scale, once, so nothing else has to know about it.
         static void Scale(StructureShape shape)
@@ -99,6 +104,7 @@ namespace LifeGame.Shared
             shape.DoorwayZ *= k;
             shape.SmokeY *= k;
         }
+
         public static float ScaleOf(int kind) => Shape(kind).Scale;
 
         // How far from the player a footprint may be laid out.

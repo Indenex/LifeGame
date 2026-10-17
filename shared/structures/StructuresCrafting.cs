@@ -1,8 +1,8 @@
-// Building kinds, shapes and stage costs: Crafting stations (Crafting and Ceramics). New kinds: 200 and up.
-// One StructureDef per kind: its fixed id (never renumbered or reused), its footprint and rules,
-// and what each stage takes. Shared by the server module and the client; keep this file free of
-// engine and SpacetimeDB types. To add a kind, add a def here and list it in StructureKind
-// (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
+// Building kinds: Crafting stations (Crafting and Ceramics). New kinds: 200 and up.
+// One StructureDef per kind: its fixed id (never renumbered or reused) and its StructureShape
+// (footprint, rules, stage names and what each stage takes). Shared by the server module and the
+// client; keep this file free of engine and SpacetimeDB types. To add a kind, add a def here and
+// list it in StructureKind (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
 using System.Collections.Generic;
 
 namespace LifeGame.Shared
@@ -12,7 +12,6 @@ namespace LifeGame.Shared
         static IEnumerable<StructureDef> CraftingDefs() => new[]
         {
                 // A crafting table (Crafting, D-098): general crafts are made at it, inside a claim.
-                // Crafting table (D-112): Table
             new StructureDef
             {
                 Kind = 9,
@@ -24,14 +23,14 @@ namespace LifeGame.Shared
                     Clearance = 1.0f,
                     Station = StationKind.Table,
                     Stages = new[] { "Table" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+                    // Crafting table (D-112): Table
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+                    },
                 },
             },
                 // Ceramics' potter's bench (ceramics-8, D-112): pots are shaped at it, inside a claim.
-                // Potter's bench (Ceramics, D-127): a split log on two stones
             new StructureDef
             {
                 Kind = 13,
@@ -44,14 +43,14 @@ namespace LifeGame.Shared
                     Clearance = 1.0f,
                     Station = StationKind.PottersBench,
                     Stages = new[] { "Bench" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Log, 1u), (Item.Stone, 2u) },
+                    // Potter's bench (Ceramics, D-127): a split log on two stones
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Log, 1u), (Item.Stone, 2u) },
+                    },
                 },
             },
                 // A repair table (Crafting, D-155): worn tools are mended here, inside a claim.
-                // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
             new StructureDef
             {
                 Kind = 15,
@@ -63,10 +62,11 @@ namespace LifeGame.Shared
                     Clearance = 1.0f,
                     Station = StationKind.Repair,
                     Stages = new[] { "Table" },
-                },
-                Stages = new[]
-                {
-                    new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
+                    // Repair table (D-155): Table, the crafting table's parts plus a pair of stones
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
+                    },
                 },
             },
         };

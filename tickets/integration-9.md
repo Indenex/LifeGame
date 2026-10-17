@@ -29,7 +29,7 @@ Lanes stop colliding in four files. Each lane/feature owns its own file and regi
 
 ## Progress log
 - 2026-10-17: PM approved the plan and the lane ranges (House building 100+, Crafting stations 200+, Animals 300+, Claims 400+; existing kinds keep their values). #267 (RepairTable) landed; #285 (devices) is still to come and will rebase onto step 1.
-- 2026-10-17: step 1 (structures) done in PR: `StructureDef` registry, defs in shared/structures/Structures{Core,House,Crafting,Animals,Claims}.cs, callers use `Structures.Kinds/Exists/Costs/Shape`. Checked: shapes (scaled) and costs for all 16 kinds are byte-identical to main.
+- 2026-10-17: step 1 (structures) done in PR #422: `StructureDef` registry, defs in shared/structures/Structures{Core,House,Crafting,Animals,Claims}.cs, callers use `Structures.Kinds/Exists/Costs/Shape`. Rebuilt on top of building-12 (stage costs now live in each StructureShape). Checked: every field of every kind's scaled shape, costs included, is identical to main for all 16 kinds.
 
 ## Open questions
 - None.
