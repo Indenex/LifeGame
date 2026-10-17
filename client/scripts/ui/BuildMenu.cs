@@ -76,12 +76,16 @@ public partial class BuildMenu : CanvasLayer
     {
         Panels.Opening(this);
         panel.Visible = true;
+        closeHint.Text = $"Click one to lay it out    {Controls.OrEsc("build_mode")} closes";
         if (category == "") category = Order.First(c => Kinds(c).Any());
         Refresh();
         if (!rendering && pictures.Count == 0) RenderPictures();
     }
 
     public void Close() => panel.Visible = false;
+
+    // Its keys are written as the player has them bound, each time it opens.
+    Label closeHint = null!;
 
     // While House building's ghost is up (or something else has the keys) B is theirs.
     public Func<bool> Blocked = () => false;
@@ -120,9 +124,9 @@ public partial class BuildMenu : CanvasLayer
         grid.MinimumSizeChanged += () =>
             scroll.CustomMinimumSize = new Vector2(across, Mathf.Min(grid.GetCombinedMinimumSize().Y, GetViewport().GetVisibleRect().Size.Y * 0.6f));
         box.AddChild(scroll);
-        var hint = Hud.Text("Click one to lay it out    B or Esc closes", 13);
-        hint.Modulate = new Color(1, 1, 1, 0.65f);
-        box.AddChild(hint);
+        closeHint = Hud.Text("Click one to lay it out    B or Esc closes", 13);
+        closeHint.Modulate = new Color(1, 1, 1, 0.65f);
+        box.AddChild(closeHint);
 
         var outer = Ui.Window(box);
         return outer;

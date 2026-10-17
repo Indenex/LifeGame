@@ -48,6 +48,9 @@ public partial class EquipmentPanel : CanvasLayer
     Control panel = null!;
     readonly System.Collections.Generic.Dictionary<ClothingSlot, Button> slots = new();
     Label slotTitle = null!, wearing = null!, effect = null!;
+    // The usage line, with the close key as the player has it bound (written on each open).
+    Label closeHint = null!;
+    const string Usage = "Drag things onto the bar below, onto a slot to wear them, tools onto Tools, or out onto the ground    Double-click uses";
     Button takeOff = null!;
     VBoxContainer choices = null!;
     ClothingSlot selected = ClothingSlot.Body;
@@ -85,6 +88,7 @@ public partial class EquipmentPanel : CanvasLayer
     {
         Panels.Opening(this);
         panel.Visible = true;
+        closeHint.Text = $"{Usage}    {Controls.OrEsc("equipment")} closes";
         shown = "";
         Refresh();
         Bag.Refresh();
@@ -203,9 +207,9 @@ public partial class EquipmentPanel : CanvasLayer
         scroll.AddChild(Bag);
         bagSide.AddChild(scroll);
 
-        var hint = Hud.Text("Drag things onto the bar below, onto a slot to wear them, tools onto Tools, or out onto the ground    Double-click uses    I or Esc closes", 13);
-        hint.Modulate = new Color(1, 1, 1, 0.65f);
-        box.AddChild(hint);
+        closeHint = Hud.Text($"{Usage}    I or Esc closes", 13);
+        closeHint.Modulate = new Color(1, 1, 1, 0.65f);
+        box.AddChild(closeHint);
 
         var outer = Ui.Window(box);
         return outer;

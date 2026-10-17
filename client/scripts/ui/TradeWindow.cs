@@ -7,7 +7,7 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Trading face to face (D-069). Trade in the right-click player menu asks (ui-35); they see
-// "Mara wants to trade" and press E to say yes or Esc to say no. The window shows both
+// "Mara wants to trade" and press Use (E) to say yes or Esc to say no. The window shows both
 // offers side by side, with what you carry below to add from. Each side accepts; any
 // change to either offer clears both accepts, and the window says so. Esc calls the
 // trade off; the server ends it when you walk apart, die or go offline.
