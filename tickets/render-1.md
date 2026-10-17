@@ -194,6 +194,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:15: naturekit-1 replaced: 9a7565c1, noon and 0.28, with and without --naturekit (4 shots), summary for the PM in the request.
 
+- 2026-10-17 16:18: ui-74 F1 keys (#851 560dd5c9), low priority, end of queue before the playtest.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
