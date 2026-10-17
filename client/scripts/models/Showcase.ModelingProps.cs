@@ -71,4 +71,30 @@ public partial class Showcase
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(-1.5f, 5.5f, 10f), new Vector3(0f, 0.2f, -2.2f), Vector3.Up);
     }
+
+    // Heath variety (model-30, D-166): all six heather mounds in front, six gorse bushes
+    // behind, six birch trunks at the back, as Terrain draws them, a person for scale.
+    [ShowcaseView("heath")]
+    void Heath()
+    {
+        void Put(Mesh mesh, Material material, Vector3 at, Color tint)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int v = 0; v < PropMeshes.HeatherVariants; v++)
+            Put(PropMeshes.Heather(v), Painted.Foliage, new Vector3(-3.5f + v * 1.4f, 0, 1.5f), Colors.White);
+        for (int v = 0; v < PropMeshes.GorseVariants; v++)
+            Put(PropMeshes.Gorse(v), Painted.Foliage, new Vector3(-4.2f + v * 1.7f, 0, -0.8f), Colors.White);
+        for (int v = 0; v < PropMeshes.BirchVariants; v++)
+            Put(PropMeshes.Birch(v), Painted.Bark, new Vector3(-4.5f + v * 1.8f, 0, -3.5f), new Color(0.86f, 0.84f, 0.80f));
+        var person = PlayerModel.Build();
+        person.Position = new Vector3(-5.6f, 0, 2.4f);
+        AddChild(person);
+        var camera = new Camera3D { Fov = 45f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(-0.5f, 3.6f, 9.5f), new Vector3(0f, 0.8f, -1f), Vector3.Up);
+    }
 }
