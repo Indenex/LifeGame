@@ -12,9 +12,10 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 ## Progress log
 - 2026-10-17: started. Old shell = one ellipsoid with ellipsoid "plates" stuck on top and a ring of ellipsoid marginals; no continuous surface, no painted texture. No Blender/Godot in the container: installing Blender 4.2 LTS to ~/tools/blender and Godot via tools/render/setup.sh.
+- 2026-10-17: Blender 4.2.3 runs headless (Cycles CPU ok; Eevee ok under xvfb with libegl1). Golden Skull packs are 2D PNGs only. Draft report in docs/art-pipeline.md. Showcase --view=turntable added (bdfa9163).
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Check Blender runs headless (`~/tools/blender/blender-4.2.3-linux-x64/blender -b --version`), then write docs/art-pipeline.md.
+Build the shell in Blender: tools/art/pebble_shell.py (model, bake, paint, export glb), then load it in ChibiFigure and render the turntable.
