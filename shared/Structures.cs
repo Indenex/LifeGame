@@ -8,6 +8,9 @@ namespace LifeGame.Shared
     public sealed class StructureShape
     {
         public string Name = "";
+        // May stand outside a claim (building-13, Justin): basic survival only. Everything else has
+        // to be built inside a claim the builder belongs to. Outside a claim, everything weathers fast.
+        public bool Wild;
         // Building size relative to the design size the model and the numbers below are written in
         // (building-14, Justin: houses felt too small). Applied once when the shapes are made, so
         // every footprint, clearance and doorway number is already the real, scaled size; the model
@@ -60,6 +63,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Lean-to",
+                Wild = true,
                 Scale = 1.25f,
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
@@ -77,6 +81,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Clay hut",
+                Wild = true,
                 Scale = 1.25f,
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
@@ -97,6 +102,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Claim marker",
+                Wild = true,
                 Category = "Claims",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
@@ -128,6 +134,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage basket",
+                Wild = true,
                 Category = "Storage",
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
@@ -167,6 +174,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Wild = true,
                 Category = "Storage",
                 Jar = true,
                 Round = true, Radius = 0.32f,
@@ -218,6 +226,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Crafting table",
+                Wild = true,
                 Category = "Crafting",
                 HalfWidth = 0.8f, HalfDepth = 0.45f,
                 Clearance = 1.0f,
@@ -234,6 +243,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
+                Wild = true,
                 Category = "Fire",
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
@@ -399,6 +409,9 @@ namespace LifeGame.Shared
         // later. Justin: "starts falling apart after 2 days". One raisable constant each (D-197);
         // a shape may still set its own WeatherAfter, but none does now.
         public const double WeatherAfterHours = 48, WeatherForHours = 6;
+
+        // Whether this kind may be built outside a claim (building-13).
+        public static bool IsWild(int kind) => Shape(kind).Wild;
 
         public static bool IsRoom(int kind) => Shape(kind).Room;
 

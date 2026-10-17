@@ -18,6 +18,9 @@ var a = new Bot("A", uri, db, null);
 var b = new Bot("B", uri, db, null);
 var bots = new List<Bot> { a, b };
 var clock = Stopwatch.StartNew();
+// A's claim, raised past the waking clearing the first time something claim-only is built.
+(float x, float z)? claimAt = null;
+bool bIsMember = false;
 
 void Pump(int ms)
 {
@@ -180,6 +183,8 @@ void WallsStopWalkers(ulong id)
 ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<Item, uint> forB, Action? prepareB = null, Action? prepareA = null)
 {
     string name = Structures.Shape((int)kind).Name;
+    // Only basic survival buildings stand outside a claim (building-13): the rest go up inside A's.
+    if (!Structures.IsWild((int)kind)) EnsureClaim();
     Console.WriteLine($"--- {name}");
 
     // Gather side by side.
@@ -196,7 +201,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     prepareB?.Invoke();
 
     // A lays out a footprint on dry, level ground nearby.
-    var site = a.FindSite(kind);
+    var site = a.FindSite(kind, Structures.IsWild((int)kind) ? null : claimAt);
     Check(site != null, "found level ground for a footprint");
     var (sx, sz) = site!.Value;
     a.WalkTo(sx, sz + 2.5f, 1f, Pump);
@@ -273,7 +278,8 @@ void HangDoor(ulong hut)
     b.Conn.Reducers.ToggleDoor(hut);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true }, 10, "and shut it again");
 
-    // A, who hung it, bars it; B can't open it then; A unbars it and B can again.
+    // A, who hung it, bars it; B can't open it then; A unbars it and B can again. (B is no member of A's claim here.)
+    StrangerB();
     a.Conn.Reducers.ToggleLock(hut);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(hut) is { Locked: true, Closed: true }, 10, "A barred the door");
     b.Conn.Reducers.ToggleLock(hut);
@@ -309,9 +315,44 @@ void ChopLogs(Bot bot, int logs)
 }
 
 // A finished gate hangs shut by itself. B opens and shuts it; A, who laid it out, bars it.
+void EnsureClaim()
+{
+    if (claimAt != null) return;
+    Console.WriteLine("--- Claim");
+    // Outside a claim the brick house is refused (building-13).
+    // On clear ground in reach, so the claim rule is what refuses it (not distance or a neighbour).
+    var probe = a.FindSite(StructureKind.BrickHouse);
+    Check(probe != null, "found clear ground for the claim-only probe");
+    a.WalkTo(probe!.Value.Item1, probe.Value.Item2 + 2.5f, 1f, Pump);
+    a.LastError = null;
+    a.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, probe.Value.Item1, probe.Value.Item2, 0f);
+    WaitFor(() => a.LastError != null, 5, "a claim-only building to be refused outside a claim");
+    Check(a.LastError!.Contains("inside your claim"), $"it says it needs a claim ({a.LastError})");
+    ulong marker = BuildTogether(StructureKind.ClaimMarker,
+        new() { [Item.Stick] = Social.MarkerSticks },
+        new() { [Item.Fiber] = Social.MarkerFiber });
+    WaitFor(() => a.Conn.Db.Claim.Iter().Any(c => c.StructureId == marker), 10, "the claim is raised");
+    var claim = a.Conn.Db.Claim.Iter().First(c => c.StructureId == marker);
+    claimAt = (claim.X, claim.Z);
+    // B helps build and gather inside it, so A lets B in; tests that need B to be a stranger take B out (StrangerB).
+    a.Conn.Reducers.AddClaimMember(b.MyId);
+    WaitFor(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.MyId), 10, "A let B into the claim");
+    bIsMember = true;
+}
+
+void StrangerB()
+{
+    if (!bIsMember) return;
+    a.Conn.Reducers.RemoveClaimMember(b.MyId);
+    WaitFor(() => !b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.MyId), 10, "A took B out of the claim");
+    bIsMember = false;
+}
+
 void UseGate(ulong gate)
 {
     Console.WriteLine("--- Gate");
+    // Gates inside a claim open for its members only (D-160): B is a member for the first part,
+    // then A takes B out again, so B is a stranger when the gate is barred.
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "the finished gate hangs shut");
     var s = a.Conn.Db.Structure.Id.Find(gate)!;
     var side = Structures.ToWorld(s.X, s.Z, s.Yaw, 0f, 0.9f);
@@ -321,6 +362,7 @@ void UseGate(ulong gate)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(gate);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    StrangerB();
     a.Conn.Reducers.ToggleLock(gate);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");
     b.Conn.Reducers.ToggleDoor(gate);
@@ -459,6 +501,7 @@ sealed class Bot
     public bool Ready;
     public float X, Z;
     public Dictionary<Item, uint> Wants = new();
+    public string? LastError;
 
     readonly string name, uri, db;
     public string Name => name;
@@ -513,6 +556,8 @@ sealed class Bot
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
+                        "SELECT * FROM claim",
+                        "SELECT * FROM claim_member",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"));
@@ -520,6 +565,7 @@ sealed class Bot
         var conn = builder.Build();
         conn.OnUnhandledReducerError += (_, e) =>
         {
+            LastError = e.Message;
             if (!e.Message.Contains("Still working")) Console.WriteLine($"  {name}: {e.Message}");
         };
         return conn;
@@ -694,13 +740,19 @@ sealed class Bot
         throw new Exception("no tree within 60 m");
     }
 
-    public (float, float)? FindSite(StructureKind kind)
+    // inClaim: look round that claim's centre and keep to its inner ground (claim-only kinds, building-13).
+    public (float, float)? FindSite(StructureKind kind, (float x, float z)? inClaim = null)
     {
         float H(float x, float z) => Structures.GroundAt(x, z, (i, j) => Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
-        for (int r = 4; r < 40; r++)
+        // The server refuses claims in the waking clearing; start the search past it.
+        const float keepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+        float cx = inClaim?.x ?? X, cz = inClaim?.z ?? Z;
+        for (int r = 4; r < 80; r++)
             for (int k = 0; k < 16; k++)
             {
-                float angle = k * MathF.Tau / 16, x = X + MathF.Cos(angle) * r, z = Z + MathF.Sin(angle) * r;
+                float angle = k * MathF.Tau / 16, x = cx + MathF.Cos(angle) * r, z = cz + MathF.Sin(angle) * r;
+                if (kind == StructureKind.ClaimMarker && x * x + z * z < keepOut * keepOut) continue;
+                if (inClaim is { } c && (x - c.x) * (x - c.x) + (z - c.z) * (z - c.z) > (Social.ClaimRadius - 5f) * (Social.ClaimRadius - 5f)) continue;
                 if (Structures.GroundProblem((int)kind, x, z, 0f, H) != null) continue;
                 if (Conn.Db.Structure.Iter().Any(s => Structures.TooClose((int)kind, x, z, (int)s.Kind, s.X, s.Z))) continue;
                 return (x, z);
