@@ -17,31 +17,67 @@ public static partial class Module
         [PrimaryKey]
         public Identity Owner;
         public byte Slot;
+        // The item in hand, so other players' clients can show it (they cannot read someone's
+        // hotbar). Kept in step with the slot by EquipSlot and SyncEquip.
+        [Default((ushort)0)]
+        public ushort Item;
     }
 
-    // Equips a hotbar slot (0 to 9). The slot already equipped, or 255, puts it away.
+    // Equips a hotbar slot (0 to 9): whatever sits on it comes to hand, tool or not (Justin: every
+    // slot equips). The slot already equipped, an empty slot, or 255 puts it away.
     [SpacetimeDB.Reducer]
     public static void EquipSlot(ReducerContext ctx, byte index)
     {
         RequirePlayer(ctx);
         var row = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender);
-        if (index >= HotbarSlots || (row is { } r && r.Slot == index))
+        var held = index < HotbarSlots ? SlotAt(ctx, index) : null;
+        if (held is not { Item: not 0 } || (row is { } r && r.Slot == index))
         {
             if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
             return;
         }
-        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index };
+        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index, Item = held.Value.Item };
         if (row is null) ctx.Db.PlayerEquip.Insert(next);
         else ctx.Db.PlayerEquip.Owner.Update(next);
+    }
+
+    // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
+    // emptied slot puts the hand away.
+    static void SyncEquip(ReducerContext ctx)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return;
+        if (SlotAt(ctx, equip.Slot) is { Item: not 0 } slot)
+        {
+            if (slot.Item != equip.Item) ctx.Db.PlayerEquip.Owner.Update(equip with { Item = slot.Item });
+        }
+        else
+            ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+    }
+
+    // Uses the item in hand the way its Def says (eat, drink, wear): a click on the held item. The
+    // item is the server's own record of what is in hand, never a client argument.
+    [SpacetimeDB.Reducer]
+    public static void UseHeld(ReducerContext ctx)
+    {
+        RequirePlayer(ctx);
+        var equip = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) ?? throw new Exception("You are holding nothing");
+        UseItem(ctx, equip.Item);
     }
 
     // The tool in the equipped slot if it carries these tags, is in the bag (not on the tools
     // belt) and still works; null when nothing fitting is equipped.
     static InventoryItem? EquippedTool(ReducerContext ctx, ItemTags tags)
     {
+        if (EquippedStack(ctx) is not { } stack) return null;
+        return (Items.Def((Item)stack.Item).Tags & tags) == tags ? stack : null;
+    }
+
+    // Whatever working item is in the equipped slot and in the bag (a bow has no tag, so the
+    // bow shot reads it here).
+    static InventoryItem? EquippedStack(ReducerContext ctx)
+    {
         if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return null;
         if (SlotAt(ctx, equip.Slot) is not { } slot || !Items.IsKnown(slot.Item)) return null;
-        if ((Items.Def((Item)slot.Item).Tags & tags) != tags) return null;
         InventoryItem? best = null;
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
         {
@@ -50,6 +86,17 @@ public static partial class Module
             if (best is null || row.Quality > best.Value.Quality) best = row;
         }
         return best;
+    }
+
+    // Why a hunting strike or a bow shot has no weapon: a spent one equipped, or none equipped.
+    static string NoWeaponMessage(ReducerContext ctx, string what)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is { } equip && SlotAt(ctx, equip.Slot) is { } slot
+            && Items.IsKnown(slot.Item) && Durability.Wears((Item)slot.Item))
+            foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, slot.Item)))
+                if (!row.OnBelt && Durability.IsSpent(row.Quality, row.Wear))
+                    return $"Your {Items.Def((Item)slot.Item).Name.ToLowerInvariant()} is spent. Mend it at a repair table.";
+        return $"Put {what} on your bar and equip it";
     }
 
     // The same, or the reason there is none, for the player's message.
