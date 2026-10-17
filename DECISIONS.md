@@ -1213,3 +1213,15 @@ Owner: Claims.
 ## D-298 — 2026-10-17 — Unity comparison spike, lighting only
 **Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
 **Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
