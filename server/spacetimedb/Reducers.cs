@@ -116,6 +116,7 @@ public static partial class Module
             var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
             if (bank is null) ctx.Db.MoveBank.Insert(left);
             else ctx.Db.MoveBank.PlayerId.Update(left);
+            (x, z) = LimitByStamina(ctx, player.PlayerId, fromX, fromZ, x, z);
         }
 
         // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).

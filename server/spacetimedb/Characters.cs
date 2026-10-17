@@ -247,6 +247,7 @@ public static partial class Module
         if (ctx.Db.ChatState.PlayerId.Find(id) != null) ctx.Db.ChatState.PlayerId.Delete(id);
         if (ctx.Db.MoveInput.PlayerId.Find(id) != null) ctx.Db.MoveInput.PlayerId.Delete(id);
         if (ctx.Db.MoveBank.PlayerId.Find(id) != null) ctx.Db.MoveBank.PlayerId.Delete(id);
+        if (ctx.Db.StaminaBar.PlayerId.Find(id) != null) ctx.Db.StaminaBar.PlayerId.Delete(id);
         if (ctx.Db.PlayerState.PlayerId.Find(id) != null) ctx.Db.PlayerState.PlayerId.Delete(id);
         if (ctx.Db.PlayerPos.PlayerId.Find(id) != null) ctx.Db.PlayerPos.PlayerId.Delete(id);
         if (ctx.Db.WorldAdmin.Identity.Find(key) != null) ctx.Db.WorldAdmin.Identity.Delete(key);
