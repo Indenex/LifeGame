@@ -13,5 +13,6 @@ public static partial class Subscriptions
         $"SELECT * FROM simmer_pot WHERE {range}",
         $"SELECT * FROM lamp WHERE {range}",
         "SELECT * FROM clay_news",
+        "SELECT * FROM trough_water",
     };
 }

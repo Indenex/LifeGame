@@ -104,7 +104,7 @@ public static class LandmarkProps
             float a = H(x, z, 96) * Mathf.Tau, r = Range(x, z, 97, 3f, 6f);
             float px = at.X + Mathf.Cos(a) * r, pz = at.Z + Mathf.Sin(a) * r;
             var lying = new Basis(Vector3.Up, H(x, z, 98) * Mathf.Tau) * Basis.FromScale(Vector3.One * Range(x, z, 99, 0.6f, 1.0f));
-            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(x, z, 100, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(lying, new Vector3(px, heightAt(px, pz), pz)), Look.Bark.Darkened(0.2f), custom));
         }
     }
@@ -165,7 +165,7 @@ public static class LandmarkProps
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 305) * Mathf.Tau)
             * Basis.FromScale(stretch * size);
         var color = Look.WorldRock.Darkened(Range(x, z, 306, 0f, 0.15f)).Lerp(Look.Moss, H(x, z, 307) < 0.4f ? Range(x, z, 308, 0.1f, 0.35f) : 0f);
-        into.Put(PropMeshes.Rock(Pick(x, z, 309, PropMeshes.RockVariants)), Look.RockSurface,
+        into.Put(PropMeshes.Rock(Pick(x, z, 309, PropMeshes.RockVariants)), Painted.Rock,
             (new Transform3D(basis, at with { Y = at.Y - 0.18f * size * stretch.Y }), color, custom with { B = 1f }));
         float radius = 0.4f * size * Mathf.Max(stretch.X, stretch.Z);
         if (radius >= 0.2f) into.Blocks.Add((at.X, at.Z, radius));
@@ -181,7 +181,7 @@ public static class LandmarkProps
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 315) * Mathf.Tau)
             * Basis.FromScale(stretch * scale);
         var color = Look.WorldRock.Darkened(Range(x, z, 316, 0f, 0.12f));
-        into.Put(PropMeshes.Outcrop(Pick(x, z, 317, PropMeshes.OutcropVariants)), Look.RockSurface,
+        into.Put(PropMeshes.Outcrop(Pick(x, z, 317, PropMeshes.OutcropVariants)), Painted.Rock,
             (new Transform3D(basis, at with { Y = at.Y - 0.1f * scale }), color, custom with { B = 1f }));
         into.Blocks.Add((at.X, at.Z, 1.25f * scale * Mathf.Max(stretch.X, stretch.Z)));
     }
@@ -199,7 +199,7 @@ public static class LandmarkProps
             if (Land.StreamDistance(x, z) > Land.StreamDistance(x - 1, z) || Land.StreamDistance(x, z) > Land.StreamDistance(x + 1, z)) return;
             // Modeling's fallen log lies along x, centred on its origin, about 3 m long.
             var across = new Basis(Vector3.Up, Range(row, 1, 401, -0.25f, 0.25f)) * Basis.FromScale(new Vector3(Range(row, 1, 402, 1.7f, 2.1f), 1f, 1f));
-            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Look.TreeBark,
+            into.Put(PropMeshes.FallenLog(Pick(row, 1, 403, PropMeshes.FallenLogVariants)), Painted.Bark,
                 (new Transform3D(across, new Vector3(x, World.WaterLevel - 0.05f, z + 0.3f)), Look.Bark.Darkened(0.18f), custom));
             return;
         }
@@ -209,7 +209,7 @@ public static class LandmarkProps
         var basis = new Basis(Vector3.Up, H(x, z, 414) * Mathf.Tau) * Basis.FromScale(stretch);
         var pos = new Vector3(x + Range(x, z, 415, -0.25f, 0.25f), top, z + Range(x, z, 416, -0.3f, 0.3f));
         var color = Look.WorldRock.Lightened(Range(x, z, 417, 0f, 0.08f)).Lerp(Look.Moss, H(x, z, 418) < 0.3f ? 0.25f : 0f);
-        into.Put(PropMeshes.RiverStone(Pick(x, z, 419, PropMeshes.RiverStoneVariants)), Look.RockSurface, (new Transform3D(basis, pos), color, custom with { B = 1f }));
+        into.Put(PropMeshes.RiverStone(Pick(x, z, 419, PropMeshes.RiverStoneVariants)), Painted.Rock, (new Transform3D(basis, pos), color, custom with { B = 1f }));
     }
 
     static int FloorDiv(int a, int b) => a >= 0 ? a / b : (a - b + 1) / b;

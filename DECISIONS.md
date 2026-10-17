@@ -1181,3 +1181,59 @@ Owner: Claims.
 ## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
 **Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
 **Who:** Relayed by the PM; no direct quote.
+
+## D-291 — 2026-10-17 — Morning frost only in autumn, lighter rime
+**Decision:** Morning frost appears only in autumn. It appears randomly by local temperature, deterministic per seed, day and spot, and it is a lighter rime, as at 864924de. The heavy snow look Justin likes is kept for winter ground snow.
+**Who:** Justin, choosing autumn-only lighter rime and keeping the heavy snow look for winter (relayed by the PM; no direct quote).
+
+## D-292 — 2026-10-17 — Top priority: roll out the painted look and textures on everything
+**Decision:** The top priority is rolling out the painted look and textures on everything: ground, trees, rocks, plants, props, animals, structures and items. Order: trees (#544) first, then terrain (Environment) and props (Modeling), then animals, structures and items. Work goes in small PRs per family.
+**Who:** Justin, setting the painted look as top priority (relayed by the PM; no direct quote).
+
+## D-293 — 2026-10-17 — "I'm stuck" command for everyone
+**Decision:** An "I'm stuck" command in the Esc menu and as `/stuck`, for everyone including bots. It moves the player to the nearest free spot within about 12 m, then their claim, then spawn, with a 60 s cooldown, decided on the server (bugfix-44). Test bots use it as their last resort (integration-12).
+**Who:** Justin, asking for the stuck command (relayed by the PM; no direct quote).
+
+## D-294 — 2026-10-17 — The launcher shows patch notes for each release
+**Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
+**Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
+
+## D-295 — 2026-10-17 — Town office powers
+**Decision:** Town office powers. Marshal: timed ban from the town's claims. Gatekeeper: opens or bars town gates for everyone. Scribe: keeps a town log only (the Mayor posts announcements). Elder: breaks tied votes. Treasurer: no power until there is a treasury.
+**Who:** Justin, picking the powers (relayed by the PM; no direct quote).
+
+## D-296 — 2026-10-17 — CI on main builds and releases fast; full checks run on PRs
+**Decision:** CI on pushes to main only builds the module and clients and runs the Upgrade check, then releases. The full gameplay checks run on every PR before merge, and draft PRs get a quick build only.
+**Who:** Justin: "Yes" (to the PM's proposal). Earlier he said: "Merge A is done -> Build -> release as fast as possible."
+
+## D-297 — 2026-10-17 — Players choose their name at character creation
+**Decision:** Players choose their name at character creation (ui-31). Names are 2 to 20 characters and unique, checked by the server.
+**Who:** Justin, asking for name choice at creation (relayed by the PM; no direct quote).
+
+## D-298 — 2026-10-17 — Unity comparison spike, lighting only
+**Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
+**Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
