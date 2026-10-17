@@ -90,6 +90,8 @@ public static class AvatarWork
         // asks the server, and the pose follows its row.
         me.RestRequested += kind =>
         {
+            // Sitting down near a burning fire, turn to face it (anim-15).
+            if (kind == RestKind.Sit && NearestFire(conn, me.Position) is { } fire) me.Face(fire.X, fire.Z);
             if (kind == RestKind.None) conn.Reducers.StandUp();
             else conn.Reducers.Rest((byte)kind);
         };
@@ -115,6 +117,20 @@ public static class AvatarWork
                 if (d < best) (best, bx, bz) = (d, tx, tz);
             }
         if (best < 3f * 3f) avatar.Face(bx, bz);
+    }
+
+    static (float X, float Z)? NearestFire(DbConnection conn, Godot.Vector3 at)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        (float, float)? best = null;
+        float bestD = Fires.WarmthRadius * Fires.WarmthRadius;
+        foreach (var f in conn.Db.Fire.Iter())
+        {
+            if (f.FuelUntil.MicrosecondsSinceUnixEpoch <= now) continue;
+            float d = (f.X - at.X) * (f.X - at.X) + (f.Z - at.Z) * (f.Z - at.Z);
+            if (d < bestD) (best, bestD) = ((f.X, f.Z), d);
+        }
+        return best;
     }
 
     static Avatar? AvatarOf(DbConnection conn, Avatar me, Func<uint, Avatar?> other, uint playerId) =>
