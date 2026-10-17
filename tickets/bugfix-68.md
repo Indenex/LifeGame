@@ -20,3 +20,7 @@ structures (the shared Obstacles rule), so the check can't go red at random on w
 
 ## Next step
 Lane paused by Justin (usage). When resumed: extend #863 so the winded step retries on a new lane too, then merge #862 once SurvivalCheck is green.
+
+## Update 2026-10-17 17:40
+- #863 (SurvivalCheck retries) merged into main as 7dd6bed0; main merged into this branch.
+- The fence building check also flaked ("found clear ground either side of the fence", on #861 attempt 1): WallsStopWalkers tried 5 offsets at one gap and a tree beside the fence blocked all of them. It now tries 9 offsets at three gaps (0.9, 0.7, 1.1 m).
