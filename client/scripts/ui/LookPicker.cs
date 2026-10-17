@@ -16,6 +16,8 @@ public partial class LookPicker : CanvasLayer
 {
     public Func<DbConnection?> Conn = () => null;
     public Func<uint> MyId = () => 0;
+    // Where the server's answer to SetName goes when it isn't the picker's (/name in chat).
+    public Action<string> Note = _ => { };
     // Options opens it through this; set when the picker is ready.
     public static Action? OpenFromMenu;
 
@@ -31,6 +33,12 @@ public partial class LookPicker : CanvasLayer
     readonly Button[] cuts = new Button[Looks.CutNames.Length], beards = new Button[Looks.BeardNames.Length];
     float spin, firstSeen = -1f;
     bool asked;
+    // The name row at first join (ui-31), Done (kept off until the name is good), and the
+    // name sent and not yet answered.
+    NameField nameField = null!;
+    Button done = null!;
+    bool first, hooked;
+    string? awaitingName;
 
     public override void _Ready()
     {
@@ -45,6 +53,9 @@ public partial class LookPicker : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
         OpenFromMenu = () => Open(first: false);
+        // One centre window at a time (D-283): opening the bag, journal or build menu puts the picker away (Esc
+        // semantics: you keep the look you had). It never counts as a covering panel, so it can't trap input.
+        Panels.Centre(this, Close);
         // --screenshot-look opens it on a default look, as at first join.
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-look")))
             GetTree().CreateTimer(1.5).Timeout += () => Open(first: true);
@@ -55,10 +66,15 @@ public partial class LookPicker : CanvasLayer
         // Start from the look you have now: your chosen row, or the one the game gave you.
         uint id = MyId();
         look = Conn()?.Db.PlayerLook.PlayerId.Find(id) is { } row
-            ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard)
+            ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard, row.Race)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
         title.Text = first ? "Choose how you look" : "Your look";
+        if (!first) Panels.Opening(this);
         welcome.Visible = first;
+        this.first = first;
+        nameField.Visible = first;
+        if (first) nameField.Fill(Conn()?.Db.Player.PlayerId.Find(id)?.Name ?? "");
+        UpdateDone();
         panel.Visible = scrim.Visible = true;
         Show(look);
     }
@@ -75,8 +91,29 @@ public partial class LookPicker : CanvasLayer
             else if (now - firstSeen > 3f)
             {
                 asked = true;
-                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null) Open(first: true);
+                // Once only (bugfix-41): a character that never chose a look is not asked again every session.
+                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null && !Settings.Get("look", "asked", false))
+                {
+                    Settings.Set("look", "asked", true);
+                    Open(first: true);
+                }
             }
+        }
+        // The server's word on a name: a refusal of the one sent from here reopens the picker
+        // with the reason under the field; any other (/name in chat) is a note as before.
+        if (!hooked && Conn() is { } conn)
+        {
+            hooked = true;
+            conn.Reducers.OnSetName += (ctx, name) =>
+            {
+                bool mine = awaitingName != null && Names.Key(name) == Names.Key(awaitingName);
+                if (mine) awaitingName = null;
+                if (ctx.Event.Status is not SpacetimeDB.Status.Failed(var reason)) return;
+                if (!mine) { Note(reason); return; }
+                Open(first: true);
+                nameField.Refused(reason);
+                UpdateDone();
+            };
         }
         if (!IsOpen || figure == null) return;
         spin += (float)delta * 0.35f;
@@ -94,6 +131,16 @@ public partial class LookPicker : CanvasLayer
 
     void Done()
     {
+        if (first)
+        {
+            if (!nameField.Valid) return;
+            string name = nameField.Value;
+            if (Conn() is { } c && c.Db.Player.PlayerId.Find(MyId())?.Name != name)
+            {
+                awaitingName = name;
+                c.Reducers.SetName(name);
+            }
+        }
         Conn()?.Reducers.SetLook((byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0));
         Close();
     }
@@ -112,6 +159,11 @@ public partial class LookPicker : CanvasLayer
         welcome.CustomMinimumSize = new Vector2(560, 0);
         welcome.Modulate = new Color(1f, 0.9f, 0.72f, 0.9f);
         box.AddChild(welcome);
+        // At first join, your name comes first (ui-31).
+        nameField = new NameField { Taken = TakenNames };
+        nameField.Changed += UpdateDone;
+        nameField.Submitted += Done;
+        box.AddChild(nameField);
 
         var columns = new HBoxContainer();
         columns.AddThemeConstantOverride("separation", 26);
@@ -122,9 +174,10 @@ public partial class LookPicker : CanvasLayer
         view = new SubViewport { OwnWorld3D = true, TransparentBg = true, Msaa3D = Viewport.Msaa.Msaa4X, Size = new Vector2I(240, 360) };
         frame.AddChild(view);
         columns.AddChild(frame);
-        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 1.05f, 4.4f) };
+        var camera = new Camera3D { Fov = 28f };
         view.AddChild(camera);
-        camera.LookAt(new Vector3(0, 0.92f, 0), Vector3.Up);
+        // Not in the tree yet, so aim it from a position rather than with LookAt.
+        camera.LookAtFromPosition(new Vector3(0, 1.05f, 4.4f), new Vector3(0, 0.92f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-35, 30, 0), LightEnergy = 1.1f });
         view.AddChild(new WorldEnvironment
         {
@@ -145,7 +198,7 @@ public partial class LookPicker : CanvasLayer
         choices.AddChild(Words("Cut", Looks.CutNames, cuts, i => look = look with { Cut = i }));
         choices.AddChild(Words("Beard", Looks.BeardNames, beards, i => look = look with { Beard = i != 0 }));
         choices.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
-        var done = ControlsPage.TextButton("Done", Done);
+        done = Ui.MainButton("Done", Done);
         done.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
         choices.AddChild(done);
 
@@ -155,6 +208,18 @@ public partial class LookPicker : CanvasLayer
 
         var outer = Ui.Window(box);
         return outer;
+    }
+
+    // Names other players have, as lower-case keys.
+    System.Collections.Generic.ICollection<string> TakenNames() =>
+        Conn()?.Db.Player.Iter().Where(p => p.PlayerId != MyId()).Select(p => Names.Key(p.Name)).ToHashSet()
+        ?? new System.Collections.Generic.HashSet<string>();
+
+    // Done stays off until the name is good (at first join); the field says why.
+    void UpdateDone()
+    {
+        bool ok = !first || nameField.Valid;
+        done.Disabled = !ok;
     }
 
     // A labelled row of round colour swatches.

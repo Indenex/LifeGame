@@ -98,6 +98,12 @@ public partial class StationPanel : CanvasLayer
             Close();
             GetViewport().SetInputAsHandled();
         }
+        // Tab and Shift+Tab step through the categories, as in the C menu.
+        else if (e is InputEventKey { Pressed: true, Echo: false, PhysicalKeycode: Key.Tab } tab)
+        {
+            grid.NextCategory(tab.ShiftPressed ? -1 : 1);
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     // The fourth first-evening tip (D-150): once your first station stands, how to use
@@ -136,7 +142,7 @@ public partial class StationPanel : CanvasLayer
             Crafting.Start(def);
         };
         box.AddChild(grid);
-        hint = Hud.Text($"Takes from your bag first, then baskets and jars nearby, then the claim's stash    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
+        hint = Hud.Text($"Takes from your bag first, then baskets and jars nearby, then the claim's stash    Tab: next category    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 

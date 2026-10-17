@@ -380,7 +380,7 @@ namespace LifeGame.Shared
             {
                 Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.5f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
@@ -388,6 +388,13 @@ namespace LifeGame.Shared
                 Id = "clay.tile", Name = "Press a roof tile", Doing = "Pressing a roof tile", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
                 Seconds = Base(3, 0.75f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
+                // A big coiled basin; kiln-fired only, set down to hold water (ceramics-13).
+                Id = "clay.trough", Name = "Build a clay trough", Doing = "Coiling a clay trough", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.TroughClay) },
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {

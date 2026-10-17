@@ -1,7 +1,7 @@
 # claims-19: Town rosters (Justin: "Add neighbors together via a roster everyone signs")
 Lane: Claims, chat and PvP rules
 Owner: Claims lane (Sonnet session)
-Status: in_review (server: roster, rights, Mayor, voting, distance); other offices, merge and panel wait for the PM
+Status: in_review (#469 server merged; panel PR open)
 Branch: claude/claims-19-town-roster
 PR: (see below)
 
@@ -33,6 +33,8 @@ Ten offices, open voting, 60 m chains with a soft cap of 64, merge by a majority
 
 - 2026-10-17: server and tests done; the server module builds, bindings generate, SocialTest passes on a fresh database; the client also builds locally (`dotnet build client/LifeGame.csproj`, 0 errors; no Godot needed, the Godot SDK comes from NuGet).
 - Toolchain recipe is in tickets/claims-13.md; add the client build line above.
+
+- 2026-10-17: #469 (server) merged. Panel built by an Opus helper (TownMap.cs, TownPanel.cs, SocialLayer.Town.cs, a Town button in ClaimPanel), reviewed, merged with main, adopted UX's Ui.Window / Ui.Title size and Panels.Centre / Panels.Opening. Never run in Godot (no Godot here); Render B has the stills request.
 
 ## Open questions / blockers
 - PM go-ahead on the other nine offices, the merge rule and the panel look (2 to 3 written descriptions sent).

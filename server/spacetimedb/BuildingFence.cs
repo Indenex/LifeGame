@@ -33,10 +33,10 @@ public static partial class Module
                 continue;
             }
             // Walls stand once a hut's wattle, or a house's or cabin's walls, are up, as the client draws them.
-            bool walls = s.Kind switch
+            bool walls = Structures.Shape(kind) switch
             {
-                StructureKind.ClayHut => s.Complete || s.Stage >= 1,
-                _ when Structures.IsRoom(kind) => s.Complete || s.Stage >= 2,
+                { Hut: true } => s.Complete || s.Stage >= 1,
+                { Room: true } => s.Complete || s.Stage >= 2,
                 _ => false,
             };
             if (walls && Structures.StepCrossesWalls(kind, s.X, s.Z, s.Yaw, DoorClosed(ctx, s.Id), fromX, fromZ, toX, toZ))
