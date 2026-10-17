@@ -138,7 +138,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -175,6 +175,20 @@ foreach (var scene in scenes)
             if (At(7)) mix.Play(Cue.Jump);
             if (At(7.65)) mix.Land(Ground.Sand, 0.6f);
             if (At(10)) mix.Step(Ground.Grass, 0f);
+        }
+        // Water scene: wading ankle, knee and waist deep, a splash in (small, big), a paddle stroke, a lap.
+        if (parts[0] == "water")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.WadeShallow);
+            if (At(2.5)) mix.Play(CueDefs.WadeKnee);
+            if (At(4)) mix.Play(CueDefs.WadeDeep);
+            if (At(6)) mix.Play(CueDefs.SplashIn, 0.5f);
+            if (At(8)) mix.Play(CueDefs.SplashIn, 1.2f);
+            if (At(10)) mix.Play(CueDefs.Paddle);
+            if (At(12)) mix.Play(CueDefs.Lap);
+            if (At(14)) mix.Play(CueDefs.Drip);
         }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")
