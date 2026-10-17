@@ -1,10 +1,12 @@
 using LifeGame.Shared;
 using SpacetimeDB;
 
-// claims-28: the town store, the Treasurer's power (recommended option while Justin decides).
-// One shared store per town, reached at the marker of any claim on its roster. Any signer
-// puts things in; the Treasurer and the Mayor (TownPower.Store) take them out. Every put and
-// take is written in the town's log. Everything is decided on the server (D-182).
+// claims-28: the town store and upkeep, the Treasurer's powers (Justin picked both, 2026-10-17).
+// One shared store per town, at its main marker: the claim on the roster longest (the founder's
+// at first; the next-oldest once that one leaves). Any signer puts things in; the Treasurer and
+// the Mayor (TownPower.Store) take them out. The Treasurer (TownPower.Upkeep) can keep up any
+// claim on the roster from the store, renewing its marker without walking there. Every put, take
+// and upkeep is written in the town's log. Everything is decided on the server (D-182).
 public static partial class Module
 {
     // What the town keeps, one row per stack (item, quality, wear, maker), as ClaimStash.
@@ -90,7 +92,7 @@ public static partial class Module
         TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} took {count} {StoreItemName(item, count)} from the store");
     }
 
-    // The caller's roster row, once they stand at the marker of a standing claim of their own town.
+    // The caller's roster row, once they stand at their town's main marker.
     static TownSigner RequireTownStoreAt(ReducerContext ctx, ulong claimId)
     {
         var player = RequirePlayer(ctx);
@@ -98,8 +100,53 @@ public static partial class Module
         var claim = RequireStandingClaim(ctx, claimId);
         if (ctx.Db.TownSigner.ClaimId.Find(claim.Id) is not { } there || there.TownId != mine.TownId)
             throw new Exception("This marker is not on your town's roster");
+        if (TownMainClaim(ctx, mine.TownId) is not { } main || main.Id != claim.Id)
+            throw new Exception($"The town's store is kept at {TownMainClaim(ctx, mine.TownId)?.OwnerName ?? "the main"}'s marker");
         RequireNearMarker(ctx, player, claim);
         return mine;
+    }
+
+    // The town's main marker: the standing claim that has been on the roster longest.
+    static Claim? TownMainClaim(ReducerContext ctx, ulong townId)
+    {
+        foreach (var signer in ctx.Db.TownSigner.ByTown.Filter(townId).OrderBy(r => r.SignedAt.MicrosecondsSinceUnixEpoch).ThenBy(r => r.Id))
+            if (ctx.Db.Claim.Id.Find(signer.ClaimId) is { } claim && IsStanding(ctx, claim)) return claim;
+        return null;
+    }
+
+    // The Treasurer keeps up a claim on the roster from the store, as if its owner had tended it.
+    [SpacetimeDB.Reducer]
+    public static void KeepUpTownClaim(ReducerContext ctx, ulong atClaimId, ulong claimId)
+    {
+        MeterCall(ctx);
+        var mine = RequireTownStoreAt(ctx, atClaimId);
+        if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Upkeep))
+            throw new Exception("Only the town's Treasurer can keep up its claims");
+        var claim = RequireStandingClaim(ctx, claimId);
+        if (ctx.Db.TownSigner.ClaimId.Find(claim.Id) is not { } there || there.TownId != mine.TownId)
+            throw new Exception("That claim is not on your town's roster");
+        foreach (var (item, need) in new[] { (Item.Stick, Towns.UpkeepSticks), (Item.Fiber, Towns.UpkeepFiber) })
+            if (ctx.Db.TownStore.ByTownItem.Filter((mine.TownId, (ushort)item)).Sum(r => (long)r.Count) < need)
+                throw new Exception($"The store needs {Towns.UpkeepSticks} {Items.Def(Item.Stick).Count(Towns.UpkeepSticks).ToLowerInvariant()} and {Towns.UpkeepFiber} {Items.Def(Item.Fiber).Count(Towns.UpkeepFiber).ToLowerInvariant()} to keep up a claim");
+        TakeFromStoreAnyQuality(ctx, mine.TownId, Item.Stick, Towns.UpkeepSticks);
+        TakeFromStoreAnyQuality(ctx, mine.TownId, Item.Fiber, Towns.UpkeepFiber);
+        ctx.Db.Claim.Id.Update(claim with { TendedAt = ctx.Timestamp, ExpiresAt = After(ctx.Timestamp, ClaimLifetimeSeconds(ctx)) });
+        TownLogLine(ctx, mine.TownId, $"{mine.OwnerName} kept up {claim.OwnerName}'s claim from the store");
+    }
+
+    // Uses up `count` of an item from the store, the most worn and lowest quality first.
+    static void TakeFromStoreAnyQuality(ReducerContext ctx, ulong townId, Item item, uint count)
+    {
+        uint left = count;
+        while (left > 0)
+        {
+            var row = ctx.Db.TownStore.ByTownItem.Filter((townId, (ushort)item))
+                .OrderBy(r => r.Quality).ThenByDescending(r => Durability.Used(r.Wear)).First();
+            uint n = Math.Min(left, row.Count);
+            if (row.Count == n) ctx.Db.TownStore.Id.Delete(row.Id);
+            else ctx.Db.TownStore.Id.Update(row with { Count = row.Count - n });
+            left -= n;
+        }
     }
 
     static string StoreItemName(ushort item, uint count) =>

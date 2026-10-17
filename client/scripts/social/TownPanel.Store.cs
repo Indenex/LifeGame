@@ -6,10 +6,11 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// claims-28: the town's store in the Town panel. It works at the marker the panel was opened
-// from, when that claim is on your town's roster. Anyone on the roster drags things in (or
-// clicks them in your bag); the Treasurer and the Mayor click or drag them back out. The
-// server checks the roster, the reach and the office, and writes every move in the log.
+// claims-28: the town's store in the Town panel. It works when the panel was opened at the
+// town's main marker (the claim on the roster longest). Anyone on the roster drags things in
+// (or clicks them in your bag); the Treasurer and the Mayor click or drag them back out, and
+// the Treasurer keeps up the town's claims from it. The server checks the roster, the reach
+// and the office, and writes every move in the log.
 public partial class TownPanel
 {
     // The claim whose marker opened the panel (SocialLayer sets it); 0 when none.
@@ -60,10 +61,11 @@ public partial class TownPanel
     {
         if (Conn == null || s.Me == null) return;
         side.AddChild(Heading("The town's store", 16));
-        bool here = Conn.Db.TownSigner.ClaimId.Find(AtClaim) is { } there && there.TownId == s.Me.TownId;
-        if (!here)
+        var main = MainClaim(s);
+        if (main == null || main.Id != AtClaim)
         {
-            side.AddChild(Note("Open the Town panel at a marker on the town's roster to reach the store."));
+            side.AddChild(Note(main == null ? "The town has no standing marker for its store."
+                : $"The store is kept at {main.OwnerName}'s marker. Open the Town panel there to reach it."));
             return;
         }
         bool mayTake = HasPower(s.Seats, MyId(), TownPower.Store);
@@ -72,5 +74,34 @@ public partial class TownPanel
             : "Anyone on the roster can put things in. Only the Treasurer and the Mayor take them out. Every move goes in the log."));
         side.AddChild(storeBox);
         RefreshStore();
+        if (HasPower(s.Seats, MyId(), TownPower.Upkeep)) BuildUpkeep(s);
+    }
+
+    // The town's main marker: the standing claim on the roster longest, as the server decides.
+    Claim? MainClaim(Snapshot s)
+    {
+        long now = SocialLayer.NowMicros;
+        foreach (var signer in s.Signers.OrderBy(r => r.SignedAt.MicrosecondsSinceUnixEpoch).ThenBy(r => r.Id))
+            if (Conn!.Db.Claim.Id.Find(signer.ClaimId) is { } claim && claim.ExpiresAt.MicrosecondsSinceUnixEpoch > now) return claim;
+        return null;
+    }
+
+    // The Treasurer renews any claim on the roster from here, for a stick and some fiber from the store.
+    void BuildUpkeep(Snapshot s)
+    {
+        side.AddChild(Note($"Keeping up a claim renews its marker as if its owner had tended it, for {Towns.UpkeepSticks} {Items.Def(Item.Stick).Count(Towns.UpkeepSticks).ToLowerInvariant()} and {Towns.UpkeepFiber} {Items.Def(Item.Fiber).Count(Towns.UpkeepFiber).ToLowerInvariant()} from the store."));
+        long now = SocialLayer.NowMicros;
+        foreach (var signer in s.Signers)
+        {
+            if (Conn!.Db.Claim.Id.Find(signer.ClaimId) is not { } claim) continue;
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 6);
+            var label = new Label { Text = $"{claim.OwnerName}  ·  marker falls {Until(claim.ExpiresAt.MicrosecondsSinceUnixEpoch - now)}", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            Hud.Style(label, 14, 0.85f);
+            row.AddChild(label);
+            ulong id = claim.Id;
+            row.AddChild(Small("Keep up", () => Conn?.Reducers.KeepUpTownClaim(AtClaim, id)));
+            side.AddChild(row);
+        }
     }
 }

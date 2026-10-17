@@ -20,6 +20,7 @@ namespace LifeGame.Shared
         Gates = 128,     // bar or unbar the gates on the town's claims
         Log = 256,       // add notes to the town's log
         Store = 512,     // take things out of the town's store (anyone on the roster puts in)
+        Upkeep = 1024,   // keep up a claim on the roster from the town's store
     }
 
     public sealed record TownOfficeDef(byte Id, string Name, string Job, TownPower Powers, byte StandsInFor = TownOfficeDef.NoOffice)
@@ -38,7 +39,7 @@ namespace LifeGame.Shared
             new(3, "Herald", "Sends a word to the whole town.", TownPower.Announce),
             new(4, "Warden", "Clears ruins left by those who have gone.", TownPower.ClearRuins),
             new(5, "Marshal", "Keeps the peace: bans a player from the town's claims for a time.", TownPower.Ban),
-            new(6, "Treasurer", "Keeps the town's store: takes things out of it for the town.", TownPower.Store),
+            new(6, "Treasurer", "Keeps the town's store: takes things out, and keeps up the town's claims from it.", TownPower.Store | TownPower.Upkeep),
             new(7, "Gatekeeper", "Bars and unbars the gates on the town's claims.", TownPower.Gates),
             new(8, "Scribe", "Keeps the town's log and adds notes to it.", TownPower.Log),
             new(9, "Elder", "Settles a tied election.", TownPower.BreakTies),
@@ -60,5 +61,8 @@ namespace LifeGame.Shared
         public const long LogNoteEveryMicros = 10L * 1_000_000;
         // claims-28: different stacks the town's store holds; raisable (D-197).
         public const int StoreStacksMax = 40;
+        // What keeping up one claim from the store costs (a marker takes 4 sticks and 2 fiber); raisable (D-197).
+        public const uint UpkeepSticks = 1;
+        public const uint UpkeepFiber = 1;
     }
 }

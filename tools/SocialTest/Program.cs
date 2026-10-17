@@ -614,9 +614,15 @@ else
             b.Conn.Reducers.SignTown(townId);
             Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 2, 5), "B signs, and the roster holds both claims");
 
-            // claims-28: the town's store, at any roster claim's marker, while both claims are fresh.
-            // Anyone on the roster puts in; only the Treasurer or the Mayor (A here) takes out; the log has both.
+            // claims-28: the town's store, at the main marker (the claim on the roster longest: A's here),
+            // while both claims are fresh. Anyone on the roster puts in; only the Treasurer or the Mayor
+            // (A here) takes out; the Treasurer keeps up a claim from it; the log has each.
             {
+                // Claims last 30 s in this run: both owners tend first.
+                Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                a.Conn.Reducers.TendClaim(aClaim.Id);
+                Walk(b, bClaim.X - 1.5f, bClaim.Z);
+                b.Conn.Reducers.TendClaim(bClaim.Id);
                 var putter = b.Conn.Db.MyInventory.Iter().Any(i => i.Count > 0 && !i.OnBelt) ? b : a;
                 Walk(putter, bClaim.X + 1.5f, bClaim.Z);
                 var carried = putter.Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Take(1).ToList();
@@ -625,22 +631,48 @@ else
                 {
                     var put = carried[0];
                     var putItem = (Item)put.Item;
+                    ExpectError(putter, () => putter.Conn.Reducers.PutInTownStore(bClaim.Id, put.Item, put.Quality, 1), "kept at", "the store is only at the town's main marker");
+                    Walk(putter, aClaim.X + 1.5f, aClaim.Z);
                     putter.LastError = null;
-                    putter.Conn.Reducers.PutInTownStore(bClaim.Id, put.Item, put.Quality, 1);
+                    putter.Conn.Reducers.PutInTownStore(aClaim.Id, put.Item, put.Quality, 1);
                     Check(Wait(() => putter.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId && r.Item == put.Item), 5), $"a signer puts a thing in the town's store ({putter.LastError ?? "ok"})");
                     Check(Wait(() => a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId) && b.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), "every signer sees the store");
-                    Walk(b, bClaim.X + 1.5f, bClaim.Z);
-                    ExpectError(b, () => b.Conn.Reducers.TakeFromTownStore(bClaim.Id, put.Item, put.Quality, 1), "Treasurer", "a plain signer cannot take from the store");
-                    Walk(a, bClaim.X + 12f, bClaim.Z + 12f);
-                    ExpectError(a, () => a.Conn.Reducers.TakeFromTownStore(bClaim.Id, put.Item, put.Quality, 1), "Walk up", "the store is reached at a marker");
+                    Walk(b, aClaim.X + 1.5f, aClaim.Z);
+                    ExpectError(b, () => b.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1), "Treasurer", "a plain signer cannot take from the store");
+                    Walk(a, aClaim.X + 12f, aClaim.Z + 12f);
+                    ExpectError(a, () => a.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1), "Walk up", "the store is reached at its marker");
                     uint before = a.Count(putItem);
-                    Walk(a, bClaim.X - 1.5f, bClaim.Z);
+                    Walk(a, aClaim.X - 1.5f, aClaim.Z);
                     a.LastError = null;
-                    a.Conn.Reducers.TakeFromTownStore(bClaim.Id, put.Item, put.Quality, 1);
+                    a.Conn.Reducers.TakeFromTownStore(aClaim.Id, put.Item, put.Quality, 1);
                     Check(Wait(() => a.Count(putItem) == before + 1 && !a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), $"the Mayor takes it out ({a.LastError ?? "ok"})");
                     Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("in the store")) && a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("from the store")), "the town log has the put and the take");
                 }
-                Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
+
+                // Upkeep: A, elected Treasurer, keeps up B's claim for a stick and a fiber from the store.
+                Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                ExpectError(a, () => a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id), "Treasurer", "only the Treasurer keeps up claims (the Mayor does not)");
+                a.Conn.Reducers.VoteTownOffice(6, a.PlayerId);
+                b.Conn.Reducers.VoteTownOffice(6, a.PlayerId);
+                Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 6 && o.HolderId == a.PlayerId), 5), "A is elected Treasurer");
+                ExpectError(a, () => a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id), "store needs", "upkeep needs a stick and fiber in the store");
+                if (a.Count(Item.Stick) >= Towns.UpkeepSticks && a.Count(Item.Fiber) >= Towns.UpkeepFiber)
+                {
+                    var stick = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Stick && !i.OnBelt);
+                    var fiber = a.Conn.Db.MyInventory.Iter().First(i => i.Item == (ushort)Item.Fiber && !i.OnBelt);
+                    a.Conn.Reducers.PutInTownStore(aClaim.Id, stick.Item, stick.Quality, Towns.UpkeepSticks);
+                    a.Conn.Reducers.PutInTownStore(aClaim.Id, fiber.Item, fiber.Quality, Towns.UpkeepFiber);
+                    Wait(() => a.Conn.Db.MyTownStore.Iter().Count(r => r.TownId == townId) >= 2, 5);
+                    long bExpires = a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0;
+                    Thread.Sleep(1100);
+                    a.LastError = null;
+                    a.Conn.Reducers.KeepUpTownClaim(aClaim.Id, bClaim.Id);
+                    Check(Wait(() => (a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > bExpires, 5), $"the Treasurer keeps up B's claim from the store ({a.LastError ?? "ok"})");
+                    Check(Wait(() => !a.Conn.Db.MyTownStore.Iter().Any(r => r.TownId == townId), 5), "upkeep uses the stick and the fiber");
+                    Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("kept up")), "the town log has the upkeep");
+                }
+                else Console.WriteLine("  (A carries no stick and fiber; upkeep from the store not checked)");
+                Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store | TownPower.Upkeep) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
                 Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
             }
 
