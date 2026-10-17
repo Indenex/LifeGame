@@ -1,9 +1,9 @@
 # building-22: Wooden chest
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: in_progress
+Status: done
 Branch: claude/house-building-8ueqz2-next
-PR: (see below)
+PR: #759 (merged)
 
 ## Goal
 The next House-building structure, picked from the options sent to the PM (the PM decides on the recommended one overnight, D-323): a wooden chest. A lidded box of split boards that stores like a basket but holds twice as much (24 stacks vs 12, one raisable constant `Structures.ChestStacks`, D-197), built inside a claim in two stages: Frame (3 logs + 1 cordage) and Boards and lid (3 logs + 1 cordage). Pure data on the shared storage base (D-206): a Def entry plus a model; no new server code, since any kind with stacks opens like the basket.
@@ -16,9 +16,10 @@ The next House-building structure, picked from the options sent to the PM (the P
 
 - 2026-10-17 12:35: #285 landed; chest renumbered to Kind 24, main merged; server and client build, BuildTest `chest` passes (223 s). Told Integration the BuildTest part name `chest` (run alone, about 195-225 s) for the Building check parts.
 
-## Open questions / blockers
-- PM: confirm the options (chest recommended; smoking rack, straw bed, well, log palisade are the others) and the claim-only default.
-- CI's "Building check" matrix runs only lean-to, basket and fence, so the coop, stone hearth, sundial (and town path) and chest checks run only locally; Integration owns the workflow.
+- 2026-10-17 12:40: #759 merged (CI run 39032674768 green, Kind 24). Integration's #778 adds the Building check entry "wooden chest". A fire on a finished hearth already draws logs and sticks from a chest within 3 m (BuildingHearth.cs uses `Structures.IsStore`, true for any kind with stacks), so no code was needed for D-149.
+
+## Open questions
+- (none)
 
 ## Next step
-Wait for CI on the chest PR, then send the green sha to the PM; ask Render B for a chest still.
+Nothing; merged. Next House-building item: wait for the PM's pick (smoking rack needs a spoilage rule from Survival; straw bed overlaps Survival's rest spots; well needs water rules).
