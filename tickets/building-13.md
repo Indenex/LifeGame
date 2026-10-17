@@ -16,9 +16,10 @@ His picks: allowed outside a claim: lean-to, clay hut, campfire and hearth, craf
   - Client: `PlaceProblem` shows "A <kind> has to stand inside your claim" when the ghost would be refused; `BuildingSystem.NeedsClaimHere(kind)` for the build menu to grey tiles with "Needs a claim".
   - Tests: BuildTest raises a claim (claim marker, B made a member for gathering and building, taken out again for the "B is a stranger" door and gate checks) before building fence, gate, brick house and log cabin, and checks a brick house is refused outside a claim. CraftCheck now expects a spindle station (not the crafting table) to be refused outside a claim. SocialTest unchanged (lean-to only). ClayCheck (Ceramics') places a kiln outside a claim and needs a claim raised first; told Ceramics.
   - Local: server and client build; BuildTest default (344 s), CraftCheck and SocialTest pass; log-cabin run below.
+- 2026-10-17: Claims' claims-15 (#345) landed the same weathering (48 h, gone 6 h later, per-shape overrides gone, clay pieces and racks swept) while this was in review; merged main and kept their text. The only weathering change left here is none: this PR is the claim-only rule (Wild flag, server refusal, table on open ground, client message, tests).
 
 ## Open questions / blockers
-- PM: "quickly" is WeatherForHours = 6 (options: 6 h [built, recommended], 12 h, 24 h as before). Existing houses outside claims on Justin's world weather at 48 h too (he is wiping the world for the release anyway).
+- (none: the 48 h / 6 h numbers are Claims' claims-15 and match Justin's words.)
 - Claims (ruins-on-lapse code): lapsed claims drop the claim; buildings left standing then weather by this clock. Nothing for Claims to change unless they want different numbers.
 
 ## Next step
