@@ -5,16 +5,18 @@ namespace LifeGame;
 
 // The player roster's shared chibi base (model-6, D-249/D-250/D-254): one body about
 // 1.35 m tall and 2.8 heads high on HumanRig's 16 bones, so every race walks, works
-// and jumps with Animation's poses. A race swaps parts on the same base: Bramble
-// (chibi human) has hair; Kit (fox) has a muzzle, tall ears, a cream chest and a
-// brush of a tail. Built like HumanFigure: one skinned mesh per look, the same
+// and jumps with Animation's poses. A race swaps parts on the same base, after the
+// roster-1 turnarounds (docs/character-concepts/roster-1): Bramble (chibi human:
+// hair cap with a tuft, green tunic, trousers, satchel strap, boots); Pebble
+// (tortoise: green skin, a shell on Spine kept behind the shoulders, a belly plate,
+// a daisy); Kit (fox, on hold, D-255). Built like HumanFigure: one skinned mesh per look, the same
 // Built record, so PlayerModel and Garments take either.
 public static class ChibiFigure
 {
     public const float Height = 1.35f;
     const float Heads = 2.8f;
 
-    public enum Race { Bramble, Kit }
+    public enum Race { Bramble, Kit, Pebble }
 
     // A chibi player's look: race, then a main colour, a second colour and a part
     // style, each an index into the race's lists below.
@@ -36,15 +38,25 @@ public static class ChibiFigure
     static readonly Color Eye = new(0.1f, 0.08f, 0.07f);
     static readonly Color Nose = new(0.15f, 0.1f, 0.09f);
     static readonly Color Boot = new(0.24f, 0.18f, 0.16f);
+    // The roster-1 colour keys.
+    static readonly Color Tunic = new(0.44f, 0.56f, 0.31f), Trousers = new(0.42f, 0.35f, 0.30f), BrambleBoot = new(0.48f, 0.31f, 0.20f), Strap = new(0.55f, 0.37f, 0.24f);
+    public static readonly Color[] PebbleSkins = { new(0.66f, 0.76f, 0.48f), new(0.62f, 0.72f, 0.5f), new(0.74f, 0.74f, 0.52f) };
+    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.5f, 0.42f, 0.36f), new(0.6f, 0.5f, 0.3f) };
+    static readonly Color ShellRim = new(0.79f, 0.64f, 0.42f), BellyPlate = new(0.91f, 0.85f, 0.63f), PebbleFeet = new(0.56f, 0.66f, 0.40f);
+    static readonly Color Petal = new(0.96f, 0.94f, 0.89f), PetalHeart = new(0.95f, 0.81f, 0.35f);
 
     public static HumanFigure.Built Build(Look look)
     {
         string key = look.ToString();
         if (Cache.TryGetValue(key, out var done)) return done;
         material ??= LifeGame.Look.Solid(Colors.White);
-        bool kit = look.Race == Race.Kit;
-        var body = kit ? Furs[look.Main % Furs.Length] : Skins[look.Main % Skins.Length];
-        var second = kit ? Creams[look.Second % Creams.Length] : Hairs[look.Second % Hairs.Length];
+        bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
+        var body = kit ? Furs[look.Main % Furs.Length] : pebble ? PebbleSkins[look.Main % PebbleSkins.Length] : Skins[look.Main % Skins.Length];
+        var second = kit ? Creams[look.Second % Creams.Length] : pebble ? Shells[look.Second % Shells.Length] : Hairs[look.Second % Hairs.Length];
+        // What the torso and legs are dressed in: Bramble's tunic and trousers, or bare.
+        var torso = bramble ? Tunic : body;
+        var legs = bramble ? Trousers : body;
+        var feet = bramble ? BrambleBoot : pebble ? PebbleFeet : Boot;
 
         const float H = Height;
         float hh = H / Heads;                       // the head, a touch under a third of the height
@@ -61,12 +73,12 @@ public static class ChibiFigure
 
         var k = new MeshKit(false);
         // A round, soft body: pear-shaped, widest at the belly.
-        k.Bone(HumanRig.Hips).Paint(body);
+        k.Bone(HumanRig.Hips).Paint(torso);
         k.Loft(new Vector3(0, hipY - 0.1f, 0), new Vector3(0, waistY + 0.04f, 0), new MeshKit.Ring[]
         {
             new(0f, 0.15f, 0.13f), new(0.3f, 0.215f, 0.19f), new(0.7f, 0.22f, 0.195f), new(1f, 0.2f, 0.175f),
         }, 18, 0.5f);
-        k.Bone(HumanRig.Spine).Paint(body);
+        k.Bone(HumanRig.Spine).Paint(torso);
         k.Loft(new Vector3(0, waistY - 0.03f, 0), new Vector3(0, chin + 0.03f, 0), new MeshKit.Ring[]
         {
             new(0f, 0.2f, 0.175f), new(0.45f, 0.18f, 0.155f), new(0.85f, 0.14f, 0.12f), new(1f, 0.09f, 0.08f),
@@ -74,6 +86,37 @@ public static class ChibiFigure
         if (kit)
             // The cream chest patch, a soft oval on the belly.
             k.Paint(second).Ellipsoid(new Vector3(0, waistY + 0.0f, 0.145f), new Vector3(0.13f, 0.17f, 0.06f), 14, 8);
+        if (bramble)
+        {
+            // The tunic's hem flares a little over the trousers; a satchel strap
+            // runs from the right shoulder to the left hip.
+            k.Bone(HumanRig.Hips).Paint(Tunic, 0.9f).Loft(new Vector3(0, hipY - 0.12f, 0), new Vector3(0, hipY - 0.06f, 0), new MeshKit.Ring[]
+            {
+                new(0f, 0.2f, 0.18f), new(1f, 0.215f, 0.19f),
+            }, 18, 0.1f);
+            k.Bone(HumanRig.Spine).Paint(Strap).Tube(new[]
+            {
+                new Vector3(-0.16f, shoulderY + 0.02f, 0.07f), new Vector3(-0.05f, waistY + 0.12f, 0.19f), new Vector3(0.1f, waistY - 0.04f, 0.2f), new Vector3(0.19f, hipY - 0.02f, 0.1f),
+            }, 0.018f, 5);
+        }
+        if (pebble)
+        {
+            // The belly plate: a pale shield on the front with painted seam lines.
+            k.Bone(HumanRig.Spine).Paint(BellyPlate).Ellipsoid(new Vector3(0, waistY - 0.02f, 0.15f), new Vector3(0.14f, 0.19f, 0.06f), 14, 8);
+            foreach (float y in new[] { -0.08f, 0.04f })
+                k.Paint(BellyPlate, 0.72f).Tube(new[] { new Vector3(-0.12f, waistY - 0.02f + y, 0.19f), new Vector3(0, waistY - 0.02f + y, 0.208f), new Vector3(0.12f, waistY - 0.02f + y, 0.19f) }, 0.006f, 4);
+            k.Paint(BellyPlate, 0.72f).Tube(new[] { new Vector3(0, waistY + 0.14f, 0.18f), new Vector3(0, waistY - 0.02f, 0.21f), new Vector3(0, waistY - 0.18f, 0.18f) }, 0.006f, 4);
+            // The shell: a dome on the back from just under the shoulders to the hips,
+            // a touch wider than the torso so it shows from the front, its front edge
+            // behind the shoulder joints. A paler rim band round its lower edge.
+            // A tall arch with a flat lower edge, as on the sheet's back view.
+            var dome = new Vector3(0, hipY - 0.06f, -0.08f);
+            k.Bone(HumanRig.Spine).Paint(second).Ellipsoid(dome, new Vector3(0.28f, 0.5f, 0.23f), 18, 14, null, 0.02f);
+            k.Paint(ShellRim).Loft(new Vector3(0, hipY - 0.08f, -0.06f), new Vector3(0, hipY - 0.03f, -0.06f), new MeshKit.Ring[]
+            {
+                new(0f, 0.265f, 0.2f), new(1f, 0.27f, 0.205f),
+            }, 18, 0.05f);
+        }
 
         // The head: big and round, a little wider than tall.
         k.Bone(HumanRig.Head).Paint(body);
@@ -101,6 +144,18 @@ public static class ChibiFigure
                 }, 5, 0.1f);
             }
         }
+        else if (pebble)
+        {
+            // A small daisy on the crown.
+            var flower = headC + new Vector3(hh * 0.06f, hh * 0.5f, 0);
+            for (int i = 0; i < 6; i++)
+            {
+                float a = i * Mathf.Tau / 6;
+                k.Paint(Petal).Ellipsoid(flower + new Vector3(Mathf.Cos(a), 0.15f, Mathf.Sin(a)) * hh * 0.07f, new Vector3(hh * 0.05f, hh * 0.02f, hh * 0.035f), 6, 3, new Basis(Vector3.Up, -a));
+            }
+            k.Paint(PetalHeart).Ellipsoid(flower + Vector3.Up * hh * 0.02f, Vector3.One * hh * 0.035f, 6, 4);
+            k.Paint(PebbleFeet).Tube(new[] { flower + Vector3.Down * hh * 0.01f, flower + Vector3.Down * hh * 0.06f }, hh * 0.01f, 4);
+        }
         else
         {
             // Bramble: a small nose, rosy cheeks, and a tousled cap of hair with a
@@ -108,6 +163,12 @@ public static class ChibiFigure
             k.Paint(body, 0.95f).Ellipsoid(headC + new Vector3(0, -hh * 0.06f, faceZ * 0.98f), new Vector3(hh * 0.05f, hh * 0.045f, hh * 0.04f), 8, 4);
             bool cropped = look.Style % 2 == 1;
             k.Paint(second).Ellipsoid(headC + new Vector3(0, hh * 0.12f, -hh * 0.04f), new Vector3(hh * 0.57f, hh * (cropped ? 0.42f : 0.46f), hh * 0.5f), 16, 10, null, 1f);
+            // A single tuft standing up from the crown.
+            var crown = headC + new Vector3(0, hh * 0.52f, -hh * 0.04f);
+            k.Paint(second, 0.95f).Loft(crown, crown + new Vector3(hh * 0.06f, hh * 0.2f, -hh * 0.04f), new MeshKit.Ring[]
+            {
+                new(0f, hh * 0.08f, hh * 0.05f), new(1f, hh * 0.01f, hh * 0.01f),
+            }, 6, 0.2f);
             if (!cropped)
                 for (int i = 0; i < 7; i++)
                 {
@@ -130,18 +191,18 @@ public static class ChibiFigure
         {
             int u = side == 0 ? HumanRig.ShoulderL : HumanRig.ShoulderR;
             Vector3 sh = j.At[u], el = j.At[u + 1], wr = j.At[u + 2];
-            k.Bone(u).Paint(body).Loft(sh, el, new MeshKit.Ring[] { new(0f, 0.06f, 0.06f), new(1f, 0.05f, 0.05f) }, 10, 0.6f);
+            k.Bone(u).Paint(torso).Loft(sh, el, new MeshKit.Ring[] { new(0f, 0.06f, 0.06f), new(1f, 0.05f, 0.05f) }, 10, 0.6f);
             k.Bone(u + 1).Loft(el, wr, new MeshKit.Ring[] { new(0f, 0.05f, 0.05f), new(1f, 0.045f, 0.045f) }, 10, 0.4f);
-            k.Bone(u + 2).Ellipsoid(wr + Vector3.Down * 0.045f, new Vector3(0.068f, 0.072f, 0.065f), 12, 8);
+            k.Bone(u + 2).Paint(body).Ellipsoid(wr + Vector3.Down * 0.045f, new Vector3(0.068f, 0.072f, 0.065f), 12, 8);
         }
         // Short legs and chunky boots.
         for (int side = 0; side < 2; side++)
         {
             int t = side == 0 ? HumanRig.HipL : HumanRig.HipR;
             Vector3 hip = j.At[t], knee = j.At[t + 1], ankle = j.At[t + 2];
-            k.Bone(t).Paint(body).Loft(hip + Vector3.Up * 0.03f, knee, new MeshKit.Ring[] { new(0f, 0.075f, 0.075f), new(1f, 0.062f, 0.062f) }, 10, 0.3f);
+            k.Bone(t).Paint(legs).Loft(hip + Vector3.Up * 0.03f, knee, new MeshKit.Ring[] { new(0f, 0.075f, 0.075f), new(1f, 0.062f, 0.062f) }, 10, 0.3f);
             k.Bone(t + 1).Loft(knee, ankle, new MeshKit.Ring[] { new(0f, 0.062f, 0.062f), new(1f, 0.055f, 0.055f) }, 10, 0.3f);
-            k.Bone(t + 2).Paint(Boot).Ellipsoid(new Vector3(ankle.X, 0.05f, 0.03f), new Vector3(0.075f, 0.055f, 0.11f), 12, 6, null, 0.6f);
+            k.Bone(t + 2).Paint(feet).Ellipsoid(new Vector3(ankle.X, 0.05f, 0.03f), new Vector3(0.075f, 0.055f, 0.11f), 12, 6, null, 0.6f);
         }
 
         if (kit)
@@ -173,15 +234,24 @@ public static class ChibiFigure
             }, 16, 0.2f);
             k.Paint(new Color(0.38f, 0.55f, 0.72f)).Blade(new Vector3(0.02f, chin, 0.12f), new Vector3(0.05f, chin - 0.16f, 0.15f), Vector3.Forward * -1f, 0.1f, 0.01f);
         }
-        else
+        else if (bramble)
+        {
+            // Bramble's outfit is on the body; a thin leaf belt marks the starting wrap.
+            k.Bone(HumanRig.Hips).Paint(LifeGame.Look.Leaf).Loft(new Vector3(0, waistY - 0.07f, 0), new Vector3(0, waistY - 0.04f, 0), new MeshKit.Ring[]
+            {
+                new(0f, 0.225f, 0.2f), new(1f, 0.222f, 0.197f),
+            }, 18, 0.05f);
+        }
+        else if (false)
         {
             k.Bone(HumanRig.Hips).Paint(LifeGame.Look.Leaf).Loft(new Vector3(0, hipY - 0.12f, 0), new Vector3(0, hipY + 0.02f, 0), new MeshKit.Ring[]
             {
                 new(0f, 0.235f, 0.21f), new(1f, 0.225f, 0.2f),
             }, 11, 0.05f);
         }
+        // Pebble starts with nothing on (the shell is the body); an empty wrap.
         var wrap = new ArrayMesh();
-        k.Commit(wrap, material);
+        if (!k.Empty) k.Commit(wrap, material);
 
         done = new HumanFigure.Built
         {

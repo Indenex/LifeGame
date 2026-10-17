@@ -511,7 +511,7 @@ public partial class Showcase : Node3D
     }
 
     // The chibi player base (model-6) beside today's figure and a 0.75 m table:
-    // Bramble and Kit, each in a couple of looks, front and three-quarter.
+    // Bramble and Pebble, each in a couple of looks, front and three-quarter.
     void Roster()
     {
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-20"), System.Globalization.CultureInfo.InvariantCulture));
@@ -521,8 +521,8 @@ public partial class Showcase : Node3D
         AddChild(today);
         var looks = new[]
         {
-            new ChibiFigure.Look(ChibiFigure.Race.Bramble, 1, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 3, 1),
-            new ChibiFigure.Look(ChibiFigure.Race.Kit, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Kit, 2, 1, 1),
+            new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 1, 1),
+            new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 1, 1, 0),
         };
         for (int i = 0; i < looks.Length; i++)
         {

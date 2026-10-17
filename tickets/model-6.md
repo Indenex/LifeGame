@@ -23,6 +23,7 @@ The picked chibi concept is the player figure in game: cute proportions and big 
 ## Progress log
 - 2026-10-17 04:15: Justin picked A (cute chibi at about 1.3–1.4 m). Plan written; waiting on the concept pick.
 - 2026-10-17 05:10: Justin picked the roster: Pebble (tortoise), Kit (fox), Capling (mushroom), Bramble (chibi human), round 4 concepts (claude/character-concepts docs/character-concepts/out/r4-*.png), ~2.8 heads, 1.35 m, shared 16-bone base with swappable parts (D-249/250/254). Started on claude/model-6-chibi: `ChibiFigure` (Race Bramble/Kit, Look(Race, Main, Second, Style)), returns HumanFigure.Built so PlayerModel/Garments take it; pear body, big round head, short limbs, mitten hands, boots; Kit: muzzle, nose, tall or rounded ears with dark insides, cream chest, brush tail with cream tip, blue scarf; Bramble: hair (tousled or cropped), leaf wrap. Showcase `roster`. Not wired into PlayerModel yet.
+- 2026-10-17 05:40: Justin: Pebble and Bramble only for now (D-255); Kit's parts stay, unpolished; Capling waits. Built from the roster-1 pack (docs/character-concepts/roster-1, on main): Bramble (hair cap with tuft, tunic with flared hem, trousers, satchel strap, boots, colours from the key) and Pebble (green skin, belly plate with seam lines, shell dome on Spine with a flat lower edge kept behind the shoulders, rim band, daisy, green feet, no wrap). Showcase `roster` shows two looks of each.
 
 ## Open questions / blockers
 - Which concept (Character concepts round 2).
