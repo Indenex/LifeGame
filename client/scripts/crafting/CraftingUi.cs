@@ -14,6 +14,8 @@ public partial class CraftingUi : CanvasLayer
 {
     // True while a minigame wants the keyboard, so walking pauses.
     public bool CapturesInput => minigame != null;
+    // True while a craft is going on (its minigame or the server's job), so a held Use key waits for it.
+    public bool Working => minigame != null || (conn != null && conn.Db.MyCraftJob.Count > 0);
     // True while the panel is up (ui/Panels.cs reads it, so the G prompt steps aside).
     public bool PanelOpen => panel.Visible;
     public event Action<string>? Notice;

@@ -85,7 +85,7 @@ public partial class SurvivalClient : Node
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
                 ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
-                    Target: new Vector3(bush.X, 0, bush.Z))
+                    Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
         Use.Register(new UseHandler
@@ -93,7 +93,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink(), Again: Use.HoldInterval)
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
