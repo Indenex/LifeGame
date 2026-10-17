@@ -122,7 +122,8 @@ public static partial class Module
         // Walls, shut gates, fences, solid things and trunks stop a step (PlayerCollision.cs).
         if (!flyingNow && PlayerStepBlocked(ctx, player.PlayerId, fromX, fromZ, x, z))
         {
-            NoteSuspicion(ctx, player.PlayerId, Suspect.MoveBlocked);
+            // Honest players bump into things all the time; only a step that lands deep inside one counts.
+            if (!StandingFree(ctx, x, z, PlayerBody * 0.5f)) NoteSuspicion(ctx, player.PlayerId, Suspect.MoveInsideObstacle);
             x = fromX;
             z = fromZ;
         }

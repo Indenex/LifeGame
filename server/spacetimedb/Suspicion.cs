@@ -12,8 +12,9 @@ public static partial class Module
     {
         // A Move that asked for more distance than the walking budget allows; clamped (bugfix-24 item 1).
         MoveOverBudget = 1,
-        // A Move into a wall, trunk or the like; sent back to where it came from (PlayerCollision.cs).
-        MoveBlocked = 2,
+        // A Move that lands well inside a wall, trunk or the like (a teleport or noclip, not a bump);
+        // sent back to where it came from (PlayerCollision.cs).
+        MoveInsideObstacle = 2,
         // A minigame score sent with no real play time behind it; capped (CraftScore.cs).
         QuickScore = 3,
         // A perfect score that the streak cap pulled down (CraftScore.cs).
