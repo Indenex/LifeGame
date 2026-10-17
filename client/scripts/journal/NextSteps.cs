@@ -28,12 +28,15 @@ public static class NextSteps
         ["knap.flake"] = "Stone breaks sharp when it is struck with stone.",
         ["knap.hand_axe"] = "A stone shaped with patience makes a heavy tool for the hand.",
         ["cook.meat"] = "Raw meat is better over a fire.",
+        ["cook.chicken"] = "A plucked bird roasts quickly. Watch it so it doesn't blacken.",
         ["cook.venison"] = "A haunch of deer, turned over the fire, makes a richer meal than mutton.",
         ["cook.broth"] = "Water and a handful of berries, kept hot in a pot, make something warm to sip on a cold evening.",
         ["cook.stew"] = "A pot left to simmer with meat and more besides becomes a meal that stays with you.",
         ["carve.digging_stick"] = "A sharpened stick digs deeper than bare hands.",
         ["cord.twist"] = "Plant fiber, twisted tight, becomes cord.",
         ["lash.spear"] = "A sharp flake bound to a long stick reaches further.",
+        ["lash.bow"] = "A green stick bent and strung with cord will throw a light shaft a long way.",
+        ["carve.arrows"] = "Straight shafts, shaved smooth and feathered with fibre, fly truer than plain sticks.",
         ["lash.stone_axe"] = "A shaped stone bound to a handle could fell a tree.",
         ["haft.knife"] = "A flake cuts better with a handle to hold it.",
         ["weave.basket"] = "Sticks and plenty of fiber can be woven into something that carries more.",
@@ -73,6 +76,7 @@ public static class NextSteps
         ["build.roof"] = "A frame thatched with fiber keeps the rain off.",
         ["build.weave"] = "A woven storage basket keeps your things by your shelter.",
         ["build.door"] = "A finished hut wants a door.",
+        [Skills.Eggs] = "Hens lay about the yard. A hen that has been sitting a while will have an egg to spare.",
         [Skills.Shear] = "A calm sheep with a full fleece will stand for a blade. Come up slowly.",
         [Skills.Kill] = "A spear or blade can bring a sheep down, but it will run.",
         [Skills.Sneak] = "Wary animals bolt from a walker. Move slowly and stay low, and you can get closer.",
@@ -111,7 +115,7 @@ public static class NextSteps
         [Skills.Kill] = new[] { Cutting.Append("lash.spear").ToArray() },
         [Skills.Butcher] = new[] { new[] { Skills.Kill } },
         [Skills.Sneak] = new[] { new[] { Skills.Forage } },
-        [Skills.Shoot] = new[] { new[] { Skills.Kill } },
+        [Skills.Shoot] = new[] { new[] { "lash.bow" }, new[] { "carve.arrows" } },
         [Skills.DryHide] = new[] { new[] { "hide.stretch" } },
         [Claim] = new[] { new[] { Skills.Forage } },
         [Bench] = new[] { new[] { "chop.log" }, new[] { Claim } },
@@ -141,6 +145,7 @@ public static class NextSteps
         [ClayRules.PitFireProcess] = new[] { Item.PinchPot, Item.CoilPot, Item.Potsherd },
         [ClayRules.KilnFireProcess] = new[] { Item.PinchPot, Item.CoilPot, Item.Potsherd },
         [Skills.Shear] = new[] { Item.Wool },
+        [Skills.Eggs] = new[] { Item.Egg },
         [Skills.Butcher] = new[] { Item.RawMutton, Item.SheepHide },
         [Skills.DryHide] = new[] { Item.Leather },
     };
@@ -150,7 +155,7 @@ public static class NextSteps
     {
         [Skills.Forage] = 0, [Skills.Berries] = 0, [Skills.Run] = 0, [Skills.Dig] = 1, ["build.frame"] = 1, ["build.table"] = 2, ["build.spindle"] = 2, ["build.rack"] = 2,
         ["build.wattle"] = 2, ["build.roof"] = 2, ["build.weave"] = 2,
-        [Skills.Shear] = 2, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
+        [Skills.Shear] = 2, [Skills.Eggs] = 1, [Skills.Kill] = 2, [Skills.Sneak] = 2, [Skills.Shoot] = 3, [Skills.Butcher] = 2, [Skills.DryHide] = 2,
     };
 
     // The first evening's road (D-081, D-127): fire, a claim, food and shelter, a stone

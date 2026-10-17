@@ -32,6 +32,8 @@ namespace LifeGame.Shared
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
         public const float BurntMuttonFood = 0.1f;
+        // Hens (animals-19): a raw egg is a snack, a roast chicken a little under mutton.
+        public const float EggFood = 0.08f, RoastChickenFood = 0.3f, BurntChickenFood = 0.08f;
         // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than
         // the same food eaten raw or roasted, and it quenches some thirst too.
         public const float BrothFood = 0.45f, BrothWater = 0.3f;
