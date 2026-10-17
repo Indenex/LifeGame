@@ -12,7 +12,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
-| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (coming soon). A right click that moves under 6 px within 250 ms is a click; more is a drag | UX/UI | ui-35 |
+| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (Join their group while they ask you). A right click that moves under 6 px within 250 ms is a click; more is a drag. Resting the cursor on a player for 0.3 s shows a small note with their name, how they stand with you and their town (ui-72). In the F1 list (ui-74); fixed, since it shares the right button with turning the view | UX/UI | ui-35, ui-72 |
 | Hold Shift | Run (uses stamina). In the F1 list | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (bugfix-25; reads the `jump` action). In the F1 list | Bug fixes | ui-17 |
@@ -29,7 +29,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
 | H | Sit down; press again to lie down; walk off to get up (anim-12). Rebindable | UX/UI, Animation | ui-40 |
 | Hold Q | Emote wheel (ui-48, D-323): wave, cheer, a little dance, bow. Point at one and let go; a tap leaves the wheel open to click. Esc closes. Shown to everyone (anim-16's `Emote` reducer, 1.5 s apart). The list is `shared/Emotes.cs`. Rebindable | UX/UI, Animation | new |
-| 1 to 9, 0 | Take what sits on hotbar slot 1 to 10 in hand (gold ring); the same key again puts it away, an empty slot's key puts away what you hold (Justin: every slot equips). Click then uses it: eat, drink, put on, or set a made thing down. With a tool or weapon the click is the strike as before, and E chops, digs, shears or butchers with the tool in hand (crafting-29). Rebindable | UX/UI | ui-19, ui-36 |
+| 1 to 9, 0 | Take what sits on hotbar slot 1 to 10 in hand (a ring round its slot, and round it in the bag, ui-70/71); the same key again puts it away, an empty slot's key puts away what you hold (Justin: every slot equips). Click then uses it: eat, drink, put on, or set a made thing down. With a tool or weapon the click is the strike as before, and E chops, digs, shears or butchers with the tool in hand (crafting-29). Rebindable | UX/UI | ui-19, ui-36 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |

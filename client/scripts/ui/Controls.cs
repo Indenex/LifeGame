@@ -17,7 +17,8 @@ public static class Controls
     // Name labels the row on the Controls page (ui/ControlsPage.cs) when Help doesn't
     // fit; Joins lists actions whose first keys read together ("W A S D").
     // Fixed rows can't be rebound (a lane reads the raw key). KeyText writes a row's
-    // keys for the F1 list when they aren't one action ("Shift {use}" reads the Use key).
+    // keys for the F1 list when they aren't one action ("Shift {use}" reads the Use key;
+    // "{click}" reads the turn-the-view button, which a quick click of opens the player menu).
     // A row with no Keys or Mouse belongs to a lane that still binds it itself; its
     // key list entry and hint wait until that action exists.
     public record Binding(string Action, Key[] Keys, string? Help, string? Hint = null,
@@ -55,6 +56,9 @@ public static class Controls
         new("sneak", new[] { Key.Ctrl }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
+        // The player menu (ui-35) and the name note (ui-72) read the right mouse button themselves;
+        // this row only puts them in the F1 list (ui-74), so players can find Trade and groups.
+        new("player_menu", None, "Trade, whisper or invite someone (rest on them to see who they are)", Fixed: true, KeyText: "{click} a player"),
         // anim-12: sit down, press again to lie down; walking gets you up (Animation's Avatar).
         // ui-48 (D-323): hold for the emote wheel, let go on one; a tap leaves it open to click.
         new("emote", new[] { Key.Q }, "Wave, cheer, dance or bow (hold, point, let go)", "Hold {key} for a wave, a cheer, a dance or a bow", OnRequest: true, Name: "Emotes (hold)"),
@@ -216,7 +220,8 @@ public static class Controls
     // binding and the player's own keys both show correctly. Null when unbound.
     public static string? KeysFor(Binding b)
     {
-        if (b.KeyText != null) return b.KeyText.Replace("{use}", KeyFor("use") ?? "E");
+        if (b.KeyText != null)
+            return b.KeyText.Replace("{use}", KeyFor("use") ?? "E").Replace("{click}", Names("camera_drag").FirstOrDefault() ?? "Right click");
         if (b.Joins != null)
         {
             var firsts = b.Joins.Select(a => Names(a).FirstOrDefault()).ToList();
