@@ -684,7 +684,7 @@ else
             Check(Wait(() => a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId && x.BannedId == a.PlayerId), 5), "the Marshal bans A");
             var ban = a.Conn.Db.TownBan.Iter().First(x => x.TownId == townId && x.BannedId == a.PlayerId);
             Check(ban.Until.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 <= Towns.BanDaysMax * (long)WorldTime.DayLengthSeconds * 1_000_000 + 5_000_000, "a ban is cut to the longest allowed");
-            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "a banned A cannot build on B's land");
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "kept off", "a banned A cannot build on B's land, and is told why");
             b.Conn.Reducers.LiftTownBan(a.PlayerId);
             Check(Wait(() => !a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId), 5), "the Marshal lifts the ban");
             Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("kept")), "the town log records the ban");

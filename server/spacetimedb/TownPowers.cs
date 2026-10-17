@@ -57,6 +57,17 @@ public static partial class Module
         return false;
     }
 
+    // claims-26: why a banned player is refused on a town's claim, with the time left; null when no live ban applies.
+    static string? BanRefusal(ReducerContext ctx, Claim claim, Identity who)
+    {
+        if (!BannedFromClaim(ctx, claim, who) || ctx.Db.TownSigner.ClaimId.Find(claim.Id) is not { } there) return null;
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        var ban = ctx.Db.TownBan.Banned.Filter(who).First(b => b.TownId == there.TownId && b.Until.MicrosecondsSinceUnixEpoch > now);
+        long minutes = Math.Max(1, (ban.Until.MicrosecondsSinceUnixEpoch - now) / 60_000_000);
+        string left = minutes < 60 ? $"{minutes} min" : $"{(minutes + 30) / 60} h";
+        return $"You are kept off {ctx.Db.Town.Id.Find(there.TownId)?.Name ?? "the town"}'s claims for about {left} more";
+    }
+
     static void ExpireBans(ReducerContext ctx)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
