@@ -94,8 +94,7 @@ public partial class SocialLayer : Node
 
     public override void _Ready()
     {
-        Bind("chat", Key.Enter, Key.KpEnter);
-        Bind("claim_open", Key.K);
+        // Chat (Enter) and the claim view (K) are bound in ui/Controls.cs.
 
         AddChild(chat);
         AddChild(panel);
