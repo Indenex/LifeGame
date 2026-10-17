@@ -496,7 +496,8 @@ public partial class Terrain : Node3D
                 if (PaintedGround.On && grassy && !shore && trail < 0.5f)
                 {
                     float scatter = Hash01(x, z, 70);
-                    float mushrooms = 0.004f + 0.03f * density * (1f - heath), twigs = 0.006f + 0.012f * density, stumps = 0.0025f * edge;
+                    float mushrooms = 0.004f + 0.03f * density * (1f - heath), twigs = 0.01f + 0.02f * density, stumps = 0.0025f * edge;
+                    float stones = 0.012f + 0.025f * (1f - density), whiteFlowers = 0.035f * (1f - density) * (1f - heath);
                     float px = x + 0.5f - Hash01(x, z, 71), pz = z + 0.5f - Hash01(x, z, 72);
                     var spot = Plant(px, HeightAt(px, pz), pz, Hash01(x, z, 73) * Mathf.Tau, 0.8f + Hash01(x, z, 74) * 0.6f);
                     if (scatter < mushrooms)
@@ -509,6 +510,14 @@ public partial class Terrain : Node3D
                         landmarks.Put(PaintedGround.Twig, Look.BarkSurface, (spot, Look.Bark.Lightened(Hash01(x, z, 75) * 0.15f), custom));
                     else if (scatter < mushrooms + twigs + stumps)
                         landmarks.Put(PropMeshes.Stump, Look.BarkSurface, (spot, Look.Bark.Darkened(Hash01(x, z, 75) * 0.1f), custom));
+                    // Small grey-violet stones half sunk in the grass (variant D's stone tone).
+                    else if (scatter < mushrooms + twigs + stumps + stones)
+                        landmarks.Put(PropMeshes.Rock(Variant(x, z, 78, PropMeshes.RockVariants)), Look.RockSurface,
+                            (spot.ScaledLocal(Vector3.One * (0.55f + Hash01(x, z, 79) * 0.45f)).Translated(Vector3.Down * 0.06f),
+                             (Look.Rock * new Color(0.92f, 0.9f, 1.08f)).Lightened(Hash01(x, z, 75) * 0.12f), custom with { B = 1f }));
+                    else if (scatter < mushrooms + twigs + stumps + stones + whiteFlowers)
+                        landmarks.Put(PaintedGround.Card(PaintedGround.FlowerCards + 1 + Variant(x, z, 80, 2), 0.5f), PaintedGround.CardMaterial,
+                            (spot, Colors.White, custom));
                 }
             }
 
