@@ -214,6 +214,7 @@ public partial class Atmosphere : Node3D
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
         ToolSounds.Connect(conn);
+        StructureSounds.Connect(conn);
     }
 
     void OnClock(WorldClock c)
