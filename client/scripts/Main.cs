@@ -418,7 +418,7 @@ public partial class Main : Node3D
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
-        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt) { TakeInHand = hud.Hotbar.TakeInHand });
         equipment.Bag.Link = new ServerBagLink(conn);
         markPicker.Attach(new ServerMarkLink(conn, () => myId));
         BagGrid.Makers = markPicker.Link;

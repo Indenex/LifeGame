@@ -213,7 +213,32 @@ public partial class HotbarBar : Control
     // True while a click would use the held item, so the strike leaves the click alone (Main).
     public bool ClickUsesHeld => !Blocked() && Held is { } h && ClickVerb(h) != null;
 
-    Action? HeldUse() => Held is { } item && ClickVerb(item) != null ? () => UseItem(item) : null;
+    // The click: a placeable starts placing; anything else goes to the server's UseHeld, which
+    // uses whatever it has in your hand (crafting-29, D-182).
+    Action? HeldUse() => Held is { } item && ClickVerb(item) != null
+        ? () =>
+        {
+            sinceChange = 0f;
+            if (Placeable(item)) PlaceRequested?.Invoke(item);
+            else Link.UseHeld();
+        }
+        : null;
+
+    // Puts an item on the bar if it isn't there and takes its slot in hand, so the server's
+    // "use or set down only what is in hand" holds for bag clicks and drags too. The calls
+    // reach the server in order, before the use that follows. False when the bar is full.
+    public bool TakeInHand(Item item)
+    {
+        int slot = SlotOf(item);
+        if (slot < 0)
+        {
+            slot = Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == null, -1);
+            if (slot < 0) { Note("Make room on your bar first: you use things from your hand"); return false; }
+            Link.Set(slot, item);
+        }
+        if (Link.Equipped != slot) Link.Equip(slot);
+        return true;
+    }
 
     // Uses one carried item: places it, or asks the server to eat, drink, wear or hold it.
     public void UseItem(Item item)
@@ -223,13 +248,18 @@ public partial class HotbarBar : Control
         if (carried.GetValueOrDefault(item) == 0) { Note($"You have no {what.ToLowerInvariant()} left"); return; }
         if (Placeable(item)) { PlaceRequested?.Invoke(item); return; }
         if (Items.UseOf(item) == UseAction.None) { Note($"{what} is used in making things"); return; }
+        // A tool from the bag: into your hand, ready to work with.
         if (Items.UseOf(item) == UseAction.Tool)
         {
-            if (SlotOf(item) is var at and >= 0) Equip(at, item);
-            else Note($"Put the {what.ToLowerInvariant()} on your bar, then press its key to take it in hand");
+            if (TakeInHand(item))
+            {
+                floatingName = $"{what} in hand";
+                nameAt = SlotOf(item);
+                nameTime = 1.6f;
+            }
             return;
         }
-        Link.Use(item);
+        if (TakeInHand(item)) Link.Use(item);
     }
 
     // Whether an item is set down rather than used: Main reads ItemDef.Placeable (crafting-21).

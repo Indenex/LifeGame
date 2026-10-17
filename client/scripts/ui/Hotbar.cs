@@ -22,6 +22,8 @@ public interface IHotbarLink
     int Equipped { get; }
     // Takes a slot in hand; the slot already in hand, or -1, puts it away.
     void Equip(int index);
+    // Uses what is in hand (eat, drink, wear); the server reads which item from PlayerEquip.
+    void UseHeld();
     event Action? Changed;
 }
 
@@ -49,6 +51,7 @@ public sealed class MockHotbarLink : IHotbarLink
     public void Use(Item item) => Changed?.Invoke();
 
     public int Equipped { get; private set; } = -1;
+    public void UseHeld() => Changed?.Invoke();
 
     public void Equip(int index)
     {
@@ -84,4 +87,5 @@ public sealed class ServerHotbarLink : IHotbarLink
 
     public int Equipped => conn.Identity is { } me && conn.Db.PlayerEquip.Owner.Find(me) is { } e ? e.Slot : -1;
     public void Equip(int index) => conn.Reducers.EquipSlot(index < 0 ? (byte)255 : (byte)index);
+    public void UseHeld() => conn.Reducers.UseHeld();
 }
