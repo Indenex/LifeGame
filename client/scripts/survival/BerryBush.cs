@@ -8,11 +8,9 @@ namespace LifeGame;
 public partial class BerryBush : Node3D
 {
     public static readonly Color BerryColor = new(0.55f, 0.08f, 0.16f);
-    // A hazel bush (survival-30) carries pale brown nuts instead; Modeling's cluster replaces these spheres.
-    public static readonly Color NutColor = new(0.68f, 0.48f, 0.24f);
     static readonly Color BushLeaf = new(0.20f, 0.33f, 0.14f);
 
-    static Mesh? lobeMesh, berryMesh, berryDarkMesh, nutMesh, nutDarkMesh, stemMesh;
+    static Mesh? lobeMesh, berryMesh, berryDarkMesh, stemMesh;
     readonly Node3D berries = new();
 
     // A lobe is a squashed sphere: center and radii in the bush's own space.
@@ -31,11 +29,8 @@ public partial class BerryBush : Node3D
         lobeMesh ??= PaintedBushes.Clump(PaintedBushes.Tint(BushLeaf));
         berryMesh ??= PaintedMesh(Look.Faceted(new SphereMesh { Radius = 0.04f, Height = 0.08f, RadialSegments = 6, Rings = 3 }, BerryColor));
         berryDarkMesh ??= PaintedMesh(Look.Faceted(new SphereMesh { Radius = 0.04f, Height = 0.08f, RadialSegments = 6, Rings = 3 }, BerryColor.Darkened(0.35f)));
-        nutMesh ??= PaintedMesh(Look.Faceted(new SphereMesh { Radius = 0.05f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, NutColor));
-        nutDarkMesh ??= PaintedMesh(Look.Faceted(new SphereMesh { Radius = 0.05f, Height = 0.1f, RadialSegments = 6, Rings = 3 }, NutColor.Darkened(0.3f)));
+        // A hazel bush (survival-30) carries hazelnuts in their husks instead of berries.
         bool hazel = Needs.IsHazelBush(id);
-        var fruit = hazel ? nutMesh : berryMesh;
-        var fruitDark = hazel ? nutDarkMesh : berryDarkMesh;
         stemMesh ??= PaintedMesh(Look.Faceted(new CylinderMesh { TopRadius = 0.006f, BottomRadius = 0.009f, Height = 0.12f, RadialSegments = 4 }, Look.Bark));
 
         int seed = (int)(id % 100_000);
@@ -56,14 +51,26 @@ public partial class BerryBush : Node3D
 
         // Berries hang in small clusters on short stems, tucked into the leaves of
         // the outer, upper surface so they read as part of the bush.
-        for (int c = 0; c < 7; c++)
+        for (int c = 0; c < (hazel ? 8 : 7); c++)
         {
             if (FindSurfaceSpot(lobes, seed, c) is not var (spot, normal)) continue;
             var cluster = new Node3D { Position = spot };
             cluster.Basis = Basis.LookingAt(normal, Mathf.Abs(normal.Y) > 0.95f ? Vector3.Forward : Vector3.Up);
+            if (hazel)
+            {
+                // Modeling's hazelnuts in their husks (model-21), stem and all, turned a little per cluster.
+                cluster.AddChild(new MeshInstance3D
+                {
+                    Mesh = PropMeshes.HazelCluster(seed + c),
+                    MaterialOverride = PropMeshes.HazelMaterial,
+                    Rotation = new Vector3(0, 0, Terrain.Hash01(seed, c, 48) * Mathf.Tau),
+                });
+                berries.AddChild(cluster);
+                continue;
+            }
             // The stem runs back into the foliage.
             cluster.AddChild(new MeshInstance3D { Mesh = stemMesh, Position = new Vector3(0, 0, 0.03f), Rotation = new Vector3(Mathf.Pi / 2f, 0, 0) });
-            int count = hazel ? 2 + (int)(Terrain.Hash01(seed, c, 44) * 2f) : 2 + (int)(Terrain.Hash01(seed, c, 44) * 3f);
+            int count = 2 + (int)(Terrain.Hash01(seed, c, 44) * 3f);
             for (int b = 0; b < count; b++)
             {
                 float a = b * Mathf.Tau / count + Terrain.Hash01(seed, c * 7 + b, 45);
@@ -71,7 +78,7 @@ public partial class BerryBush : Node3D
                 float scale = 0.8f + Terrain.Hash01(seed, c * 7 + b, 46) * 0.45f;
                 cluster.AddChild(new MeshInstance3D
                 {
-                    Mesh = Terrain.Hash01(seed, c * 7 + b, 47) < 0.3f ? fruitDark : fruit,
+                    Mesh = Terrain.Hash01(seed, c * 7 + b, 47) < 0.3f ? berryDarkMesh : berryMesh,
                     // Local -Z points out of the bush; berries sit just proud of the leaves.
                     Position = new Vector3(Mathf.Cos(a) * r, Mathf.Sin(a) * r - 0.01f, -0.015f),
                     Scale = Vector3.One * scale,

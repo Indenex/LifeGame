@@ -158,9 +158,10 @@ public static class PropMeshes
     }
 
     // Hazelnuts on the bush (model-21, for Survival's autumn hazels, D-323): two or three
-    // nuts in their frilled green-gold husks on a short stem, in the berry clusters' frame
+    // tan nuts in their frilled green husks on a short stem, in the berry clusters' frame
     // (BerryBush): local -Z points out of the bush, the stem runs back into it along +Z.
-    // Colours are in the vertices; draw it with HazelMaterial.
+    // Built 1.5x life size (about 12 cm across) so it reads from 5 to 10 m, like the
+    // berries. Colours are in the vertices; draw it with HazelMaterial.
     public static Mesh HazelCluster(int variant) => Variant("hazelcluster", variant, HazelClusterVariants, BuildHazelCluster);
     public const int HazelClusterVariants = 3;
     public static Material HazelMaterial => hazelMaterial ??= Painted.Of(Look.Solid(Colors.White));
@@ -169,7 +170,8 @@ public static class PropMeshes
     static ArrayMesh BuildHazelCluster(int v)
     {
         var k = new MeshKit(false) { Skinned = false };
-        var shell = new Color(0.36f, 0.26f, 0.16f);
+        const float life = 1.5f;
+        var shell = new Color(0.56f, 0.42f, 0.27f);
         var husk = new Color(0.3f, 0.4f, 0.15f);
         k.Paint(Look.Bark.Lightened(0.15f)).Tube(new[] { new Vector3(0, 0, 0.05f), new Vector3(0, 0.005f, 0.01f), new Vector3(0, 0, -0.01f) }, 0.004f, 4, 0.003f);
         int count = 2 + v % 2;
@@ -181,7 +183,8 @@ public static class PropMeshes
             var tilt = MeshKit.Aim(dir) * new Basis(Vector3.Right, Mathf.Pi / 2f);
             var up = tilt * Vector3.Up;
             k.Paint(shell, 0.9f + H(v * 3 + i, 40) * 0.15f).Ellipsoid(at + up * 0.006f, new Vector3(0.016f, 0.018f, 0.016f), 8, 5, tilt);
-            k.Paint(shell.Darkened(0.15f)).Ellipsoid(at + up * 0.024f, new Vector3(0.004f, 0.005f, 0.004f), 5, 3, tilt);
+            k.Paint(shell.Lightened(0.18f)).Ellipsoid(at + up * 0.014f, new Vector3(0.0135f, 0.01f, 0.0135f), 8, 4, tilt);
+            k.Paint(shell.Darkened(0.2f)).Ellipsoid(at + up * 0.024f, new Vector3(0.004f, 0.005f, 0.004f), 5, 3, tilt);
             // The husk: a leafy cup round the lower half, a frill of short teeth at its lip.
             k.Paint(husk).Loft(at - up * 0.017f, at + up * 0.004f, new MeshKit.Ring[]
             {
@@ -195,7 +198,13 @@ public static class PropMeshes
                 k.Paint(husk, 0.9f + H(v * 7 + j, 43) * 0.2f).Blade(lip, lip + up * (0.008f + H(j, 41) * 0.005f) + side * 0.006f, side, 0.008f, 0.002f);
             }
         }
-        return Done(k);
+        var arrays = k.CommitToArrays();
+        var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        for (int n = 0; n < verts.Length; n++) verts[n] *= life;
+        arrays[(int)Mesh.ArrayType.Vertex] = verts;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
     }
 
     // A fallen giant (model-19, for Environment's env-33 landmark, drawn 3 to 4 times

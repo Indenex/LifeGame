@@ -211,7 +211,7 @@ public static class ItemModels
         Item.BowDrill => (BowDrill, false),
         Item.Berries => (Berries, true),
         // Stand-in until Modeling makes a hazelnut (survival-30).
-        Item.Hazelnuts => (Berries, true),
+        Item.Hazelnuts => (Hazelnuts, true),
         Item.RawMutton => (k => Mutton(k, new Color(0.74f, 0.30f, 0.30f), new Color(0.93f, 0.87f, 0.77f), Bone, 1f), true),
         Item.CookedMutton => (k => Mutton(k, new Color(0.50f, 0.27f, 0.12f), new Color(0.74f, 0.54f, 0.28f), new Color(0.86f, 0.78f, 0.64f), 0.95f), true),
         Item.BurntMutton => (k => Mutton(k, new Color(0.10f, 0.08f, 0.07f), new Color(0.17f, 0.13f, 0.10f), new Color(0.32f, 0.28f, 0.23f), 0.88f), true),
@@ -507,11 +507,11 @@ public static class ItemModels
     }
 
     // A small handful of hazelnuts (model-21, for Survival's autumn wild food, D-323):
-    // round, glossy brown shells with a pale, flat base and a little point, one still
-    // in its frilled green-gold husk.
+    // round tan shells, paler toward the top, with a pale, flat base and a little point,
+    // one still in its frilled green husk.
     static void Hazelnuts(Kit k)
     {
-        var shell = new Color(0.36f, 0.26f, 0.16f);
+        var shell = new Color(0.56f, 0.42f, 0.27f);
         var spots = new[] { new Vector3(-0.025f, 0, 0.01f), new Vector3(0.022f, 0, 0.018f), new Vector3(0.0f, 0, -0.025f) };
         for (int i = 0; i < spots.Length; i++)
         {
@@ -528,7 +528,8 @@ public static class ItemModels
         var up = tilt * Vector3.Up;
         k.Plain.Paint(shell).Ellipsoid(at, new Vector3(0.017f, 0.019f, 0.017f) * size, 9, 6, tilt);
         k.Plain.Paint(new Color(0.85f, 0.76f, 0.6f)).Ellipsoid(at - up * 0.016f * size, new Vector3(0.011f, 0.004f, 0.011f) * size, 7, 2, tilt);
-        k.Plain.Paint(shell.Darkened(0.15f)).Ellipsoid(at + up * 0.019f * size, new Vector3(0.004f, 0.005f, 0.004f) * size, 5, 3, tilt);
+        k.Plain.Paint(shell.Lightened(0.18f)).Ellipsoid(at + up * 0.009f * size, new Vector3(0.0145f, 0.01f, 0.0145f) * size, 9, 4, tilt);
+        k.Plain.Paint(shell.Darkened(0.2f)).Ellipsoid(at + up * 0.019f * size, new Vector3(0.004f, 0.005f, 0.004f) * size, 5, 3, tilt);
         if (!husked) return;
         // A leafy cup round the lower half, a frill of short teeth at its lip.
         var husk = new Color(0.3f, 0.4f, 0.15f);
