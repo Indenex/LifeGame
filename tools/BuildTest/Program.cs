@@ -392,6 +392,11 @@ void UseGate(ulong gate)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(gate);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    // A member of the claim bars and unbars its gate too (claims-21: owner, members and the town's Gatekeeper).
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "B, a member, barred the gate");
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "and unbarred it");
     StrangerB();
     a.Conn.Reducers.ToggleLock(gate);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");

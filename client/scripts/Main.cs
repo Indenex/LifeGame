@@ -95,6 +95,8 @@ public partial class Main : Node3D
         // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
         placing.Terrain = terrain;
         placing.Me = me;
+        // Fires go where you choose (ui-30); the ring turns amber where the server would say no.
+        crafting.PickSpot = (label, min, picked) => placing.PickSpot(label, min, picked, FireSpotProblem);
         placing.CameraRig = cameraRig;
         placing.View = view;
         placing.Note = hud.Note;
@@ -159,6 +161,7 @@ public partial class Main : Node3D
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
+        crafting.PlayerAt = () => me.Position;
         AddChild(station);
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
@@ -505,6 +508,18 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+    }
+
+    // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
+    // rocks and trunks) and the spacing from other fires and hearths, as the server checks them.
+    string? FireSpotProblem(float x, float z)
+    {
+        if (!FireGround.Clear(x, z, terrain.DepthAt, terrain.ClearedAt)) return "Not here: a fire wants level, dry ground clear of rocks and trees";
+        if (conn == null) return null;
+        bool near(float fx, float fz) => new Vector2(fx - x, fz - z).Length() < Fires.Spacing;
+        if (conn.Db.Fire.Iter().Any(f => near(f.X, f.Z)) || conn.Db.ColdHearth.Iter().Any(h => near(h.X, h.Z)))
+            return "Too close to another fire";
+        return null;
     }
 
     PlayerPos? MyPos() =>

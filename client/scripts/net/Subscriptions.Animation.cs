@@ -12,5 +12,6 @@ public static partial class Subscriptions
         "SELECT * FROM player_look",
         "SELECT * FROM player_jump",
         "SELECT * FROM player_act",
+        "SELECT * FROM player_rest",
     };
 }
