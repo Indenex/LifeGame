@@ -180,6 +180,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:42: env-38 water + env-39 clouds (#843 4d1f443e; was 221c725b, 062e72cd): water after (same shots as env38-before), clouds 0.45 noon/0.7 and rain 0.7/cloud 0.9 vs --clouds=0, dragonflies close; first runtime of both shaders, so report pink/missing with the log. After ui-70.
 
+- 2026-10-17 15:50: bugfix-65/66 (#844 833172e9 shadows, #845 248e7656 wet sheen and fire reach): after = local octopus merge 9a88e342 of main 4bd3f9dd + both (local branch render/bugfix-65-66; recreate with `git merge 833172e9 248e7656` on main if lost), before = main 4bd3f9dd. Scenes: lean-to + fire night orbit clip, wet Pebble orbit in low sun, Pebble 2 m / 10 m from a fire. render_cam.gd gained an orbit rate (5th value); RenderCabin.cs.txt gained SeedFire. After ui-70.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

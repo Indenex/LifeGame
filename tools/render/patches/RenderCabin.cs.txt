@@ -21,4 +21,14 @@ public static partial class Module
             LitBy = 0, LitAt = ctx.Timestamp, FuelUntil = ctx.Timestamp + new TimeDuration(3L * 3600 * 1_000_000), FuelCapSeconds = 3 * 3600,
         });
     }
+
+    [SpacetimeDB.Reducer]
+    public static void SeedFire(ReducerContext ctx, float x, float z)
+    {
+        ctx.Db.Fire.Insert(new Fire
+        {
+            Id = 0, X = x, Z = z, ChunkX = (int)System.MathF.Floor(x / 16f), ChunkZ = (int)System.MathF.Floor(z / 16f),
+            LitBy = 0, LitAt = ctx.Timestamp, FuelUntil = ctx.Timestamp + new TimeDuration(3L * 3600 * 1_000_000), FuelCapSeconds = 3 * 3600,
+        });
+    }
 }

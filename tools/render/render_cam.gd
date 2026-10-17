@@ -6,7 +6,8 @@ extends Node
 # the player: `distance` metres away on the ground, `height` metres up, `yaw`
 # degrees around from the game camera's usual spot behind (0 = same side as the
 # game camera, 180 = the far side), looking at `look_height` metres above the
-# player's feet (default 1).
+# player's feet (default 1). A fifth value orbits the camera that many degrees per
+# second of game time (--render-cam=5,2.5,0,1,30 goes round once in 12 s).
 # --render-cam-target=sheep frames the sheep nearest the player instead (yaw then
 # counts from the game camera's direction too).
 # --render-slowstart=scale,seconds runs game time at `scale` for the first
@@ -20,6 +21,7 @@ var rig: Node3D
 var cam: Camera3D
 var target_kind := ""
 var slow_until_ms := -1
+var orbit := 0.0
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args() + OS.get_cmdline_args():
@@ -65,6 +67,8 @@ func _process(_delta: float) -> void:
 					best = n
 		if best != null:
 			feet = best.global_position
-	var yaw := rig.global_rotation.y + deg_to_rad(cfg[2])
+	if cfg.size() > 4:
+		orbit += cfg[4] * _delta
+	var yaw := rig.global_rotation.y + deg_to_rad(cfg[2] + orbit)
 	cam.global_position = feet + Vector3(sin(yaw), 0, cos(yaw)) * cfg[0] + Vector3.UP * cfg[1]
 	cam.look_at(feet + Vector3.UP * cfg[3])

@@ -1,0 +1,14 @@
+# bugfix-66 (#845): a soaked Pebble in low sun, the camera behind and low, orbiting once (12 s)
+# so the sun comes into view; before, the wet sheen glared white. Wetness is set by owner SQL.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.72 --rain=0 --cloud=0.1 --wind=0.1 --season=0.25 --render-cam=3,0.9,0,1.3,30
+frames 200
+act SetRaceLook 1 1 1 0 0
+warp -6 -6
+sql UPDATE vitals SET wetness = 1.0, wetness_rate = 0.0, wet = true
+frames +36
+sql UPDATE vitals SET wetness = 1.0, wetness_rate = 0.0, wet = true
+mark orbit-start
+frames +150
+mark orbit-end

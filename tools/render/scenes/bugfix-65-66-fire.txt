@@ -1,0 +1,39 @@
+# bugfix-65 (#844): a lit campfire beside a lean-to at night, the camera orbiting once (12 s) so
+# the firelight flicker and any square particle shadows show. Run with RENDER_PATCH=tools/render/patches/cabin.sh
+# (SeedFire). The camera player is a Pebble (SetRaceLook 1).
+client-as-puppet
+client-movie 12
+client --time-of-day=0.9 --rain=0 --cloud=0.1 --wind=0.15 --season=0.25 --render-cam=5,2.4,0,0.8,30
+frames 200
+act SetRaceLook 1 1 1 0 0
+warp -6 -6
+give 1 12 50
+give 3 12 50
+place 0 -2 -3 45
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+act SeedFire -6.9 -7.9
+frames +60
+mark orbit-start
+frames +150
+mark orbit-end

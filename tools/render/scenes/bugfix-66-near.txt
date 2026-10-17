@@ -1,0 +1,13 @@
+# bugfix-66 (#845): a Pebble 2 m and then 10 m from a campfire at night; firelight on the
+# character should fade with distance. Run with RENDER_PATCH=tools/render/patches/cabin.sh (SeedFire).
+client-as-puppet
+client --time-of-day=0.9 --rain=0 --cloud=0.1 --wind=0.1 --season=0.25 --render-cam=4.5,2.2,0,1
+wait 35
+act SetRaceLook 1 1 1 0 0
+act SeedFire -6 -8
+warp -6 -6
+wait 15
+burst 2 3
+warp -6 2
+wait 15
+burst 2 3
