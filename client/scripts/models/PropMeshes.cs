@@ -220,6 +220,72 @@ public static class PropMeshes
         return Done(k);
     }
 
+    // Mushrooms for the ground cover (reference art, D-232): 0 one brown cap, 1 a
+    // cluster of small pale ones, 2 a muted red cap with pale spots. Colours are
+    // baked and quiet (no saturated reds); tint near white. About 0.1 to 0.15 m tall.
+    public const int MushroomVariants = 3;
+    public static Mesh Mushroom(int variant) => Variant("mushroom", variant, MushroomVariants, BuildMushroom);
+
+    static ArrayMesh BuildMushroom(int v)
+    {
+        var k = Kit();
+        var stem = new Color(0.86f, 0.81f, 0.7f);
+        void One(Vector3 at, float tall, float cap, Color top, float lean)
+        {
+            var head = at + new Vector3(lean, tall, lean * 0.5f);
+            k.Paint(stem).Tube(new[] { at, at.Lerp(head, 0.5f) + new Vector3(lean * 0.2f, 0, 0), head }, cap * 0.28f, 6, cap * 0.22f);
+            k.Paint(top).Ellipsoid(head + Vector3.Up * cap * 0.15f, new Vector3(cap, cap * 0.55f, cap), 8, 4, null, 0.35f);
+            k.Paint(stem, 0.85f).Ellipsoid(head + Vector3.Up * cap * 0.02f, new Vector3(cap * 0.85f, cap * 0.08f, cap * 0.85f), 8, 2);
+        }
+        switch (v)
+        {
+            case 0:
+                One(Vector3.Zero, 0.1f, 0.065f, new Color(0.55f, 0.38f, 0.24f), 0.01f);
+                break;
+            case 1:
+                for (int i = 0; i < 5; i++)
+                {
+                    float a = i * 2.4f, r = 0.02f + i * 0.012f;
+                    One(new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r), 0.05f + H(i, 70) * 0.04f, 0.025f + H(i, 71) * 0.012f, new Color(0.84f, 0.78f, 0.64f), (H(i, 72) - 0.5f) * 0.03f);
+                }
+                break;
+            default:
+                One(Vector3.Zero, 0.12f, 0.075f, new Color(0.62f, 0.27f, 0.2f), -0.01f);
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * 1.1f + 0.3f, r = 0.03f + H(i, 73) * 0.02f;
+                    var spot = new Vector3(Mathf.Cos(a) * r - 0.01f, 0.12f + 0.075f * 0.15f + 0.035f - r * 0.35f, Mathf.Sin(a) * r - 0.005f);
+                    k.Paint(new Color(0.9f, 0.86f, 0.76f)).Ellipsoid(spot, new Vector3(0.008f, 0.004f, 0.008f), 5, 2);
+                }
+                break;
+        }
+        return Done(k);
+    }
+
+    // Fallen twigs lying in the grass: a forked stick about 0.3 to 0.5 m long,
+    // near-white for the bark tint.
+    public const int TwigVariants = 3;
+    public static Mesh Twig(int variant) => Variant("twig", variant, TwigVariants, BuildTwig);
+
+    static ArrayMesh BuildTwig(int v)
+    {
+        var k = Kit();
+        float len = 0.3f + V(v, 30) * 0.2f;
+        var a = new Vector3(-len * 0.5f, 0.015f, 0);
+        var b = new Vector3(len * 0.5f, 0.015f, (V(v, 31) - 0.5f) * 0.08f);
+        var mid = a.Lerp(b, 0.5f) + new Vector3(0, 0.01f, (V(v, 32) - 0.5f) * 0.05f);
+        k.Paint(Colors.White, 0.85f).Tube(new[] { a, mid, b }, 0.012f, 5, 0.006f);
+        for (int i = 0; i < 1 + v % 2 + 1; i++)
+        {
+            float t = 0.3f + i * 0.25f;
+            var root = a.Lerp(b, t);
+            float side = i % 2 == 0 ? 1f : -1f;
+            var tip = root + new Vector3(len * 0.22f, 0.01f + V(v, 33 + i) * 0.03f, side * len * (0.15f + V(v, 36 + i) * 0.12f));
+            k.Paint(Colors.White, 0.8f).Tube(new[] { root, tip }, 0.007f, 4, 0.003f);
+        }
+        return Done(k);
+    }
+
     // A cut stump with a pale face and rings, for where trees were felled.
     public static Mesh Stump => stump ??= BuildStump();
 
@@ -237,7 +303,10 @@ public static class PropMeshes
             k.Paint(Colors.White, 0.7f).Tube(new[] { dir * 0.1f + Vector3.Up * 0.2f, dir * 0.38f - Vector3.Up * 0.03f }, 0.07f, 5, 0.03f);
         }
         k.Paint(Colors.White).Ellipsoid(new Vector3(0, 0.4f, 0), new Vector3(0.175f, 0.008f, 0.17f), 7, 2);
-        k.Paint(new Color(0.85f, 0.76f, 0.62f)).Ellipsoid(new Vector3(0, 0.405f, 0), new Vector3(0.09f, 0.006f, 0.09f), 7, 2);
+        // Growth rings: a darker band between the pale face and the paler heart.
+        k.Paint(new Color(0.72f, 0.62f, 0.48f)).Ellipsoid(new Vector3(0, 0.403f, 0), new Vector3(0.135f, 0.006f, 0.13f), 7, 2);
+        k.Paint(new Color(0.85f, 0.76f, 0.62f)).Ellipsoid(new Vector3(0, 0.406f, 0), new Vector3(0.09f, 0.006f, 0.09f), 7, 2);
+        k.Paint(new Color(0.7f, 0.6f, 0.46f)).Ellipsoid(new Vector3(0.01f, 0.409f, 0.005f), new Vector3(0.035f, 0.005f, 0.035f), 6, 2);
         return Done(k);
     }
 

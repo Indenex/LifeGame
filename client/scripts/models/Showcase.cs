@@ -436,6 +436,14 @@ public partial class Showcase : Node3D
         Place(PropMeshes.Rock(0), rock, new Vector3(-3f, 0, 1.2f), 0.4f, 1.1f);
         Place(PropMeshes.Rock(0), rock, new Vector3(3.6f, 0, 1.6f), 2.1f, 0.8f);
         Place(PropMeshes.Rock(2), rock, new Vector3(-1.4f, 0, -1.2f), 1.0f, 0.9f);
+        // Ground cover from the reference art: a stump, mushrooms and twigs.
+        var plain = now ? Look.Solid(Colors.White) : MaterialLook.For(MaterialLook.Pattern.Plain, variant);
+        Place(PropMeshes.Stump, Pick(Look.BarkSurface, MaterialLook.Pattern.Bark, Look.Bark.Lightened(0.15f)), new Vector3(3.2f, 0, -0.6f), 0.5f);
+        for (int i = 0; i < 3; i++)
+        {
+            Place(PropMeshes.Mushroom(i), plain, new Vector3(-2.2f + i * 0.35f, 0, 1.9f + (i % 2) * 0.2f), i * 1.3f);
+            Place(PropMeshes.Twig(i), Pick(Look.BarkSurface, MaterialLook.Pattern.Bark, Look.Bark), new Vector3(1.0f + i * 0.6f, 0, 2.8f - i * 0.3f), i * 0.9f);
+        }
 
         // A sheep and the player in front.
         var woolColor = new Color(0.74f, 0.71f, 0.63f);
