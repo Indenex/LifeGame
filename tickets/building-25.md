@@ -1,9 +1,9 @@
 # building-25: Playtest fixes for building with friends
 Lane: House building
 Owner: House building thread (session_01DzgG4copWqifKWUcydbjBZ)
-Status: in_progress
+Status: in_review
 Branch: claude/building-ht3tnl
-PR: (not yet; same PR as building-24)
+PR: #847 (with building-24)
 
 ## Goal
 "Home and friends" focus (PM, 2026-10-17). Land the playtest-4 and playtest-5 building fixes that never reached main (/mnt/project-files/patches/building-8/0002 and 0003, numbered building-9 there), rewritten for today's code (E is the Use key, the picture build menu, see-through walls):
@@ -16,9 +16,10 @@ Dropped from those patches: the old roof fade (replaced by see-through, D-168), 
 
 ## Progress log
 - 2026-10-17 16:10: written. Server, client and BuildTest build. BuildTest lean-to gains `LeanToCoverAndFires` (shelter and fire rules) and `TakeDownSite` (B is refused, A takes down their own site); BuildTest's `FindSite` skips spots on a fire. KEYMAP.md Shift+E row mentions the takedown (tell UX through the PM).
+- 2026-10-17 16:15: BuildTest green locally on fresh servers: lean-to,basket,fence (115 ok), coop,stone-hearth,sundial (95 ok), clay-hut (100 ok). PR #847 opened.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Run `dotnet run -- lean-to` in tools/BuildTest against a fresh local server, then push and open the PR with building-24.
+Wait for CI on #847, then send the PM the green sha.
