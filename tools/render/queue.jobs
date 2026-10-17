@@ -5,6 +5,7 @@ grass tools/render/render.sh grass 2064cb0 "--time-of-day=0.45 --rain=0 --cloud=
 grass-walk-main env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk-main dbe929a tools/render/scenes/grass-walk.txt
 grass-walk env RENDER_SIZE=1280x720 tools/render/scene.sh grass-walk 2064cb0 tools/render/scenes/grass-walk.txt
 pinetest2 env TICKET=pinetest2 "VIEWS=pinetest --time-of-day=0.62 --grade=1,pinetest --time-of-day=0.62 --grade=1 --close" tools/render/scenes/model-1-style.sh 361526ef
+model-6 env TICKET=model-6 "VIEWS=roster,roster --yaw=160" tools/render/scenes/model-1-style.sh 9d9d79ad
 model-4 env TICKET=model-4 "VIEWS=painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2,painted --time-of-day=0.70 --cloud=0.25 --grade=1 --godrays=2,painted --time-of-day=0.92 --cloud=0.1 --grade=1" tools/render/scenes/model-1-style.sh a03e50bf
 model-4b env TICKET=model-4b "VIEWS=painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2,painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2 --trees=meshes,painted --time-of-day=0.92 --cloud=0.1 --grade=1" tools/render/scenes/model-1-style.sh 638074c5
 model-4c env TICKET=model-4c "VIEWS=painted --near --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2,painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2,painted --time-of-day=0.62 --cloud=0.2 --grade=1 --godrays=2 --trees=meshes,painted --time-of-day=0.92 --cloud=0.1 --grade=1" tools/render/scenes/model-1-style.sh 13578cd7
