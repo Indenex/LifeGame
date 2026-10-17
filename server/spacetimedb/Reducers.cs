@@ -39,7 +39,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
-            MarkSeen(ctx, existing.PlayerId);
+            ForgetSeen(ctx, existing.PlayerId);
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
@@ -73,7 +73,6 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
-        MarkSeen(ctx, player.PlayerId);
         SurvivalConnected(ctx, player);
         EnsureHealth(ctx, player.PlayerId);
     }
@@ -84,6 +83,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
         {
             ctx.Db.Player.Identity.Update(player with { Online = false });
+            ForgetSeen(ctx, player.PlayerId);
             SurvivalDisconnected(ctx, player);
             StanceDisconnected(ctx, player);
         }

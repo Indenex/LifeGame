@@ -183,13 +183,14 @@ public static class Look
 
     // The same grass for the tufts Environment plants only near the player: they
     // shrink away between about 31 and 48 m, before the chunks that have none.
-    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f);
+    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f, stylised: true);
 
-    static ShaderMaterial MakeGrass(float fadeFar)
+    static ShaderMaterial MakeGrass(float fadeFar, bool stylised = false)
     {
         var material = new ShaderMaterial { Shader = GrassShader };
         material.SetShaderParameter("clouds", Clouds);
         material.SetShaderParameter("fade_far", fadeFar);
+        material.SetShaderParameter("stylised", stylised ? 1f : 0f);
         return material;
     }
 
@@ -590,6 +591,8 @@ public static class Look
             // from the player (0 = never), so they are gone before the chunks
             // that carry none (GrassTufts).
             uniform float fade_far = 0.0;
+            // 1 on the grass tufts only: the art-reference colour bands.
+            uniform float stylised = 0.0;
             global uniform vec3 player_position;
 
             varying vec3 tint;
@@ -636,6 +639,18 @@ public static class Look
                 // Roots match the ground; tips catch the sun and turn warm.
                 vec3 warm = tint * vec3(1.3, 1.3, 1.0) + vec3(0.02, 0.02, 0.0);
                 vec3 color = mix(tint, warm, smoothstep(0.0, 1.0, tip));
+                // The grass tufts lean toward the art references (docs/art-reference 02):
+                // muted olive and warm yellow-green, a soft blue-violet shade at the
+                // roots, and pale lit tips, in soft tone bands. Shape, height, density
+                // and wind are unchanged; ferns, reeds and flowers keep their colours.
+                if (stylised > 0.5) {
+                    float lum = dot(tint, vec3(0.3, 0.59, 0.11));
+                    vec3 olive = mix(tint, vec3(lum * 1.1, lum * 1.05, lum * 0.55), 0.3);
+                    vec3 root_shade = olive * vec3(0.62, 0.65, 0.82);
+                    vec3 lit_tip = olive * vec3(1.36, 1.3, 0.78);
+                    color = mix(root_shade, olive, smoothstep(0.05, 0.4, tip));
+                    color = mix(color, lit_tip, smoothstep(0.6, 0.95, tip));
+                }
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
                 color *= mix(1.0, 0.88, wetness);
                 // Grass fades to straw in the cold and wears snow on its tips.
