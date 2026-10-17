@@ -52,6 +52,7 @@ conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
@@ -629,20 +630,32 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within reach of a spot.
 void WalkTo(float tx, float tz)
 {
+    // Round trunks and boulders by a route, then straight in (bugfix-34).
+    var route = ground.Route(x, z, tx, tz);
+    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
+    Leg(tx, tz, 1.5f);
+}
+
+void Leg(float tx, float tz, float tol)
+{
     int lagged = 0;
     for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d < 1.5f) break;
+        if (d < tol) break;
         if (guard > 900)
         {
-            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
             var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var near = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
-                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
-            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", near)}");
+            var near = new List<string>();
+            for (int ix = (int)x - 3; ix <= (int)x + 3; ix++)
+                for (int iz = (int)z - 3; iz <= (int)z + 3; iz++)
+                    if (Obstacles.At(ground, ix, iz, out float ox, out float oz, out float r, out float h)) near.Add($"{(h == float.MaxValue ? "trunk" : "rock")}@({ox:F1},{oz:F1}) r{r:F2}");
+            foreach (var st in conn.Db.Structure.Iter())
+                if (MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6) near.Add($"{st.Kind}@({st.X:F1},{st.Z:F1}) done={st.Complete} stage={st.Stage}");
+            Console.WriteLine("  near: " + string.Join("; ", near));
+            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left");
         }
-        float step = Math.Min(d - 1f, 0.5f);
+        float step = Math.Min(tol >= 1.5f ? d - 1f : d, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
         var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
@@ -655,8 +668,10 @@ void WalkTo(float tx, float tz)
         else lagged = 0;
         if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
+            float px = x, pz = z;
             x += dx / d * step;
             z += dz / d * step;
+            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
