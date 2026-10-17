@@ -102,13 +102,12 @@ namespace LifeGame.Shared
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
-                WeatherAfter = 168,
                 Room = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
             },
             // Ceramics' storage jar (ceramics-6): a kiln-fired jar set down as a store.
-            // Fired clay doesn't rot, so it weathers only after two weeks untouched.
+            // Outside a claim it weathers like everything else.
             new StructureShape
             {
                 Name = "Storage jar",
@@ -118,7 +117,6 @@ namespace LifeGame.Shared
                 Solid = true,
                 // The most a jar can hold; a jar's own quality sets its size (StoreStacksFor).
                 StoreStacks = JarStacksMax,
-                WeatherAfter = 336,
                 Stages = new[] { "Set the jar" },
             },
             // A stick fence: two posts and two lashed rails, 2 m long. Runs of them pen
@@ -196,7 +194,6 @@ namespace LifeGame.Shared
                 Clearance = 3.2f,
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
-                WeatherAfter = 168,
                 Room = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Sill", "Log walls", "Rafters", "Thatch" },
@@ -336,9 +333,11 @@ namespace LifeGame.Shared
         public static int StoreStacksFor(int kind, byte quality) =>
             Shape(kind).Jar ? JarStacks(quality) : Shape(kind).StoreStacks;
 
-        // Weathering (D-046): outside claims, anything players made that nobody has
-        // touched for WeatherAfterHours starts to weather, and is gone WeatherForHours later.
-        public const double WeatherAfterHours = 72, WeatherForHours = 24;
+        // Weathering (D-046, claims-15): outside claims, anything players made that nobody
+        // has touched for WeatherAfterHours starts to fall apart, and is gone WeatherForHours
+        // later. Justin: "starts falling apart after 2 days". One raisable constant each (D-197);
+        // a shape may still set its own WeatherAfter, but none does now.
+        public const double WeatherAfterHours = 48, WeatherForHours = 6;
 
         public static bool IsRoom(int kind) => Shape(kind).Room;
 

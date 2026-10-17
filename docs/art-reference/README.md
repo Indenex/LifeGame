@@ -13,6 +13,10 @@ Justin, 2026-10-16: "go look back at our original reference world/terrain/charac
 | `05-snowy-pines.webp` | Snowy pines, bare shrubs, stumps, falling snow, stone wall |
 | `06-ice-dungeon-interior.webp` | Indoor room: chunky blue-grey stone walls, an arched niche and doorway, wooden barrels, crates, a long table with chairs and stools, a cobbled floor dusted with snow, and an armoured figure |
 
+**Dofus** is the other inspiration Justin named (2026-10-17): beautiful hand-crafted 2D artwork and scenery. Like these packs, it is painted art presented in a 3D-feeling world. Look at Dofus for warmth, hand-painted detail, rich colour and cosy, lush scenery.
+
+The Golden Skull packs themselves are in `docs/art-packs/golden-skull/`.
+
 These are images of a 2D isometric asset pack, used for their style, not their camera. LifeGame stays 3D with its follow camera (D-002).
 
 ## What to take from them
