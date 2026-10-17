@@ -424,37 +424,42 @@ def write(name, w, h, body):
         f.write('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">%s<rect width="100%%" height="100%%" fill="url(#sky)"/>%s</svg>' % (w, h, w, h, BG, body))
 
 
-# individual sheets: fence, front, three-quarter
-for key, name, kind, fn in CONCEPTS:
-    S = 300
-    W, Hh, gy = 760, 470, 400
-    _, H = fn(0)
-    b = ground(W, gy)
-    b += fence(90, gy, S)
-    b += char(fn, 0, 300, gy, S) + char(fn, 1, 560, gy, S)
-    b += "<text x='24' y='38' font-size='28' fill='#3f2c26' %s>%s <tspan font-size='18' fill='#7a5f4a'>· %s · %.2f m</tspan></text>" % (FONT, name, kind, H)
-    b += "<text x='300' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>front</text>" % FONT
-    b += "<text x='560' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>three-quarter</text>" % FONT
-    b += "<text x='90' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>1 m fence post</text>" % FONT
-    write(key, W, Hh, b)
+def main():
+    # individual sheets: fence, front, three-quarter
+    for key, name, kind, fn in CONCEPTS:
+        S = 300
+        W, Hh, gy = 760, 470, 400
+        _, H = fn(0)
+        b = ground(W, gy)
+        b += fence(90, gy, S)
+        b += char(fn, 0, 300, gy, S) + char(fn, 1, 560, gy, S)
+        b += "<text x='24' y='38' font-size='28' fill='#3f2c26' %s>%s <tspan font-size='18' fill='#7a5f4a'>· %s · %.2f m</tspan></text>" % (FONT, name, kind, H)
+        b += "<text x='300' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>front</text>" % FONT
+        b += "<text x='560' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>three-quarter</text>" % FONT
+        b += "<text x='90' y='452' font-size='14' fill='#3f2c26' text-anchor='middle' %s>1 m fence post</text>" % FONT
+        write(key, W, Hh, b)
 
-# lineup: fence, current player, then the 10 in recommendation order
-S = 170
-slot = 150
-W = 90 + slot * 12
-Hh, gy = 440, 370
-b = ground(W, gy)
-b += ruler(14, gy, S, 1.9)
-b += fence(105, gy, S)
-b += "<text x='105' y='%d' font-size='13' fill='#3f2c26' text-anchor='middle' %s>fence 1 m</text>" % (gy + 40, FONT)
-b += char(current, 0, 105 + slot, gy, S)
-b += "<text x='%d' y='%d' font-size='13' fill='#3f2c26' text-anchor='middle' %s>current 1.8 m</text>" % (105 + slot, gy + 40, FONT)
-for i, (key, name, kind, fn) in enumerate(CONCEPTS):
-    x = 105 + slot * (i + 2)
-    _, H = fn(0)
-    b += char(fn, 0.5, x, gy, S)
-    b += "<text x='%d' y='%d' font-size='15' fill='#3f2c26' text-anchor='middle' %s>%d. %s</text>" % (x, gy + 36, FONT, i + 1, name)
-    b += "<text x='%d' y='%d' font-size='11' fill='#5a4636' text-anchor='middle' %s>%s · %.2f m</text>" % (x, gy + 54, FONT, kind, H)
-b += "<text x='%d' y='30' font-size='24' fill='#3f2c26' %s>LifeGame character concepts · lineup at one scale</text>" % (60, FONT)
-write("lineup", W, Hh, b)
-print("ok")
+    # lineup: fence, current player, then the 10 in recommendation order
+    S = 170
+    slot = 150
+    W = 90 + slot * 12
+    Hh, gy = 440, 370
+    b = ground(W, gy)
+    b += ruler(14, gy, S, 1.9)
+    b += fence(105, gy, S)
+    b += "<text x='105' y='%d' font-size='13' fill='#3f2c26' text-anchor='middle' %s>fence 1 m</text>" % (gy + 40, FONT)
+    b += char(current, 0, 105 + slot, gy, S)
+    b += "<text x='%d' y='%d' font-size='13' fill='#3f2c26' text-anchor='middle' %s>current 1.8 m</text>" % (105 + slot, gy + 40, FONT)
+    for i, (key, name, kind, fn) in enumerate(CONCEPTS):
+        x = 105 + slot * (i + 2)
+        _, H = fn(0)
+        b += char(fn, 0.5, x, gy, S)
+        b += "<text x='%d' y='%d' font-size='15' fill='#3f2c26' text-anchor='middle' %s>%d. %s</text>" % (x, gy + 36, FONT, i + 1, name)
+        b += "<text x='%d' y='%d' font-size='11' fill='#5a4636' text-anchor='middle' %s>%s · %.2f m</text>" % (x, gy + 54, FONT, kind, H)
+    b += "<text x='%d' y='30' font-size='24' fill='#3f2c26' %s>LifeGame character concepts · lineup at one scale</text>" % (60, FONT)
+    write("lineup", W, Hh, b)
+    print("ok")
+
+
+if __name__ == "__main__":
+    main()

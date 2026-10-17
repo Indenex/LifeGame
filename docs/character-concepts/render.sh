@@ -3,6 +3,7 @@
 set -e
 cd "$(dirname "$0")"
 python3 make_concepts.py
+python3 make_round2.py
 CH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome
 for f in out/*.svg; do
   w=$(sed -n 's/.*<svg[^>]* width="\([0-9]*\)".*/\1/p' "$f" | head -1)
