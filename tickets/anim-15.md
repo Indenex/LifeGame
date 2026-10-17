@@ -3,7 +3,7 @@ Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
 Branch: claude/anim-15 (stacked on claude/anim-13, #613)
-PR: (not yet)
+PR: #633
 
 ## Goal
 Sitting (anim-12) feels alive and cosy:
@@ -28,4 +28,4 @@ Sitting (anim-12) feels alive and cosy:
 - (none)
 
 ## Next step
-Push, open the PR (base claude/anim-13), and request a Render C clip: a chibi sitting by a fire for 40 s, then sitting in the open at night.
+Wait for #600 and #613 to merge (retarget each in turn), then send the PM the green sha. Render C clip requested.
