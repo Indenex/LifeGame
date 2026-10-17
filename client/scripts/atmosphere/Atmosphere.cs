@@ -125,6 +125,7 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyFrost();
         ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
@@ -329,6 +330,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
@@ -464,6 +466,7 @@ public partial class Atmosphere : Node3D
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
+        CapFog();
     }
 
     // The campfires you can hear: louder the closer and the better they burn,
