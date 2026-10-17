@@ -58,7 +58,8 @@ public static class PaintedGround
     // the size they are first asked for, so these sizes are the ones Terrain uses.
     public static void Prewarm()
     {
-        _ = BroadTuft; _ = Twig; _ = GrassMaterial; _ = CardMaterial;
+        for (int i = 0; i < TuftVariants; i++) BroadTufts(i);
+        _ = Twig; _ = GrassMaterial; _ = CardMaterial;
         _ = PropMeshes.Stump; _ = Look.BarkSurface;
         for (int i = 0; i < 4; i++) Card(MushroomCards + i, 0.22f);
         for (int i = 0; i < 3; i++) Card(CloverCards + i, 0.3f);
@@ -72,29 +73,32 @@ public static class PaintedGround
 
     public static Mesh Twig => twig ??= BuildTwig();
 
-    // A square metre of the restyled grass: 64 blades in a jittered 8 x 8 grid like
-    // today's 100, but each a broad, arching leaf (full width for the lower half, then
+    // A square metre of the restyled grass: 100 blades in a jittered 10 x 10 grid and
+    // at the same heights as today's (Justin: shorter, denser), but each a broad, arching leaf (full width for the lower half, then
     // a tapered point that bends over) rather than a thin spike, as the pack's tufts
     // are drawn. Each blade's vertex shade varies a little, so neighbours read apart.
-    public static Mesh BroadTuft => broadTuft ??= BuildBroadTuft();
-    static Mesh? broadTuft;
+    public static Mesh BroadTuft => BroadTufts(0);
+    public const int TuftVariants = 3;
+    static readonly Mesh?[] broadTufts = new Mesh?[TuftVariants];
+    public static Mesh BroadTufts(int variant) => broadTufts[variant] ??= BuildBroadTuft(variant);
 
-    static Mesh BuildBroadTuft()
+    static Mesh BuildBroadTuft(int variant)
     {
+        uint v = (uint)variant * 40u;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        const int grid = 8;
+        const int grid = 10;
         for (int gx = 0; gx < grid; gx++)
             for (int gz = 0; gz < grid; gz++)
             {
-                float px = (gx + 0.5f) / grid - 0.5f + (H(gx, gz, 620) - 0.5f) / grid;
-                float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621) - 0.5f) / grid;
-                float angle = H(gx, gz, 622) * Mathf.Pi;
-                float height = 0.34f + H(gx, gz, 623) * 0.34f;
-                float half = 0.035f + H(gx, gz, 624) * 0.025f;
+                float px = (gx + 0.5f) / grid - 0.5f + (H(gx, gz, 620u + v) - 0.5f) / grid;
+                float pz = (gz + 0.5f) / grid - 0.5f + (H(gx, gz, 621u + v) - 0.5f) / grid;
+                float angle = H(gx, gz, 622u + v) * Mathf.Pi;
+                float height = 0.2f + H(gx, gz, 623u + v) * 0.22f;
+                float half = 0.032f + H(gx, gz, 624u + v) * 0.022f;
                 var side = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * half;
-                var lean = new Vector3(H(gx, gz, 625) - 0.5f, 0, H(gx, gz, 626) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627) * 0.16f);
-                var shade = Colors.White.Darkened(H(gx, gz, 628) * 0.32f);
+                var lean = new Vector3(H(gx, gz, 625u + v) - 0.5f, 0, H(gx, gz, 626u + v) - 0.5f).Normalized() * (0.08f + H(gx, gz, 627u + v) * 0.16f);
+                var shade = Colors.White.Darkened(H(gx, gz, 628u + v) * 0.32f);
                 var root = new Vector3(px, -0.02f, pz);
                 var mid = root + lean * 0.35f + Vector3.Up * height * 0.55f;
                 var tip = root + lean + Vector3.Up * height * 0.9f;
