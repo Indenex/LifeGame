@@ -70,7 +70,7 @@ public static partial class Module
     // The nearest free spot to the caller's own standing claim marker, if they have one.
     static (float, float)? OwnClaimSpot(ReducerContext ctx)
     {
-        foreach (var claim in ctx.Db.Claim.Owner.Filter(ctx.Sender))
+        foreach (var claim in ctx.Db.Claim.Owner.Filter(Me(ctx)))
             if (IsStanding(ctx, claim) && FindFreeSpot(ctx, claim.X, claim.Z, 6f) is { } spot) return spot;
         return null;
     }
@@ -129,6 +129,6 @@ public static partial class Module
             if (!s.Complete && s.Stage < 1) continue;
             if (Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, margin)) return false;
         }
-        return !(ClaimAt(ctx, x, z) is { } claim && !HasClaimRights(ctx, claim, ctx.Sender));
+        return !(ClaimAt(ctx, x, z) is { } claim && !HasClaimRights(ctx, claim, Me(ctx)));
     }
 }

@@ -82,7 +82,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var pot = ctx.Db.SimmerPot.Id.Find(potId) ?? throw new Exception("That pot is gone");
-        if (pot.Owner != ctx.Sender)
+        if (pot.Owner != Me(ctx))
             throw new Exception("That isn't your pot");
         RequireReach(pos, pot.X, pot.Z);
         float left = ClayRules.SimmerSeconds((Item)pot.Dish) - SecondsBetween(pot.PutAt, ctx.Timestamp);
@@ -92,10 +92,10 @@ public static partial class Module
         if (ClayRules.KeepsPot((Item)pot.Dish))
         {
             // Tallow is skimmed off the top; the pot comes back empty (ceramics-9).
-            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, Items.RawQuality);
-            AddToInventory(ctx, ctx.Sender, Item.CoilPot, 1, pot.Quality);
+            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.CoilPot, 1, pot.Quality);
         }
         else
-            AddToInventory(ctx, ctx.Sender, (Item)pot.Dish, 1, pot.Quality);
+            AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, pot.Quality);
     }
 }
