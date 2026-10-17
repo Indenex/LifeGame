@@ -13,7 +13,8 @@ Justin: "a sundial item, and when it's built, a little curved time-of-day UI thi
 - Server (D-182): `server/spacetimedb/BuildingSundial.cs` public per-player view `my_sundial` (`MySundial`, rows of `SundialAccess { ClaimId }`): a row for each claim the player owns or belongs to that has a finished sundial inside its radius, or whose town roster has such a claim. The client shows the arc while the view is non-empty. No schema change (a view only).
 - Tests: BuildTest `sundial` (also `both`) builds one with two players in a claim and checks owner and member get a row and a stranger does not; passes locally (43 s). The town path is the same code but is not exercised by a test yet.
 - Model: Modeling's sundial model is merged in.
-- 2026-10-17 11:22: #638 merged (CI run 39027575978 green). Kind 20 is final (PM: Crafting renumbers its devices to 21-23). The town path of `my_sundial` has no test yet.
+- 2026-10-17 11:22: #638 merged (CI run 39027575978 green). Kind 20 is final (PM: Crafting renumbers its devices to 21-23). The town path of `my_sundial` had no test.
+- 2026-10-17 11:50: BuildTest `sundial` now also covers the town path (building-21): B raises a second claim 42-58 m from A's (new `Bot.FindRingSite`), A starts a town and invites B, B signs, and B gets a `my_sundial` row with no membership of A's claim; passes locally (58 s).
 
 - 2026-10-17 11:25: Render requested 02e86586 (Render B): sundial still (--view=sundial) and the arc in game, for Justin; PM asked.
 
@@ -22,4 +23,4 @@ Justin: "a sundial item, and when it's built, a little curved time-of-day UI thi
 - Journal 'Things to try' line sent to the PM: "A flat stone and a stick, set in your claim, will tell the whole claim the hour."
 
 ## Next step
-Optional: a BuildTest check for the town path of `my_sundial` (needs B to raise a second claim within 60 m, A to start a town, invite and B to sign; no second-claim helper exists in BuildTest yet).
+Wait for CI on the town-path test PR, then send the green sha to the PM.
