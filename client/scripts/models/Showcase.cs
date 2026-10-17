@@ -659,23 +659,25 @@ public partial class Showcase : Node3D
         Card("sone_31", new Vector3(-1.2f, 0, 0.4f), 0.25f);
         // Ground cover: the game's blade grass (Justin wants it back, restyled; D-232),
         // in the pack's olive-yellow, with only a few painted accents.
-        var terrainType = typeof(Terrain);
-        terrainType.GetMethod("EnsureMeshes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, null);
-        var tuft = (Mesh)terrainType.GetField("tuftMesh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+        // Environment's restyled painted blade grass (PaintedGround): broad arching
+        // tufts of about a square metre each, in banded tones.
+        PaintedGround.Prewarm();
+        RenderingServer.GlobalShaderParameterSet("player_position", Vector3.Zero);
         var spots = new List<Transform3D>();
-        for (int i = 0; i < 14000; i++)
-        {
-            var at = new Vector3(rng.RandfRange(-14f, 14f), 0, rng.RandfRange(-16f, 6f));
-            if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
-            spots.Add(new Transform3D(new Basis(Vector3.Up, rng.Randf() * Mathf.Tau).Scaled(Vector3.One * (0.8f + rng.Randf() * 0.5f)), at));
-        }
-        var blades = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = tuft, InstanceCount = spots.Count };
+        for (float x = -14f; x < 14f; x += 0.7f)
+            for (float z = -16f; z < 6f; z += 0.7f)
+            {
+                var at = new Vector3(x + rng.RandfRange(-0.35f, 0.35f), 0, z + rng.RandfRange(-0.35f, 0.35f));
+                if (Mathf.Abs(at.X - 0.5f) < 2.6f && Mathf.Abs(at.Z + 4.5f) < 2.2f) continue;
+                spots.Add(new Transform3D(new Basis(Vector3.Up, rng.Randf() * Mathf.Tau).Scaled(Vector3.One * (0.85f + rng.Randf() * 0.35f)), at));
+            }
+        var blades = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = PaintedGround.BroadTuft, InstanceCount = spots.Count };
         for (int i = 0; i < spots.Count; i++)
         {
             blades.SetInstanceTransform(i, spots[i]);
-            blades.SetInstanceColor(i, new Color(0.40f, 0.49f, 0.2f).Lerp(new Color(0.58f, 0.63f, 0.28f), rng.Randf()));
+            blades.SetInstanceColor(i, PaintedGround.Grass(new Color(0.47f, 0.58f, 0.2f), rng.Randf()));
         }
-        AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = Look.GrassTufts, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        AddChild(new MultiMeshInstance3D { Multimesh = blades, MaterialOverride = PaintedGround.GrassMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         string[] extras = { "Forest_small_flower_01", "Forest_small_flower_02", "Forest_small_flower_03", "Forest_small_mushroom_01", "Forest_small_mushroom_03", "Forest_small_fern_01" };
         for (int i = 0; i < 90; i++)
         {
