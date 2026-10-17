@@ -78,6 +78,8 @@ public partial class CraftingUi : CanvasLayer
         panel.GrowHorizontal = Control.GrowDirection.Both;
         panel.GrowVertical = Control.GrowDirection.Both;
         root.AddChild(panel);
+        // Another centre window opening closes this one (D-283); a minigame in progress keeps going.
+        Panels.Centre(this, () => { panel.Visible = false; reopenAfterMinigame = false; grid.ClearSearch(); });
         progressPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         progressPanel.GrowHorizontal = Control.GrowDirection.Both;
         progressPanel.Position = new Vector2(-150, -130);
@@ -119,6 +121,7 @@ public partial class CraftingUi : CanvasLayer
     // it steps that many categories along).
     public void Open(int onTier)
     {
+        Panels.Opening(this);
         panel.Visible = true;
         Refresh();
         grid.NextCategory(onTier);
@@ -129,6 +132,7 @@ public partial class CraftingUi : CanvasLayer
     public void Toggle()
     {
         if (minigame != null) return;
+        if (!panel.Visible) Panels.Opening(this);
         panel.Visible = !panel.Visible;
         if (!panel.Visible) grid.ClearSearch();
         Refresh();

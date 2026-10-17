@@ -55,12 +55,14 @@ public partial class BuildMenu : CanvasLayer
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
+        Panels.Centre(this, Close);
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-buildmenu")))
             GetTree().CreateTimer(1.5).Timeout += Open;
     }
 
     public void Open()
     {
+        Panels.Opening(this);
         panel.Visible = true;
         if (category == "") category = Order.First(c => Kinds(c).Any());
         Refresh();

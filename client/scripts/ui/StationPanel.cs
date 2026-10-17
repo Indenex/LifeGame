@@ -37,6 +37,7 @@ public partial class StationPanel : CanvasLayer
         window = MakeWindow();
         window.Visible = false;
         AddChild(window);
+        Panels.Centre(this, () => { if (IsOpen) Close(); });
         Use.Register(new UseHandler { Id = "ui.station", Priority = 30, Find = FindUse });
     }
 
@@ -59,6 +60,7 @@ public partial class StationPanel : CanvasLayer
 
     public void Open(Structure at)
     {
+        Panels.Opening(this);
         station = at;
         shown = "";
         window.Visible = true;

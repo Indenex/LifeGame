@@ -65,6 +65,7 @@ public partial class EquipmentPanel : CanvasLayer
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
+        Panels.Centre(this, Close);
 
         // --screenshot-equip opens the panel with the first wearable on and the rest to
         // hand; =feet picks the feet slot.
@@ -82,6 +83,7 @@ public partial class EquipmentPanel : CanvasLayer
 
     public void Open()
     {
+        Panels.Opening(this);
         panel.Visible = true;
         shown = "";
         Refresh();
