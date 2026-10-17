@@ -162,28 +162,65 @@ public static class MaterialLook
     {
         var material = new ShaderMaterial { Shader = new Shader { Code = CardPineCode } };
         material.SetShaderParameter("card", card);
+        material.SetShaderParameter("brush", Brush);
         return material;
     }
+
+    // A tiling noise of soft blobs, read in world space as brush dabs: where it is
+    // high, light lands as a dab even across neighbouring boughs, and it breaks the
+    // edges of the light bands so they look painted rather than smooth.
+    static NoiseTexture2D Brush => brush ??= new NoiseTexture2D
+    {
+        Width = 256, Height = 256, Seamless = true, GenerateMipmaps = true,
+        Noise = new FastNoiseLite { NoiseType = FastNoiseLite.NoiseTypeEnum.SimplexSmooth, Frequency = 0.02f, FractalOctaves = 3, FractalGain = 0.45f, Seed = 7 },
+    };
+    static NoiseTexture2D? brush;
 
     const string CardPineCode = """
         shader_type spatial;
         render_mode cull_disabled;
         uniform sampler2D card : source_color, filter_linear_mipmap, repeat_disable;
+        uniform sampler2D brush : filter_linear_mipmap, repeat_enable;
         // Colours picked from the card.
-        uniform vec3 shade_col : source_color = vec3(0.16, 0.19, 0.13);
-        uniform vec3 base_col : source_color = vec3(0.23, 0.29, 0.19);
-        uniform vec3 lit_col : source_color = vec3(0.34, 0.39, 0.25);
+        uniform vec3 shade_col : source_color = vec3(0.16, 0.2, 0.14);
+        uniform vec3 base_col : source_color = vec3(0.23, 0.3, 0.2);
+        uniform vec3 lit_col : source_color = vec3(0.33, 0.4, 0.26);
         uniform vec3 ink : source_color = vec3(0.1, 0.11, 0.08);
         uniform vec3 bark_dark : source_color = vec3(0.24, 0.16, 0.19);
         uniform vec3 bark_lit : source_color = vec3(0.39, 0.31, 0.27);
+        // Shade leans violet, as a painter's would; lit tips lean warm.
+        uniform vec3 shade_tint : source_color = vec3(0.72, 0.7, 0.9);
+        uniform vec3 warm_tint : source_color = vec3(1.0, 0.96, 0.86);
+        // How many metres one repeat of the brush noise spans.
+        uniform float brush_size = 3.5;
+        // How much the light follows the whole tree's cone instead of each bough,
+        // so light and shade fall in big painted shapes across the tree.
+        uniform float cone_light = 0.75;
         varying vec3 obj;
+        varying vec3 world_pos;
         varying vec3 world_n;
+        varying float dab;
+        varying vec3 cone_n;
+
+        // The brush noise at a world point, read on two planes so it sticks to the
+        // tree from every side; stretched a little sideways, like short strokes.
+        float brush_at(vec3 p) {
+            vec2 a = vec2(p.x * 0.8, p.y * 1.3) / brush_size;
+            vec2 b = vec2(p.z * 0.8, p.y * 1.3) / brush_size + 0.37;
+            return mix(texture(brush, a).r, texture(brush, b).r, 0.5);
+        }
+
         void vertex() {
             obj = VERTEX;
+            world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
             world_n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+            // The cone's own normal at this point: out from the trunk and a little up.
+            vec3 out_dir = length(VERTEX.xz) > 1e-4 ? normalize(vec3(VERTEX.x, 0.0, VERTEX.z)) : vec3(0.0, 0.0, 1.0);
+            cone_n = normalize((MODELVIEW_MATRIX * vec4(out_dir + vec3(0.0, 0.45, 0.0), 0.0)).xyz);
         }
         void fragment() {
             vec3 col;
+            dab = brush_at(world_pos);
             if (UV2.x < 0.5) {
                 // Trunk: the card's purple-brown bark in long vertical strokes.
                 float ang = atan(obj.x, obj.z);
@@ -193,18 +230,21 @@ public static class MaterialLook
                 col = shade_col * COLOR.rgb;
             } else {
                 float across = abs(UV.x), along = UV.y, rnd = UV2.y;
-                // The lighter patch: on the upper side, along the bough's middle, its
-                // edge wavering like a brush stroke.
-                float edge = 0.62 + 0.14 * sin(along * 7.0 + rnd * 40.0) + 0.12 * rnd;
-                float patch = (1.0 - smoothstep(edge - 0.06, edge + 0.06, across))
-                    * smoothstep(0.2 + 0.12 * rnd, 0.3 + 0.12 * rnd, along)
-                    * (1.0 - smoothstep(0.8, 0.88, along));
-                patch *= FRONT_FACING ? smoothstep(0.1, 0.35, world_n.y) : 0.0;
+                // The lighter patch on each bough's upper middle, its edge wavering
+                // with the brush, joined by dabs that run across neighbouring boughs.
+                float edge = 0.55 + 0.25 * (dab - 0.5) + 0.12 * rnd;
+                float patch = (1.0 - smoothstep(edge - 0.04, edge + 0.04, across))
+                    * smoothstep(0.2 + 0.12 * rnd, 0.28 + 0.12 * rnd, along)
+                    * (1.0 - smoothstep(0.8, 0.86, along));
+                float dabs = smoothstep(0.6, 0.63, dab) * smoothstep(0.1, 0.3, along);
+                patch = max(patch * 0.85, dabs);
+                patch *= FRONT_FACING ? smoothstep(0.05, 0.3, world_n.y) : 0.0;
                 col = mix(base_col, lit_col, patch);
-                // Darker toward its sides, so the gaps between lobes read as shadow.
-                col = mix(col, shade_col, 0.7 * smoothstep(0.7, 0.98, across) * (1.0 - patch));
-                // Darker toward the trunk, under the tier above.
-                col = mix(shade_col, col, smoothstep(0.18, 0.45, along));
+                // Warm light on the tips.
+                col *= mix(vec3(1.0), warm_tint, smoothstep(0.7, 0.9, along) * patch);
+                // Darker toward the sides, and toward the trunk under the tier above.
+                col = mix(col, shade_col, 0.65 * smoothstep(0.72, 0.98, across) * (1.0 - patch));
+                col = mix(shade_col, col, smoothstep(0.16, 0.4, along + (dab - 0.5) * 0.15));
                 if (!FRONT_FACING) col = mix(col, shade_col, 0.6);
                 // A soft ink line round the edge and the points.
                 float line = smoothstep(0.9, 1.0, across) * smoothstep(0.7, 0.9, along) * 0.5 + smoothstep(0.9, 1.0, along);
@@ -212,13 +252,23 @@ public static class MaterialLook
                 col *= COLOR.rgb;
             }
             ALBEDO = col;
+            if (UV2.x > 0.5) NORMAL = normalize(mix(FRONT_FACING ? NORMAL : -NORMAL, cone_n, cone_light));
             ROUGHNESS = 0.95;
-            SPECULAR = 0.05;
+            SPECULAR = 0.0;
         }
+        // Light in painted steps (Atmosphere's rules): the wrapped light times the
+        // shadow is quantised into shade, mid and lit, with edges broken by the
+        // brush; the light's own colour and strength stay smooth. Shade leans
+        // violet. Ambient is left to the scene.
         void light() {
-            float l = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
-            float band = 0.3 + 0.22 * smoothstep(0.45, 0.6, l);
-            DIFFUSE_LIGHT += LIGHT_COLOR * band / PI;
+            float wrapped = clamp(dot(NORMAL, LIGHT) * 0.6 + 0.4, 0.0, 1.0);
+            float l = wrapped * ATTENUATION + (dab - 0.5) * 0.22;
+            float soft = 0.025;
+            float mid = smoothstep(0.3 - soft, 0.3 + soft, l);
+            float lit = smoothstep(0.62 - soft, 0.62 + soft, l);
+            float band = 0.32 + 0.2 * mid + 0.22 * lit;
+            vec3 tone = mix(shade_tint, vec3(1.0), mid);
+            DIFFUSE_LIGHT += LIGHT_COLOR * tone * band / PI;
         }
         """;
 
