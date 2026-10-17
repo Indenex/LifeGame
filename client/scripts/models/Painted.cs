@@ -71,8 +71,10 @@ public static class Painted
     static ShaderMaterial MakeRock()
     {
         var twin = (ShaderMaterial)Of(Look.RockSurface).Duplicate();
-        twin.SetShaderParameter("base_paint", new Color(0.6f, 0.6f, 0.65f));
-        twin.SetShaderParameter("base_mix", 0.5f);
+        // A mid stone grey, a touch warm (painted-16): once D-319 took the relief off,
+        // the old pale grey (0.6) read near white in sun on the grass.
+        twin.SetShaderParameter("base_paint", new Color(0.47f, 0.46f, 0.47f));
+        twin.SetShaderParameter("base_mix", 0.6f);
         twin.SetShaderParameter("shade_tint", new Color(0.56f, 0.53f, 0.8f));
         twin.SetShaderParameter("crevice", 0.22f);
         twin.SetShaderParameter("lit_dabs", 0.08f);
