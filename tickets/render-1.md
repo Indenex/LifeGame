@@ -172,6 +172,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:22: claims-27 (#839, bd7d3c96): strike at 2.5 m ("Too far away"), struck from the left (red flush), Town panel (seedtown patch); after #834. Puppet `act` now takes {target}.
 
+- 2026-10-17 15:30: bugfix-60..63 cabin (#840 eaf095c2 vs main), Justin's bug report: night with a fire inside from his angle, day look through the door; new patch cabin.sh (SeedCabin reducer). Front of the queue with ui-70.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

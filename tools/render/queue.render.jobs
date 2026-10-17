@@ -1,5 +1,9 @@
 # The one Render lane's queue (render-1, 2026-10-17 after the account move). Older queue files are history.
 env35-pond tools/render/render.sh env35-pond 47bafb11 "--life=1 --debug-position=-44,-20 --camera-zoom=-1 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --screenshot-delay=150" "--life=1 --debug-position=-44,-20 --render-cam=4,1.4,0,0.4 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --screenshot-delay=150" "--life=1 --debug-position=-44,-20 --render-cam=4,1.4,180,0.4 --time-of-day=0.5 --season=0.25 --rain=0 --cloud=0.15 --wind=0.1 --view-radius=3 --screenshot-delay=150"
+cabin-after-night env RENDER_PATCH=tools/render/patches/cabin.sh tools/render/scene.sh bugfix-60-63-after-night eaf095c2 tools/render/scenes/bugfix-60-cabin-night.txt
+cabin-before-night env RENDER_PATCH=tools/render/patches/cabin.sh tools/render/scene.sh bugfix-60-63-before-night 5064a254 tools/render/scenes/bugfix-60-cabin-night.txt
+cabin-after-day env RENDER_PATCH=tools/render/patches/cabin.sh tools/render/scene.sh bugfix-60-63-after-day eaf095c2 tools/render/scenes/bugfix-60-cabin-day.txt
+cabin-before-day env RENDER_PATCH=tools/render/patches/cabin.sh tools/render/scene.sh bugfix-60-63-before-day 5064a254 tools/render/scenes/bugfix-60-cabin-day.txt
 bugfix-58-after env RENDER_PATCH=tools/render/patches/ghost.sh tools/render/scene.sh bugfix-58-after 3166cf99 tools/render/scenes/bugfix-58-rings.txt
 bugfix-58-before env RENDER_PATCH=tools/render/patches/ghost.sh tools/render/scene.sh bugfix-58-before 5064a254 tools/render/scenes/bugfix-58-rings.txt
 mushrooms tools/render/scene.sh survival-35 c7a1c4eb tools/render/scenes/survival-35-mushrooms.txt

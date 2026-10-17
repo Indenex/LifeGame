@@ -1,0 +1,14 @@
+# bugfix-60..63 (#840): a finished log cabin (door toward the game camera, yaw 45) with a fire
+# burning inside, laid by the SeedCabin render reducer. Run with RENDER_PATCH=tools/render/patches/cabin.sh.
+# night: the player stands ~5 m from the door, as in Justin's bug report shot; day: the player
+# stands inside, the camera looks in through the doorway at the floor.
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.1 --season=0.05 --debug-position=25.05,15.05 --render-cam=4.2,1.7,0,0.2
+name B
+find
+wait 30
+act SeedCabin 25.05 15.05 45
+warp 40 40
+wait 40
+snap
+wait 8
+snap

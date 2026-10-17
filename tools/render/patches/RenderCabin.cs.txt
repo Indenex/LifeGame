@@ -1,0 +1,24 @@
+using SpacetimeDB;
+
+// Render-tree-only (never committed): SeedCabin lays a finished log cabin with a burning fire
+// inside, for stills (bugfix-60..63), since a cabin is claim-only and owner SQL can't write
+// Timestamp or enum columns. yaw in degrees; the door is on the cabin's +Z side.
+public static partial class Module
+{
+    [SpacetimeDB.Reducer]
+    public static void SeedCabin(ReducerContext ctx, float x, float z, float yaw)
+    {
+        ctx.Db.Structure.Insert(new Structure
+        {
+            Id = 0, Kind = StructureKind.LogCabin, X = x, Z = z, Yaw = yaw * System.MathF.PI / 180f,
+            ChunkX = (int)System.MathF.Floor(x / 16f), ChunkZ = (int)System.MathF.Floor(z / 16f),
+            Owner = ctx.Sender, Stage = 4, Needs = new System.Collections.Generic.List<MaterialNeed>(),
+            Complete = true, Builders = 1, PlacedAt = ctx.Timestamp,
+        });
+        ctx.Db.Fire.Insert(new Fire
+        {
+            Id = 0, X = x, Z = z, ChunkX = (int)System.MathF.Floor(x / 16f), ChunkZ = (int)System.MathF.Floor(z / 16f),
+            LitBy = 0, LitAt = ctx.Timestamp, FuelUntil = ctx.Timestamp + new TimeDuration(3L * 3600 * 1_000_000), FuelCapSeconds = 3 * 3600,
+        });
+    }
+}
