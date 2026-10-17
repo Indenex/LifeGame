@@ -31,6 +31,7 @@ public partial class OptionsPage : Control
     Button lightRays = null!;
     Button softGlow = null!, vignette = null!;
     Button shadows = null!;
+    Button ambientLife = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -156,6 +157,14 @@ public partial class OptionsPage : Control
         });
         shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(shadows);
+        // Butterflies, pollen and fireflies (Environment, env-30); Off for slower PCs.
+        ambientLife = ControlsPage.TextButton(LifeText(), () =>
+        {
+            AmbientLife.Setting = (AmbientLife.Setting + 1) % AmbientLife.Names.Length;
+            ambientLife.Text = LifeText();
+        });
+        ambientLife.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(ambientLife);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -177,6 +186,7 @@ public partial class OptionsPage : Control
     static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
     static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
     static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
+    static string LifeText() => $"Ambient life: {AmbientLife.Names[AmbientLife.Setting]}";
 
     static string GrassText() => $"Grass: {GrassDetail.Names[GrassDetail.Setting]}";
 

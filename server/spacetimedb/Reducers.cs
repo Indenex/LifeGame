@@ -42,57 +42,24 @@ public static partial class Module
         EnsureWorldClock(ctx);
         EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
-        if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
+        BackfillCharacter(ctx, ctx.Sender);
+        // A login with no character yet gets its first, named for now; it picks a real name
+        // and look at the creator. A login with characters waits at the menu, unless its
+        // character is still in the world from a connection that was lost.
+        if (!ctx.Db.Character.Login.Filter(ctx.Sender).Any())
         {
-            ctx.Db.Player.Identity.Update(existing with { Online = true });
-            ForgetSeen(ctx, existing.PlayerId);
-            if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
-                ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
-            SurvivalConnected(ctx, existing with { Online = true });
-            EnsureHealth(ctx, existing.PlayerId);
-            return;
+            var first = MakeCharacter(ctx, ctx.Sender, ctx.Sender, $"Wanderer-{ctx.Rng.Next(1000, 10000)}");
+            SetActive(ctx, ctx.Sender, first.Identity);
+            EnterWorld(ctx, first);
         }
-
-        var player = ctx.Db.Player.Insert(new Player
-        {
-            Identity = ctx.Sender,
-            PlayerId = 0,
-            Name = $"Wanderer-{ctx.Rng.Next(1000, 10000)}",
-            Online = true,
-        });
-
-        // New players wake up naked near the middle of the seeded area.
-        float x = (float)(ctx.Rng.NextDouble() * 16 - 8);
-        float z = (float)(ctx.Rng.NextDouble() * 16 - 8);
-        ctx.Db.PlayerPos.Insert(new PlayerPos
-        {
-            PlayerId = player.PlayerId,
-            X = x,
-            Z = z,
-            Heading = 0,
-            ChunkX = (short)World.ChunkOf(x),
-            ChunkZ = (short)World.ChunkOf(z),
-        });
-        ctx.Db.PlayerState.Insert(new PlayerState
-        {
-            PlayerId = player.PlayerId,
-            LastMoveAt = ctx.Timestamp,
-            LastActionAt = ctx.Timestamp,
-        });
-        SurvivalConnected(ctx, player);
-        EnsureHealth(ctx, player.PlayerId);
+        else if (ActivePlayer(ctx, ctx.Sender) is { Online: true } resumed)
+            EnterWorld(ctx, resumed);
     }
 
     [SpacetimeDB.Reducer(ReducerKind.ClientDisconnected)]
     public static void PlayerDisconnected(ReducerContext ctx)
     {
-        if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } player)
-        {
-            ctx.Db.Player.Identity.Update(player with { Online = false });
-            ForgetSeen(ctx, player.PlayerId);
-            SurvivalDisconnected(ctx, player);
-            StanceDisconnected(ctx, player);
-        }
+        if (ActivePlayer(ctx, ctx.Sender) is { } player) LeaveWorld(ctx, player);
     }
 
     [SpacetimeDB.Reducer]
@@ -103,11 +70,9 @@ public static partial class Module
         name = Names.Normalize(name);
         if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
-        string key = Names.Key(name);
-        foreach (var other in ctx.Db.Player.Iter())
-            if (other.PlayerId != player.PlayerId && Names.Key(other.Name) == key)
-                throw new Exception("That name is taken");
+        RequireNameFree(ctx, name, player.PlayerId);
         ctx.Db.Player.Identity.Update(player with { Name = name });
+        if (ctx.Db.Character.Key.Find(player.Identity) is { } character) ctx.Db.Character.Key.Update(character with { Name = name });
     }
 
     // How much walking a player has banked (World.MoveAllowance). Private.
@@ -137,7 +102,7 @@ public static partial class Module
         bool flyingNow = IsFlyingAdmin(ctx, player.PlayerId);
         if (!flyingNow)
         {
-            float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
+            float speed = World.MaxSpeed * CarryWalkFactor(ctx, Me(ctx));
             var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
             float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
             float dx = x - fromX, dz = z - fromZ;
@@ -243,7 +208,7 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
+        AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
         NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
@@ -252,7 +217,7 @@ public static partial class Module
     public static void Drop(ReducerContext ctx, ushort item, byte quality)
     {
         var pos = RequirePos(ctx, RequirePlayer(ctx));
-        var stack = FindStack(ctx, ctx.Sender, (Item)item, quality) ?? throw new Exception("You are not carrying that");
+        var stack = FindStack(ctx, Me(ctx), (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
         var dropped = ctx.Db.WorldItem.Insert(new WorldItem
@@ -320,8 +285,9 @@ public static partial class Module
         if (!ctx.SenderAuth.IsInternal) throw new Exception("Only the server runs this");
     }
 
+    // The character the caller is playing; refused at the character menu (not in the world).
     static Player RequirePlayer(ReducerContext ctx) =>
-        ctx.Db.Player.Identity.Find(ctx.Sender) ?? throw new Exception("No player for this connection");
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { Online: true } p ? p : throw new Exception("No player for this connection");
 
     static PlayerPos RequirePos(ReducerContext ctx, Player player) =>
         ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) ?? throw new Exception("No position");

@@ -10,16 +10,16 @@ public static partial class Module
 {
     // Whether the caller may open or shut a gate at this structure's spot.
     static bool ClaimGateAllows(ReducerContext ctx, Structure gate) =>
-        ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, ctx.Sender);
+        ClaimAt(ctx, gate.X, gate.Z) is not { } claim || HasClaimRights(ctx, claim, Me(ctx));
 
     // Barring a gate on a claim: its owner and members, or the town's Gatekeeper (claims-21). Neighbours who
     // only signed the roster can still open and shut it (ClaimGateAllows) but not bar it.
     static bool ClaimGateLockAllows(ReducerContext ctx, Claim claim)
     {
-        bool owner = claim.Owner == ctx.Sender;
-        bool banned = BannedFromClaim(ctx, claim, ctx.Sender);
-        bool member = ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).Any(m => m.Member == ctx.Sender);
-        return Social.MayBarGate(owner, member, IsTownmate(ctx, claim, ctx.Sender), TownGateKeeperMay(ctx, claim), banned);
+        bool owner = claim.Owner == Me(ctx);
+        bool banned = BannedFromClaim(ctx, claim, Me(ctx));
+        bool member = ctx.Db.ClaimMember.ClaimId.Filter(claim.Id).Any(m => m.Member == Me(ctx));
+        return Social.MayBarGate(owner, member, IsTownmate(ctx, claim, Me(ctx)), TownGateKeeperMay(ctx, claim), banned);
     }
 
     // Declared in BuildingStorage.cs (building-9, #202).

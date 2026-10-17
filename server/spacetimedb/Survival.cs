@@ -74,7 +74,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyVitals", Public = true)]
     public static List<Vitals> MyVitals(ViewContext ctx) =>
-        ctx.Db.Vitals.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.Vitals.Owner.Filter(Me(ctx)).ToList();
 
     // Berry bushes. A bush is ripe from RipeAt on, so regrowth needs no timer.
     [SpacetimeDB.Table(Accessor = "ForageBush", Public = true)]
@@ -156,7 +156,7 @@ public static partial class Module
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
-            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
+            AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear);
         }
         else
             Take(ctx, (Item)item, 1);
@@ -202,7 +202,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         RemoveFromStack(ctx, stack, 1);
-        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
+        AddToInventory(ctx, Me(ctx), empty, 1, stack.Quality, stack.Wear);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 
@@ -258,7 +258,7 @@ public static partial class Module
         var state = RequireCooldown(ctx, player);
 
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
+        AddToInventory(ctx, Me(ctx), Item.Berries, 3, Items.RawQuality);
         NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, Item.Berries);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
@@ -510,7 +510,7 @@ public static partial class Module
     // Any stack of an item the sender carries, whatever its quality.
     static InventoryItem? AnyStack(ReducerContext ctx, Item item)
     {
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)))
             return row;
         return null;
     }
