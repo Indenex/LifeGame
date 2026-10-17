@@ -32,9 +32,11 @@ Painted colour bands, not photoreal. Measure the cost, add a Graphics setting fo
 
 - 2026-10-17 04:45: floating leaves in the shader. A drifting cell grid of pointed ovals near the banks (fading by depth over 0.5 to 4 m): many and turned in autumn, a few green in summer, none when it freezes. They sit on top of the reflections. Environment (env-21, claude/environment-water-edges) keeps its damp shore band and leaves foam and edge alpha to the water; I told them the mean stays at WaterLevel.
 
+- 2026-10-17 05:40: stream flow. A 64 m flow map round the player, 1 m per texel, rebuilt every 8 m: direction is along the stream line (perpendicular to the gradient of Land.StreamDistance), downstream is +z, and strength fades from 4 to 11 m off the line. The shader slides the fine ripples, floating leaves and pale foam streaks downstream with a two-phase flow cycle, and running water is a little rougher. Environment confirmed: streams every ~300 m, the first ~66 m west of spawn (x ≈ -48…-41 at z=10); wet sand stays theirs.
+
 ## Open questions / blockers
 - Render C: before/after clip and GPU cost (`--gpu-bench`, which is on the atmosphere-29 branch only; until then, frame time).
 - Environment: their water-edge work. The shore foam and fade now come from the depth behind the water, so the edges need no special mesh.
 
 ## Next step
-Wait for #517 CI and Render C's before/after clip (requested 04:35). Tune from it, then take it out of draft. Next piece: stream flow, if Environment confirms there are streams (only ponds so far).
+Wait for #517 CI and Render C's before/after clip (requested 04:35). Tune from it, then take it out of draft. Every item on the PM's list is now built.

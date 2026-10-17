@@ -35,6 +35,13 @@ public partial class Atmosphere
         ExtraCullMargin = 2f,
     };
     readonly WaterRipples waterRipples = new();
+
+    // The streams' flow round the player: 64 m at a metre a texel, rebuilt every 8 m.
+    const int FlowRes = 64;
+    const float FlowSize = 64f;
+    readonly Image flowImage = Image.CreateEmpty(FlowRes, FlowRes, false, Image.Format.Rgba8);
+    readonly ImageTexture flowTexture = new();
+    Vector2 flowOrigin = new(float.MaxValue, 0f);
     Color waterSkyTop = new(0.35f, 0.55f, 0.8f), waterSkyHorizon = new(0.7f, 0.78f, 0.82f);
     Vector3 waterSunDir = Vector3.Up;
 
@@ -53,6 +60,8 @@ public partial class Atmosphere
     {
         nearWater.GlobalPosition = new Vector3(Mathf.Snapped(focus.X, NearSpacing), World.WaterLevel, Mathf.Snapped(focus.Z, NearSpacing));
         waterRipples.Tick(dt, focus, rainAmount);
+        var flowWant = new Vector2(Mathf.Round(focus.X) - FlowSize / 2f, Mathf.Round(focus.Z) - FlowSize / 2f);
+        if (flowWant.DistanceTo(flowOrigin) > 8f) RebuildFlow(flowWant);
 
         bool day = waterSunDir.Y > -0.05f;
         RenderingServer.GlobalShaderParameterSet(WaterLook.SkyTop, ToVec(waterSkyTop));
@@ -61,6 +70,40 @@ public partial class Atmosphere
         RenderingServer.GlobalShaderParameterSet(WaterLook.SunColor, ToVec(sun.LightColor) * (sun.Visible ? sun.LightEnergy : 0f));
         RenderingServer.GlobalShaderParameterSet(WaterLook.Ambient, ToVec(env.AmbientLightColor) * env.AmbientLightEnergy);
         RenderingServer.GlobalShaderParameterSet(WaterLook.ReflectSteps, ReflectionSteps[WaterReflections]);
+    }
+
+    // Which way the streams run near the player. A stream runs along its line, across
+    // the slope of the distance to it; downstream is taken as south (+z) everywhere,
+    // strongest mid-channel and gone by the edge of its water.
+    void RebuildFlow(Vector2 origin)
+    {
+        flowOrigin = origin;
+        bool any = false;
+        for (int j = 0; j < FlowRes; j++)
+            for (int i = 0; i < FlowRes; i++)
+            {
+                int x = (int)origin.X + i, z = (int)origin.Y + j;
+                float d = Land.StreamDistance(x, z);
+                var c = new Color(0.5f, 0.5f, 0f, 1f);
+                if (d < 12f)
+                {
+                    var g = new Vector2(Land.StreamDistance(x + 1, z) - Land.StreamDistance(x - 1, z),
+                                        Land.StreamDistance(x, z + 1) - Land.StreamDistance(x, z - 1));
+                    var along = new Vector2(-g.Y, g.X);
+                    if (along.LengthSquared() > 1e-6f)
+                    {
+                        along = along.Normalized();
+                        if (along.Y < 0f) along = -along;
+                        float strength = 1f - Mathf.SmoothStep(4f, 11f, d);
+                        c = new Color(0.5f + 0.5f * along.X * strength, 0.5f + 0.5f * along.Y * strength, 0f, 1f);
+                        any = true;
+                    }
+                }
+                flowImage.SetPixel(i, j, c);
+            }
+        flowTexture.SetImage(flowImage);
+        RenderingServer.GlobalShaderParameterSet(WaterLook.Flow, flowTexture);
+        RenderingServer.GlobalShaderParameterSet(WaterLook.FlowRect, new Vector4(origin.X - 0.5f, origin.Y - 0.5f, FlowSize, any ? 1f : 0f));
     }
 
     static Vector3 ToVec(Color c) => new(c.R, c.G, c.B);

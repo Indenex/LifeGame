@@ -12,7 +12,9 @@ namespace LifeGame;
 //   the screen, softened, falling back to the sky's own colours, stronger at a glance;
 // - the sun's glint as a crisp painted shape rather than a smeared highlight;
 // - a few leaves floating near the banks, drifting with the wind: many in autumn,
-//   turned gold and red, a stray green one in summer, none under winter ice.
+//   turned gold and red, a stray green one in summer, none under winter ice;
+// - streams that run: their ripples, leaves and a few pale streaks of foam slide
+//   downstream along the channel (a flow map round the player, AtmosphereWaterSurface).
 // The far plane uses the same shader without the waves and gives way to the near mesh
 // inside near_radius, so the two never overlap.
 public static class WaterLook
@@ -23,7 +25,8 @@ public static class WaterLook
     // simulation's texture and rectangle (x, z of its corner, size in metres, 1 when on).
     public static readonly StringName SkyTop = "water_sky_top", SkyHorizon = "water_sky_horizon",
         SunDir = "water_sun_dir", SunColor = "water_sun_color", Ambient = "water_ambient",
-        ReflectSteps = "water_reflect_steps", Sim = "water_sim", SimRect = "water_sim_rect";
+        ReflectSteps = "water_reflect_steps", Sim = "water_sim", SimRect = "water_sim_rect",
+        Flow = "water_flow", FlowRect = "water_flow_rect";
 
     // The near mesh reaches this far from the player; the far plane takes over beyond.
     public const float NearRadius = 44f;
@@ -49,6 +52,10 @@ public static class WaterLook
         blank.Fill(new Color(0.5f, 0.5f, 0f, 1f));
         Add(Sim, RenderingServer.GlobalShaderParameterType.Sampler2D, ImageTexture.CreateFromImage(blank));
         Add(SimRect, RenderingServer.GlobalShaderParameterType.Vec4, new Vector4(0f, 0f, 1f, 0f));
+        var still = Image.CreateEmpty(1, 1, false, Image.Format.Rgba8);
+        still.Fill(new Color(0.5f, 0.5f, 0f, 1f));
+        Add(Flow, RenderingServer.GlobalShaderParameterType.Sampler2D, ImageTexture.CreateFromImage(still));
+        Add(FlowRect, RenderingServer.GlobalShaderParameterType.Vec4, new Vector4(0f, 0f, 1f, 0f));
     }
 
     // Look.EnsureWeatherGlobals must have run first (Look.WaterSurface does that).
@@ -92,6 +99,8 @@ public static class WaterLook
         global uniform float water_reflect_steps;
         global uniform sampler2D water_sim : filter_linear, repeat_disable;
         global uniform vec4 water_sim_rect;
+        global uniform sampler2D water_flow : filter_linear, repeat_disable;
+        global uniform vec4 water_flow_rect;
         global uniform float season_autumn;
         global uniform float season_warmth;
 
@@ -114,6 +123,30 @@ public static class WaterLook
             return sin(dot(p, vec2(2.3, 1.1)) * 2.1 + t * 2.6) * 0.5
                  + sin(dot(p, vec2(-1.2, 2.4)) * 3.3 + t * 3.1) * 0.3
                  + sin(dot(p, vec2(1.9, -2.2)) * 5.1 + t * 3.9) * 0.2;
+        }
+
+        // Which way and how fast the water runs here (metres a second), 0 in ponds.
+        vec2 flow_at(vec2 p) {
+            if (water_flow_rect.w < 0.5) return vec2(0.0);
+            vec2 uv = (p - water_flow_rect.xy) / water_flow_rect.z;
+            if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return vec2(0.0);
+            return (textureLod(water_flow, uv, 0.0).rg - 0.5) * 2.0 * 0.7;
+        }
+
+        // The phase of the flow's two overlapping cycles, and how much the second shows:
+        // each cycle slides the pattern downstream and is swapped out before it stretches.
+        vec3 flow_phase(float t) {
+            float a = fract(t * 0.3), b = fract(t * 0.3 + 0.5);
+            return vec3(a, b, abs(1.0 - 2.0 * a));
+        }
+
+        // The fine ripples, carried downstream where the water runs.
+        float fine_ripples(vec2 p, float t, vec2 f) {
+            if (dot(f, f) < 1e-5) return ripples(p, t);
+            vec3 ph = flow_phase(t);
+            float r0 = ripples(p - f * ph.x * 3.3, t);
+            float r1 = ripples(p - f * ph.y * 3.3 + vec2(0.37, 0.71), t);
+            return mix(r1, r0, ph.z);
         }
 
         // Height of the interactive ripples (WaterRipples), in metres, 0 outside it.
@@ -196,11 +229,13 @@ public static class WaterLook
             // and the rain.
             float e = 0.08;
             float amp = (0.02 + 0.05 * wind_strength * (0.6 + 0.6 * wind_gust)) * wave_fade;
-            float fine = 0.012 + 0.03 * wind_strength;
-            float h0 = swell(p, t) * amp + ripples(p, t) * fine + sim(p);
+            vec2 f = flow_at(p);
+            // Running water is a little rougher than a still pond.
+            float fine = (0.012 + 0.03 * wind_strength) * (1.0 + 1.5 * length(f));
+            float h0 = swell(p, t) * amp + fine_ripples(p, t, f) * fine + sim(p);
             vec2 slope = vec2(
-                swell(p + vec2(e, 0.0), t) * amp + ripples(p + vec2(e, 0.0), t) * fine + sim(p + vec2(e, 0.0)) - h0,
-                swell(p + vec2(0.0, e), t) * amp + ripples(p + vec2(0.0, e), t) * fine + sim(p + vec2(0.0, e)) - h0) / e;
+                swell(p + vec2(e, 0.0), t) * amp + fine_ripples(p + vec2(e, 0.0), t, f) * fine + sim(p + vec2(e, 0.0)) - h0,
+                swell(p + vec2(0.0, e), t) * amp + fine_ripples(p + vec2(0.0, e), t, f) * fine + sim(p + vec2(0.0, e)) - h0) / e;
             float rain = smoothstep(0.02, 0.6, rain_amount);
             if (rain > 0.0) slope += rings(p, t, mix(0.15, 0.9, rain)) * 0.1 * rain;
             vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
@@ -267,12 +302,30 @@ public static class WaterLook
             float wob = texture(noise, p * 0.18 + vec2(t * 0.015, t * 0.01)).r;
             float foam = 1.0 - smoothstep(0.03, 0.1 + 0.1 * wob, through);
             foam = max(foam, smoothstep(0.035, 0.07, abs(sim(p))) * 0.6);
+            // Pale streaks of foam slide down a running stream.
+            float fl = length(f);
+            if (fl > 0.02) {
+                vec3 ph = flow_phase(t);
+                vec2 across = vec2(-f.y, f.x) / fl;
+                vec2 sp = vec2(dot(p, across) * 2.2, dot(p, f / fl) * 0.35);
+                float s0 = texture(noise, (sp - vec2(0.0, ph.x * 3.3 * fl * 0.35)) * 0.15).r;
+                float s1 = texture(noise, (sp - vec2(0.0, ph.y * 3.3 * fl * 0.35)) * 0.15 + 0.5).r;
+                foam = max(foam, smoothstep(0.66, 0.74, mix(s1, s0, ph.z)) * clamp(fl * 0.6, 0.0, 0.35));
+            }
             col = mix(col, foam_color.rgb * (water_ambient + water_sun_color * 0.5), foam * 0.75);
 
             // Leaves near the bank, most in autumn, none once it freezes.
             float leafy = (0.03 + 0.3 * season_autumn) * (1.0 - smoothstep(0.5, 4.0, through0)) * smoothstep(-0.9, -0.6, season_warmth);
             if (leafy > 0.005) {
-                vec4 lf = leaf(p, t, leafy);
+                vec4 lf;
+                if (dot(f, f) < 1e-5) lf = leaf(p, t, leafy);
+                else {
+                    // In a stream the leaves ride the current.
+                    vec3 ph = flow_phase(t);
+                    vec4 l0 = leaf(p - f * ph.x * 3.3, t, leafy);
+                    vec4 l1 = leaf(p - f * ph.y * 3.3 + vec2(3.7, 1.3), t, leafy);
+                    lf = mix(l1, l0, ph.z);
+                }
                 col = mix(col, lf.rgb * (water_ambient + water_sun_color * 0.6), lf.a * (1.0 - foam));
             }
 
