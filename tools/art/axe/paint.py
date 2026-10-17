@@ -46,8 +46,8 @@ n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-6)
 pid = np.rint(np.load(os.path.join(src, "axe_id.npy"))[..., 0] * 16).astype(int)
 s = n @ LIGHT
 
-STONE = dict(lit=c(0.8, 0.77, 0.8), mid=c(0.62, 0.6, 0.67), shade=c(0.45, 0.43, 0.53))
-WOOD = dict(lit=c(0.86, 0.66, 0.44), mid=c(0.72, 0.52, 0.34), shade=c(0.55, 0.39, 0.34))
+STONE = dict(lit=c(0.64, 0.62, 0.68), mid=c(0.47, 0.45, 0.54), shade=c(0.33, 0.31, 0.42))
+WOOD = dict(lit=c(0.74, 0.55, 0.37), mid=c(0.6, 0.42, 0.29), shade=c(0.44, 0.31, 0.29))
 CORD = dict(lit=c(0.95, 0.86, 0.64), mid=c(0.83, 0.71, 0.5), shade=c(0.64, 0.54, 0.46))
 COCOA = c(0.36, 0.25, 0.22)
 
@@ -64,7 +64,7 @@ col = np.ones((S, S, 3)) * STONE["mid"]
 st = pid == 1
 key = np.round(n * 12) @ np.array([12.9898, 78.233, 37.719])
 h = (np.sin(key) * 43758.5453) % 1.0
-f = s + (h - 0.5) * 0.35
+f = s + (h - 0.5) * 0.5
 stone = tone(STONE, smooth(0.42, 0.45, f), 1 - smooth(-0.02, 0.01, f))
 # Facet ridges: where the baked normal jumps between neighbouring texels.
 dn = np.zeros((S, S))
@@ -80,7 +80,7 @@ stone += (COCOA * 0.9 - stone) * (ridge * (1 - facing) * 0.35)[..., None]
 # The honed cutting edge: a pale band along +Z.
 zmax = p[st][:, 2].max() if st.any() else 0
 hone = smooth(zmax - 0.03, zmax - 0.012, p[..., 2])
-stone += (c(0.9, 0.88, 0.9) - stone) * (hone * 0.6)[..., None]
+stone += (c(0.82, 0.8, 0.84) - stone) * (hone * 0.55)[..., None]
 col[st] = stone[st]
 
 # Wood: honey tones and four long soft grain streaks.
@@ -93,7 +93,7 @@ for k, (a0, ph) in enumerate(((0.3, 0.0), (1.9, 1.3), (3.6, 2.1), (4.9, 0.7))):
     d = np.abs(((th - a + np.pi) % (2 * np.pi)) - np.pi)
     streak = np.maximum(streak, (1 - smooth(0.05, 0.22, d)) * smooth(-0.6, -0.3, y + 0.05 * k) * (1 - smooth(0.05, 0.12, y)))
 wood = tone(WOOD, smooth(0.38, 0.44, s), 1 - smooth(-0.05, 0.0, s))
-wood += (WOOD["shade"] - wood) * (streak * 0.45)[..., None]
+wood += (WOOD["shade"] - wood) * (streak * 0.6)[..., None]
 col[wd] = wood[wd]
 
 # Cord: straw, sinking into cocoa where it wraps tight.
