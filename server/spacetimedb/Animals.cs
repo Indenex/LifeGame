@@ -19,6 +19,8 @@ public enum AnimalState
     Idle,
     Walk,
     Run,
+    // Settled for the night (hens in or by their coop).
+    Roost,
 }
 
 // Animals think on the server a couple of times a second and only send a row when
@@ -447,6 +449,8 @@ public static partial class Module
             mind.StateUntil = now + AnimalMicros(4f, 11f, ctx);
             return;
         }
+
+        if (t.Roosts && RoostDecide(ctx, ref body, ref mind, flock, now)) return;
 
         if (now < mind.StateUntil && !straggling) return;
 

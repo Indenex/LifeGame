@@ -44,6 +44,8 @@ namespace LifeGame.Shared
         public bool Indoor;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
         public bool Kiln, Jar;
+        // A hen coop (animals-20): hens roost in a finished one at night and make it their home.
+        public bool Coop;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -364,6 +366,21 @@ namespace LifeGame.Shared
                     new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
                     new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
                     new[] { (Item.RoofTile, 12u) },
+                },
+            },
+            // The hen coop (animals-20, D-265): a small thatched coop with a pop-hole, inside a claim.
+            new StructureShape
+            {
+                Name = "Hen coop",
+                Category = "Shelter",
+                HalfWidth = 0.8f, HalfDepth = 0.6f,
+                Clearance = 1.0f,
+                Coop = true,
+                Stages = new[] { "Frame", "Thatch" },
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stick, 8u), (Item.Cordage, 2u) },
+                    new[] { (Item.Fiber, 6u) },
                 },
             },
         });

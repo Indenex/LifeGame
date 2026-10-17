@@ -59,7 +59,7 @@ public static partial class StructureModel
             LifeGame.Shared.StationKind.PottersBench => StationMeshes.PottersBench(),
             LifeGame.Shared.StationKind.Spindle => StationMeshes.Distaff(),
             LifeGame.Shared.StationKind.DryingRack => StationMeshes.DryingRack(),
-            _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
+            _ => kind switch { 1 => ClayHut(), 2 => ClaimMarkerModel.Pieces(), 3 => KilnModel.Pieces(), 4 => Basket(), 6 => JarModel.Pieces(), _ when LifeGame.Shared.Structures.Shape(kind).Coop => Coop(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
         // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
         // the near slope fades and the far slope stays rather than the whole thing clearing.
@@ -68,6 +68,29 @@ public static partial class StructureModel
                 if (piece.Role == PieceRole.Roof) piece.Role = PieceRole.Wall;
         Cache[kind] = pieces;
         return pieces;
+    }
+
+    // --- Hen coop (animals-20): a rough placeholder until Modeling's coop lands. Four posts, slatted
+    // sides, a pop-hole gap in the front (+Z) and a low thatched gable.
+
+    static List<Piece> Coop()
+    {
+        var list = new List<Piece>();
+        const float hw = 0.8f, hd = 0.6f, eaveY = 0.8f, ridgeY = 1.2f;
+        Site(list, new[] { new Vector3(-hw, 0, hd), new Vector3(hw, 0, hd), new Vector3(hw, 0, -hd), new Vector3(-hw, 0, -hd) });
+        foreach (var (x, z) in new[] { (-hw, hd), (hw, hd), (hw, -hd), (-hw, -hd) })
+            Add(list, 0, Wood, Stick(new Vector3(x, -0.05f, z), new Vector3(x, eaveY, z), 0.05f));
+        foreach (float y in new[] { 0.2f, 0.45f, 0.7f })
+        {
+            Add(list, 0, Wood, Stick(new Vector3(-hw, y, -hd), new Vector3(hw, y, -hd), 0.03f));
+            Add(list, 0, Wood, Stick(new Vector3(-hw, y, hd), new Vector3(hw, y, hd), 0.03f));
+            Add(list, 0, Wood, Stick(new Vector3(-hw, y, -hd), new Vector3(-hw, y, hd), 0.03f));
+            Add(list, 0, Wood, Stick(new Vector3(hw, y, -hd), new Vector3(hw, y, hd), 0.03f));
+        }
+        Add(list, 1, Wood, Stick(new Vector3(-hw - 0.1f, ridgeY, 0), new Vector3(hw + 0.1f, ridgeY, 0), 0.04f));
+        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.05f, -hd - 0.12f), new Vector3(0, ridgeY + 0.05f, 0), hw * 2f + 0.3f, 0.09f, 1));
+        Add(list, 1, Thatch, ThatchRow(new Vector3(0, eaveY - 0.05f, hd + 0.12f), new Vector3(0, ridgeY + 0.05f, 0), hw * 2f + 0.3f, 0.09f, 2));
+        return list;
     }
 
     // --- Lean-to: two forked uprights, a ridge pole, ribs down to a ground log, thatch.

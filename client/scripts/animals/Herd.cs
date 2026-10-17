@@ -68,6 +68,7 @@ public partial class Herd : Node3D
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.eggs", Priority = 15, Find = OfferEggs });
+        Sheep.InsideCoop = InsideCoop;
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
         Strike.Register("animals.animal", OfferStrike);
         Strike.Register("animals.bow", OfferShot);
@@ -217,6 +218,15 @@ public partial class Herd : Node3D
         if (nearest == null) return null;
         ulong id = nearest.Id;
         return new UseOffer("Take eggs", best, () => conn.Reducers.CollectEggs(id));
+    }
+
+    // A finished hen coop covers this spot (roosting hens are drawn inside it).
+    bool InsideCoop(float x, float z)
+    {
+        if (conn == null) return false;
+        foreach (var s in conn.Db.Structure.Iter())
+            if (s.Complete && Structures.Shape((int)s.Kind).Coop && new Vector2(s.X - x, s.Z - z).Length() < 1.4f) return true;
+        return false;
     }
 
     void Upsert(Animal a, bool inserted)

@@ -23,6 +23,8 @@ public enum StructureKind
     LogCabin,
     RepairTable,
     TiledHouse,
+    // The hen coop (animals-20, D-265); numbered by merge order.
+    HenCoop,
 }
 
 // One material a structure's current stage still needs.
