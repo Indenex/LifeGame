@@ -1,7 +1,7 @@
 # atmosphere-31: 3D, interactive water with reflections
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-31-water
 PR: #517 (draft)
 
@@ -40,4 +40,4 @@ Painted colour bands, not photoreal. Measure the cost, add a Graphics setting fo
 - Environment: their water-edge work. The shore foam and fade now come from the depth behind the water, so the edges need no special mesh.
 
 ## Next step
-Wait for CI on #517, send the green sha to the PM.
+Done: merged as #517 (dd1c4676).

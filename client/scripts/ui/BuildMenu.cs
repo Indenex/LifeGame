@@ -32,6 +32,8 @@ public partial class BuildMenu : CanvasLayer
     GridContainer grid = null!;
     string category = "";
     readonly Dictionary<int, Texture2D> pictures = new();
+    // The open tab's picture frames, filled in as each picture finishes (ui-49).
+    readonly Dictionary<int, PictureFrame> frames = new();
     bool rendering;
 
     // Each shape names its own tab (House building's StructureShape.Category).
@@ -56,6 +58,11 @@ public partial class BuildMenu : CanvasLayer
         panel.Visible = false;
         AddChild(panel);
         Panels.Centre(this, Close);
+        // Pictures are made a few seconds after the world loads, so the menu rarely opens
+        // before they're ready (ui-49: blank boxes on first open).
+        // Not headless (bots and checks): there's nothing to draw with.
+        if (DisplayServer.GetName() != "headless")
+            GetTree().CreateTimer(4).Timeout += () => { if (!rendering && pictures.Count == 0) RenderPictures(); };
         // --screenshot-buildmenu opens the first tab; =Walls (any tab's name) opens that one.
         foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--screenshot-buildmenu")))
         {
@@ -134,6 +141,7 @@ public partial class BuildMenu : CanvasLayer
             tabs.AddChild(tab);
         }
         foreach (var child in grid.GetChildren()) { grid.RemoveChild(child); child.QueueFree(); }
+        frames.Clear();
         foreach (int kind in Kinds(category)) grid.AddChild(Tile(kind));
     }
 
@@ -149,16 +157,9 @@ public partial class BuildMenu : CanvasLayer
         tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
             : afford ? "" : Shortfall(costs);
 
-        var picture = new TextureRect
-        {
-            Texture = pictures.GetValueOrDefault(kind),
-            CustomMinimumSize = new Vector2(Thumb, Thumb),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
-            ClipContents = true,
-        };
+        var picture = new PictureFrame(Thumb) { SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
+        picture.SetPicture(pictures.GetValueOrDefault(kind));
+        frames[kind] = picture;
         tile.Column.AddChild(picture);
         tile.Column.AddChild(tile.Line(Structures.Shape(kind).Name, 14));
         var row = tile.Wrap();
@@ -214,14 +215,15 @@ public partial class BuildMenu : CanvasLayer
         AddChild(view);
         var camera = new Camera3D { Fov = 30f };
         view.AddChild(camera);
-        view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-50, -35, 0), LightEnergy = 1.1f });
+        // Bright enough that thin sticks (fences, gates, racks) still read on the card.
+        view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-50, -35, 0), LightEnergy = 1.35f });
         view.AddChild(new WorldEnvironment
         {
             Environment = new Godot.Environment
             {
                 AmbientLightSource = Godot.Environment.AmbientSource.Color,
                 AmbientLightColor = new Color(0.75f, 0.78f, 0.85f),
-                AmbientLightEnergy = 0.6f,
+                AmbientLightEnergy = 0.8f,
                 BackgroundMode = Godot.Environment.BGMode.ClearColor,
             },
         });
@@ -234,7 +236,8 @@ public partial class BuildMenu : CanvasLayer
             // Framed from the front left and a little above, sized to the footprint and height.
             var shape = Structures.Shape(kind);
             float size = Mathf.Max(shape.Round ? shape.Radius : Mathf.Max(shape.HalfWidth, shape.HalfDepth), 0.5f);
-            if (shape.Fence || shape.Gate) size = Mathf.Max(size, 1.4f);
+            // Fences and gates are long and thin: frame them closer, so the rails aren't hairlines.
+            if (shape.Fence || shape.Gate) size = Mathf.Max(size, 1.0f);
             float distance = size * 4.2f + 1.5f;
             var target = new Vector3(0, size * 0.55f, 0);
             camera.Position = target + new Vector3(-0.55f, 0.45f, 0.8f).Normalized() * distance;
@@ -244,11 +247,71 @@ public partial class BuildMenu : CanvasLayer
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             pictures[kind] = ImageTexture.CreateFromImage(view.GetTexture().GetImage());
+            if (frames.TryGetValue(kind, out var frame) && IsInstanceValid(frame)) frame.SetPicture(pictures[kind]);
             view.RemoveChild(model);
             model.QueueFree();
         }
         view.QueueFree();
         rendering = false;
-        if (IsOpen) Refresh();
+    }
+}
+
+// Where a build card's picture sits (ui-49): a soft ground patch under the model, so thin
+// dark sticks still stand out, and while the picture is still being made, a faint pencil
+// house that breathes, instead of an empty box.
+public partial class PictureFrame : Control
+{
+    readonly TextureRect picture;
+    float time;
+
+    public PictureFrame(int size)
+    {
+        CustomMinimumSize = new Vector2(size, size);
+        MouseFilter = MouseFilterEnum.Ignore;
+        ClipContents = true;
+        picture = new TextureRect
+        {
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        picture.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(picture);
+    }
+
+    public void SetPicture(Texture2D? texture)
+    {
+        picture.Texture = texture;
+        SetProcess(texture == null);
+        QueueRedraw();
+    }
+
+    public override void _Process(double delta)
+    {
+        time += (float)delta;
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        var c = Size / 2;
+        // A light oval of ground under where the model stands.
+        var light = WarmLook.On ? WarmLook.Paper.Lightened(0.35f) : new Color(Look.Cream, 0.16f);
+        DrawSetTransform(c + new Vector2(0, Size.Y * 0.22f), 0f, new Vector2(1f, 0.38f));
+        DrawCircle(Vector2.Zero, Size.X * 0.42f, new Color(light, WarmLook.On ? 0.75f : 1f));
+        DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+        if (picture.Texture != null) return;
+        // A little pencil house, breathing while the picture is made.
+        var ink = WarmLook.On ? WarmLook.Ink : Look.Cream;
+        ink = new Color(ink, 0.25f + 0.12f * Mathf.Sin(time * 3f));
+        float s = Size.X / 112f;
+        var o = c + new Vector2(0, 6) * s;
+        var house = new[]
+        {
+            o + new Vector2(-22, 20) * s, o + new Vector2(-22, -6) * s, o + new Vector2(0, -26) * s,
+            o + new Vector2(22, -6) * s, o + new Vector2(22, 20) * s, o + new Vector2(-22, 20) * s,
+        };
+        DrawPolyline(house, ink, 2.5f * s, true);
+        DrawPolyline(new[] { o + new Vector2(-6, 20) * s, o + new Vector2(-6, 6) * s, o + new Vector2(6, 6) * s, o + new Vector2(6, 20) * s }, ink, 2.5f * s, true);
     }
 }

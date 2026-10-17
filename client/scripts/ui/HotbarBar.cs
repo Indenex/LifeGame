@@ -382,11 +382,36 @@ public partial class HotbarSlotView : PanelContainer
         picture.Modulate = new Color(1, 1, 1, n > 0 ? 1f : 0.3f);
         count.Text = n > 1 ? n.ToString() : "";
         key.Text = keyName;
-        style.BorderColor = equipped ? InHand : new Color(Look.Cream, what == null ? 0.14f : 0.28f);
-        style.SetBorderWidthAll(equipped ? 2 : 1);
-        style.BgColor = equipped ? new Color(0.20f, 0.16f, 0.08f, 0.78f) : new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
-        style.ShadowColor = equipped ? new Color(InHand, 0.35f) : new Color(0, 0, 0, 0.25f);
+        if (WarmLook.On)
+        {
+            // Paper buttons (ui-45, D-313): cream discs with a soft brown rim and shadow; the slot
+            // in hand wears a butter-gold ring. An empty slot is paler.
+            style.BgColor = equipped ? new Color(1f, 0.93f, 0.78f, 0.97f) : new Color(WarmLook.Paper, what == null ? 0.55f : 0.92f);
+            style.BorderColor = equipped ? WarmLook.Butter.Darkened(0.12f) : new Color(WarmLook.Ink, what == null ? 0.18f : 0.32f);
+            style.SetBorderWidthAll(equipped ? 3 : 2);
+            style.ShadowColor = equipped ? new Color(WarmLook.Butter, 0.55f) : new Color(0.20f, 0.10f, 0.05f, 0.30f);
+            style.ShadowSize = equipped ? 9 : 6;
+            InkLabels(equipped);
+        }
+        else
+        {
+            style.BorderColor = equipped ? InHand : new Color(Look.Cream, what == null ? 0.14f : 0.28f);
+            style.SetBorderWidthAll(equipped ? 2 : 1);
+            style.BgColor = equipped ? new Color(0.20f, 0.16f, 0.08f, 0.78f) : new Color(0.09f, 0.10f, 0.07f, what == null ? 0.35f : 0.62f);
+            style.ShadowColor = equipped ? new Color(InHand, 0.35f) : new Color(0, 0, 0, 0.25f);
+        }
         TooltipText = equipped ? $"{label} (in hand)" : label;
+    }
+
+    // On paper the count is brown ink; the key sits outside the disc, so it keeps its soft
+    // shadow and gets a warm one.
+    void InkLabels(bool equipped)
+    {
+        count.AddThemeColorOverride("font_color", WarmLook.Ink);
+        count.AddThemeColorOverride("font_shadow_color", new Color(1f, 1f, 1f, 0.6f));
+        key.AddThemeColorOverride("font_color", new Color(1f, 0.97f, 0.9f));
+        key.AddThemeColorOverride("font_shadow_color", new Color(0.22f, 0.12f, 0.06f, 0.75f));
+        key.Modulate = new Color(1, 1, 1, equipped ? 1f : 0.85f);
     }
 
     // A small bounce when its key is pressed.
