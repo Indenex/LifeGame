@@ -586,9 +586,10 @@ else
                 t.LastError = null;
             }
         }
-        // The earlier checks gave materials away and used some up: top both up first.
+        // The earlier checks gave materials away and used some up: top both up first. A keeps a stick
+        // and a fiber beyond the marker for the town store and upkeep checks (claims-28).
         foreach (var gatherer in new[] { a, b })
-            foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks), (Item.Fiber, (int)Social.MarkerFiber) })
+            foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks + (gatherer == a ? 1 : 0)), (Item.Fiber, (int)Social.MarkerFiber + (gatherer == a ? 1 : 0)) })
                 while (gatherer.Count(kind) < count)
                 {
                     var item = gatherer.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
