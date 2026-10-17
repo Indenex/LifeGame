@@ -298,10 +298,13 @@ public partial class Terrain : Node3D
 
         // Banks fade from grass to sand over the last few hand-widths above the water,
         // and the sand darkens to damp at the waterline (env-21), instead of one hard strip.
-        float sand = 1f - Mathf.SmoothStep(Look.WaterLevel + 0.08f, Look.WaterLevel + 0.34f, top);
-        color = color.Lerp(Look.Shore, sand * 0.8f);
-        float damp = 1f - Mathf.SmoothStep(Look.WaterLevel - 0.02f, Look.WaterLevel + 0.12f, top);
-        color = color.Lerp(DampShore, damp * 0.7f);
+        // The painted ground prototypes (env-27) draw the shore bolder, so it reads from the
+        // default camera: a wider sand bank in its own colour and a darker wet band.
+        bool bold = PaintedTerrain.Chosen != PaintedTerrain.Style.Old;
+        float sand = 1f - Mathf.SmoothStep(Look.WaterLevel + 0.08f, Look.WaterLevel + (bold ? 0.5f : 0.34f), top);
+        color = color.Lerp(Look.Shore, sand * (bold ? 0.92f : 0.8f));
+        float damp = 1f - Mathf.SmoothStep(Look.WaterLevel - 0.02f, Look.WaterLevel + (bold ? 0.16f : 0.12f), top);
+        color = color.Lerp(bold ? WetShore : DampShore, damp * (bold ? 0.85f : 0.7f));
 
         if (Depth(x, z) > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
@@ -335,6 +338,7 @@ public partial class Terrain : Node3D
     }
 
     static readonly Color DampShore = new(0.50f, 0.45f, 0.34f);
+    static readonly Color WetShore = new(0.36f, 0.32f, 0.25f);
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
 
     // A dry cell within two meters of open water, where reeds and stones gather.
@@ -524,11 +528,12 @@ public partial class Terrain : Node3D
                     float clump = Mathf.SmoothStep(0.45f, 0.7f, World.Noise(x + 4421, z - 2203, 6f, 99));
                     if (Hash01(x, z, 60) < 0.08f + 0.6f * clump)
                     {
-                        int stems = 1 + (int)(Hash01(x, z, 72) * 2.999f * clump);
+                        bool bold = PaintedTerrain.Chosen != PaintedTerrain.Style.Old;
+                        int stems = (bold ? 2 : 1) + (int)(Hash01(x, z, 72) * 2.999f * clump);
                         for (int s = 0; s < stems; s++)
                         {
                             float ox = (Hash01(x + s * 31, z, 64) - 0.5f) * 0.7f, oz = (Hash01(x, z + s * 31, 65) - 0.5f) * 0.7f;
-                            reeds.Add((Plant(fx + ox, top, fz + oz, yaw + s * 2.1f, 0.6f + Hash01(x + s, z, 61) * 0.5f),
+                            reeds.Add((Plant(fx + ox, top, fz + oz, yaw + s * 2.1f, (bold ? 0.95f : 0.6f) + Hash01(x + s, z, 61) * 0.5f),
                                 Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z + s, 62) * 0.3f), custom));
                         }
                     }
@@ -538,23 +543,23 @@ public partial class Terrain : Node3D
                 // cleared and dug ground on a ragged line, so no edge follows the grid (env-26).
                 float cover = GrassCover(x, z);
                 // Wildflowers in patches across the open ground.
-                if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f * cover)
+                if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > FlowerPatch && Hash01(x, z, 57) < FlowerFill * cover)
                 {
                     int kind = (int)(World.Noise(x, z, 18f, 64) * Undergrowth.FlowerColors.Length * 0.999f);
-                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
+                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, FlowerSize),
                         Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
                 // And the odd lone white flower between the patches (env-17).
-                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < 0.04f * cover)
-                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 68), top, z + 0.5f - Hash01(x, z, 69), yaw, 0.8f + Hash01(x, z, 70) * 0.3f),
-                        Look.FlowerWhite.Darkened(Hash01(x, z, 71) * 0.06f), custom with { A = SeasonFlower }));
+                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < FlowerLone * cover)
+                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 68), top, z + 0.5f - Hash01(x, z, 69), yaw, (0.8f + Hash01(x, z, 70) * 0.3f) * FlowerSize),
+                        LoneFlower(x, z).Darkened(Hash01(x, z, 71) * 0.06f), custom with { A = SeasonFlower }));
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
                 // so blades and ground read as one surface.
                 bool grassy = top >= Look.WaterLevel + 0.2f && cover > 0.02f;
                 // Under the trees the grass thins and stays short; it is short on the
                 // heath and gives way to moss on wet ground.
-                if (grassy && tufts != null && Hash01(x, z, 40) < (0.93f - 0.5f * density - 0.5f * wet - 0.6f * trail) * Mathf.SmoothStep(0f, 0.6f, cover))
+                if (grassy && tufts != null && Hash01(x, z, 40) < (TuftCover - 0.5f * density - 0.5f * wet - 0.6f * trail) * Mathf.SmoothStep(0f, 0.6f, cover))
                 {
                     // Shear the patch onto the slope so every blade stays rooted; each patch
                     // turns its own way and sits a little off centre, so patch edges never
@@ -746,7 +751,7 @@ public partial class Terrain : Node3D
                 Xf(0, 1.6f + k * 0.7f, 0), new Color(0.9f + k * 0.06f, 0.9f + k * 0.06f, 0.9f + k * 0.06f));
         pineMesh = pine.Commit();
 
-        tuftMesh = BuildTuft(GrassDetail.Keep);
+        tuftMesh = GroundLooks.Tuft(GrassDetail.Keep) ?? BuildTuft(GrassDetail.Keep);
     }
 
     internal static SphereMesh Blob(float radius) => new() { Radius = radius, Height = radius * 1.7f, RadialSegments = 10, Rings = 6 };
@@ -814,7 +819,7 @@ public partial class Terrain : Node3D
     {
         if (tuftMesh is not ArrayMesh mesh) return;
         mesh.ClearSurfaces();
-        BuildTuft(keep, mesh);
+        if (GroundLooks.Tuft(keep, mesh) == null) BuildTuft(keep, mesh);
     }
 
     public static float Hash01(int x, int z, uint salt) => Trees.Hash01(x, z, salt);
