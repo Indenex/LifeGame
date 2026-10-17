@@ -42,6 +42,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
+                "SELECT * FROM craft_work",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -215,7 +216,7 @@ while (CountOf(Item.Fiber) > 6)
     var fiber = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Fiber);
     uint had = CountOf(Item.Fiber);
     lastError = null;
-    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality);
+    conn.Reducers.StashItem(claim.Id, fiber.Item, fiber.Quality, 1);
     Pump(() => lastError != null || CountOf(Item.Fiber) < had, 5, "fiber into the stash");
     if (lastError != null) Fail($"stashing fiber: {lastError}");
 }
@@ -225,6 +226,161 @@ WalkTo(table.X, table.Z);
 Craft("weave.basket", 0, Item.Basket);
 Pump(() => StashFiber() == stashed - 4, 3, "4 fiber to leave the stash");
 Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({stashed} -> {StashFiber()})");
+
+// Crafting-21: a made thing is set down where the player chooses. The basket just woven
+// is placeable; a stick is not; the spot has to be within reach.
+{
+    Gather(Item.Stick, 1);
+    WalkTo(table.X, table.Z);
+    var basket = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Basket);
+    var stickRow = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.Stick);
+    lastError = null;
+    conn.Reducers.PlaceItem(stickRow.Item, stickRow.Quality, stickRow.Wear, x + 1f, z, 0f);
+    Pump(() => lastError != null, 5, "placing a stick to be refused");
+    if (lastError != "That can't be set down") Fail($"placing a stick: {lastError}");
+    lastError = null;
+    conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, x + 30f, z, 0f);
+    Pump(() => lastError != null, 5, "placing out of reach to be refused");
+    Console.WriteLine($"Placing out of reach: {lastError}");
+
+    bool placedOk = false;
+    for (int k = 0; k < 12 && !placedOk; k++)
+    {
+        float a = k * MathF.Tau / 12, px = x + MathF.Cos(a) * 1.8f, pz = z + MathF.Sin(a) * 1.8f;
+        int before = conn.Db.WorldItem.Count;
+        lastError = null;
+        conn.Reducers.PlaceItem(basket.Item, basket.Quality, basket.Wear, px, pz, 1.25f);
+        Pump(() => lastError != null || conn.Db.WorldItem.Count > before, 5, "the basket to be placed");
+        if (lastError == null) placedOk = true;
+        else if (!lastError.Contains("steep") && !lastError.Contains("way") && !lastError.Contains("water")) Fail($"placing the basket: {lastError}");
+    }
+    if (!placedOk) Fail("no spot beside the table took a basket");
+    var placed = conn.Db.WorldItem.Iter().First(w => w.Item == (ushort)Item.Basket && w.Placed);
+    if (MathF.Abs(placed.Yaw - 1.25f) > 0.001f) Fail($"the placed basket lost its turn ({placed.Yaw})");
+    if (CountOf(Item.Basket) != 0) Fail("the basket stayed in the bag");
+    WalkTo(placed.X, placed.Z);
+    conn.Reducers.PickUp(placed.Id);
+    Pump(() => CountOf(Item.Basket) == 1, 5, "the placed basket to be picked back up");
+    Console.WriteLine($"Placed the basket at ({placed.X:F1}, {placed.Z:F1}) turned {placed.Yaw:F2} and picked it up again");
+}
+
+// Crafting-19: tool wear and repair (D-155). The server counts each use as one use of
+// the tool's life; the admin raises that so a single use spends a tool.
+{
+    // A repair table, built like the crafting table: 4 sticks, 2 cordage, a log and 2 stones.
+    Gather(Item.Stick, 6);
+    Gather(Item.Stone, 3);
+    Gather(Item.Fiber, 12);
+    while (CountOf(Item.Cordage) < 3) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+        WalkTo(table.X, table.Z);
+    }
+    WalkTo(table.X, table.Z);
+    var repairTable = BuildHere(StructureKind.RepairTable);
+    Console.WriteLine($"Built a repair table at ({repairTable.X:F1}, {repairTable.Z:F1})");
+
+    WalkTo(repairTable.X, repairTable.Z);
+
+    // One use spends the axe.
+    AdminCall("set_tool_wear_step", "1000");
+    var (wx, wz) = NearestTree();
+    var wtrunk = Trees.Trunk(wx, wz);
+    WalkTo(wtrunk.X, wtrunk.Z);
+    Craft("chop.log", 0, Item.Log);
+    var spentAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    if (!Durability.IsSpent(spentAxe.Quality, spentAxe.Wear)) Fail($"one hard use did not spend the axe (wear {spentAxe.Wear})");
+    Console.WriteLine($"The axe is {Durability.Condition(spentAxe.Quality, spentAxe.Wear)} after one use");
+    lastError = null;
+    conn.Reducers.StartCraft("chop.log", 0);
+    Pump(() => lastError != null, 5, "a spent axe to be refused");
+    if (lastError?.Contains("spent") != true) Fail($"chopping with a spent axe: {lastError}");
+    Console.WriteLine($"Spent axe: {lastError}");
+
+    // Away from the table, mending is refused.
+    if (MathF.Sqrt((x - repairTable.X) * (x - repairTable.X) + (z - repairTable.Z) * (z - repairTable.Z)) > 8f)
+    {
+        lastError = null;
+        conn.Reducers.RepairTool(spentAxe.Item, spentAxe.Quality, spentAxe.Wear);
+        Pump(() => lastError != null, 5, "mending away from the table to be refused");
+        if (lastError?.Contains("repair table") != true) Fail($"mending away from the table: {lastError}");
+        Console.WriteLine($"Mending away from the table: {lastError}");
+    }
+
+    // Wear travels with the tool into the claim's stash and back.
+    WalkTo(marker.X, marker.Z);
+    lastError = null;
+    conn.Reducers.StashItem(claim.Id, spentAxe.Item, spentAxe.Quality, 1);
+    Pump(() => lastError != null || CountOf(Item.StoneAxe) == 0, 5, "the axe into the stash");
+    if (lastError != null) Fail($"stashing the axe: {lastError}");
+    var stashedAxe = conn.Db.MyClaimStash.Iter().First(r => r.ClaimId == claim.Id && r.Item == (ushort)Item.StoneAxe);
+    if (stashedAxe.Wear != spentAxe.Wear) Fail($"the stash lost the axe's wear ({spentAxe.Wear} -> {stashedAxe.Wear})");
+    conn.Reducers.TakeFromStash(claim.Id, stashedAxe.Item, stashedAxe.Quality, 1);
+    Pump(() => CountOf(Item.StoneAxe) == 1, 5, "the axe back out of the stash");
+    var backAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    if (backAxe.Wear != spentAxe.Wear) Fail($"the axe came back with different wear ({spentAxe.Wear} -> {backAxe.Wear})");
+    Console.WriteLine("The axe kept its wear through the stash");
+
+    // Spend the digging stick too, then show a spent stick no longer reaches the deeper level.
+    var stick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+    var (dx, dz) = (World.CellOf(x) + 1, World.CellOf(z) + 1);
+    WalkTo(dx * World.CellSize, dz * World.CellSize);
+    for (int dig = 0; dig <= World.MaxDigDepth; dig++)
+    {
+        lastError = null;
+        conn.Reducers.Dig(dx, dz);
+        Pump(() => lastError != null || (conn.Db.TerrainEdit.CellKey.Find(World.CellKey(dx, dz))?.Depth ?? 0) > dig, 5, "a dig");
+        if (lastError != null && dig < World.MaxDigDepth) Fail($"dig {dig + 1}: {lastError}");
+        Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+    }
+    var spentStick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+    if (!Durability.IsSpent(spentStick.Quality, spentStick.Wear)) Fail("the digging stick did not wear out");
+    lastError = null;
+    conn.Reducers.Dig(dx, dz);
+    Pump(() => lastError != null, 5, "a spent stick to be left out of a deep dig");
+    if (lastError != "Too deep to dig by hand") Fail($"a deep dig with a spent stick: {lastError}");
+    Console.WriteLine($"Spent digging stick: {lastError}");
+
+    // Mend both at the table. The axe takes a length of cordage; the stick just a cutting tool.
+    AdminCall("set_tool_wear_step", "1");
+    WalkTo(repairTable.X, repairTable.Z);
+    uint cordageBefore = CountOf(Item.Cordage);
+    lastError = null;
+    var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
+    Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
+    if (lastError != null) Fail($"mending the axe: {lastError}");
+    var mendedAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    byte expectQ = Durability.RepairedQuality(oldAxe.Quality, oldAxe.Wear);
+    if (Durability.IsSpent(mendedAxe.Quality, mendedAxe.Wear) || Durability.Used(mendedAxe.Wear) != 0) Fail("the mended axe still shows wear");
+    if (mendedAxe.Quality != expectQ || mendedAxe.Quality > oldAxe.Quality) Fail($"mended axe quality {mendedAxe.Quality}, expected {expectQ} (was {oldAxe.Quality})");
+    if (Durability.Origin(mendedAxe.Wear) != oldAxe.Quality) Fail($"the mended axe forgot its original quality ({Durability.Origin(mendedAxe.Wear)} vs {oldAxe.Quality})");
+    if (CountOf(Item.Cordage) != cordageBefore - 1) Fail($"mending the axe took {cordageBefore - CountOf(Item.Cordage)} cordage, not 1");
+    Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
+
+    uint cordageNow = CountOf(Item.Cordage);
+    lastError = null;
+    conn.Reducers.RepairTool(spentStick.Item, spentStick.Quality, spentStick.Wear);
+    Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.DiggingStick && r.Wear != spentStick.Wear), 5, "the digging stick to be mended");
+    if (lastError != null) Fail($"mending the digging stick: {lastError}");
+    if (CountOf(Item.Cordage) != cordageNow) Fail("sharpening a digging stick used cordage");
+    Console.WriteLine("Sharpened the digging stick (no materials)");
+
+    // As good as it can be, and the mended axe chops again.
+    var freshStick = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.DiggingStick);
+    lastError = null;
+    conn.Reducers.RepairTool(freshStick.Item, freshStick.Quality, freshStick.Wear);
+    Pump(() => lastError != null, 5, "mending a fresh stick to be refused");
+    var (cx2, cz2) = NearestTree();
+    var ctrunk = Trees.Trunk(cx2, cz2);
+    WalkTo(ctrunk.X, ctrunk.Z);
+    Craft("chop.log", 0, Item.Log);
+    Console.WriteLine("The mended axe chops again");
+}
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
@@ -309,6 +465,9 @@ Structure BuildHere(StructureKind kind)
         lastError = null;
         conn.Reducers.Build(s.Id);
         Pump(() => false, 0.35f, null);
+        // WalkTo stops up to 1.5 m short of its target, so approaching the site from the far
+        // side can leave the bot just outside the work reach: step up to the building and go on.
+        if (lastError != null && lastError.Contains("Out of reach")) WalkTo(s.X, s.Z);
     }
     return conn.Db.Structure.Id.Find(s.Id)!;
 }
@@ -321,6 +480,13 @@ void Craft(string processId, float score, Item? expect)
     Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, $"{processId} to start");
     if (lastError != null) Fail($"{processId}: {lastError}");
     var def = Processes.Find(processId)!;
+    // Other players see the tool in hand (CraftWork.Tool, for Animation): it is the one a tool craft used.
+    if (def.NeedsTool != ItemTags.None)
+    {
+        Pump(() => conn.Db.CraftWork.PlayerId.Find(myId) != null || conn.Db.MyCraftJob.Count == 0, 3, null);
+        if (conn.Db.CraftWork.PlayerId.Find(myId) is { Tool: 0 })
+            Fail($"{processId} needs a tool but its work row names none");
+    }
     Pump(() => conn.Db.MyCraftJob.Count == 0, def.Seconds * 1.2f + 5, $"{processId} to finish");
     if (expect is { } item)
     {
@@ -406,12 +572,23 @@ void WalkTo(float tx, float tz)
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 1.5f) break;
         float step = Math.Min(d - 1f, 0.5f);
-        x += dx / d * step;
-        z += dz / d * step;
+        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
+        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        {
+            x += dx / d * step;
+            z += dz / d * step;
+        }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
     }
-    Pump(() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f, 3, "position to settle");
+    for (var settle = Stopwatch.StartNew(); ; )
+    {
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
+        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
+        conn.Reducers.Move(x, z, 0f);
+        Pump(() => false, 0.1f, null);
+    }
 }
 
 void Pump(Func<bool> until, float seconds, string? what)
@@ -427,6 +604,22 @@ void Pump(Func<bool> until, float seconds, string? what)
         conn.FrameTick();
         Thread.Sleep(10);
     }
+}
+
+// Runs a reducer as the database owner through the CLI (the bot is not the owner).
+void AdminCall(string reducer, string arg)
+{
+    var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, reducer, arg })
+    {
+        WorkingDirectory = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server"),
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+    };
+    using var p = Process.Start(info) ?? throw new Exception("could not start spacetimedb-cli");
+    string err = p.StandardError.ReadToEnd();
+    p.WaitForExit();
+    if (p.ExitCode != 0) Fail($"{reducer} {arg}: {err}");
+    Pump(() => false, 0.5f, null);
 }
 
 static void Fail(string message)

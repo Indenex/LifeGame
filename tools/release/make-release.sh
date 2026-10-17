@@ -15,6 +15,9 @@ out=$(cd "$out" && pwd)
 prs=$( [ -n "$prs_file" ] && cat "$prs_file" || echo '[]')
 wipe=$(jq -r 'any(.[]; .wipe)' <<<"$prs")
 
+# Never ship a game without its .NET assemblies (builds 1092 to 1096 did).
+"$(dirname "$0")/../ci/check-export.sh" "$art/LifeGame-Linux/linux" "$art/LifeGame-Windows/windows"
+
 cp "$art/LifeGame-Server/StdbModule.wasm" "$out/StdbModule.wasm"
 # Each zip holds the platform folder's contents at its root, so the launcher unpacks it as is.
 (cd "$art/LifeGame-Linux/linux" && chmod +x LifeGame.x86_64 && zip -qry "$out/LifeGame-Linux.zip" .)
@@ -25,6 +28,11 @@ for l in Linux Windows; do
     chmod +x "$art/LifeGameLauncher-$l"/LifeGameLauncher.* 2>/dev/null || true
     (cd "$art/LifeGameLauncher-$l" && zip -qry "$out/LifeGameLauncher-$l.zip" .)
   fi
+  # The player launcher (release-3): the same script without the server parts.
+  if [ -d "$art/LifeGamePlayer-$l" ]; then
+    chmod +x "$art/LifeGamePlayer-$l"/LifeGamePlayer.* 2>/dev/null || true
+    (cd "$art/LifeGamePlayer-$l" && zip -qry "$out/LifeGamePlayer-$l.zip" .)
+  fi
 done
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
@@ -34,7 +42,13 @@ launcher_json() {
   [ -f "$out/LifeGameLauncher-Linux.zip" ] && [ -f "$out/LifeGameLauncher-Windows.zip" ] || return 0
   printf ',\n  "launcher": {\n    "version": "%s",\n' "${LAUNCHER_VERSION:-unknown}"
   printf '    "linux": { "file": "LifeGameLauncher-Linux.zip", "exe": "LifeGameLauncher.x86_64", "sha256": "%s" },\n' "$(sha256 "$out/LifeGameLauncher-Linux.zip")"
-  printf '    "windows": { "file": "LifeGameLauncher-Windows.zip", "exe": "LifeGameLauncher.exe", "sha256": "%s" }\n  }' "$(sha256 "$out/LifeGameLauncher-Windows.zip")"
+  printf '    "windows": { "file": "LifeGameLauncher-Windows.zip", "exe": "LifeGameLauncher.exe", "sha256": "%s" }' "$(sha256 "$out/LifeGameLauncher-Windows.zip")"
+  if [ -f "$out/LifeGamePlayer-Linux.zip" ] && [ -f "$out/LifeGamePlayer-Windows.zip" ]; then
+    printf ',\n    "player": {\n'
+    printf '      "linux": { "file": "LifeGamePlayer-Linux.zip", "exe": "LifeGamePlayer.x86_64", "sha256": "%s" },\n' "$(sha256 "$out/LifeGamePlayer-Linux.zip")"
+    printf '      "windows": { "file": "LifeGamePlayer-Windows.zip", "exe": "LifeGamePlayer.exe", "sha256": "%s" }\n    }' "$(sha256 "$out/LifeGamePlayer-Windows.zip")"
+  fi
+  printf '\n  }'
 }
 cat > "$out/release.json" <<JSON
 {

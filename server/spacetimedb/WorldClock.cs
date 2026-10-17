@@ -126,8 +126,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WeatherTick(ReducerContext ctx, WeatherTickTimer timer)
     {
-        if (!ctx.SenderAuth.IsInternal)
-            throw new Exception("Only the server changes the weather");
+        RequireServer(ctx);
         EnsureWorldClock(ctx);
         var clock = ctx.Db.WorldClock.Id.Find(0)!.Value;
         ctx.Db.WorldClock.Id.Update(clock with { ServerNow = ctx.Timestamp });
@@ -185,7 +184,7 @@ public static partial class Module
     // Who may change the time from the game. The publisher (the claims admin) can
     // always; they add a player with `spacetime call <db> make_admin '"Name"'`,
     // since a game client signs in with its own identity, not the publisher's.
-    [SpacetimeDB.Table(Accessor = "WorldAdmin", Public = true)]
+    [SpacetimeDB.Table(Accessor = "WorldAdmin")] // private (admin-1): clients read only their own row through my_admin
     public partial struct WorldAdmin
     {
         [PrimaryKey]

@@ -91,10 +91,11 @@ public static partial class Module
     {
         bool burnt = Roasting.Burnt(seconds);
         byte cap = 100;
-        QualityCapFor(ctx, roast.PlayerId, "cook.meat", ref cap);
-        byte quality = burnt ? Items.RawQuality : Processes.Quality(roast.Quality, Roasting.Score(seconds), cap);
-        OnProcessPerformed(ctx, roast.PlayerId, "cook.meat", quality, burnt);
         var def = Foods.FindRoast((Item)roast.Item) ?? throw new Exception("That doesn't roast");
+        string process = def.Process;
+        QualityCapFor(ctx, roast.PlayerId, process, ref cap);
+        byte quality = burnt ? Items.RawQuality : Processes.Quality(roast.Quality, Roasting.Score(seconds), cap);
+        OnProcessPerformed(ctx, roast.PlayerId, process, quality, burnt);
         return burnt ? (def.Burnt, Items.RawQuality) : (def.Cooked, quality);
     }
 

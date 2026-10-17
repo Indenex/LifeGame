@@ -6,7 +6,8 @@ namespace LifeGame;
 // The Esc menu's Options page (D-097): one slider per kind of sound, with music on or
 // off under Music. The levels live in SoundLevels, which saves them and hands them on
 // (the Audio lane eases each change so dragging never clicks); new players start each
-// at half. Esc or Back returns to the menu.
+// at half. Under Graphics, how far the world is drawn (env-9). Esc or Back
+// returns to the menu.
 public partial class OptionsPage : Control
 {
     // Back to the menu (PauseMenu sets it).
@@ -27,6 +28,8 @@ public partial class OptionsPage : Control
     readonly HSlider[] sliders = new HSlider[Levels.Length];
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
+    HSlider view = null!;
+    Label viewName = null!;
 
     public override void _Ready()
     {
@@ -80,6 +83,25 @@ public partial class OptionsPage : Control
             }
         }
 
+        // How far the world is drawn (env-9); slow PCs turn it down.
+        var graphics = new Label { Text = "Graphics", HorizontalAlignment = HorizontalAlignment.Center };
+        Hud.Soft(graphics, 15, 0.6f);
+        column.AddChild(graphics);
+        // Four steps, Short to Very far; the name shows beside the slider.
+        view = ControlsPage.SliderRow(column, "View distance", 0, ViewDistance.Names.Length - 1, 1, (int)ViewDistance.Setting, v =>
+        {
+            ViewDistance.Setting = (ViewDistance.Level)(int)v;
+            viewName.Text = ViewDistance.Names[(int)v];
+        });
+        viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
+        Hud.Soft(viewName, 16, 0.7f);
+        view.GetParent().AddChild(viewName);
+
+        // How you look (ui-21): the same picker as at first join.
+        var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
+        lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(lookButton);
+
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);
@@ -95,6 +117,8 @@ public partial class OptionsPage : Control
             sliders[i].SetValueNoSignal(v);
             percents[i].Text = Percent(v);
         }
+        view.SetValueNoSignal((int)ViewDistance.Setting);
+        viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
         Visible = true;
     }
 

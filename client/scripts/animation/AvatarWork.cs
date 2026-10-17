@@ -1,19 +1,21 @@
 using System;
+using System.Linq;
 using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Drives each avatar's work pose from its running craft job, and other players'
-// sneaking from player_sneaking. Your own job comes from my_craft_job; other players'
-// from the public craft_work table (D-072), which Atmosphere already subscribes to.
+// Drives each avatar's work pose from its running craft job, other players' sneaking
+// from player_sneaking, and everyone's clothes from worn_item. Your own job comes from
+// my_craft_job; other players' from the public craft_work table (D-072), which
+// Atmosphere already subscribes to.
 public static class AvatarWork
 {
     public static void Attach(DbConnection conn, Avatar me, Func<uint, Avatar?> other)
     {
         conn.Db.MyCraftJob.OnInsert += (_, j) =>
         {
-            Start(me, j.ProcessId);
+            Start(me, j.ProcessId, conn);
             if (WorkMotions.For(j.ProcessId) == WorkMotion.Chop) FaceTree(me);
             // Station crafts turn you to the station you work at (D-098).
             else if (Processes.Find(j.ProcessId) is { Station: not StationKind.None } def
@@ -34,7 +36,26 @@ public static class AvatarWork
             if (other(p.PlayerId) is not { } a) return;
             a.Sneaking = conn.Db.PlayerSneaking.PlayerId.Find(p.PlayerId) is not null;
             Start(a, conn.Db.CraftWork.PlayerId.Find(p.PlayerId)?.ProcessId);
+            Dress(conn, a, p.PlayerId);
         };
+
+        // What everyone wears (worn_item, D-074). Wearing a new piece deletes the old
+        // row and inserts the new one, so each change re-reads the player's whole set.
+        void Changed(WornItem w)
+        {
+            if (w.Owner == conn.Identity) Dress(conn, me, w.PlayerId);
+            else if (other(w.PlayerId) is { } a) Dress(conn, a, w.PlayerId);
+        }
+        conn.Db.WornItem.OnInsert += (_, w) => Changed(w);
+
+        // Quick actions anyone did (player_act, anim-4), your own included: the server
+        // notes them only once they succeed.
+        conn.Db.PlayerAct.OnInsert += (_, act) =>
+        {
+            var avatar = act.PlayerId == MyPlayerId(conn) ? me : other(act.PlayerId);
+            avatar?.Act((WorkMotion)act.Motion, act.Item == 0 ? null : (Item)act.Item);
+        };
+        conn.Db.WornItem.OnDelete += (_, w) => Changed(w);
     }
 
     // Felling: face the nearest standing trunk within reach (shared/Trees.cs cells).
@@ -54,8 +75,27 @@ public static class AvatarWork
         if (best < 3f * 3f) avatar.Face(bx, bz);
     }
 
-    static void Start(Avatar avatar, string? processId)
+    static uint? MyPlayerId(DbConnection conn) =>
+        conn.Identity is { } id ? conn.Db.Player.Identity.Find(id)?.PlayerId : null;
+
+    static void Dress(DbConnection conn, Avatar avatar, uint playerId)
+    {
+        ushort body = 0, feet = 0;
+        foreach (var w in conn.Db.WornItem.Iter())
+        {
+            if (w.PlayerId != playerId) continue;
+            if (w.Slot == PlayerModel.Body) body = w.Item;
+            else if (w.Slot == PlayerModel.Feet) feet = w.Item;
+        }
+        avatar.Wear(PlayerModel.Body, body);
+        avatar.Wear(PlayerModel.Feet, feet);
+    }
+
+    // conn only for your own avatar: your inventory says which tool you work with.
+    static void Start(Avatar avatar, string? processId, DbConnection? conn = null)
     {
         avatar.Work = WorkMotions.For(processId);
+        var (right, left) = HeldTools.For(processId, conn?.Db.MyInventory.Iter().Select(i => (i.Item, i.Quality)));
+        avatar.Hold(right, left);
     }
 }

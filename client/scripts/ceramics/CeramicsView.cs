@@ -41,6 +41,7 @@ public partial class CeramicsView : Node
         this.conn = conn;
         RegisterUse();
         AttachSimmer(conn);
+        AttachLamps(conn);
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
@@ -72,6 +73,7 @@ public partial class CeramicsView : Node
                 note(form switch
                 {
                     ClayForm.Brick => "The brick is drying. It turns pale when it is ready.",
+                    ClayForm.Tile => "Your roof tile is drying. It is too fine for a campfire: once it is pale, fire it in a kiln.",
                     ClayForm.StorageJar => "Your storage jar is drying. It is too big for a campfire: once it is pale, fire it in a kiln.",
                     _ => "Your pot is drying. It turns pale when it is ready to fire.",
                 });
@@ -146,6 +148,10 @@ public partial class CeramicsView : Node
         Use.Register(new UseHandler { Id = "ceramics.kiln", Priority = 26, Find = KilnOffer });
         // Like taking meat off a fire: ahead of feeding it.
         Use.Register(new UseHandler { Id = "ceramics.simmer", Priority = 25, Find = SimmerOffer });
+        // A lamp you face: feed it tallow, or pick it up once it's out. Setting one down
+        // sits just under feeding a fire, so G at a fire still feeds the fire.
+        Use.Register(new UseHandler { Id = "ceramics.lamp", Priority = 24, Find = LampOffer });
+        Use.Register(new UseHandler { Id = "ceramics.set_lamp", Priority = 19, Find = SetLampOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
         Use.Register(new UseHandler { Id = "ceramics.fire_pot", Priority = 22, Find = at => TendOffer(at, firing: true) });
@@ -331,7 +337,8 @@ public partial class CeramicsView : Node
 
     static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
         or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar
-        or Item.PotOfBroth or Item.PotOfStew;
+        or Item.PotOfBroth or Item.PotOfStew or Item.ClayLamp or Item.Tallow
+        or Item.UnfiredRoofTile or Item.RoofTile;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()

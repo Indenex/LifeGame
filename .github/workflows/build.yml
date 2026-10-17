@@ -1,7 +1,11 @@
 name: Build
 
-# Doc-only changes (the Scribe's, the wiki's, tickets) start no Build at all: no server,
-# load test or runners. A change that touches anything else still runs everything.
+# Which checks run depends on what changed (job 'changes'): doc-only changes build nothing, client-only
+# changes skip the server tests, server- or tools-only changes skip the Windows export. On main that
+# is paths-ignore for docs; everything else on a push to main runs in full.
+# The three required checks (docs/MERGE_QUEUE.md) are 'Server module and load test', 'Client (Linux)'
+# and 'Client (Windows)'. They always report, even when they have nothing to do, because a branch rule
+# that requires a check blocks a PR whose check never shows up. Keep their names.
 on:
   push:
     branches: [main]
@@ -15,19 +19,17 @@ on:
   pull_request:
     # labeled/unlabeled so adding or removing world-wipe re-runs the checks.
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    paths-ignore:
-      - '**.md'
-      - 'tickets/**'
-      - 'docs/**'
-      - 'wiki/**'
-      - 'renders/**'
-      - 'tools/wiki-page/**'
+  # The merge queue builds its temporary branches here (docs/MERGE_QUEUE.md).
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
-# A new push to a PR cancels that PR's older run. Every commit on main gets its own group, so
-# no merge ever cancels or replaces another commit's Build (a release needs each one to finish).
+# A new push to a PR cancels that PR's older run. Pushes to main share one group without
+# cancelling: the running build finishes, and only the newest pending build waits, so a burst of
+# merges is built as one batch (each merge replaces any older pending run) and the release picks
+# whatever is newest and green. Manual runs have a group of their own.
 concurrency:
-  group: build-${{ github.event_name == 'push' && github.sha || format('{0}-{1}', github.event_name, github.ref) }}
+  group: build-${{ github.event_name == 'push' && 'main' || format('{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -35,80 +37,65 @@ env:
   SPACETIME_VERSION: 2.12.0
 
 jobs:
-  server:
-    name: Server module and load test
+  # Decides what the rest has to do. Not a required check.
+  changes:
+    name: What changed
+    runs-on: ubuntu-24.04
+    outputs:
+      server: ${{ steps.what.outputs.server }}
+      linux: ${{ steps.what.outputs.linux }}
+      windows: ${{ steps.what.outputs.windows }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Work out what changed
+        id: what
+        run: |
+          set -u
+          all() { echo "server=true" >> "$GITHUB_OUTPUT"; echo "linux=true" >> "$GITHUB_OUTPUT"; echo "windows=true" >> "$GITHUB_OUTPUT"; exit 0; }
+          case "${{ github.event_name }}" in
+            pull_request) base=HEAD^1 ;;
+            merge_group) base="${{ github.event.merge_group.base_sha }}"; git fetch -q --depth=1 origin "$base" ;;
+            *) all ;;
+          esac
+          # The same list as paths-ignore on push.
+          code=$(git diff --name-only "$base" HEAD | grep -vE '\.md$|^(tickets|docs|wiki|renders|tools/wiki-page)/' || true)
+          echo "Changed (not docs):"; echo "$code"
+          server=false linux=false windows=false
+          if [ -n "$code" ]; then
+            # A workflow change, or a file outside the known folders, can affect anything.
+            if grep -qE '^\.github/' <<<"$code" || grep -qvE '^(client|server|shared|tools)/' <<<"$code"; then all; fi
+            # Server tests: anything but client-only changes.
+            if grep -qvE '^client/' <<<"$code"; then server=true; fi
+            # Windows export: the client, what it shares with the server, the export tooling.
+            if grep -qE '^(client/|shared/|tools/ci/|tools/release/|tools/gen-bindings)' <<<"$code"; then windows=true; fi
+            # Linux export is also the compile check for bindings, so server changes run it too.
+            if [ "$windows" = true ] || grep -qE '^server/' <<<"$code"; then linux=true; fi
+          fi
+          { echo "server=$server"; echo "linux=$linux"; echo "windows=$windows"; } >> "$GITHUB_OUTPUT"
+
+  # Builds the module once. The test jobs below publish this build and share the bindings.
+  module:
+    name: Build server module
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v5
+      - uses: ./.github/actions/setup-stdb
         with:
-          dotnet-version: 8.0.x
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-
-
-      - name: Cache SpacetimeDB
-        id: stdb-cache
-        uses: actions/cache@v5
-        with:
-          path: ~/stdb
-          key: stdb-${{ env.SPACETIME_VERSION }}
-
-      - name: Install SpacetimeDB
-        run: |
-          if [ ! -x "$HOME/stdb/spacetimedb-cli" ]; then
-            mkdir -p "$HOME/stdb"
-            curl -sSL "https://github.com/clockworklabs/SpacetimeDB/releases/download/v${SPACETIME_VERSION}/spacetime-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C "$HOME/stdb"
-          fi
-          echo "$HOME/stdb" >> "$GITHUB_PATH"
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
 
       - name: Build module
         working-directory: server
         run: spacetimedb-cli build
 
-      # Bindings are not committed; every job generates them from the module.
+      # Bindings are not committed; they are generated from the module.
       - name: Generate client bindings
         run: tools/gen-bindings.sh
-
-      - name: Publish to a local server and run a short load test
-        run: |
-          spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
-          (cd server && spacetimedb-cli publish lifegame --server local --yes)
-          # Pull requests get a quick smoke test; main gets the full 20 bots for 20 s.
-          if [ "${{ github.event_name }}" = "push" ]; then bots=20; secs=20; else bots=5; secs=5; fi
-          (cd tools/LoadTest && dotnet run -c Release -- $bots $secs)
-          (cd tools/BuildTest && dotnet run -c Release)
-          (cd tools/SpawnCheck && dotnet run -c Release)
-
-      # Justin publishes each merge over his world without --delete-data (bugfix-3).
-      # The one planned wipe (D-129) carries the world-wipe label, which only the PM adds
-      # once Justin has confirmed the date. Every other PR must carry the world over.
-      - name: World wipe (labelled, upgrade check skipped)
-        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'world-wipe')
-        run: echo "::warning::This PR is labelled world-wipe. Publishing it needs --delete-data and wipes Justin's world (D-129)."
-
-      - name: Upgrade check (this module over the base branch's world, no wipe)
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'world-wipe')
-        run: |
-          # The merge commit's first parent is the base this PR was merged onto. The
-          # base branch's tip can move while CI runs, so don't fetch it by name.
-          git fetch --depth=2 origin "$GITHUB_SHA"
-          tools/upgrade-check.sh HEAD^1
-
-      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
-        run: cd tools/CraftCheck && dotnet run -c Release
-
-      - name: Check chat, claim and PvP rules with two players
-        run: |
-          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
-          (cd server && spacetimedb-cli call lifegame --server local set_newcomer_grace 0)
-          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
       # The compiled module, so a host can publish it without the .NET SDK:
       # spacetime publish <name> --bin-path StdbModule.wasm
@@ -118,9 +105,115 @@ jobs:
           path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@v6
+        with:
+          name: module-bindings
+          path: client/module_bindings
+          retention-days: 1
+          if-no-files-found: error
+
+  load:
+    name: Load, spawn and social checks
+    needs: module
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - uses: ./.github/actions/start-server
+      - name: Short load test and spawn check
+        run: |
+          # Pull requests get a quick smoke test; main gets the full 20 bots for 20 s.
+          if [ "${{ github.event_name }}" = "push" ]; then bots=20; secs=20; else bots=5; secs=5; fi
+          (cd tools/LoadTest && dotnet run -c Release -- $bots $secs)
+          (cd tools/SpawnCheck && dotnet run -c Release)
+      - name: Check chat, claim and PvP rules with two players
+        run: |
+          (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
+          (cd server && spacetimedb-cli call lifegame --server local set_newcomer_grace 0)
+          cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
+
+  build-test:
+    name: Building check
+    needs: module
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - uses: ./.github/actions/start-server
+      - name: Build structures with two players
+        run: cd tools/BuildTest && dotnet run -c Release
+
+  craft-test:
+    name: Crafting check
+    needs: module
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - uses: ./.github/actions/start-server
+      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
+        run: cd tools/CraftCheck && dotnet run -c Release
+
+  # Justin publishes each merge over his world without --delete-data (bugfix-3).
+  # The one planned wipe (D-129) carries the world-wipe label, which only the PM adds
+  # once Justin has confirmed the date. Every other PR must carry the world over.
+  upgrade:
+    name: Upgrade check
+    needs: module
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: module-bindings
+          path: client/module_bindings
+      - name: Start a local server
+        run: |
+          spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
+      - name: World wipe (labelled, upgrade check skipped)
+        if: contains(github.event.pull_request.labels.*.name, 'world-wipe')
+        run: echo "::warning::This PR is labelled world-wipe. Publishing it needs --delete-data and wipes Justin's world (D-129)."
+      - name: Upgrade check (this module over the base branch's world, no wipe)
+        if: "!contains(github.event.pull_request.labels.*.name, 'world-wipe')"
+        run: |
+          # The merge commit's first parent is the base this PR was merged onto. The
+          # base branch's tip can move while CI runs, so don't fetch it by name.
+          git fetch --depth=2 origin "$GITHUB_SHA"
+          tools/upgrade-check.sh HEAD^1
+
+  # The required check. Passes when every server job passed or had nothing to do.
+  server:
+    name: Server module and load test
+    needs: [changes, module, load, build-test, craft-test, upgrade]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every server job passed or was skipped
+        run: |
+          [ "${{ needs.changes.result }}" = success ] || { echo "::error::Could not work out what changed."; exit 1; }
+          for r in "module ${{ needs.module.result }}" "load ${{ needs.load.result }}" "build-test ${{ needs.build-test.result }}" "craft-test ${{ needs.craft-test.result }}" "upgrade ${{ needs.upgrade.result }}"; do
+            echo "$r"
+            case "${r#* }" in success|skipped) ;; *) failed=1 ;; esac
+          done
+          [ -z "${failed:-}" ] || { echo "::error::A server job failed."; exit 1; }
+
   client:
     name: Client (${{ matrix.preset }})
     runs-on: ubuntu-24.04
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -132,37 +225,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-
-
-      - name: Cache SpacetimeDB
-        id: stdb-cache
-        uses: actions/cache@v5
-        with:
-          path: ~/stdb
-          key: stdb-${{ env.SPACETIME_VERSION }}
-
-      - name: Install SpacetimeDB
+      - name: Does this export need to run?
+        id: gate
         run: |
-          if [ ! -x "$HOME/stdb/spacetimedb-cli" ]; then
-            mkdir -p "$HOME/stdb"
-            curl -sSL "https://github.com/clockworklabs/SpacetimeDB/releases/download/v${SPACETIME_VERSION}/spacetime-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C "$HOME/stdb"
-          fi
-          echo "$HOME/stdb" >> "$GITHUB_PATH"
+          if [ "${{ matrix.preset }}" = Windows ]; then go='${{ needs.changes.outputs.windows }}'; else go='${{ needs.changes.outputs.linux }}'; fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+          [ "$go" = true ] || echo "Nothing this export depends on changed."
+
+      - uses: ./.github/actions/setup-stdb
+        if: steps.gate.outputs.go == 'true'
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
 
       # Bindings are not committed; every job generates them from the module.
       - name: Generate client bindings
+        if: steps.gate.outputs.go == 'true'
         run: tools/gen-bindings.sh
 
       - name: Cache Godot and export templates
+        if: steps.gate.outputs.go == 'true'
         id: godot-cache
         uses: actions/cache@v5
         with:
@@ -172,6 +253,7 @@ jobs:
           key: godot-${{ env.GODOT_VERSION }}-mono
 
       - name: Install Godot and export templates
+        if: steps.gate.outputs.go == 'true'
         run: |
           if [ "${{ steps.godot-cache.outputs.cache-hit }}" != "true" ]; then
             base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
@@ -184,7 +266,14 @@ jobs:
           fi
           echo "GODOT=$(ls $HOME/godot/*/Godot_v*_mono_linux.x86_64)" >> "$GITHUB_ENV"
 
+      # Godot exports a pck and an exe even when the C# project does not compile, and then the game
+      # cannot start. Compile it here so a build error fails this job.
+      - name: Build the C# project
+        if: steps.gate.outputs.go == 'true'
+        run: dotnet build client/LifeGame.csproj -c Release --nologo
+
       - name: Export
+        if: steps.gate.outputs.go == 'true'
         working-directory: client
         run: |
           mkdir -p "$(dirname ../${{ matrix.out }})"
@@ -192,7 +281,12 @@ jobs:
           "$GODOT" --headless --path . --export-release "${{ matrix.preset }}" "../${{ matrix.out }}"
           test -e "../${{ matrix.out }}"
 
+      - name: Check the export has the .NET assemblies
+        if: steps.gate.outputs.go == 'true'
+        run: tools/ci/check-export.sh "$(dirname '${{ matrix.out }}')"
+
       - uses: actions/upload-artifact@v6
+        if: steps.gate.outputs.go == 'true'
         with:
           name: LifeGame-${{ matrix.preset }}
           path: builds/

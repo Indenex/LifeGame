@@ -26,6 +26,10 @@ public partial class ClaimPanel : CanvasLayer
     // claims-9: the owner names the place.
     readonly LineEdit placeBox = new();
     readonly HBoxContainer placeRow = new();
+    // ui-18: the stash and your bag as round-slot grids, dragged between (a whole stack
+    // per drag). Kept across rebuilds like the rows above, so a drag isn't cut short.
+    readonly HBoxContainer stashGrids = new();
+    BagGrid stashGrid = null!, stashBag = null!;
     bool owner, dirty, confirmAbandon;
     float clock;
 
@@ -171,6 +175,42 @@ public partial class ClaimPanel : CanvasLayer
         }
     }
 
+    // Built once; each rebuild refreshes the slots in place (ui-18).
+    void StashGrids()
+    {
+        if (stashGrid == null)
+        {
+            stashGrids.AddThemeConstantOverride("separation", 24);
+            stashGrid = new BagGrid
+            {
+                Kind = "stash", Width = 5, Empty = "Empty",
+                Source = () => Conn != null && Claim is { } c
+                    ? Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == c.Id).Select(s => new BagStack((Item)s.Item, s.Quality, s.Count))
+                    : Enumerable.Empty<BagStack>(),
+                Accepts = d => d["from"].AsString() == "bag",
+                Receive = d => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+            };
+            stashBag = new BagGrid
+            {
+                Kind = "bag", Width = 5, Empty = "Nothing",
+                Source = () => Conn != null
+                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                    : Enumerable.Empty<BagStack>(),
+                Accepts = d => d["from"].AsString() == "stash",
+                Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
+            };
+            foreach (var (title, grid) in new[] { ("In the stash", stashGrid), ("You carry", stashBag) })
+            {
+                var column = new VBoxContainer();
+                column.AddChild(Note(title));
+                column.AddChild(grid);
+                stashGrids.AddChild(column);
+            }
+        }
+        stashGrid.Refresh();
+        stashBag.Refresh();
+    }
+
     void Rebuild()
     {
         dirty = false;
@@ -179,7 +219,7 @@ public partial class ClaimPanel : CanvasLayer
         foreach (var child in content.GetChildren())
         {
             content.RemoveChild(child);
-            if (child != standing && child != addRow && child != placeRow) child.QueueFree();
+            if (child != standing && child != addRow && child != placeRow && child != stashGrids) child.QueueFree();
         }
 
         string? place = Conn.Db.ClaimName.ClaimId.Find(claim.Id)?.Name;
@@ -232,12 +272,14 @@ public partial class ClaimPanel : CanvasLayer
 
         // The shared stash at the foot of the marker.
         content.AddChild(Heading("Stash", 16));
+        StashGrids();
+        content.AddChild(stashGrids);
         var stash = Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == claim.Id).OrderBy(s => s.Item).ThenByDescending(s => s.Quality).ToList();
         if (stash.Count == 0) content.AddChild(Note("Empty. Anything you leave here is safe from outsiders."));
         foreach (var s in stash)
         {
-            var row = Row($"{Name(s.Item, s.Quality)}  {s.Count}");
-            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality)));
+            var row = Row($"{Name(s.Item, s.Quality, s.Wear)}  {s.Count}");
+            row.AddChild(Small("Take", () => Conn.Reducers.TakeFromStash(claim.Id, s.Item, s.Quality, 1)));
             content.AddChild(row);
         }
         // claims-11: the last few comings and goings, newest first.
@@ -258,7 +300,7 @@ public partial class ClaimPanel : CanvasLayer
             row.AddThemeConstantOverride("h_separation", 6);
             row.AddThemeConstantOverride("v_separation", 6);
             foreach (var item in carried)
-                row.AddChild(Small($"Leave {Name(item.Item, item.Quality).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality)));
+                row.AddChild(Small($"Leave {Name(item.Item, item.Quality, item.Wear).ToLowerInvariant()}", () => Conn.Reducers.StashItem(claim.Id, item.Item, item.Quality, 1)));
             content.AddChild(row);
         }
 
@@ -280,11 +322,12 @@ public partial class ClaimPanel : CanvasLayer
     }
 
     // "Hand axe (fine)" for made things, just "Stick" for raw materials.
-    static string Name(ushort item, byte quality)
+    static string Name(ushort item, byte quality, uint wear = 0)
     {
         if (!Items.IsKnown(item)) return "Something";
         var def = Items.Def((Item)item);
-        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()})" : def.Name;
+        string worn = ItemLook.Condition(item, quality, wear);
+        return def.HasQuality ? $"{def.Name} ({Processes.Grade(quality).ToLowerInvariant()}{(worn == "" ? "" : ", " + worn)})" : def.Name;
     }
 
     // "just now", "4 min ago", "2 h ago", "3 days ago".

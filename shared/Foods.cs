@@ -27,12 +27,14 @@ namespace LifeGame.Shared
     }
 
     // A raw food that roasts on a fire (Roasting timing): what it becomes when done well,
-    // and when left on too long. Adding a roastable is one entry here plus a recipe.
+    // when left on too long, and which skill process it trains. A new roastable is one
+    // entry here plus its recipe.
     public sealed class RoastDef
     {
         public Item Raw;
         public Item Cooked;
         public Item Burnt;
+        public string Process = "";
     }
 
     public static class Foods
@@ -42,6 +44,9 @@ namespace LifeGame.Shared
             new FoodDef { Id = Item.Berries, Food = Needs.BerryFood, Water = Needs.BerryWater },
             new FoodDef { Id = Item.CookedMutton, Food = Needs.RoastMuttonFood, GoodMeal = true },
             new FoodDef { Id = Item.BurntMutton, Food = Needs.BurntMuttonFood },
+            // Venison (animals-14) feeds like mutton for now: same numbers as the roast.
+            new FoodDef { Id = Item.CookedVenison, Food = Needs.RoastMuttonFood, GoodMeal = true },
+            new FoodDef { Id = Item.BurntVenison, Food = Needs.BurntMuttonFood },
             new FoodDef { Id = Item.PotOfBroth, Food = Needs.BrothFood, Water = Needs.BrothWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
             new FoodDef { Id = Item.PotOfStew, Food = Needs.StewFood, Water = Needs.StewWater, GoodMeal = true, LeavesBehind = Item.CoilPot },
         };
@@ -55,7 +60,8 @@ namespace LifeGame.Shared
 
         public static readonly IReadOnlyList<RoastDef> Roasts = new[]
         {
-            new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton },
+            new RoastDef { Raw = Item.RawMutton, Cooked = Item.CookedMutton, Burnt = Item.BurntMutton, Process = "cook.meat" },
+            new RoastDef { Raw = Item.RawVenison, Cooked = Item.CookedVenison, Burnt = Item.BurntVenison, Process = "cook.venison" },
         };
 
         static readonly Dictionary<Item, RoastDef> RoastByRaw = Roasts.ToDictionary(r => r.Raw);

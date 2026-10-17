@@ -32,7 +32,12 @@ public partial class Atmosphere
         DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled,
         AlbedoColor = new Color(1f, 0.6f, 0.28f, 0f),
     };
-    readonly List<(Vector3 Door, float Yaw, bool Shut, float Strength, Vector3 Roof, float Dist)> homes = new();
+    readonly List<(Vector3 Door, float Yaw, bool Shut, float Strength, Vector3 Roof, float Dist, ulong Id, bool Chimney)> homes = new();
+
+    // How see-through a building is now, 0 solid to 1 faded out of the camera's way
+    // (House building's BuildingSystem.SeeThroughOf; Main wires it). A faded home's
+    // doorway glow fades with it, so the light doesn't hang in the air; its smoke stays.
+    public Func<ulong, float>? SeeThrough;
     readonly List<(Vector3 At, float Strength, float Dist)> openFires = new();
 
     void ReadyHomes()
@@ -135,13 +140,14 @@ public partial class Atmosphere
             doorGlows[i].Visible = on;
             if (!on) continue;
             var h = homes[i];
-            float s = h.Strength * glow * (h.Shut ? 0.25f : 1f);
+            float solid = 1f - Mathf.Clamp(SeeThrough?.Invoke(h.Id) ?? 0f, 0f, 1f);
+            float s = h.Strength * glow * (h.Shut ? 0.25f : 1f) * solid;
             doorLights[i].GlobalPosition = h.Door + new Vector3(0f, 0.9f, 0f);
             doorLights[i].LightEnergy = 1.4f * s * flicker;
             doorGlows[i].GlobalPosition = h.Door + new Vector3(0f, 0.85f, 0f);
             doorGlows[i].GlobalRotation = new Vector3(0f, h.Yaw, 0f);
             // Each doorway fades with its own fire, and nearly vanishes behind a shut door.
-            doorGlows[i].Transparency = 1f - Mathf.Clamp(h.Strength * (h.Shut ? 0.2f : 1f), 0f, 1f);
+            doorGlows[i].Transparency = 1f - Mathf.Clamp(h.Strength * (h.Shut ? 0.2f : 1f) * solid, 0f, 1f);
         }
         doorGlowMaterial.AlbedoColor = new Color(1f, 0.6f, 0.28f, 0.55f * glow * flicker);
 
@@ -149,7 +155,7 @@ public partial class Atmosphere
         // the air around it, so it is pale by day and dim blue-grey at night.
         int k = 0;
         foreach (var h in homes)
-            if (k < SmokeSlots) SetSmoke(smokes[k++], h.Roof, h.Strength, air);
+            if (h.Chimney && k < SmokeSlots) SetSmoke(smokes[k++], h.Roof, h.Strength, air);
         foreach (var f in openFires)
             if (k < SmokeSlots) SetSmoke(smokes[k++], f.At + new Vector3(0f, 0.9f, 0f), f.Strength * 0.6f, air);
         for (; k < SmokeSlots; k++)
@@ -198,7 +204,9 @@ public partial class Atmosphere
                 var (dx, dz) = Structures.ToWorld(hs.X, hs.Z, hs.Yaw, 0f, shape.DoorwayZ + 0.15f);
                 bool shut = homesConn.Db.StructureDoor.StructureId.Find(hs.Id) is { Closed: true };
                 float doorGround = terrain?.TileHeight(World.CellOf(dx), World.CellOf(dz)) ?? ground;
-                homes.Add((new Vector3(dx, doorGround, dz), hs.Yaw, shut, strength, new Vector3(hs.X, ground + 2.9f, hs.Z), dist));
+                // Smoke leaves at the shape's smoke outlet (StructureShape.SmokeY, D-206); a shape
+                // with none sends up no smoke.
+                homes.Add((new Vector3(dx, doorGround, dz), hs.Yaw, shut, strength, new Vector3(hs.X, ground + shape.SmokeY, hs.Z), dist, hs.Id, shape.SmokeY > 0f));
             }
             else openFires.Add((new Vector3(f.X, ground, f.Z), strength, dist));
         }

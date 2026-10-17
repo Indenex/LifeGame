@@ -10,7 +10,7 @@ namespace LifeGame;
 // thatched gable roof. +Z is the door side.
 public static partial class StructureModel
 {
-    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.62f;
+    const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.78f; // 1.78 x 1.25 = 2.2 m clear (building-14)
     const float HouseEaveZ = Structures.HouseWallZ + 0.5f, HouseEaveX = Structures.HouseWallX + 0.45f;
     static ShaderMaterial? brick;
     static ShaderMaterial Brick => brick ??= Look.Solid(new Color(0.74f, 0.5f, 0.36f));
@@ -66,7 +66,17 @@ public static partial class StructureModel
                 Add(list, 1, Wood, Stick(new Vector3(-HouseDoorHalf - 0.3f, HouseDoorTop + 0.04f, wz + 0.02f), new Vector3(HouseDoorHalf + 0.3f, HouseDoorTop + 0.05f, wz + 0.02f), 0.09f));
         }
 
-        // Rafters: a ridge pole, pairs of rafters down to the eaves, clay gable ends.
+        HouseRoof(list, t, Clay);
+        return list;
+    }
+
+    // Rafters with gable ends over the room's side walls (stage 2), then thatch in rows
+    // from the eaves up on both slopes and a bundled ridge cap (stage 3). Shared by the
+    // mud-brick house (clay gables) and the log cabin (log gables).
+    static void HouseRoof(List<Piece> list, float t, Material gable)
+    {
+        float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        // Rafters: a ridge pole, pairs of rafters down to the eaves, gable ends.
         float slope = (HouseRidge - HouseWallTop) / wz;
         float eaveY = HouseRidge - slope * HouseEaveZ;
         Add(list, 2, Wood, Stick(new Vector3(-HouseEaveX - 0.1f, HouseRidge + 0.02f, 0), new Vector3(HouseEaveX + 0.1f, HouseRidge + 0.05f, 0), 0.07f));
@@ -78,7 +88,7 @@ public static partial class StructureModel
                 Add(list, 2, Wood, Stick(new Vector3(x, eaveY - 0.02f, side * HouseEaveZ), new Vector3(x + (Hash(i, 22) - 0.5f) * 0.04f, HouseRidge + 0.1f, -side * 0.12f), 0.045f));
         }
         foreach (float side in new[] { 1f, -1f })
-            Add(list, 2, Clay, Gable(side * wx, wz + t / 2, HouseWallTop + 0.1f, HouseRidge - 0.04f, t * 0.8f, side));
+            Add(list, 2, gable, Gable(side * wx, wz + t / 2, HouseWallTop + 0.1f, HouseRidge - 0.04f, t * 0.8f, side));
 
         // Thatch in rows from the eaves up on both slopes, then a bundled ridge cap.
         const int rows = 4;
@@ -93,7 +103,6 @@ public static partial class StructureModel
             }
         }
         Add(list, 3, Thatch, Wrap(new Vector3(0, HouseRidge + 0.2f, 0), Vector3.Right, 0.15f, HouseEaveX * 2 + 0.25f, lumpy: true));
-        return list;
     }
 
     // A low course of fieldstones from a to b.

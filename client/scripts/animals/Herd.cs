@@ -61,9 +61,15 @@ public partial class Herd : Node3D
             if (a.State == AnimalState.Run && old.State != AnimalState.Run && DistanceTo(a, player()) < BoltHintRange)
                 Hints.Request("sneak");
         };
+        conn.Db.AnimalHit.OnInsert += (_, h) =>
+        {
+            if (animals.TryGetValue(h.AnimalId, out var node)) node.Flinch(h.Crit, new Vector3(h.FromX, 0f, h.FromZ));
+            HitPop.Show(new Vector3(h.X, terrain.HeightAt(h.X, h.Z), h.Z), h.Crit, h.Killed);
+        };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
         Strike.Register("animals.animal", OfferStrike);
+        Strike.Register("animals.bow", OfferShot);
         var racks = new HideRacks();
         AddChild(racks);
         racks.Bind(conn, terrain);
@@ -77,7 +83,7 @@ public partial class Herd : Node3D
         bool gently = leaving.Remove(c.AnimalId, out var sheep) || animals.Remove(c.AnimalId, out sheep);
         if (!gently)
         {
-            sheep = new Sheep(c.AnimalId, terrain);
+            sheep = new Sheep(c.AnimalId, terrain, c.Species);
             AddChild(sheep);
         }
         sheep!.LieDown(c.X, c.Z, c.Heading, c.Fleece, c.Growth, gently);
@@ -115,6 +121,37 @@ public partial class Herd : Node3D
         ulong id = nearest.Id;
         return new StrikeOffer(best, () => conn.Reducers.StrikeAnimal(id));
     }
+
+    // Shooting (animals-15): with a bow and an arrow, the strike key shoots the nearest
+    // animal in a cone in front, within BowRange. The server decides the hit, so the
+    // client only picks the target and animates the arrow.
+    const float BowRange = 40f;
+    static readonly float BowCone = Mathf.Cos(Mathf.DegToRad(25f));
+
+    StrikeOffer? OfferShot(Vector3 at, Vector3 facing)
+    {
+        if (conn == null || !CarryingItem(Item.Bow) || !CarryingItem(Item.Arrow)) return null;
+        Animal? nearest = null;
+        float best = BowRange;
+        foreach (var a in conn.Db.Animal.Iter())
+        {
+            var to = new Vector3(a.X - at.X, 0, a.Z - at.Z);
+            float d = to.Length();
+            if (d <= best && d > 1f && to.Dot(facing) >= BowCone * d)
+                (nearest, best) = (a, d);
+        }
+        if (nearest == null) return null;
+        ulong id = nearest.Id;
+        var target = new Vector3(nearest.X, terrain.HeightAt(nearest.X, nearest.Z) + 0.8f, nearest.Z);
+        return new StrikeOffer(best, () =>
+        {
+            conn.Reducers.ShootAnimal(id);
+            ArrowFlight.Launch(this, at + new Vector3(0, 1.4f, 0), target);
+        });
+    }
+
+    bool CarryingItem(Item item) =>
+        conn?.Db.MyInventory.Iter().Any(i => i.Count > 0 && i.Item == (ushort)item) == true;
 
     public override void _Process(double delta)
     {
@@ -156,7 +193,7 @@ public partial class Herd : Node3D
         foreach (var a in conn.Db.Animal.Iter())
         {
             float d = DistanceTo(a, at);
-            if (d <= best && a.Species == AnimalSpecies.Sheep && a.Fleece >= 80)
+            if (d <= best && AnimalDefs.Get((byte)a.Species).Shearable && a.Fleece >= 80)
                 (nearest, best) = (a, d);
         }
         if (nearest == null) return null;
@@ -168,7 +205,7 @@ public partial class Herd : Node3D
     {
         if (!animals.TryGetValue(a.Id, out var sheep))
         {
-            sheep = new Sheep(a.Id, terrain);
+            sheep = new Sheep(a.Id, terrain, a.Species);
             animals[a.Id] = sheep;
             AddChild(sheep);
             inserted = true;
