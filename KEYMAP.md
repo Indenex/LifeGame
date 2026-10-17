@@ -38,6 +38,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|
 | Crafting panel | Tab next tier, 1-9 pick a row, Esc close |
 | Build placement | T / Shift+T rotate, Tab next building, Enter place, Esc cancel |
+| Placing a made thing (ui-16, D-187) | Drag it out of the bag (I) and let go over the world, press its hotbar key, or take the after-craft prompt (E); click to set it down; T / Shift+T or the scroll wheel turn it; Tab next thing; Esc or a click on the hotbar puts it back |
 | Minigames (knapping, shaping) | Space, A/D, T (ceramics), Esc quit |
 | Basket panel | Click moves one item, Shift+click moves all, E (Use) or Esc close |
 | Station panel (ui-13) | E (Use) at a finished station opens it; click Make; E (Use) or Esc closes |

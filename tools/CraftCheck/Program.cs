@@ -186,10 +186,11 @@ conn.Reducers.StartCraft("weave.basket", 0);
 Pump(() => lastError != null, 5, "a basket away from a table to be refused");
 Console.WriteLine($"Basket with no table: {lastError}");
 lastError = null;
-conn.Reducers.PlaceStructure(StructureKind.CraftingTable, x + 2f, z, 0f);
-Pump(() => lastError != null, 5, "a table outside a claim to be refused");
-if (lastError?.Contains("inside your claim") != true) Fail($"a table outside a claim: {lastError}");
-Console.WriteLine($"Table outside a claim: {lastError}");
+// Only basic survival buildings stand outside a claim (building-13): a station that isn't the table is refused.
+conn.Reducers.PlaceStructure(StructureKind.SpindleStation, x + 2f, z, 0f);
+Pump(() => lastError != null, 5, "a spindle station outside a claim to be refused");
+if (lastError?.Contains("inside your claim") != true) Fail($"a spindle station outside a claim: {lastError}");
+Console.WriteLine($"Spindle station outside a claim: {lastError}");
 Gather(Item.Fiber, 6);
 Craft("cord.twist", 0, Item.Cordage);
 Craft("cord.twist", 0, Item.Cordage);
@@ -382,6 +383,19 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     Console.WriteLine("The mended axe chops again");
 }
 
+// Crafting-20: a bow and arrows (animals-15) are made at the bench by hand: the bow from
+// sticks and cordage, three arrows from sticks and fiber, both with a cutting tool.
+{
+    Gather(Item.Stick, 5);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    Craft("lash.bow", 0, Item.Bow);
+    uint arrowsBefore = CountOf(Item.Arrow);
+    Craft("carve.arrows", 0, Item.Arrow);
+    if (CountOf(Item.Arrow) != arrowsBefore + 3) Fail($"one arrow craft made {CountOf(Item.Arrow) - arrowsBefore} arrows, not 3");
+    Console.WriteLine("Made a bow and three arrows");
+}
+
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
 // and put some in this player's inventory (the identity is printed) to check it.
 if (Environment.GetEnvironmentVariable("CRAFTCHECK_ROAST") == "1")
@@ -567,14 +581,31 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within reach of a spot.
 void WalkTo(float tx, float tz)
 {
-    while (true)
+    int lagged = 0;
+    for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 1.5f) break;
+        if (guard > 900)
+        {
+            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
+            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
+            var near = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
+                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
+            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", near)}");
+        }
         float step = Math.Min(d - 1f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
+        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
+        {
+            // The server has not followed for a second: it refused the last step (something solid in the
+            // way). Take its word for where we are and carry on from there, like a player would.
+            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
+        }
+        else lagged = 0;
+        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
             x += dx / d * step;
             z += dz / d * step;

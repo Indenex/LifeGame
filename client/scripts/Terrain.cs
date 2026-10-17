@@ -204,11 +204,11 @@ public partial class Terrain : Node3D
                 float h = TileHeight(x, z);
                 heights[i, j] = h;
                 normals[i, j] = NormalAt(x, z);
-                colors[i, j] = TileColor(x, z, h);
+                colors[i, j] = UnderGrass(x, z, h, TileColor(x, z, h));
                 // A cell whose clearing just changed carries its old color and when it
                 // changed, and the ground shader blends from one to the other.
                 changes[i, j] = ClearChange(x, z) is { } c
-                    ? TileColor(x, z, h, cleared: !c.Cleared) with { A = c.At }
+                    ? UnderGrass(x, z, h, TileColor(x, z, h, cleared: !c.Cleared)) with { A = c.At }
                     : new Color(0, 0, 0, 0);
             }
 
@@ -276,6 +276,26 @@ public partial class Terrain : Node3D
         if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
+    }
+
+    // How strongly the ground under the grass leans toward the tufts' own olive
+    // (env-18), so the odd cell without a tuft doesn't show as a lighter square.
+    const float UnderGrassMatch = 0.7f;
+
+    // The ground's color where grass grows, toward the tufts' muted olive in proportion
+    // to how much grass the cell is likely to carry: full in the open meadow, fading
+    // under the trees, on trails and wet ground. Mirrors Look's grass shader (stylised).
+    Color UnderGrass(int x, int z, float top, Color color)
+    {
+        if (top < Look.WaterLevel + 0.2f || World.ClayScore(x, z) >= 0.7f || Depth(x, z) > 0) return color;
+        float cover = Mathf.Clamp(0.93f - 0.5f * Forest.Density(x, z) - 0.5f * Forest.Wetland(x, z) - 0.6f * Landmarks.Trail(x, z), 0f, 1f);
+        var lin = color.SrgbToLinear();
+        float lum = lin.R * 0.3f + lin.G * 0.59f + lin.B * 0.11f;
+        var olive = new Color(
+            Mathf.Lerp(lin.R, lum * 1.1f, 0.3f),
+            Mathf.Lerp(lin.G, lum * 1.05f, 0.3f),
+            Mathf.Lerp(lin.B, lum * 0.55f, 0.3f)) * 0.9f;
+        return lin.Lerp(olive with { A = lin.A }, cover * UnderGrassMatch).LinearToSrgb();
     }
 
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
@@ -403,7 +423,7 @@ public partial class Terrain : Node3D
                     // boulders share a shape, as stone of one kind would.
                     bool pebble = shore && rocky < 0.5f;
                     float size = pebble ? 0.2f + Hash01(x, z, 22) * 0.2f : 0.3f + Hash01(x, z, 22) * 0.55f;
-                    var stone = (at.ScaledLocal(Vector3.One * size), Look.Rock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
+                    var stone = (at.ScaledLocal(Vector3.One * size), Look.WorldRock.Darkened(Hash01(x, z, 20) * 0.15f), custom with { B = 1f });
                     if (pebble)
                         landmarks.Put(PropMeshes.RiverStone(Regional(x, z, 95, PropMeshes.RiverStoneVariants)), Look.RockSurface,
                             (at.ScaledLocal(Vector3.One * size * 3.3f), stone.Item2, stone.Item3));
@@ -456,6 +476,10 @@ public partial class Terrain : Node3D
                     flowers.Add((Plant(x + 0.5f - Hash01(x, z, 58), top, z + 0.5f - Hash01(x, z, 59), yaw, 1f),
                         Undergrowth.FlowerColors[kind].Lightened((Hash01(x, z, 66) - 0.5f) * 0.1f), custom with { A = SeasonFlower }));
                 }
+                // And the odd lone white flower between the patches (env-17).
+                else if (density < 0.2f && heath < 0.5f && !shore && Hash01(x, z, 67) < 0.04f)
+                    flowers.Add((Plant(x + 0.5f - Hash01(x, z, 68), top, z + 0.5f - Hash01(x, z, 69), yaw, 0.8f + Hash01(x, z, 70) * 0.3f),
+                        Look.FlowerWhite.Darkened(Hash01(x, z, 71) * 0.06f), custom with { A = SeasonFlower }));
 
                 // A carpet of grass over each grassy tile, rooted in the tile's own color
                 // so blades and ground read as one surface.

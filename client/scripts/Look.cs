@@ -20,6 +20,9 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Boulders, river stones and outcrops in the world (env-16): paler and warmer than
+    // Rock, after the art references. Tools, stations and items keep Rock.
+    public static readonly Color WorldRock = new(0.64f, 0.61f, 0.55f);
     // Wildflowers in the grass (Environment's undergrowth).
     public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
     public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);
@@ -74,6 +77,9 @@ public static class Look
         // the fog colour (Atmosphere) over its outer quarter.
         Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
+        // Legs wet from wading (Atmosphere): up to this world height, this wet (0 to 1).
+        Add("wet_line", RenderingServer.GlobalShaderParameterType.Float, -1000f);
+        Add("wet_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -183,13 +189,14 @@ public static class Look
 
     // The same grass for the tufts Environment plants only near the player: they
     // shrink away between about 31 and 48 m, before the chunks that have none.
-    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f);
+    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f, stylised: true);
 
-    static ShaderMaterial MakeGrass(float fadeFar)
+    static ShaderMaterial MakeGrass(float fadeFar, bool stylised = false)
     {
         var material = new ShaderMaterial { Shader = GrassShader };
         material.SetShaderParameter("clouds", Clouds);
         material.SetShaderParameter("fade_far", fadeFar);
+        material.SetShaderParameter("stylised", stylised ? 1f : 0f);
         return material;
     }
 
@@ -294,6 +301,9 @@ public static class Look
         // colour of the fog it melts into at its rim.
         global uniform float far_land_radius;
         global uniform vec3 fog_tint;
+        // How far up the player is wet from wading, and how wet (0 dry to 1 just out).
+        global uniform float wet_line;
+        global uniform float wet_amount;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -533,6 +543,15 @@ public static class Look
 
                 // The rim of the distant land melts into the fog, so its edge never
                 // shows against the sky, even on a clear day.
+                // Just out of the water, the player is darker and glossier up to where the water
+                // reached, with a soft edge, drying off over time.
+                if (wet_amount > 0.0) {
+                    float near_player = 1.0 - smoothstep(0.45, 0.65, length(world_pos.xz - player_position.xz));
+                    float soaked = wet_amount * near_player * (1.0 - smoothstep(wet_line - 0.04, wet_line + 0.04, world_pos.y));
+                    ALBEDO *= mix(1.0, 0.62, soaked);
+                    wet = max(wet, soaked);
+                }
+
                 if (far_land_radius > 0.0) {
                     float rim = smoothstep(0.75 * far_land_radius, far_land_radius, length(world_pos.xz - player_position.xz));
                     ALBEDO *= 1.0 - rim;
@@ -590,6 +609,8 @@ public static class Look
             // from the player (0 = never), so they are gone before the chunks
             // that carry none (GrassTufts).
             uniform float fade_far = 0.0;
+            // 1 on the grass tufts only: the art-reference colour bands.
+            uniform float stylised = 0.0;
             global uniform vec3 player_position;
 
             varying vec3 tint;
@@ -636,6 +657,18 @@ public static class Look
                 // Roots match the ground; tips catch the sun and turn warm.
                 vec3 warm = tint * vec3(1.3, 1.3, 1.0) + vec3(0.02, 0.02, 0.0);
                 vec3 color = mix(tint, warm, smoothstep(0.0, 1.0, tip));
+                // The grass tufts lean toward the art references (docs/art-reference 02):
+                // muted olive and warm yellow-green, a soft blue-violet shade at the
+                // roots, and pale lit tips, in soft tone bands. Shape, height, density
+                // and wind are unchanged; ferns, reeds and flowers keep their colours.
+                if (stylised > 0.5) {
+                    float lum = dot(tint, vec3(0.3, 0.59, 0.11));
+                    vec3 olive = mix(tint, vec3(lum * 1.1, lum * 1.05, lum * 0.55), 0.3);
+                    vec3 root_shade = olive * vec3(0.62, 0.65, 0.82);
+                    vec3 lit_tip = olive * vec3(1.36, 1.3, 0.78);
+                    color = mix(root_shade, olive, smoothstep(0.05, 0.4, tip));
+                    color = mix(color, lit_tip, smoothstep(0.6, 0.95, tip));
+                }
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
                 color *= mix(1.0, 0.88, wetness);
                 // Grass fades to straw in the cold and wears snow on its tips.

@@ -142,7 +142,7 @@ Pump(() => a.Conn.Db.Structure.Iter().Any(s => s.Kind == StructureKind.ClaimMark
 if (a.LastError != null) { Console.WriteLine($"FAIL  laying out the marker: {a.LastError}"); Environment.Exit(1); }
 var site = a.Conn.Db.Structure.Iter().First(s => s.Kind == StructureKind.ClaimMarker && s.Owner == a.Conn.Identity);
 Check(a.MyClaim() == null, "no claim until the marker is built");
-ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 4, cz + 3, 0), "", "B cannot lay out a marker next to A's");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, cx + 4, cz + 3, 0), "m further", "B cannot lay out a marker next to A's, and is told how far to move");
 for (int i = 0; i < 20 && a.MyClaim() == null; i++)
 {
     a.Conn.Reducers.Build(site.Id);

@@ -1039,3 +1039,101 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-256 — 2026-10-17 — Grass: back to main's original blade grass, lightly stylised toward the references (overrides D-246's grass restyle details; follows D-242)
 **Decision:** The grass stays main's original blade grass, with shape, height, density and wind unchanged. Only a light stylise toward the references is applied: colour, tone bands and lit tips, perhaps a few flowers. The shorter, denser and clumped rework is dropped, which overrides the grass details of D-246. The screenshot rule in D-246 stands. Owner: Environment.
 **Who:** Justin ("for the grass, just go back to the old one, and try to stylize it a bit to match references. It was far better.")
+
+## D-257 — 2026-10-17 — The atmosphere-25 lighting grade becomes the default look (follows D-234)
+**Decision:** The atmosphere-25 lighting grade becomes the default look (option a). Owner: Atmosphere.
+**Who:** Justin, picking option a (relayed by the PM; no direct quote).
+
+## D-258 — 2026-10-17 — Neighbours share building rights through a town roster everyone signs
+**Decision:** Neighbours share building rights through a town roster that everyone signs. Owner: Claims.
+**Who:** Justin, picking "Add neighbors together via a roster everyone signs".
+
+## D-259 — 2026-10-17 — The next animal is the hen
+**Decision:** The next animal is the hen: a tame flock that lays eggs, with low upkeep (D-148). Owner: Animals.
+**Who:** Justin, picking the hen (relayed by the PM; no direct quote).
+
+## D-260 — 2026-10-17 — Tool repair trains Toolmaking; wading and floating train a new Swimming skill
+**Decision:** Repairing a tool trains Toolmaking. Wading and floating train a new Swimming skill. This follows the one shared progression formula (D-175).
+**Who:** Justin, picking "Both, but make wading train swimming".
+
+## D-261 — 2026-10-17 — Pines: fuller, closer to the painted texture, with random sides, widths and heights (follows D-253)
+**Decision:** The 3D pine, at about 80% of the painted card pines, is a step in the right direction. It should be fuller and match the texture even more. Pines also need random sides, widths, heights and so on for variety (D-166). Owner: Modeling.
+**Who:** Justin ("fuller and match the texture even more, but this is a step in the right direction. We also need random sides, widths, heights, etc for some variety.")
+
+## D-262 — 2026-10-17 — Antler stays a plain material for now
+**Decision:** Antler stays a plain material. There is no soft hammer or flaker made from it for now.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-263 — 2026-10-17 — Tools in the doll's Tools section count as carried (refines D-219, D-223)
+**Decision:** Tools in the doll's Tools section count as carried, so recipes, trades, stashing and death can take them. The Tools section is just a weightless home: no bag space and no weight, as in D-219 and D-223.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-264 — 2026-10-17 — Swimming skill effects stay small (follows D-260)
+**Decision:** The Swimming skill's effects stay small. At max rank, wade speed rises from 0.60 to 0.75 and float speed from 0.50 to 0.70. The gain is front-loaded and the skill levels at a slow pace, using the one shared progression formula (D-175). The ids are `swim.wade` and `swim.float`.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
+**Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
+**Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
+**Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
+
+## D-267 — 2026-10-17 — Eggs cook into a boiled egg (follows D-259)
+**Decision:** Eggs cook into a boiled egg.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-268 — 2026-10-17 — Feathers fletch better arrows; plain arrows still work (follows D-259)
+**Decision:** Feathers fletch better arrows. Plain arrows still work.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-269 — 2026-10-17 — Hens roost in their coop at night and come out at dawn (follows D-259, D-265)
+**Decision:** Hens roost in their coop at night and come out at dawn.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-270 — 2026-10-17 — Other players in water get ripples and splashes, but no wet legs
+**Decision:** Other players in water get ripples and splashes, but no wet legs.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
+**Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
+**Who:** PM default (Justin not yet asked).
+
+## D-272 — 2026-10-17 — Maker's mark: players pick from a glyph panel with a colour picker; inspecting an item shows its maker (refines D-266)
+**Decision:** Players pick their maker's mark from a panel with many glyphs (fantasy, scientific and more) and a colour picker. Inspecting any made item tells you who made it. Owner: Ceramics.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-273 — 2026-10-17 — Atmosphere builds morning frost next
+**Decision:** Atmosphere builds morning frost next (atmosphere-28).
+**Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
+
+## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
+**Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
+**Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
+
+## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
+**Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
+**Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).

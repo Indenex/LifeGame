@@ -203,7 +203,7 @@ public static partial class Module
         var def = AnimalDefs.Get((byte)carcass.Species);
         bool grown = carcass.Growth >= 80;
         for (int i = 0; i < (grown ? def.MeatGrown : def.MeatYoung); i++) DropNear(ctx, carcass, def.Meat, quality);
-        if (grown) DropNear(ctx, carcass, def.Hide, quality);
+        if (grown && def.Hide is { } hide) DropNear(ctx, carcass, hide, quality);
         if (grown && def.Extra is { } extra) DropNear(ctx, carcass, extra, quality);
         ctx.Db.AnimalCarcass.Id.Delete(carcassId);
     }

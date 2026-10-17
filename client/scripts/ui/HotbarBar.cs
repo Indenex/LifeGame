@@ -26,7 +26,7 @@ public partial class HotbarBar : Control
     // True while something else has the keys (a panel, chat, building).
     public Func<bool> Blocked = () => false;
     public Action<string> Note = _ => { };
-    // A placeable item's key (ui-16 opens the ghost when it is wired).
+    // A placeable item's key: Main hands it to Placing, which opens the ghost (ui-16).
     public event Action<Item>? PlaceRequested;
 
     readonly HBoxContainer row = new() { MouseFilter = MouseFilterEnum.Ignore };
@@ -175,8 +175,7 @@ public partial class HotbarBar : Control
         Link.Use(item);
     }
 
-    // Placeable items open the placing ghost; read from the item's Def once crafting-21
-    // adds the flag (ui-16 wires PlaceRequested).
+    // Whether an item is set down rather than used: Main reads ItemDef.Placeable (crafting-21).
     public static Func<Item, bool> Placeable = _ => false;
 
     // Drags between slots and off the bar (HotbarSlotView calls these).
