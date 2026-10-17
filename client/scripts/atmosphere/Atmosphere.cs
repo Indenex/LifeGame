@@ -124,6 +124,7 @@ public partial class Atmosphere : Node3D
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyFrost();
         ReadyStorms();
         ReadyHomes();
 
@@ -316,6 +317,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateFrost(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)

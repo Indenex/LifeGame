@@ -77,6 +77,8 @@ public static class Look
         // Legs wet from wading (Atmosphere): up to this world height, this wet (0 to 1).
         Add("wet_line", RenderingServer.GlobalShaderParameterType.Float, -1000f);
         Add("wet_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Morning frost (Atmosphere): 0 none to 1 a full white rime.
+        Add("frost", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -301,6 +303,9 @@ public static class Look
         // How far up the player is wet from wading, and how wet (0 dry to 1 just out).
         global uniform float wet_line;
         global uniform float wet_amount;
+        // Rime after a cold clear night, 0 none to 1 full; it melts away patchily.
+        global uniform float frost;
+        const vec3 FROST = vec3(0.80, 0.86, 0.93);
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -517,6 +522,19 @@ public static class Look
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
                 color = mix(color, SNOW * (1.0 + paint), snow);
                 wet *= 1.0 - snow;
+                // Morning frost whitens what faces the open sky, thickest on the bumps,
+                // and melts back in patches; people, animals and made things (no
+                // cavity) stay clear of it. Tiny glints sparkle as you move.
+                if (frost > 0.0 && cavity > 0.01) {
+                    float patches = texture(detail, world_pos.xz * 0.06).r;
+                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * 1.25 - 0.12);
+                    rime *= smoothstep(-0.1, 0.6, world_normal.y) * mix(0.6, 1.0, h) * (1.0 - snow);
+                    vec3 cell = floor(world_pos * 28.0);
+                    float glint = step(0.985, fract(sin(dot(cell + floor(view_camera_position * 3.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453));
+                    color = mix(color, FROST * (1.0 + paint), rime * 0.75);
+                    color = mix(color, vec3(1.0), glint * rime * 0.8);
+                    wet *= 1.0 - rime;
+                }
                 // Puddles gather on flat ground in the low spots of a slow pattern,
                 // spreading as the ground stays soaked and shrinking as it dries:
                 // dark, still and glossy.
@@ -672,6 +690,12 @@ public static class Look
                 vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
                 color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
                 color = mix(color, SNOW, snow_cover * (0.55 + 0.45 * tip));
+                // Frost silvers the blades, most at the tips, gone first where it melts.
+                if (frost > 0.0) {
+                    float patches = texture(clouds, world_pos.xz * 0.035).r;
+                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * 1.3 - 0.15) * (1.0 - snow_cover);
+                    color = mix(color, FROST, rime * (0.35 + 0.5 * tip));
+                }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
                 // Both faces of a blade are lit like the ground beneath it.
