@@ -47,10 +47,9 @@ public partial class Woodcutting : Node
         if (t.Felled && felled.Add(t.CellKey)) terrain?.Refresh(t.CellX, t.CellZ);
     }
 
-    // An axe that still works: a spent one is mended first, so no chop is offered for it.
-    bool HasAxe() => conn != null && conn.Db.MyInventory.Iter()
-        .Any(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).Tags.HasFlag(ItemTags.Chopping)
-            && !(Durability.Wears((Item)i.Item) && Durability.IsSpent(i.Quality, i.Wear)));
+    // Only an axe that is equipped and still works chops (crafting-29, Equipped.cs); otherwise
+    // the tree is not offered and E goes to the loot near it.
+    bool HasAxe() => Equipped.Has(conn, ItemTags.Chopping);
 
     // The trunk of the nearest standing tree within reach, as the server will pick it.
     (Vector2 Trunk, int CellX, int CellZ)? TreeNear(Vector3 at)

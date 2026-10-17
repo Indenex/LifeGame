@@ -100,26 +100,72 @@ public partial class CraftGrid : VBoxContainer
                 search.Text = arg["--screenshot-craft-search=".Length..];
                 Refresh();
             }
-        if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover"))) return;
-        GetTree().CreateTimer(1.0).Timeout += () =>
+        // --screenshot-craft-hover pins the first can't-make card's hover, since a still can't point.
+        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover")))
+            GetTree().CreateTimer(1.0).Timeout += () => pinned = Shown.FindIndex(p => Missing(p) != null);
+    }
+
+    // The hover for a card: drawn by us beside the card, not Godot's tooltip at the mouse,
+    // so it never covers the card's own text or the panel's footer (Render B). One panel on
+    // a layer above every window, shown for whichever card the mouse is over each frame.
+    static CanvasLayer? tipLayer;
+    static PanelContainer? tip;
+    static Label? tipText;
+    static Control? tipFor;
+    int pinned = -1;
+
+    public override void _Process(double delta)
+    {
+        Control? over = null;
+        if (IsVisibleInTree())
         {
-            int i = Shown.FindIndex(p => Missing(p) != null);
-            if (i < 0 || grid.GetChildOrNull<Control>(i) is not { } card) return;
-            // On a layer of its own above the panel, where a real tooltip would draw.
-            var layer = new CanvasLayer { Layer = 20 };
-            GetTree().Root.AddChild(layer);
-            var tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.95f), BorderColor = new Color(Look.Cream, 0.3f) };
+            if (pinned >= 0) over = grid.GetChildOrNull<Control>(pinned);
+            else if (GetViewport().GuiGetHoveredControl() is { } hovered)
+                for (Node? n = hovered; n != null && n != this; n = n.GetParent())
+                    if (n.GetParent() == grid && n is Control c) { over = c; break; }
+        }
+        if (over != null && over.HasMeta("tip")) ShowTip(over);
+        // Only this grid's own card's tip is ours to hide (the C menu and a station share it).
+        else if (tip != null && tipFor != null && (!IsInstanceValid(tipFor) || !tipFor.IsInsideTree() || grid.IsAncestorOf(tipFor)))
+        {
+            tip.Visible = false;
+            tipFor = null;
+        }
+    }
+
+    void ShowTip(Control card)
+    {
+        if (tip == null)
+        {
+            tipLayer = new CanvasLayer { Layer = 20 };
+            GetTree().Root.AddChild(tipLayer);
+            tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.96f), BorderColor = new Color(Look.Cream, 0.3f) };
             style.SetBorderWidthAll(1);
             style.SetCornerRadiusAll(6);
             style.ContentMarginLeft = style.ContentMarginRight = 10;
             style.ContentMarginTop = style.ContentMarginBottom = 6;
             tip.AddThemeStyleboxOverride("panel", style);
-            tip.AddChild(Hud.Text(card.TooltipText, 14));
-            layer.AddChild(tip);
-            tip.Position = card.GetGlobalRect().Position + new Vector2(card.Size.X * 0.6f, card.Size.Y * 0.7f);
-        };
+            tipText = Hud.Text("", 14);
+            tip.AddChild(tipText);
+            tipLayer.AddChild(tip);
+        }
+        string text = card.GetMeta("tip").AsString();
+        if (tipFor == card && tipText!.Text == text && tip.Visible) return;
+        tipFor = card;
+        tipText!.Text = text;
+        tip.ResetSize();
+        tip.Visible = true;
+        // Beside the card at its top: right of it, or left near the screen's edge; kept on screen.
+        var rect = card.GetGlobalRect();
+        var size = tip.GetCombinedMinimumSize();
+        var screen = GetViewportRect().Size;
+        bool right = rect.End.X + 8 + size.X < screen.X;
+        float x = right ? rect.End.X + 8 : Mathf.Max(4, rect.Position.X - 8 - size.X);
+        float y = Mathf.Clamp(rect.Position.Y, 4, Mathf.Max(4, screen.Y - size.Y - 4));
+        tip.Position = new Vector2(x, y);
     }
+
 
     public void ClearSearch()
     {
@@ -199,27 +245,15 @@ public partial class CraftGrid : VBoxContainer
     {
         string? missing = Missing(def);
         bool ready = missing == null;
-        var card = new Button { FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(CardWidth, CardHeight) };
-        var style = new StyleBoxFlat { BgColor = new Color(0.09f, 0.10f, 0.07f, 0.6f), BorderColor = new Color(Look.Cream, 0.22f) };
-        style.SetBorderWidthAll(1);
-        style.SetCornerRadiusAll(10);
-        var hover = (StyleBoxFlat)style.Duplicate();
-        hover.BorderColor = new Color(Look.Cream, 0.6f);
-        card.AddThemeStyleboxOverride("normal", style);
-        card.AddThemeStyleboxOverride("hover", hover);
-        card.AddThemeStyleboxOverride("pressed", hover);
+        // A Card keeps its width and grows taller to fit; inputs wrap inside it (ui-33).
+        var card = new Card(CardWidth, CardHeight);
         card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
-        card.TooltipText = Describe(def, missing);
+        card.SetMeta("tip", Describe(def, missing));
         // Acts on the press, so holding it down can repeat (Held).
         card.ActionMode = BaseButton.ActionModeEnum.Press;
         card.Pressed += () => { Held = def; Make(def); };
 
-        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        column.SetAnchorsPreset(LayoutPreset.FullRect);
-        column.OffsetLeft = column.OffsetTop = 8;
-        column.OffsetRight = column.OffsetBottom = -8;
-        column.AddThemeConstantOverride("separation", 4);
-        card.AddChild(column);
+        var column = card.Column;
 
         // The result's picture, with the number key in the corner for the first nine.
         var picture = new Control { CustomMinimumSize = new Vector2(Picture, Picture), MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
@@ -239,28 +273,25 @@ public partial class CraftGrid : VBoxContainer
             card.AddChild(key);
         }
 
-        var name = Hud.Text(def.Name, 14);
-        name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        name.MouseFilter = MouseFilterEnum.Ignore;
-        column.AddChild(name);
+        column.AddChild(card.Line(def.Name, 14));
 
         // Inputs as pictures with have/need, then the tool and the hands-on mark.
-        var needs = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        needs.AddThemeConstantOverride("separation", 4);
+        var needs = card.Wrap();
         foreach (var input in def.Consumes)
         {
-            needs.AddChild(Icon(input.Item, 20));
-            uint have = Have(input.Item);
-            var n = Hud.Text($"{Math.Min(have, 99)}/{input.Count}", 12);
-            if (have < input.Count) n.Modulate = new Color(1f, 0.75f, 0.45f);
+            // Icon and count kept together, so a wrap never splits them.
+            var pair = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            pair.AddThemeConstantOverride("separation", 2);
+            pair.AddChild(Icon(input.Item, 20));
+            uint have = Have(input.Item), need = Need(def, input);
+            var n = Hud.Text($"{Math.Min(have, 99)}/{need}", 12);
+            if (have < need) n.Modulate = new Color(1f, 0.75f, 0.45f);
             n.MouseFilter = MouseFilterEnum.Ignore;
-            needs.AddChild(n);
+            pair.AddChild(n);
+            needs.AddChild(pair);
         }
         if (def.NeedsTool != ItemTags.None && ToolFor(def.NeedsTool) is { } tool)
         {
-            var spacer = new Control { CustomMinimumSize = new Vector2(4, 0), MouseFilter = MouseFilterEnum.Ignore };
-            needs.AddChild(spacer);
             var toolIcon = Icon(tool, 20);
             // The tool is held, not used up: drawn in a ring.
             var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -275,14 +306,18 @@ public partial class CraftGrid : VBoxContainer
         string note = HandsOn(def).Trim(' ', '·');
         if (note != "")
         {
-            var hands = Hud.Text(note.Split('.')[0], 11);
-            hands.HorizontalAlignment = HorizontalAlignment.Center;
+            var hands = card.Line(note.Split('.')[0], 11);
             hands.Modulate = new Color(1f, 0.85f, 0.6f, 0.8f);
             hands.MouseFilter = MouseFilterEnum.Ignore;
             column.AddChild(hands);
         }
         return card;
     }
+
+    // How many of an input the recipe really needs on hand: knapping strikes stone on stone,
+    // so a hammer-stone input needs one more to strike with (CraftingUi.Missing says the same).
+    static uint Need(ProcessDef def, Ingredient input) =>
+        input.Count + (def.NeedsTool.HasFlag(ItemTags.Hammer) && Items.Def(input.Item).Tags.HasFlag(ItemTags.Hammer) ? 1u : 0u);
 
     static string Describe(ProcessDef def, string? missing)
     {
