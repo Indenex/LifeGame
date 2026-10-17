@@ -1,8 +1,8 @@
 # building-11: See-through structures
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: todo
-Branch: (new, off origin/main after #202 merges)
+Status: in_review
+Branch: claude/house-building-8ueqz2-seethrough (was stacked on building-10; #271 squash-merged as d9f0f395, main merged in, base is main)
 PR: (not yet)
 
 ## Goal
@@ -11,10 +11,17 @@ D-168 (Justin): any time the player is rendered underneath something, the see-th
 ## Progress log
 - 2026-10-16: ticket opened from the PM's message. Read the code: `StructureView` holds `pieces` (Stage, Mesh, Material, Anchor) with one MeshInstance3D per piece and no roof/wall tag yet; `Look.GhostOf` only knows tree materials (`Look.cs` ~110); `Terrain.ShowGhosts` is the tree pattern to copy.
 
+- 2026-10-16 21:45: built (client only; client project compiles, shader not run: no Godot here). Look.HidesPlayer is on main. Look.cs: the painted shader gets `uniform float fade_override = -1.0` (when >= 0 it replaces the tree test) and `Look.StructureGhost(source)` makes a ghost copy. StructureView.UpdateSeeThrough(hides, dt) eases a 0..1 fade (about 0.33 s), swaps each finished piece's mesh for a ghost mesh (same shader, alpha 1 - fade*(0.35..1), fully clear in a soft circle round the player), and back. BuildingSystem.UpdateSeeThrough tests each finished shelter (RainCover > 0: lean-to, hut, house, cabin) within 25 m with Look.HidesPlayer on its footprint box (3 m tall) and the camera.
+- Default chosen: the whole finished building ghosts, not only roof and camera-side walls; the clear circle round the player stands in for the "camera-side wall" part and avoids tagging every model piece. Say if Justin wants only roof and near walls (needs a roof/wall tag per Piece).
+- 2026-10-16: Render requested cf1f7ad (Render session_015S96hNrEu92FrCoNZqZZjs).
+- 2026-10-16 (Justin via PM): "like Project Zomboid". Reworked from the whole-building ghost: inside a building the roof and upper parts clear away entirely; walls between camera and player fade, far walls stay solid; outside behind a building only the walls in the way fade (clear circle round the player) and the roof stays; other buildings solid; ~0.3 s eases. Built: `StructureModel.Piece.Role` (Fixed = stage 0, Roof = thatch or anything above 2.15 m, Wall = the rest), painted shader ghost gets `cut_mode` (1 wall, 2 roof), `cut_origin`, `cam_dir` (a wall fragment fades by how much it faces the camera from the building's centre, so round hut courses cut away correctly without splitting meshes), `StructureView.UpdateSeeThrough(inside, hides, camera, dt)` with separate roof and wall fades, `BuildingSystem.UpdateSeeThrough` passes inside (Structures.Contains) and hides (Look.HidesPlayer). Client compiles; shader not run (no Godot here). An Opus helper reviews the shader and tuning read-only.
+- 2026-10-16: Opus helper reviewed the shader and tuning read-only (nothing could be rendered). Applied: building ghosts use their own shader variant with `depth_prepass_alpha` so a faded near wall can't hide a far wall in the same mesh; the solid keeps casting shadows (`ShadowsOnly`) while ghosted so rooms don't flood with sun; roles now: roof = thatch or centred above 2.15 m, Fixed = ends below 0.6 m, else Wall; lean-to thatch is Wall (near slope fades, far stays); facing band 0.05..0.45; wall fade floor 0.85 inside and 0.45 outside; eased fades (3.5/s in, 2.5/s out); footprint box 2.2 m tall (walls only). Not applied: roof circle-cut from outside (see open question).
+- 2026-10-16: for Atmosphere's doorway glow: `BuildingSystem.SeeThroughOf(ulong structureId)` returns 0..1 (how cut away the structure is now; 0 for no view). Merged building-10 (stations, SmokeY) into this branch.
+- 2026-10-17: main merged (Look.cs conflict: kept both shader field lists). Homes are now 1.25x (building-14): the hide-the-player box scales with them (`Footprint` height and eave use `shape.Scale`). Ghost meshes sit under each piece's holder, so they scale with the view.
+
 ## Open questions / blockers
-- Waiting on Environment's segment-crosses-box helper in Look (sha from Environment).
-- `Piece` needs a tag (roof / wall / other) per shape so only roof and camera-side walls fade; the house, hut, lean-to and cabin models each need tagging.
-- No dotnet in this container: client changes can't be built locally, so CI is the only check.
+- RESOLVED, Justin picked (b): from outside the roof gets a soft clear circle round the player when you are behind it. Built (roofFloor eases 0 outside to 1 inside; footprint box now 3.7 m tall and 0.5 m wider for the eaves). Was: from outside, behind a hut or house, the roof's eave overhang (hut eave about 1.36 m at 2.4 m out, house 0.5 m) can still hide the player when only walls fade. Option (a) as built: roof stays solid from outside [recommended until seen]; (b) roof gets a soft circle cut round the player when behind the building [small change: a third fade, ALPHA = 1 - fade * window on roof]. Decide after the renders.
+- Not seen running: needs a Godot run or a render (shader change is small but unverified at runtime).
 
 ## Next step
-Wait for Environment's helper sha, then: tag pieces in StructureModel (roof vs wall), give Look.GhostOf a path for structure materials, and add `StructureView.SetSeeThrough(float fade)` driven from BuildingSystem each frame.
+Open/refresh the PR (base: claude/house-building-8ueqz2 until #271 merges), wait for CI, request a render (walk into a hut, house and cabin; camera behind a wall), send the PM the green sha.

@@ -3,18 +3,21 @@ using LifeGame.Shared;
 
 namespace LifeGame;
 
-// What the hands are doing while a craft job runs. Small crafts kneel on the right knee
-// with the left foot planted and loop their own arm motion; Station stands working at a
-// waist-high station (crafting table, spindle, drying rack: D-098). Hands hold nothing.
-public enum WorkMotion { None, Gather, Knap, HandDrill, BowDrill, Twist, Knead, Scrape, Wrap, Carve, Tend, Station, Chop }
+// What the hands are doing while a craft job runs (the WorkMotion enum is in shared/).
+// Small crafts kneel on the right knee with the left foot planted and loop their own arm
+// motion; Station stands working at a waist-high station (crafting table, spindle,
+// drying rack: D-098). Hands hold nothing.
 
 public static class WorkMotions
 {
-    // Process ids are dotted strings from shared/Processes.cs; new families fall back to Gather.
+    // A process names its motion on its Def (ProcessDef.Motion). Older entries leave it
+    // unset and get a guess from their id prefix; new families fall back to Gather.
     public static WorkMotion For(string? processId)
     {
         if (string.IsNullOrEmpty(processId)) return WorkMotion.None;
-        if (Processes.Find(processId) is { Station: not StationKind.None }) return WorkMotion.Station;
+        var def = Processes.Find(processId);
+        if (def is { Motion: not WorkMotion.None }) return def.Motion;
+        if (def is { Station: not StationKind.None }) return WorkMotion.Station;
         if (processId == "fire.bow_drill") return WorkMotion.BowDrill;
         if (processId == "hide.scrape") return WorkMotion.Scrape;
         if (processId == "hide.stretch") return WorkMotion.Wrap;
@@ -47,13 +50,7 @@ public static class WorkMotions
             Chop(p, t);
             return;
         }
-        // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
-        // back; left thigh forward and shin straight down to a planted foot.
-        p.HipsOffset = new Vector3(0, -legLength * 0.44f, -0.05f);
-        p[Joint.KneeR].X = Mathf.Pi / 2f;
-        p[Joint.FootR].X = Mathf.Pi / 2f;
-        p[Joint.HipL] = new Vector3(-1.45f, 0, 0.06f);
-        p[Joint.KneeL].X = 1.45f;
+        Kneel(p, legLength);
         p[Joint.Neck].X = 0.15f;
         p[Joint.ShoulderL].Z = 0.12f;
         p[Joint.ShoulderR].Z = -0.12f;
@@ -161,6 +158,119 @@ public static class WorkMotions
         p[Joint.Spine].X = lean;
         // Breathing goes on underneath.
         p[Joint.Spine].X += 0.01f * Mathf.Sin(t * 1.65f);
+    }
+
+    // Kneel on the right knee: right thigh straight down, shin flat behind, foot laid
+    // back; left thigh forward and shin straight down to a planted foot.
+    static void Kneel(Pose p, float legLength)
+    {
+        p.HipsOffset = new Vector3(0, -legLength * 0.44f, -0.05f);
+        p[Joint.KneeR].X = Mathf.Pi / 2f;
+        p[Joint.FootR].X = Mathf.Pi / 2f;
+        p[Joint.HipL] = new Vector3(-1.45f, 0, 0.06f);
+        p[Joint.KneeL].X = 1.45f;
+    }
+
+    // --- Quick actions (anim-4): played once, blended in and out by PlayerAnimator ---
+
+    public static bool IsAct(WorkMotion m) => m is WorkMotion.Drink or WorkMotion.Eat or WorkMotion.Pluck or WorkMotion.PickUp;
+
+    // How long one plays, in seconds, fades included.
+    public static float ActSeconds(WorkMotion m) => m switch
+    {
+        WorkMotion.Drink => 2.4f,
+        WorkMotion.Eat => 1.6f,
+        WorkMotion.Pluck => 1.0f,
+        WorkMotion.PickUp => 0.45f,
+        _ => 0f,
+    };
+
+    // Where an action repeated while it plays loops back to: from loopAt seconds to
+    // loopTo, two moments with the same pose (hands back at the water, at the side).
+    public static (float loopAt, float loopTo) ActLoop(WorkMotion m) => m switch
+    {
+        WorkMotion.Drink => (2.3f, 0.3f),
+        WorkMotion.Eat => (1.15f, 0.15f),
+        WorkMotion.Pluck => (0.85f, 0f),
+        _ => (ActSeconds(m), 0f),
+    };
+
+    // Seconds to blend in and out; a pick-up is quick and light so it never slows play.
+    public static float ActFade(WorkMotion m) => m == WorkMotion.PickUp ? 0.12f : 0.25f;
+
+    // Whether the legs take part. A pick-up bends only the back and arms (with a slight
+    // knee dip), so it plays over walking; the others stop when you walk off.
+    public static bool ActUsesLegs(WorkMotion m) => m != WorkMotion.PickUp;
+
+    // The action's pose at t seconds in. The fades come from PlayerAnimator.
+    public static void ActPose(Pose p, WorkMotion m, float t, float legLength)
+    {
+        p.Clear();
+        switch (m)
+        {
+            case WorkMotion.Drink:
+            {
+                // Down on one knee at the bank, lean out, cup both hands in the water, lift
+                // them to the mouth and tip the head back to drink.
+                Kneel(p, legLength);
+                // 0 at the water, 1 at the mouth.
+                float lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.75f) / 0.5f, 0f, 1f))
+                    * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 2.0f) / 0.3f, 0f, 1f)));
+                float dip = Mathf.Sin(Mathf.Clamp((t - 0.3f) / 0.45f, 0f, 1f) * Mathf.Pi) * (1f - lift);
+                p[Joint.Spine].X = Mathf.Lerp(0.75f + 0.08f * dip, 0.25f, lift);
+                p[Joint.Neck].X = Mathf.Lerp(0.1f, -0.35f, lift);
+                Arm(p, true, Mathf.Lerp(-1.05f - 0.1f * dip, -0.85f, lift), Mathf.Lerp(-0.22f, -0.38f, lift), Mathf.Lerp(-0.25f, -2.2f, lift));
+                Arm(p, false, Mathf.Lerp(-1.05f - 0.1f * dip, -0.85f, lift), Mathf.Lerp(0.22f, 0.38f, lift), Mathf.Lerp(-0.25f, -2.2f, lift));
+                // Palms turned up into a cup.
+                p[Joint.HandL].Y = -0.6f;
+                p[Joint.HandR].Y = 0.6f;
+                break;
+            }
+            case WorkMotion.Eat:
+            {
+                // Standing: the right hand brings the food to the mouth, then a few chews.
+                float lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.15f) / 0.35f, 0f, 1f))
+                    * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.85f) / 0.3f, 0f, 1f)));
+                float chew = t > 0.6f ? Mathf.Max(0f, Mathf.Sin((t - 0.6f) * 16f)) * (1f - Mathf.Clamp((t - 0.8f) / 0.3f, 0f, 1f)) : 0f;
+                Arm(p, false, Mathf.Lerp(-0.1f, -0.85f, lift), Mathf.Lerp(0.05f, 0.4f, lift), Mathf.Lerp(-0.3f, -2.3f, lift));
+                Arm(p, true, -0.05f, 0.02f, -0.2f);
+                p[Joint.Spine].X = 0.04f;
+                p[Joint.Neck].X = 0.08f * lift + 0.06f * chew;
+                p[Joint.Head].X = 0.05f * chew;
+                break;
+            }
+            case WorkMotion.Pluck:
+            {
+                // Reach into the bush at chest height, pick with a flick, bring the hand back.
+                float reach = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 0.35f, 0f, 1f))
+                    * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.55f) / 0.3f, 0f, 1f)));
+                float flick = Mathf.Sin(Mathf.Clamp((t - 0.35f) / 0.2f, 0f, 1f) * Mathf.Pi);
+                p[Joint.Spine].X = 0.22f * reach;
+                p[Joint.Neck].X = 0.1f * reach;
+                Arm(p, false, Mathf.Lerp(-0.3f, -1.35f, reach), Mathf.Lerp(0.05f, 0.1f, reach), Mathf.Lerp(-0.6f, -0.25f, reach) - 0.3f * flick);
+                p[Joint.HandR].X = -0.4f * flick;
+                // The other hand waits low and open to take them.
+                Arm(p, true, -0.45f * reach, -0.15f * reach, -1.1f * reach);
+                break;
+            }
+            case WorkMotion.PickUp:
+            {
+                // A quick bend from the waist with soft knees and a grab near the feet.
+                float down = Mathf.Sin(Mathf.Clamp(t / ActSeconds(m), 0f, 1f) * Mathf.Pi);
+                p.HipsOffset = new Vector3(0, -0.08f * down, -0.04f * down);
+                p[Joint.HipL].X = -0.35f * down;
+                p[Joint.HipR].X = -0.35f * down;
+                p[Joint.KneeL].X = 0.6f * down;
+                p[Joint.KneeR].X = 0.6f * down;
+                p[Joint.FootL].X = -0.25f * down;
+                p[Joint.FootR].X = -0.25f * down;
+                p[Joint.Spine].X = 0.85f * down;
+                p[Joint.Neck].X = -0.2f * down;
+                Arm(p, false, -0.75f * down, 0.05f, -0.15f);
+                Arm(p, true, -0.2f * down, -0.05f, -0.4f * down);
+                break;
+            }
+        }
     }
 
     // Standing at a waist-high station, knees soft, both hands working on its top and

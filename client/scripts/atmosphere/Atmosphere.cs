@@ -19,6 +19,7 @@ public partial class Atmosphere : Node3D
     // Cached names: a string here would build a new StringName every frame.
     static readonly StringName NClouds = "clouds";
     static readonly StringName NWetness = "wetness";
+    static readonly StringName NPuddles = "puddles";
     static readonly StringName NWindStrength = "wind_strength";
     static readonly StringName NWindGust = "wind_gust";
     static readonly StringName NRainAmount = "rain_amount";
@@ -43,12 +44,15 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
+    readonly FallingLeaves leaves = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
 
     // Report sheep here (position, running) and they bleat; see SheepVoices.
     public readonly SheepVoices Sheep = new();
+    // The same for red deer: a bark when a herd bolts, hoof thuds, and stags roaring at autumn dusk (audio-4).
+    public readonly DeerVoices Deer = new();
 
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
@@ -61,14 +65,20 @@ public partial class Atmosphere : Node3D
     float cloud = 0.2f, rainAmount, wind = 0.3f, wetness;
     float targetCloud = 0.2f, targetRain, targetWind = 0.3f, targetWetness;
     float? argCloud, argRain, argWind, argWetness;
+    // Standing water after rain, eased; --puddles=1 holds it for screenshots.
+    float puddleLevel;
+    float? argPuddles;
     int previewWeather;
 
     // F6 steps through these (cloud, rain, wind, wetness): the server's weather,
-    // then clear, drizzle, light rain, steady rain and a storm.
+    // then each kind in shared/Weathers.cs at the middle of its range, the ground
+    // as wet as that rain soon makes it.
     static readonly (float, float, float, float)[] PreviewWeathers =
-    {
-        default, (0.1f, 0f, 0.25f, 0f), (0.8f, 0.18f, 0.3f, 0.4f), (0.9f, 0.4f, 0.45f, 0.7f), (0.95f, 0.65f, 0.6f, 1f), (1f, 1f, 0.9f, 1f),
-    };
+        new[] { default((float, float, float, float)) }.Concat(Weathers.All.Select(k =>
+        {
+            float rain = (k.RainMin + k.RainMax) * 0.5f;
+            return ((k.CloudMin + k.CloudMax) * 0.5f, rain, (k.WindMin + k.WindMax) * 0.5f, Mathf.Min(1f, rain * 1.6f));
+        })).ToArray();
 
     // Lightning: a flash lights the sky and the land, and thunder follows.
     float flash, nextStrike = 20f;
@@ -82,6 +92,7 @@ public partial class Atmosphere : Node3D
     // the clouds drift with it.
     public static readonly Vector2 WindDirection = new(0.6f, 0.8f);
     static readonly StringName NWindDir = "wind_dir";
+    static readonly StringName NFogTint = "fog_tint";
 
     // How wooded it is around the player, eased over a few seconds: where the sun
     // shafts between the trunks show.
@@ -105,10 +116,14 @@ public partial class Atmosphere : Node3D
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
+        AddChild(leaves);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
+        Deer.Cry = sound.DeerCry;
         ReadySeasons();
         ReadyFronts();
+        ReadyStorms();
+        ReadyHomes();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -124,6 +139,7 @@ public partial class Atmosphere : Node3D
         argRain = ArgFloat("rain");
         argWind = ArgFloat("wind");
         argWetness = ArgFloat("wetness");
+        argPuddles = ArgFloat("puddles");
         if (Arg("debug-position")?.Split(',') is [var px, var pz]
             && float.TryParse(px, System.Globalization.CultureInfo.InvariantCulture, out var x)
             && float.TryParse(pz, System.Globalization.CultureInfo.InvariantCulture, out var z))
@@ -162,11 +178,18 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
-        conn.Db.Animal.OnUpdate += (_, _, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
-        conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
+        conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
+        conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
+        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
+        // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
+        conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
+        // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
+        conn.Db.ArrowShot.OnInsert += (_, shot) => HearArrow(shot);
+        // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
+        conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -244,6 +267,10 @@ public partial class Atmosphere : Node3D
         // Clouds drift with the wind, the same way the grass leans.
         cloudOffset -= WindDirection * (1.5f + wind * 5f) * dt;
         RenderingServer.GlobalShaderParameterSet(NWetness, wetness);
+        // Puddles stand once the ground is well soaked, and frozen ground holds none.
+        float puddleTarget = Mathf.SmoothStep(0.45f, 0.9f, wetness) * (1f - Mathf.SmoothStep(0.3f, 0.8f, SnowCover));
+        puddleLevel = Mathf.Lerp(puddleLevel, argPuddles ?? puddleTarget, snap ? 1f : 1f - Mathf.Exp(-dt / 20f));
+        RenderingServer.GlobalShaderParameterSet(NPuddles, puddleLevel);
         RenderingServer.GlobalShaderParameterSet(NWindStrength, wind);
         // Grass and trees push harder exactly when the wind is heard to gust.
         RenderingServer.GlobalShaderParameterSet(NWindGust, sound.Gust);
@@ -253,6 +280,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NWindDir, WindDirection);
 
         ApplyLight();
+        RenderingServer.GlobalShaderParameterSet(NFogTint, env.FogLightColor);
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
         RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
@@ -262,14 +290,20 @@ public partial class Atmosphere : Node3D
             terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
             terrain?.ShowGhosts(camera.GlobalPosition, focus);
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
+            Deer.RoarTime = StagRoarTime();
+            Deer.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));
         rain.Follow(focus, rainAmount, wind, env.FogLightColor.Lerp(new Color(0.8f, 0.82f, 0.85f) * (0.3f + 0.7f * daylight), 0.4f));
         // Dawn mist glows with the same light as the fog: warm at sunrise.
-        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f), wind, dt);
+        float sunLow = Mathf.SmoothStep(-0.02f, 0.08f, WorldTime.SunHeight(timeOfDay)) * (1f - Mathf.SmoothStep(0.25f, 0.5f, WorldTime.SunHeight(timeOfDay)));
+        var towardSun = WorldTime.SunHeight(timeOfDay) > -0.06f ? sun.GlobalBasis.Z : -sun.GlobalBasis.Z;
+        mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f),
+            towardSun, sun.LightColor * sunLow * (1f - Mathf.Clamp(cloud * 1.2f - 0.2f, 0f, 1f)), wind, dt);
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
+        UpdateHomes(dt, focus, Night, env.FogLightColor);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
@@ -278,8 +312,9 @@ public partial class Atmosphere : Node3D
         sound.TimeOfDay = timeOfDay;
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        leaves.Follow(focus, Year, wind, woods, WindDirection);
         sound.Foliage = wooded;
-        Lightning(dt);
+        Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)
         {
             Sfx.Listen(focus, ear.GlobalBasis.X);
@@ -360,6 +395,7 @@ public partial class Atmosphere : Node3D
         sun.LightEnergy = isDay ? 2.4f * sunUp * (1f - 0.72f * overcast) : 0.55f * moonUp * (1f - 0.7f * overcast);
         sun.LightVolumetricFogEnergy = isDay ? (0.6f + 1.0f * Mathf.SmoothStep(0.05f, 0.35f, sunHeight)) * (1f - 0.5f * overcast) : 1.2f;
         sun.ShadowOpacity = 1f - 0.6f * overcast;
+        sun.LightEnergy *= 1f - 0.5f * storminess;
 
         // Sun shafts in the woods: at a low sun on a fair day the air between the
         // trunks thickens a little and scatters forward, so the light slants through
@@ -371,7 +407,8 @@ public partial class Atmosphere : Node3D
 
         // Overcast skies go grey and flat; rain darkens and thickens the air.
         float grey = overcast * 0.75f;
-        float dim = 1f - 0.35f * storm;
+        // A thunderstorm goes darker still, toward a cold slate.
+        float dim = (1f - 0.35f * storm) * (1f - 0.3f * storminess);
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
@@ -395,6 +432,8 @@ public partial class Atmosphere : Node3D
         env.TonemapExposure = mood.Exposure * (1f + 0.12f * overcast);
         env.AdjustmentSaturation = 1f - 0.2f * overcast - 0.1f * (1f - daylight) - 0.12f * WinterLight;
         env.AmbientLightEnergy *= 1f + 0.25f * snowCover;
+        env.AmbientLightEnergy *= 1f - 0.3f * storminess;
+        env.FogLightColor = env.FogLightColor.Lerp(new Color(0.3f, 0.34f, 0.38f) * dim, 0.35f * storminess);
         env.GlowIntensity = 0.6f + 0.4f * (1f - daylight);
 
         if (flash > 0.001f)
@@ -458,29 +497,6 @@ public partial class Atmosphere : Node3D
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
                 terrain.Refresh(x, z);
-    }
-
-    float strikeAge = 10f, strikePeak;
-
-    // Storms throw lightning every half minute or so. Most of it is far off: a dull
-    // glow in the clouds and a late, low rumble. Now and then a strike is close: a
-    // white double flash and a crack right after.
-    void Lightning(float dt)
-    {
-        float stormy = Mathf.SmoothStep(0.75f, 0.95f, rainAmount);
-        nextStrike -= dt * stormy;
-        if (stormy > 0.05f && nextStrike <= 0f)
-        {
-            nextStrike = (float)GD.RandRange(12.0, 40.0);
-            float near = Mathf.Pow(GD.Randf(), 2f);
-            strikePeak = (0.2f + 0.8f * near) * stormy;
-            strikeAge = 0f;
-            // Sound covers about 340 m a second; distant strikes are 2 to 6 km off.
-            sound.Thunder(0.3f + (1f - near) * 5f, (0.35f + 0.65f * near) * stormy, near);
-        }
-        strikeAge += dt;
-        float a = strikeAge;
-        flash = strikePeak * (Mathf.Exp(-a / 0.07f) + (a > 0.16f ? 0.7f * Mathf.Exp(-(a - 0.16f) / 0.12f) : 0f));
     }
 
     // A unit vector pointing at something this many degrees above the horizon,
@@ -578,6 +594,11 @@ public partial class Atmosphere : Node3D
             uniform float front_rain = 0.0;
             uniform float front_amount = 0.0;
             uniform float rainbow = 0.0;
+            // Thunderstorms (AtmosphereStorms): how stormy, and lightning inside
+            // the clouds toward flash_dir.
+            uniform float storm = 0.0;
+            uniform float flash = 0.0;
+            uniform vec3 flash_dir = vec3(0.0, 0.25, -1.0);
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -641,7 +662,13 @@ public partial class Atmosphere : Node3D
                     cloud_col *= 1.0 - 0.45 * cover * smoothstep(0.4, 0.8, n);
                     // Rain clouds on the way are darker underneath.
                     cloud_col *= 1.0 - 0.5 * front_rain * upwind;
+                    // Storm clouds hang heavy and dark, bruised blue-grey underneath.
+                    cloud_col = mix(cloud_col, cloud_col * vec3(0.55, 0.6, 0.68), storm * smoothstep(0.3, 0.7, n));
                     col = mix(col, cloud_col, c * 0.9);
+
+                    // Lightning lights the clouds from inside, brightest toward the strike.
+                    float toward = pow(max(dot(d, flash_dir), 0.0), 5.0);
+                    col += vec3(0.72, 0.78, 1.0) * flash * toward * (0.35 + 1.4 * c * n);
 
                     // Grey curtains of rain hanging from them down to the horizon.
                     float around = atan(d.x, d.z);

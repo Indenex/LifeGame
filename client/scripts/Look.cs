@@ -27,7 +27,7 @@ public static class Look
     public static readonly Color FlowerPink = new(0.88f, 0.55f, 0.62f);
     // Heath on the hilltops and birch wetland by the water (Environment's env-4).
     public static readonly Color BirchBark = new(0.86f, 0.84f, 0.78f);
-    public static readonly Color Heather = new(0.45f, 0.30f, 0.40f);
+    public static readonly Color Heather = new(0.42f, 0.38f, 0.33f);
     public static readonly Color Gorse = new(0.30f, 0.36f, 0.14f);
     public static readonly Color Sedge = new(0.46f, 0.48f, 0.22f);
     public static readonly Color HeathGround = new(0.42f, 0.37f, 0.24f);
@@ -39,8 +39,8 @@ public static class Look
 
     public const float WaterLevel = -1.0f;
 
-    static Shader? paintedShader, ghostShader, grassShader;
-    static ShaderMaterial? ground, bark, rock, foliage, grass;
+    static Shader? paintedShader, ghostShader, structureGhostShader, grassShader;
+    static ShaderMaterial? ground, bark, rock, foliage, grass, grassTufts;
     static NoiseTexture2D? brush, detail, clouds;
 
     // Weather every surface reads, set each frame by the atmosphere: how soaked the
@@ -69,6 +69,11 @@ public static class Look
         Add("snow_cover", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
+        Add("puddles", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Distant land (Environment's FarLand sets the radius, 0 when off) melts into
+        // the fog colour (Atmosphere) over its outer quarter.
+        Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("fog_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(0.62f, 0.68f, 0.70f));
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -85,7 +90,13 @@ public static class Look
 
     // Each surface family gets the same shader with its own detail: how fine the
     // surface relief is, how deep it reads, and which way it stretches.
-    public static ShaderMaterial Ground => ground ??= Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f);
+    public static ShaderMaterial Ground => ground ??= WithPuddles(Make(0f, 1f, detailScale: 0.45f, bump: 1.0f, cavity: 0.18f));
+
+    static ShaderMaterial WithPuddles(ShaderMaterial material)
+    {
+        material.SetShaderParameter("puddles_ok", 1f);
+        return material;
+    }
     public static ShaderMaterial BarkSurface => bark ??= Make(0f, 1f, detailScale: 2.0f, bump: 1.2f, cavity: 0.3f, stretch: new Vector3(4f, 0.35f, 4f));
     public static ShaderMaterial RockSurface => rock ??= Make(0f, 1f, detailScale: 1.0f, bump: 1.5f, cavity: 0.22f);
     public static ShaderMaterial Foliage => foliage ??= Make(0.08f, 3.0f, detailScale: 1.6f, bump: 1.5f, cavity: 0.3f);
@@ -112,9 +123,15 @@ public static class Look
         material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
         material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
 
-    static ShaderMaterial Ghost(ShaderMaterial source)
+    // A see-through copy of any painted surface for a building to fade by hand: set its
+    // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
+    public static ShaderMaterial StructureGhost(ShaderMaterial source) => Ghost(source, StructureGhostShader);
+
+    static ShaderMaterial Ghost(ShaderMaterial source) => Ghost(source, GhostShader);
+
+    static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
     {
-        var ghost = new ShaderMaterial { Shader = GhostShader };
+        var ghost = new ShaderMaterial { Shader = shader };
         foreach (var uniform in source.Shader.GetShaderUniformList())
         {
             var name = new StringName(uniform.AsGodotDictionary()["name"].AsString());
@@ -162,12 +179,17 @@ public static class Look
 
     // Grass has its own shader: blades take their tile's color at the root, so the
     // carpet and the ground read as one surface, and rolling gusts sweep across it.
-    public static ShaderMaterial Grass => grass ??= MakeGrass();
+    public static ShaderMaterial Grass => grass ??= MakeGrass(0f);
 
-    static ShaderMaterial MakeGrass()
+    // The same grass for the tufts Environment plants only near the player: they
+    // shrink away between about 31 and 48 m, before the chunks that have none.
+    public static ShaderMaterial GrassTufts => grassTufts ??= MakeGrass(48f);
+
+    static ShaderMaterial MakeGrass(float fadeFar)
     {
         var material = new ShaderMaterial { Shader = GrassShader };
         material.SetShaderParameter("clouds", Clouds);
+        material.SetShaderParameter("fade_far", fadeFar);
         return material;
     }
 
@@ -268,6 +290,10 @@ public static class Look
         global uniform float cloud_cover;
         global uniform vec2 cloud_offset;
         global uniform float world_seconds;
+        // How far the distant land reaches round the player (0 when off), and the
+        // colour of the fog it melts into at its rim.
+        global uniform float far_land_radius;
+        global uniform vec3 fog_tint;
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -277,6 +303,9 @@ public static class Look
         global uniform float snowing;
         // How far through the year it is: 0 spring, 0.25 summer, 0.5 autumn, 0.75 winter.
         global uniform float season_year;
+        // How much standing water there is after rain, 0 dry to 1 puddled; it rises
+        // once the ground is soaked and lingers after the rain stops.
+        global uniform float puddles;
         const vec3 SNOW = vec3(0.86, 0.89, 0.94);
 
         // How bare broadleaf trees are: bare through winter, leafing out again early
@@ -303,6 +332,12 @@ public static class Look
         .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
+    // A building's ghost: open faces stay visible as on the solid, and an opaque depth pass first,
+    // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
+    static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
+        .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+
     const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
@@ -319,6 +354,22 @@ public static class Look
             uniform float bump = 1.0;
             uniform float cavity = 0.4;
             uniform bool see_through = false;
+            // Set on a ghost (never a solid) to fade it by hand, 0 solid to 1 clear, in place of the
+            // tree test: buildings drive it while the player is under their roof.
+            uniform float fade_override = -1.0;
+            // A building ghost cuts away like Project Zomboid (D-168). cut_mode 1 is a wall:
+            // it fades on the side facing the camera (cam_dir, flat, from the building's
+            // centre cut_origin to the camera) and stays solid on the far side. cut_mode 2
+            // is a roof: it clears as fade_override reaches 1, entirely or only round the player
+            // (cut_floor). 0 is the trees.
+            uniform float cut_mode = 0.0;
+            uniform vec3 cut_origin = vec3(0.0);
+            uniform vec2 cam_dir = vec2(0.0, 1.0);
+            // How much of a wall facing the camera (or of a roof) fades away from the player's
+            // circle: nearly all from inside, less (a wall) or none (a roof) from outside.
+            uniform float cut_floor = 0.85;
+            // 1 on the ground material only: where puddles may gather after rain.
+            uniform float puddles_ok = 0.0;
             global uniform vec3 player_position;
             global uniform vec3 view_camera_position;
 
@@ -362,7 +413,7 @@ public static class Look
                 season_kind = INSTANCE_CUSTOM.w;
                 // Broadleaf canopies thin to nothing in winter and grow back in spring.
                 if (sway > 0.0 && season_kind > 0.5 && season_kind < 1.5) VERTEX *= 1.0 - 0.85 * leaf_drop();
-                fade = see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
+                fade = fade_override >= 0.0 ? fade_override : see_through ? fade_amount(MODEL_MATRIX, CAMERA_POSITION_WORLD) : 0.0;
                 // A tree or rock on a cell that was just cleared goes away instead of
                 // vanishing: trees topple slowly and settle into the ground, rocks sink.
                 // On a cell that comes back they grow in. Custom data: x when it started,
@@ -444,15 +495,32 @@ public static class Look
                     turned = mix(turned, vec3(0.30, 0.20, 0.11), smoothstep(0.75, 1.0, season_autumn));
                     color = mix(color, turned * (1.0 + paint * 2.0), smoothstep(0.0, 0.6, season_autumn));
                 }
-                // Heather flowers purple through late summer, in speckles over the bush.
+                // Heather stays a quiet green-brown most of the year; only through late
+                // summer do its flower tips turn a soft, dusty mauve, no brighter than
+                // the grass (Justin: no saturated pink). The tips are found by their
+                // colour (purple-ish vertex paint), so the mesh's own purple is tamed too.
                 if (sway > 0.0 && season_kind > 2.5 && season_kind < 3.5) {
                     float bloom = smoothstep(0.3, 0.38, season_year) * (1.0 - smoothstep(0.48, 0.56, season_year));
-                    color = mix(color, vec3(0.55, 0.22, 0.52) * (1.0 + paint * 2.0), bloom * 0.75 * smoothstep(0.3, 0.6, h));
+                    float tip = smoothstep(0.02, 0.12, min(color.r, color.b) - color.g);
+                    float bright = dot(color, vec3(0.3, 0.59, 0.11));
+                    vec3 muted = mix(vec3(0.40, 0.38, 0.25), vec3(0.47, 0.41, 0.44), bloom * 0.8);
+                    color = mix(color, muted * clamp(bright / 0.5, 0.7, 1.1), tip);
                 }
                 // Snow settles on whatever faces up, filling the hollows first.
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
                 color = mix(color, SNOW * (1.0 + paint), snow);
                 wet *= 1.0 - snow;
+                // Puddles gather on flat ground in the low spots of a slow pattern,
+                // spreading as the ground stays soaked and shrinking as it dries:
+                // dark, still and glossy.
+                float puddle = 0.0;
+                if (puddles_ok > 0.5 && puddles > 0.01) {
+                    float low = 1.0 - texture(detail, world_pos.xz * 0.035).r;
+                    float edge = 1.0 - 0.42 * puddles;
+                    puddle = smoothstep(edge, edge + 0.05, low) * smoothstep(0.93, 0.99, world_normal.y) * (1.0 - snow);
+                    color *= mix(1.0, 0.5, puddle);
+                    wet = max(wet, puddle);
+                }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
 
@@ -463,10 +531,20 @@ public static class Look
                 // Relief height is in tenths of a meter at most, so bumps stay subtle.
                 NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);
 
+                // The rim of the distant land melts into the fog, so its edge never
+                // shows against the sky, even on a clear day.
+                if (far_land_radius > 0.0) {
+                    float rim = smoothstep(0.75 * far_land_radius, far_land_radius, length(world_pos.xz - player_position.xz));
+                    ALBEDO *= 1.0 - rim;
+                    EMISSION = fog_tint * rim;
+                }
+
                 AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);
                 AO_LIGHT_AFFECT = 0.3;
-                ROUGHNESS = mix(1.0, 0.75, wet);
-                SPECULAR = 0.08 * wet;
+                ROUGHNESS = mix(mix(1.0, 0.75, wet), 0.05, puddle);
+                SPECULAR = mix(0.08 * wet, 0.5, puddle);
+                // Still water lies flat, whatever the relief of the ground under it.
+                NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz, puddle));
             #ifdef GHOST
                 // Faintly see-through all over, and clear in a soft circle around the
                 // player, measured on screen.
@@ -475,7 +553,18 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
-                ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                if (cut_mode > 1.5) {
+                    // cut_floor 1 clears the whole roof (player inside); 0 clears only the
+                    // circle round the player (player behind the building).
+                    ALPHA = 1.0 - fade * mix(cut_floor, 1.0, window);
+                } else if (cut_mode > 0.5) {
+                    vec2 out_dir = world_pos.xz - cut_origin.xz;
+                    float facing = smoothstep(0.05, 0.45, dot(normalize(out_dir + vec2(1e-4)), cam_dir));
+                    ALPHA = 1.0 - fade * facing * mix(cut_floor, 1.0, window);
+                } else {
+                    ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
+                }
+                if (ALPHA < 0.04) discard;
             #endif
             }
 
@@ -497,6 +586,12 @@ public static class Look
             shader_type spatial;
             render_mode cull_disabled, specular_disabled;
 
+            // Tufts shrink to nothing between 0.65 x fade_far and fade_far metres
+            // from the player (0 = never), so they are gone before the chunks
+            // that carry none (GrassTufts).
+            uniform float fade_far = 0.0;
+            global uniform vec3 player_position;
+
             varying vec3 tint;
             varying float tip;
             varying float gust;
@@ -504,6 +599,10 @@ public static class Look
             varying float shade;
 
             void vertex() {
+                if (fade_far > 0.0) {
+                    float away = length(MODEL_MATRIX[3].xz - player_position.xz);
+                    VERTEX *= 1.0 - smoothstep(0.65 * fade_far, fade_far, away);
+                }
                 // Flowers (season code 2) bloom only in spring and summer; snow
                 // presses all grass down.
                 float flowering = INSTANCE_CUSTOM.w > 1.5 ? smoothstep(-0.25, 0.1, season_warmth) * (1.0 - smoothstep(0.1, 0.4, season_autumn)) : 1.0;
@@ -580,6 +679,7 @@ public static class Look
         uniform vec4 shallow_color : source_color = vec4(0.30, 0.55, 0.55, 1.0);
         uniform vec4 sky_tint : source_color = vec4(0.62, 0.72, 0.78, 1.0);
         uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
+        global uniform vec3 player_position;
         varying vec3 world_pos;
 
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -662,6 +762,19 @@ public static class Look
             ROUGHNESS = mix(0.32, 0.45, rain);
             SPECULAR = 0.12;
             METALLIC = 0.0;
+
+            // Like the land, the water melts into the fog over the outer quarter of
+            // the distant land, and past its edge there is none to see.
+            if (far_land_radius > 0.0) {
+                float reach = length(world_pos.xz - player_position.xz);
+                if (reach > far_land_radius) discard;
+                float rim = smoothstep(0.75 * far_land_radius, far_land_radius, reach);
+                ALBEDO *= 1.0 - rim;
+                EMISSION = fog_tint * rim;
+                ALPHA = mix(ALPHA, 1.0, rim);
+                SPECULAR *= 1.0 - rim;
+                ROUGHNESS = mix(ROUGHNESS, 1.0, rim);
+            }
         }
         """;
 

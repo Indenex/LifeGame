@@ -91,6 +91,7 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.Roast.OnInsert += (_, _) => Refresh();
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
         DeviceUse.Register(conn, this);
+        Mending.Register(conn);
         // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
         Use.Register(new UseHandler
         {

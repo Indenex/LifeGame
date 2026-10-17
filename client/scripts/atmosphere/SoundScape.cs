@@ -29,13 +29,17 @@ public partial class SoundScape : Node
     // Levels are plain floats the synth thread reads each block; a stale read just
     // eases in one block later.
     public float Daylight { set => mix.Daylight = value; }
-    public float Rain { set => mix.Rain = value; }
+    public float Rain { set { mix.Rain = value; RainNow = value; } }
+    public float RainNow { get; private set; }
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
-    public float Cover { set => mix.Cover = value; }
-    public float TimeOfDay { set => mix.TimeOfDay = value; }
+    public float Cover { set { mix.Cover = value; CoverNow = value; } }
+    public float CoverNow { get; private set; }
+    public float TimeOfDay { set { mix.TimeOfDay = value; TimeOfDayNow = value; } }
+    public float TimeOfDayNow { get; private set; }
     public float Foliage { set => mix.Foliage = value; }
-    public float Fire { set => mix.Fire = value; }
+    public float Fire { set { mix.Fire = value; FireNow = value; } }
+    public float FireNow { get; private set; }
     public float FirePan { set => mix.FirePan = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
@@ -77,6 +81,8 @@ public partial class SoundScape : Node
     {
         Load();
         Sfx.Attach(this);
+        AddChild(new MusicPlayer(this)); // the recorded music (audio-8)
+        SoundMix.Fault = what => Fault(what);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
         player.Play();
@@ -96,6 +102,7 @@ public partial class SoundScape : Node
     // One-off sounds go through a queue so the synth thread adds them between blocks.
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
     public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Land(ground, strength, gain, pan));
+    public void Play(CueDef def, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(def, gain, pan));
     public void Play(Cue cue, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(cue, gain, pan));
     public void DeerCry(SoundMix.DeerCall call, float pan, float gain, float far) => events.Enqueue(m => m.DeerCry(call, pan, gain, far));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
@@ -105,6 +112,14 @@ public partial class SoundScape : Node
     public void OtherWorking(uint player, Work kind) => events.Enqueue(m => m.OtherWorking(player, kind));
     public void OtherWorkDone(uint player, Work kind, bool failed) => events.Enqueue(m => m.OtherWorkDone(player, kind, failed));
     public void OtherPlace(uint player, float gain, float pan) => events.Enqueue(m => m.OtherPlace(player, gain, pan));
+
+    int faultsLogged;
+
+    // Logged once per fault, at most a few times, so a repeating fault cannot flood the log.
+    void Fault(string what)
+    {
+        if (faultsLogged++ < 5) GD.PushError($"SoundScape: {what}");
+    }
 
     void Synthesize()
     {
@@ -118,8 +133,20 @@ public partial class SoundScape : Node
                 Thread.Sleep(4);
                 continue;
             }
-            while (events.TryDequeue(out var e)) e(mix);
-            mix.Render(left, right, Block);
+            // Nothing a single sound does may end this thread: all sound in the game comes
+            // through it. A failing event is dropped and logged; SoundMix.Render guards itself.
+            while (events.TryDequeue(out var e))
+            {
+                try { e(mix); }
+                catch (Exception ex) { Fault($"a sound event threw: {ex}"); }
+            }
+            try { mix.Render(left, right, Block); }
+            catch (Exception ex)
+            {
+                Fault($"Render threw: {ex}");
+                Array.Clear(left, 0, Block);
+                Array.Clear(right, 0, Block);
+            }
             long w = written;
             for (int i = 0; i < Block; i++) ring[(w + i) % RingFrames] = new Vector2(left[i], right[i]);
             Interlocked.Add(ref written, Block);
@@ -128,6 +155,20 @@ public partial class SoundScape : Node
 
     public override void _Process(double delta)
     {
+        // Watchdogs: if the synth thread has died or Godot stopped the player (an audio
+        // device change, say), bring them back instead of staying silent for the session.
+        if (running && synth is { IsAlive: false })
+        {
+            Fault("the synth thread had stopped; restarting it");
+            synth = new Thread(Synthesize) { IsBackground = true, Name = "SoundScape", Priority = ThreadPriority.AboveNormal };
+            synth.Start();
+        }
+        if (running && !player.Playing)
+        {
+            Fault("the audio player had stopped; restarting it");
+            player.Play();
+            playback = player.GetStreamPlayback() as AudioStreamGeneratorPlayback;
+        }
         if (playback == null) return;
         // Whole blocks only, so the same array is reused every time.
         long ready = Interlocked.Read(ref written) - read;

@@ -27,6 +27,9 @@ string? tokenPath = args.FirstOrDefault(a => a.StartsWith("--token="))?[8..];
 string? goTo = args.FirstOrDefault(a => a.StartsWith("--goto="))?[7..];
 bool jarRun = args.Contains("--jar");
 bool potRun = args.Contains("--pot");
+bool lampRun = args.Contains("--lamp");
+bool tileRun = args.Contains("--tile");
+bool tallowRun = Environment.GetEnvironmentVariable("CLAYCHECK_TALLOW") == "1";
 bool kilnRun = jarRun || args.Contains("--kiln");
 
 Identity? me = null;
@@ -56,6 +59,9 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM structure",
                 "SELECT * FROM basket_item",
                 "SELECT * FROM simmer_pot",
+                "SELECT * FROM lamp",
+                "SELECT * FROM animal",
+                "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",
                 "SELECT * FROM terrain_edit",
                 "SELECT * FROM chopped_tree",
@@ -102,7 +108,7 @@ Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
-uint clayWanted = jarRun ? 46u : kilnRun ? 38u : potRun ? 12u : 12u;
+uint clayWanted = jarRun ? 54u : kilnRun ? 38u : potRun ? 12u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -125,6 +131,8 @@ SetUpBench();
 
 if (kilnRun) return KilnCheck();
 if (potRun) return PotCheck();
+if (lampRun) return LampCheck();
+if (tileRun) return TileCheck();
 
 Craft("clay.clean", 0, Item.CleanClay);
 Craft("clay.clean", 0, Item.CleanClay);
@@ -235,7 +243,7 @@ return 0;
 // dried in the open are loaded and fired in it.
 int KilnCheck()
 {
-    while (CountOf(Item.CleanClay) < (jarRun ? 23 : 19)) Craft("clay.clean", 0, Item.CleanClay);
+    while (CountOf(Item.CleanClay) < (jarRun ? 27 : 19)) Craft("clay.clean", 0, Item.CleanClay);
     Craft("clay.grit", 0, Item.Grit);
     Craft("clay.temper_grit", 0, Item.TemperedClay);
     if (jarRun)
@@ -243,6 +251,7 @@ int KilnCheck()
         Craft("clay.grit", 0, Item.Grit);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
         Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay); // two more tempered clay, for a roof tile
     }
 
     // Two pots shaped at the bench, away from any fire, so picking them up doesn't fire them.
@@ -252,7 +261,7 @@ int KilnCheck()
     Craft("clay.daub", 0, Item.Daub);
     var kilnPots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.PinchPot).Select(p => p.Id).ToList();
     if (kilnPots.Count != 2) Fail($"expected 2 pots drying, have {kilnPots.Count}");
-    ulong jarPiece = 0;
+    ulong jarPiece = 0, tilePiece = 0;
     if (jarRun)
     {
         AtBench();
@@ -260,12 +269,17 @@ int KilnCheck()
         jarPiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.StorageJar)?.Id ?? 0;
         if (jarPiece == 0) Fail("no storage jar drying");
         Log("STAGE jar-drying");
+        // A roof tile too (ceramics-10): kiln-fired only, like the jar.
+        Craft("clay.tile", 0.9f, null);
+        tilePiece = conn.Db.ClayPiece.Iter().FirstOrDefault(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile)?.Id ?? 0;
+        if (tilePiece == 0) Fail("no roof tile drying");
+        Log("STAGE tile-drying");
     }
 
     // Eight bricks round a fire, where they dry twice as fast. Bricks need no bench;
     // the fire is well clear of the pots by the bench.
     LightFireNear(bench.X + 4f, bench.Z + 1.3f);
-    foreach (var id in kilnPots.Append(jarPiece).Where(id => id != 0))
+    foreach (var id in kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0))
         if (conn.Db.ClayPiece.Id.Find(id) is { } p && DistanceTo(p.X, p.Z, fire.X, fire.Z) <= ClayRules.FireReach + 0.5f)
             Fail("the brick fire is lit too close to the drying pots");
     KeepFireGoing();
@@ -323,7 +337,7 @@ int KilnCheck()
 
     // Wait for the pots, pick them up, load them.
     watch.Restart();
-    while (kilnPots.Append(jarPiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    while (kilnPots.Append(jarPiece).Append(tilePiece).Where(id => id != 0).Any(id => MoistureOf(id) > ClayRules.SafeToFire))
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(12)) Fail("pots never dried");
         Pump(() => false, 5, null);
@@ -345,6 +359,14 @@ int KilnCheck()
         Pump(() => lastError != null, 3, "the campfire to refuse the jar");
         if (lastError == null || !lastError.Contains("kiln")) Fail($"campfire took the jar: {lastError}");
         Log($"Campfire: {lastError}");
+        // The tile is picked up too, and also refused by a campfire.
+        var tp = conn.Db.ClayPiece.Id.Find(tilePiece)!;
+        WalkTo(tp.X, tp.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(tilePiece, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(tilePiece) == null, 3, "picking up the dry tile");
+        if (lastError != null) Fail($"picking up the tile: {lastError}");
+        if (CountOf(Item.UnfiredRoofTile) != 1) Fail("expected an unfired roof tile");
     }
     foreach (var id in kilnPots)
     {
@@ -363,7 +385,7 @@ int KilnCheck()
     WalkTo(kiln.X, kiln.Z, 1.6f);
     lastError = null;
     conn.Reducers.UseKiln(kiln.Id);
-    int loadWanted = jarRun ? 3 : 2;
+    int loadWanted = jarRun ? 4 : 2;
     Pump(() => lastError != null || (conn.Db.Kiln.StructureId.Find(kiln.Id)?.Load?.Count ?? 0) == loadWanted, 3, "the kiln to be loaded");
     if (lastError != null) Fail($"loading: {lastError}");
     Log($"Loaded {loadWanted} pieces");
@@ -393,6 +415,14 @@ int KilnCheck()
     if (!got.SequenceEqual(loaded)) Fail($"kiln pot qualities {string.Join(",", got)}, expected {string.Join(",", loaded)}");
     Log($"{fired.Count} kiln-fired pots at quality {string.Join(",", got)}");
     Log("STAGE kiln-done");
+    if (jarRun)
+    {
+        // The roof tile comes out by the door as a fired roof tile (or sherds, 2% of the time).
+        var tile = conn.Db.WorldItem.Iter().FirstOrDefault(w => w.Item == (ushort)Item.RoofTile && DistanceTo(w.X, w.Z, kiln.X, kiln.Z) < 2.5f);
+        if (tile == null) Log("The roof tile cracked in the kiln (2% chance); tile not checked this run");
+        else Log($"Kiln-fired roof tile at quality {tile.Quality}");
+        if (tile != null) Log("STAGE tile-fired");
+    }
     if (jarRun) JarCheck(kiln);
     Log("Kiln check passed: bricks to a kiln to kiln-fired pots");
     conn.Disconnect();
@@ -401,6 +431,231 @@ int KilnCheck()
 
 // Cooking in a pot (ceramics-7): a coil pot dried by a fire and fired in it,
 // filled at the water, berries picked, broth simmered, taken off and eaten.
+// Clay oil lamps (ceramics-9): two lamps pinched at the bench and pit-fired; setting
+// one down with no tallow is refused. Tallow comes from raw mutton, which only Animals
+// hands out: with CLAYCHECK_TALLOW=1, put 2 raw mutton in this player's bag (the
+// identity is printed) and the run renders tallow in a pot, lights a lamp and feeds it.
+int LampCheck()
+{
+    // The tallow run also needs a coil pot to render in; it dries and fires with the lamps.
+    int cleanWanted = tallowRun ? 6 : 2;
+    while (CountOf(Item.CleanClay) < cleanWanted) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+    if (tallowRun)
+    {
+        Craft("clay.grit", 0, Item.Grit);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+        Craft("clay.temper_grit", 0, Item.TemperedClay);
+    }
+
+    AtBench();
+    Craft("clay.lamp", 0.9f, null);
+    Craft("clay.lamp", 0.9f, null);
+    if (tallowRun) Craft("clay.coil_pot", 0.9f, null);
+    var lampPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Lamp).ToList();
+    if (lampPieces.Count != 2) Fail($"expected 2 lamps drying, have {lampPieces.Count}");
+    var potPieces = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.CoilPot).ToList();
+    Log("STAGE lamps-drying");
+    LightFireNear(lampPieces.Average(p => p.X) + 1.3f, lampPieces.Average(p => p.Z));
+    KeepFireGoing();
+    var ids = lampPieces.Concat(potPieces).Select(p => p.Id).ToList();
+    var watch = Stopwatch.StartNew();
+    while (ids.Any(id => MoistureOf(id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("lamps never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    int newsBefore = news.Count;
+    foreach (var id in ids)
+    {
+        KeepFireGoing();
+        var piece = conn.Db.ClayPiece.Id.Find(id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(id)?.Stage == (byte)ClayStage.Firing, 3, "a lamp to go in the fire");
+        if (lastError != null) Fail($"firing a lamp: {lastError}");
+    }
+    watch.Restart();
+    while (ids.Any(id => conn.Db.ClayPiece.Id.Find(id) != null))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(6)) Fail("lamp firing never finished");
+        Pump(() => false, 2, null);
+    }
+    Pump(() => news.Count >= newsBefore + ids.Count, 5, "firing news");
+    int WorldCount(Item it) => conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)it);
+    if (WorldCount(Item.ClayLamp) == 0)
+    {
+        Log("Both lamps cracked in the fire (a small chance); lamp lighting not checked this run");
+        conn.Disconnect();
+        return 0;
+    }
+    if (tallowRun && WorldCount(Item.CoilPot) == 0)
+    {
+        Log("The coil pot cracked in the fire (a small chance); tallow not checked this run");
+        tallowRun = false;
+    }
+    Gather(Item.ClayLamp, 1);
+    if (tallowRun) Gather(Item.CoilPot, 1);
+    Log("STAGE lamp-fired");
+
+    KeepFireGoing();
+    WalkTo(fire.X + 2.5f, fire.Z, 0.3f);
+    lastError = null;
+    conn.Reducers.SetLamp(x + 1f, z);
+    Pump(() => lastError != null, 3, "a lamp with no tallow to be refused");
+    if (lastError?.Contains("tallow") != true) Fail($"a lamp with no tallow: {lastError}");
+    Log($"No tallow: {lastError}");
+
+    if (!tallowRun)
+    {
+        Log("Lamp check passed: a lamp pinched at the bench, fired, and refused without tallow (set CLAYCHECK_TALLOW=1 to light one)");
+        conn.Disconnect();
+        return 0;
+    }
+    // Hunt a sheep for its mutton (Animals: a spear and a quiet approach), unless a
+    // debug hook already put some in the bag.
+    if (CountOf(Item.RawMutton) < 2) HuntMutton();
+    WalkTo(waterX, waterZ, 1.5f);
+    if (CountOf(Item.CoilPotOfWater) == 0)
+    {
+        lastError = null;
+        conn.Reducers.FillPots();
+        Pump(() => lastError != null || CountOf(Item.CoilPotOfWater) > 0, 3, "a coil pot of water");
+        if (CountOf(Item.CoilPotOfWater) == 0) Fail("the tallow run needs a coil pot in the bag (put one there too)");
+    }
+    fire = conn.Db.Fire.Id.Find(fire.Id) ?? fire;
+    KeepFireGoing();
+    WalkTo(fire.X + 1.2f, fire.Z, 0.3f);
+    Craft("cook.tallow", 0, null);
+    Pump(() => conn.Db.SimmerPot.Iter().Any(p => p.PlayerId == myId), 5, "the tallow to go on");
+    var simmer = conn.Db.SimmerPot.Iter().First(p => p.PlayerId == myId);
+    Pump(() => false, ClayRules.SimmerSeconds(Item.Tallow) + 1, null);
+    lastError = null;
+    conn.Reducers.TakeOffPot(simmer.Id);
+    Pump(() => lastError != null || CountOf(Item.Tallow) >= 1, 3, "tallow");
+    if (lastError != null) Fail($"taking the tallow off: {lastError}");
+    Log($"Rendered tallow; the coil pot came back empty ({CountOf(Item.CoilPot)} coil pots)");
+    Gather(Item.Tallow, 1);
+
+    WalkTo(fire.X + 2.5f, fire.Z, 0.3f);
+    lastError = null;
+    conn.Reducers.SetLamp(x + 1f, z);
+    Pump(() => lastError != null || conn.Db.Lamp.Iter().Any(l => l.PlayerId == myId), 3, "a lit lamp");
+    if (lastError != null) Fail($"setting a lamp: {lastError}");
+    Log("STAGE lamp-lit");
+    Log("Lamp check passed: tallow rendered, and a fired lamp set down and lit");
+    conn.Disconnect();
+    return 0;
+}
+
+// Raw mutton the way a player gets it (ceramics-9): lash a spear, sneak up on the
+// nearest sheep, strike until it falls, butcher it with the stone axe and pick up the
+// cuts. Sheep never bolt from a player who moves in short steps.
+void HuntMutton()
+{
+    if (CountOf(Item.Spear) == 0)
+    {
+        if (CountOf(Item.Stone) < 2) Gather(Item.Stone, 2); // one to strike with, one to knap
+        if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 1);
+        if (CountOf(Item.Fiber) < 3 && CountOf(Item.Cordage) < 1) Gather(Item.Fiber, 3);
+        Craft("knap.flake", 0.95f, Item.Flake);
+        if (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, Item.Cordage);
+        Craft("lash.spear", 0, Item.Spear);
+    }
+    var sheep = conn.Db.Animal.Iter().OrderBy(a => DistanceTo(a.X, a.Z, x, z)).FirstOrDefault();
+    if (sheep == null) Fail("no sheep to hunt in this world");
+    ulong id = sheep!.Id;
+    Log($"Hunting sheep {id}, {DistanceTo(sheep.X, sheep.Z, x, z):0} m away");
+    var clock = Stopwatch.StartNew();
+    while (conn.Db.AnimalCarcass.Iter().All(c => c.AnimalId != id))
+    {
+        if (clock.Elapsed > TimeSpan.FromMinutes(4)) Fail("could not bring the sheep down");
+        var a = conn.Db.Animal.Id.Find(id);
+        if (a == null) Fail("the sheep vanished without a carcass");
+        while (DistanceTo(a!.X, a.Z, x, z) > 2.0f)
+        {
+            // Short steps, so the sheep isn't startled.
+            float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            x += dx / d * 0.15f;
+            z += dz / d * 0.15f;
+            conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
+            Pump(() => false, 0.1f, null);
+            a = conn.Db.Animal.Id.Find(id);
+            if (a == null) break;
+        }
+        if (a == null) continue;
+        lastError = null;
+        conn.Reducers.StrikeAnimal(id);
+        Pump(() => false, 1.1f, null);
+        if (lastError != null && !lastError.Contains("Too far")) Fail($"striking the sheep: {lastError}");
+    }
+    var carcass = conn.Db.AnimalCarcass.Iter().First(c => c.AnimalId == id);
+    WalkTo(carcass.X, carcass.Z, 1.5f);
+    lastError = null;
+    conn.Reducers.ButcherCarcass(carcass.Id);
+    Pump(() => lastError != null || CountOf(Item.RawMutton) >= 2 || conn.Db.WorldItem.Iter().Count(w => w.Item == (ushort)Item.RawMutton) >= 3, 5, "the butchering");
+    if (lastError != null) Fail($"butchering: {lastError}");
+    Gather(Item.RawMutton, 2);
+    Log("STAGE mutton-hunted");
+}
+
+// Roof tiles (ceramics-10): pressed at the bench, dried by a fire; a campfire refuses
+// to fire them (kiln only, like the jar). Kiln firing is the same path as the jar's,
+// which --kiln --jar covers.
+int TileCheck()
+{
+    while (CountOf(Item.CleanClay) < 2) Craft("clay.clean", 0, Item.CleanClay);
+    Craft("clay.grit", 0, Item.Grit);
+    Craft("clay.temper_grit", 0, Item.TemperedClay);
+
+    // Shaping a tile away from the bench is refused.
+    WalkTo(bench.X, bench.Z - 15f, 0.5f);
+    lastError = null;
+    conn.Reducers.StartCraft("clay.tile", 0.9f);
+    Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 3, "a tile with no bench to be refused");
+    if (lastError == null) Fail("a tile was shaped away from the bench");
+    Log($"No bench: {lastError}");
+
+    AtBench();
+    Craft("clay.tile", 0.9f, null);
+    Craft("clay.tile", 0.9f, null);
+    var tiles = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId && p.Form == (byte)ClayForm.Tile).ToList();
+    if (tiles.Count != 2) Fail($"expected 2 tiles drying, have {tiles.Count}");
+    Log("STAGE tiles-drying");
+    LightFireNear(tiles.Average(p => p.X) + 1.3f, tiles.Average(p => p.Z));
+    KeepFireGoing();
+    var watch = Stopwatch.StartNew();
+    while (tiles.Any(t => MoistureOf(t.Id) > ClayRules.SafeToFire))
+    {
+        if (watch.Elapsed > TimeSpan.FromMinutes(10)) Fail("tiles never dried");
+        KeepFireGoing();
+        Pump(() => false, 5, null);
+    }
+    foreach (var t in tiles)
+    {
+        var piece = conn.Db.ClayPiece.Id.Find(t.Id)!;
+        WalkTo(piece.X, piece.Z, 1.2f);
+        lastError = null;
+        conn.Reducers.TendClay(t.Id, false);
+        Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(t.Id) == null, 3, "picking up a dry tile");
+        if (lastError != null) Fail($"picking up a tile: {lastError}");
+    }
+    if (CountOf(Item.UnfiredRoofTile) != 2) Fail($"expected 2 unfired tiles, have {CountOf(Item.UnfiredRoofTile)}");
+    KeepFireGoing();
+    WalkTo(fire.X, fire.Z, 1.2f);
+    lastError = null;
+    conn.Reducers.FirePots(fire.Id);
+    Pump(() => lastError != null, 3, "the campfire to refuse the tiles");
+    if (lastError == null || !lastError.Contains("kiln")) Fail($"campfire took the tiles: {lastError}");
+    Log($"Campfire: {lastError}");
+    Log("Tile check passed: tiles pressed at the bench, dried, and refused by a campfire (they need a kiln)");
+    conn.Disconnect();
+    return 0;
+}
+
 int PotCheck()
 {
     // Two coil pots, so one cracking in the pit (a chance) doesn't void the run.
@@ -802,12 +1057,23 @@ void WalkTo(float tx, float tz, float near)
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d <= near) break;
         float step = Math.Min(d - near * 0.9f, 0.5f);
-        x += dx / d * step;
-        z += dz / d * step;
+        // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
+        // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        {
+            x += dx / d * step;
+            z += dz / d * step;
+        }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
     }
-    Pump(() => conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f, 3, "position to settle");
+    for (var settle = Stopwatch.StartNew(); ; )
+    {
+        if (conn.Db.PlayerPos.PlayerId.Find(myId) is { } p && MathF.Abs(p.X - x) < 0.1f && MathF.Abs(p.Z - z) < 0.1f) break;
+        if (settle.Elapsed.TotalSeconds > 15) Fail("timed out waiting for position to settle");
+        conn.Reducers.Move(x, z, 0f);
+        Pump(() => false, 0.1f, null);
+    }
 }
 
 void Pump(Func<bool> until, float seconds, string? what)

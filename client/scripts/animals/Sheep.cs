@@ -1,19 +1,23 @@
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// A round, woolly sheep with a dark face and legs. It glides between the positions
-// the server sends and animates from how fast it is actually moving: legs swing
-// when walking, it bounds when running, hops when startled, and drops its head to
-// nibble grass when grazing.
+// A round, woolly sheep with a dark face and legs, or a red deer (animals-14): slim
+// and long-legged, red-brown with a pale rump, the stags antlered. It glides between
+// the positions the server sends and animates from how fast it is actually moving:
+// legs swing when walking, it bounds when running, hops when startled, and drops
+// its head to nibble grass when grazing. Both share the skeleton and animation.
 public partial class Sheep : Node3D
 {
     // Slightly longer than the server's half-second tick, so a sheep is still
     // gliding when the next update arrives and never stops between steps.
     const float GlideSeconds = 0.6f;
     const float HopSeconds = 0.35f;
+    // Fastest turn, radians per second; quicker than this reads as snapping round.
+    const float MaxTurn = 4.5f;
 
     readonly Terrain terrain;
     // One skinned mesh per sheep: the parts used to be separate nodes, eight draw
@@ -26,10 +30,13 @@ public partial class Sheep : Node3D
     static readonly Vector3[] Hips = SheepFigure.Hips;
     static readonly Vector3 OldHeadAt = new(0, 0.8f, 0.4f);
     static readonly Vector3[] OldHips = { new(-0.15f, 0.46f, 0.26f), new(0.15f, 0.46f, 0.26f), new(-0.15f, 0.46f, -0.26f), new(0.15f, 0.46f, -0.26f) };
+    // A deer stands on longer legs and carries its head high on a long neck.
+    static readonly Vector3 DeerHeadAt = new(0, 1.32f, 0.62f);
+    static readonly Vector3[] DeerHips = { new(-0.13f, 0.82f, 0.38f), new(0.13f, 0.82f, 0.38f), new(-0.13f, 0.82f, -0.38f), new(0.13f, 0.82f, -0.38f) };
     readonly float seed;
 
     Vector2 from, to;
-    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw;
+    float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
     Color woolColor;
@@ -62,6 +69,10 @@ public partial class Sheep : Node3D
     };
     static readonly Dictionary<int, Material> WoolMaterials = new();
     static ArrayMesh? sheepMesh;
+    // Red deer: coats from red-brown to grey-brown; the rump, belly and throat are pale.
+    static readonly Color[] Coats = { new(0.47f, 0.30f, 0.19f), new(0.50f, 0.33f, 0.21f), new(0.42f, 0.32f, 0.24f) };
+    static readonly Dictionary<int, Material> CoatMaterials = new();
+    static ArrayMesh? deerMesh, stagMesh;
     // Skin, face and legs share one material; their colors ride in the vertices.
     static Material? plainMaterial;
     static readonly Color Skin = new(0.80f, 0.66f, 0.58f);
@@ -78,16 +89,35 @@ public partial class Sheep : Node3D
         return material;
     }
 
-    public Sheep(ulong id, Terrain terrain)
+    // About a third of deer are antlered stags; Audio uses this too so the roar
+    // comes from the stags that are drawn.
+    public static bool IsStag(ulong id) => Terrain.Hash01((int)id, 13, 21) < AnimalDefs.Get(AnimalDefs.Deer).AntlerShare;
+
+    public Sheep(ulong id, Terrain terrain, AnimalSpecies species = AnimalSpecies.Sheep)
     {
         this.terrain = terrain;
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
+        var def = AnimalDefs.Get((byte)species);
+        bool deer = def.Model == "deer";
+        // About a third of deer are antlered stags (AnimalDef.AntlerShare).
+        bool stag = deer && IsStag(id);
         BuildMeshes();
+        if (deer) BuildDeerMeshes();
+        var headAt = deer ? DeerHeadAt : HeadAt;
+        var hips = deer ? DeerHips : Hips;
 
         int color = (int)(Terrain.Hash01((int)id, 11, 5) * Fleeces.Length) % Fleeces.Length;
         if (!WoolMaterials.TryGetValue(color, out var wool))
             WoolMaterials[color] = wool = WoolLook(Fleeces[color]);
         woolColor = Fleeces[color];
+        if (deer)
+        {
+            // Coats vary a little, from red-brown to a greyer brown.
+            int coat = (int)(Terrain.Hash01((int)id, 17, 3) * Coats.Length) % Coats.Length;
+            if (!CoatMaterials.TryGetValue(coat, out wool))
+                CoatMaterials[coat] = wool = Look.Solid(Coats[coat]);
+            woolColor = Coats[coat];
+        }
 
         // A shorn sheep is a slim pink body; the fleece bone shrinks into it when
         // shorn and swells back out as the wool regrows.
@@ -96,21 +126,21 @@ public partial class Sheep : Node3D
         skeleton.SetBoneParent(FleeceBone, BodyBone);
         skeleton.AddBone("head");
         skeleton.SetBoneParent(HeadBone, BodyBone);
-        skeleton.SetBoneRest(HeadBone, new Transform3D(Basis.Identity, HeadAt));
+        skeleton.SetBoneRest(HeadBone, new Transform3D(Basis.Identity, headAt));
         for (int i = 0; i < 4; i++)
         {
             skeleton.AddBone($"leg{i}");
             skeleton.SetBoneParent(FirstLegBone + i, BodyBone);
-            skeleton.SetBoneRest(FirstLegBone + i, new Transform3D(Basis.Identity, Hips[i]));
+            skeleton.SetBoneRest(FirstLegBone + i, new Transform3D(Basis.Identity, hips[i]));
         }
         skeleton.ResetBonePoses();
         AddChild(skeleton);
-        var mesh = new MeshInstance3D { Mesh = sheepMesh, Skeleton = new NodePath("..") };
+        var mesh = new MeshInstance3D { Mesh = deer ? (stag ? stagMesh : deerMesh) : sheepMesh, Skeleton = new NodePath("..") };
         mesh.SetSurfaceOverrideMaterial(0, wool);
         skeleton.AddChild(mesh);
 
-        // Not every sheep is the same size.
-        adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f;
+        // Not every sheep is the same size; stags are bigger than hinds.
+        adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f + (stag ? 0.1f : 0f);
         Scale = Vector3.One * adultSize;
     }
 
@@ -139,6 +169,25 @@ public partial class Sheep : Node3D
 
     // Butchered: sink softly into the grass and go.
     public void FadeAway() => fading = 0f;
+
+    // A hit landed from `from` (the hitter's position; a crit hits harder): the body
+    // jerks away from the blow and the head snaps up. A crit also buckles the hind legs
+    // and the animal stumbles for half a second before it gets away.
+    public void Flinch(bool crit, Vector3 from)
+    {
+        var away = new Vector2(Position.X - from.X, Position.Z - from.Z);
+        if (away.LengthSquared() < 1e-4f) away = new Vector2(Mathf.Sin(Rotation.Y), Mathf.Cos(Rotation.Y));
+        away = away.Normalized();
+        // Into the body's own frame: x to its left (+X), y forward (+Z).
+        float h = Rotation.Y;
+        flinchAway = new Vector2(away.X * Mathf.Cos(h) - away.Y * Mathf.Sin(h), away.X * Mathf.Sin(h) + away.Y * Mathf.Cos(h));
+        flinchCrit = crit;
+        flinch = 0f;
+    }
+    float flinch = -1f;
+    bool flinchCrit;
+    Vector2 flinchAway;
+    const float FlinchSeconds = 0.4f, StumbleSeconds = 0.5f, BuckleSeconds = 0.8f;
 
 
     public void Apply(Animal a, bool snap)
@@ -177,11 +226,18 @@ public partial class Sheep : Node3D
             return;
         }
 
-        glide = Mathf.Min(glide + dt / GlideSeconds, 1f);
+        // A crit's stumble holds the animal back a moment; it catches up as it bolts.
+        bool stumbling = flinchCrit && flinch >= 0f && flinch < StumbleSeconds;
+        glide = Mathf.Min(glide + dt / GlideSeconds * (stumbling ? 0.3f : 1f), 1f);
         var flat = from.Lerp(to, glide);
         float ground = terrain.HeightAt(flat.X, flat.Y);
         Position = new Vector3(flat.X, Mathf.Lerp(Position.Y, ground, 1f - Mathf.Exp(-12f * dt)), flat.Y);
-        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, targetHeading, 1f - Mathf.Exp(-7f * dt)), 0);
+        // Turn at a natural rate rather than snapping to each new heading, and remember
+        // how fast, so the body can lean into the turn and the head lead it.
+        float turn = Mathf.AngleDifference(Rotation.Y, targetHeading) * (1f - Mathf.Exp(-7f * dt));
+        turn = Mathf.Clamp(turn, -MaxTurn * dt, MaxTurn * dt);
+        Rotation = new Vector3(0, Rotation.Y + turn, 0);
+        turnRate = Mathf.Lerp(turnRate, turn / Mathf.Max(dt, 1e-4f), 1f - Mathf.Exp(-6f * dt));
 
         var moved = Position - lastPosition;
         moved.Y = 0;
@@ -190,7 +246,13 @@ public partial class Sheep : Node3D
 
         float walk = Mathf.Clamp(speed / 1.0f, 0f, 1f);
         float run = Mathf.Clamp((speed - 2f) / 1.5f, 0f, 1f);
-        gait += dt * (speed * 5.5f + run * 4f);
+        // The cycle advances by ground covered, not time, so hooves don't skate: one cycle
+        // is the distance two swings of the legs reach, longer in the bound's flight.
+        // Hip height from the leg bone's rest, so any species strides on its own legs.
+        if (hipHeight <= 0f) hipHeight = skeleton.GetBoneRest(FirstLegBone).Origin.Y;
+        float leg = hipHeight * Scale.Y;
+        float reach = 4f * leg * Mathf.Lerp(Mathf.Sin(0.45f * Mathf.Max(walk, 0.2f)), Mathf.Sin(0.7f) * 1.6f, run);
+        gait += speed * dt * Mathf.Tau / Mathf.Max(reach, 0.05f);
 
         // Walking moves diagonal legs together; running bounds front pair, then back pair.
         float s = Mathf.Sin(gait) * 0.45f * walk;
@@ -212,7 +274,29 @@ public partial class Sheep : Node3D
         float hopLift = Mathf.Sin(Mathf.Pi * hop / HopSeconds) * 0.28f;
         float bounce = Mathf.Abs(Mathf.Sin(gait)) * (0.025f * walk * (1f - run) + 0.12f * run);
         float breathe = Mathf.Sin(time * 1.7f) * 0.006f * (1f - walk);
-        Body(new Vector3(0, hopLift + bounce, 0), new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, 0), new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
+        // Lean into turns, more at speed.
+        float lean = Mathf.Clamp(turnRate * speed * 0.05f, -0.22f, 0.22f);
+        // A hit: a sharp jerk away from the blow that settles quickly.
+        float jerk = 0f, buckle = 0f;
+        if (flinch >= 0f)
+        {
+            flinch += dt;
+            jerk = flinch < 0.05f ? flinch / 0.05f : Mathf.Exp(-(flinch - 0.05f) * 9f);
+            if (flinchCrit)
+            {
+                jerk *= 1.5f;
+                buckle = flinch < 0.1f ? Mathf.SmoothStep(0f, 1f, flinch / 0.1f)
+                    : flinch < 0.45f ? 1f : 1f - Mathf.SmoothStep(0f, 1f, (flinch - 0.45f) / (BuckleSeconds - 0.45f));
+            }
+            if (flinch > (flinchCrit ? BuckleSeconds : FlinchSeconds)) flinch = -1f;
+        }
+        Body(new Vector3(flinchAway.X * 0.07f * jerk, hopLift + bounce - 0.07f * buckle, flinchAway.Y * 0.07f * jerk),
+            new Vector3(-run * Mathf.Cos(gait) * 0.08f + flinchAway.Y * 0.18f * jerk - 0.22f * buckle, 0, -lean - flinchAway.X * 0.18f * jerk),
+            new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
+        // Hind legs fold under the rump in a crit's buckle.
+        if (buckle > 0f)
+            for (int i = 2; i < 4; i++)
+                Leg(i, new Vector3(Mathf.Lerp(Mathf.Lerp(i == 2 ? -s : s, back, run), 0.75f, buckle), 0, 0));
 
         // Head down to nibble when grazing, up and looking about when idle or alarmed.
         float targetPitch, targetYaw = 0f;
@@ -232,9 +316,12 @@ public partial class Sheep : Node3D
         }
         else
             targetPitch = 0.15f;
+        // The head leads the turn.
+        if (speed > 0.3f) targetYaw += Mathf.Clamp(turnRate * 0.25f, -0.5f, 0.5f);
         pitch = Mathf.Lerp(pitch, targetPitch, 1f - Mathf.Exp(-4f * dt));
         yaw = Mathf.Lerp(yaw, targetYaw, 1f - Mathf.Exp(-3f * dt));
-        Head(new Vector3(pitch, yaw, 0));
+        // The head snaps up and away from the blow.
+        Head(new Vector3(pitch - 0.5f * jerk, yaw + flinchAway.X * 0.3f * jerk, 0));
 
         // Wool shrinks away quickly when shorn and creeps back as it regrows.
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
@@ -369,6 +456,16 @@ public partial class Sheep : Node3D
         st.Commit(sheepMesh);
         sheepMesh.SurfaceSetMaterial(1, plainMaterial);
         return sheepMesh;
+    }
+
+    // The carved red deer (Modeling, DeerFigure): same bones as the sheep, so the shared
+    // animation works unchanged. Surface 0 is the coat, colored by the deer's material.
+    static void BuildDeerMeshes()
+    {
+        if (deerMesh != null) return;
+        plainMaterial ??= Look.Solid(Colors.White);
+        deerMesh = DeerFigure.Build(false, plainMaterial);
+        stagMesh = DeerFigure.Build(true, plainMaterial);
     }
 
     static SurfaceTool Begin()

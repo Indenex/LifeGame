@@ -46,9 +46,8 @@ public static class Controls
         new("pick_up", new[] { Key.E }, null, Fixed: true, KeyText: "{use}", Name: "Pick up"),
         new("craft", new[] { Key.C }, "Make things", "{key} to make things from what you carry"),
         new("camera_drag", Array.Empty<Key>(), "Turn the view (hold and drag)", "Hold the right mouse button and drag to turn the view", Mouse: MouseButton.Right, Name: "Turn the view (hold and drag)"),
-        // Bug fixes builds the jump (bugfix-25); it reads the "jump" action. Help stays
-        // null (out of the F1 list) until that lands and gives the row its line.
-        new("jump", new[] { Key.Space }, null, "{key} to jump", OnRequest: true, Name: "Jump"),
+        // The jump (bugfix-25) reads the "jump" action.
+        new("jump", new[] { Key.Space }, "Jump", "{key} to jump", OnRequest: true, Name: "Jump"),
         new("key_help", new[] { Key.F1 }, null, "Hold {key} to see every key", Name: "Show every key (hold)"),
         // D-088, D-091: Shift runs (stamina, survival-7) and sneak is Ctrl.
         new("run", new[] { Key.Shift }, "Run (hold)", "Hold {key} to run", OnRequest: true, Name: "Run (hold)"),
@@ -60,6 +59,17 @@ public static class Controls
         // with these keys; they join the key list once those lanes land.
         new("strike", None, "Strike", "{key} to strike", OnRequest: true),
         new("craft_play_minigame", None, "Work a craft by hand (hold while starting)"),
+        // The hotbar (ui-19): 1 to 9 and 0 use what sits on the ten slots along the bottom.
+        new("hotbar_1", new[] { Key.Key1 }, "Use what's on the bar", "The number keys ({key}) use what sits on the bar along the bottom", OnRequest: true, Name: "Bar slot 1", Joins: new[] { "hotbar_1", "hotbar_2", "hotbar_3", "hotbar_4", "hotbar_5", "hotbar_6", "hotbar_7", "hotbar_8", "hotbar_9", "hotbar_10" }),
+        new("hotbar_2", new[] { Key.Key2 }, null, Name: "Bar slot 2"),
+        new("hotbar_3", new[] { Key.Key3 }, null, Name: "Bar slot 3"),
+        new("hotbar_4", new[] { Key.Key4 }, null, Name: "Bar slot 4"),
+        new("hotbar_5", new[] { Key.Key5 }, null, Name: "Bar slot 5"),
+        new("hotbar_6", new[] { Key.Key6 }, null, Name: "Bar slot 6"),
+        new("hotbar_7", new[] { Key.Key7 }, null, Name: "Bar slot 7"),
+        new("hotbar_8", new[] { Key.Key8 }, null, Name: "Bar slot 8"),
+        new("hotbar_9", new[] { Key.Key9 }, null, Name: "Bar slot 9"),
+        new("hotbar_10", new[] { Key.Key0 }, null, Name: "Bar slot 10"),
         new("eat", new[] { Key.X }, "Eat", "{key} eats the best food you carry"),
         new("drink", None, "Drink"),
         new("build_mode", new[] { Key.B }, "Build", "{key} to lay out a shelter"),
@@ -67,6 +77,8 @@ public static class Controls
         new("claim_open", None, "Your claim", "{key} shows the land you claim"),
         new("chat", None, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
+        // The equipment panel (ui-10, D-074, D-094); its hint waits until you first carry clothes.
+        new("equipment", new[] { Key.I }, "What you carry and wear", "{key} shows what you carry and wear", OnRequest: true),
         // Interim: Ceramics reads V directly until tending clay moves to G.
         new("tend_clay", new[] { Key.V }, "Tend clay", Fixed: true),
     };

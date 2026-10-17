@@ -5,6 +5,8 @@ using SpacetimeDB;
 public enum AnimalSpecies
 {
     Sheep,
+    // Red deer (animals-14): shy herds at the woodland edges.
+    Deer,
 }
 
 // What an animal is doing, so clients can pick the matching animation.
@@ -30,13 +32,10 @@ public static partial class Module
     // than a client's view radius, so animals are already moving when they come into sight.
     const float FlockWakeRange = (World.ViewRadiusChunks + 1) * World.ChunkSize * World.CellSize;
 
-    const float SheepWalkSpeed = 1.0f;
-    const float SheepTrotSpeed = 1.7f;
-    const float SheepRunSpeed = 4.4f;
-    const float SheepNoticeRange = 14f;
+    // How each species moves, senses and what it drops lives in shared/Animals.cs (AnimalDefs).
+    static AnimalDef Traits(AnimalSpecies species) => AnimalDefs.Get((byte)species);
+
     // Anyone moving slower than this, sneakers included, never frightens a sheep.
-    const float SheepCalmSpeed = World.SneakSpeed + 0.6f;
-    const float SheepHomeRange = 12f;
     // Ground lower than this is water or marsh; sheep stay out of it.
     const float SheepDryLevel = -0.85f;
 
@@ -126,6 +125,12 @@ public static partial class Module
         public float Vz;
         public long At;
         public long StillSince;
+        // When Stalking last got credit for sneaking near a wary animal (animal.sneak),
+        // throttled to every few seconds; and when this player last drew a bow (Bow.cs).
+        [Default(0L)]
+        public long SneakReportAt;
+        [Default(0L)]
+        public long ShotAt;
     }
 
     [SpacetimeDB.Table(Accessor = "AnimalTickTimer", Scheduled = nameof(AnimalTick), ScheduledAt = nameof(ScheduledAt))]
@@ -137,16 +142,6 @@ public static partial class Module
         public ScheduleAt ScheduledAt;
     }
 
-    // Starting flocks: one at the edge of the clearing where players wake up, the
-    // rest further out. Each settles in the most open meadow near its spot.
-    static readonly (float X, float Z, int Size, float Search)[] SheepFlocks =
-    {
-        (4f, 3f, 5, 1f),
-        (-34f, 22f, 6, 14f),
-        (30f, -36f, 4, 14f),
-        (-42f, -30f, 5, 14f),
-    };
-
     // Starts the animal clock and places the first flocks. Safe to call on every
     // connect, so worlds created before animals existed get them too.
     static void EnsureAnimals(ReducerContext ctx)
@@ -157,14 +152,16 @@ public static partial class Module
                 ScheduledId = 0,
                 ScheduledAt = new ScheduleAt.Interval(TimeSpan.FromMilliseconds(AnimalTickMillis)),
             });
-        if (ctx.Db.Flock.Count > 0) return;
-        foreach (var (x, z, size, search) in SheepFlocks)
-            SpawnFlock(ctx, AnimalSpecies.Sheep, x, z, size, search);
+        // Species added later (deer, animals-14) get their first herds in worlds that lack them.
+        foreach (var def in AnimalDefs.All)
+            if (!ctx.Db.Flock.Iter().Any(f => (byte)f.Species == def.Id))
+                foreach (var spot in def.Herds)
+                    SpawnFlock(ctx, (AnimalSpecies)def.Id, spot.X, spot.Z, spot.Size, spot.Search);
     }
 
     static void SpawnFlock(ReducerContext ctx, AnimalSpecies species, float x, float z, int size, float search)
     {
-        var (homeX, homeZ) = AnimalOpenestNear(x, z, search);
+        var (homeX, homeZ) = AnimalOpenestNear(x, z, search, Traits(species).WoodPref);
         var flock = ctx.Db.Flock.Insert(new Flock { FlockId = 0, Species = species, HomeX = homeX, HomeZ = homeZ, Size = (byte)size });
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         for (int i = 0; i < size; i++)
@@ -208,6 +205,8 @@ public static partial class Module
     struct AnimalWatcher
     {
         public float X, Z, Vx, Vz, Speed, StillSeconds;
+        public uint PlayerId;
+        public bool Sneaking;
     }
 
     struct FlockMember
@@ -219,6 +218,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void AnimalTick(ReducerContext ctx, AnimalTickTimer timer)
     {
+        RequireServer(ctx);
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
         var watchers = AnimalWatchPlayers(ctx, now);
         if (watchers.Count == 0) return;
@@ -258,7 +258,7 @@ public static partial class Module
             }
             if (ctx.Db.PlayerPos.PlayerId.Find(player.PlayerId) is not { } pos) continue;
 
-            var w = new AnimalWatcher { X = pos.X, Z = pos.Z };
+            var w = new AnimalWatcher { X = pos.X, Z = pos.Z, PlayerId = player.PlayerId, Sneaking = ctx.Db.PlayerSneaking.PlayerId.Find(player.PlayerId) != null };
             if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(player.PlayerId) is { } seen)
             {
                 // Positions arrive in 100 ms batches, so a single sample is jittery;
@@ -317,25 +317,47 @@ public static partial class Module
             if (!mind.Equals(before[i].Mind))
                 ctx.Db.AnimalMind.AnimalId.Update(mind);
         }
+
+        // Stalking trains from sneaking near a wary animal that hasn't bolted.
+        if (Traits(before[0].Body.Species).Wary > 0f)
+            foreach (var w in watchers)
+            {
+                if (!w.Sneaking || w.Speed < 0.3f) continue;
+                if (before.Any(m => m.Body.State != AnimalState.Run && AnimalDist(w.X, w.Z, m.Body.X, m.Body.Z) < SneakTrainRange))
+                    ReportSneaking(ctx, w.PlayerId, now);
+            }
+    }
+
+    // Close enough to a wary animal that creeping up on it counts as practice.
+    const float SneakTrainRange = 14f;
+    const long SneakReportEveryMicros = 4_000_000;
+
+    static void ReportSneaking(ReducerContext ctx, uint playerId, long now)
+    {
+        if (ctx.Db.AnimalPlayerSeen.PlayerId.Find(playerId) is not { } seen || now - seen.SneakReportAt < SneakReportEveryMicros) return;
+        ctx.Db.AnimalPlayerSeen.PlayerId.Update(seen with { SneakReportAt = now });
+        OnProcessPerformed(ctx, playerId, Skills.Sneak, 50, false);
     }
 
     // Players closing in fast scare a sheep; a player standing still calms it.
     // Panic spreads to flock-mates that see a neighbor bolt.
     static void AnimalSense(ref AnimalMind mind, Animal body, FlockMember[] flock, List<AnimalWatcher> watchers, out bool calmedByStillPlayer)
     {
+        var t = Traits(body.Species);
         calmedByStillPlayer = false;
         float fear = 0f, awayX = 0f, awayZ = 0f;
         foreach (var w in watchers)
         {
             float dx = body.X - w.X, dz = body.Z - w.Z;
             float d = MathF.Sqrt(dx * dx + dz * dz);
-            if (d > SheepNoticeRange) continue;
+            if (d > t.Notice) continue;
             d = MathF.Max(d, 0.1f);
             float closing = (w.Vx * dx + w.Vz * dz) / d;
-            float near = 1f - Math.Clamp((d - 3f) / (SheepNoticeRange - 3f), 0f, 1f);
-            float threat = Math.Clamp((closing - SheepCalmSpeed) / 2f, 0f, 1f) * near;
+            float near = 1f - Math.Clamp((d - 3f) / (t.Notice - 3f), 0f, 1f);
+            float threat = Math.Clamp((closing - t.CalmSpeed) / 2f, 0f, 1f) * near;
             // Brushing past at full walk startles; a sneaking player can move among them.
-            if (d < 2f && w.Speed > SheepCalmSpeed) threat = MathF.Max(threat, 0.6f);
+            if (d < 2f && w.Speed > t.CalmSpeed) threat = MathF.Max(threat, 0.6f);
+            if (d < t.Wary && w.Speed > 0.3f) threat = MathF.Max(threat, 0.6f * (1f - d / t.Wary) + 0.2f);
             if (threat > 0f)
             {
                 fear += threat;
@@ -356,6 +378,8 @@ public static partial class Module
 
         // Fear builds faster than it fades, but a slow, careful approach never adds up to panic.
         float calm = (calmedByStillPlayer ? 0.45f : 0.3f) * AnimalDt;
+        // A badly hurt deer tires: it bolts, then stops to rest, and gives chase again when pressed.
+        if (body.Species == AnimalSpecies.Deer && mind.Health < t.RestBelowHealth && fear < 0.3f) calm += 0.5f * AnimalDt;
         mind.Nervous = Math.Clamp(mind.Nervous + fear * 0.7f - calm, 0f, 1f);
 
         float len = MathF.Sqrt(awayX * awayX + awayZ * awayZ);
@@ -378,13 +402,14 @@ public static partial class Module
         List<AnimalWatcher> watchers, bool calmedByStillPlayer, float huddle, long now)
     {
         const float RunAt = 0.5f, CalmAt = 0.2f;
+        var t = Traits(body.Species);
         double graze = 0.75 - 0.45 * huddle;
 
         if (mind.Nervous > RunAt || (body.State == AnimalState.Run && mind.Nervous > CalmAt))
         {
             body.State = AnimalState.Run;
-            mind.TargetX = body.X + mind.FleeX * 6f;
-            mind.TargetZ = body.Z + mind.FleeZ * 6f;
+            mind.TargetX = body.X + mind.FleeX * t.FleeAhead;
+            mind.TargetZ = body.Z + mind.FleeZ * t.FleeAhead;
             return;
         }
         if (body.State == AnimalState.Run)
@@ -409,7 +434,7 @@ public static partial class Module
         if (now < mind.StateUntil && !straggling) return;
 
         // A calm sheep may wander over to someone who has been standing still for a while.
-        if (mind.Nervous < 0.05f && calmedByStillPlayer && ctx.Rng.NextDouble() < 0.12)
+        if (t.Curious && mind.Nervous < 0.05f && calmedByStillPlayer && ctx.Rng.NextDouble() < 0.12)
         {
             foreach (var w in watchers)
             {
@@ -425,18 +450,19 @@ public static partial class Module
         {
             if (ctx.Rng.NextDouble() < 0.55 * (1f - 0.7f * huddle))
             {
-                // Wander somewhere new, preferring open grass to the woods, and
-                // drifting back toward home when far from it.
+                // Wander somewhere new, preferring its kind of ground (open grass for
+                // sheep, the woodland edge for deer), and drifting back toward home when far from it.
                 float tx = body.X, tz = body.Z, best = float.MaxValue;
                 for (int k = 0; k < 3; k++)
                 {
                     float angle = (float)(ctx.Rng.NextDouble() * MathF.Tau);
-                    float r = (3f + (float)ctx.Rng.NextDouble() * 6f) * (1f - 0.6f * huddle);
+                    float r = (t.WanderMin + (float)ctx.Rng.NextDouble() * (t.WanderMax - t.WanderMin)) * (1f - 0.6f * huddle);
                     float cx = body.X + MathF.Sin(angle) * r, cz = body.Z + MathF.Cos(angle) * r;
-                    if (AnimalWoodland(cx, cz) < best)
-                        (tx, tz, best) = (cx, cz, AnimalWoodland(cx, cz));
+                    float fit = MathF.Abs(AnimalWoodland(cx, cz) - t.WoodPref);
+                    if (fit < best)
+                        (tx, tz, best) = (cx, cz, fit);
                 }
-                if (AnimalDist(tx, tz, flock.HomeX, flock.HomeZ) > SheepHomeRange)
+                if (AnimalDist(tx, tz, flock.HomeX, flock.HomeZ) > t.HomeRange)
                 {
                     tx = body.X + (flock.HomeX - body.X) * 0.4f;
                     tz = body.Z + (flock.HomeZ - body.Z) * 0.4f;
@@ -491,10 +517,12 @@ public static partial class Module
         float dx = mind.TargetX - body.X, dz = mind.TargetZ - body.Z;
         float d = MathF.Sqrt(dx * dx + dz * dz);
         if (d < 0.01f) return;
-        float speed = body.State == AnimalState.Run ? SheepRunSpeed : d > 5f ? SheepTrotSpeed : SheepWalkSpeed;
+        var t = Traits(body.Species);
+        float speed = body.State == AnimalState.Run ? t.Run : d > 5f ? t.Trot : t.Walk;
         // A wounded animal can't keep up its full gallop, and lambs are a bit slower.
         if (body.State == AnimalState.Run)
-            speed *= (0.6f + 0.4f * mind.Health / 100f) * (body.Growth < 100 ? 0.85f : 1f);
+            speed *= (t.RunFloor + t.RunHealthShare * mind.Health / 100f)
+                * (body.Growth < 100 ? 0.85f : 1f);
         float step = MathF.Min(speed * AnimalDt, d);
         float nx = body.X + dx / d * step, nz = body.Z + dz / d * step;
 
@@ -538,17 +566,18 @@ public static partial class Module
     static float AnimalWoodland(float x, float z) =>
         x * x + z * z < 12f * 12f ? 0f : World.Noise(World.CellOf(x), World.CellOf(z), 24f, 33);
 
-    // The most open dry spot within range of (x, z).
-    static (float, float) AnimalOpenestNear(float x, float z, float range)
+    // The dry spot within range of (x, z) whose woodland is closest to pref (0 is
+    // the most open meadow, which sheep want).
+    static (float, float) AnimalOpenestNear(float x, float z, float range, float pref = 0f)
     {
         var (bx, bz) = AnimalNearestDry(x, z);
-        float best = AnimalWoodland(bx, bz);
+        float best = MathF.Abs(AnimalWoodland(bx, bz) - pref);
         for (float dx = -range; dx <= range; dx += 2f)
             for (float dz = -range; dz <= range; dz += 2f)
             {
                 float px = x + dx, pz = z + dz;
                 if (dx * dx + dz * dz > range * range || !AnimalCanStand(px, pz)) continue;
-                float w = AnimalWoodland(px, pz);
+                float w = MathF.Abs(AnimalWoodland(px, pz) - pref);
                 if (w < best)
                     (bx, bz, best) = (px, pz, w);
             }

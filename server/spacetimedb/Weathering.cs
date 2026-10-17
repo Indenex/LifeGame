@@ -79,8 +79,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WeatherSweep(ReducerContext ctx, WeatherSweepTimer timer)
     {
-        if (ctx.Sender != ctx.Identity)
-            throw new Exception("Only the server weathers things");
+        RequireServer(ctx);
         SweepWeathering(ctx, ctx.Timestamp);
     }
 
@@ -130,5 +129,8 @@ public static partial class Module
             ctx.Db.WorldItem.Id.Delete(item.Id);
             ctx.Db.GroundItemTouch.ItemId.Delete(touch.ItemId);
         }
+
+        // Claims' sweep for the rest (claims-15): clay pieces and free-standing hide racks.
+        SweepUntrackedThings(ctx, now);
     }
 }

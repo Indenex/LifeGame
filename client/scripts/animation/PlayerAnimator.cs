@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -8,7 +9,7 @@ namespace LifeGame;
 public sealed class PlayerAnimator
 {
     readonly PlayerRig rig;
-    readonly Pose idle = new(), walk = new(), work = new(), pose = new();
+    readonly Pose idle = new(), walk = new(), work = new(), act = new(), pose = new();
     // Set while a craft job runs; the figure kneels into it and back out.
     public WorkMotion Work;
     WorkMotion shownWork;
@@ -20,6 +21,30 @@ public sealed class PlayerAnimator
     // still rising, and the knee-bend kick left over from the last landing.
     bool airborne, rising;
     float air, rise, landKick;
+
+    // A quick action (WorkMotions.IsAct): drink, eat, pluck, pick up. Plays once over
+    // whatever else is going on, fading in and out.
+    WorkMotion shownAct;
+    float actTime, actBlend;
+    // The same action again while it plays (another sip): it loops back round at its
+    // natural point instead of jumping to the start.
+    bool again;
+
+    public void Act(WorkMotion motion)
+    {
+        if (!WorkMotions.IsAct(motion)) return;
+        if (motion == shownAct && actBlend > 0f)
+        {
+            again = true;
+            return;
+        }
+        shownAct = motion;
+        actTime = 0f;
+        again = false;
+    }
+
+    // Seconds left of the action playing now, 0 when none.
+    public float ActLeft => shownAct == WorkMotion.None ? 0f : Mathf.Max(WorkMotions.ActSeconds(shownAct) - actTime, 0f);
 
     public void Jump(bool airborne, bool rising, float landing)
     {
@@ -56,19 +81,24 @@ public sealed class PlayerAnimator
 
         if (crouch > 0.005f) Crouch(pose, crouch);
 
-        if (Work != WorkMotion.None && Work != shownWork)
+        // A new job while another still shows: ease out of the old pose first, then into
+        // the new one, so nothing snaps.
+        if (Work != shownWork && Work != WorkMotion.None && (shownWork == WorkMotion.None || workBlend < 0.05f))
         {
             shownWork = Work;
             workTime = 0f;
         }
         workTime += dt;
-        workBlend = Mathf.Lerp(workBlend, Work != WorkMotion.None && walkBlend < 0.5f ? 1f : 0f, 1f - Mathf.Exp(-5f * dt));
+        bool working = Work != WorkMotion.None && Work == shownWork && walkBlend < 0.5f;
+        workBlend = Mathf.Lerp(workBlend, working ? 1f : 0f, 1f - Mathf.Exp(-8f * dt));
         if (workBlend > 0.005f)
         {
             WorkMotions.Pose(work, shownWork, workTime, rig.LegLength);
             pose.Blend(pose, work, workBlend > 0.995f ? 1f : workBlend);
         }
-        else shownWork = WorkMotion.None;
+        else if (Work == WorkMotion.None) shownWork = WorkMotion.None;
+
+        if (shownAct != WorkMotion.None) PlayAct(dt);
         air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
         rise = Mathf.Lerp(rise, rising ? 1f : 0f, 1f - Mathf.Exp(-10f * dt));
         landKick *= Mathf.Exp(-7f * dt);
@@ -79,6 +109,43 @@ public sealed class PlayerAnimator
         pose[Joint.Hips].Z -= turnLean;
         pose[Joint.Neck].Z += turnLean * 0.7f;
         rig.Apply(pose);
+    }
+
+    void PlayAct(float dt)
+    {
+        actTime += dt;
+        var (loopAt, loopTo) = WorkMotions.ActLoop(shownAct);
+        if (again && actTime >= loopAt)
+        {
+            actTime = loopTo + (actTime - loopAt);
+            again = false;
+        }
+        float length = WorkMotions.ActSeconds(shownAct), fade = WorkMotions.ActFade(shownAct);
+        bool legs = WorkMotions.ActUsesLegs(shownAct);
+        // Walking off ends a whole-body action early: it blends out as you go.
+        float target = (actTime < length - fade || again) && !(legs && walkBlend > 0.5f) ? 1f : 0f;
+        actBlend = Mathf.MoveToward(actBlend, target, dt / fade);
+        if (actBlend <= 0f && (target == 0f || actTime >= length))
+        {
+            shownAct = WorkMotion.None;
+            return;
+        }
+        WorkMotions.ActPose(act, shownAct, actTime, rig.LegLength);
+        float w = Mathf.SmoothStep(0f, 1f, actBlend);
+        if (legs)
+        {
+            pose.Blend(pose, act, w);
+            return;
+        }
+        // Over a walk the legs keep striding: they take only a little of the bend.
+        float legW = w * (1f - 0.8f * walkBlend);
+        for (int i = 0; i < Pose.Count; i++)
+        {
+            var j = (Joint)i;
+            bool leg = j is Joint.HipL or Joint.KneeL or Joint.FootL or Joint.HipR or Joint.KneeR or Joint.FootR;
+            pose.Rot[i] = pose.Rot[i].Lerp(act.Rot[i], leg ? legW : w);
+        }
+        pose.HipsOffset = pose.HipsOffset.Lerp(pose.HipsOffset + act.HipsOffset, legW);
     }
 
     void Idle(Pose p)
