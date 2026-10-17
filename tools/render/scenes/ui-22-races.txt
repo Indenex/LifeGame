@@ -1,0 +1,15 @@
+# ui-22 (#471) race choice in the look picker. --screenshot-look opens it; click Pebble
+# (727,224 in the 1280x720 still), then a Shell swatch (position read off the first still).
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-look --chibi
+wait 40
+snap
+click 727 224
+wait 8
+snap
+click 723 357
+wait 8
+snap
+click 700 425
+wait 8
+snap
