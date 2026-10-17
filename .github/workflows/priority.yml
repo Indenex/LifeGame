@@ -1,0 +1,60 @@
+name: Main priority
+
+# Builds and releases of main come first (Justin, integration-13). GitHub has no job priority, so while a
+# main Build or Release is queued or running, queued and running pull request Builds are cancelled, which
+# frees the runners; when main is idle they are re-run (newest head per PR only). Merge-queue and manual
+# runs and Release runs are never touched. Nothing is stored: a PR run counts as paused when it was
+# cancelled and nothing newer ran for its head commit (a run a newer push replaced is left alone).
+# Triggers: a push to main pauses at once; each finished Build or Release and a 15-minute schedule do the
+# pass below, which pauses PR runs that started while main is still busy and resumes them once it is idle.
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [Build, Release]
+    types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: main-priority
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  REPO: ${{ github.repository }}
+
+jobs:
+  priority:
+    name: Main first
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Pause or resume pull request builds
+        run: |
+          active() { for s in queued in_progress waiting pending; do gh api --paginate "repos/$REPO/actions/workflows/$1/runs?status=$s&per_page=100" --jq "$2"; done; }
+          # Main is busy when a push-triggered Build or any Release is queued or running (this push counts).
+          main_busy=$(( $(active build.yml '.workflow_runs[] | select(.event == "push") | .id' | wc -l) + $(active release.yml '.workflow_runs[] | .id' | wc -l) ))
+          if [ "$main_busy" -gt 0 ]; then
+            echo "### Paused for a main build; re-runs automatically" >> "$GITHUB_STEP_SUMMARY"
+            active build.yml '.workflow_runs[] | select(.event == "pull_request") | "\(.id) \(.head_branch) \(.head_sha)"' | sort -u | while read -r id branch sha; do
+              if gh api -X POST "repos/$REPO/actions/runs/$id/cancel" >/dev/null 2>&1; then
+                echo "- run $id ($branch, ${sha:0:8}): paused for a main build; re-runs automatically" | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+            exit 0
+          fi
+          echo "### Resumed after main" >> "$GITHUB_STEP_SUMMARY"
+          gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" --jq '.[] | "\(.number) \(.head.sha)"' | while read -r number sha; do
+            # The newest Build run for this exact head commit; paused means it was cancelled.
+            run=$(gh api "repos/$REPO/actions/workflows/build.yml/runs?event=pull_request&head_sha=$sha&per_page=1" --jq '.workflow_runs[0] | select(. != null) | "\(.id) \(.conclusion)"')
+            [ "${run#* }" = cancelled ] || continue
+            if gh api -X POST "repos/$REPO/actions/runs/${run%% *}/rerun" >/dev/null 2>&1; then
+              echo "- PR #$number: re-ran run ${run%% *} (${sha:0:8})" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done

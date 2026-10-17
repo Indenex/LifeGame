@@ -175,7 +175,8 @@ public partial class Main : Node3D
             || buildMenu.IsOpen
             || markPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
+        // A click with food, drink, clothes or a placeable in hand uses it instead of striking (ui-36).
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -440,7 +441,7 @@ public partial class Main : Node3D
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
-        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt) { TakeInHand = hud.Hotbar.TakeInHand });
         equipment.Bag.Link = new ServerBagLink(conn);
         markPicker.Attach(new ServerMarkLink(conn, () => myId));
         BagGrid.Makers = markPicker.Link;
@@ -547,7 +548,7 @@ public partial class Main : Node3D
         {
             myId = p.PlayerId;
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else me.SetLook(p.PlayerId);
         }
         if (others.TryGetValue(p.PlayerId, out var avatar))
@@ -560,7 +561,7 @@ public partial class Main : Node3D
     // A player's chosen look (model-3): applied to their avatar over the id default.
     void OnPlayerLook(PlayerLook l)
     {
-        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard, l.Race);
         if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
         else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
@@ -582,7 +583,7 @@ public partial class Main : Node3D
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
             if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
-                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard, chosen.Race));
             else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
