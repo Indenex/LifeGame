@@ -38,6 +38,6 @@ public static partial class Module
         int n = 0;
         foreach (var _ in ctx.Db.WorldItem.ByChunk.Filter((chunkX, chunkZ)))
             if (++n >= MaxItemsPerChunk)
-                throw new Exception("There's too much lying about here. Pick some up or put it away first");
+                throw new Exception("The ground here is crowded; pick some things up or try a basket");
     }
 }
