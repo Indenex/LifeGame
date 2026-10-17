@@ -1181,3 +1181,19 @@ Owner: Claims.
 ## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
 **Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
 **Who:** Relayed by the PM; no direct quote.
+
+## D-291 — 2026-10-17 — Morning frost only in autumn, lighter rime
+**Decision:** Morning frost appears only in autumn. It appears randomly by local temperature, deterministic per seed, day and spot, and it is a lighter rime, as at 864924de. The heavy snow look Justin likes is kept for winter ground snow.
+**Who:** Justin, choosing autumn-only lighter rime and keeping the heavy snow look for winter (relayed by the PM; no direct quote).
+
+## D-292 — 2026-10-17 — Top priority: roll out the painted look and textures on everything
+**Decision:** The top priority is rolling out the painted look and textures on everything: ground, trees, rocks, plants, props, animals, structures and items. Order: trees (#544) first, then terrain (Environment) and props (Modeling), then animals, structures and items. Work goes in small PRs per family.
+**Who:** Justin, setting the painted look as top priority (relayed by the PM; no direct quote).
+
+## D-293 — 2026-10-17 — "I'm stuck" command for everyone
+**Decision:** An "I'm stuck" command in the Esc menu and as `/stuck`, for everyone including bots. It moves the player to the nearest free spot within about 12 m, then their claim, then spawn, with a 60 s cooldown, decided on the server (bugfix-44). Test bots use it as their last resort (integration-12).
+**Who:** Justin, asking for the stuck command (relayed by the PM; no direct quote).
+
+## D-294 — 2026-10-17 — The launcher shows patch notes for each release
+**Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
+**Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
