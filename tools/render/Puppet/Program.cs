@@ -154,6 +154,12 @@ void WalkTo(float tx, float tz)
 int shots = 0;
 string? movieDir = Environment.GetEnvironmentVariable("PUPPET_MOVIE_DIR");
 int Frames() => movieDir != null && Directory.Exists(movieDir) ? Directory.GetFiles(movieDir, "*.png").Length : 0;
+bool SqlOk(string q)
+{
+    using var p = Process.Start(new ProcessStartInfo("spacetimedb-cli", $"sql --server {uri} {db} \"{q}\"") { RedirectStandardError = true, RedirectStandardOutput = true })!;
+    p.StandardOutput.ReadToEnd(); p.StandardError.ReadToEnd(); p.WaitForExit();
+    return p.ExitCode == 0;
+}
 string Display() => Environment.GetEnvironmentVariable("DISPLAY") ?? ":99";
 void Run(string file, string arguments)
 {
@@ -247,7 +253,11 @@ bool Step(string line)
             string quality = n.Length > 2 ? n[2] : "50";
             var owner = me;
             if (n.Length > 3 && n[3] == "camera") owner = conn.Db.Player.Iter().First(p => p.PlayerId == target).Identity;
-            Run("spacetimedb-cli", $"sql --server {uri} {db} \"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES (0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false)\"");
+            // inventory_item gained columns over time (wear, slot, on_belt, then maker): try the newest shape first.
+            string vals = $"(0, 0x{owner}, {n[0]}, {quality}, {n[1]}, 0, 0, false";
+            if (!SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt, maker) VALUES {vals}, 0)")
+                && !SqlOk($"INSERT INTO inventory_item (id, owner, item, quality, count, wear, slot, on_belt) VALUES {vals})"))
+                Console.WriteLine($"puppet: give {rest} failed (inventory_item columns changed?)");
             Pump(1.0);
             break;
         }
