@@ -1011,3 +1011,15 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-249 — 2026-10-17 — Character concepts round 2: 10 more, with multiple themes on one shared skeleton and base body (follows D-247)
 **Decision:** After seeing the 10 round-1 concepts (Kit, Capling, Bramble, Clover, Pip, Mossle, Puddle, Sprout, Dumpling, Hearthling), Justin wants another 10. Multiple player themes or races are welcome, built on one shared skeleton and base body with swappable parts (ears, tails, hats, heads, colours), so animation and modelling are shared and modelling work is minimised. Round 2 is 10 more concepts on a shared base. Owner: Character concepts.
 **Who:** Justin ("give me another 10. Multiple character models/themes would be nice too I think. I do want a shared model/skeleton etc. though as much as possible to minimize modeling work etc.")
+
+## D-250 — 2026-10-17 — New player characters: chibi proportions at about 1.3 to 1.4 m tall (follows D-247, D-249)
+**Decision:** New player characters keep cute, big-head chibi proportions but are about 1.3 to 1.4 m tall in game, so the 1.75 m-built world (stations, doors, tools, camera) still works with small tweaks. Justin chose this over shrinking the world or truly tiny characters.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-251 — 2026-10-17 — StructureKind ids get explicit values with lane ranges (integration-9)
+**Decision:** `StructureKind` ids get explicit values with lane ranges: House building 100+, Crafting stations 200+, Animals 300+, Claims 400+. Existing kinds keep their values. Owner: Integration (integration-9).
+**Who:** PM technical decision.
+
+## D-252 — 2026-10-17 — Merge queue CI design: doc-only PRs skip their steps; world-wipe PRs are merged by hand (#403)
+**Decision:** In the merge queue's CI design (#403), doc-only PRs run the three checks but skip their steps. World-wipe PRs are merged by hand, outside the queue.
+**Who:** PM technical decision.
