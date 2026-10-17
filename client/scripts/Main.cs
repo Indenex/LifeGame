@@ -492,7 +492,7 @@ public partial class Main : Node3D
 
     void OnPlayerPos(PlayerPos p, bool inserted)
     {
-        var at = new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z);
+        var at = new Vector3(p.X, Wading.FeetY(terrain.HeightAt(p.X, p.Z)), p.Z);
         if (myId != 0 && p.PlayerId == myId || (myId == 0 && IsMine(p.PlayerId)))
         {
             // Before spawning we wait for the area around us (see Subscribe).
@@ -548,7 +548,7 @@ public partial class Main : Node3D
     void AddItem(WorldItem item)
     {
         if (items.Has(item.Id)) return;
-        float yaw = Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
+        float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
         items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
     }
@@ -614,12 +614,13 @@ public partial class Main : Node3D
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
         if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt);
+        float wading = Wading.SpeedFactor(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z)));
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt) * wading;
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
         // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
-        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && survival.TrySpendStamina(Stamina.JumpCost))
+        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && !Wading.Floating(Wading.Depth(terrain.HeightAt(me.Position.X, me.Position.Z))) && survival.TrySpendStamina(Stamina.JumpCost))
         {
             jump.Start(velocity);
             conn?.Reducers.Jump();
@@ -630,13 +631,11 @@ public partial class Main : Node3D
 
         var pos = building.Collide(me.Position, me.Position + velocity * dt, jump.AirHeight);
         pos = terrain.CollideVegetation(pos, jump.AirHeight);
-        // Deep water is not walkable yet, but a step that climbs is always allowed,
-        // so nobody gets trapped in a flooded hole they dug.
+        // Water is walkable (bugfix-32): feet follow the bed, or float over deep water.
         float next = terrain.HeightAt(pos.X, pos.Z);
-        if (next < Look.WaterLevel - 0.3f && next < terrain.HeightAt(me.Position.X, me.Position.Z))
-            pos = me.Position;
+        float feet = Wading.FeetY(next);
         // Ease up and down slopes instead of popping between heights; in the air the feet follow the arc.
-        pos.Y = jump.Airborne ? next + jump.AirHeight : Mathf.Lerp(me.Position.Y, next, 1f - Mathf.Exp(-14f * dt));
+        pos.Y = jump.Airborne ? feet + jump.AirHeight : Mathf.Lerp(me.Position.Y, feet, 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
         me.SetJump(jump.Airborne, jump.Rising, jump.Landing);
         if (landed) Sfx.Land(jump.Landing, atmosphere.GroundAt(pos));

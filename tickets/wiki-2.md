@@ -26,9 +26,10 @@ Justin found the first wiki (wiki-1, #83) oddly affectionate. Rewrite every page
 - 2026-10-16 20:05: PM: #175 new land and #173 seasons merged; moved the new-land and seasons drafts into getting-started, needs and tips, checked against shared/Land.cs and shared/Seasons.cs. Fauna does not change by season yet, so no animals text.
 - 2026-10-16 20:50: PM batch: moved in crafting stations (only the Crafting Table exists on main; Potter's bench, Spindle and drying rack stay drafts), craft times (#160), Leatherwork and Weaver (#193), thirst eases in the first hour (#226), weather you can see coming (#217), lambs and snow huddling (#195). No text for sounds, forest corners, see-through trees, the carved player. Drafts for deer and hunting, tool wear, claim fences on claude/wiki-drafts.
 - 2026-10-16 21:40: #264 ui-17 keys merged: E use and pick up, Shift+E bar, right-drag turn, no Q/E. Space jump left out until bugfix-25 lands (KEYMAP: out of F1 until then).
+- 2026-10-17 01:55: PM batch: build menu tabs (#334), look picker (#376), bigger buildings and fire warming rooms (#377), see-through shelters (#272), admin commands (#335), durability and repair table (#267), crafted items to bag (#412, drag-to-place UI not wired yet so not described), wading and floating (#414), red deer, hunting, Stalking crits; also on main and moved in from drafts: all five stations, equipment panel on I and clothes, Firecraft fire length, claim fences and gates, camp names, Space jump. Not described: bow (no recipe, #389), music (no tracks ship), clay trough (#417).
 
 ## Open questions / blockers
 - (none) Justin chose "As is" (a).
 
 ## Next step
-Open the PR for this branch and send the PM the link and green sha; then, when the PM reports a merge from the pending list (#175 new land, equipment panel on I, Firecraft fire length D-090, fence building), add its wiki lines on claude/wiki-2 restarted from main, no numbers.
+Wait for PR CI, send the PM the green sha; then add the bow (#389), clay trough (#417), drag-to-place and music when the PM reports them on main.

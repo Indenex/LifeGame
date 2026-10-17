@@ -190,7 +190,6 @@ public sealed class SoundMix
         pan = Side(pan);
         // Cues that have been converted to data play from their CueDef.
         if (CueDefs.ForCue(cue) is { } def) cues.Trigger(def, gain, pan);
-        else cues.Trigger(cue, gain, pan);
     }
 
     // The work in your hands: its sound runs until Working(Work.None). WorkDone
@@ -1561,7 +1560,6 @@ public sealed class SoundMix
 
         sealed class Voice
         {
-            public Cue Cue;
             public CueDef? Def;                 // a data cue (CueDefs) instead of a Cue enum one
             public float[]? Phases;             // per layer, for tones
             public Lowpass[]? Hp, Lp;           // per layer, for noise
@@ -1586,35 +1584,6 @@ public sealed class SoundMix
                 Def = def, Pitch = Range(rng, 0.96f, 1.04f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f),
                 Phases = new float[def.Layers.Length], Hp = new Lowpass[def.Layers.Length], Lp = new Lowpass[def.Layers.Length],
             });
-        }
-
-        public void Trigger(Cue cue, float gain = 1f, float pan = 0f)
-        {
-            if (active.Count > 8) active.RemoveAt(0);
-            active.Add(new Voice { Cue = cue, Pitch = Range(rng, 0.92f, 1.08f), Gain = gain, Pan = Math.Clamp(pan, -1f, 1f) });
-        }
-
-        // The journal's chime (it was journal/Chime.cs): each note a marimba bar's
-        // fundamental and its bright 3.9x partial with a soft mallet, then two quiet
-        // echoes so it hangs in the air a moment.
-        static readonly (float Freq, float At, float Gain)[] Title = { (587.33f, 0f, 1f), (880f, 0.16f, 0.8f) };
-        static readonly (float Freq, float At, float Gain)[] Discovery = { (783.99f, 0f, 0.55f) };
-
-        static float Marimba(float t, (float Freq, float At, float Gain)[] notes) =>
-            Bars(t, notes) + 0.22f * Bars(t - 0.23f, notes) + 0.1f * Bars(t - 0.47f, notes);
-
-        static float Bars(float t, (float Freq, float At, float Gain)[] notes)
-        {
-            float sum = 0f;
-            foreach (var (freq, at, gain) in notes)
-            {
-                float u = t - at;
-                if (u < 0f) continue;
-                float body = MathF.Sin(MathF.Tau * freq * u) * MathF.Exp(-u * 3.2f);
-                float ring = 0.25f * MathF.Sin(MathF.Tau * freq * 3.9f * u) * MathF.Exp(-u * 14f);
-                sum += gain * Math.Min(1f, u / 0.004f) * (body + ring);
-            }
-            return sum;
         }
 
         // One sample of a data cue: every layer that has started, as a noise band or a gliding tone.
@@ -1647,8 +1616,6 @@ public sealed class SoundMix
             return sum;
         }
 
-        static float Burst(float t, float start, float decay) => t < start ? 0f : MathF.Min(1f, (t - start) / 0.004f) * MathF.Exp(-(t - start) / decay);
-
         public void Render(float[] l, float[] r, float[] sl, float[] sr, int n)
         {
             float dt = 1f / rate;
@@ -1656,7 +1623,7 @@ public sealed class SoundMix
             {
                 var v = active[k];
                 float pl = Pan(v.Pan, true) * 1.4142f, pr = Pan(v.Pan, false) * 1.4142f;
-                float length = v.Def != null ? v.Def.Length : v.Cue switch { Cue.SkillUp => 2.2f, Cue.Learn => 1.6f, Cue.Eat => 0.9f, Cue.Drink => 0.8f, Cue.FireLit => 1f, Cue.Crit => 0.7f, Cue.Jump => 0.3f, Cue.BowDraw => 0.8f, Cue.BowShot => 0.6f, Cue.ArrowWood => 0.5f, _ => 0.4f };
+                float length = v.Def?.Length ?? 0.4f;
                 for (int i = 0; i < n; i++)
                 {
                     float t = v.Age, x = noise.Next(), s = 0f, send = 0f;
@@ -1664,133 +1631,6 @@ public sealed class SoundMix
                     {
                         s = DefSample(v, t, x, dt);
                         send = s * v.Def.Send;
-                    }
-                    else switch (v.Cue)
-                    {
-                        case Cue.Pickup:
-                        {
-                            // Leaves and cloth brushing, then a soft knock in the bag.
-                            float rustle = v.Band.Process(x, 2800f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
-                            v.Phase += 2f * MathF.PI * 140f * v.Pitch * dt;
-                            s = rustle * 0.35f + MathF.Sin(v.Phase) * Burst(t, 0.07f, 0.03f) * 0.17f;
-                            break;
-                        }
-                        case Cue.Eat:
-                        {
-                            // Three bites, each a short crunchy burst.
-                            float bites = Burst(t, 0f, 0.035f) + 0.8f * Burst(t, 0.28f, 0.03f) + 0.65f * Burst(t, 0.55f, 0.03f);
-                            float grain = MathF.Abs(noise.Next()) > 0.6f ? 1f : 0.3f;
-                            s = v.Band.Process(x * grain, 1700f * v.Pitch, 0.8f, rate) * bites * 0.65f;
-                            break;
-                        }
-                        case Cue.Drink:
-                        {
-                            // Two gulps, each a short drop in pitch, over a little slosh.
-                            float g1 = Burst(t, 0.05f, 0.07f), g2 = Burst(t, 0.38f, 0.07f);
-                            float since = t < 0.38f ? t - 0.05f : t - 0.38f;
-                            v.Phase += 2f * MathF.PI * (260f - 500f * MathF.Max(0f, since)) * v.Pitch * dt;
-                            float slosh = v.Low.Process(x, Lowpass.Coef(900f, rate)) * Burst(t, 0f, 0.15f);
-                            s = MathF.Sin(v.Phase) * (g1 + g2) * 0.11f + slosh * 0.2f;
-                            break;
-                        }
-                        case Cue.FireLit:
-                        {
-                            // A soft whoosh as the flame takes, opening up as it grows.
-                            float open = Math.Min(1f, t / 0.35f);
-                            float w = v.Low.Process(x, Lowpass.Coef(300f + 2500f * open, rate));
-                            s = w * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.9f)) * 0.24f;
-                            break;
-                        }
-                        case Cue.Hit:
-                        {
-                            // A blow landing: a dull thud dropping in pitch, a slap of cloth and flesh.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            float slap = v.Band.Process(x, 1100f * v.Pitch, 0.7f, rate) * Burst(t, 0f, 0.03f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.15f + slap * 0.225f;
-                            break;
-                        }
-                        case Cue.Crit:
-                        {
-                            // A sneak attack's bonus: the same thud, a sharp crack over it and a
-                            // short bright ring that says it was a good one.
-                            v.Phase += 2f * MathF.PI * (130f - 220f * MathF.Min(t, 0.1f)) * v.Pitch * dt;
-                            v.Phase2 += 2f * MathF.PI * 1480f * v.Pitch * dt;
-                            float crack = v.Band.Process(x, 3600f, 0.6f, rate) * Burst(t, 0f, 0.012f);
-                            float ring = MathF.Sin(v.Phase2) * Burst(t, 0.02f, 0.14f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.09f) * 0.16f + crack * 0.27f + ring * 0.04f;
-                            send = ring * 0.024f;
-                            break;
-                        }
-                        case Cue.BowDraw:
-                        {
-                            // Wood and sinew under strain: an irregular, slow creak. Band-passed
-                            // noise whose centre wanders and whose loudness stutters, never a steady tone.
-                            float wander = 650f + 220f * MathF.Sin(t * 5.1f) + 140f * MathF.Sin(t * 12.7f + 1f);
-                            float stutter = Math.Max(0f, MathF.Sin(t * 2f * MathF.PI * 7.3f) * MathF.Sin(t * 2f * MathF.PI * 11.1f + 0.7f));
-                            float rub = v.Band.Process(x, wander * v.Pitch, 0.35f, rate);
-                            float strain = MathF.Sin(MathF.PI * Math.Min(1f, t / 0.8f));
-                            s = rub * (0.25f + stutter) * strain * 0.16f;
-                            break;
-                        }
-                        case Cue.BowShot:
-                        {
-                            // The string's twang (a few damped low tones, a touch sharp at first) and the
-                            // whoosh of the arrow leaving.
-                            float glide = 1f + 0.03f * MathF.Exp(-t / 0.04f);
-                            v.Phase += 2f * MathF.PI * 165f * v.Pitch * glide * dt;
-                            v.Phase2 += 2f * MathF.PI * 330f * v.Pitch * glide * dt;
-                            float twang = MathF.Sin(v.Phase) * MathF.Exp(-t / 0.2f) + 0.5f * MathF.Sin(v.Phase2) * MathF.Exp(-t / 0.11f)
-                                + 0.25f * MathF.Sin(v.Phase * 3f) * MathF.Exp(-t / 0.07f);
-                            float whoosh = v.Band.Process(x, 1900f - 1200f * Math.Min(1f, t / 0.3f), 0.6f, rate) * Burst(t, 0.01f, 0.1f);
-                            s = Math.Min(1f, t / 0.002f) * twang * 0.08f + whoosh * 0.22f;
-                            send = twang * 0.01f;
-                            break;
-                        }
-                        case Cue.ArrowFlesh:
-                        {
-                            // Into an animal: a dull, wet thunk.
-                            v.Phase += 2f * MathF.PI * (120f - 200f * Math.Min(t, 0.08f)) * v.Pitch * dt;
-                            float wet = v.Low.Process(x, Lowpass.Coef(800f, rate)) * Burst(t, 0f, 0.04f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.07f) * 0.14f + wet * 0.25f;
-                            break;
-                        }
-                        case Cue.ArrowWood:
-                        {
-                            // Into a tree: a sharp thock and the shaft humming for a moment.
-                            v.Phase += 2f * MathF.PI * 380f * v.Pitch * dt;
-                            v.Phase2 += 2f * MathF.PI * 940f * v.Pitch * dt;
-                            float knock = v.Band.Process(x, 1500f, 0.7f, rate) * Burst(t, 0f, 0.012f);
-                            s = knock * 0.4f + MathF.Sin(v.Phase) * Burst(t, 0f, 0.08f) * 0.12f + MathF.Sin(v.Phase2) * Burst(t, 0f, 0.22f) * 0.03f;
-                            send = s * 0.2f;
-                            break;
-                        }
-                        case Cue.ArrowEarth:
-                        {
-                            // Into the ground: a dull thud and a little grit.
-                            v.Phase += 2f * MathF.PI * 85f * v.Pitch * dt;
-                            float grit = v.Low.Process(x, Lowpass.Coef(1000f, rate)) * Burst(t, 0f, 0.05f);
-                            s = MathF.Sin(v.Phase) * Burst(t, 0f, 0.06f) * 0.14f + grit * 0.18f;
-                            break;
-                        }
-                        case Cue.Jump:
-                        {
-                            // Pushing off: a quick scuff of the ground and cloth, and a small
-                            // lift of breath.
-                            float scuff = v.Band.Process(x, 1500f * v.Pitch, 0.9f, rate) * Burst(t, 0f, 0.05f);
-                            float breath = v.Low.Process(x, Lowpass.Coef(2200f, rate)) * MathF.Sin(MathF.PI * Math.Min(1f, t / 0.25f));
-                            s = scuff * 0.3f + breath * 0.05f;
-                            break;
-                        }
-                        case Cue.Learn:
-                            // One faint wooden note, G5: something new in the journal.
-                            s = Marimba(t, Discovery) * 0.017f;
-                            send = s * 0.6f;
-                            break;
-                        case Cue.SkillUp:
-                            // D5 then A5 on a wooden bar, an open fifth: a skill earned a new title.
-                            s = Marimba(t, Title) * 0.027f;
-                            send = s * 0.6f;
-                            break;
                     }
                     s *= v.Gain;
                     send *= v.Gain;

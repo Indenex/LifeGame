@@ -8,6 +8,9 @@ namespace LifeGame.Shared
     public sealed class StructureShape
     {
         public string Name = "";
+        // May stand outside a claim (building-13, Justin): basic survival only. Everything else has
+        // to be built inside a claim the builder belongs to. Outside a claim, everything weathers fast.
+        public bool Wild;
         // Building size relative to the design size the model and the numbers below are written in
         // (building-14, Justin: houses felt too small). Applied once when the shapes are made, so
         // every footprint, clearance and doorway number is already the real, scaled size; the model
@@ -46,6 +49,8 @@ namespace LifeGame.Shared
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
         // mud-brick house and the log cabin share the walls, door and fire-warms-the-room rule.
         public bool Room;
+        // Sun-dried brick walls (a Daub-work stage) and, if TileRoof, a roof of fired clay tiles, not thatch.
+        public bool BrickWalls, TileRoof;
         public string[] Stages = Array.Empty<string>();
         // What each stage takes, in the same order as Stages (the server builds each stage's needs from
         // this; the client shows it before you lay out). Fiber stands in for thatch; the hut's walls are daub.
@@ -60,6 +65,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Lean-to",
+                Wild = true,
                 Scale = 1.25f,
                 HalfWidth = 1.5f, HalfDepth = 1.25f,
                 Clearance = 1.9f,
@@ -77,6 +83,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Clay hut",
+                Wild = true,
                 Scale = 1.25f,
                 Round = true, Radius = 1.9f,
                 Clearance = 2.2f,
@@ -97,6 +104,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Claim marker",
+                Wild = true,
                 Category = "Claims",
                 Round = true, Radius = 0.5f,
                 Clearance = 1.2f,
@@ -128,6 +136,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage basket",
+                Wild = true,
                 Category = "Storage",
                 Round = true, Radius = 0.35f,
                 Clearance = 0.6f,
@@ -151,6 +160,7 @@ namespace LifeGame.Shared
                 RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
                 DoorwayZ = 1.8f,
                 Room = true,
+                BrickWalls = true,
                 SmokeY = 3.3f,
                 Stages = new[] { "Footings", "Brick walls", "Rafters", "Thatch" },
                 // Brick house: Footings, Brick walls, Rafters, Thatch
@@ -167,6 +177,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Storage jar",
+                Wild = true,
                 Category = "Storage",
                 Jar = true,
                 Round = true, Radius = 0.32f,
@@ -218,6 +229,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Crafting table",
+                Wild = true,
                 Category = "Crafting",
                 HalfWidth = 0.8f, HalfDepth = 0.45f,
                 Clearance = 1.0f,
@@ -234,6 +246,7 @@ namespace LifeGame.Shared
             new StructureShape
             {
                 Name = "Raised hearth",
+                Wild = true,
                 Category = "Fire",
                 Round = true, Radius = HearthRadius, Solid = true,
                 Clearance = 0.6f,
@@ -329,6 +342,30 @@ namespace LifeGame.Shared
                     new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u), (Item.Stone, 2u) },
                 },
             },
+            // A tiled house (ceramics-10, Justin): the mud-brick house with a roof of fired clay tiles
+            // instead of thatch. Same room, door and shelter; claim-only like the brick house.
+            new StructureShape
+            {
+                Name = "Tiled house",
+                Category = "Shelter",
+                Scale = 1.25f,
+                HalfWidth = 2.4f, HalfDepth = 2.0f,
+                Clearance = 3.2f,
+                RainCover = 1f, Warmth = 0.5f, ShutWarmth = 0.55f,
+                DoorwayZ = 1.8f,
+                Room = true,
+                BrickWalls = true,
+                TileRoof = true,
+                SmokeY = 3.3f,
+                Stages = new[] { "Footings", "Brick walls", "Rafters", "Roof tiles" },
+                Costs = new (Item Item, uint Count)[][]
+                {
+                    new[] { (Item.Stone, 6u), (Item.Stick, 4u) },
+                    new[] { (Item.Brick, 16u), (Item.Daub, 6u) },
+                    new[] { (Item.Stick, 12u), (Item.Cordage, 2u) },
+                    new[] { (Item.RoofTile, 12u) },
+                },
+            },
         });
 
         // Multiplies each shape's lengths by its Scale, once, so nothing else has to know about it.
@@ -400,6 +437,9 @@ namespace LifeGame.Shared
         // a shape may still set its own WeatherAfter, but none does now.
         public const double WeatherAfterHours = 48, WeatherForHours = 6;
 
+        // Whether this kind may be built outside a claim (building-13).
+        public static bool IsWild(int kind) => Shape(kind).Wild;
+
         public static bool IsRoom(int kind) => Shape(kind).Room;
 
         // The real (scaled) wall numbers of a hut or a room-shaped home.
@@ -443,8 +483,8 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             2 => Social.MarkProcess,
             4 => WeaveProcess,
-            // Brick house: footings and rafters are framing, walls are daub work, thatch is roofing.
-            5 => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
+            // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
+            _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
             _ when Shape(kind).Room => stage >= 3 ? RoofProcess : FrameProcess,
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
@@ -535,6 +575,31 @@ namespace LifeGame.Shared
                 float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
                 return doorShut || mz < 0f || MathF.Abs(mx) > HouseDoorHalfWidthFor(kind);
             }
+            return false;
+        }
+
+        // Whether a step crosses a lean-to's two sides or its back (the front is open).
+        // Other kinds have no such walls.
+        public static bool StepCrossesLeanTo(int kind, float sx, float sz, float yaw, float fromX, float fromZ, float toX, float toZ)
+        {
+            var shape = Shape(kind);
+            if (shape.Round || shape.Fence || shape.Room || kind != 0) return false;
+            float wx = shape.HalfWidth, wz = shape.HalfDepth;
+            var (ax, az) = ToLocal(sx, sz, yaw, fromX, fromZ);
+            var (bx, bz) = ToLocal(sx, sz, yaw, toX, toZ);
+            // The back wall at z = -wz.
+            if ((az > -wz) != (bz > -wz))
+            {
+                float x = ax + (bx - ax) * ((-wz - az) / (bz - az));
+                if (MathF.Abs(x) <= wx) return true;
+            }
+            // The two sides at x = +-wx.
+            foreach (float side in new[] { -wx, wx })
+                if ((ax > side) != (bx > side))
+                {
+                    float z = az + (bz - az) * ((side - ax) / (bx - ax));
+                    if (z >= -wz && z <= wz) return true;
+                }
             return false;
         }
 
