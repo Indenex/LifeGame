@@ -199,6 +199,12 @@ public static class ClayLook
                             float row = floor(stamp_glyph / stamp_grid.x);
                             vec2 cell = vec2((col + uv.x) / stamp_grid.x, (row + uv.y) / stamp_grid.y);
                             float ink = texture(stamp_atlas, cell).a;
+                            // A pale lip round the dent, like light catching it, so dark colours still read.
+                            vec2 step_uv = vec2(0.05, 0.05) / stamp_grid;
+                            float near = max(max(texture(stamp_atlas, cell + vec2(step_uv.x, 0.0)).a, texture(stamp_atlas, cell - vec2(step_uv.x, 0.0)).a),
+                                             max(texture(stamp_atlas, cell + vec2(0.0, step_uv.y)).a, texture(stamp_atlas, cell - vec2(0.0, step_uv.y)).a));
+                            float lip = clamp(near - ink, 0.0, 1.0);
+                            color = mix(color, color * 0.6 + vec3(0.42, 0.38, 0.32), lip * 0.7);
                             // Painted in the maker's colour, a touch darker where it sits in the clay.
                             color = mix(color, stamp_color * (0.92 + grain * 0.1), ink * 0.94);
                         }
