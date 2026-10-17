@@ -131,4 +131,26 @@ public partial class Atmosphere
         float dusk = Mathf.SmoothStep(0.66f, 0.74f, t) * (1f - Mathf.SmoothStep(0.82f, 0.9f, t));
         return autumn * dusk;
     }
+
+    // A blow on an animal: a thud, or a crack for a sneak-attack crit. An arrow's plain hit
+    // is voiced by its ArrowShot (the thunk), so only a crit adds the crack.
+    void HearHit(AnimalHit h)
+    {
+        if (h.Ranged && !h.Crit) return;
+        Sfx.PlayHit(h.Crit ? Cue.Crit : Cue.Hit, new Vector3(h.X, 0f, h.Z), new Vector3(h.FromX, 0f, h.FromZ));
+    }
+
+    const float ArrowSpeed = 60f; // metres a second: how long until the thunk is heard
+
+    // The twang and whoosh where the arrow leaves (full volume if it is you), then, when it
+    // lands, a thunk into the animal, a tree (in woods) or the ground.
+    void HearArrow(ArrowShot shot)
+    {
+        var from = new Vector3(shot.FromX, 0f, shot.FromZ);
+        var to = new Vector3(shot.ToX, 0f, shot.ToZ);
+        Sfx.PlayShot(from, to, shot.Hit
+            ? Cue.ArrowFlesh
+            : Forest.Density(World.CellOf(shot.ToX), World.CellOf(shot.ToZ)) > 0.45f ? Cue.ArrowWood : Cue.ArrowEarth,
+            (from - to).Length() / ArrowSpeed, GetTree());
+    }
 }

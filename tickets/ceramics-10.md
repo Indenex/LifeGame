@@ -15,6 +15,8 @@ Justin picked roof tiles (2026-10-16). Fired clay tiles are a new roofing materi
 
 - 2026-10-16 23:05: Justin decided (via the PM): 12 tiles per roof. No custom weathering value: house-type buildings, including the Tiled house, can only be built inside a claim and anything outside a claim weathers fast (48 h untouched); the Tiled house follows the same claim rules as the brick house (House building's building-13 adds the claim-only flag). The 504 h idea is dropped. Told House building.
 
+- 2026-10-17 00:00: #343 (tiles) and #356 (tallow in the pot meshes) merged. ceramics-12 (branch claude/clay-ceramics-12-kfr4kr): ClayCheck --kiln --jar now also presses a roof tile, dries it, a campfire refuses it, and it comes out of the kiln as a fired Roof tile (c12kt3 PASSED, tile quality 80). Test-only change. After House building's #362 (kiln and bench claim-only) lands, re-run --kiln --jar to confirm the kiln is built inside the claim.
+
 ## Open questions / blockers
 Sent to House building and the PM, 2026-10-16 22:30. How do tiles get on a roof? Working on option A until told otherwise.
 1. (Recommended) A new house kind, "Tiled house": a brick house whose last stage is "Roof tiles" (tile cost) instead of thatch. Pure data, no world change; players choose thatch or tile when they lay out the house. Cost: two house kinds that share most of their shape.

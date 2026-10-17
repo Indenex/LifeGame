@@ -51,6 +51,7 @@ public partial class Main : Node3D
     readonly TradeWindow trade = new();
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
+    readonly BuildMenu buildMenu = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -88,6 +89,11 @@ public partial class Main : Node3D
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         AddChild(building);
+        // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
+        // Added after building, so it sees B first; while the ghost is up, B is building's.
+        buildMenu.Place = building.StartPlacing;
+        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
@@ -130,7 +136,8 @@ public partial class Main : Node3D
             || social.PanelOpen
             || trade.IsOpen
             || equipment.IsOpen
-            || station.IsOpen;
+            || station.IsOpen
+            || buildMenu.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
@@ -338,6 +345,8 @@ public partial class Main : Node3D
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
+        conn.Db.PlayerLook.OnInsert += (_, l) => OnPlayerLook(l);
+        conn.Db.PlayerLook.OnUpdate += (_, _, l) => OnPlayerLook(l);
         // Only online players are subscribed, so a delete means they logged off.
         conn.Db.Player.OnDelete += (_, p) =>
         {
@@ -361,6 +370,7 @@ public partial class Main : Node3D
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         equipment.Bag.Link = new ServerBagLink(conn);
+        buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -444,12 +454,26 @@ public partial class Main : Node3D
     void OnPlayer(Player p)
     {
         names[p.PlayerId] = p.Name;
-        if (p.Identity == myIdentity) myId = p.PlayerId;
+        if (p.Identity == myIdentity)
+        {
+            myId = p.PlayerId;
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else me.SetLook(p.PlayerId);
+        }
         if (others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar.SetPlayerName(p.Name);
             avatar.Visible = p.Online;
         }
+    }
+
+    // A player's chosen look (model-3): applied to their avatar over the id default.
+    void OnPlayerLook(PlayerLook l)
+    {
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
+        else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
 
     void OnPlayerPos(PlayerPos p, bool inserted)
@@ -468,6 +492,9 @@ public partial class Main : Node3D
         if (!others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
         }

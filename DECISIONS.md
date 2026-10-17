@@ -963,3 +963,35 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
 **Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
 **Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")
+
+## D-238 — 2026-10-17 — Ceramics next: clay pipes and drain tiles for moving water (ceramics-13)
+**Decision:** Ceramics' next work is clay pipes and drain tiles for moving water (ceramics-13), design first. Justin chose it over slip decoration and a potter's wheel.
+**Who:** Justin, picking clay pipes and drain tiles (relayed by the PM; no direct quote).
+
+## D-239 — 2026-10-17 — Clay pipes and drains: trough only for now (follows D-238)
+**Decision:** For ceramics-13, Justin picked "Trough only": a fired clay trough filled by hand, with no pipe network for now. The network design (stream to cistern, roof gutters) stays on file in `tickets/ceramics-13.md` for later.
+**Who:** Justin, picking "Trough only" (relayed by the PM; no direct quote).
+
+## D-240 — 2026-10-17 — The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D (extends D-234, D-235, D-236)
+**Decision:** The world's look must read as Golden Skull's and Dofus's hand-painted style in 3D, using whatever technique works, with pack sprites only where they fit. Nothing is copied literally unless it fits, but the overall art theme and direction should be very similar to that work and to Dofus. A unique way of getting the hand-painted style in 3D is fine; Dofus does it and Octopath is similar. Every look image shown to Justin is paired side by side with its reference. The art lanes (Modeling, Environment, Atmosphere) are already on Opus.
+**Who:** Justin ("so far the images I've seen from the environment worker are NOTHING like the reference images/packs I gave you." "Nothing literal unless it fits, but the overall art theme and direction, even though it's '3d' should be VERY similar to his work and Dofus. If it has to come up with a unique way to get the hand painted style in 3d, that's fine, and i know it's perfectly do-able. Dofus does it, Octopath is similar, etc. Maybe it needs to be switched to an opus worker if it isnt already.")
+
+## D-241 — 2026-10-17 — Music direction: cute, whimsical and relaxing, in the spirit of Dofus (audio-8)
+**Decision:** The music is cute, whimsical and relaxing in the spirit of Dofus, with a basic main theme in the mood of Grynpyret's "Kites" (original melody, nothing copied) and a lullaby-like song about naps. The goal is to be very cutesy and relaxing in general, and less Valheim-like. Owner: Audio, ticket audio-8; Audio prototypes clips for Justin's pick before converting.
+**Who:** Justin ("I want some music similar to Dofus, and a basic theme similar to Grynpyret's song Kites, and A song about naps. The goal is to be very cutesy and relaxing in general, less valheim-y music.")
+
+## D-242 — 2026-10-17 — Keep the old dense, wind-swept blade grass and restyle it to the new hand-painted look (extends D-240)
+**Decision:** The previous dense, wind-swept blade grass comes back and is restyled to the new hand-painted look (pack palette, tone bands). Sprite-card tufts are not the grass; flowers and mushrooms are only sparse accents. This answers the painted-ground prototype. Owner: Environment.
+**Who:** Justin ("the modeler/environment's grass is HORRIBLE, I want the old grass back, and make it match the new style, it was really good before")
+
+## D-243 — 2026-10-17 — Music comes from Justin, made with Suno; Audio builds a data-driven player (revises D-241)
+**Decision:** The music will be provided by Justin, made with Suno, instead of being synthesized or composed by Audio. Audio builds a data-driven player for recorded tracks, mood-tagged and cross-faded. This revises D-241: the direction there (cute, whimsical, relaxing, Dofus-like) still guides Justin's tracks. Owner: Audio.
+**Who:** Justin ("These all sound super generic and crappy", on the synthesized music tasters)
+
+## D-244 — 2026-10-17 — Painted 2.5D clearing look is acceptable apart from the grass (follows D-242)
+**Decision:** On the Painted 2.5D clearing screenshot, trees, rocks, stumps, the cabin and sheep are acceptable for now. Only the grass was rejected (D-242).
+**Who:** Justin ("The other things look ok so far")
+
+## D-245 — 2026-10-17 — Soundtrack style: soft future bass with folk instruments (follows D-241, D-243)
+**Decision:** The soundtrack style is a blend of soft future-bass production with folk instruments such as flute and harp. The references are Grynpyret's "Kites" (kawaii future bass, B major, about 111 BPM) and "A Song About Naps" (also a Grynpyret track), plus Dofus. Justin generates the tracks in Suno; the PM gave him prompts for the main theme (about 108 BPM), the nap song (about 76 BPM) and a day track (about 96 BPM).
+**Who:** Justin, picking the style blend (relayed by the PM; no direct quote).

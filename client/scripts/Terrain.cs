@@ -44,6 +44,7 @@ public partial class Terrain : Node3D
 
     public float TileHeight(int x, int z)
     {
+        if (building is { } snapshot) return snapshot.TileHeight(x, z);
         long key = World.CellKey(x, z);
         short depth = depths.TryGetValue(key, out var d) ? d : (short)0;
         return BaseHeight(key, x, z) - depth * World.DigStep;
@@ -120,39 +121,19 @@ public partial class Terrain : Node3D
                     dirty.Add(key);
         }
 
-        // Build chunks nearest first, within a few milliseconds a frame so walking
-        // never hitches: one chunk takes tens of ms on a slow machine.
-        if (dirty.Count == 0) return;
-        var order = new List<(int, int)>(dirty);
-        order.Sort((a, b) => Dist(a).CompareTo(Dist(b)));
-        var clock = System.Diagnostics.Stopwatch.StartNew();
-        foreach (var key in order)
+        // Chunks build on worker threads, nearest first (env-12); the main thread only
+        // snapshots what they need and puts finished ones in place.
+        if (dirty.Count == 0 && pending.Count == 0) return;
+        loading ??= System.Diagnostics.Stopwatch.StartNew();
+        PumpBuilds(chunkX, chunkZ, r);
+        if (dirty.Count == 0 && pending.Count == 0)
         {
-            if (clock.Elapsed.TotalMilliseconds > 4) break;
-            dirty.Remove(key);
-            if (Math.Abs(key.Item1 - chunkX) > r || Math.Abs(key.Item2 - chunkZ) > r) continue;
-            bool rebuilt = chunks.Remove(key, out var old);
-            if (rebuilt) old!.QueueFree();
-            NoteClearing(key.Item1, key.Item2, rebuilt);
-            var node = BuildChunk(key.Item1, key.Item2);
-            if (WantsTufts(key)) tufted.Add(key); else tufted.Remove(key);
-            AddChild(node);
-            chunks[key] = node;
-            if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
-            else ghostHolders.Remove(key);
+            GD.Print($"[view] radius {r}: {chunks.Count} chunks in place {loading.Elapsed.TotalMilliseconds:F0} ms after the first was asked for");
+            loading = null;
         }
-
-        buildMs += clock.Elapsed.TotalMilliseconds;
-        if (dirty.Count == 0 && buildMs > 0)
-        {
-            GD.Print($"[view] radius {r}: {chunks.Count} chunks built in {buildMs:F0} ms");
-            buildMs = 0;
-        }
-
-        int Dist((int, int) k) => Math.Abs(k.Item1 - chunkX) + Math.Abs(k.Item2 - chunkZ);
     }
 
-    double buildMs;
+    System.Diagnostics.Stopwatch? loading;
 
     // Grass tufts only near the player: they fade out before ViewDistance.GrassChunks,
     // so a chunk gaining or losing them on a rebuild never shows.
@@ -179,17 +160,18 @@ public partial class Terrain : Node3D
 
     // When this cell's clearing changed, if it is still easing over.
     (float At, bool Cleared)? ClearChange(int x, int z) =>
+        building is { } snapshot ? snapshot.ClearChange(x, z) :
         clearChanges.TryGetValue(World.CellKey(x, z), out var c) && Look.Clock - c.At < ClearFadeSeconds + 1f ? c : null;
 
-    Node3D BuildChunk(int cx, int cz)
-    {
-        var root = new Node3D { Name = $"Chunk_{cx}_{cz}" };
-        root.AddChild(new MeshInstance3D { Mesh = BuildGround(cx, cz), MaterialOverride = Look.Ground });
-        AddVegetation(root, cx, cz);
-        return root;
-    }
+    // Whether a cell is under a building (from the snapshot on a worker).
+    bool IsCleared(int x, int z) => building is { } snapshot ? snapshot.IsCleared(x, z) : Cleared?.Invoke(x, z) == true;
 
-    Mesh BuildGround(int cx, int cz)
+    bool Edited(int x, int z) => building is { } snapshot ? snapshot.EditedAt(x, z) : depths.ContainsKey(World.CellKey(x, z));
+
+    short Depth(int x, int z) =>
+        building is { } snapshot ? snapshot.DepthAt(x, z) : depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
+
+    void BuildGround(ChunkData data, int cx, int cz)
     {
         int n = World.ChunkSize;
 
@@ -237,16 +219,10 @@ public partial class Terrain : Node3D
                 Corner(i, j); Corner(i + 1, j + 1); Corner(i, j + 1);
             }
 
-        var arrays = new Godot.Collections.Array();
-        arrays.Resize((int)Mesh.ArrayType.Max);
-        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-        arrays[(int)Mesh.ArrayType.Normal] = vertexNormals;
-        arrays[(int)Mesh.ArrayType.Color] = vertexColors;
-        arrays[(int)Mesh.ArrayType.Custom0] = custom;
-        var mesh = new ArrayMesh();
-        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays,
-            flags: (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
-        return mesh;
+        data.Vertices = vertices;
+        data.Normals = vertexNormals;
+        data.Colors = vertexColors;
+        data.Custom = custom;
     }
 
     static void Quad(SurfaceTool st, Vector3 normal, Color color, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
@@ -278,10 +254,10 @@ public partial class Terrain : Node3D
 
         if (top < Look.WaterLevel + 0.2f) color = Look.Shore.Lerp(color, 0.2f);
 
-        if (depths.TryGetValue(World.CellKey(x, z), out var d) && d > 0)
+        if (Depth(x, z) > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
 
-        if (cleared ?? Cleared?.Invoke(x, z) == true) color = color.Lerp(Look.Earth, 0.6f);
+        if (cleared ?? IsCleared(x, z)) color = color.Lerp(Look.Earth, 0.6f);
 
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
@@ -298,7 +274,7 @@ public partial class Terrain : Node3D
         return false;
     }
 
-    void AddVegetation(Node3D root, int cx, int cz)
+    void AddVegetation(ChunkData data, int cx, int cz)
     {
         EnsureMeshes();
         // Each instance: transform, color, and custom data saying when it started to
@@ -307,7 +283,7 @@ public partial class Terrain : Node3D
         var leafy = new List<(Transform3D, Color, Color)>();
         var pines = new List<(Transform3D, Color, Color)>();
         // Grass tufts only in the chunks near the player (WantsTufts).
-        var tufts = WantsTufts((cx, cz)) ? new List<(Transform3D, Color, Color)>() : null;
+        var tufts = data.Tufts ? new List<(Transform3D, Color, Color)>() : null;
         var ferns = new List<(Transform3D, Color, Color)>();
         var reeds = new List<(Transform3D, Color, Color)>();
         var flowers = new List<(Transform3D, Color, Color)>();
@@ -325,7 +301,7 @@ public partial class Terrain : Node3D
                 bool flattening = change is { Cleared: true };
                 // Custom data: when the change started, and +1 going away or -1 coming back.
                 var custom = change is { } c ? new Color(c.At, c.Cleared ? 1f : -1f, 0, 0) : new Color(0, 0, 0, 0);
-                if (depths.ContainsKey(World.CellKey(x, z)) || (Cleared?.Invoke(x, z) == true && !flattening)) continue;
+                if (Edited(x, z) || (IsCleared(x, z) && !flattening)) continue;
                 float top = TileHeight(x, z);
                 var (fx, fz) = Trees.Trunk(x, z);
                 float yaw = Hash01(x, z, 14) * Mathf.Tau;
@@ -333,9 +309,10 @@ public partial class Terrain : Node3D
                 // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    // Stepping stones or a fallen log mark an easy place to ford a stream.
-                    if (Landmarks.FordStoneAt(x, z))
-                        LandmarkProps.Ford(x, z, top, landmarks, custom);
+                    // Features in the water (shared/Features.cs): stepping stones or a
+                    // fallen log mark an easy place to ford a stream.
+                    if (Features.At(x, z, FeatureGround.Stream) is { } wading)
+                        LandmarkProps.For(wading).Build(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     else if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                     {
                         var reed = (Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom);
@@ -364,15 +341,11 @@ public partial class Terrain : Node3D
                 float tree = Forest.TreeChance(density, heath); // the same as Trees.Forest(x, z)
                 float trail = Landmarks.Trail(x, z);
 
-                // Landmarks to steer by (env-5), each shaped by its own seed.
-                if (Landmarks.GiantOakAt(x, z))
+                // Landmarks to steer by (env-5), each shaped by its own seed; whatever
+                // the feature registry puts on a cell is all that stands there.
+                if (Features.At(x, z, FeatureGround.Dry) is { } feature)
                 {
-                    LandmarkProps.GiantTree(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
-                    continue;
-                }
-                if (Landmarks.OutcropAt(x, z))
-                {
-                    LandmarkProps.Outcrop(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
+                    LandmarkProps.For(feature).Build(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     continue;
                 }
                 float sapling = tree + 0.03f * edge * (1f - heath);
@@ -487,16 +460,16 @@ public partial class Terrain : Node3D
         trunks.AddRange(landmarks.Trunks);
         leafy.AddRange(landmarks.Leafy);
         pines.AddRange(landmarks.Pines);
-        AddMulti(root, trunkMesh!, trunks, Look.TreeBark);
-        AddMulti(root, leafyMesh!, leafy, Look.TreeFoliage);
-        AddMulti(root, pineMesh!, pines, Look.TreeFoliage);
+        data.Add(trunkMesh!, trunks, Look.TreeBark);
+        data.Add(leafyMesh!, leafy, Look.TreeFoliage);
+        data.Add(pineMesh!, pines, Look.TreeFoliage);
         foreach (var ((mesh, material), items) in landmarks.Batches)
-            AddMulti(root, mesh, items, material, castShadow: material != Look.Grass);
-        if (tufts != null) AddMulti(root, tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
-        AddMulti(root, Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
-        AddMulti(root, Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
-        AddMulti(root, Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
-        AddMulti(root, Undergrowth.Bush, bushes, Look.Foliage);
+            data.Add(mesh, items, material, castShadow: material != Look.Grass);
+        if (tufts != null) data.Add(tuftMesh!, tufts, Look.GrassTufts, castShadow: false);
+        data.Add(Undergrowth.Fern, ferns, Look.Grass, castShadow: false);
+        data.Add(Undergrowth.Reed, reeds, Look.Grass, castShadow: false);
+        data.Add(Undergrowth.Flowers, flowers, Look.Grass, castShadow: false);
+        data.Add(Undergrowth.Bush, bushes, Look.Foliage);
     }
 
     // Which of a prop's shape variants stands on a cell: at random, or (Regional) the
