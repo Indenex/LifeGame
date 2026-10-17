@@ -73,6 +73,8 @@ public static class Look
         Add("snowing", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("season_year", RenderingServer.GlobalShaderParameterType.Float, 0.1f);
         Add("puddles", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Flat rings in the grass round low things worth seeing (Modeling's model-37).
+        GrassClearings.AddGlobals();
         // Distant land (Environment's FarLand sets the radius, 0 when off) melts into
         // the fog colour (Atmosphere) over its outer quarter.
         Add("far_land_radius", RenderingServer.GlobalShaderParameterType.Float, 0f);
@@ -691,6 +693,7 @@ public static class Look
             // env-31 prototypes (GroundLooks): 1 Breath of the Wild, 2 Ghibli.
             uniform float look = 0.0;
             global uniform vec3 player_position;
+            """ + GrassClearings.ShaderCode + """
 
             varying vec3 tint;
             varying float tip;
@@ -708,6 +711,10 @@ public static class Look
                 float flowering = INSTANCE_CUSTOM.w > 1.5 ? smoothstep(-0.25, 0.1, season_warmth) * (1.0 - smoothstep(0.1, 0.4, season_autumn)) : 1.0;
                 VERTEX *= flowering;
                 VERTEX.y *= 1.0 - 0.75 * snow_cover;
+                // Round a mushroom or root patch the grass lies flat, spreading a little (GrassClearings).
+                float cleared = grass_cleared(MODEL_MATRIX[3].xz);
+                VERTEX.y *= 1.0 - 0.85 * cleared;
+                VERTEX.xz *= 1.0 + 0.35 * cleared;
                 // Grass on a cell just cleared lies down and sinks away; grass on a
                 // cell uncleared rises back up.
                 if (INSTANCE_CUSTOM.x > 0.0) {

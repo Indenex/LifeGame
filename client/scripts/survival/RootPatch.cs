@@ -17,6 +17,7 @@ public partial class RootPatch : Node3D
         dug = new MeshInstance3D { Mesh = WildRoots.Dug(variant), MaterialOverride = WildRoots.Material, Visible = false };
         AddChild(ripe);
         AddChild(dug);
+        GrassClearings.Track(this);
     }
 
     public bool Ripe
