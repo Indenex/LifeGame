@@ -1137,3 +1137,7 @@ Owner: Claims.
 ## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
 **Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
 **Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
