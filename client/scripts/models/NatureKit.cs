@@ -98,6 +98,16 @@ public static class NatureKit
         return (new Transform3D(basis * Basis.FromScale(Vector3.One * scale), item.Item1.Origin - basis.Y * sink), item.Item2, item.Item3);
     }
 
+    // Whether a chunk batch's mesh is one of the kit trees (TreeFall draws it falling).
+    public static bool IsTree(Mesh mesh)
+    {
+        if (!Trees) return false;
+        lock (TreeMeshes)
+            foreach (var t in TreeMeshes.Values)
+                if (t.Mesh == mesh) return true;
+        return false;
+    }
+
     // Terrain's tree placements scaled by a kit tree's extra scale.
     public static List<(Transform3D, Color, Color)> Scaled(List<(Transform3D, Color, Color)> items, float scale) =>
         items.ConvertAll(i => (new Transform3D(i.Item1.Basis * Basis.FromScale(Vector3.One * scale), i.Item1.Origin), i.Item2, i.Item3));

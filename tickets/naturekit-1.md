@@ -23,8 +23,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 16:45: boulders from the kit behind graphics/naturekit_rocks (or --naturekit): Terrain's boulder line calls NatureKit.Rock(variant); each kit rock is scaled to our variant's footprint (collision unchanged), sunk 12%, and takes half the world stone hue plus each one's darkening. Bench radius 8 with kit trees+rocks: 23.96 M triangles, 6017 draws (rocks add ~2%). River stones stay ours.
 
+- 2026-10-17 17:15: draft PR #853 opened (naturekit-1 + village-1). Kit trees now fall when chopped: TreeFall.StandingTree also takes batches whose mesh NatureKit.IsTree (one-line hook in Environment's TreeFall.cs). They fall whole, with no sawn-off version yet. Still missing: a see-through ghost for kit trees.
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Wait for the Render lane's in-game shots (ours vs --naturekit) and Justin's pick; meanwhile start village props (baskets, barrels, crates, fences) from /mnt/project-files/assets-incoming/villagekit-godot.zip into client/assets/quaternius/village/.
+Watch CI on PR #853 and send the green sha to the PM; meanwhile add a ghost variant of NatureKit's shader (fade_override like Painted's GhostShader) so kit trees fade when the player is behind them.
