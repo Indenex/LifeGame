@@ -71,6 +71,7 @@ public partial class Main : Node3D
     {
         // First, so it sees every window built after it (the --warm prototype, D-313).
         AddChild(new WarmLook());
+        AddChild(new Bounce());
         SetupInput();
         SetupView();
         SetupEnvironment();

@@ -12,6 +12,8 @@ public static class Ui
     // over a dark forest (Render B on #494).
     public static readonly Color Frame = new(0.10f, 0.11f, 0.09f, 0.94f);
     public const int Corner = 12, TitleSize = 20;
+    // Set on every window's frame, so the warm look and the bounce (D-313, D-314) find them.
+    public const string WindowMark = "ui_window";
 
     // A centred window around the content; roomy gives the bigger margins of a full page (Options).
     public static PanelContainer Window(Control content, bool roomy = false)
@@ -25,6 +27,7 @@ public static class Ui
         panel.SetAnchorsPreset(Control.LayoutPreset.Center);
         panel.GrowHorizontal = Control.GrowDirection.Both;
         panel.GrowVertical = Control.GrowDirection.Both;
+        panel.SetMeta(WindowMark, true);
         WarmLook.Frame(panel, style);
         return panel;
     }

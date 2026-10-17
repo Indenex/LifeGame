@@ -59,6 +59,7 @@ public partial class WarmLook : Node
             if (c is PanelContainer p && !p.HasMeta(Mark) && IsHandFramed(p))
             {
                 var style = (StyleBoxFlat)((StyleBoxFlat)p.GetThemeStylebox("panel")).Duplicate();
+                p.SetMeta(Ui.WindowMark, true);
                 Frame(p, style);
                 p.AddThemeStyleboxOverride("panel", style);
             }

@@ -100,6 +100,15 @@ public partial class OptionsPage : Control
         });
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
+        // Bouncy windows, squishy buttons, wiggling items (D-314); off for a calmer screen.
+        Button motion = null!;
+        motion = ControlsPage.TextButton(MotionText(), () =>
+        {
+            Bounce.Reduce = !Bounce.Reduce;
+            motion.Text = MotionText();
+        });
+        motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(motion);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -115,6 +124,8 @@ public partial class OptionsPage : Control
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);
     }
+
+    static string MotionText() => Bounce.Reduce ? "Reduce motion: on" : "Reduce motion: off";
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
