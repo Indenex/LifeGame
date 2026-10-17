@@ -1241,3 +1241,7 @@ Owner: Claims.
 ## D-305 — 2026-10-17 — Belt tools are storage only for world use
 **Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
 **Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
