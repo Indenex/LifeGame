@@ -620,7 +620,7 @@ sealed class Bot
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
-            if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
+            if (StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
@@ -639,7 +639,7 @@ sealed class Bot
             targetItem = item?.Id ?? 0;
             if (item == null) return;
         }
-        if (Step(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
+        if (StepRouted(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
         {
             actionTimer = 0.3f;
             Conn.Reducers.PickUp(item.Id);
@@ -671,6 +671,24 @@ sealed class Bot
     BotGround Ground => ground ??= new BotGround(Conn);
 
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
+
+    // Like Step, but round trunks, boulders and buildings by a route (bugfix-34): follows waypoints
+    // and works the route out again when the target changes or every few seconds. Returns the distance to the target.
+    List<(float X, float Z)> route = new();
+    float routeTx = float.NaN, routeTz, routeAge;
+
+    float StepRouted(float tx, float tz, float dt)
+    {
+        routeAge += dt;
+        if (route.Count == 0 || MathF.Abs(tx - routeTx) > 0.5f || MathF.Abs(tz - routeTz) > 0.5f || routeAge > 3f)
+        {
+            route = Ground.Route(X, Z, tx, tz);
+            routeTx = tx; routeTz = tz; routeAge = 0f;
+        }
+        while (route.Count > 1 && (route[0].X - X) * (route[0].X - X) + (route[0].Z - Z) * (route[0].Z - Z) < 0.16f) route.RemoveAt(0);
+        Step(route[0].X, route[0].Z, dt);
+        return MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z));
+    }
 
     // Moves up to one tick's walk toward a point and returns the distance left.
     float Step(float tx, float tz, float dt)
@@ -707,9 +725,10 @@ sealed class Bot
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
             {
+                float px = X, pz = Z;
                 X += dx / dist * step;
                 Z += dz / dist * step;
-                (X, Z) = Ground.Slide(X, Z); // round trunks and boulders, as a player does
+                (X, Z) = Ground.Slide(px, pz, X, Z); // round things and walls, as a player meets them
                 moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
@@ -725,6 +744,10 @@ sealed class Bot
     // still short, adopt where it has us and go round the side, a little wider each time.
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
     {
+        // Round trunks and boulders by a route first (bugfix-34), to a spot that can be stood on.
+        (tx, tz) = Ground.Stand(tx, tz);
+        var route = Ground.Route(X, Z, tx, tz);
+        for (int i = 0; i < route.Count - 1; i++) WalkStraight(route[i].X, route[i].Z, 0.4f, pump);
         for (int attempt = 0; attempt < 6; attempt++)
         {
             WalkStraight(tx, tz, within, pump);

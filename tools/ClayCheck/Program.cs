@@ -580,9 +580,10 @@ void HuntMutton()
         {
             // Short steps, so the sheep isn't startled.
             float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            float px = x, pz = z;
             x += dx / d * 0.15f;
             z += dz / d * 0.15f;
-            (x, z) = ground.Slide(x, z);
+            (x, z) = ground.Slide(px, pz, x, z);
             conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
             Pump(() => false, 0.1f, null);
             a = conn.Db.Animal.Id.Find(id);
@@ -1054,18 +1055,27 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within `near` of a spot.
 void WalkTo(float tx, float tz, float near)
 {
+    // Round trunks and boulders by a route, then straight in (bugfix-34).
+    var route = ground.Route(x, z, tx, tz);
+    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
+    Leg(tx, tz, near);
+}
+
+void Leg(float tx, float tz, float near)
+{
     while (true)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d <= near) break;
-        float step = Math.Min(d - near * 0.9f, 0.5f);
+        float step = Math.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
         if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
+            float px = x, pz = z;
             x += dx / d * step;
             z += dz / d * step;
-            (x, z) = ground.Slide(x, z); // round trunks and boulders, as a player does
+            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);

@@ -86,7 +86,14 @@ void ExpectError(Tester t, Action call, string contains, string what)
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
 }
 
-void Walk(Tester t, float x, float z) => Pump(() => t.StepToward(x, z), 60, $"{t.Name} walking");
+void Walk(Tester t, float x, float z)
+{
+    (x, z) = t.Stand(x, z);
+    // Round trunks and boulders by a route first (bugfix-34).
+    var route = t.Route(x, z);
+    for (int i = 0; i < route.Count - 1; i++) Pump(() => t.StepToward(route[i].X, route[i].Z), 60, $"{t.Name} walking");
+    Pump(() => t.StepToward(x, z), 60, $"{t.Name} walking");
+}
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
@@ -545,6 +552,10 @@ sealed class Tester
     // One 10 Hz step toward a point; true once the server has us close enough.
     BotGround? ground;
 
+    public (float X, float Z) Stand(float tx, float tz) => (ground ??= new BotGround(Conn)).Stand(tx, tz);
+
+    public List<(float X, float Z)> Route(float tx, float tz) => (ground ??= new BotGround(Conn)).Route(X, Z, tx, tz);
+
     public bool StepToward(float tx, float tz)
     {
         var pos = Conn.Db.PlayerPos.PlayerId.Find(PlayerId);
@@ -554,7 +565,7 @@ sealed class Tester
         lastMove = clock.Elapsed.TotalSeconds;
         float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
         float step = MathF.Min(d, 5f * 0.1f);
-        if (d > 0.001f) { X += dx / d * step; Z += dz / d * step; (X, Z) = (ground ??= new BotGround(Conn)).Slide(X, Z); }
+        if (d > 0.001f) { float px = X, pz = Z; X += dx / d * step; Z += dz / d * step; (X, Z) = (ground ??= new BotGround(Conn)).Slide(px, pz, X, Z); }
         Conn.Reducers.Move(X, Z, 0);
         return false;
     }

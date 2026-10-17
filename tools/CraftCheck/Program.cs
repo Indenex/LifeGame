@@ -582,10 +582,18 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within reach of a spot.
 void WalkTo(float tx, float tz)
 {
+    // Round trunks and boulders by a route, then straight in (bugfix-34).
+    var route = ground.Route(x, z, tx, tz);
+    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
+    Leg(tx, tz, 1.5f);
+}
+
+void Leg(float tx, float tz, float tol)
+{
     for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
-        if (d < 1.5f) break;
+        if (d < tol) break;
         if (guard > 900)
         {
             var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
@@ -598,14 +606,15 @@ void WalkTo(float tx, float tz)
             Console.WriteLine("  near: " + string.Join("; ", near));
             Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left");
         }
-        float step = Math.Min(d - 1f, 0.5f);
+        float step = Math.Min(tol >= 1.5f ? d - 1f : d, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
         if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
+            float px = x, pz = z;
             x += dx / d * step;
             z += dz / d * step;
-            (x, z) = ground.Slide(x, z); // round trunks and boulders, as a player does
+            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);
