@@ -30,6 +30,7 @@ public partial class OptionsPage : Control
     Button music = null!;
     Button lightRays = null!;
     HSlider view = null!;
+    Button markButton = null!;
     Label viewName = null!;
 
     public override void _Ready()
@@ -105,6 +106,11 @@ public partial class OptionsPage : Control
         lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lookButton);
 
+        // Your maker's mark (ui-23).
+        markButton = ControlsPage.TextButton("Your mark", () => MarkPicker.OpenFromMenu?.Invoke());
+        markButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(markButton);
+
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);
@@ -116,6 +122,7 @@ public partial class OptionsPage : Control
 
     public void Open()
     {
+        markButton.Visible = MarkPicker.Available;
         for (int i = 0; i < Levels.Length; i++)
         {
             double v = SoundLevels.Get(Levels[i].Key);

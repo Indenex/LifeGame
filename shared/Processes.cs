@@ -372,7 +372,7 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
-                Id = "clay.coil_pot", Name = "Build a coil pot", Doing = "Building a coil pot", Tier = 3,
+                Id = "clay.coil_pot", Name = "Build a clay pot", Doing = "Building a clay pot", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, 3) },
                 Seconds = Base(3, 2f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
