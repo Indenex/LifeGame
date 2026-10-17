@@ -75,15 +75,8 @@ public partial class CharacterMenu : CanvasLayer
     ulong chosen;
     float time;
 
-    // Nunito (SIL OFL, client/assets/fonts), rounded and friendly; the default font if it's missing.
-    static Font? rounded;
-    public static Font Rounded(int weight)
-    {
-        rounded ??= GD.Load<FontFile>("res://assets/fonts/Nunito.ttf");
-        var face = new FontVariation { BaseFont = rounded ?? ThemeDB.FallbackFont };
-        face.VariationOpentype = new Godot.Collections.Dictionary { { TextServerManager.GetPrimaryInterface().NameToTag("wght"), weight } };
-        return face;
-    }
+    // Nunito, the warm look's rounded face (Ui.Font, D-313).
+    public static Font Rounded(int weight) => Ui.Font(weight);
 
     public static Label Text(string text, int size, int weight = 600, Color? colour = null)
     {
