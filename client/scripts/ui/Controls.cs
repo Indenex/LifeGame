@@ -242,6 +242,10 @@ public static class Controls
         return row?.Joins != null ? KeysFor(row) : Names(action).FirstOrDefault();
     }
 
+    // "B or Esc" for a panel's close line, from the live binding; just "Esc" when the player has
+    // unbound the key (ui-77: close lines named the default key even after a rebind).
+    public static string OrEsc(string action) => KeyFor(action) is { } key ? $"{key} or Esc" : "Esc";
+
     // A hint with "{key}" filled in from the live binding.
     public static string HintText(Binding b) =>
         b.Hint!.Replace("{key}", (b.Joins != null ? KeysFor(b) : KeyFor(b.Action)) ?? "?");

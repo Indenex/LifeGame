@@ -7,8 +7,8 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Your group on screen (ui-38, the shell): a quiet list of members down the left edge, no box
-// (D-045), with "Leave group" under it; "Mara asks you to join her group    E joins" above the
-// E prompt while an invitation waits, and a soft "wants you in their group" over the
+// (D-045), with "Leave group" under it; "Mara asks you to join her group    E joins" (the Use
+// key as bound) above the Use prompt while an invitation waits, and a soft "wants you in their group" over the
 // inviter's head, like the trade cue. The server decides everything (Groups.cs); this reads
 // my_group and my_group_invites.
 public partial class GroupView : CanvasLayer
@@ -70,7 +70,7 @@ public partial class GroupView : CanvasLayer
     {
         if (conn == null) return;
         var invite = Incoming;
-        asked.Text = invite is { } i ? $"{i.FromName} asks you to join their group    E joins" : "";
+        asked.Text = invite is { } i ? $"{i.FromName} asks you to join their group    {Controls.KeyFor("use") ?? "Use"} joins" : "";
         Cue(invite?.FromId ?? 0);
 
         // Rebuild the list only when it changes.
