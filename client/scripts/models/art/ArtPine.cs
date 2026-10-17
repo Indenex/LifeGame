@@ -4,8 +4,8 @@ namespace LifeGame;
 
 // art-rnd-1 showcase piece: today's painted pine (PaintedTrees, built at runtime from
 // rings of drooping boughs) beside a Blender-authored pine (tools/art/trees/, rebuilt
-// with tools/art/trees/build.sh): five stacked, puffy tiers with rolled hems and rounded,
-// drooping scallops (about 5k triangles) on a short warm-brown trunk, with needle clusters, lit tier tops,
+// with tools/art/trees/build.sh, three seeded variants): four to six stacked, puffy tiers with rolled hems and rounded,
+// drooping scallops and a soft rounded tip (about 4.4k to 6.4k triangles) on a short warm-brown trunk, with needle clusters, lit tier tops,
 // violet-leaning undersides and the bark's plates painted into one 1024 px texture over
 // baked AO. It stands at today's scale (about 4.4 m).
 //
@@ -32,6 +32,13 @@ public static class ArtPine
         return root;
     }
 
-    public static Node3D Authored() =>
-        PaintedAsset.Instance(Dir + "pine.glb", PaintedAsset.Material(Dir + "pine_albedo.png"));
+    // Three seeded variants (D-166), pine_0..2: Authored() hands them out in turn, so the
+    // showcase's three authored slots show one of each.
+    public const int Variants = 3;
+    static int next;
+
+    public static Node3D Authored() => Variant(next++ % Variants);
+
+    public static Node3D Variant(int seed) =>
+        PaintedAsset.Instance(Dir + $"pine_{seed}.glb", PaintedAsset.Material(Dir + $"pine_{seed}_albedo.png"));
 }
