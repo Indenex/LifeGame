@@ -268,6 +268,7 @@ public static partial class Module
                 continue;
             }
 
+            NoteSwimming(ctx, player, pos);
             var next = WithSurroundings(ctx, now, pos, online: true);
             // Weather drifts slowly, so small changes in the rate wait for a bigger one.
             if (MathF.Abs(next.WarmthRate - v.WarmthRate) > 0.02f * MathF.Abs(v.WarmthRate) + 1e-7f || next.NearHeat != v.NearHeat || next.Wet != v.Wet
