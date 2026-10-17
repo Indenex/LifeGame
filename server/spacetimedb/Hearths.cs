@@ -34,8 +34,22 @@ public static partial class Module
     // Before a fire is checked for burning out, a hearth fire may top up its fuel (D-149).
     static partial void FireTopUpHook(ReducerContext ctx, Fire fire, ref Timestamp fuelUntil);
 
-    static (float X, float Z) FireSpot(ReducerContext ctx, PlayerPos pos)
+    static (float X, float Z) FireSpot(ReducerContext ctx, PlayerPos pos, (float X, float Z)? chosen = null)
     {
+        // A spot the player chose is taken as it is if it is in reach and clear; a built or
+        // cold hearth within reach still takes the fire when the choice is beside it.
+        if (chosen is { } pick)
+        {
+            float dist = Dist(pos.X, pos.Z, pick.X, pick.Z);
+            if (dist > World.Reach + 0.5f) throw new Exception("That is out of reach");
+            if (dist < 0.8f) throw new Exception("That is too close to stand");
+            (float X, float Z)? raised = null;
+            BuiltHearthSpotHook(ctx, pick.X, pick.Z, ref raised);
+            if (raised is { } onHearth && Dist(onHearth.X, onHearth.Z, pick.X, pick.Z) < Fires.Spacing) return onHearth;
+            if (NearestColdHearth(ctx, pick.X, pick.Z, 0.5f) is { } cold) return (cold.X, cold.Z);
+            if (!ClearForFire(ctx, pick.X, pick.Z)) throw new Exception("There's no clear, level ground there for a fire");
+            return pick;
+        }
         (float X, float Z)? built = null;
         BuiltHearthSpotHook(ctx, pos.X, pos.Z, ref built);
         if (built is { } b) return b;
