@@ -394,7 +394,7 @@ public partial class BuildingSystem : Node
         }
         else if (e.IsActionPressed("build_rotate"))
         {
-            ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
+            if (!Structures.Shape(placeKind).FixedYaw) ghostYawTarget += Mathf.Pi / 4f * (Input.IsKeyPressed(Key.Shift) ? -1 : 1);
             GetViewport().SetInputAsHandled();
         }
         else if (e is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
@@ -422,7 +422,7 @@ public partial class BuildingSystem : Node
         placing = true;
         ghostPlaced = false;
         // Face the open side toward the camera, so you look into what you build.
-        ghostYawTarget = ghostYaw = Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
+        ghostYawTarget = ghostYaw = Structures.Shape(placeKind).FixedYaw ? 0f : Mathf.Snapped(Mathf.Atan2(-cameraRig.Forward.X, -cameraRig.Forward.Z), Mathf.Pi / 4f);
         MakeGhost();
     }
 
@@ -450,7 +450,7 @@ public partial class BuildingSystem : Node
             hud.Note(placeProblem);
             return;
         }
-        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, ghostYawTarget);
+        c.Reducers.PlaceStructure((StructureKind)placeKind, ghostPos.X, ghostPos.Z, Structures.Shape(placeKind).FixedYaw ? 0f : ghostYawTarget);
         Sfx.Play(Cue.Place);
         // Shift keeps the ghost up for another of the same kind (fences, walls, houses in a row).
         if (Input.IsKeyPressed(Key.Shift)) MakeGhost();

@@ -59,6 +59,8 @@ namespace LifeGame.Shared
         public byte EggCap;
         // Settles for the night in a coop (or a sheltered spot) and comes out at dawn.
         public bool Roosts;
+        // Beds down through the middle of the day and grazes again towards evening (deer, animals-21).
+        public bool BedsAtMidday;
 
         // The client's model plan ("sheep", "deer" or "hen") and the share of males that carry antlers.
         public string Model = "sheep";
@@ -93,7 +95,7 @@ namespace LifeGame.Shared
                 Id = Deer, Key = "animal.deer", Name = "Red deer",
                 Walk = 1.1f, Trot = 2.4f, Run = 6.5f, Notice = 30f, CalmSpeed = 1.2f,
                 HomeRange = 18f, FleeAhead = 12f, WanderMin = 4f, WanderMax = 12f, WoodPref = 0.45f, Curious = false,
-                Wary = 10f, RunFloor = 0.3f, RunHealthShare = 0.7f, RestBelowHealth = 45,
+                Wary = 10f, RunFloor = 0.3f, RunHealthShare = 0.7f, RestBelowHealth = 45, BedsAtMidday = true,
                 Meat = Item.RawVenison, MeatGrown = 2, MeatYoung = 1, Hide = Item.DeerHide, Extra = Item.Antler,
                 Model = "deer", AntlerShare = 0.35f,
                 Herds = new[] { new AnimalHerdSpot(70f, 45f, 4, 22f), new AnimalHerdSpot(-60f, -75f, 3, 22f) },

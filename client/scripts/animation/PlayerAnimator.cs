@@ -192,6 +192,7 @@ public sealed class PlayerAnimator
         bool lying = Rest == RestKind.Lie && restStage > 2.5f;
         Face mood =
             lying && Asleep ? Face.Closed
+            : shownGesture == Gesture.Doze ? (gestureTime < 3.5f ? Face.Closed : Face.Open)
             : lying || shownGesture == Gesture.Yawn ? Face.Sleepy
             : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Face.Happy
             : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Face.Sleepy
@@ -358,12 +359,12 @@ public sealed class PlayerAnimator
     // around or rolls its shoulders; it waves at someone close by, sways happily by a
     // fire, and in the cold rubs its hands and shivers (#15, kept gentle: D-313). Each
     // figure keeps its own timing (seed), so a crowd never moves in step.
-    enum Gesture { None, Stretch, LookAround, Shoulders, RubHands, Yawn, Wave, Sway }
+    enum Gesture { None, Stretch, LookAround, Shoulders, RubHands, Yawn, Wave, Sway, Doze }
     Gesture shownGesture;
     float stillFor, gestureTime, nextGesture = 4f, lastWave = -999f, waveYaw;
     const float GestureSeconds = 2.6f;
 
-    static float LengthOf(Gesture g) => g switch { Gesture.Sway => 6f, Gesture.Yawn => 2.8f, Gesture.Wave => 2.2f, _ => GestureSeconds };
+    static float LengthOf(Gesture g) => g switch { Gesture.Doze => 5f, Gesture.Sway => 6f, Gesture.Yawn => 2.8f, Gesture.Wave => 2.2f, _ => GestureSeconds };
 
     // What is around the figure when it next fidgets: warmth from a burning fire (0 to
     // 1) and the turn to the nearest other player close enough to wave at (radians,
@@ -382,6 +383,8 @@ public sealed class PlayerAnimator
         int pick = (int)Mathf.PosMod(time * 7.3f + seed * 13f, 4f);
         if (warmth > 0.2f && pick < 2) return Gesture.Sway;
         if (cold > 0.5f && pick != 1) return Gesture.RubHands;
+        // Late at night a figure standing about nods off on its feet now and then (anim-23).
+        if (Atmosphere.Night > 0.75f && pick >= 2) return Gesture.Doze;
         return pick switch { 0 => Gesture.Stretch, 1 => Gesture.LookAround, 2 => Gesture.Shoulders, _ => Gesture.Yawn };
     }
 
@@ -468,6 +471,24 @@ public sealed class PlayerAnimator
                 p[Joint.ElbowL].X = -0.2f;
                 p[Joint.ElbowR].X = -0.2f;
                 p[Joint.Neck].Z = 0.18f * Mathf.Sin(t * 2.4f);
+                break;
+            }
+            case Gesture.Doze:
+            {
+                // Dozing on its feet: the head sinks slowly forward, the shoulders slump and
+                // the body sways, then with a little start it jerks awake and straightens.
+                float sink = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 3.4f, 0f, 1f));
+                float wake = Mathf.Clamp((t - 3.5f) / 0.25f, 0f, 1f);
+                float droop = sink * (1f - wake);
+                float startle = Mathf.Sin(Mathf.Clamp((t - 3.5f) / 0.5f, 0f, 1f) * Mathf.Pi);
+                p.HipsOffset = new Vector3(0, -0.01f * droop, 0);
+                p[Joint.Spine].X = 0.12f * droop - 0.06f * startle;
+                p[Joint.Spine].Z = 0.04f * droop * Mathf.Sin(t * 0.9f);
+                p[Joint.Neck].X = 0.55f * droop - 0.15f * startle;
+                p[Joint.ShoulderL] = new Vector3(-0.02f, 0, 0.06f - 0.03f * droop + 0.08f * startle);
+                p[Joint.ShoulderR] = new Vector3(-0.02f, 0, -0.06f + 0.03f * droop - 0.08f * startle);
+                p[Joint.ElbowL].X = -0.1f;
+                p[Joint.ElbowR].X = -0.1f;
                 break;
             }
             case Gesture.Sway:

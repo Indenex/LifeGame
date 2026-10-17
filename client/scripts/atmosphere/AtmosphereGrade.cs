@@ -101,7 +101,7 @@ public partial class Atmosphere
         // Cosy shade is a lighter lavender-blue by day and a softer moonlit blue.
         env.AmbientLightColor = env.AmbientLightColor
             .Lerp(new Color(0.48f, 0.44f, 0.60f).Lerp(new Color(0.60f, 0.58f, 0.76f), soft), 0.2f * grade * daylight + 0.1f * soft * daylight)
-            .Lerp(new Color(0.40f, 0.42f, 0.66f).Lerp(new Color(0.62f, 0.50f, 0.66f), soft), 0.3f * lowSun)
+            .Lerp(new Color(0.40f, 0.42f, 0.66f).Lerp(new Color(0.62f, 0.57f, 0.68f), soft), 0.3f * lowSun)
             .Lerp(new Color(0.30f, 0.32f, 0.58f).Lerp(new Color(0.36f, 0.40f, 0.64f), soft), 0.45f * night);
         env.AmbientLightSkyContribution = 0.75f - 0.1f * grade - 0.2f * lowSun - 0.1f * night;
         // Deeper shade: less fill light and stronger contact shadows, so darks hold their
@@ -122,10 +122,10 @@ public partial class Atmosphere
         // takes less of the sky's colour and leans toward a soft warm beige by day.
         env.FogAerialPerspective = 0.5f - 0.3f * grade;
         env.FogLightColor = env.FogLightColor.Lerp(new Color(0.78f, 0.72f, 0.60f) * (0.6f + 0.4f * daylight), 0.35f * grade * daylight);
-        // Cosy: dawn and dusk air glows peach-rose, not brown, and the day haze is a
-        // paler cream.
+        // Cosy: dawn and dusk air glows a light warm peach, not brown, and the day haze
+        // is a paler cream. (A stronger rose read as a murky pink veil, atmosphere-39.)
         env.FogLightColor = env.FogLightColor.Lerp(new Color(0.86f, 0.82f, 0.74f) * (0.6f + 0.4f * daylight), 0.3f * soft * daylight)
-            .Lerp(new Color(0.96f, 0.74f, 0.70f), 0.45f * soft * lowSun);
+            .Lerp(new Color(0.96f, 0.84f, 0.74f), 0.3f * soft * lowSun);
         // Gentle bloom: a softer threshold so fire and bright light glow, swelling at low sun.
         env.GlowIntensity += 0.15f * grade + 0.3f * lowSun;
         env.GlowBloom = 0.08f + 0.06f * grade + 0.1f * lowSun;

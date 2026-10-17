@@ -51,6 +51,7 @@ namespace LifeGame.Shared
                     Round = true, Radius = HearthRadius, Solid = true,
                     Clearance = 0.6f,
                     Indoor = true,
+                    Hearth = true,
                     Stages = new[] { "Stone ring", "Clay surround" },
                     // Raised hearth: Stone ring, Clay surround
                     Costs = new (Item Item, uint Count)[][]
@@ -136,6 +137,58 @@ namespace LifeGame.Shared
                         new[] { (Item.Stick, 5u) },
                         new[] { (Item.Stick, 4u), (Item.Fiber, 4u) },
                         new[] { (Item.Fiber, 6u) },
+                    },
+                },
+            },
+                // A stone-ringed hearth (D-286, Justin): an outdoor hearth builders can work beside through winter
+                // nights. A fire lit on it warms out to Fires.StoneRingWarmthRadius instead of the campfire's 5 m,
+                // and burns longer like the raised hearth. Wild like the campfire; modest stone cost.
+            new StructureDef
+            {
+                // 19: its StructureKind position, after HenCoop = 18 (a SpacetimeDB enum takes no explicit values).
+                Kind = 19,
+                Shape = new StructureShape
+                {
+                    Name = "Stone-ringed hearth",
+                    Model = "StoneHearth",
+                    Wild = true,
+                    Category = "Fire",
+                    Round = true, Radius = 0.55f, Solid = true,
+                    Clearance = 0.7f,
+                    Hearth = true,
+                    // Survival's constant (9 m, so a winter-night builder is warm out to about 8 m); Justin tunes it there.
+                    HeatRadius = Fires.StoneRingWarmthRadius,
+                    Stages = new[] { "Ring stones", "Kerb" },
+                    // Stone-ringed hearth: Ring stones, Kerb
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 5u) },
+                        new[] { (Item.Stone, 3u) },
+                    },
+                },
+            },
+                // A sundial (building-19, Justin): a flat stone and a stick. Everyone in its claim, and its
+                // town, sees the time of day on their screen while it stands. Claim-only: it only counts there.
+            new StructureDef
+            {
+                // 20: its StructureKind position for now (the plan is 23 once the devices 20-22 land; the
+                // startup check will catch a mismatch).
+                Kind = 20,
+                Shape = new StructureShape
+                {
+                    Name = "Sundial",
+                    Model = "Sundial",
+                    Category = "Crafting",
+                    Sundial = true,
+                    FixedYaw = true,
+                    Round = true, Radius = 0.4f, Solid = true,
+                    Clearance = 0.8f,
+                    Stages = new[] { "Plinth", "Dial" },
+                    // Sundial: Plinth, Dial (a flat stone and a stick for the gnomon, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stone, 3u) },
+                        new[] { (Item.Stone, 1u), (Item.Stick, 1u) },
                     },
                 },
             },
