@@ -10,9 +10,9 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 
 [display]
 
-window/size/viewport_width=760
-window/size/viewport_height=440
-window/size/resizable=false
+window/size/viewport_width=860
+window/size/viewport_height=560
+window/size/resizable=true
 
 [rendering]
 

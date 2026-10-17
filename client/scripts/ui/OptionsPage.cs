@@ -29,6 +29,7 @@ public partial class OptionsPage : Control
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
     Button lightRays = null!;
+    Button softGlow = null!, vignette = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -100,12 +101,29 @@ public partial class OptionsPage : Control
         });
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
+        // A soft lens (Atmosphere, D-313): warm glow and light leaks, and a vignette.
+        softGlow = ControlsPage.TextButton(OnOff("Soft glow", Atmosphere.SoftGlow), () =>
+        {
+            Atmosphere.SoftGlow = !Atmosphere.SoftGlow;
+            Settings.Set("graphics", "soft_glow", Atmosphere.SoftGlow ? 1 : 0);
+            softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        });
+        softGlow.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(softGlow);
+        vignette = ControlsPage.TextButton(OnOff("Vignette", Atmosphere.Vignette), () =>
+        {
+            Atmosphere.Vignette = !Atmosphere.Vignette;
+            Settings.Set("graphics", "vignette", Atmosphere.Vignette ? 1 : 0);
+            vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        });
+        vignette.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(vignette);
         // Bouncy windows, squishy buttons, wiggling items (D-314); off for a calmer screen.
         Button motion = null!;
-        motion = ControlsPage.TextButton(MotionText(), () =>
+        motion = ControlsPage.TextButton(OnOff("Reduce motion", Bounce.Reduce), () =>
         {
             Bounce.Reduce = !Bounce.Reduce;
-            motion.Text = MotionText();
+            motion.Text = OnOff("Reduce motion", Bounce.Reduce);
         });
         motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(motion);
@@ -125,9 +143,9 @@ public partial class OptionsPage : Control
         column.AddChild(back);
     }
 
-    static string MotionText() => Bounce.Reduce ? "Reduce motion: on" : "Reduce motion: off";
-
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
+
+    static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
 
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
@@ -143,6 +161,8 @@ public partial class OptionsPage : Control
         view.SetValueNoSignal((int)ViewDistance.Setting);
         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
         lightRays.Text = RaysText();
+        softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
         Visible = true;
     }
 
