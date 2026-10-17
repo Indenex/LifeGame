@@ -8,6 +8,12 @@ public static partial class Module
     [SpacetimeDB.Reducer(ReducerKind.Init)]
     public static void Init(ReducerContext ctx)
     {
+        // A mis-appended structure kind fails the first publish (CI load test) instead of breaking a world.
+        var enumKinds = Enum.GetValues<StructureKind>().Select(k => (int)k).OrderBy(k => k);
+        if (!enumKinds.SequenceEqual(Structures.Kinds))
+            throw new InvalidOperationException(
+                "StructureKind enum and the StructureDefs in shared/structures/ disagree: enum "
+                + string.Join(",", enumKinds) + " defs " + string.Join(",", Structures.Kinds));
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
