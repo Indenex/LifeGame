@@ -16,6 +16,8 @@ public partial class PauseMenu : CanvasLayer
     // Other things that own Esc while they're open (a panel, chat, placing a building).
     // Main supplies them; when any says yes, Esc is theirs.
     public Func<bool> OthersOpen = () => false;
+    // Opens the bug report window (Main sets it).
+    public Action? ReportBug;
     public KeyHelp Keys = null!;
     // The world's music (Atmosphere's SoundScape), for the music slider; Main sets it.
     public Func<SoundScape?> Sound = () => null;
@@ -63,6 +65,9 @@ public partial class PauseMenu : CanvasLayer
         column.AddChild(Entry("Resume", Close));
         column.AddChild(Entry("Options", ShowOptions));
         column.AddChild(Entry("Controls", ShowControls));
+        // The bug report window (bugfix-42, F8); Main sets ReportBug. The menu closes first
+        // so the report's picture is of the world, not of this menu.
+        column.AddChild(Entry("Report a bug", () => { Close(); ReportBug?.Invoke(); }));
         column.AddChild(Entry("Quit", () => GetTree().Quit()));
 
         page.Back = HideControls;

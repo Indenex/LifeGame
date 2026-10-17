@@ -183,7 +183,7 @@ public partial class Main : Node3D
         AddChild(keyHelp);
         SetUpBugReport();
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => bugReport?.IsOpen == true || crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { ReportBug = () => GetTree().CreateTimer(0.15).Timeout += () => bugReport?.Open(), Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => bugReport?.IsOpen == true || crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);

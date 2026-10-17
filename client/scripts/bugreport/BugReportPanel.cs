@@ -25,7 +25,9 @@ public partial class BugReportPanel : CanvasLayer
 
     Control panel = null!;
     LineEdit what = null!;
-    Label result = null!;
+    Label result = null!, thanks = null!;
+    TextureRect picture = null!;
+    Control asking = null!;
     Image? shot;
 
     public override void _Ready()
@@ -58,6 +60,11 @@ public partial class BugReportPanel : CanvasLayer
         Panels.Opening(this);
         what.Text = "";
         result.Text = "";
+        thanks.Visible = false;
+        asking.Visible = true;
+        // The picture that goes with the report, small, so you can see what is sent.
+        picture.Texture = shot == null ? null : ImageTexture.CreateFromImage(shot);
+        picture.Visible = shot != null;
         panel.Visible = true;
         what.GrabFocus();
     }
@@ -68,24 +75,84 @@ public partial class BugReportPanel : CanvasLayer
         what.ReleaseFocus();
     }
 
+    // The look (UX, ui-29): the shared window, a clear field, Send as the main button, the
+    // screenshot as a small picture, and a plain thank-you once it's sent.
     Control MakePanel()
     {
-        var box = new VBoxContainer { CustomMinimumSize = new Vector2(460, 0) };
-        box.AddThemeConstantOverride("separation", 10);
+        var box = new VBoxContainer { CustomMinimumSize = new Vector2(520, 0) };
+        box.AddThemeConstantOverride("separation", 12);
         box.AddChild(Ui.Title("Report a bug"));
-        box.AddChild(Hud.Text("What went wrong? A few words is plenty. A picture of the game and your details are added for you.", 14));
-        what = new LineEdit { PlaceholderText = "For example: my sleeping mat vanished", MaxLength = 300 };
+
+        asking = new VBoxContainer();
+        asking.AddThemeConstantOverride("separation", 12);
+        box.AddChild(asking);
+        var top = new HBoxContainer();
+        top.AddThemeConstantOverride("separation", 14);
+        asking.AddChild(top);
+        var ask = Hud.Text("What went wrong? A few words is plenty. This picture and your game details go with it.", 14);
+        ask.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        ask.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        ask.Modulate = new Color(1, 1, 1, 0.8f);
+        top.AddChild(ask);
+        picture = new TextureRect
+        {
+            CustomMinimumSize = new Vector2(160, 90),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+        };
+        top.AddChild(picture);
+
+        what = new LineEdit { PlaceholderText = "For example: my sleeping mat vanished", MaxLength = 300, CustomMinimumSize = new Vector2(0, 40) };
+        what.AddThemeFontSizeOverride("font_size", 16);
+        var field = new StyleBoxFlat { BgColor = new Color(0.05f, 0.05f, 0.04f, 0.9f), BorderColor = new Color(Look.Cream, 0.35f) };
+        field.SetBorderWidthAll(1);
+        field.SetCornerRadiusAll(6);
+        field.ContentMarginLeft = field.ContentMarginRight = 10;
+        var focused = (StyleBoxFlat)field.Duplicate();
+        focused.BorderColor = new Color(Look.Cream, 0.8f);
+        what.AddThemeStyleboxOverride("normal", field);
+        what.AddThemeStyleboxOverride("focus", focused);
         what.TextSubmitted += _ => Send();
-        box.AddChild(what);
-        var row = new HBoxContainer();
+        asking.AddChild(what);
+
+        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         row.AddThemeConstantOverride("separation", 10);
-        row.AddChild(ControlsPage.TextButton("Send report", Send));
         row.AddChild(ControlsPage.TextButton("Cancel", Close));
-        box.AddChild(row);
+        row.AddChild(MainButton("Send report", Send));
+        asking.AddChild(row);
+
+        // After Send: a plain thank-you, with where the copy went in smaller print.
+        thanks = Hud.Text("Thanks, it's sent.", 18);
+        thanks.Modulate = new Color(0.8f, 1f, 0.75f);
+        thanks.Visible = false;
+        box.AddChild(thanks);
         result = Hud.Text("", 13);
         result.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        result.Modulate = new Color(1, 1, 1, 0.75f);
         box.AddChild(result);
+
+        var hint = Hud.Text("Enter sends    Esc closes    F8 opens this any time", 13);
+        hint.Modulate = new Color(1, 1, 1, 0.55f);
+        box.AddChild(hint);
         return Ui.Window(box);
+    }
+
+    // The one filled button: the thing to do here.
+    static Button MainButton(string text, Action pressed)
+    {
+        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(150, 38) };
+        b.AddThemeFontSizeOverride("font_size", 16);
+        var style = new StyleBoxFlat { BgColor = new Color(0.55f, 0.42f, 0.24f, 0.95f) };
+        style.SetCornerRadiusAll(8);
+        var hover = (StyleBoxFlat)style.Duplicate();
+        hover.BgColor = new Color(0.64f, 0.5f, 0.3f, 1f);
+        b.AddThemeStyleboxOverride("normal", style);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
+        b.AddThemeColorOverride("font_color", Look.Cream);
+        b.AddThemeColorOverride("font_hover_color", Look.Cream);
+        b.Pressed += pressed;
+        return b;
     }
 
     void Send()
@@ -103,8 +170,10 @@ public partial class BugReportPanel : CanvasLayer
         string folder = ProjectSettings.GlobalizePath("user://bug-reports");
         if (error == null) OS.ShellOpen(folder);
         result.Text = error == null
-            ? $"Sent. A copy is saved in {folder}. The summary is on your clipboard."
-            : $"Sent to the server. Saving the copy failed: {error}";
+            ? $"A copy is saved in {folder} (that folder just opened), and a one-line summary is on your clipboard."
+            : $"Saving a copy on this computer failed ({error}), but the server has it.";
+        thanks.Visible = true;
+        asking.Visible = false;
         what.Text = "";
     }
 
