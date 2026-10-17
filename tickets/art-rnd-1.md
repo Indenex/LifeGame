@@ -14,8 +14,11 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 - 2026-10-17: started. Old shell = one ellipsoid with ellipsoid "plates" stuck on top and a ring of ellipsoid marginals; no continuous surface, no painted texture. No Blender/Godot in the container: installing Blender 4.2 LTS to ~/tools/blender and Godot via tools/render/setup.sh.
 - 2026-10-17: Blender 4.2.3 runs headless (Cycles CPU ok; Eevee ok under xvfb with libegl1). Golden Skull packs are 2D PNGs only. Draft report in docs/art-pipeline.md. Showcase --view=turntable added (bdfa9163).
 
+- 2026-10-17: report pushed (d3fc29ae) and summary sent to the PM. Before turntables of #594 rendered (Sonnet helper; tools/render/scenes/art-rnd-1-turntable.sh).
+- 2026-10-17: pilot pipeline works end to end: tools/art/pebble_shell/build.sh (Blender: model, Cycles bake of AO and normals, glb; paint.py: painted albedo) -> client/assets/models/pebble_shell/; ChibiShell.cs puts it on the Spine bone (ChibiShell.Enabled; Showcase --built-shell for the old one). v1 render e48b64f7: big step up, but flat from the side and too orange. v2: higher dome, muted palette.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Build the shell in Blender: tools/art/pebble_shell.py (model, bake, paint, export glb), then load it in ChibiFigure and render the turntable.
+Render v2 with `tools/render/scenes/art-rnd-1-turntable.sh HEAD <name> --style=1` and review it. Then render the worn style and colour variants, commit the before/after images under renders/, and send them to the PM.
