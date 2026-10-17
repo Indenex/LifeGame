@@ -1059,3 +1059,11 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-261 — 2026-10-17 — Pines: fuller, closer to the painted texture, with random sides, widths and heights (follows D-253)
 **Decision:** The 3D pine, at about 80% of the painted card pines, is a step in the right direction. It should be fuller and match the texture even more. Pines also need random sides, widths, heights and so on for variety (D-166). Owner: Modeling.
 **Who:** Justin ("fuller and match the texture even more, but this is a step in the right direction. We also need random sides, widths, heights, etc for some variety.")
+
+## D-262 — 2026-10-17 — Antler stays a plain material for now
+**Decision:** Antler stays a plain material. There is no soft hammer or flaker made from it for now.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-263 — 2026-10-17 — Tools in the doll's Tools section count as carried (refines D-219, D-223)
+**Decision:** Tools in the doll's Tools section count as carried, so recipes, trades, stashing and death can take them. The Tools section is just a weightless home: no bag space and no weight, as in D-219 and D-223.
+**Who:** Justin (relayed by the PM; no direct quote).
