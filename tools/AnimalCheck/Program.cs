@@ -547,8 +547,10 @@ Ok("a rabbit snare is set down and the server keeps a row for it");
 int RabbitsAtSnare() => conn.Db.Animal.Iter().Count(a => a.Species == AnimalSpecies.Rabbit && MathF.Abs(a.X - snx) < 2f && MathF.Abs(a.Z - snz) < 2f);
 void WaitForCatch()
 {
+    // Counted before the spawns: the snare can take the first rabbit while the third is still
+    // being placed, so a count taken after them may already be one short (bugfix-59).
+    int before = RabbitsAtSnare() + 3;
     for (int i = 0; i < 3; i++) Spawn(AnimalSpecies.Rabbit, snx + 0.1f * i, snz);
-    int before = RabbitsAtSnare();
     Pump(() => conn.Db.SnareState.ItemId.Find(snareRow.ItemId) is { Caught: not 0 }, 60, "the snare to catch a rabbit");
     Pump(() => RabbitsAtSnare() < before, 10, "the caught rabbit to leave the field");
     Settle(300);
