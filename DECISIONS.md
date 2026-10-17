@@ -1334,3 +1334,27 @@ PM defaults taken under this decision (each: PM default while Justin asleep; rev
 10. Claim protections for animal goods: eggs from hens inside a claim are claim-members-only (open outside claims); leather drying on a hide rack can be taken only by its maker or claim members; butchering a carcass inside a claim stays open to anyone for now. Alternatives were: eggs open to all, or owner-only everywhere; hide racks open to all; butchering members-only. (PM default while Justin asleep; revisit)
 11. New Options > Graphics > UI size slider (Auto, 80 to 200%). The default for new players is Auto: designed size up to 1080p, scaling up on taller windows (about 133% at 1440p, 200% at 4K). Alternatives were a fixed 100%, or Auto capped at 150%. (PM default while Justin asleep; revisit)
 12. Bag tooltips describe what an item does in words (for example "Eat: a snack", "Burns for about 2 min"), not exact numbers. Alternatives were exact numbers (+12% food), or words with numbers shown while Shift is held. (PM default while Justin asleep; revisit)
+
+## D-324 — 2026-10-17 — ClayCheck runs nightly and on a manual button, not on every PR
+**Decision:** ClayCheck (the "first pot run", crafting-39, #812) runs nightly plus on a manual button (`nightly.yml`, #814), not on every PR. The repo is public, so it costs nothing.
+**Who:** PM call.
+
+## D-325 — 2026-10-17 — Hidden values, stage A (bugfix-53, D-182)
+**Decision:** Hidden values, stage A. One table family per PR, no world wipe; each must pass the Upgrade check. New private tables, with the old columns zeroed, not removed. Anything other players' clients draw stays public, including "Made by"; only Quality and Wear move. Owning lanes are consulted through the PM. Stage B (per-chunk views for PlayerPos and Animal) comes later, led by Integration, before outside players join.
+**Who:** PM call.
+
+## D-326 — 2026-10-17 — Live-device upgrade rule (#819)
+**Decision:** A running DeviceJob without a DeviceStatus row gets one at its next tick (#819).
+**Who:** PM call.
+
+## D-327 — 2026-10-17 — Animals' next item is the rabbit snare (animals-34)
+**Decision:** Animals' next item is animals-34, the rabbit snare (item 218). It is being built on the recommended options: it catches 1 in 4 per pass; it re-sets itself and wears out after 6 catches; the owner and claim members collect raw rabbit and fur. Pending Justin's confirmation.
+**Who:** PM default; pending Justin's confirmation.
+
+## D-328 — 2026-10-17 — Banned players see how long they are kept off a town's claims (claims-26)
+**Decision:** Claims-26 (#815): banned players see "You are kept off <town>'s claims for about N more". Recommended; pending Justin's confirmation.
+**Who:** PM default; pending Justin's confirmation.
+
+## D-329 — 2026-10-17 — D-323 autopilot ended; its defaults await Justin's confirmation
+**Decision:** Justin is back. The D-323 autopilot ended at about 13:55Z on 2026-10-17. Its PM defaults (all tagged "PM default while Justin asleep; revisit") still await his confirmation.
+**Who:** Relayed by the PM; no direct quote.

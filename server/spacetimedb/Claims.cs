@@ -164,7 +164,7 @@ public static partial class Module
     {
         if (ClaimAt(ctx, x, z) is not { } claim) return;
         if (!HasClaimRights(ctx, claim, Me(ctx)))
-            throw new Exception($"This land is claimed by {claim.OwnerName}");
+            throw new Exception(BanRefusal(ctx, claim, Me(ctx)) ?? $"This land is claimed by {claim.OwnerName}");
         // Working a neighbour's land under a town roster does not keep their claim standing.
         if (IsOwnerOrMember(ctx, claim, Me(ctx))) TendByWork(ctx, claim);
     }

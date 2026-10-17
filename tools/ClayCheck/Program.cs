@@ -117,6 +117,7 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 Gather(Item.Stone, jarRun ? 14u : 6u);
 Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
 Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
+Log("STAGE gathered-stone-stick-fiber");
 
 // Dig: every dig in a clay patch gives a lump of clay.
 WalkTo(clayX, clayZ, 1.2f);
@@ -129,6 +130,7 @@ while (CountOf(Item.Clay) < clayWanted)
     if (!World.IsClay(cx, cz) || DepthAt(cx, cz) >= World.MaxDigDepth - 1) { cell++; continue; }
     lastError = null;
     uint before = CountOf(Item.Clay);
+    Timeline.Step();
     conn.Reducers.Dig(cx, cz);
     Pump(() => lastError != null || CountOf(Item.Clay) > before, 3, "a dig");
     if (lastError is { } err && !err.Contains("Still working") && !err.Contains("reach")) Fail($"dig: {err}");
@@ -136,6 +138,7 @@ while (CountOf(Item.Clay) < clayWanted)
     Pump(() => false, 0.65f, null);
 }
 Log($"Dug {CountOf(Item.Clay)} clay");
+Log("STAGE clay-dug");
 
 // Pots are shaped at a potter's bench inside a claim (D-112): make a stone axe, chop
 // a log, claim land past the spawn clearing and build the bench there. All the clay
@@ -155,6 +158,7 @@ Craft("clay.grit", 0, Item.Grit);
 Craft("clay.temper_grit", 0, Item.TemperedClay);
 Craft("clay.temper_grit", 0, Item.TemperedClay);
 if (CountOf(Item.TemperedClay) != 4) Fail($"expected 4 tempered clay, have {CountOf(Item.TemperedClay)}");
+Log("STAGE clay-tempered");
 
 // Shape two pinch pots at the bench; they are set down beside it, on our side.
 AtBench();
@@ -169,6 +173,7 @@ var good = pots[1];
 // A fire right beside the wet pots, off the bench, fed well enough for a firing.
 LightFireNear(pots.Average(p => p.X) + 1.3f, pots.Average(p => p.Z));
 Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
+Log("STAGE pots-shaped-and-fire-lit");
 KeepFireGoing();
 Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate {good.DryRate * 480:F2}x");
 if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
@@ -204,6 +209,7 @@ Log("Damp pot cracked into sherds, as it should");
 KeepFireGoing();
 WalkTo(good.X, good.Z, 1.2f);
 lastError = null;
+Timeline.Step();
 conn.Reducers.TendClay(good.Id, false);
 Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(good.Id)?.Stage == (byte)ClayStage.Firing, 3, "the dry pot to go in the fire");
 if (lastError != null) Fail($"firing: {lastError}");
@@ -226,6 +232,7 @@ if (whole)
     Gather(Item.PinchPot, 1);
     WalkTo(waterX, waterZ, 1.5f);
     lastError = null;
+    Timeline.Step();
     conn.Reducers.FillPots();
     Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) > 0, 3, "a pot of water");
     if (lastError != null) Fail($"filling: {lastError}");
@@ -249,6 +256,7 @@ Log("Inventory:");
 foreach (var row in conn.Db.MyInventory.Iter().OrderBy(r => r.Item))
     Log($"  {Items.Def((Item)row.Item).Count(row.Count)} x{row.Count} (quality {row.Quality})");
 Log(whole ? "Clay check passed: dug clay to a fired pot of water" : "Clay check passed (pot cracked; rerun to see the water)");
+Timeline.Print();
 conn.Disconnect();
 return 0;
 
@@ -1045,6 +1053,7 @@ void SetUpBench()
     var trunk = Trees.Trunk(treeX, treeZ);
     WalkTo(trunk.X, trunk.Z, 1.2f);
     Craft("chop.log", 0, Item.Log);
+    Log("STAGE axe-and-log");
 
     // Claims stay out of the spawn clearing: walk out past it, away from the origin.
     float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
@@ -1054,6 +1063,7 @@ void SetUpBench()
     marker = BuildHere(StructureKind.ClaimMarker, (sx, sz) => sx * sx + sz * sz > (keepOut + 1f) * (keepOut + 1f) && ClearGround(sx, sz, -1, 1, -1, 1));
     Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
     Log($"Claimed land at {marker.X:F1}, {marker.Z:F1}");
+    Log("STAGE claimed");
 
     // With no bench, shaping is refused.
     lastError = null;
@@ -1153,6 +1163,7 @@ Structure BuildHere(StructureKind kind, Func<float, float, bool> ok)
     WalkTo(at.X, at.Z + 2f, 0.2f);
     int before = conn.Db.Structure.Count;
     lastError = null;
+    Timeline.Step();
     conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
     Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
     if (lastError != null) Fail($"laying out a {kind}: {lastError}");
@@ -1190,6 +1201,7 @@ void Feed(int sticks)
     for (int i = 0; i < sticks && CountOf(Item.Stick) > 0; i++)
     {
         lastError = null;
+        Timeline.Step();
         conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
         Pump(() => false, 0.3f, null);
         if (lastError != null) Fail($"feeding the fire: {lastError}");
@@ -1243,6 +1255,7 @@ void EquipAxe()
 void Craft(string processId, float score, Item? expect)
 {
     if (Processes.Find(processId) is { Outcome: Outcome.Chop }) EquipAxe();
+    Timeline.Step();
     uint before = expect is { } e ? CountOf(e) : 0;
     lastError = null;
     if (Processes.Find(processId) is { Minigame: not Minigame.None } mg)
@@ -1281,6 +1294,7 @@ void Gather(Item item, uint want)
 
         WalkTo(target.X, target.Z, 1.5f);
         uint before = CountOf(item);
+        Timeline.Step();
         conn.Reducers.PickUp(target.Id);
         Pump(() => CountOf(item) > before || conn.Db.WorldItem.Id.Find(target.Id) == null, 3, "pickup");
     }
@@ -1304,10 +1318,44 @@ void Pump(Func<bool> until, float seconds, string? what)
     }
 }
 
-static void Log(string message) => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
+static void Log(string message)
+{
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
+    if (message.StartsWith("STAGE ")) Timeline.Mark(message[6..]);
+}
 
 static void Fail(string message)
 {
     Console.Error.WriteLine($"Clay check FAILED: {message}");
     Environment.Exit(1);
+}
+
+// The run's stage timeline (crafting-39): when each STAGE line was reached, in real minutes from the
+// first step, and how many player actions (crafts, digs, pick-ups, tends) it took since the last one.
+// It is what the PM reads to judge the pace of a new player's first pot against D-075.
+static class Timeline
+{
+    static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+    static readonly List<(string Stage, double Minutes, int Steps)> Marks = new();
+    static int steps, lastSteps;
+    static double lastMinutes;
+
+    public static void Step() => steps++;
+
+    public static void Mark(string stage)
+    {
+        Marks.Add((stage, Clock.Elapsed.TotalMinutes, steps - lastSteps));
+        lastSteps = steps;
+    }
+
+    public static void Print()
+    {
+        Console.WriteLine("Timeline (real minutes since the bot woke; steps are player actions since the stage before):");
+        foreach (var (stage, minutes, stepCount) in Marks)
+        {
+            Console.WriteLine($"  {stage,-28} {minutes,5:F1} min  (+{minutes - lastMinutes:F1})  {stepCount} steps");
+            lastMinutes = minutes;
+        }
+        Console.WriteLine($"  total {Clock.Elapsed.TotalMinutes:F1} min, {steps} steps");
+    }
 }
