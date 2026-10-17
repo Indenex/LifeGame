@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
@@ -97,6 +98,9 @@ public partial class Main : Node3D
         HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
         hud.Hotbar.PlaceRequested += placing.StartItem;
         AddChild(placing);
+        // The maker's mark (ui-23): chosen from Options, shown on made things' tooltips.
+        BagGrid.Makers = markPicker.Link;
+        AddChild(markPicker);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
@@ -163,6 +167,7 @@ public partial class Main : Node3D
             || equipment.IsOpen
             || station.IsOpen
             || buildMenu.IsOpen
+            || markPicker.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
@@ -368,6 +373,15 @@ public partial class Main : Node3D
         if (token != null) builder = builder.WithToken(token);
         conn = builder.Build();
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
+        // A maker's mark carries 16 bits of the maker's id; this finds their name (ceramics-15).
+        ItemLook.MakerName = id => conn.Db.Player.Iter().FirstOrDefault(p => (p.PlayerId & 0xFFFFu) == id)?.Name;
+        ClayLook.MarkLookup = id =>
+        {
+            var m = conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == id);
+            int slot = m == null ? -1 : MakerStamp.SlotOf(m.Glyph);
+            if (m == null || slot < 0) return null;
+            return (slot, new Color(((m.Color >> 16) & 0xFF) / 255f, ((m.Color >> 8) & 0xFF) / 255f, (m.Color & 0xFF) / 255f));
+        };
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
@@ -390,7 +404,8 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
+        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
@@ -398,6 +413,8 @@ public partial class Main : Node3D
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
+        markPicker.Attach(new ServerMarkLink(conn, () => myId));
+        BagGrid.Makers = markPicker.Link;
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
@@ -564,7 +581,7 @@ public partial class Main : Node3D
         if (items.Has(item.Id)) return;
         float yaw = item.Placed ? item.Yaw : Terrain.Hash01((int)item.Id, 3, 21) * Mathf.Tau;
         var at = new Vector3(item.X, terrain.HeightAt(item.X, item.Z) + 0.04f, item.Z);
-        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at));
+        items.Add(item.Id, (Item)item.Item, new Transform3D(new Basis(Vector3.Up, yaw), at), item.Wear);
     }
 
     void RemoveItem(ulong id) => items.Remove(id);
@@ -586,15 +603,33 @@ public partial class Main : Node3D
             if (mb.ButtonIndex == MouseButton.WheelUp) cameraRig.Zoom(-2f);
             if (mb.ButtonIndex == MouseButton.WheelDown) cameraRig.Zoom(2f);
         }
-        if (e.IsActionPressed("dig")) Dig();
-        if (e.IsActionPressed("pick_up")) PickUp();
+        if (e.IsActionPressed("dig") && !e.IsEcho()) { digHold.Pressed(me.Position); Dig(); }
+        if (e.IsActionPressed("pick_up") && !e.IsEcho()) { pickHold.Pressed(me.Position); PickUp(); }
         if (e.IsActionPressed("craft")) crafting.Toggle();
     }
+
+    // Hold the dig key to keep digging, one cell at a time as the ground allows (HoldRepeat).
+    readonly HoldRepeat digHold = new();
+    // The same for picking things up off the ground with the Use key when nothing else is on offer.
+    readonly HoldRepeat pickHold = new();
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
         conn?.FrameTick();
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && digHold.Update(Input.IsActionPressed("dig"), dt, World.DigCooldownMicros / 1_000_000f + 0.1f, false, me.Position))
+        {
+            digHold.Acted(me.Position);
+            Dig();
+        }
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen
+            && pickHold.Update(Input.IsActionPressed("pick_up") && Use.Shown == null, dt, 0.5f, false, me.Position)
+            && conn != null && conn.Db.WorldItem.Iter().Any(i => new Vector2(i.X - me.Position.X, i.Z - me.Position.Z).Length() <= World.Reach))
+        {
+            pickHold.Acted(me.Position);
+            PickUp();
+        }
 
         if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);

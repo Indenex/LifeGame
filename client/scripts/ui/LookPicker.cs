@@ -139,14 +139,7 @@ public partial class LookPicker : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.88f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
     }
 
