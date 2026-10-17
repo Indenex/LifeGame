@@ -158,9 +158,14 @@ public static class ClayLook
         return m;
     }
 
+    // The painted light (painted-8, D-313/D-319): pots are lit in the same soft shade, mid and lit
+    // bands as every other painted thing (Painted.Light), with the shade leaning violet, a faint
+    // ink edge, and only a whisper of grain so the clay reads smooth and clean.
+    static string F(float v) => v.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
+
     static Shader Shader => shader ??= new Shader
     {
-        Code = """
+        Code = $$"""
             shader_type spatial;
             render_mode cull_back;
 
@@ -181,6 +186,11 @@ public static class ClayLook
             uniform float slip_bands = 0.0;
             uniform vec3 slip_color : source_color = vec3(0.6, 0.4, 0.2);
             uniform vec2 slip_rim = vec2(0.256, 0.03);
+            uniform vec3 shade_tint : source_color = vec3(0.74, 0.72, 0.9);
+            uniform float ink_edge = 0.5;
+            const float BAND_SOFT = {{F(Painted.Smooth.BandSoft)}};
+            const float BAND_BREAK = {{F(Painted.Smooth.BandBreak)}};
+            varying float dab;
 
             varying vec3 local_pos;
             varying vec3 local_normal;
@@ -222,10 +232,15 @@ public static class ClayLook
                 }
 
                 vec3 color = albedo.rgb;
-                // Fine grain from the temper, and finger marks.
+                // A whisper of grain from the temper, and soft finger marks (D-319: no speckle).
                 float grain = noise(p * 1.6);
-                color *= 0.95 + grain * 0.08;
-                color *= 0.96 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.08;
+                color *= 0.985 + grain * 0.025;
+                color *= 0.97 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.06;
+                // The broad brush drift that breaks the light bands a little.
+                dab = fbm(local_pos * 3.0 + vec3(seed));
+                // A touch lighter on top, darker underneath, as on the other painted things.
+                vec3 world_n = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+                color *= mix(0.94, 1.06, smoothstep(-0.6, 0.9, world_n.y));
 
                 // A maker's mark pressed into the outside of the pot, twice, on opposite sides, so
                 // one is usually in view: dark in the dent, with a thin lighter lip.
@@ -282,6 +297,9 @@ public static class ClayLook
                     color = mix(color, vec3(0.08, 0.06, 0.05), crack);
                 }
 
+                // A soft, faint ink line round the shape.
+                float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
+                color *= mix(1.0, 0.7, ink_edge * smoothstep(0.6, 0.95, rim));
                 ALBEDO = color;
                 // Wet clay glistens; dry and fired clay is matte.
                 ROUGHNESS = mix(0.95, 0.32, wetness);
@@ -293,6 +311,15 @@ public static class ClayLook
                     float heat = glow * flicker * mix(1.0, 0.35, height) * (0.6 + 0.4 * fbm(p * 0.5 + vec3(TIME * 0.3)));
                     EMISSION = vec3(1.0, 0.36, 0.08) * heat;
                 }
+            }
+
+            void light() {
+                float shade = 1.0;
+            {{Painted.Light}}
+                // Wet clay still glistens: a soft highlight that fades as it dries.
+                vec3 half_v = normalize(LIGHT + VIEW);
+                float shine = pow(clamp(dot(NORMAL, half_v), 0.0, 1.0), mix(8.0, 48.0, wetness));
+                SPECULAR_LIGHT += LIGHT_COLOR * shine * mix(0.04, 0.5, wetness) * ATTENUATION / PI;
             }
             """,
     };
