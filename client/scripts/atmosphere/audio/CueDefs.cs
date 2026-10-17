@@ -66,9 +66,34 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0f, 0.04f, 0.12f, 20f, 1200f, 0.004f),
     });
 
+    // Hit: a blow landing: a dull thud dropping a little in pitch and a slap of cloth and flesh.
+    public static readonly CueDef Hit = new("cue.hit", 0.4f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.07f, 0.15f, 130f, 108f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.03f, 0.24f, 600f, 1800f, 0.004f),
+    });
+
+    // Crit: a sneak attack's bonus: the same thud, a sharp crack and a short bright ring.
+    public static readonly CueDef Crit = new("cue.crit", 0.7f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.09f, 0.16f, 130f, 108f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.115f, 2000f, 6000f, 0.004f),
+        new CueLayer(Src.Tone, 0.02f, 0.14f, 0.04f, 1480f, 1480f, 0.004f),
+    }, Send: 0.1f);
+
+    // Jump: the push-off: a quick scuff of the ground and cloth and a small lift of breath.
+    public static readonly CueDef Jump = new("cue.jump", 0.3f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.3f, 900f, 2400f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.1f, 0.06f, 20f, 2200f, 0.1f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,
+        Cue.Hit => Hit,
+        Cue.Crit => Crit,
+        Cue.Jump => Jump,
         _ => null,
     };
 }
