@@ -13,6 +13,8 @@ namespace LifeGame;
 static class StorageSounds
 {
     const float Hearing = 12f;
+    const double Cooldown = 0.6;   // seconds before the same store sounds again
+    static readonly System.Collections.Generic.Dictionary<ulong, double> lastHeard = new();
 
     public static void Connect(DbConnection c)
     {
@@ -28,8 +30,14 @@ static class StorageSounds
     {
         if (ctx.Event is not Event<Reducer>.Reducer) return;
         if (c.Db.Structure.Id.Find(structureId) is not { } s) return;
-        bool jar = Structures.Shape((int)s.Kind).Jar;
-        var def = jar ? (put ? CueDefs.JarPut : CueDefs.JarTake) : (put ? CueDefs.BasketPut : CueDefs.BasketTake);
+        // Putting several things in at once is one lid, not a clunk each.
+        double now = Time.GetTicksMsec() / 1000.0;
+        if (lastHeard.TryGetValue(structureId, out double was) && now - was < Cooldown) return;
+        lastHeard[structureId] = now;
+        var shape = Structures.Shape((int)s.Kind);
+        var def = shape.Jar ? (put ? CueDefs.JarPut : CueDefs.JarTake)
+            : shape.Model == "Chest" ? (put ? CueDefs.ChestPut : CueDefs.ChestTake)
+            : put ? CueDefs.BasketPut : CueDefs.BasketTake;
         Sfx.PlayAnimal(def, new Vector3(s.X, 0.5f, s.Z), Hearing);
     }
 }
