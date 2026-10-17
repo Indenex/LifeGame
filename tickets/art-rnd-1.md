@@ -19,6 +19,8 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: v3 done: rounder lit centres, cooler browns; three shell colours and worn style checked (Showcase --variants). Before/after sheets in renders/art-rnd-1-shell-turntable.png and renders/art-rnd-1-shell-close.png (before = #594 at 17825e4e with the same Turntable camera, applied in a scratch worktree only). Pilot write-up in docs/art-pipeline.md. Sent to the PM.
 
+- 2026-10-17: D-313 (cutesy, relaxing, hint of realism) from the PM: v4 49d7efa2 makes the shell cute: 3 vertebral + 2 costal a side, 16 chunky marginals, wide soft grooves, pastel caramel palette, cocoa seams, one faint ring. Sheets: renders/art-rnd-1-shell-cute-turntable.png, renders/art-rnd-1-shell-cute-close.png. Report updated with D-313 rules.
+
 ## Open questions / blockers
 - Modeling owns client/scripts/models and client/assets/models: does Modeling take ChibiShell + tools/art/pebble_shell as is, or fold the method into #594? (PM to decide with Modeling.)
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?

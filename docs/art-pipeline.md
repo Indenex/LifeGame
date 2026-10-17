@@ -58,6 +58,12 @@ Gain is how much better a typical model looks to Justin. Effort is for this lane
 
 ## Recommended pipeline
 
+**Art direction (D-313, 2026-10-17):** "Cutesy, relaxing, with a hint of realism." The look leans towards the chibi: soft rounded forms, chunky readable silhouettes, a warm pastel-leaning palette and gentle painted detail. Real materials (wood grain, stone facets, shell scutes) show only as a hint, never gritty. For this pipeline that means:
+- Simplify real anatomy and structure into a few big, friendly shapes: three plates down a shell instead of five, chunky rims, generous bevels.
+- Use soft seams in a warm dark (cocoa, not black), wide pale bevels on the upper edges, and at most one faint growth ring or grain line per plate.
+- Keep a pastel palette with high values and low contrast between tones. The banded light and violet shade in the shader do the modelling.
+- Use the bakes (AO, normals) for softness, not grit: wide rounded grooves, pillowed plates, and AO kept light.
+
 For hero pieces (characters and what they wear, tools in hand, furniture, building parts):
 
 1. **Reference first.** Collect two or three real references and the matching Golden Skull or Dofus style notes. Write the shape list and the palette (lit, mid and shade per material) in the asset's script header.
