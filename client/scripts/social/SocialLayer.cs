@@ -36,7 +36,7 @@ public partial class SocialLayer : Node
     float landTimer;
 
     // True while the chat box or the claim panel's name box has focus, so Main can stop walking.
-    public bool Typing => chat.Typing || panel.Typing;
+    public bool Typing => chat.Typing || panel.Typing || town.Typing;
 
     public static long NowMicros => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
 
@@ -70,6 +70,7 @@ public partial class SocialLayer : Node
         conn.Db.MyInventory.OnDelete += (_, _) => panel.MarkDirty();
         AttachFighting();
         AttachTrading();
+        AttachTown(connection);
 
         // G at a marker you may tend refreshes it (KEYMAP: Use); K still opens the panel.
         Use.Register(new UseHandler
@@ -83,7 +84,7 @@ public partial class SocialLayer : Node
                 foreach (var c in conn.Db.Claim.Iter())
                 {
                     float d = new Vector2(c.X - at.X, c.Z - at.Z).Length();
-                    if (d <= bestD && HasRights(c)) { best = c; bestD = d; }
+                    if (d <= bestD && IsOwnerOrMember(c)) { best = c; bestD = d; }
                 }
                 return best is { } claim
                     ? new UseOffer("Tend the marker", bestD, () => conn.Reducers.TendClaim(claim.Id))
@@ -94,8 +95,7 @@ public partial class SocialLayer : Node
 
     public override void _Ready()
     {
-        Bind("chat", Key.Enter, Key.KpEnter);
-        Bind("claim_open", Key.K);
+        // Chat (Enter) and the claim view (K) are bound in ui/Controls.cs.
 
         AddChild(chat);
         AddChild(panel);
@@ -113,6 +113,7 @@ public partial class SocialLayer : Node
         AddChild(layer);
         ReadyFighting();
         ReadyPlaces();
+        ReadyTown();
     }
 
     static void Bind(string action, params Key[] keys)
@@ -132,7 +133,7 @@ public partial class SocialLayer : Node
         if (claimSub == null)
             claimSub = conn.SubscriptionBuilder()
                 .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
-                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat" });
+                .Subscribe(new[] { "SELECT * FROM claim", "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM player_health", "SELECT * FROM strike_event", "SELECT * FROM my_trade", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_chat", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM my_town_invites", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log" });
     }
 
     public Func<bool> HideChip = () => false;
@@ -155,6 +156,9 @@ public partial class SocialLayer : Node
         }
     }
 
+    // Opens the chat line already started, for the player menu's Whisper (ui-35).
+    public void OpenChat(string prefill) => chat.Open(prefill);
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (conn == null || Typing) return;
@@ -165,15 +169,16 @@ public partial class SocialLayer : Node
         }
         else if (e.IsActionPressed("claim_open"))
         {
-            if (panel.IsOpen) { panel.Close(); return; }
+            if (panel.IsOpen || town.IsOpen) { panel.Close(); town.Close(); return; }
             var marker = NearestMarker();
             if (marker == null) hud.Note("Walk up to a claim marker first");
-            else if (!HasRights(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
+            else if (!IsOwnerOrMember(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
             else panel.Open(marker, IsMine(marker));
         }
-        else if (e.IsActionPressed("ui_cancel") && panel.IsOpen)
+        else if (e.IsActionPressed("ui_cancel") && (panel.IsOpen || town.IsOpen))
         {
             panel.Close();
+            town.Close();
             GetViewport().SetInputAsHandled();
         }
     }
@@ -189,7 +194,7 @@ public partial class SocialLayer : Node
             hud.Note("Name changed");
             return;
         }
-        if (text.StartsWith('/') && (TimeCommands.Try(conn, text, hud.Note) || AdminCommands.Try(conn, text, hud.Note))) return;
+        if (text.StartsWith('/') && (TimeCommands.Try(conn, text, hud.Note) || AdminCommands.Try(conn, text, hud.Note) || StuckCommand.Try(text, hud.Note))) return;
         conn.Reducers.SendChat(text);
     }
 
@@ -320,7 +325,7 @@ public partial class SocialLayer : Node
             markers[c.Id] = marker;
             world.AddChild(marker);
         }
-        marker.Set(c, HasRights(c));
+        marker.Set(c, IsOwnerOrMember(c));
         if (panel.Claim?.Id == c.Id) panel.Open(c, IsMine(c));
     }
 
@@ -337,7 +342,7 @@ public partial class SocialLayer : Node
     {
         if (conn == null) return;
         foreach (var c in conn.Db.Claim.Iter())
-            if (markers.TryGetValue(c.Id, out var marker)) marker.Set(c, HasRights(c));
+            if (markers.TryGetValue(c.Id, out var marker)) marker.Set(c, IsOwnerOrMember(c));
         panel.MarkDirty();
     }
 
@@ -376,8 +381,20 @@ public partial class SocialLayer : Node
         return null;
     }
 
-    bool HasRights(Claim c) =>
+    // Builder rights, as the server decides them: the owner, its members, and anyone who signed
+    // the same town roster as this claim (claims-19). Stashes and the marker's upkeep are the
+    // owner's and members' alone (IsOwnerOrMember).
+    bool HasRights(Claim c) => IsOwnerOrMember(c) || IsTownmate(c);
+
+    bool IsOwnerOrMember(Claim c) =>
         IsMine(c) || (conn?.Db.ClaimMember.Iter().Any(m => m.ClaimId == c.Id && m.PlayerId == myId) ?? false);
+
+    bool IsTownmate(Claim c)
+    {
+        if (conn == null) return false;
+        var there = conn.Db.TownSigner.ClaimId.Find(c.Id);
+        return there != null && conn.Db.TownSigner.Iter().Any(t => t.PlayerId == myId && t.TownId == there.TownId);
+    }
 
     void UpdateLandChip()
     {

@@ -34,6 +34,9 @@ public static partial class Module
         public Timestamp FireStart;
         public Timestamp FireFinish;
         public float FiredMoisture;
+        // The maker's mark (shared/Marks.cs); 0 for none. Bricks carry none.
+        [Default(0u)]
+        public uint Mark;
     }
 
     // Rechecks rain and fires around drying pieces.
@@ -122,6 +125,7 @@ public static partial class Module
             Moisture = 1f,
             MoistureAt = ctx.Timestamp,
             DryRate = DryRateAt(ctx, x, z),
+            Mark = form == ClayForm.Brick ? 0u : MarkFor(ctx, job.PlayerId),
         });
         EnsureDryTimer(ctx);
     }
@@ -159,7 +163,7 @@ public static partial class Module
         if (form == ClayForm.Brick)
             AddToInventory(ctx, ctx.Sender, Item.Brick, 1, Items.RawQuality);
         else
-            AddToInventory(ctx, ctx.Sender, ClayRules.UnfiredItem(form), 1, piece.Quality);
+            AddToInventory(ctx, ctx.Sender, ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark);
     }
 
     // Sets every unfired pot you carry into a fire within reach, as many as fit.
@@ -207,6 +211,7 @@ public static partial class Module
                     ChunkZ = fire.ChunkZ,
                     Moisture = 0f,
                     MoistureAt = ctx.Timestamp,
+                    Mark = stack.Wear,
                 });
                 StartFiring(ctx, piece, fire, 0f);
                 used++;
@@ -231,12 +236,13 @@ public static partial class Module
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FilledItem((Item)i.Item) is not null)
             .ToList();
         if (empty.Count == 0)
-            throw new Exception("You have no fired pot to fill");
+            throw new Exception("You have nothing to fill: a fired pot or a waterskin");
         foreach (var stack in empty)
         {
             RemoveFromStack(ctx, stack, stack.Count);
-            AddToInventory(ctx, ctx.Sender, ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality);
-            OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
+            AddToInventory(ctx, ctx.Sender, ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality, stack.Wear);
+            if ((Item)stack.Item != Item.Waterskin)
+                OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
         }
     }
 
@@ -296,7 +302,7 @@ public static partial class Module
         }
         else
         {
-            DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0);
+            DropNear(ctx, piece, ClayRules.FiredItem(form), piece.Quality, 0, piece.Mark);
             News(ctx, piece.MadeBy, $"Your {ClayRules.FormName(form)} is fired, and whole. {{use}} picks it up.");
         }
     }
@@ -427,13 +433,14 @@ public static partial class Module
     }
 
     // Drops an item on the ground where a piece was, nudged so several don't stack.
-    static void DropNear(ReducerContext ctx, ClayPiece piece, Item item, byte quality, int index)
+    static void DropNear(ReducerContext ctx, ClayPiece piece, Item item, byte quality, int index, uint wear = 0)
     {
         float x = piece.X + index * 0.18f, z = piece.Z - index * 0.12f;
         ctx.Db.WorldItem.Insert(new WorldItem
         {
             Id = 0, Item = (ushort)item, Quality = quality,
             X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
+            Wear = wear,
         });
     }
 

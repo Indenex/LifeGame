@@ -1,7 +1,7 @@
 # integration-10: Smarter, parallel CI
 Lane: Integration
 Owner: Integration thread
-Status: in_review
+Status: in_review (PR #413 merged; follow-up on claude/integration-craft-faster)
 Branch: claude/integration-parallel-ci
 PR: (see GitHub)
 
@@ -18,8 +18,26 @@ Server job 16:20 = setup+module build 0:45, bindings 0:18, load+BuildTest+SpawnC
 - `Server module and load test` is now a gate job that passes when all of those passed or were skipped (and fails if the change detection failed).
 - Composite actions `.github/actions/setup-stdb` and `start-server` replace the copied setup steps.
 
+## After (PR #413, run 38991156084): 8 min 46 s wall (was 16 min 38 s)
+Crafting check 7:31 (longest), Building check 6:11, Load/spawn/social 3:10, Upgrade 1:33, module build 1:00, clients 1:31 (Linux) and 1:56 (Windows). Client Export step (with the Godot import) is 17 s of that, so an import cache is not worth its stale-cache risk.
+
 ## Progress log
+- 2026-10-17: follow-up: CraftCheck's 60 s wait for the first fire to burn down now runs last, so the rest of the check passes the time (about -1 min). BuildTest (6:11) becomes the long pole.
 - 2026-10-17: workflow written (PR). After numbers to be filled in from the PR's own run.
 
 ## Next step
 Compare the PR's run time with the before figures, fix anything the run shows, then send the PM the green sha. Later: Godot .godot import cache.
+
+## integration-13: main builds and releases first (Justin)
+`.github/workflows/priority.yml` ("Main priority"): GitHub has no job priority, so while a push-triggered Build or any Release is queued or running, queued and in-progress pull_request Build runs are cancelled (job summary: "paused for a main build; re-runs automatically"). When main is idle (after each finished Build or Release, and on a 15-minute schedule) the newest cancelled run per open PR head is re-run. Merge-queue and manual runs and Release runs are never touched; PR runs a newer push replaced are left alone. Needs `actions: write`. WORKER_LOOP.md step 5b tells lanes a cancelled run is not red.
+## Update 2026-10-17: main builds and ships only (Justin approved)
+- Push to main runs the module build, the Upgrade check (now also on main; the merged PR's `world-wipe` label is looked up through the API so a wipe merge doesn't go red) and the clients, plus the `server` summary job. The load, Building and Crafting checks run on PRs only, because they already ran before the merge.
+- Draft PRs skip those three checks (module, upgrade and clients still run); `ready_for_review` is a pull_request trigger so the full set runs when the PR is marked ready.
+- A ticket/docs-only push already skips every heavy job (the `changes` filter), on PRs and on main.
+- Load test on PRs stays 5 bots for 5 s; main no longer runs the 20 bots / 20 s one.
+
+## integration-13 update: smart priority (Justin picked A)
+Pausing on every main push starved PRs (main merges every 3-5 min, a PR run takes ~9). Now `priority.yml` pauses PR Builds only while a main Build (push) or a Release has a queued run or queued jobs (main is waiting for a runner), and leaves any PR run that has been running 4 minutes or more to finish. It resumes (re-runs the newest cancelled run per open PR head) when no main Build or Release is queued or running. Also triggered by pull_request pushes and a 5-minute schedule, since starvation can begin after the push.
+
+## integration-16: merge queue with batches (Justin: "Merge queue + batches"), supersedes the pausing in integration-13
+priority.yml is deleted (no more cancelling PR runs). GitHub's merge queue lands PRs in batches of 3 to 5 (10-minute wait to fill), one combined check run per batch, one main push, one Build and one Release per batch. build.yml: the Upgrade check also runs on `merge_group` (batch tip over the queue's base) and on a main push compares with the push's `before`. Needs Justin's ruleset clicks (docs/MERGE_QUEUE.md). Until the ruleset exists, merging works as before.

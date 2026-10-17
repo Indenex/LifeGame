@@ -11,6 +11,7 @@ public partial class Atmosphere
 {
     float stepPhase;
     Vector3 lastPlayerPos;
+    float lastWaterDepth, lapTimer;
 
     // One step per stride, matching the avatar's leg swing.
     void Footsteps()
@@ -23,12 +24,41 @@ public partial class Atmosphere
         flat.Y = 0;
         lastPlayerPos = pos;
         float distance = flat.Length();
+        float depth = Wading.Depth(pos.Y);
+        WaterBody(pos, depth, distance);
+        lastWaterDepth = depth;
         if (distance > 2f || distance < 0.0005f) return;
         float before = stepPhase;
         stepPhase += distance * 2.4f;
         if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
 
-        sound.Step(GroundAt(pos), wetness);
+        if (depth > 0.05f && Sheltered?.Invoke(pos) != true) WadeStep(depth);
+        else sound.Step(GroundAt(pos), wetness);
+    }
+
+    // One stride in water: a splash that gets deeper with the water, or a paddle stroke when afloat.
+    void WadeStep(float depth)
+    {
+        lapTimer = 0f;
+        sound.Play(depth >= Wading.FloatDepth ? CueDefs.Paddle : depth > 0.65f ? CueDefs.WadeDeep : depth > 0.3f ? CueDefs.WadeKnee : CueDefs.WadeShallow);
+    }
+
+    // Going in (a splash by how fast), coming out (dripping), and the quiet lapping while afloat and still.
+    void WaterBody(Vector3 pos, float depth, float distance)
+    {
+        if (Sheltered?.Invoke(pos) == true) return;
+        float dt = (float)GetProcessDeltaTime();
+        if (lastWaterDepth <= 0.05f && depth > 0.05f)
+        {
+            float speed = dt > 0f ? Mathf.Min(distance, 2f) / dt : 0f;
+            Sfx.Splash(pos, Mathf.Clamp(speed / 6f, 0.15f, 1f));
+        }
+        else if (lastWaterDepth > 0.05f && depth <= 0.05f) sound.Play(CueDefs.Drip);
+        if (depth >= Wading.FloatDepth && distance < 0.0005f)
+        {
+            lapTimer += dt;
+            if (lapTimer > 2.6f) { lapTimer = 0f; sound.Play(CueDefs.Lap); }
+        }
     }
 
     // What is underfoot at a position: used by footsteps and by landings (Sfx.Land).
@@ -120,6 +150,8 @@ public partial class Atmosphere
         bool running = a.State == AnimalState.Run;
         if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
         else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
+        else if (AnimalDefs.Get((byte)a.Species).Model == "hen")
+            Hens.Seen(a.Id, a.X, a.Z, a.State switch { AnimalState.Graze => HenVoices.Mood.Peck, AnimalState.Walk => HenVoices.Mood.Walk, AnimalState.Run => HenVoices.Mood.Run, _ => HenVoices.Mood.Idle });
     }
 
     // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,
@@ -156,7 +188,7 @@ public partial class Atmosphere
 
     // Sounds for the quick body actions (player_act): data cues (CueDefs) timed to the motion,
     // played from where that player stands, so nearby players hear each other.
-    static CueDef? SoundOfAct(WorkMotion motion) => motion switch
+    static CueDef? SoundOfAct(WorkMotion motion, ushort item) => motion switch
     {
         WorkMotion.Drink => CueDefs.Drink,
         WorkMotion.Eat => CueDefs.Eat,
@@ -167,8 +199,28 @@ public partial class Atmosphere
 
     void HearAct(DbConnection conn, PlayerAct act)
     {
-        if (SoundOfAct((WorkMotion)act.Motion) is not { } def) return;
+        if (SoundOfAct((WorkMotion)act.Motion, act.Item) is not { } def) return;
         if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
         Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
+    }
+
+    // How much each fire can hold ahead of now (its lighter's Firecraft and a hearth's scale, set by
+    // the server on the fire row: FuelCapSeconds), so a well-stoked fire is judged against its own cap.
+    readonly System.Collections.Generic.Dictionary<ulong, float> fireCaps = new();
+
+    void HearFireCaps(DbConnection conn)
+    {
+        conn.Db.Fire.OnInsert += (_, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnUpdate += (_, _, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnDelete += (_, f) => fireCaps.Remove(f.Id);
+    }
+
+    // 0 to 1: how stoked a fire is, rising from 70% to 80% of its own cap (the same ramp as the
+    // smoke signal, so the roar and the plume come together). Fires from before the column
+    // (cap 0) are judged against the Master cap.
+    float Stoke(ulong id, float left)
+    {
+        float cap = fireCaps.TryGetValue(id, out var c) && c > 0f ? c : Fires.MasterMaxSeconds;
+        return Mathf.SmoothStep(0.70f, 0.80f, left / cap);
     }
 }

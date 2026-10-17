@@ -28,9 +28,9 @@ int failures = 0;
 
 // Calls an admin reducer as the CLI's identity, which published the database. Runs
 // from the temp folder: inside server/ the CLI reads spacetime.json and misparses.
-void AsOwner(string reducer, string value)
+void AsOwner(string reducer, params string[] values)
 {
-    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer, value })
+    var run = Process.Start(new ProcessStartInfo("spacetimedb-cli", new[] { "call", "-s", uri, db, reducer }.Concat(values).ToArray())
     {
         WorkingDirectory = Path.GetTempPath(),
         RedirectStandardOutput = true,
@@ -40,10 +40,10 @@ void AsOwner(string reducer, string value)
     run.WaitForExit();
     if (run.ExitCode != 0)
     {
-        Console.WriteLine($"FAIL  {reducer} {value} as the database owner: {output.Trim()}");
+        Console.WriteLine($"FAIL  {reducer} {string.Join(" ", values)} as the database owner: {output.Trim()}");
         Environment.Exit(1);
     }
-    Console.WriteLine($"Set {reducer} {value}");
+    Console.WriteLine($"Set {reducer} {string.Join(" ", values)}");
 }
 
 void Pump(Func<bool> until, double seconds, string what)
@@ -86,23 +86,42 @@ void ExpectError(Tester t, Action call, string contains, string what)
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
 }
 
-void Walk(Tester t, float x, float z) => Pump(() => t.StepToward(x, z), 60, $"{t.Name} walking");
+// The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
+// last resort asks the server to shake the bot free (unstuck).
+var walkers = new Dictionary<Tester, BotWalker>();
+void Walk(Tester t, float x, float z)
+{
+    if (!walkers.TryGetValue(t, out var w))
+    {
+        w = walkers[t] = new BotWalker(t.Conn, t.PlayerId, "Social test", t.Name, ms =>
+        {
+            for (var until = Stopwatch.StartNew(); until.ElapsedMilliseconds < ms; Thread.Sleep(5))
+                foreach (var u in all) u.Tick();
+        }, msg => { Console.WriteLine($"FAIL  {msg} (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})"); Environment.Exit(1); });
+    }
+    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1})");
+    w.To(ref t.X, ref t.Z, x, z, 0.3f, stand: true);
+}
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+Walk(a, 0f, 0f);
+Walk(b, 1f, 0f);
 Console.WriteLine($"connected A={a.PlayerId} at {a.X:F1},{a.Z:F1}  B={b.PlayerId}");
 
-// A gathers what a marker needs.
-foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks), (Item.Fiber, (int)Social.MarkerFiber), (Item.Stone, 1) })
+// A gathers what a marker needs (and a second marker's worth for the town check at the end, claims-19); B gathers one marker's worth.
+foreach (var gatherer in new[] { a, b })
+foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks * (gatherer == a ? 2 : 1)), (Item.Fiber, (int)Social.MarkerFiber * (gatherer == a ? 2 : 1)), (Item.Stone, gatherer == a ? 1 : 0) })
 {
-    while (a.Count(kind) < count)
+    while (gatherer.Count(kind) < count)
     {
-        var item = a.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
-            .OrderBy(i => (i.X - a.X) * (i.X - a.X) + (i.Z - a.Z) * (i.Z - a.Z)).First();
-        Walk(a, item.X, item.Z);
-        uint before = a.Count(kind);
-        a.Conn.Reducers.PickUp(item.Id);
-        Pump(() => a.Count(kind) > before || a.LastError != null, 5, "pick up");
-        a.LastError = null;
+        var item = gatherer.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
+            .OrderBy(i => (i.X - gatherer.X) * (i.X - gatherer.X) + (i.Z - gatherer.Z) * (i.Z - gatherer.Z)).First();
+        Walk(gatherer, item.X, item.Z);
+        uint before = gatherer.Count(kind);
+        gatherer.Conn.Reducers.PickUp(item.Id);
+        Pump(() => gatherer.Count(kind) > before || gatherer.LastError != null, 5, "pick up");
+        gatherer.LastError = null;
     }
 }
 Console.WriteLine($"A gathered {a.Count(Item.Stick)} sticks, {a.Count(Item.Fiber)} fiber, {a.Count(Item.Stone)} stone");
@@ -151,9 +170,10 @@ for (int i = 0; i < 20 && a.MyClaim() == null; i++)
 }
 Pump(() => a.MyClaim() != null, 5, "claim raised");
 var claim = a.MyClaim()!;
-Check(a.Count(Item.Stick) == 0 && a.Count(Item.Fiber) == 0, "marker used up 4 sticks and 2 fiber");
+Check(a.Count(Item.Stick) == Social.MarkerSticks && a.Count(Item.Fiber) == Social.MarkerFiber, "marker used up 4 sticks and 2 fiber (a second marker's worth is kept for the town check)");
 Check(claim.StructureId == site.Id && claim.X == site.X && claim.Z == site.Z, "the claim sits on the finished marker");
 ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, b.X + 2, b.Z + 2, 0), "claimed", "B cannot build inside A's claim");
+ExpectError(b, () => b.Conn.Reducers.PlaceStructure(StructureKind.BrickHouse, b.X + 5, b.Z, 0), "claimed by", "a house on someone else's claim says whose land it is");
 
 // Chat reaches the player standing nearby.
 a.Conn.Reducers.SendChat("hello neighbour");
@@ -174,6 +194,10 @@ a.LastError = null;
 a.Conn.Reducers.SendChat("/me");
 Wait(() => b.Conn.Db.MyChat.Iter().Count() > chatCount || a.LastError != null, 1.5);
 Check(b.Conn.Db.MyChat.Iter().Count() == chatCount && a.LastError == null, "an empty /me says nothing");
+Check(Social.TownNear(0, 0, 41, 0) && !Social.TownNear(0, 0, 61, 0), "claims within 60 m can join the same town");
+Check(Social.MayBarGate(true, false, false, false, false) && Social.MayBarGate(false, true, false, false, false) && Social.MayBarGate(false, false, true, true, false), "the owner, a member and the Gatekeeper bar a gate");
+Check(!Social.MayBarGate(false, false, true, false, false) && !Social.MayBarGate(false, false, false, true, false), "a plain signer cannot bar a gate, nor a Gatekeeper outside the town");
+Check(!Social.MayBarGate(false, true, false, false, true) && !Social.MayBarGate(false, false, true, true, true) && Social.MayBarGate(true, false, false, false, true), "a ban takes the member's and the Gatekeeper's rights, never the owner's");
 Check(Social.StripControl("a\nb\u001bc") == "a b c" && Social.CleanClaimName("Wil\nlow\u0000 Hollow") == "Wil low Hollow", "control characters read as spaces in chat and names");
 Check(Social.ChatDim(2f) == 1f && MathF.Abs(Social.ChatDim(Social.ChatRange) - 0.55f) < 0.01f && Social.ChatDim(16f) < 1f, "far chat lines are dimmer");
 
@@ -238,9 +262,14 @@ long day = 86_400_000_000L, t0 = 1_000L * day;
 Check(Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0) == "Tended 2 days ago · stands 1 more day", $"the marker line reads well ({Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0)})");
 
 // claims-4: the owner adds B by name (any case), and a calm line says so.
-string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";
+// Names are letters only and unique (ui-31, shared Names), so the bot's is too.
+string bName = "Tobin" + new string(Enumerable.Range(0, 6).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
 b.Conn.Reducers.SetName(bName);
 Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
+// ui-31: a name someone has (in any case), a name kept for the game, and digits are refused.
+ExpectError(a, () => a.Conn.Reducers.SetName(bName.ToUpperInvariant()), "taken", "a name someone else has is refused");
+ExpectError(a, () => a.Conn.Reducers.SetName("Mayor"), "kept for the game", "a town office isn't a name");
+ExpectError(a, () => a.Conn.Reducers.SetName("Ann42"), "letters", "digits aren't part of a name");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
 ulong chatBeforeAdd = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
 a.LastError = null;
@@ -391,9 +420,13 @@ ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone,
 // The land's owner can clear anything on it; nobody else can take down the owner's things.
 Walk(b, site.X + 1.5f, site.Z);
 ExpectError(b, () => b.Conn.Reducers.Dismantle(site.Id), "take it down", "B cannot take down A's marker");
-Walk(a, hx - 2, hz);
+// Stand in front of the lean-to, outside its side walls: two metres west of its middle is on the wall
+// itself, which no route can reach (the "stuck on leg 2/2 to (38.0, 33.4)" flake).
+var hutShape = Structures.Shape((int)hut!.Kind);
+var hutFront = Structures.ToWorld(hut.X, hut.Z, hut.Yaw, 0f, hutShape.HalfDepth + 1.2f);
+Walk(a, hutFront.x, hutFront.z);
 a.LastError = null;
-a.Conn.Reducers.Dismantle(hut!.Id);
+a.Conn.Reducers.Dismantle(hut.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
@@ -479,9 +512,201 @@ else
     Check(true, "dismantling the marker ends the claim");
 }
 
+// --- Towns (claims-19). Run last, with two fresh claims, because a claim lasts only 30 s here:
+// B raises a claim, A raises one 41 m away, A starts a roster, B signs it, and A gets builder rights
+// on B's land (but not the stash, or tending) until B leaves the roster.
+{
+    float H(float px, float pz) => Structures.GroundAt(px, pz, (i, j) => b.Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
+    bool GoodMarkerSpot(float x, float z) => ClearSpot(x, z)
+        && Structures.GroundProblem((int)StructureKind.ClaimMarker, x, z, 0f, H) == null
+        && !Trees.GrowsAt(World.CellOf(x), World.CellOf(z)) && !Rocks.LiesAt(World.CellOf(x), World.CellOf(z));
+    (float x, float z, float x2, float z2)? pair = null;
+    for (int ring = 0; ring <= 24 && pair == null; ring++)
+        for (int step = 0; step < Math.Max(1, ring * 6) && pair == null; step++)
+        {
+            float angle = step * MathF.Tau / Math.Max(1, ring * 6), r = ring * 4f;
+            float x1 = 34 + r * MathF.Cos(angle), z1 = 30 + r * MathF.Sin(angle);
+            if (!GoodMarkerSpot(x1, z1)) continue;
+            for (int d = 0; d < 8 && pair == null; d++)
+            {
+                float da = MathF.Tau * d / 8f, x2 = x1 + 41f * MathF.Cos(da), z2 = z1 + 41f * MathF.Sin(da);
+                if (GoodMarkerSpot(x2, z2)) pair = (x1, z1, x2, z2);
+            }
+        }
+    Check(pair != null, "there is room for two neighbouring claims for the town check");
+    if (pair is { } sites)
+    {
+        void Raise(Tester t, float x, float z)
+        {
+            Walk(t, x - 1.5f, z);
+            t.LastError = null;
+            t.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, x, z, 0);
+            Pump(() => t.Conn.Db.Structure.Iter().Any(st => st.Kind == StructureKind.ClaimMarker && st.Owner == t.Conn.Identity && !st.Complete) || t.LastError != null, 5, $"{t.Name} lays out a marker");
+            if (t.LastError != null) Console.WriteLine($"  {t.Name} could not lay out the town-check marker: {t.LastError}");
+            var mine = t.Conn.Db.Structure.Iter().FirstOrDefault(st => st.Kind == StructureKind.ClaimMarker && st.Owner == t.Conn.Identity && !st.Complete);
+            for (int i = 0; i < 20 && t.MyClaim() == null && mine.Id != 0; i++)
+            {
+                t.Conn.Reducers.Build(mine.Id);
+                Wait(() => t.MyClaim() != null, 0.7);
+                t.LastError = null;
+            }
+        }
+        // The earlier checks gave materials away and used some up: top both up first.
+        foreach (var gatherer in new[] { a, b })
+            foreach (var (kind, count) in new[] { (Item.Stick, (int)Social.MarkerSticks), (Item.Fiber, (int)Social.MarkerFiber) })
+                while (gatherer.Count(kind) < count)
+                {
+                    var item = gatherer.Conn.Db.WorldItem.Iter().Where(i => i.Item == (ushort)kind)
+                        .OrderBy(i => (i.X - gatherer.X) * (i.X - gatherer.X) + (i.Z - gatherer.Z) * (i.Z - gatherer.Z)).First();
+                    Walk(gatherer, item.X, item.Z);
+                    uint before = gatherer.Count(kind);
+                    gatherer.Conn.Reducers.PickUp(item.Id);
+                    Pump(() => gatherer.Count(kind) > before || gatherer.LastError != null, 5, "pick up");
+                    gatherer.LastError = null;
+                }
+        Raise(b, sites.x2, sites.z2);
+        Raise(a, sites.x, sites.z);
+        var aClaim = a.MyClaim();
+        var bClaim = b.MyClaim();
+        Check(aClaim != null && bClaim != null, $"A and B each hold a claim for the town check (A {(aClaim != null ? "ok" : a.LastError ?? "none")}, B {(bClaim != null ? "ok" : b.LastError ?? "none")})");
+        if (aClaim != null && bClaim != null)
+        {
+            // B stays at their marker and tends it, so both claims are fresh for the next 30 s.
+            b.Conn.Reducers.TendClaim(bClaim.Id);
+
+            // Two one-claim towns merge by a majority of each: A's "Alder" and B's "Birch".
+            a.Conn.Reducers.StartTown("Alder");
+            b.Conn.Reducers.StartTown("Birch");
+            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Alder") && a.Conn.Db.Town.Iter().Any(t => t.Name == "Birch"), 5), "A and B each start a town");
+            var alderId = a.Conn.Db.Town.Iter().First(t => t.Name == "Alder").Id;
+            var birchId = a.Conn.Db.Town.Iter().First(t => t.Name == "Birch").Id;
+            a.Conn.Reducers.ProposeTownMerge(birchId);
+            Check(Wait(() => a.Conn.Db.TownMerge.Iter().Any(m => m.FromTownId == alderId && m.ToTownId == birchId), 5), "A, the Mayor, proposes joining Birch");
+            var mergeId = a.Conn.Db.TownMerge.Iter().First(m => m.FromTownId == alderId).Id;
+            a.Conn.Reducers.VoteTownMerge(mergeId, true);
+            Wait(() => a.Conn.Db.TownMergeVote.Iter().Any(v => v.MergeId == mergeId), 5);
+            Check(a.Conn.Db.Town.Iter().Count(t => t.Name == "Alder" || t.Name == "Birch") == 2, "one town's yes is not enough");
+            b.Conn.Reducers.VoteTownMerge(mergeId, true);
+            // The older town keeps its name (which started first is a race between the two calls).
+            Check(Wait(() => a.Conn.Db.Town.Iter().Count(t => t.Name == "Alder" || t.Name == "Birch") == 1 && a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == alderId || t.TownId == birchId) == 2, 5)
+                && a.Conn.Db.TownSigner.Iter().Select(t => t.TownId).Distinct().Count() == 1, "a majority of both towns merges them into one");
+            var townId = a.Conn.Db.TownSigner.Iter().First(t => t.PlayerId == a.PlayerId).TownId;
+            Check(a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor)?.HolderId == 0, "the merged town starts with an empty Mayor's seat");
+            // B steps out again, A elects themselves Mayor (one vote of one is a majority) and renames the town.
+            b.Conn.Reducers.LeaveTown();
+            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "B leaves the merged town");
+            a.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == Social.OfficeMayor && o.HolderId == a.PlayerId), 5), "a lone signer's vote makes them Mayor");
+            a.Conn.Reducers.RenameTown("Willow Run");
+            Check(Wait(() => a.Conn.Db.Town.Iter().Any(t => t.Name == "Willow Run"), 5), "the Mayor renames the town");
+            ExpectError(b, () => b.Conn.Reducers.SignTown(townId), "invited", "B cannot sign without an invitation");
+            a.Conn.Reducers.InviteToTown(b.PlayerId);
+            Check(Wait(() => b.Conn.Db.MyTownInvites.Iter().Any(i => i.TownName == "Willow Run"), 5) && !a.Conn.Db.MyTownInvites.Iter().Any(), "B sees the invitation, and A does not");
+            // Before signing, A has no rights on B's land.
+            Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
+            float tx = bClaim.X + 7f, tz = bClaim.Z, tx2 = bClaim.X, tz2 = bClaim.Z + 7f;
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx, tz, 0), "claimed", "before B signs, A cannot build on B's land");
+            b.Conn.Reducers.SignTown(townId);
+            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 2, 5), "B signs, and the roster holds both claims");
+
+            // Builder rights now; the stash and the marker's upkeep stay B's.
+            a.LastError = null;
+            a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx, tz, 0);
+            Wait(() => a.LastError != null || a.Conn.Db.Structure.Iter().Any(st => st.Kind == StructureKind.LeanTo && st.Owner == a.Conn.Identity && Math.Abs(st.X - tx) < 0.1f), 5);
+            Check(a.LastError?.Contains("claimed") != true, $"a signer can lay out a building on another signed claim ({a.LastError ?? "ok"})");
+            ExpectError(a, () => a.Conn.Reducers.TakeFromStash(bClaim.Id, (ushort)Item.Stone, 50, 1), "not yours", "a signer cannot open another claim's stash");
+            ExpectError(a, () => a.Conn.Reducers.TendClaim(bClaim.Id), "owner and members", "a signer cannot tend another claim's marker");
+            ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId + 1000), "not on this roster", "the founder cannot remove someone who is not on the roster");
+
+            ExpectError(b, () => b.Conn.Reducers.RenameTown("Nope"), "Mayor", "only the Mayor renames the town");
+            a.LastError = null;
+            a.Conn.Reducers.AnnounceToTown("Market day on the green");
+            Wait(() => a.LastError != null, 1);
+            Check(a.LastError == null, $"the Mayor can speak for the town ({a.LastError ?? "ok"})");
+            ExpectError(a, () => a.Conn.Reducers.AnnounceToTown("And again"), "moment", "the town's word is rate limited");
+            ExpectError(b, () => b.Conn.Reducers.AnnounceToTown("Hello"), "Herald", "only the Herald or Mayor speaks for the town");
+            // A second office, as data: both signers vote A in as Deputy.
+            a.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(1, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 1 && o.HolderId == a.PlayerId), 5), "the signers elect a Deputy");
+            ExpectError(a, () => a.Conn.Reducers.VoteTownOffice(77, a.PlayerId), "no such office", "an unknown office cannot be voted on");
+            // Terms end (the admin shortens terms to a second for this check, then restores them).
+            AsOwner("set_town_term", "1");
+            TownOffice? Seat(byte office) => a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == office);
+            // A tie for Warden: no majority, so the term's end decides, and the longer-standing signer (A) wins.
+            a.Conn.Reducers.VoteTownOffice(4, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(4, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 4) == 2, 5);
+            Check(Seat(4)?.HolderId == 0, "a tied vote leaves the seat empty until the term ends");
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(4)?.HolderId == a.PlayerId, 5), "at the term's end a tie goes to the longest-standing signer");
+            // The Judge breaks a tie: both vote B in as Judge (a majority), then split over the Marshal.
+            a.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(2, b.PlayerId);
+            Check(Wait(() => Seat(2)?.HolderId == b.PlayerId, 5), "the signers elect B as Judge");
+            a.Conn.Reducers.VoteTownOffice(5, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(5, b.PlayerId);
+            Wait(() => a.Conn.Db.TownVote.Iter().Count(v => v.TownId == townId && v.Office == 5) == 2, 5);
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => Seat(5)?.HolderId == b.PlayerId, 5), "a tied vote goes to the one the Judge voted for, even over the longer-standing signer");
+            // No votes: the holder stays on, with a fresh term.
+            long judgeTermEnd = Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0;
+            Thread.Sleep(1500);
+            AsOwner("settle_town_terms_now");
+            Check(Wait(() => (Seat(2)?.TermEndsAt.MicrosecondsSinceUnixEpoch ?? 0) > judgeTermEnd, 5) && Seat(2)?.HolderId == b.PlayerId, "with no votes the holder stays on for another term");
+            AsOwner("set_town_term", "0");
+
+            // The Mayor: A, the founder, starts as Mayor. Only the Mayor removes; the signers vote.
+            var mayorNow = a.Conn.Db.TownOffice.Iter().FirstOrDefault(o => o.TownId == townId && o.Office == Social.OfficeMayor);
+            Check(mayorNow.HolderId == a.PlayerId, "A is Mayor of the signed town");
+            ExpectError(b, () => b.Conn.Reducers.RemoveFromTown(a.PlayerId), "Mayor", "a signer who is not Mayor cannot remove anyone");
+            b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, b.PlayerId);
+            Check(Wait(() => b.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId && v.VoterId == b.PlayerId), 5), "B votes for B");
+            Check(a.Conn.Db.TownOffice.Iter().First(o => o.TownId == townId && o.Office == Social.OfficeMayor).HolderId == a.PlayerId, "one vote of two is not a majority, so A stays Mayor");
+            a.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, b.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == Social.OfficeMayor && o.HolderId == b.PlayerId), 5), "two votes of two make B the Mayor");
+            Check(!a.Conn.Db.TownVote.Iter().Any(v => v.TownId == townId), "the ballot clears once the seat is filled");
+            ExpectError(a, () => a.Conn.Reducers.RemoveFromTown(b.PlayerId), "Mayor", "A is no longer Mayor and cannot remove B");
+            ExpectError(b, () => b.Conn.Reducers.VoteTownOffice(Social.OfficeMayor, 999999), "not on this roster", "a vote must name a signer");
+
+            // claims-21: the Marshal's ban, the Scribe's log. B is Mayor now, and also elected Marshal above.
+            Check(Towns.Get(9)!.Powers.HasFlag(TownPower.BreakTies) && Towns.Get(7)!.Powers.HasFlag(TownPower.Gates), "the Elder breaks ties and the Gatekeeper keeps the gates, as data");
+            ExpectError(a, () => a.Conn.Reducers.BanFromTown(b.PlayerId, 1), "Marshal", "only the Marshal bans");
+            ExpectError(b, () => b.Conn.Reducers.BanFromTown(b.PlayerId, 1), "yourself", "the Marshal cannot ban themselves");
+            b.Conn.Reducers.BanFromTown(a.PlayerId, 99);
+            Check(Wait(() => a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId && x.BannedId == a.PlayerId), 5), "the Marshal bans A");
+            var ban = a.Conn.Db.TownBan.Iter().First(x => x.TownId == townId && x.BannedId == a.PlayerId);
+            Check(ban.Until.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 <= Towns.BanDaysMax * (long)WorldTime.DayLengthSeconds * 1_000_000 + 5_000_000, "a ban is cut to the longest allowed");
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "a banned A cannot build on B's land");
+            b.Conn.Reducers.LiftTownBan(a.PlayerId);
+            Check(Wait(() => !a.Conn.Db.TownBan.Iter().Any(x => x.TownId == townId), 5), "the Marshal lifts the ban");
+            Check(a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Text.Contains("kept")), "the town log records the ban");
+            ExpectError(a, () => a.Conn.Reducers.WriteTownLog("A note"), "Scribe", "only the Scribe writes in the log");
+            a.Conn.Reducers.VoteTownOffice(8, a.PlayerId);
+            b.Conn.Reducers.VoteTownOffice(8, a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId && o.Office == 8 && o.HolderId == a.PlayerId), 5), "A is elected Scribe");
+            a.Conn.Reducers.WriteTownLog("The well was dug");
+            Check(Wait(() => a.Conn.Db.TownLog.Iter().Any(l => l.TownId == townId && l.Note && l.Text.Contains("The well was dug")), 5), "the Scribe adds a note to the log");
+            ExpectError(a, () => a.Conn.Reducers.WriteTownLog("Again"), "moment", "notes are rate limited");
+
+            // The Mayor removes a signer; the rights go with them.
+            b.Conn.Reducers.RemoveFromTown(a.PlayerId);
+            Check(Wait(() => a.Conn.Db.TownSigner.Iter().Count(t => t.TownId == townId) == 1, 5), "the Mayor removes A from the roster");
+            ExpectError(a, () => a.Conn.Reducers.PlaceStructure(StructureKind.LeanTo, tx2, tz2, 0), "claimed", "after being removed, A cannot build on B's land");
+            // The last signer leaving closes the town.
+            b.Conn.Reducers.LeaveTown();
+            Check(Wait(() => !a.Conn.Db.Town.Iter().Any(t => t.Id == townId) && !a.Conn.Db.TownOffice.Iter().Any(o => o.TownId == townId), 5), "the town and its offices close when the last claim leaves");
+        }
+    }
+}
+
 Console.WriteLine(failures == 0 ? "All social checks passed" : $"{failures} checks failed");
 // The SDK keeps background threads alive, so leave explicitly.
 Environment.Exit(failures == 0 ? 0 : 1);
+
+sealed record Site(ulong Id, float X, float Z);
 
 readonly record struct Vector(float X, float Z)
 {
@@ -523,7 +748,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))
@@ -543,6 +768,14 @@ sealed class Tester
     public Claim? MyClaim() => Conn.Db.Claim.Iter().FirstOrDefault(c => c.OwnerPlayerId == PlayerId);
 
     // One 10 Hz step toward a point; true once the server has us close enough.
+    BotGround? ground;
+
+    public string Describe() => (ground ??= new BotGround(Conn)).Describe(X, Z);
+
+    public (float X, float Z) Stand(float tx, float tz) => (ground ??= new BotGround(Conn)).Stand(tx, tz);
+
+    public List<(float X, float Z)> Route(float tx, float tz) => (ground ??= new BotGround(Conn)).Route(X, Z, tx, tz);
+
     public bool StepToward(float tx, float tz)
     {
         var pos = Conn.Db.PlayerPos.PlayerId.Find(PlayerId);
@@ -552,7 +785,7 @@ sealed class Tester
         lastMove = clock.Elapsed.TotalSeconds;
         float dx = tx - X, dz = tz - Z, d = MathF.Sqrt(dx * dx + dz * dz);
         float step = MathF.Min(d, 5f * 0.1f);
-        if (d > 0.001f) { X += dx / d * step; Z += dz / d * step; }
+        if (d > 0.001f) { float px = X, pz = Z; X += dx / d * step; Z += dz / d * step; (X, Z) = (ground ??= new BotGround(Conn)).Slide(px, pz, X, Z); }
         Conn.Reducers.Move(X, Z, 0);
         return false;
     }

@@ -19,6 +19,7 @@ public static partial class Module
         RequireReach(pos, x, z);
         RequireClaimAccess(ctx, x, z);
 
+        RequireHeld(ctx, item);
         var stack = FindStack(ctx, ctx.Sender, (Item)item, quality, wear) ?? throw new Exception("You are not carrying that");
         if (Placement.Check((Item)item, x, z, (px, pz) => Structures.GroundAt(px, pz, (i, j) => DepthAt(ctx, i, j))) is { } problem)
             throw new Exception(problem);
@@ -34,6 +35,7 @@ public static partial class Module
             Item = item,
             Quality = quality,
             Wear = wear,
+            Maker = stack.Maker,
             Placed = true,
             Yaw = yaw,
             X = x,

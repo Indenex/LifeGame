@@ -17,6 +17,14 @@ public static class Undergrowth
     public static Mesh Bush => bush ??= BuildBush();
 
     // Wildflower colors, from the Look palette.
+    // A colour leaned toward the muted olive of the stylised grass tufts (env-20), so
+    // low plants sit with the meadow instead of standing out saturated green.
+    public static Color Olive(Color color)
+    {
+        float lum = color.R * 0.3f + color.G * 0.59f + color.B * 0.11f;
+        return color.Lerp(new Color(lum * 1.1f, lum * 1.05f, lum * 0.6f, color.A), 0.4f);
+    }
+
     public static readonly Color[] FlowerColors = { Look.FlowerWhite, Look.FlowerButtercup, Look.FlowerViolet, Look.FlowerPink };
 
     // A fern: fronds arching up and out from the middle, about half a meter across.

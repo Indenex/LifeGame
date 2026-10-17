@@ -63,6 +63,10 @@ public static partial class Module
         public uint Count;
         [Default(0u)]
         public uint Wear;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // Owners and members see their claims' stashes; nobody else does.
@@ -138,9 +142,17 @@ public static partial class Module
     // House building asks this before placing or taking down a structure.
     static partial void CheckClaimAccess(ReducerContext ctx, float x, float z) => RequireClaimAccess(ctx, x, z);
 
-    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who)
+    // Builder rights on a claim: its owner, its members, and (claims-19) anyone who signed
+    // the same town roster as the claim. Building, digging, picking up, gates and the like.
+    public static bool HasClaimRights(ReducerContext ctx, Claim claim, Identity who) =>
+        !BannedFromClaim(ctx, claim, who) && (IsOwnerOrMember(ctx, claim, who) || IsTownmate(ctx, claim, who));
+
+    // The inner circle only: the owner and the members the owner added. Stashes, tending the
+    // marker and similar stay with them, not with the town.
+    public static bool IsOwnerOrMember(ReducerContext ctx, Claim claim, Identity who)
     {
         if (claim.Owner == who) return true;
+        if (BannedFromClaim(ctx, claim, who)) return false;
         foreach (var m in ctx.Db.ClaimMember.ClaimId.Filter(claim.Id))
             if (m.Member == who) return true;
         return false;
@@ -153,7 +165,8 @@ public static partial class Module
         if (ClaimAt(ctx, x, z) is not { } claim) return;
         if (!HasClaimRights(ctx, claim, ctx.Sender))
             throw new Exception($"This land is claimed by {claim.OwnerName}");
-        TendByWork(ctx, claim);
+        // Working a neighbour's land under a town roster does not keep their claim standing.
+        if (IsOwnerOrMember(ctx, claim, ctx.Sender)) TendByWork(ctx, claim);
     }
 
     // claims-5: owners and members keep their claim standing just by working on it.
@@ -274,7 +287,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!IsOwnerOrMember(ctx, claim, ctx.Sender))
             throw new Exception("Only the owner and members can tend this marker");
         RequireNearMarker(ctx, player, claim);
 
@@ -324,7 +337,7 @@ public static partial class Module
     static void AddMember(ReducerContext ctx, Claim claim, Player who)
     {
         if (who.Identity == ctx.Sender) throw new Exception("You already own this claim");
-        if (HasClaimRights(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
+        if (IsOwnerOrMember(ctx, claim, who.Identity)) throw new Exception($"{who.Name} is already a member");
         ctx.Db.ClaimMember.Insert(new ClaimMember { Id = 0, ClaimId = claim.Id, Member = who.Identity, PlayerId = who.PlayerId, Name = who.Name });
 
         // A calm line by the marker, and where the new member stands if that's elsewhere.
@@ -377,10 +390,10 @@ public static partial class Module
         {
             uint n = Math.Min(left, stack.Count);
             RemoveFromStack(ctx, stack, n);
-            if (FindStash(ctx, claim.Id, item, quality, stack.Wear) is { } row)
+            if (FindStash(ctx, claim.Id, item, quality, stack.Wear, stack.Maker) is { } row)
                 ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count + n });
             else
-                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear });
+                ctx.Db.ClaimStash.Insert(new ClaimStash { Id = 0, ClaimId = claim.Id, Item = item, Quality = quality, Count = n, Wear = stack.Wear, Maker = stack.Maker });
             left -= n;
         }
         LogStash(ctx, claim.Id, item, (int)count);
@@ -404,7 +417,7 @@ public static partial class Module
                 ctx.Db.ClaimStash.Id.Delete(row.Id);
             else
                 ctx.Db.ClaimStash.Id.Update(row with { Count = row.Count - n });
-            AddToInventory(ctx, ctx.Sender, (Item)item, n, quality, row.Wear);
+            AddToInventory(ctx, ctx.Sender, (Item)item, n, quality, row.Wear, row.Maker);
             left -= n;
         }
         LogStash(ctx, claim.Id, item, -(int)count);
@@ -450,7 +463,7 @@ public static partial class Module
                 float angle = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
                 float r = 0.4f + (float)ctx.Rng.NextDouble() * 1.2f;
                 float x = claim.X + MathF.Cos(angle) * r, z = claim.Z + MathF.Sin(angle) * r;
-                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
+                ctx.Db.WorldItem.Insert(new WorldItem { Id = 0, Item = row.Item, Quality = row.Quality, Wear = row.Wear, Maker = row.Maker, X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z) });
             }
             ctx.Db.ClaimStash.Id.Delete(row.Id);
         }
@@ -458,6 +471,7 @@ public static partial class Module
             ctx.Db.ClaimMember.Id.Delete(m.Id);
         RemoveClaimName(ctx, claim.Id);
         RemoveStashLog(ctx, claim.Id);
+        TownDropClaim(ctx, claim);
         ctx.Db.Claim.Id.Delete(claim.Id);
         // The marker post goes with it; what was built into it is not given back.
         if (ctx.Db.Structure.Id.Find(claim.StructureId) is { } marker)
@@ -493,7 +507,7 @@ public static partial class Module
     {
         var player = RequirePlayer(ctx);
         var claim = RequireStandingClaim(ctx, claimId);
-        if (!HasClaimRights(ctx, claim, ctx.Sender)) throw new Exception("This stash is not yours to open");
+        if (!IsOwnerOrMember(ctx, claim, ctx.Sender)) throw new Exception("This stash is not yours to open");
         RequireNearMarker(ctx, player, claim);
         return claim;
     }
@@ -516,10 +530,11 @@ public static partial class Module
         return found;
     }
 
-    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear)
+    static ClaimStash? FindStash(ReducerContext ctx, ulong claimId, ushort item, byte quality, uint wear, uint maker)
     {
+        var key = new StackKey(item, quality, wear, maker);
         foreach (var row in ctx.Db.ClaimStash.ByClaimItem.Filter((claimId, item)))
-            if (row.Quality == quality && row.Wear == wear)
+            if (KeyOf(row) == key)
                 return row;
         return null;
     }

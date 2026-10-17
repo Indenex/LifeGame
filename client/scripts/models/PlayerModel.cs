@@ -12,6 +12,17 @@ public static class PlayerModel
     // The style in use until Justin picks one (model-1).
     public static HumanFigure.Style Style = HumanFigure.Carved;
 
+    // The chibi roster (model-6, D-249): Bramble or Pebble by the look's race, on
+    // the 1.35 m base, the player figure since Justin turned it on. `--legacy-player`
+    // on the command line brings back the 1.75 m figure for comparison. Its clothes
+    // are cut to it (ChibiFigure.Garment).
+    public static bool Chibi = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--legacy-player") < 0;
+
+    // How tall the player figure stands, for the camera and the nameplate.
+    public static float Height => Chibi ? ChibiFigure.Height : 1.75f;
+
+    public static ChibiFigure.Look ChibiLook(HumanFigure.Appearance look) => new((ChibiFigure.Race)look.Race, look.Skin, look.Hair, look.Cut);
+
     // Clothing slots, as in shared/Clothing.cs and the worn_item table (D-074).
     public const byte Body = 0, Feet = 1;
 
@@ -20,8 +31,8 @@ public static class PlayerModel
     {
         get
         {
-            var f = HumanFigure.Build(Style);
-            float chin = 1.75f - f.HeadHeight;
+            var f = Chibi ? ChibiFigure.Build(ChibiLook(HumanFigure.Appearance.Default)) : HumanFigure.Build(Style);
+            float chin = (Chibi ? ChibiFigure.Height : 1.75f) - f.HeadHeight;
             return new Vector3(0, chin + f.HeadHeight * 0.3f - f.Joints.At[HumanRig.Head].Y, f.HeadHeight * 0.42f);
         }
     }
@@ -33,8 +44,9 @@ public static class PlayerModel
     // A player's own look (skin, hair, cut, beard) on the shared figure.
     public static Skeleton3D Build(HumanFigure.Appearance look)
     {
-        var skeleton = HumanFigure.Create(Style, look);
-        float drop = HumanFigure.Build(Style).GripDrop;
+        var skeleton = Chibi ? ChibiFigure.Create(ChibiLook(look)) : HumanFigure.Create(Style, look);
+        float drop = Chibi ? ChibiFigure.Build(ChibiLook(look)).GripDrop : HumanFigure.Build(Style).GripDrop;
+        Remember(skeleton, look);
         foreach (var (bone, tool) in new[] { (HumanRig.HandR, "ToolR"), (HumanRig.HandL, "ToolL") })
         {
             var hand = new BoneAttachment3D { Name = tool == "ToolR" ? "HandRAttach" : "HandLAttach", BoneName = HumanRig.Names[bone] };
@@ -50,9 +62,46 @@ public static class PlayerModel
     // Gives a built figure another look; the skeleton and anything worn stay.
     public static void SetLook(Skeleton3D figure, HumanFigure.Appearance look)
     {
+        if (Chibi)
+        {
+            Remember(figure, look);
+            var built = ChibiFigure.Build(ChibiLook(look));
+            if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } chibi) chibi.Mesh = built.Mesh;
+            // The face set follows the new race and skin, keeping the face shown.
+            if (figure.HasMeta(ChibiFigure.FaceMeta)) ChibiFigure.DressFace(figure, ChibiLook(look));
+            // Put back on whatever it wears, cut for the new race.
+            for (byte slot = 0; slot <= Feet; slot++)
+                Wear(figure, slot, figure.HasMeta($"worn{slot}") ? (ushort)figure.GetMeta($"worn{slot}").AsInt32() : (ushort)0);
+            return;
+        }
         if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } body)
             body.Mesh = HumanFigure.Build(Style, look).Mesh;
     }
+
+    static readonly NodePath FaceAttachPath = ChibiFigure.FaceAttach;
+
+    // Shows one face on a chibi figure (model-15): blink, happy, sleepy or open. A
+    // visibility flip between the four parts under its FaceAttach node, safe to call
+    // every frame: it returns at once when that face is already showing, and does
+    // nothing on a figure without a face set (the legacy adult).
+    public static void SetFace(Skeleton3D figure, Face face)
+    {
+        if (!figure.HasMeta(ChibiFigure.FaceMeta)) return;
+        int now = figure.GetMeta(ChibiFigure.FaceMeta).AsInt32();
+        if (now == (int)face) return;
+        var attach = figure.GetNodeOrNull(FaceAttachPath);
+        if (attach == null || (int)face >= attach.GetChildCount()) return;
+        for (int i = 0; i < attach.GetChildCount(); i++)
+            attach.GetChild<Node3D>(i).Visible = i == (int)face;
+        figure.SetMeta(ChibiFigure.FaceMeta, (int)face);
+    }
+
+    // A figure keeps its look, so its chibi wrap can be put back on.
+    static void Remember(Node figure, HumanFigure.Appearance look) =>
+        figure.SetMeta("look", new int[] { look.Skin, look.Hair, look.Cut, look.Beard ? 1 : 0, look.Race });
+
+    static HumanFigure.Appearance LookOf(Node figure) =>
+        figure.HasMeta("look") && figure.GetMeta("look").AsInt32Array() is { Length: 5 } l ? new(l[0], l[1], l[2], l[3] != 0, l[4]) : HumanFigure.Appearance.Default;
 
     // Puts on what a player wears in a slot (item 0 for nothing): a garment from
     // the worn_item table replaces the one shown there. An empty body slot shows
@@ -65,7 +114,8 @@ public static class PlayerModel
             figure.RemoveChild(old);
             old.QueueFree();
         }
-        var mesh = Garments.For(Style, slot, item);
+        figure.SetMeta($"worn{slot}", item);
+        var mesh = Chibi ? ChibiFigure.Garment(ChibiLook(LookOf(figure)), slot, item) : Garments.For(Style, slot, item);
         if (mesh != null)
             figure.AddChild(new MeshInstance3D { Name = SlotNode(slot), Mesh = mesh, Skeleton = new NodePath("..") });
     }

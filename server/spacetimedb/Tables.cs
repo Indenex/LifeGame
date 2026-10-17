@@ -97,6 +97,10 @@ public static partial class Module
         public bool Placed;
         [Default(0f)]
         public float Yaw;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // What each player carries: one stack per item and quality.
@@ -115,6 +119,16 @@ public static partial class Module
         // Tool wear (shared/Durability.cs). Worn and fresh tools are separate stacks.
         [Default(0u)]
         public uint Wear;
+        // Where it sits in the bag (ui-18; the player arranges it, or Sort), or its place on
+        // the tools section of the doll when OnBelt. Belt rows add no weight (Inventory.cs).
+        [Default((ushort)0)]
+        public ushort Slot;
+        [Default(false)]
+        public bool OnBelt;
+        // Who made it (a PlayerId; 0 = unknown or not made). Part of a stack's identity with
+        // quality and wear (Inventory.cs StackKey); only the server sets it (crafting-25).
+        [Default(0u)]
+        public uint Maker;
     }
 
     // Clients read their own inventory through this view; the table itself is private.

@@ -140,23 +140,10 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     var (wx0, wx1, wz) = crossing!.Value;
     float sx = wx0 - 2, ex = wx1 + 2;
     float cxw = MyPos()!.X, czw = MyPos()!.Z;
-    void WalkTo(float tx, float tz)
-    {
-        for (int guard = 0; guard < 2000; guard++)
-        {
-            float dx = tx - cxw, dz2 = tz - czw, d = MathF.Sqrt(dx * dx + dz2 * dz2);
-            if (d < 0.2f) break;
-            var seen = MyPos()!;
-            if (MathF.Abs(seen.X - cxw) + MathF.Abs(seen.Z - czw) < 0.8f)
-            {
-                float step = MathF.Min(d, 0.3f);
-                cxw += dx / d * step; czw += dz2 / d * step;
-            }
-            conn.Reducers.Move(cxw, czw, MathF.Atan2(dx, dz2));
-            Pump(100);
-        }
-        WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - tx) + MathF.Abs(p.Z - tz) < 1.0f, 15, $"server has us at ({tx:F0}, {tz:F0})");
-    }
+    // Walking itself is tested here and nowhere else (integration-12): this walker is strict, so a stall
+    // fails the check instead of repositioning the bot as the other tools' walkers would.
+    var walker = new BotWalker(conn, myId, "Spawn check", "bot", Pump, msg => { Check(false, msg); }, strict: true);
+    void WalkTo(float tx, float tz) => walker.To(ref cxw, ref czw, tx, tz, 0.2f, stand: true);
     WalkTo(sx, wz);
     WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
     Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");
@@ -174,6 +161,11 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     }
     WaitFor(Swam, 10, "time spent wading is journalled as swim.wade or swim.float");
 }
+
+// The atmosphere subscription (clock, weather, seasons) must apply: one private or unknown table in it
+// fails the whole thing and no client ever sees the time or season change (bugfix-39).
+Subscribe(Subscriptions.Atmosphere, 20, "the clock, weather and season subscription applies");
+Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the world clock and season clock arrive");
 
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();

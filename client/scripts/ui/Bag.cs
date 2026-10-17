@@ -10,7 +10,7 @@ namespace LifeGame;
 // One stack in the bag panel: what it is, how good, how many (ui-18). Id is its row
 // (a basket's item row, or the bag's own row once the bag keeps an order), Slot its
 // place in the bag or on the tools belt, -1 for none.
-public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1)
+public record BagStack(Item Item, byte Quality, uint Count, ulong Id = 0, int Slot = -1, uint Maker = 0, uint Decor = 0)
 {
     public string Label => ItemLook.Label(Item, Quality, Count);
 }
@@ -47,7 +47,8 @@ public sealed class MockBagLink : IBagLink
             (Item.Stick, 0, 8), (Item.Stone, 0, 3), (Item.Fiber, 0, 12), (Item.Flake, 60, 2),
             (Item.HandAxe, 72, 1), (Item.Berries, 0, 5), (Item.Clay, 0, 4), (Item.CoilPotOfWater, 55, 1),
         };
-        for (int i = 0; i < bag.Length; i++) rows.Add((new BagStack(bag[i].Item1, bag[i].Item2, bag[i].Item3, (ulong)i + 1, i), false));
+        for (int i = 0; i < bag.Length; i++)
+            rows.Add((new BagStack(bag[i].Item1, bag[i].Item2, bag[i].Item3, (ulong)i + 1, i, bag[i].Item1 == Item.HandAxe ? 7u : 0u), false));
         rows.Add((new BagStack(Item.StoneKnife, 65, 1, 99, 0), true));
     }
 
@@ -92,21 +93,23 @@ public sealed class ServerBagLink : IBagLink
     readonly DbConnection conn;
     public ServerBagLink(DbConnection conn) => this.conn = conn;
 
-    public IEnumerable<BagStack> Carried() => conn.Db.MyInventory.Iter()
-        .Where(i => i.Count > 0 && Items.IsKnown(i.Item))
-        .GroupBy(i => (i.Item, i.Quality))
-        .Select(g => new BagStack((Item)g.Key.Item, g.Key.Quality, (uint)g.Sum(i => i.Count)));
+    // The bag's rows in their places, and the tools on the doll (ui-18, server/spacetimedb/Inventory.cs).
+    // Each row is one stack; pots carry their maker in Wear (Ceramics), shown as "Made by" (ui-23).
+    public IEnumerable<BagStack> Carried() => Rows(belt: false);
+    public IEnumerable<BagStack> Belt() => Rows(belt: true);
+
+    IEnumerable<BagStack> Rows(bool belt) => conn.Db.MyInventory.Iter()
+        .Where(i => i.Count > 0 && i.OnBelt == belt && Items.IsKnown(i.Item))
+        .Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, i.Id, i.Slot, Marks.MakerOf((Item)i.Item, i.Wear),
+            ClayItemLook.Decoration((Item)i.Item, i.Wear)));
 
     public void Drop(Item item, byte quality) => conn.Reducers.Drop((ushort)item, quality);
 
-    // The bag's order and the tools belt need the server's Slot and OnBelt columns
-    // (ui-18, after #267); until then the bag sorts itself and the belt stays hidden.
-    public bool Arranges => false;
-    public IEnumerable<BagStack> Belt() => Enumerable.Empty<BagStack>();
-    public void MoveTo(ulong id, int slot) { }
-    public void Sort() { }
-    public void ToBelt(ulong id, int slot) { }
-    public void FromBelt(ulong id, int slot) { }
+    public bool Arranges => true;
+    public void MoveTo(ulong id, int slot) => conn.Reducers.MoveInBag(id, (ushort)Math.Max(slot, 0));
+    public void Sort() => conn.Reducers.SortBag();
+    public void ToBelt(ulong id, int slot) => conn.Reducers.PutOnBelt(id, slot < 0 ? (byte)255 : (byte)slot);
+    public void FromBelt(ulong id, int slot) => conn.Reducers.TakeOffBelt(id, slot < 0 ? ushort.MaxValue : (ushort)slot);
 }
 
 // Everything you carry as a grid of round slots, sorted by kind (ui-18). Drag a slot
@@ -116,6 +119,8 @@ public sealed class ServerBagLink : IBagLink
 public partial class BagGrid : GridContainer
 {
     public const float Slot = 50f;
+    // Who made what, for the inspect tooltip (ui-23); Main sets it.
+    public static IMarkLink? Makers;
     public IBagLink Link = new MockBagLink(false);
     // What the grid shows: the bag by default, or a store (a basket, the claim stash).
     public Func<IEnumerable<BagStack>>? Source;
@@ -158,13 +163,7 @@ public partial class BagGrid : GridContainer
     }
 
     // Sorted by kind: what you use (food, drink, tools, clothes) first, then the rest by item.
-    public static int Group(Item item) => Items.UseOf(item) switch
-    {
-        UseAction.Eat or UseAction.Drink => 0,
-        UseAction.Tool => 1,
-        UseAction.Wear => 2,
-        _ => 3,
-    };
+    public static int Group(Item item) => LifeGame.Shared.Bag.Group(item);
 
     public void Refresh()
     {
@@ -260,7 +259,7 @@ public partial class BagSlotView : PanelContainer
         AddChild(stack);
         var picture = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -297,6 +296,36 @@ public partial class BagSlotView : PanelContainer
         }
     }
 
+    // Hovering a made thing names its maker and shows their mark (ui-23, Justin: "if an
+    // item is inspected, it tells you who made it").
+    public override GodotObject? _MakeCustomTooltip(string forText)
+    {
+        if (Stack == null) return null;
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 4);
+        box.AddChild(Hud.Text(Stack.Label, 14));
+        if (Stack.Maker != 0 && BagGrid.Makers?.Maker(Stack.Maker) is { } who)
+        {
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 6);
+            var mark = new MarkView { CustomMinimumSize = new Vector2(22, 22), Width = 1.6f };
+            mark.Show(BagGrid.Makers.Find(who.Glyph), who.Color.Lightened(0.25f));
+            row.AddChild(mark);
+            var by = Hud.Text($"Made by {who.Name}", 13);
+            by.Modulate = new Color(1, 1, 1, 0.8f);
+            row.AddChild(by);
+            box.AddChild(row);
+        }
+        // The warm look's tooltip is already a paper note (ui-44): ink the words, no dark box.
+        if (WarmLook.On)
+        {
+            WarmLook.InkInside(box);
+            return box;
+        }
+        var panel = Hud.Panel(box, Vector2.Zero);
+        return panel;
+    }
+
     public override bool _CanDropData(Vector2 atPosition, Variant data) => Grid.CanTake(data, Cell);
     public override void _DropData(Vector2 atPosition, Variant data) => Grid.Take(data, Cell);
 
@@ -305,21 +334,29 @@ public partial class BagSlotView : PanelContainer
         if (Stack == null) return default;
         var preview = new TextureRect
         {
-            Texture = ItemIcon.For(Stack.Item),
+            Texture = ItemIcon.For(Stack.Item, Stack.Decor),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             Size = new Vector2(BagGrid.Slot, BagGrid.Slot),
             Position = -new Vector2(BagGrid.Slot, BagGrid.Slot) / 2,
             Modulate = new Color(1, 1, 1, 0.8f),
         };
+        // Shift-drag takes half the stack (rounded up) into a basket or the stash; a plain drag takes it all.
+        uint count = Input.IsKeyPressed(Key.Shift) && Stack.Count > 1 ? (Stack.Count + 1) / 2 : Stack.Count;
         var holder = new Control();
         holder.AddChild(preview);
+        if (count > 1)
+        {
+            var label = Hud.Text(count.ToString(), 13);
+            label.Position = new Vector2(BagGrid.Slot * 0.1f, BagGrid.Slot * 0.05f);
+            holder.AddChild(label);
+        }
         SetDragPreview(holder);
         Grid.Dragging = (Stack.Item, Stack.Quality);
         var data = new Godot.Collections.Dictionary
         {
             ["from"] = Grid.Kind, ["item"] = (int)Stack.Item, ["quality"] = (int)Stack.Quality,
-            ["count"] = (long)Stack.Count, ["id"] = (long)Stack.Id,
+            ["count"] = (long)count, ["id"] = (long)Stack.Id,
         };
         // Only the bag's own things go onto the hotbar or a worn slot.
         if (Grid.Kind == "bag") data["bag"] = (int)Stack.Item;

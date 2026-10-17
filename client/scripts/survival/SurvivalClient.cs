@@ -85,7 +85,7 @@ public partial class SurvivalClient : Node
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
                 ? new UseOffer("Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
-                    Target: new Vector3(bush.X, 0, bush.Z))
+                    Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
         Use.Register(new UseHandler
@@ -93,7 +93,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink",
             Priority = 10,
             Find = at => conn != null && vitals != null && Current().water < 0.97f && WaterNearby()
-                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink())
+                ? new UseOffer("Drink", World.Reach, () => conn.Reducers.Drink(), Again: Use.HoldInterval)
                 : null,
         });
         // A pot you carry is the last resort: it only shows when you're thirsty and
@@ -103,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
+                ? new UseOffer("Drink from what you carry", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
@@ -285,7 +285,8 @@ public partial class SurvivalClient : Node
         if (conn == null) return;
         float load = 0f;
         bool basket = false;
-        foreach (var i in conn.Db.MyInventory.Iter())
+        // Tools on the doll's tools section add no weight (ui-18).
+        foreach (var i in conn.Db.MyInventory.Iter().Where(i => !i.OnBelt))
         {
             load += Carry.Weight((Item)i.Item) * i.Count;
             if (i.Item == (ushort)Carry.Basket && i.Count > 0) basket = true;

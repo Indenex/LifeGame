@@ -168,6 +168,35 @@ namespace LifeGame.Shared
         // most ClaimNameMax characters. Empty means unnamed.
         public const int ClaimNameMax = 28;
 
+        // claims-19: town rosters. Claim owners sign a roster; everyone who signed gets builder
+        // rights (build, dig, gates; not stashes, tending or fighting rules) on every signed
+        // claim. One raisable constant each (D-197).
+        public const int TownMaxClaims = 64;                       // a soft cap, for server cost
+        public const float TownNearMetres = 60f;                   // marker to marker; touching is 40
+        public const long TownInviteMicros = 24L * 3600 * 1_000_000;
+        // Offices are voted for by the signers (open ballot). A majority wins at once; otherwise
+        // the term's end decides by most votes. Office ids are append-only data (D-206).
+        public const byte OfficeMayor = 0;
+        public const long TownTermMicros = 7L * 24 * 3600 * 1_000_000;
+        public const long TownVacancyMicros = 24L * 3600 * 1_000_000;
+
+        // Whether two claim markers are near enough for the same town.
+        // Who may bar or unbar a gate on a claim (claims-21): the owner, the members the owner added, and the
+        // town's Gatekeeper. A signer who is neither only opens and shuts it. A banned player (never the owner)
+        // loses every right on the claim, member and Gatekeeper included.
+        public static bool MayBarGate(bool isOwner, bool isMember, bool isTownmate, bool isGatekeeper, bool banned)
+        {
+            bool inner = isOwner || (isMember && !banned);
+            bool rights = inner || (isTownmate && !banned);
+            return rights && (inner || isGatekeeper);
+        }
+
+        public static bool TownNear(float x1, float z1, float x2, float z2)
+        {
+            float dx = x1 - x2, dz = z1 - z2;
+            return dx * dx + dz * dz <= TownNearMetres * TownNearMetres;
+        }
+
         // claims-16 (D-182): control characters (newlines, escapes, NUL) never reach other
         // players' screens; they read as spaces, so words don't run together.
         public static string StripControl(string text)

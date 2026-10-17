@@ -181,6 +181,7 @@ public partial class BuildingSystem
     void OpenBasket(ulong id)
     {
         if (basketLayer == null) MakeBasketPanel();
+        Panels.Opening(this); // one centre window at a time (D-283)
         openBasket = id;
         basketLayer!.Visible = true;
         RefreshBasket();
@@ -196,6 +197,7 @@ public partial class BuildingSystem
     {
         basketLayer = new CanvasLayer { Layer = 2, Visible = false };
         AddChild(basketLayer);
+        Panels.Centre(this, CloseBasket);
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 8);
         basketTitle = Hud.Text("Storage basket", 18);
@@ -220,7 +222,7 @@ public partial class BuildingSystem
         {
             Kind = "bag", Width = 5, Empty = "Nothing",
             Source = () => conn() is { } c
-                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
                 : Enumerable.Empty<BagStack>(),
             Clicked = (s, all) => { if (openBasket is { } id) conn()?.Reducers.BasketPut(id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             Accepts = d => d["from"].AsString() == "basket",
@@ -229,14 +231,11 @@ public partial class BuildingSystem
         columns.AddChild(Column("In the basket", basketInside, out basketInsideTitle));
         columns.AddChild(Column("You carry", basketCarried, out _));
         box.AddChild(columns);
-        var hint = Hud.Text($"Drag moves a whole stack, click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
+        var hint = Hud.Text($"Drag moves a whole stack (Shift-drag: half), click moves one, Shift+click moves all    {Controls.KeyFor("use") ?? "E"} or Esc closes", 13);
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
-        var panel = Hud.Panel(box, Vector2.Zero);
-        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
-        panel.GrowHorizontal = Control.GrowDirection.Both;
-        panel.GrowVertical = Control.GrowDirection.Both;
-        basketLayer.AddChild(panel);
+        // The shared window look (ui/Ui.cs), so the world doesn't read through it.
+        basketLayer.AddChild(Ui.Window(box));
     }
 
     static Control Column(string title, Control list, out Label label)

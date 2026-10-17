@@ -156,7 +156,7 @@ public static partial class Module
         {
             var stack = AnyStack(ctx, (Item)item)!.Value;
             RemoveFromStack(ctx, stack, 1);
-            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+            AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
         }
         else
             Take(ctx, (Item)item, 1);
@@ -202,7 +202,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         RemoveFromStack(ctx, stack, 1);
-        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality);
+        AddToInventory(ctx, ctx.Sender, empty, 1, stack.Quality, stack.Wear);
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + water) });
     }
 
@@ -312,6 +312,8 @@ public static partial class Module
                     Id = 0,
                     Item = stack.Item,
                     Quality = stack.Quality,
+                    Wear = stack.Wear,
+                    Maker = stack.Maker,
                     X = x,
                     Z = z,
                     ChunkX = World.ChunkOf(x),
@@ -584,7 +586,7 @@ public static partial class Module
     // speed check by this, matching the client's slowdown.
     static float CarryWalkFactor(ReducerContext ctx, Identity owner)
     {
-        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Select(i => ((Item)i.Item, i.Count)));
+        var (load, limit) = Carry.Of(ctx.Db.InventoryItem.Owner.Filter(owner).Where(i => !i.OnBelt).Select(i => ((Item)i.Item, i.Count)));
         return Carry.WalkFactor(load, limit);
     }
 }

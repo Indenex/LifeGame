@@ -41,6 +41,7 @@ public partial class SoundScape : Node
     public float Fire { set { mix.Fire = value; FireNow = value; } }
     public float FireNow { get; private set; }
     public float FirePan { set => mix.FirePan = value; }
+    public float FireStoke { set => mix.FireStoke = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
     // Running water along a stream (audio-2a); ponds use Water.

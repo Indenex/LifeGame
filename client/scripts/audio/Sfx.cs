@@ -34,6 +34,32 @@ public static class Sfx
 
     // A cue defined as data (CueDefs).
     public static void Play(CueDef def) => scape?.Play(def);
+    public static void Play(CueDef def, float gain) => scape?.Play(def, gain);
+
+    // An animal's voice at `where`, heard out to `hearing` metres, quieter with distance (power 1.4,
+    // like the deer), from its side. `loudness` is the animal's own level, 1 for a normal cry.
+    public static void PlayAnimal(CueDef def, Vector3 where, float hearing, float loudness = 1f)
+    {
+        var offset = new Vector3(where.X - listener.X, 0, where.Z - listener.Z);
+        float distance = offset.Length();
+        if (distance >= hearing) return;
+        float gain = loudness * Mathf.Pow(1f - distance / hearing, 1.4f);
+        if (gain < 0.01f) return;
+        float pan = distance < 0.5f ? 0f : Mathf.Clamp(offset.Normalized().Dot(new Vector3(right.X, 0, right.Z).Normalized()), -1f, 1f) * 0.8f;
+        scape?.Play(def, gain, pan);
+    }
+
+    // Something hitting the water at `where`: strength 0 (a drop) to 1 (a big body); you (within
+    // 1.5 m of the listener) at full volume, others from their side. Atmosphere calls this for
+    // the player's own entry; anything else that splashes (a thrown stone, an animal, another
+    // player) can call it too.
+    public static void Splash(Vector3 where, float strength)
+    {
+        float s = Mathf.Clamp(strength, 0f, 1f);
+        float gain = 0.3f + 0.9f * s;
+        if (new Vector3(where.X - listener.X, 0, where.Z - listener.Z).LengthSquared() < 1.5f * 1.5f) scape?.Play(CueDefs.SplashIn, gain);
+        else if (Place(where, out float g, out float pan)) scape?.Play(CueDefs.SplashIn, gain * g, pan);
+    }
 
     // The same for something that happens at `where`: you (within 1.5 m of the listener) at full
     // volume, others from their side, quieter with distance.
