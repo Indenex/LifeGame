@@ -2,7 +2,7 @@
 Lane: Animation
 Owner: Animation thread (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
-Branch: claude/anim-26 (stacked on claude/anim-25 / #739 until that merges)
+Branch: claude/anim-26
 PR: (not yet)
 
 ## Goal
@@ -17,4 +17,4 @@ How: each station `ProcessDef` sets its `Motion` (data, D-206). `WorkMotions.Sta
 - (none). A render request to Render C would help confirm that the hands sit on the station top; renders don't block merges (D-142).
 
 ## Next step
-Server build, commit, push, open the PR (base main once #739 merges, else claude/anim-25).
+Push, open the PR against main, wait for CI, then send the PM the green sha.
