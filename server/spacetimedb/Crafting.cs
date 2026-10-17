@@ -102,7 +102,20 @@ public static partial class Module
     // Starts a process. The client plays the hands-on minigame first and sends its
     // score from 0 to 1; hands-off processes ignore it.
     [SpacetimeDB.Reducer]
-    public static void StartCraft(ReducerContext ctx, string processId, float score)
+    public static void StartCraft(ReducerContext ctx, string processId, float score) =>
+        StartCraftCore(ctx, processId, score, null);
+
+    // Lights a fire where the player chose (crafting-28): the same craft as StartCraft with
+    // the spot named. Only fire processes take a spot; it must be within reach and clear
+    // ground by the same rules as the automatic spot (Hearths.cs ClearForFire).
+    [SpacetimeDB.Reducer]
+    public static void StartFireAt(ReducerContext ctx, string processId, float score, float x, float z)
+    {
+        if (!float.IsFinite(x) || !float.IsFinite(z)) throw new Exception("Not there");
+        StartCraftCore(ctx, processId, score, (x, z));
+    }
+
+    static void StartCraftCore(ReducerContext ctx, string processId, float score, (float X, float Z)? chosenSpot)
     {
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
@@ -123,7 +136,9 @@ public static partial class Module
             station = StationNear(ctx, def.Station, pos.X, pos.Z)
                 ?? throw new Exception($"You need to be at a {StationInfo.Name(def.Station)} in your claim");
         // Find the fire's spot before anything is used up, in case there is none.
-        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos) : null;
+        if (chosenSpot is not null && def.Outcome != Outcome.Fire)
+            throw new Exception("Only a fire can be lit somewhere in particular");
+        (float X, float Z)? fireSpot = def.Outcome == Outcome.Fire ? FireSpot(ctx, pos, chosenSpot) : null;
 
         // Check everything first so a missing input never half-consumes the rest.
         foreach (var input in def.Consumes)
