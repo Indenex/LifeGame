@@ -176,6 +176,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 15:35: env-38 water (Justin's feedback): before on main 1f3b1431 now (pond noon/golden/night, close -46,-22 zoom 1, reedy bank -37,10, wind 0.8); after when Environment sends its sha (same shots, from /tmp/render/env38-shots.txt or the env38-before job line). Right after the cabin shots.
 
+- 2026-10-17 15:38: ui-70 hotbar slots (#841 489c3c10, Justin's request) warm and cold, before on main 26273056, plus --screenshot-hotbar ghost; right after the cabin shots, then env-38.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 

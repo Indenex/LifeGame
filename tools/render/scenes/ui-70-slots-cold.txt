@@ -1,0 +1,31 @@
+# ui-70: items in slots always clear on a light plate, the ring round the slot in hand, and
+# the grey ghost of an item you've run out of. The camera logs in as the puppet.
+# Before/after: run on main and on this branch; warm, then again with --cold on the client line.
+# The ghost alone also shows with render.sh and --screenshot-hotbar (cordage in slot 4).
+client-as-puppet
+client --cold --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
+wait 35
+give 1 8 50
+give 7 1 50
+give 10 1 50
+give 160 1 60
+give 3 6 50
+wait 4
+# The bar, nothing in hand.
+burst 2 1.5
+# Something in hand: the ring springs in.
+key 2
+burst 3 0.25
+wait 2
+snap
+# The berry eaten from the hand: its slot keeps a grey ghost.
+key 4
+wait 1
+click 640 300
+wait 3
+snap
+# The bag (I).
+key i
+wait 2
+burst 2 1.5
+key Escape
