@@ -13,8 +13,11 @@ public static partial class Module
         int k = (int)kind;
         var station = Structures.Shape(k).Station;
         if (station == StationKind.None || Structures.IsWild(k)) return;
-        if (ClaimAt(ctx, x, z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender))
-            throw new Exception($"A {StationInfo.Name(station)} has to stand inside your claim");
+        string what = StationInfo.Name(station);
+        if (ClaimAt(ctx, x, z) is not { } claim)
+            throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
+        if (!HasClaimRights(ctx, claim, ctx.Sender))
+            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // How far a station's middle is from its edge, for reach.

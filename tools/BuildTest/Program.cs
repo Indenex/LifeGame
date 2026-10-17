@@ -10,7 +10,10 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+// What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
+// lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -47,6 +50,10 @@ void WaitFor(Func<bool> done, int seconds, string what)
 
 WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 
+// Every run starts from the same place (bugfix-31): players wake at a random spot in the clearing.
+a.WalkTo(0f, 0f, 0.3f, Pump);
+b.WalkTo(1f, 0f, 0.3f, Pump);
+
 // The tiled house (ceramics-10) is the brick house with a roof of 12 fired tiles.
 {
     var tiled = Structures.Shape((int)StructureKind.TiledHouse);
@@ -73,11 +80,11 @@ foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, St
     Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
 }
 
-if (which is "lean-to" or "both")
+if (Wants("lean-to"))
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
-if (which is "clay-hut" or "both")
+if (Wants("clay-hut"))
 {
     ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
@@ -93,7 +100,7 @@ if (which is "clay-hut" or "both")
     LayMat(hut);
     BuildHearth(hut);
 }
-if (which is "basket" or "both")
+if (Wants("basket"))
     StoreInBasket(BuildTogether(StructureKind.Basket,
         new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
         new() { [Item.Fiber] = 9 },
@@ -104,7 +111,7 @@ if (which is "basket" or "both")
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
 
-if (which is "fence" or "both")
+if (Wants("fence"))
 {
     WallsStopWalkers(BuildTogether(StructureKind.Fence,
         new() { [Item.Stick] = 2 },
@@ -115,7 +122,7 @@ if (which is "fence" or "both")
 }
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
-if (which is "brick-house")
+if (Wants("brick-house"))
 {
     ulong house = BuildTogether(StructureKind.BrickHouse,
         new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
@@ -145,7 +152,7 @@ if (which is "brick-house")
 }
 
 // Not in "both": each player makes a stone axe and chops ten logs, which takes minutes (log-cabin).
-if (which is "log-cabin")
+if (Wants("log-cabin"))
 {
     ulong cabin = BuildTogether(StructureKind.LogCabin,
         new() { [Item.Stone] = 7, [Item.Stick] = 7, [Item.Fiber] = 3 },
@@ -255,6 +262,13 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Walk in and check the spot counts as sheltered.
     if (Structures.Shape((int)kind).RainCover > 0)
     {
+        if (kind == StructureKind.LeanTo)
+        {
+            // Its sides and back stop walkers (bugfix-34): come in by the open front.
+            var lean = Structures.Shape((int)kind);
+            var leanFront = Structures.ToWorld(done.X, done.Z, done.Yaw, 0f, lean.HalfDepth + 1.2f);
+            a.WalkTo(leanFront.x, leanFront.z, 0.3f, Pump);
+        }
         a.WalkTo(sx, sz, 0.3f, Pump);
         Check(Structures.Contains((int)kind, done.X, done.Z, done.Yaw, a.X, a.Z, -0.2f), "standing inside is sheltered");
     }
@@ -269,6 +283,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
 void HangDoor(ulong hut)
 {
     Console.WriteLine("--- Door");
+    LeaveHut(hut); // both are still inside after the "standing inside" check; its walls pen them in
     a.Wants = new() { [Item.Stick] = Structures.DoorSticks, [Item.Fiber] = Structures.DoorFiber };
     b.Wants = new();
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
@@ -437,9 +452,9 @@ void BuildHearth(ulong hut)
     double seconds = (fire.FuelUntil.MicrosecondsSinceUnixEpoch - fire.LitAt.MicrosecondsSinceUnixEpoch) / 1e6;
     Check(Math.Abs(seconds - Fires.StartSeconds * Structures.HearthFuelScale) < 1, $"and burns {Structures.HearthFuelScale}x as long ({seconds:F0} s)");
 
-    // Walls stop the server's players (bugfix-27): leave through the doorway, as a player would.
-    a.WalkTo(door.x, door.z, 0.3f, Pump);
-    b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
+    // Walls stop the server's players (bugfix-27): the next stages gather from outside, so go out
+    // through the doorway to the yard, as a player would.
+    LeaveHut(hut);
 }
 
 // The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished
@@ -613,7 +628,7 @@ sealed class Bot
         {
             digCell ??= NearestClay();
             var (cx, cz) = digCell.Value;
-            if (Step(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
+            if (StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt) < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
@@ -632,7 +647,7 @@ sealed class Bot
             targetItem = item?.Id ?? 0;
             if (item == null) return;
         }
-        if (Step(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
+        if (StepRouted(item.X, item.Z, dt) < 1.2f && Lag() < 0.8f && actionTimer <= 0)
         {
             actionTimer = 0.3f;
             Conn.Reducers.PickUp(item.Id);
@@ -660,8 +675,28 @@ sealed class Bot
 
     // How far the server still has this player from where the bot thinks it stands.
     float lastSx, lastSz, stuckFor, detourLeft, detourSign = 1f;
+    BotGround? ground;
+    BotGround Ground => ground ??= new BotGround(Conn);
 
     public float Lag() => Conn.Db.PlayerPos.PlayerId.Find(myId) is { } seen ? MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) : 0f;
+
+    // Like Step, but round trunks, boulders and buildings by a route (bugfix-34): follows waypoints
+    // and works the route out again when the target changes or every few seconds. Returns the distance to the target.
+    List<(float X, float Z)> route = new();
+    float routeTx = float.NaN, routeTz, routeAge;
+
+    float StepRouted(float tx, float tz, float dt)
+    {
+        routeAge += dt;
+        if (route.Count == 0 || MathF.Abs(tx - routeTx) > 0.5f || MathF.Abs(tz - routeTz) > 0.5f || routeAge > 3f)
+        {
+            route = Ground.Route(X, Z, tx, tz);
+            routeTx = tx; routeTz = tz; routeAge = 0f;
+        }
+        while (route.Count > 1 && (route[0].X - X) * (route[0].X - X) + (route[0].Z - Z) * (route[0].Z - Z) < 0.16f) route.RemoveAt(0);
+        Step(route[0].X, route[0].Z, dt);
+        return MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z));
+    }
 
     // Moves up to one tick's walk toward a point and returns the distance left.
     float Step(float tx, float tz, float dt)
@@ -698,15 +733,17 @@ sealed class Bot
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
             {
+                float px = X, pz = Z;
                 X += dx / dist * step;
                 Z += dz / dist * step;
+                (X, Z) = Ground.Slide(px, pz, X, Z); // round things and walls, as a player meets them
                 moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         else if (Lag() > 0.05f)
             Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
-        return MathF.Max(0, dist - moved);
+        return moved > 0f ? MathF.Sqrt((tx - X) * (tx - X) + (tz - Z) * (tz - Z)) : dist;
     }
 
     // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
@@ -715,6 +752,10 @@ sealed class Bot
     // still short, adopt where it has us and go round the side, a little wider each time.
     public void WalkTo(float tx, float tz, float within, Action<int> pump)
     {
+        // Round trunks and boulders by a route first (bugfix-34), to a spot that can be stood on.
+        (tx, tz) = Ground.Stand(tx, tz);
+        var route = Ground.Route(X, Z, tx, tz);
+        for (int i = 0; i < route.Count - 1; i++) WalkStraight(route[i].X, route[i].Z, 0.4f, pump);
         for (int attempt = 0; attempt < 6; attempt++)
         {
             WalkStraight(tx, tz, within, pump);

@@ -6,12 +6,16 @@ namespace LifeGame;
 // degree steps. It eases after its target so nothing ever snaps.
 public partial class CameraRig : Node3D
 {
+    // Metres; one raisable constant.
+    public const float FarPlane = 1500f;
     public Vector3 Focus;
     public Camera3D Camera { get; } = new()
     {
         Fov = 45f,
         Near = 0.3f,
-        Far = 300f,
+        // Nothing is built or drawn beyond the view radius (at most 160 m) except sky, fog and water, so a long
+        // far plane costs nothing in geometry; it lets the smoke-signal columns (atmosphere) show from afar.
+        Far = FarPlane,
         // The far forest softens out of focus, which sells the depth.
         Attributes = new CameraAttributesPractical
         {

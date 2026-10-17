@@ -20,26 +20,33 @@ public partial class GroundItems : Node3D
         public readonly List<Transform3D> Places = new();
     }
 
-    readonly Dictionary<(Item, int, int), Batch> batches = new();
+    readonly Dictionary<(Item, int, int, int), Batch> batches = new();
     readonly Dictionary<ulong, Batch> batchOf = new();
     readonly Dictionary<ulong, int> slotOf = new();
 
     public bool Has(ulong id) => batchOf.ContainsKey(id);
 
-    public void Add(ulong id, Item item, Transform3D place)
+    // `mark` is the row's Wear number: for pots it is the maker's mark (shared/Marks.cs), drawn as
+    // a stamp, and pots with different marks are drawn in separate batches.
+    public void Add(ulong id, Item item, Transform3D place, uint mark = 0)
     {
         if (batchOf.ContainsKey(id)) return;
         int px = Mathf.FloorToInt(place.Origin.X / PatchMeters), pz = Mathf.FloorToInt(place.Origin.Z / PatchMeters);
-        if (!batches.TryGetValue((item, px, pz), out var batch))
+        int variant = Marks.Has(mark) && Marks.Marked(item) ? (int)Marks.Maker(mark) + 1 : 0;
+        if (!batches.TryGetValue((item, px, pz, variant), out var batch))
         {
             batch = new Batch
             {
-                Mesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = ItemLook.MeshFor(item) },
+                Mesh = new MultiMesh
+                {
+                    TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                    Mesh = (variant > 0 ? ClayItemLook.MarkedMesh(item, (uint)(variant - 1)) : null) ?? ItemLook.MeshFor(item),
+                },
                 // Unused slots collapse to a point inside the patch, so they draw
                 // nothing and don't stretch the batch's bounds.
                 Hidden = new Transform3D(new Basis(Vector3.Zero, Vector3.Zero, Vector3.Zero), place.Origin),
             };
-            batches[(item, px, pz)] = batch;
+            batches[(item, px, pz, variant)] = batch;
             AddChild(new MultiMeshInstance3D { Multimesh = batch.Mesh });
         }
 

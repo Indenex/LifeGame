@@ -41,7 +41,7 @@ public static class Controls
         // feet when there's nothing to use; Space jumps; the view turns by mouse drag
         // only (no Q/E). The Use key comes first: UseKey handles E when it has an
         // offer, and otherwise lets it through to Main's pick-up.
-        new("use", new[] { Key.E }, "Use what's in front of you, or pick up what's at your feet", "{key} uses what's in front of you, or picks up what lies at your feet"),
+        new("use", new[] { Key.E }, "Use what's in front of you, or pick up what's at your feet (hold to keep going)", "{key} uses what's in front of you, or picks up what lies at your feet. Hold it to keep going"),
         // Pick up follows the Use key (SyncPickUp); it isn't rebound on its own.
         new("pick_up", new[] { Key.E }, null, Fixed: true, KeyText: "{use}", Name: "Pick up"),
         new("craft", new[] { Key.C }, "Make things", "{key} to make things from what you carry"),
@@ -54,7 +54,7 @@ public static class Controls
         new("sneak", new[] { Key.Ctrl }, "Sneak (hold)", "Hold {key} to sneak up on animals", OnRequest: true),
         // Building reads Shift inside its door offer, so this follows the Use key.
         new("bar_door", None, "Bar or unbar a hut door", Fixed: true, KeyText: "Shift {use}"),
-        new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you"),
+        new("dig", new[] { Key.F }, "Dig", "{key} digs the ground in front of you. Hold it to keep digging"),
         // Animals binds strike (click, or Z) and Skills binds craft_play_minigame (Ctrl)
         // with these keys; they join the key list once those lanes land.
         new("strike", None, "Strike", "{key} to strike", OnRequest: true),
@@ -73,9 +73,9 @@ public static class Controls
         new("eat", new[] { Key.X }, "Eat", "{key} eats the best food you carry"),
         new("drink", None, "Drink"),
         new("build_mode", new[] { Key.B }, "Build", "{key} to lay out a shelter"),
-        new("journal", None, "Journal", "{key} opens your journal"),
-        new("claim_open", None, "Your claim", "{key} shows the land you claim"),
-        new("chat", None, "Speak", "{key} to speak"),
+        new("journal", new[] { Key.J }, "Journal", "{key} opens your journal"),
+        new("claim_open", new[] { Key.K }, "Your claim", "{key} shows the land you claim"),
+        new("chat", new[] { Key.Enter, Key.KpEnter }, "Speak", "{key} to speak"),
         new("toggle_music", new[] { Key.M }, "Music on or off"),
         // The equipment panel (ui-10, D-074, D-094); its hint waits until you first carry clothes.
         new("equipment", new[] { Key.I }, "What you carry and wear", "{key} shows what you carry and wear", OnRequest: true),

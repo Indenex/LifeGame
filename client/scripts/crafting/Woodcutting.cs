@@ -34,7 +34,7 @@ public partial class Woodcutting : Node
             {
                 if (!HasAxe() || TreeNear(at) is not { } tree) return null;
                 float d = new Vector2(tree.X - at.X, tree.Y - at.Z).Length();
-                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y));
+                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y), Again: 0.3f);
             },
         });
     }

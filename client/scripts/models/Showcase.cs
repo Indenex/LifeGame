@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -39,6 +39,7 @@ public partial class Showcase : Node3D
             else if (view == "cooking") Cooking();
             else if (view == "deer") Deer();
             else if (view == "hen") Hen();
+            else if (view == "stonehearth") StoneHearthView();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -115,7 +116,7 @@ public partial class Showcase : Node3D
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [212] = "Boiled egg", [213] = "Burnt egg" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         // --ids=207,211 shows only those items.
@@ -276,6 +277,24 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 35f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.3f, 1.1f, 3.4f), new Vector3(0.3f, 0.25f, 0), Vector3.Up);
+    }
+
+    // The stone-ringed hearth (model-9, D-286): its first course on the left, the
+    // finished kerb on the right, the player beside for scale.
+    void StoneHearthView()
+    {
+        var pieces = StructureModel.StoneHearth();
+        for (int c = 0; c < 2; c++)
+            foreach (var piece in pieces)
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-0.75f + c * 1.5f, 0, 0) });
+        var figure = PlayerModel.Build();
+        figure.Position = new Vector3(2.0f, 0, -0.4f);
+        figure.Rotation = new Vector3(0, -0.6f, 0);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.3f, 1.9f, 3.0f), new Vector3(0.3f, 0.15f, 0), Vector3.Up);
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
