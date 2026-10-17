@@ -124,8 +124,8 @@ public static class Painted
     }
 
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: null));
-    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_draw_always;"));
-    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;"));
+    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_prepass_alpha;"));
+    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;", structure: true));
     static Shader? shader, ghostShader, structureGhostShader;
 
     static NoiseTexture2D Dabs => dabs ??= new NoiseTexture2D
@@ -146,10 +146,11 @@ public static class Painted
     }
 
     // ghost: the render mode of a see-through variant, or null for the solid.
-    static string Code(string? ghost)
+    // structure: a building's ghost, which keeps Look's structure fade rules (env-25).
+    static string Code(string? ghost, bool structure = false)
     {
         string code = Look.PaintedCode;
-        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
+        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : "") + (structure ? "\n#define STRUCTURE_GHOST" : ""));
         if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
         code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + RimUniform);
         code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", $$"""
