@@ -84,15 +84,18 @@ public partial class Placing : Node
     Action<float, float>? spotPicked;
     string spotLabel = "";
     float spotMin;
+    Func<float, float, string?>? spotCheck;
 
     // Shows a ring at the cursor within reach; a click (or Use, or Enter) picks the spot,
     // Esc lets it go. Too close to stand by it shows amber. The server has the last word.
-    public void PickSpot(string label, float minDistance, Action<float, float> picked)
+    // check, when given, says why a spot won't do (the same rule the server uses), or null.
+    public void PickSpot(string label, float minDistance, Action<float, float> picked, Func<float, float, string?>? check = null)
     {
         if (Active) Stop();
         spotPicked = picked;
         spotLabel = label;
         spotMin = minDistance;
+        spotCheck = check;
         ghost = new MeshInstance3D { Mesh = SpotRing(), MaterialOverride = ghostMaterial };
         View.AddChild(ghost);
         ghostPos = Me.Position + CameraRig.Forward * 1.5f;
@@ -265,7 +268,7 @@ public partial class Placing : Node
 
         var away = new Vector2(ghostPos.X - Me.Position.X, ghostPos.Z - Me.Position.Z).Length();
         problem = thing is { } item ? Link.Fits(item, ghostPos.X, ghostPos.Z, yawTarget)
-            : away < spotMin ? "A little further from you" : null;
+            : away < spotMin ? "A little further from you" : spotCheck?.Invoke(ghostPos.X, ghostPos.Z);
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(problem == null ? Fits : Blocked, 1f - Mathf.Exp(-10f * dt));
         UpdateHint();
     }

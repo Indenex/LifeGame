@@ -193,6 +193,11 @@ public partial class Terrain : Node3D
 
     bool Edited(int x, int z) => building is { } snapshot ? snapshot.EditedAt(x, z) : depths.ContainsKey(World.CellKey(x, z));
 
+    // The dug depth and building-cleared state of a cell, for checks shared with the server
+    // (FireGround: the fire-spot ghost, ui-30).
+    public short DepthAt(int x, int z) => Depth(x, z);
+    public bool ClearedAt(int x, int z) => IsCleared(x, z);
+
     short Depth(int x, int z) =>
         building is { } snapshot ? snapshot.DepthAt(x, z) : depths.TryGetValue(World.CellKey(x, z), out var d) ? d : (short)0;
 
