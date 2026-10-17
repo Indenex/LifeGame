@@ -327,6 +327,14 @@ public static class NatureKit
 
     const bool TreesTextured = true;
 
+    // Kit trees whose leaves are painted in autumn colours: the green they wear until autumn
+    // (near the kit's common tree's leaves, the birch a little fresher) and the mean
+    // luminance of their leaf texture, so the painting's light and dark carry into the green.
+    static (Color Green, float Reference)? AutumnLeaves(string model) =>
+        model.StartsWith("Birch") ? (new Color(0.48f, 0.62f, 0.06f), 0.38f)
+        : model.StartsWith("TwistedTree") ? (new Color(0.42f, 0.58f, 0.03f), 0.26f)
+        : null;
+
     // How bright the kit trees' textures sit (Justin, 2026-10-17: "WAY too bright"): their
     // value scaled down and colour eased a little toward grey, into our forest's range. The
     // showcase takes --tree-value=0.85 and so on to compare steps.
@@ -450,6 +458,14 @@ public static class NatureKit
                 m.SetShaderParameter("tree_saturation", TreeSaturation);
                 // Giant pines in our pines' deep green (Justin's pick) rather than the kit's fresher one.
                 if (textured && kind == Kind.Leaves && model.StartsWith("GiantPine")) m.SetShaderParameter("albedo", new Color(0.83f, 0.81f, 0.9f));
+                // Birches and twisted trees green until autumn (Justin's pick): our green in
+                // spring and summer, turning to the kit's own red and orange in the fall.
+                if (textured && kind == Kind.Leaves && AutumnLeaves(model) is var (green, reference))
+                {
+                    m.SetShaderParameter("kit_autumn", true);
+                    m.SetShaderParameter("summer_green", green);
+                    m.SetShaderParameter("summer_ref", reference);
+                }
             }
             m.SetShaderParameter("rim", kind is Kind.Rock ? 1f : 0f);
             // Rocks take half the hue of the world's stone tint and each one's own darkening.
@@ -520,6 +536,9 @@ public static class NatureKit
         uniform bool kit_light = false;
         uniform float tree_value = 1.0;
         uniform float tree_saturation = 1.0;
+        uniform bool kit_autumn = false;
+        uniform vec3 summer_green : source_color = vec3(0.35, 0.48, 0.0);
+        uniform float summer_ref = 0.4;
         uniform float fade_size = 1.0;
         global uniform vec3 player_position;
         global uniform vec3 view_camera_position;
@@ -637,7 +656,14 @@ public static class NatureKit
                 float lum = max(dot(COLOR.rgb, vec3(0.3, 0.59, 0.11)), 0.05);
                 color *= mix(vec3(1.0), COLOR.rgb / lum, tint_blend) * min(lum / tint_ref, 1.0);
             }
-            if (autumn > 0.0 && season_autumn > 0.0) {
+            if (kit_autumn) {
+                // Leaves painted in autumn colours: green the rest of the year, the paint's own
+                // red and orange as the turn, brown before they fall as the others.
+                float lum = dot(color, vec3(0.3, 0.59, 0.11));
+                vec3 green = summer_green * (lum / summer_ref);
+                vec3 turned = mix(color, vec3(0.42, 0.28, 0.15) * (0.6 + lum), smoothstep(0.75, 1.0, season_autumn));
+                color = mix(green, turned, smoothstep(0.0, 0.6, season_autumn));
+            } else if (autumn > 0.0 && season_autumn > 0.0) {
                 // Each tree its own mix of gold, orange and red, brown before they fall;
                 // the leaves' light-dark painting is kept in the turn.
                 float lum = dot(color, vec3(0.3, 0.59, 0.11));

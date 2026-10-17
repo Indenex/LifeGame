@@ -33,8 +33,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 18:40: Justin: kit trees 'WAY too bright'. Trees now scaled by TreeValue (default 0.7, showcase --tree-value=) and eased to 0.88 saturation; steps 0.85/0.7/0.55 sent to the PM (screenshots/naturekit/trees-value-*.png). Giant pines pulled to our deep pine green (Justin's pick). Licences checked: both Source packs CC0 (licence txt beside the files). Felled falls back to vertex order for non-indexed surfaces.
 
+- 2026-10-17 19:40: Justin picked 30% darker (TreeValue 0.7, the default; no change) and "green until autumn" for birches and twisted trees: their leaves are recoloured to our green (AutumnLeaves in NatureKit.cs, kit_autumn in the shader) and turn to the kit's own red and orange through the season blend. Showcase view `autumnkit` (--time-of-day=0.5 --season=0.35 summer / 0.6 autumn); shot /mnt/project-files/screenshots/naturekit/birch-twisted-summer-autumn.png. The trading stall (model-36) also rides #853, parked: Justin picked a friends list instead.
+
 ## Open questions / blockers
-- Look pick for Justin (via the PM): how far to take it.
+- (none)
 
 ## Next step
-Apply Justin's brightness pick (TreeValue in NatureKit.cs), push, send the PM the green sha for PR #853; then a cap disc on the felled kit trunk's cut.
+Send the PM the green sha for PR #853 once CI passes; then wait for the PM (no new work picked by lanes).

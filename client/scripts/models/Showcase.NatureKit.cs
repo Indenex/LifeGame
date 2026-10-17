@@ -96,4 +96,19 @@ public partial class Showcase
         camera.LookAtFromPosition(new Vector3(0f, 4.5f, 13f), new Vector3(0f, 1.2f, 0f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
+
+    // Birches and twisted trees through the year (naturekit-1): green in summer, the kit's
+    // red and orange in autumn. Run with --time-of-day and --season (0.35 summer, 0.6 autumn).
+    [ShowcaseView("autumnkit")]
+    void AutumnKitView()
+    {
+        string[] trees = { "Birch_1", "TwistedTree_1", "CommonTree_1", "Birch_3", "TwistedTree_3" };
+        for (int i = 0; i < trees.Length; i++)
+            if (NatureKit.Mesh(trees[i]) is { } mesh)
+                AddChild(new MeshInstance3D { Mesh = mesh, Position = new Vector3(-8f + i * 4f, 0, (i % 2) * -2f), Rotation = new Vector3(0, i * 1.1f, 0) });
+        var camera = new Camera3D { Fov = 45f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 5f, 25f), new Vector3(0, 4.5f, -1f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
 }

@@ -1,7 +1,7 @@
 # model-36: Trading stall model
 Lane: Modeling
 Owner: Modeling thread
-Status: in_review
+Status: blocked
 Branch: claude/modeling-i8ox5v
 PR: #853
 
@@ -23,5 +23,5 @@ stages like the other structures.
   and the hook `"Stall" => StallModel.Pieces()` in StructureModel.Pieces.
 
 ## Next step
-Wait for Claims to wire the hook; when building-26's village textures land, move the stall's
+Parked: Justin picked a friends list instead of the stall. When it comes back, Claims wires `"Stall" => StallModel.Pieces()`.
 wood and awning onto them.
