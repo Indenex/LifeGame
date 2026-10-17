@@ -66,14 +66,16 @@ public static class Painted
     public static ShaderMaterial Rock => rock ??= MakeRock();
     static ShaderMaterial? rock;
 
-    // The cards' stone (Forest_big_stone): pale grey planes where the light falls, deep
-    // blue-violet in the shade, crevices only where the relief is deepest.
+    // The cards' stone (Forest_big_stone): pale grey planes where the light falls, a cool
+    // grey-violet in the shade, crevices only where the relief is deepest. The shade was a
+    // deeper blue-violet, which turned pale stone pink-lilac all over under the warm sun and
+    // rim (painted-18); it keeps a hint of the cards' violet, lighter and greyer.
     static ShaderMaterial MakeRock()
     {
         var twin = (ShaderMaterial)Of(Look.RockSurface).Duplicate();
         twin.SetShaderParameter("base_paint", new Color(0.6f, 0.6f, 0.65f));
         twin.SetShaderParameter("base_mix", 0.5f);
-        twin.SetShaderParameter("shade_tint", new Color(0.56f, 0.53f, 0.8f));
+        twin.SetShaderParameter("shade_tint", new Color(0.66f, 0.64f, 0.76f));
         twin.SetShaderParameter("crevice", 0.22f);
         twin.SetShaderParameter("lit_dabs", 0.08f);
         return twin;
