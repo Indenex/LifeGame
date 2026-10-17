@@ -1,9 +1,9 @@
 # env-16: Paler, warmer world rocks
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_review
+Status: done
 Branch: claude/environment-pale-rocks
-PR: (opening)
+PR: #455 (merged)
 
 ## Goal
 Boulders, river stones and outcrop stones in the world read paler and warmer, closer to the art references (pale warm grey instead of mid neutral grey). Colour only: no shape, size or density change. A new `Look.WorldRock` colour is used by Terrain's boulders and Environment's LandmarkProps stones; `Look.Rock` (tools, stations, items, claim markers of other lanes) is unchanged.
@@ -15,4 +15,4 @@ Boulders, river stones and outcrop stones in the world read paler and warmer, cl
 - (none)
 
 ## Next step
-Wait for CI on the PR, send the green sha to the PM, ask Render for a before/after (main vs this branch).
+Done; merged.
