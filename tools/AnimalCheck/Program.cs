@@ -20,6 +20,7 @@ string server = args.Length > 2 ? args[2] : "local";
 var clock = Stopwatch.StartNew();
 Identity? me = null;
 bool subscribed = false;
+Guest? guest = null;
 string? lastError = null;
 
 void Fail(string what)
@@ -70,6 +71,9 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_admin",
                 "SELECT * FROM player_equip",
+                "SELECT * FROM claim",
+                "SELECT * FROM claim_member",
+                "SELECT * FROM hide_rack",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -79,14 +83,14 @@ conn.OnUnhandledReducerError += (_, e) => lastError = e.Message;
 void Pump(Func<bool> done, int seconds, string what)
 {
     var until = clock.Elapsed + TimeSpan.FromSeconds(seconds);
-    while (!done() && clock.Elapsed < until) { conn.FrameTick(); Thread.Sleep(5); }
+    while (!done() && clock.Elapsed < until) { conn.FrameTick(); guest?.Conn.FrameTick(); Thread.Sleep(5); }
     if (!done()) Fail($"timed out waiting for {what}");
 }
 
 void Settle(int ms)
 {
     var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms);
-    while (clock.Elapsed < until) { conn.FrameTick(); Thread.Sleep(5); }
+    while (clock.Elapsed < until) { conn.FrameTick(); guest?.Conn.FrameTick(); Thread.Sleep(5); }
 }
 
 Pump(() => subscribed, 30, "subscription");
@@ -321,6 +325,173 @@ conn.Reducers.CollectEggs(henNear.Id);
 Pump(() => CountOf(Item.Egg) > eggsBefore, 10, "eggs from a hen at hand");
 Ok("eggs come only from a hen within reach");
 
+// --- Claims: eggs and hide-rack leather stay with the claim's owner and members (animals-28) ---
+// A raises a claim marker well outside the waking clearing; B, a second character who is no
+// member, comes to it. Hens and hung hides are placed with the admin hooks.
+Give(Item.Stick, Social.MarkerSticks);
+Give(Item.Fiber, Social.MarkerFiber);
+float H(float x, float z) => Structures.GroundAt(x, z, (i, j) => conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
+const float keepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+(float X, float Z)? site = null;
+for (int r = 42; r < 90 && site == null; r += 2)
+    for (int k = 0; k < 16 && site == null; k++)
+    {
+        float angle = k * MathF.Tau / 16, sx0 = here.X + MathF.Cos(angle) * r, sz0 = here.Z + MathF.Sin(angle) * r;
+        if (sx0 * sx0 + sz0 * sz0 < keepOut * keepOut) continue;
+        if (Structures.GroundProblem((int)StructureKind.ClaimMarker, sx0, sz0, 0f, H) != null) continue;
+        if (conn.Db.Structure.Iter().Any(st => Structures.TooClose((int)StructureKind.ClaimMarker, sx0, sz0, (int)st.Kind, st.X, st.Z))) continue;
+        // Open ground round it for the hens and racks.
+        if (Enumerable.Range(0, 8).Any(i => ground.Stand(sx0 + 4f * MathF.Cos(i * MathF.Tau / 8), sz0 + 4f * MathF.Sin(i * MathF.Tau / 8)) is var (qx, qz)
+                && (MathF.Abs(qx - (sx0 + 4f * MathF.Cos(i * MathF.Tau / 8))) > 0.01f || MathF.Abs(qz - (sz0 + 4f * MathF.Sin(i * MathF.Tau / 8))) > 0.01f))) continue;
+        site = (sx0, sz0);
+    }
+if (site is not { } mark) { Fail("no open site for a claim marker 42 m or more from the start"); return 1; }
+walker.To(ref bx, ref bz, mark.X - 1.5f, mark.Z, 0.3f, stand: true);
+lastError = null;
+conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, mark.X, mark.Z, 0);
+Pump(() => lastError != null || conn.Db.Structure.Iter().Any(st => st.Kind == StructureKind.ClaimMarker && st.Owner == me!.Value), 10, "the claim marker to be laid out");
+if (lastError != null) Fail($"laying out the claim marker at ({mark.X:F1}, {mark.Z:F1}): {lastError}");
+var markerSite = conn.Db.Structure.Iter().First(st => st.Kind == StructureKind.ClaimMarker && st.Owner == me!.Value);
+Claim? MyClaim() => conn.Db.Claim.Iter().FirstOrDefault(c => c.OwnerPlayerId == Me().PlayerId);
+for (int i = 0; i < 25 && MyClaim() == null; i++)
+{
+    lastError = null;
+    conn.Reducers.Build(markerSite.Id);
+    var until = clock.Elapsed + TimeSpan.FromMilliseconds(700);
+    while (MyClaim() == null && clock.Elapsed < until) { conn.FrameTick(); Thread.Sleep(5); }
+}
+if (MyClaim() == null) Fail($"the claim marker never completed ({lastError ?? "no error"})");
+Ok("A holds a claim");
+
+// B: a second character with no part in the claim.
+string gname = "Gest" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
+var g = new Guest();
+g.Conn = DbConnection.Builder()
+    .WithUri(uri)
+    .WithDatabaseName(db)
+    .OnConnect((c, identity, _) =>
+    {
+        g.Id = identity;
+        c.SubscriptionBuilder()
+            .OnApplied(_ => g.Ready = true)
+            .Subscribe(new[]
+            {
+                "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM animal", "SELECT * FROM terrain_edit",
+                "SELECT * FROM chopped_tree", "SELECT * FROM structure", "SELECT * FROM structure_door",
+                "SELECT * FROM my_inventory", "SELECT * FROM claim", "SELECT * FROM hide_rack",
+            });
+    })
+    .OnConnectError(e => Fail($"second character connect: {e.Message}"))
+    .Build();
+g.Conn.OnUnhandledReducerError += (_, e) => g.LastError = e.Message;
+guest = g;
+Pump(() => g.Ready && g.Conn.Db.Player.Identity.Find(g.Id!.Value) is not null, 30, "the second character");
+Pump(() => g.Conn.Db.PlayerPos.PlayerId.Find(g.Conn.Db.Player.Identity.Find(g.Id!.Value)!.PlayerId) is not null, 20, "the second character's position");
+g.Conn.Reducers.SetName(gname);
+Pump(() => g.Conn.Db.Player.Identity.Find(g.Id!.Value)!.Name == gname, 10, "the second character's name");
+uint gid = g.Conn.Db.Player.Identity.Find(g.Id!.Value)!.PlayerId;
+var gstart = g.Conn.Db.PlayerPos.PlayerId.Find(gid)!;
+float gx = gstart.X, gz = gstart.Z;
+var gwalker = new BotWalker(g.Conn, gid, "Animal check", gname, ms =>
+{
+    for (var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms); clock.Elapsed < until; Thread.Sleep(5)) { conn.FrameTick(); g.Conn.FrameTick(); }
+}, msg => Fail(msg));
+uint GCount(Item item) => (uint)g.Conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)item).Sum(r => (long)r.Count);
+string GRefused(string what, Action call)
+{
+    g.LastError = null;
+    call();
+    Pump(() => g.LastError != null, 15, $"{what} to be refused");
+    return g.LastError!;
+}
+void GWalkTo(float tx, float tz) => gwalker.To(ref gx, ref gz, tx, tz, 0.6f, stand: true);
+void AWalkTo(float tx, float tz) => walker.To(ref bx, ref bz, tx, tz, 0.6f, stand: true);
+
+HideRack Hang(float x, float z, uint madeBy)
+{
+    var before = conn.Db.HideRack.Iter().Select(r => r.Id).ToHashSet();
+    lastError = null;
+    conn.Reducers.AdminHangHide(x, z, madeBy);
+    Pump(() => lastError != null || conn.Db.HideRack.Iter().Any(r => !before.Contains(r.Id)), 10, "a hide to be hung");
+    if (lastError != null) Fail($"hanging a hide: {lastError}");
+    return conn.Db.HideRack.Iter().First(r => !before.Contains(r.Id));
+}
+
+// Eggs inside the claim: refused to B, taken by A.
+var yardHen = Spawn(AnimalSpecies.Hen, mark.X + 4f, mark.Z, 2);
+GWalkTo(yardHen.X, yardHen.Z);
+string yard = GRefused("a stranger taking eggs inside a claim", () => g.Conn.Reducers.CollectEggs(yardHen.Id));
+if (!yard.Contains("belong to") || !yard.Contains(Me().Name)) Fail($"a non-member taking eggs inside A's claim was refused with \"{yard}\"");
+Ok($"a non-member cannot take eggs from hens in a claim ({yard})");
+AWalkTo(yardHen.X, yardHen.Z);
+uint eggsA = CountOf(Item.Egg);
+lastError = null;
+conn.Reducers.CollectEggs(yardHen.Id);
+Pump(() => CountOf(Item.Egg) > eggsA || lastError != null, 10, "the owner's eggs");
+if (CountOf(Item.Egg) <= eggsA) Fail($"the claim's owner could not take eggs: {lastError}");
+Ok("the owner takes eggs from hens in their claim");
+
+// Leather on a rack inside the claim: kept for its maker or the claim's people.
+var rackA = Hang(mark.X, mark.Z + 4f, 0);
+var rackB = Hang(mark.X - 3f, mark.Z + 4f, gid);
+GWalkTo(rackA.X, rackA.Z);
+string leather = GRefused("a stranger taking leather inside a claim", () => g.Conn.Reducers.TakeLeather(rackA.Id));
+if (!leather.Contains("still drying")) Fail($"a non-member taking someone else's leather in A's claim was refused with \"{leather}\"");
+Ok($"a non-member cannot take leather someone else hung ({leather})");
+GWalkTo(rackB.X, rackB.Z);
+uint leatherB = GCount(Item.Leather);
+g.LastError = null;
+g.Conn.Reducers.TakeLeather(rackB.Id);
+Pump(() => GCount(Item.Leather) > leatherB || g.LastError != null, 10, "the maker's leather");
+if (GCount(Item.Leather) <= leatherB) Fail($"B could not take the leather B hung, inside A's claim: {g.LastError}");
+Ok("whoever hung a hide takes its leather, even inside another's claim");
+AWalkTo(rackA.X, rackA.Z);
+uint leatherA = CountOf(Item.Leather);
+lastError = null;
+conn.Reducers.TakeLeather(rackA.Id);
+Pump(() => CountOf(Item.Leather) > leatherA || lastError != null, 10, "the owner's leather");
+if (CountOf(Item.Leather) <= leatherA) Fail($"the claim's owner could not take leather hung in their claim: {lastError}");
+Ok("the owner takes leather hung in their claim");
+
+// Out in the open anyone takes eggs.
+var wildHen = Spawn(AnimalSpecies.Hen, mark.X + Social.ClaimRadius + 8f, mark.Z, 2);
+GWalkTo(wildHen.X, wildHen.Z);
+uint eggsB = GCount(Item.Egg);
+g.LastError = null;
+g.Conn.Reducers.CollectEggs(wildHen.Id);
+Pump(() => GCount(Item.Egg) > eggsB || g.LastError != null, 10, "eggs from a hen outside every claim");
+if (GCount(Item.Egg) <= eggsB) Fail($"B could not take eggs from a hen outside every claim: {g.LastError}");
+Ok("anyone takes eggs from hens outside a claim");
+
+// A member of the claim does take eggs there.
+conn.Reducers.AddClaimMemberByName(gname);
+Pump(() => conn.Db.ClaimMember.Iter().Any(), 10, "B to be added as a member");
+var memberHen = Spawn(AnimalSpecies.Hen, mark.X + 4f, mark.Z - 3f, 2);
+GWalkTo(memberHen.X, memberHen.Z);
+eggsB = GCount(Item.Egg);
+g.LastError = null;
+g.Conn.Reducers.CollectEggs(memberHen.Id);
+Pump(() => GCount(Item.Egg) > eggsB || g.LastError != null, 10, "a member's eggs");
+if (GCount(Item.Egg) <= eggsB) Fail($"a member could not take eggs inside the claim: {g.LastError}");
+Ok("a claim member takes eggs from hens in the claim");
+var rackM = Hang(mark.X + 3f, mark.Z + 4f, 0);
+GWalkTo(rackM.X, rackM.Z);
+leatherB = GCount(Item.Leather);
+g.LastError = null;
+g.Conn.Reducers.TakeLeather(rackM.Id);
+Pump(() => GCount(Item.Leather) > leatherB || g.LastError != null, 10, "a member's leather");
+if (GCount(Item.Leather) <= leatherB) Fail($"a member could not take leather hung in the claim: {g.LastError}");
+Ok("a claim member takes leather hung in the claim");
+g.Conn.Disconnect();
+
 Console.WriteLine("Animal check passed");
 conn.Disconnect();
 return 0;
+
+sealed class Guest
+{
+    public DbConnection Conn = null!;
+    public Identity? Id;
+    public bool Ready;
+    public string? LastError;
+}
