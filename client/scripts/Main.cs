@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
@@ -86,16 +87,27 @@ public partial class Main : Node3D
         AddChild(journal);
         view.AddChild(journal.Notes);
         AddChild(crafting);
+        // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
+        placing.Terrain = terrain;
+        placing.Me = me;
+        placing.CameraRig = cameraRig;
+        placing.View = view;
+        placing.Note = hud.Note;
+        placing.OverBar = at => hud.Hotbar.RowRect.HasPoint(at);
+        HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
+        hud.Hotbar.PlaceRequested += placing.StartItem;
+        AddChild(placing);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
         atmosphere.SeeThrough = building.SeeThroughOf;
+        atmosphere.OtherFigures = () => others.Values;
         AddChild(building);
         // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
         // Added after building, so it sees B first; while the ghost is up, B is building's.
         buildMenu.Place = building.StartPlacing;
-        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        buildMenu.Blocked = () => building.Placing || placing.Active || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
         AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
@@ -103,9 +115,9 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning;
         // The hotbar's number keys (ui-19) rest while something else has the keys.
-        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
         // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
         hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
@@ -152,7 +164,7 @@ public partial class Main : Node3D
             || buildMenu.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -383,6 +395,7 @@ public partial class Main : Node3D
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);

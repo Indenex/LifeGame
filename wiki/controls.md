@@ -17,7 +17,8 @@ The game shows a hint for each key the first time you need it. **Hold F1** at an
 | C | Crafting panel |
 | X | Eat the best food you carry |
 | B | Build menu |
-| I | Equipment panel: what you wear and carry |
+| I | Your bag beside what you wear. Drag items onto the hotbar, onto a slot to wear them, or out onto the ground; double-click uses an item |
+| 1 to 9, 0 | Use what sits on that hotbar slot: eat, drink, wear, or set a made thing down |
 | J | Journal |
 | K | Claim panel |
 | Enter | Chat |
