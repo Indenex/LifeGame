@@ -25,8 +25,9 @@ Done means:
 
 ## Open questions / blockers
 - Mining: the game has no mining yet (no mine.* process or rock-strike reducer). It's ready for a Mine motion when one exists.
-- "Scoops the water up with their mouth": built as cupped hands to mouth (PM's reading). The alternative is lowering the face to the water. Asked the PM.
-- Sounds synced to the motions (scoop splash, gulp, pluck, chew): asked Audio.
+- "Scoops the water up with their mouth": PM confirmed (a) cupped hands at 00:21. Hooks in Survival.cs and Reducers.cs approved; the PM tells Survival and Integration.
+- Sounds synced to the motions: Audio builds them on PlayerAct.OnInsert once #382 is on main. Tell Audio (session_01SXcxtoyeqDmypiHxkHedU6) when it merges.
+- Render clips requested; Render moved to session_015S96hNrEu92FrCoNZqZZjs.
 
 ## Next step
 Open the PR, get CI green and send the sha to the PM; send the Render request for clips of each action.
