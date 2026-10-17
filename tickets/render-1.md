@@ -188,6 +188,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:05: ui-72 BEFORE (UX session_01XAS3LxWb4DQeesL22s27k4) on main f49f9c6e, warm/cold: trade (+asked), player menu (+inspect), claim panel (ui-69 scene), Town panel (seedtown). AFTER on claude/ux-ui-coal5x when UX pushes ui-72 (+ --screenshot-playermenu=hover). After naturekit.
 
+- 2026-10-17 16:08: ui-72 AFTER on #850 d63e2ab3 queued right after BEFORE (+ playermenu=hover).
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
