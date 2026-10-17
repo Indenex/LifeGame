@@ -18,7 +18,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Space | Jump (bugfix-25; reads the `jump` action). In the F1 list | Bug fixes | ui-17 |
 | F | Dig | Crafting | same |
 | E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, say yes when a player asks to trade (Esc says no; ui-9). Nothing on players themselves: asking to trade is the right-click player menu (ui-35) | all | Was G (Use) and Space (Pick up) until ui-17 |
-| Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
+| Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); take down your own unfinished site (building-25). Read inside Building's offers, no separate binding | Building | new, building-3; takedown building-25; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu: pictures by category (Shelter, Storage, Crafting, Fire, Fences and gates, Claims), costs on each tile, greyed when short; click one to lay it out (T turns, Tab next, click places, Esc or B cancels). B or Esc closes the menu | Building, UX/UI (ui-20) | Justin picked the picture panel |
