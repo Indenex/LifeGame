@@ -60,6 +60,9 @@ public static class MaterialLook
             if (pattern == Pattern.Wood) color *= new Color(1.05f, 0.95f, 0.88f);
             // Straw toward the pack's golden hay, a little deeper than today's pale thatch.
             if (pattern == Pattern.Straw) color *= new Color(0.86f, 0.8f, 0.72f);
+            // Figures a touch deeper and warmer, so pale skin and cloth keep their
+            // shape under the creamy grade.
+            if (pattern == Pattern.Skin) color *= new Color(0.9f, 0.82f, 0.76f);
             // Foliage toward the pack's olive-yellow and muted greens: half way to a
             // warm olive of the same brightness.
             if (pattern == Pattern.Leaves)

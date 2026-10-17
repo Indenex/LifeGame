@@ -656,6 +656,12 @@ public partial class Showcase : Node3D
         Card("forest_bush_4", new Vector3(4.6f, 0, -5.2f), 1.2f);
         Card("forest_bush_5", new Vector3(-7f, 0, 0.5f), 1.0f);
         Card("sone_2", new Vector3(1.6f, 0, 3.6f), 0.5f);
+        // Bare trees and dead brush among the living, as in reference 02.
+        Card("Forest_deadTree_1", new Vector3(-2.2f, 0, -6.5f), 4.2f);
+        Card("Forest_deadTree_2", new Vector3(5.8f, 0, 0.6f), 3.6f);
+        Card("Forest_deadBush_3", new Vector3(-4.6f, 0, 2.6f), 0.8f);
+        Card("Forest_deadbush5", new Vector3(3.4f, 0, 3.4f), 0.7f);
+        Card("Forest_deadBush_3", new Vector3(-8f, 0, -1.2f), 0.9f);
         Card("sone_31", new Vector3(-1.2f, 0, 0.4f), 0.25f);
         // Ground cover: the game's blade grass (Justin wants it back, restyled; D-232),
         // in the pack's olive-yellow, with only a few painted accents.
@@ -689,7 +695,10 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         // The reference art's high three-quarter view, the far distance softly blurred.
-        camera.LookAtFromPosition(new Vector3(2.5f, 7.5f, 11f), new Vector3(0, 0.8f, -2f), Vector3.Up);
+        if (args.ContainsKey("near"))
+            camera.LookAtFromPosition(new Vector3(1.8f, 4.6f, 7.2f), new Vector3(0, 0.8f, -1.5f), Vector3.Up);
+        else
+            camera.LookAtFromPosition(new Vector3(2.5f, 7.5f, 11f), new Vector3(0, 0.8f, -2f), Vector3.Up);
         camera.Attributes = new CameraAttributesPractical { DofBlurFarEnabled = true, DofBlurFarDistance = 17f, DofBlurFarTransition = 10f, DofBlurAmount = 0.1f };
         if (!args.ContainsKey("time-of-day")) return;
         AddChild(new Atmosphere());
