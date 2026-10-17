@@ -1,9 +1,9 @@
 # claims-28: The Treasurer keeps the town's store and its upkeep
 Lane: Claims
 Owner: Claims thread (session_01T6RYk3zyUHiSncD3ZXrFFm)
-Status: in_progress
-Branch: local `claims-28-town-store` (stacked on claude/claims-nxkyjn); checkpoint patches in /mnt/project-files/claims/claims-28/. Pushes to claude/claims-nxkyjn once #839 (claims-27) merges.
-PR: (not yet)
+Status: in_review
+Branch: claude/claims-nxkyjn
+PR: #839 (with claims-27 and claims-29)
 
 ## Goal
 Justin picked both Treasurer options (2026-10-17, via the PM): (1) a town store: one shared store at the town's main marker; any townmate puts in; the Treasurer and the Mayor take out; every move logged. (2) upkeep: the Treasurer keeps up any town claim's lifetime from the store, logged.
@@ -17,4 +17,4 @@ Built: the main marker is the standing claim on the roster longest (the founder'
 - (none; upkeep cost 1 stick + 1 fiber is a lane default, sent to the PM)
 
 ## Next step
-After #839 merges: `git checkout -B claude/claims-nxkyjn origin/main`, cherry-pick the claims-28 commit, push, open the PR marked "waiting on Justin's Treasurer pick", check CI.
+Wait for CI on #839 and send the green sha to the PM.

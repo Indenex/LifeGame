@@ -20,4 +20,4 @@ Land the playtest strike feedback that was built on the other account but never 
 - Renders of a miss note and a side flush (Render lane, not blocking).
 
 ## Next step
-Check CI on the PR; fix any build error; send the green sha to the PM (session_01HQQLrCgy3JhRUA9YMTqyL1).
+Wait for CI on #839 (now also carrying claims-28 and claims-29); send the green sha to the PM.
