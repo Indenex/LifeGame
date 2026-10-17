@@ -105,6 +105,7 @@ public partial class HotbarBar : Control
     {
         if (preview) return;
         var before = new Dictionary<Item, uint>(carried);
+        var lifeBefore = new Dictionary<Item, float>(lifeLeft);
         carried.Clear();
         labels.Clear();
         lifeLeft.Clear();
@@ -119,6 +120,11 @@ public partial class HotbarBar : Control
         double now = Time.GetTicksMsec() / 1000.0;
         if (quietUntil < 0) quietUntil = now + 2.0;
         bool quiet = now < quietUntil && Link is ServerHotbarLink;
+        // A tool you carry wearing past "nearly spent" or "spent" says so once, gently, with what
+        // to do about it (ui-80): before, a tool simply stopped working.
+        if (!quiet)
+            foreach (var (item, left) in lifeLeft)
+                if (lifeBefore.TryGetValue(item, out var was) && WearNote(ItemName(item), was, left) is { } note) Note(note);
         var gained = items.Select(e => e.Item).Distinct()
             .Where(i => carried[i] > before.GetValueOrDefault(i)).ToList();
         if (gained.Count > 0 && !quiet) Sfx.Play(Cue.Pickup);
@@ -149,6 +155,15 @@ public partial class HotbarBar : Control
         if (free < 0) return;
         Link.Set(free, item);
         Hints.Request("hotbar_1");
+    }
+
+    // The words for a tool crossing into "nearly spent" or "spent", or null; the same words as the
+    // tooltip and the server's refusal (Durability.cs).
+    static string? WearNote(string name, float was, float now)
+    {
+        if (was > 0f && now <= 0f) return $"Your {name.ToLowerInvariant()} is spent. Mend it at a repair table";
+        if (was > Durability.NearlySpentBelow && now <= Durability.NearlySpentBelow) return $"Your {name.ToLowerInvariant()} is nearly spent";
+        return null;
     }
 
     int SlotOf(Item item) => Enumerable.Range(0, Slots).FirstOrDefault(i => Link.SlotItem(i) == item, -1);
