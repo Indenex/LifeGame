@@ -19,6 +19,11 @@ public partial class Atmosphere
     // Extinction per metre: depth fog and volumetric fog, and the two together.
     // (Combined cap lowered from 0.012 in atmosphere-37: distant trees nearly vanished at dawn.)
     const float MaxFogDensity = 0.008f, MaxMistDensity = 0.009f, MaxAirDensity = 0.010f;
+    // The follow camera looks down from 20 to 30 m away, so even the player is that
+    // deep in the air (atmosphere-39: golden hour read as a murky pink veil over
+    // everything). The two fogs together keep at least this much of the light over the
+    // camera-to-player distance; the far land still fades.
+    const float NearClear = 0.9f, MinAirDensity = 0.003f;
     // How strongly the sun lights the fog, how far forward it scatters, and the bloom.
     const float MaxSunInFog = 1.6f, MaxAnisotropy = 0.7f, MaxGlowBloom = 0.1f, MaxGlowIntensity = 0.9f, MinGlowThreshold = 1.0f;
 
@@ -27,9 +32,15 @@ public partial class Atmosphere
         float fog = Mathf.Min(env.FogDensity, MaxFogDensity);
         float mist = env.VolumetricFogEnabled ? Mathf.Min(env.VolumetricFogDensity, MaxMistDensity) : 0f;
         // Together they still keep the near scene clear.
-        if (fog + mist > MaxAirDensity)
+        float maxAir = MaxAirDensity;
+        if (Player is { } p && p.IsInsideTree() && GetViewport()?.GetCamera3D() is { } cam)
         {
-            float k = MaxAirDensity / (fog + mist);
+            float toPlayer = Mathf.Max(cam.GlobalPosition.DistanceTo(p.GlobalPosition), 1f);
+            maxAir = Mathf.Clamp(-Mathf.Log(NearClear) / toPlayer, MinAirDensity, MaxAirDensity);
+        }
+        if (fog + mist > maxAir)
+        {
+            float k = maxAir / (fog + mist);
             fog *= k;
             mist *= k;
         }
