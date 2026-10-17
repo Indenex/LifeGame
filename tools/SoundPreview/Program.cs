@@ -27,6 +27,34 @@
 // Default: day:40 rain:30 dusk:20 night:40
 using LifeGame;
 
+// Music prototypes (audio-8): `--pieces=outdir` writes the main theme and nap song (style A)
+// and the main-theme tasters of styles B and C as WAV files.
+if (args.FirstOrDefault(a => a.StartsWith("--pieces=")) is { } piecesArg)
+{
+    string dir = piecesArg[9..];
+    Directory.CreateDirectory(dir);
+    void Write(string name, Track track, Arrangement arr, int bars)
+    {
+        var (l, r) = Score.Render(track, arr, bars);
+        double sum = 0, peak = 0;
+        for (int i = 0; i < l.Length; i++) { sum += l[i] * l[i] + r[i] * r[i]; peak = Math.Max(peak, Math.Max(Math.Abs(l[i]), Math.Abs(r[i]))); }
+        float rms = (float)Math.Sqrt(sum / (2.0 * l.Length));
+        // Normalise to about -20 dBFS rms for listening (the game scales it by the slider and bed).
+        float gain = Math.Min(0.1f / rms, 0.9f / (float)peak);
+        using var f = new BinaryWriter(File.Create(Path.Combine(dir, name + ".wav")));
+        int bytes = l.Length * 4;
+        f.Write("RIFF"u8); f.Write(36 + bytes); f.Write("WAVEfmt "u8); f.Write(16); f.Write((short)1); f.Write((short)2);
+        f.Write(44100); f.Write(44100 * 4); f.Write((short)4); f.Write((short)16); f.Write("data"u8); f.Write(bytes);
+        for (int i = 0; i < l.Length; i++) { f.Write((short)(l[i] * gain * 32767f)); f.Write((short)(r[i] * gain * 32767f)); }
+        Console.WriteLine($"{name}: {l.Length / 44100.0:F1} s, rms {20 * Math.Log10(rms * gain):F1} dBFS, peak {20 * Math.Log10(peak * gain):F1} dBFS");
+    }
+    Write("main-theme-A-sunny-picnic", Pieces.MainTheme, Pieces.Sunny, 32);
+    Write("nap-song-A-lullaby", Pieces.NapSong, Pieces.Lullaby, 20);
+    Write("taster-A-sunny-picnic", Pieces.MainTheme, Pieces.Sunny, 8);
+    Write("taster-B-music-box", Pieces.MainTheme, Pieces.MusicBoxStyle, 8);
+    Write("taster-C-chiptune-folk", Pieces.MainTheme, Pieces.Chip, 10);
+    Environment.Exit(0);
+}
 // Soak test (audio-hotfix-1): hours of game time of random weather, seasons and events
 // through the mix, checking every block stays finite and nothing throws.
 //   dotnet run -c Release -- --edges      (every setting at its limits; must report no faults)
