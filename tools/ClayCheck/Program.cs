@@ -1081,10 +1081,7 @@ void SetUpBench()
     // Claims stay out of the spawn clearing: walk out past it, away from the origin.
     float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
     float claimDist = keepOut + 5f;
-    // A kit run claims towards the water, which it walks to next to fill the pot; a full run
-    // towards the clay it has just dug.
-    var (tx, tz) = kit ? (waterX, waterZ) : (clayX, clayZ);
-    float ang = tx == 0 && tz == 0 ? 0f : MathF.Atan2(tz, tx);
+    float ang = clayX == 0 && clayZ == 0 ? 0f : MathF.Atan2(clayZ, clayX);
     WalkTo(MathF.Cos(ang) * claimDist, MathF.Sin(ang) * claimDist, 1f);
     marker = BuildHere(StructureKind.ClaimMarker, (sx, sz) => sx * sx + sz * sz > (keepOut + 1f) * (keepOut + 1f) && ClearGround(sx, sz, -1, 1, -1, 1));
     Pump(() => conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 5, "the claim");
