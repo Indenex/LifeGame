@@ -37,10 +37,11 @@ for shot in "${shots[@]}"; do
   out=$RENDER_OUT/$ticket-$sha-$n.png
   read -r -a opts <<<"$shot"
   server_opt="--server=http://127.0.0.1:$port"
-  extra=(); engine=()
+  extra=(); engine=(); shotarg=("--screenshot=$out")
   for o in "${opts[@]}"; do
     case "$o" in
       --offline) server_opt="--server=http://127.0.0.1:1" ;;
+      --when-loaded) shotarg=("--screenshot-when-loaded=$out") ;;   # wait until every chunk in view is loaded
       --engine=*) engine+=(--rendering-method "${o#--engine=}") ;;   # e.g. --engine=gl_compatibility
       *) extra+=("$o") ;;
     esac
@@ -48,6 +49,6 @@ for shot in "${shots[@]}"; do
   case " $shot " in *" --screenshot-delay="*) ;; *) extra+=("--screenshot-delay=30") ;; esac
   echo "shot $n: $shot"
   (cd "$tree/client" && timeout "${RENDER_SHOT_TIMEOUT:-2400}" xvfb-run -a -s "-screen 0 ${size}x24" "$godot" --path . --resolution "$size" "${engine[@]}" -- \
-    "$server_opt" --db=lifegame --profile=render$n "--screenshot=$out" "${extra[@]}") >>"$log" 2>&1 || true
+    "$server_opt" --db=lifegame --profile=render$n "${shotarg[@]}" "${extra[@]}") >>"$log" 2>&1 || true
   if [ -s "$out" ]; then echo "  saved $out"; else echo "  no image (see $log)"; fi
 done
