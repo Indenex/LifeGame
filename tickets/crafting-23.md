@@ -36,3 +36,6 @@ Merge order set by the PM (2026-10-17): #285 goes LAST in its round, after ClayT
 ## Update 2026-10-17: refreshed on main
 - Merged origin/main (ClayTrough is kind 17 on main). The three devices are provisionally kinds 18, 19, 20 so the enum order matches. PM: HenCoop 18, StoneHearth 19 and the sundial 20 land first, so the final numbers are 21, 22, 23. At that merge: re-merge main, move `Kind =` in `shared/structures/StructuresCrafting.cs` and the positions in `StructureKind` (`Building.cs`) to follow the last kind on main, keep `Category = "Crafting"`, rerun CraftCheck and `tools/upgrade-check.sh origin/main`.
 - Local: build, CraftCheck (incl. the settling-tub case) and the upgrade check pass.
+
+## Note 2026-10-17: subscriptions moved (#527)
+Client subscription queries no longer go in `Subscriptions.cs`. When main is next merged into this branch, move `device_job` and `device_output` out of that list into a `[SubscriptionQueries] static IEnumerable<string> CraftingQueries(string range, string farRange)` in `client/scripts/net/Subscriptions.Crafting.cs` (see docs/CONTENT.md).
