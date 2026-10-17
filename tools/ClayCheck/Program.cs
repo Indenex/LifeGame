@@ -1163,6 +1163,7 @@ Structure BuildHere(StructureKind kind, Func<float, float, bool> ok)
     WalkTo(at.X, at.Z + 2f, 0.2f);
     int before = conn.Db.Structure.Count;
     lastError = null;
+    Timeline.Step();
     conn.Reducers.PlaceStructure(kind, at.X, at.Z, 0f);
     Pump(() => lastError != null || conn.Db.Structure.Count > before, 5, $"the {kind} to be laid out");
     if (lastError != null) Fail($"laying out a {kind}: {lastError}");
@@ -1200,6 +1201,7 @@ void Feed(int sticks)
     for (int i = 0; i < sticks && CountOf(Item.Stick) > 0; i++)
     {
         lastError = null;
+        Timeline.Step();
         conn.Reducers.FeedFire(fire.Id, (ushort)Item.Stick);
         Pump(() => false, 0.3f, null);
         if (lastError != null) Fail($"feeding the fire: {lastError}");

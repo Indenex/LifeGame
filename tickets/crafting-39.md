@@ -1,7 +1,7 @@
 # crafting-39: First pot run (stage timeline)
 Lane: Crafting
 Owner: Crafting thread (Sonnet, D-159)
-Status: in_progress
+Status: in_review
 Branch: crafting-first-pot
 PR: (to open)
 
@@ -14,8 +14,11 @@ ClayCheck's default mode already makes this whole journey (stone axe, log, claim
 - 2026-10-17 14:30: branch off main 69c6705a; timeline added to ClayCheck, builds.
 - Hint coverage by reading client/scripts/journal/NextSteps.cs against the processes the run uses: every process on the path has a Things-to-try line (gather.tinder, fire.hand_drill, knap.hand_axe, cord.twist, lash.stone_axe, chop.log, claim, bench, dig, clay.clean, clay.grit, clay.temper_grit, clay.pinch_pot, pit fire, fill).
 
+- 2026-10-17 14:19: local run on main 69c6705a passed (fresh db, 12.8 min, 65 steps; the last two reducers added since are PlaceStructure and FeedFire). Timeline (real minutes, steps since the stage before): gathered stone, stick and fiber 0.6 (30); clay dug 0.9 (11); axe and log 1.7 (4); claim and bench 2.1; clay tempered 2.7 (7); two pots shaped and fire lit 3.3 (4); pot bone dry 7.6; fired whole 11.6; pot of water 12.5. 8.3 of the 12.8 minutes are drying (4.3) and firing (4.0).
+- Not in CI: ClayCheck is not in build.yml. Asked Integration for a job (about 13 minutes, so main only or a nightly).
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Run ClayCheck locally (fresh db), paste the timeline here, open the PR, send the PM the findings and the green sha.
+Wait for CI on the PR, send the PM the green sha; Integration decides how ClayCheck runs in CI.
