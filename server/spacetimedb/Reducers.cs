@@ -70,6 +70,7 @@ public static partial class Module
         name = Names.Normalize(name);
         if (Names.Problem(name) is { } problem) throw new Exception(problem);
         var player = RequirePlayer(ctx);
+        RequirePace(ctx, player.PlayerId, Pace.ChangeName, 1.0, "One moment before you change your name again");
         RequireNameFree(ctx, name, player.PlayerId);
         ctx.Db.Player.Identity.Update(player with { Name = name });
         if (ctx.Db.Character.Key.Find(player.Identity) is { } character) ctx.Db.Character.Key.Update(character with { Name = name });
@@ -217,6 +218,7 @@ public static partial class Module
     public static void Drop(ReducerContext ctx, ushort item, byte quality)
     {
         var pos = RequirePos(ctx, RequirePlayer(ctx));
+        RequireRoomForItem(ctx, pos.ChunkX, pos.ChunkZ);
         var stack = FindStack(ctx, Me(ctx), (Item)item, quality) ?? throw new Exception("You are not carrying that");
         RemoveFromStack(ctx, stack, 1);
 
