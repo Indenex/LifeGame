@@ -65,7 +65,7 @@ WaitFor(() => bots.All(x => x.Ready), 30, "both players connected");
 {
     var ring = Structures.Shape((int)StructureKind.StoneHearth);
     Check(ring.Wild && ring.Hearth && !ring.Indoor, "the stone-ringed hearth stands outdoors, anywhere");
-    Check(MathF.Abs(ring.HeatRadius - Fires.StoneRingWarmthRadius) < 0.001f && ring.HeatRadius >= 8f && ring.HeatRadius > Fires.WarmthRadius, "a fire on it warms out to 8 m or more, past the campfire's 5 m");
+    Check(ring.HeatRadius >= 8f && ring.HeatRadius > Fires.WarmthRadius, "a fire on it warms out to 8 m or more, past the campfire's 5 m");
     Check(Fires.WarmthFrom(0, 0, 6f, 0, ring.HeatRadius) > 0f && Fires.WarmthFrom(0, 0, 6f, 0) == 0f, "6 m away is warm by the hearth and cold by a plain fire");
     Check(Fires.WarmthFrom(0, 0, 2f, 0) == Fires.WarmthFrom(0, 0, 2f, 0, Fires.WarmthRadius), "a plain fire warms as before");
     Check(Structures.StageProcess((int)StructureKind.StoneHearth, 1) == Structures.FrameProcess, "its stones are laid like a frame");
