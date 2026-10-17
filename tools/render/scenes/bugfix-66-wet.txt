@@ -3,12 +3,12 @@
 client-as-puppet
 client-movie 12
 client --time-of-day=0.72 --rain=0 --cloud=0.1 --wind=0.1 --season=0.25 --render-cam=3,0.9,0,1.3,30
-frames 200
+frames 120
 act SetRaceLook 1 1 1 0 0
 warp -6 -6
 sql UPDATE vitals SET wetness = 1.0, wetness_rate = 0.0, wet = true
-frames +36
+frames +24
 sql UPDATE vitals SET wetness = 1.0, wetness_rate = 0.0, wet = true
 mark orbit-start
-frames +150
+frames +100
 mark orbit-end

@@ -4,7 +4,7 @@
 client-as-puppet
 client-movie 12
 client --time-of-day=0.9 --rain=0 --cloud=0.1 --wind=0.15 --season=0.25 --render-cam=5,2.4,0,0.8,30
-frames 200
+frames 120
 act SetRaceLook 1 1 1 0 0
 warp -6 -6
 give 1 12 50
@@ -33,7 +33,7 @@ build
 build
 build
 act SeedFire -6.9 -7.9
-frames +60
+frames +24
 mark orbit-start
-frames +150
+frames +100
 mark orbit-end
