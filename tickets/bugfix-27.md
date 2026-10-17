@@ -27,3 +27,5 @@ A hacked client can no longer walk through fences, shut gates, hut or house wall
 
 ## Next step
 Wait for CI on the PR; merge it after #335; then pick the follow-ups above (bots that path around obstacles, then trunks and lean-to sides).
+
+- 2026-10-17: CI on 148898ff failed in BuildTest 'Raised hearth: gathered stones and clay' (bots were still inside the hut, walls and the shut door penned them in). Fix: the bots open the door and walk out through the doorway before gathering. BuildTest passes locally in 472 s.

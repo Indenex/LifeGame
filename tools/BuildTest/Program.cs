@@ -334,6 +334,22 @@ void UseGate(ulong gate)
 void BuildHearth(ulong hut)
 {
     Console.WriteLine("--- Raised hearth");
+    // The bots are still inside the hut from the mat, and its walls stop the server's players
+    // (bugfix-27): go out through the doorway before gathering, or they stay penned in.
+    var hutRow = a.Conn.Db.Structure.Id.Find(hut)!;
+    var doorway = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).DoorwayZ + 0.6f);
+    var yard = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).Radius + 2.5f);
+    a.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+    if (a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true })
+    {
+        a.Conn.Reducers.ToggleDoor(hut); // a shut door stops walkers too
+        WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the hut door opens for the way out");
+    }
+    foreach (var bot in bots)
+    {
+        bot.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+        bot.WalkTo(yard.x, yard.z, 0.5f, Pump);
+    }
     a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
     b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
     var until = clock.Elapsed + TimeSpan.FromSeconds(300);
