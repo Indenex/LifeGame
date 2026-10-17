@@ -93,7 +93,13 @@ nb = d["normal"][..., :3] * 2 - 1
 N = np.stack([nb[..., 0], nb[..., 2], -nb[..., 1]], -1).reshape(-1, 3)
 valid = d["normal"][..., :3].reshape(-1, 3).sum(1) > 0.01   # unbaked texels stay 0
 N[valid] /= np.linalg.norm(N[valid], axis=1, keepdims=True)
-ao = d["ao"][..., 0].reshape(-1)
+# The AO, softened so no sampling grain reaches the painting.
+ao = np.clip(d["ao"][..., 0], 0, 1).astype(float)
+k = np.exp(-0.5 * (np.arange(-6, 7) / 2.5) ** 2)
+k /= k.sum()
+for axis in (0, 1):
+    ao = np.apply_along_axis(lambda r: np.convolve(r, k, mode="same"), axis, ao)
+ao = ao.reshape(-1)
 leaf = d["leaf"][..., 0].reshape(-1) > 0.5
 SIZE = d["ao"].shape[0]
 img = np.zeros((SIZE * SIZE, 3))
@@ -107,7 +113,7 @@ if TREE == "birch":
     BARK = dict(lit=c(244, 238, 224), mid=c(224, 216, 206), shade=c(182, 174, 196), mark=c(86, 66, 64), foot=c(146, 130, 132))
 else:
     LEAF = np.array([c(40, 50, 70), c(42, 74, 66), c(56, 98, 70), c(84, 128, 76), c(120, 158, 92)])
-    EDGES = [0.2, 0.42, 0.66, 0.92]
+    EDGES = [0.2, 0.42, 0.66, 9.0]     # no highlight tone: no small dabs on the tiers
     CLUSTER = np.array([0.3, 0.17, 0.3])
     BARK = dict(lit=c(182, 124, 84), mid=c(148, 96, 68), shade=c(112, 76, 72), mark=c(86, 56, 52), foot=c(120, 84, 66))
 
@@ -127,8 +133,9 @@ v = v - 0.2 * crescent
 col = ramp(v, LEAF, EDGES, 0.035)
 # The crevices between clumps: a soft glaze to the deep tone, then a soft cocoa line in
 # the deepest of them.
-col = mix(col, np.repeat(LEAF[:1], len(a), 0), 0.6 * smooth(0.8, 0.4, a))
-col = mix(col, np.repeat(COCOA[None], len(a), 0), 0.35 * smooth(0.5, 0.25, a))
+col = mix(col, np.repeat(LEAF[1:2], len(a), 0), 0.5 * smooth(0.85, 0.5, a))
+col = mix(col, np.repeat(LEAF[:1], len(a), 0), 0.5 * smooth(0.6, 0.3, a))
+col = mix(col, np.repeat(COCOA[None], len(a), 0), 0.3 * smooth(0.4, 0.2, a))
 img[m] = col
 
 # ---- Bark ----
