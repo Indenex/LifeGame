@@ -105,11 +105,13 @@ public partial class Atmosphere
         // Warm and pale low down, where the firelight catches it, then grey and fading high up.
         var ramp = new Gradient
         {
-            Offsets = new[] { 0f, 0.06f, 0.3f, 0.7f, 1f },
+            // Clear for the first tenth of a puff's life (about 3 m): a lit puff right over the flames
+            // has the firelight behind it from the camera's side and drew as a dark blob (bugfix-72).
+            Offsets = new[] { 0f, 0.1f, 0.2f, 0.4f, 0.75f, 1f },
             Colors = new[]
             {
-                new Color(1f, 0.92f, 0.8f, 0f), new Color(0.96f, 0.89f, 0.79f, 0.5f), new Color(0.8f, 0.79f, 0.77f, 0.42f),
-                new Color(0.68f, 0.68f, 0.7f, 0.28f), new Color(0.64f, 0.65f, 0.68f, 0f),
+                new Color(1f, 0.92f, 0.8f, 0f), new Color(1f, 0.92f, 0.8f, 0f), new Color(0.96f, 0.89f, 0.79f, 0.5f),
+                new Color(0.8f, 0.79f, 0.77f, 0.42f), new Color(0.68f, 0.68f, 0.7f, 0.28f), new Color(0.64f, 0.65f, 0.68f, 0f),
             },
         };
         // Small at the fire, spreading wide at the top.
