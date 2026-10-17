@@ -51,6 +51,8 @@ public partial class Atmosphere : Node3D
 
     // Report sheep here (position, running) and they bleat; see SheepVoices.
     public readonly SheepVoices Sheep = new();
+    // The same for red deer: a bark when a herd bolts, hoof thuds, and stags roaring at autumn dusk (audio-4).
+    public readonly DeerVoices Deer = new();
 
     // The clock: day zero began at dayStart, and the server is clockOffset ahead of us.
     long dayStartMicros, clockOffsetMicros;
@@ -117,6 +119,7 @@ public partial class Atmosphere : Node3D
         AddChild(leaves);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
+        Deer.Cry = sound.DeerCry;
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
@@ -179,9 +182,15 @@ public partial class Atmosphere : Node3D
         ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => { if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
-        conn.Db.Animal.OnUpdate += (_, _, a) => { if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
-        conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
+        conn.Db.Animal.OnInsert += (_, a) => HearAnimal(a);
+        conn.Db.Animal.OnUpdate += (_, _, a) => HearAnimal(a);
+        conn.Db.Animal.OnDelete += (_, a) => { Sheep.Gone(a.Id); Deer.Gone(a.Id); };
+        // A blow landing on an animal: a thud, or a crack for a sneak-attack crit (audio-4).
+        conn.Db.AnimalHit.OnInsert += (_, h) => HearHit(h);
+        // A bow shot: the twang now, the arrow's thunk when it lands (audio-6).
+        conn.Db.ArrowShot.OnInsert += (_, shot) => HearArrow(shot);
+        // Drinking, eating, plucking and picking up, for everyone, timed to the motions (audio-7).
+        conn.Db.PlayerAct.OnInsert += (_, act) => HearAct(conn, act);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -282,6 +291,8 @@ public partial class Atmosphere : Node3D
             terrain ??= GetParent()?.GetChildren().OfType<Terrain>().FirstOrDefault();
             terrain?.ShowGhosts(camera.GlobalPosition, focus);
             Sheep.Tick(dt, focus, camera.GlobalBasis.X);
+            Deer.RoarTime = StagRoarTime();
+            Deer.Tick(dt, focus, camera.GlobalBasis.X);
         }
         float daylight = WorldTime.Daylight(timeOfDay);
         UpdateSeasons(dt, focus, wind, env.FogLightColor * (0.3f + 0.7f * WorldTime.Daylight(timeOfDay)));

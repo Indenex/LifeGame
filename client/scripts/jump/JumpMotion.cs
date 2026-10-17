@@ -28,6 +28,13 @@ public sealed class JumpMotion
         sinceTakeoff = 0f;
     }
 
+    // Drops the jump where it is (taking off into /fly mid-hop).
+    public void Cancel()
+    {
+        Airborne = false;
+        Landing = 0f;
+    }
+
     // Advances the arc; true on the frame it ends.
     public bool Tick(float dt)
     {

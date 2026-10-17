@@ -49,8 +49,11 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly AdminPanel admin = new();
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
+    readonly BuildMenu buildMenu = new();
+    readonly LookPicker lookPicker = new();
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -87,16 +90,22 @@ public partial class Main : Node3D
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
+        atmosphere.SeeThrough = building.SeeThroughOf;
         AddChild(building);
+        // The picture build menu (ui-20): B opens it; a tile starts House building's ghost.
+        // Added after building, so it sees B first; while the ghost is up, B is building's.
+        buildMenu.Place = building.StartPlacing;
+        buildMenu.Blocked = () => building.Placing || crafting.CapturesInput || Panels.Open() || survival.Mourning || social.Typing;
+        AddChild(buildMenu);
         survival.Setup(view, terrain, me, hud);
         survival.AvatarOf = id => others.GetValueOrDefault(id);
         AddChild(survival);
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         // The hotbar's number keys (ui-19) rest while something else has the keys.
-        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
         // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
         hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
@@ -119,20 +128,31 @@ public partial class Main : Node3D
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
+        AddChild(admin);
+        admin.Note = hud.Note;
+        AdminCommands.Menu = admin;
+        AdminCommands.IsFlying = () => flying;
+        AdminCommands.SetFlying = SetFlying;
         // The panel at a crafting station (ui-13, D-098).
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
         AddChild(station);
+        // Choosing how you look (ui-21): opens by itself at first join, and from Options.
+        lookPicker.Conn = () => conn;
+        lookPicker.MyId = () => myId;
+        AddChild(lookPicker);
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
             || equipment.IsOpen
-            || station.IsOpen;
+            || station.IsOpen
+            || buildMenu.IsOpen
+            || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -143,7 +163,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -338,6 +358,8 @@ public partial class Main : Node3D
 
         conn.Db.Player.OnInsert += (_, p) => OnPlayer(p);
         conn.Db.Player.OnUpdate += (_, _, p) => OnPlayer(p);
+        conn.Db.PlayerLook.OnInsert += (_, l) => OnPlayerLook(l);
+        conn.Db.PlayerLook.OnUpdate += (_, _, l) => OnPlayerLook(l);
         // Only online players are subscribed, so a delete means they logged off.
         conn.Db.Player.OnDelete += (_, p) =>
         {
@@ -358,9 +380,11 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         equipment.Bag.Link = new ServerBagLink(conn);
+        buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -444,12 +468,26 @@ public partial class Main : Node3D
     void OnPlayer(Player p)
     {
         names[p.PlayerId] = p.Name;
-        if (p.Identity == myIdentity) myId = p.PlayerId;
+        if (p.Identity == myIdentity)
+        {
+            myId = p.PlayerId;
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                me.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else me.SetLook(p.PlayerId);
+        }
         if (others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar.SetPlayerName(p.Name);
             avatar.Visible = p.Online;
         }
+    }
+
+    // A player's chosen look (model-3): applied to their avatar over the id default.
+    void OnPlayerLook(PlayerLook l)
+    {
+        var look = HumanFigure.Appearance.From(l.Skin, l.Hair, l.Cut, l.Beard);
+        if (myId != 0 && l.PlayerId == myId || (myId == 0 && IsMine(l.PlayerId))) me.SetLook(look);
+        else if (others.TryGetValue(l.PlayerId, out var avatar)) avatar.SetLook(look);
     }
 
     void OnPlayerPos(PlayerPos p, bool inserted)
@@ -460,7 +498,7 @@ public partial class Main : Node3D
             // Before spawning we wait for the area around us (see Subscribe).
             if (!spawned) return;
             // The server clamps impossible moves; snap back if we drifted too far.
-            if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+            if (!flying && new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
                 me.Position = at;
             return;
         }
@@ -468,6 +506,9 @@ public partial class Main : Node3D
         if (!others.TryGetValue(p.PlayerId, out var avatar))
         {
             avatar = new Avatar(names.GetValueOrDefault(p.PlayerId, "Wanderer")) { Remote = true, Position = at };
+            if (conn?.Db.PlayerLook.PlayerId.Find(p.PlayerId) is { } chosen)
+                avatar.SetLook(HumanFigure.Appearance.From(chosen.Skin, chosen.Hair, chosen.Cut, chosen.Beard));
+            else avatar.SetLook(p.PlayerId);
             others[p.PlayerId] = avatar;
             view.AddChild(avatar);
         }
@@ -496,8 +537,8 @@ public partial class Main : Node3D
         // Stacks whose qualities share a grade read the same, so they show as one slot.
         var stacks = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
-            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : ""))
-            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n), n); })
+            .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : "", Worn: ItemLook.Condition(i.Item, i.Quality, i.Wear)))
+            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n, g.Key.Worn), n); })
             .ToList();
         hud.SetItems(stacks);
     }
@@ -541,7 +582,7 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);
         social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
@@ -551,6 +592,8 @@ public partial class Main : Node3D
         if (conn != null && spawned)
         {
             Subscribe(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
+            heartbeatTimer -= dt;
+            if (heartbeatTimer <= 0f) { heartbeatTimer = 20f; conn.Reducers.Heartbeat(); }
             sendTimer -= dt;
             if (sendTimer <= 0f)
             {
@@ -564,9 +607,12 @@ public partial class Main : Node3D
         }
     }
 
+    float heartbeatTimer; // tells the server we're still here (see Presence.cs)
+
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
@@ -684,7 +730,8 @@ public partial class Main : Node3D
         return null;
     }
 
-    // One identity per install, so you keep your character between sessions.
+    // One identity per install, so you keep your character between sessions. It lives in the
+    // Godot user folder (outside the launcher's game folder), so reinstalling the game keeps it.
     static string TokenPath => Arg("profile") is { } p ? $"user://token_{p}.txt" : "user://token.txt";
 
     static string? LoadToken()
@@ -697,6 +744,13 @@ public partial class Main : Node3D
 
     static void SaveToken(string token)
     {
+        // A different token from the one on disk (server wiped, key changed) keeps the old one as
+        // a .bak, so a character is never lost for good by an overwrite.
+        if (LoadToken() is { } old && old != token)
+        {
+            using var bak = FileAccess.Open(TokenPath + ".bak", FileAccess.ModeFlags.Write);
+            bak.StoreString(old);
+        }
         using var file = FileAccess.Open(TokenPath, FileAccess.ModeFlags.Write);
         file.StoreString(token);
     }

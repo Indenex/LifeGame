@@ -107,6 +107,11 @@ public partial class OptionsPage : Control
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
 
+        // How you look (ui-21): the same picker as at first join.
+        var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
+        lookButton.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(lookButton);
+
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(back);

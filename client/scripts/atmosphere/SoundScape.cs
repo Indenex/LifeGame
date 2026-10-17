@@ -29,13 +29,17 @@ public partial class SoundScape : Node
     // Levels are plain floats the synth thread reads each block; a stale read just
     // eases in one block later.
     public float Daylight { set => mix.Daylight = value; }
-    public float Rain { set => mix.Rain = value; }
+    public float Rain { set { mix.Rain = value; RainNow = value; } }
+    public float RainNow { get; private set; }
     public float Wind { set => mix.Wind = value; }
     public float Wetness { set => mix.Wetness = value; }
-    public float Cover { set => mix.Cover = value; }
-    public float TimeOfDay { set => mix.TimeOfDay = value; }
+    public float Cover { set { mix.Cover = value; CoverNow = value; } }
+    public float CoverNow { get; private set; }
+    public float TimeOfDay { set { mix.TimeOfDay = value; TimeOfDayNow = value; } }
+    public float TimeOfDayNow { get; private set; }
     public float Foliage { set => mix.Foliage = value; }
-    public float Fire { set => mix.Fire = value; }
+    public float Fire { set { mix.Fire = value; FireNow = value; } }
+    public float FireNow { get; private set; }
     public float FirePan { set => mix.FirePan = value; }
     public float Water { set => mix.Water = value; }
     public float WaterPan { set => mix.WaterPan = value; }
@@ -77,6 +81,7 @@ public partial class SoundScape : Node
     {
         Load();
         Sfx.Attach(this);
+        AddChild(new MusicPlayer(this)); // the recorded music (audio-8)
         SoundMix.Fault = what => Fault(what);
         player.Stream = new AudioStreamGenerator { MixRate = mix.Rate, BufferLength = 0.2f };
         AddChild(player);
@@ -97,6 +102,7 @@ public partial class SoundScape : Node
     // One-off sounds go through a queue so the synth thread adds them between blocks.
     public void Step(Ground ground, float wetness) => events.Enqueue(m => m.Step(ground, wetness));
     public void Land(Ground ground, float strength, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Land(ground, strength, gain, pan));
+    public void Play(CueDef def, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(def, gain, pan));
     public void Play(Cue cue, float gain = 1f, float pan = 0f) => events.Enqueue(m => m.Play(cue, gain, pan));
     public void DeerCry(SoundMix.DeerCall call, float pan, float gain, float far) => events.Enqueue(m => m.DeerCry(call, pan, gain, far));
     public void Bleat(float pan, float gain, bool startled, bool lamb = false) => events.Enqueue(m => m.Bleat(pan, gain, startled, lamb));
