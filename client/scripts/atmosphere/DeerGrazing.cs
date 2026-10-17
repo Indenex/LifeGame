@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -35,7 +36,7 @@ static class DeerGrazing
 
     static void Seen(Animal a)
     {
-        if (a.Species != AnimalSpecies.Deer) return;
+        if (AnimalDefs.Get((byte)a.Species).Voice != "deer") return;
         if (!deer.TryGetValue(a.Id, out var d))
             deer[a.Id] = d = new Grazer { NextCrunch = now + 1 + random.NextDouble() * 2, NextSnort = now + 15 + random.NextDouble() * 40 };
         d.Where = new Vector3(a.X, 0.4f, a.Z);

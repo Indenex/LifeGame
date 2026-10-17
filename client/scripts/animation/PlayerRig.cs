@@ -3,8 +3,8 @@ using Godot;
 namespace LifeGame;
 
 // The player figure's joints. A figure is either a tree of Node3D pivots with these
-// exact names, each at its joint with its mesh hanging from it (today's capsules in
-// Avatar.cs), or a Skeleton3D with bones of these names and rigidly weighted mesh (the
+// exact names, each at its joint with its mesh hanging from it (unused today), or a
+// Skeleton3D with bones of these names and rigidly weighted mesh (the
 // Modeling lane's PlayerModel: one draw call per player). Rest pose: standing straight,
 // arms down, +Z forward, every pivot rotation zero. Animation writes only the pivots'
 // rotations and the Hips position, never meshes or scales.
