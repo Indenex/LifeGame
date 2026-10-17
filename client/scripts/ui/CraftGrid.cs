@@ -117,7 +117,12 @@ public partial class CraftGrid : VBoxContainer
             tip.AddThemeStyleboxOverride("panel", style);
             tip.AddChild(Hud.Text(card.TooltipText, 14));
             layer.AddChild(tip);
-            tip.Position = card.GetGlobalRect().Position + new Vector2(card.Size.X * 0.6f, card.Size.Y * 0.7f);
+            // Beside the card, where it doesn't cover the card's own text: right of it, or left
+            // when the card is in the last column near the screen's edge.
+            var rect = card.GetGlobalRect();
+            float width = tip.GetCombinedMinimumSize().X;
+            bool right = rect.End.X + 8 + width < GetViewportRect().Size.X;
+            tip.Position = new Vector2(right ? rect.End.X + 8 : rect.Position.X - 8 - width, rect.Position.Y + 8);
         };
     }
 
@@ -251,9 +256,9 @@ public partial class CraftGrid : VBoxContainer
         foreach (var input in def.Consumes)
         {
             needs.AddChild(Icon(input.Item, 20));
-            uint have = Have(input.Item);
-            var n = Hud.Text($"{Math.Min(have, 99)}/{input.Count}", 12);
-            if (have < input.Count) n.Modulate = new Color(1f, 0.75f, 0.45f);
+            uint have = Have(input.Item), need = Need(def, input);
+            var n = Hud.Text($"{Math.Min(have, 99)}/{need}", 12);
+            if (have < need) n.Modulate = new Color(1f, 0.75f, 0.45f);
             n.MouseFilter = MouseFilterEnum.Ignore;
             needs.AddChild(n);
         }
@@ -283,6 +288,11 @@ public partial class CraftGrid : VBoxContainer
         }
         return card;
     }
+
+    // How many of an input the recipe really needs on hand: knapping strikes stone on stone,
+    // so a hammer-stone input needs one more to strike with (CraftingUi.Missing says the same).
+    static uint Need(ProcessDef def, Ingredient input) =>
+        input.Count + (def.NeedsTool.HasFlag(ItemTags.Hammer) && Items.Def(input.Item).Tags.HasFlag(ItemTags.Hammer) ? 1u : 0u);
 
     static string Describe(ProcessDef def, string? missing)
     {

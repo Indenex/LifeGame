@@ -1177,3 +1177,7 @@ Owner: Claims.
 ## D-289 — 2026-10-17 — "Coil pot" is displayed as "Clay pot"
 **Decision:** "Coil pot" is renamed "Clay pot" in display names only. Ids are unchanged.
 **Who:** Relayed by the PM; no direct quote.
+
+## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
+**Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
+**Who:** Relayed by the PM; no direct quote.
