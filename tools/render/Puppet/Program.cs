@@ -86,7 +86,7 @@ var conn = DbConnection.Builder()
                 x = pos.X; z = pos.Z;
                 ready = true;
             })
-            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure", "SELECT * FROM world_item"
+            .Subscribe(new[] { "SELECT * FROM player", "SELECT * FROM forage_bush", "SELECT * FROM player_pos", "SELECT * FROM my_inventory", "SELECT * FROM my_craft_job", "SELECT * FROM fire", "SELECT * FROM structure", "SELECT * FROM world_item"
 #if HAS_TRADE
                 , "SELECT * FROM my_trade"
 #endif
