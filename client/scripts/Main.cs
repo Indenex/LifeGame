@@ -19,6 +19,7 @@ public partial class Main : Node3D
     static readonly StringName NWalkBack = "walk_back";
     static readonly StringName NWalkForward = "walk_forward";
     static readonly StringName NSneak = "sneak";
+    static readonly StringName NJump = "jump";
 
     const float WalkSpeed = 4.2f;
     const float SendInterval = World.MoveTickMillis / 1000f;
@@ -36,6 +37,8 @@ public partial class Main : Node3D
     readonly SurvivalClient survival = new();
     readonly Avatar me = new("You");
     readonly Herd herd = new();
+    readonly JumpMotion jump = new();
+    readonly JumpView jumpView = new();
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
     readonly Woodcutting woodcutting = new();
@@ -53,6 +56,7 @@ public partial class Main : Node3D
     float heading, sendTimer;
     Vector3 lastSent = new(float.NaN, 0, float.NaN);
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
+    int subscribedFar = -1;
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
     readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Msaa4X, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa };
@@ -91,11 +95,26 @@ public partial class Main : Node3D
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        // The hotbar's number keys (ui-19) rest while something else has the keys.
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Note = hud.Note;
+        // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
+        hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
+        equipment.Bag.Use = hud.Hotbar.UseItem;
+        equipment.Bag.TakeOff = slot => equipment.Link.TakeOff(slot);
+        equipment.Bag.ClearHotbar = i => hud.Hotbar.Link.Set(i, null);
+        equipment.Bag.OverPanel = at => equipment.Covers(at) || hud.Hotbar.RowRect.HasPoint(at);
+        equipment.Bag.PlaceOrDrop = (item, quality) =>
+        {
+            if (HotbarBar.Placeable(item)) { equipment.Close(); hud.Hotbar.RequestPlace(item); }
+            else equipment.Bag.Link.Drop(item, quality);
+        };
         social.HideChip = () => survival.Mourning;
         // What you wear (ui-10, D-074).
         equipment.Note = hud.Note;
         AddChild(equipment);
         building.MayBar = social.HasRightsAt;
+        building.ClaimStandingAt = social.ClaimStandingAt;
         building.ClaimBorderNear = social.ClaimBorderNear;
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
@@ -335,10 +354,13 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnUpdate += (_, _, _) => RefreshInventory();
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
+        jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         equipment.Attach(new ServerEquipLink(conn));
+        hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        equipment.Bag.Link = new ServerBagLink(conn);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -395,9 +417,12 @@ public partial class Main : Node3D
 
     void Subscribe(int chunkX, int chunkZ)
     {
-        if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
+        // Resubscribes when you cross a chunk or the far radius (view distance setting) changes.
+        if (conn == null || (subscribedChunk == (chunkX, chunkZ) && subscribedFar == Subscriptions.FarRadius)) return;
         subscribedChunk = (chunkX, chunkZ);
+        subscribedFar = Subscriptions.FarRadius;
         string range = Subscriptions.Range(chunkX, chunkZ, World.ViewRadiusChunks);
+        string farRange = Subscriptions.Range(chunkX, chunkZ, subscribedFar);
         var old = subscription;
         // Subscribe to the new area before dropping the old one so nothing pops out.
         // The first area is where we wake up: appear once it has loaded, all at once.
@@ -413,7 +438,7 @@ public partial class Main : Node3D
                 // Still wake up and walk: one failed subscription must not freeze the player.
                 if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
             })
-            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
+            .Subscribe(Subscriptions.Area(range, farRange).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
     void OnPlayer(Player p)
@@ -517,6 +542,7 @@ public partial class Main : Node3D
         conn?.FrameTick();
 
         if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
+        jumpView.Process(dt, atmosphere.GroundAt);
         social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
         water.Position = new Vector3(Mathf.Round(me.Position.X), Look.WaterLevel, Mathf.Round(me.Position.Z));
@@ -541,20 +567,33 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
-        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(Input.IsActionPressed(NSneak), input != Vector2.Zero, WalkSpeed, dt);
+        bool sneak = Input.IsActionPressed(NSneak);
+        var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
         velocity = velocity.Lerp(wish, 1f - Mathf.Exp(-(wish == Vector3.Zero ? 10f : 7f) * dt));
 
-        var pos = building.Collide(me.Position, me.Position + velocity * dt);
-        pos = terrain.CollideVegetation(pos);
+        // Jump (bugfix-25): a hop keeps its takeoff direction, and the server tells the others.
+        if (!social.Typing && Input.IsActionJustPressed(NJump) && jump.CanStart(sneak) && survival.TrySpendStamina(Stamina.JumpCost))
+        {
+            jump.Start(velocity);
+            conn?.Reducers.Jump();
+            Sfx.Play(Cue.Jump);
+        }
+        bool landed = jump.Tick(dt);
+        if (jump.Airborne) velocity = jump.Launch;
+
+        var pos = building.Collide(me.Position, me.Position + velocity * dt, jump.AirHeight);
+        pos = terrain.CollideVegetation(pos, jump.AirHeight);
         // Deep water is not walkable yet, but a step that climbs is always allowed,
         // so nobody gets trapped in a flooded hole they dug.
         float next = terrain.HeightAt(pos.X, pos.Z);
         if (next < Look.WaterLevel - 0.3f && next < terrain.HeightAt(me.Position.X, me.Position.Z))
             pos = me.Position;
-        // Ease up and down slopes instead of popping between heights.
-        pos.Y = Mathf.Lerp(me.Position.Y, terrain.HeightAt(pos.X, pos.Z), 1f - Mathf.Exp(-14f * dt));
+        // Ease up and down slopes instead of popping between heights; in the air the feet follow the arc.
+        pos.Y = jump.Airborne ? next + jump.AirHeight : Mathf.Lerp(me.Position.Y, next, 1f - Mathf.Exp(-14f * dt));
         me.Position = pos;
+        me.SetJump(jump.Airborne, jump.Rising, jump.Landing);
+        if (landed) Sfx.Land(jump.Landing, atmosphere.GroundAt(pos));
 
         if (velocity.LengthSquared() > 0.05f)
         {

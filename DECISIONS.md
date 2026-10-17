@@ -943,3 +943,19 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-232 — 2026-10-16 — Art direction: low-poly shapes with simple painted material textures, Valheim-like (pending Justin's pick of renders, D-154)
 **Decision:** The direction is low-poly shapes with simple, low-res, painted material textures (Valheim-like), a cutesy warm feel, and lighting and atmosphere carrying the awe. Justin did not want flat colour. This is a direction only: per D-154 it is pending Justin's pick of renders, so no art is built past a prototype yet. Modeling is prototyping 2 to 3 texture variants, and Atmosphere is lighting the test renders.
 **Who:** Justin ("I dont like the textures the models are using; I want things to be less textures, but still very stylized with our pretty low poly look." When offered flat colour: "I want things to have material looks/texture still, closer to valheim I think. I want the game to be cutesy and beautiful/awe inspiring with lighting and stuff.")
+
+## D-233 — 2026-10-16 — Players pick their look at first join, from Modeling's carved parts
+**Decision:** Each player picks skin tone, hair colour, cut and beard at first join, from Modeling's carved parts. The server validates the choice. Justin chose this over an automatic look from the player id or keeping everyone identical. Owner: Modeling.
+**Who:** Justin (relayed by the PM; no direct quote), picking the first-join choice.
+
+## D-234 — 2026-10-16 — Lighting: prototype the colour grade, richer sky and god rays; the original reference screenshots are the target look (D-154)
+**Decision:** Prototype all three lighting options: the time-of-day colour grade, the richer sky, and god rays everywhere at low sun with a quality setting. Renders come before anything ships (D-154). Justin's original reference world, terrain and character screenshots are the target look for the game. Owner: Atmosphere.
+**Who:** Justin ("go look back at our original reference world/terrain/character screenshots I sent you. That's what the game should look like."), with his pick of all three lighting options.
+
+## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
+**Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
+**Who:** Justin (shared the images; relayed by the PM, no direct quote).
+
+## D-236 — 2026-10-17 — Bought art packs from Golden Skull Art; Dofus is a second style reference (follows D-234, D-235)
+**Decision:** Justin bought Golden Skull Art's (Max Heyder) 2D Isometric Foliage Pack and Isometric Starter Pack, with a commercial licence and his stated permission to host them in the public repo temporarily. They are in `docs/art-packs/golden-skull/` (#378). Dofus is now a second style reference alongside `docs/art-reference`.
+**Who:** Justin ("Our other inspiration is a game called Dofus. Beautiful, hand crafted artwork, scenery, etc. It's a similar 2d but 3d engine type thing.")
