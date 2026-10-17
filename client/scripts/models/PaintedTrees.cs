@@ -448,7 +448,8 @@ public static class PaintedTrees
             return text[..at] + replacement + text[(at + anchor.Length)..];
         }
         code = Put(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_FOLIAGE" + (ghost ? "\n#define GHOST" : ""));
-        if (ghost) code = Put(code, "render_mode cull_disabled;", "render_mode cull_disabled, depth_draw_always;");
+        // Only the front-most surface of a faded crown blends, as Look's tree ghosts (env-25).
+        if (ghost) code = Put(code, "render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;");
         code = Put(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
         code = Put(code, "VERTEX *= 1.0 - 0.85 * leaf_drop();", """
             {

@@ -3,7 +3,7 @@
 // reconnect. Runs against a local server with the module freshly published.
 // Exits non-zero if anything fails.
 //
-// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [lean-to|clay-hut|basket|fence|stone-hearth|coop|brick-house|log-cabin|both=both] [uri=http://127.0.0.1:3000] [db=lifegame]
 // brick-house and log-cabin run on their own: bricks take minutes to dry, and twenty logs take a while to chop.
 using System.Diagnostics;
 using LifeGame.Shared;
@@ -13,7 +13,7 @@ using SpacetimeDB.Types;
 // What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
-bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" or "stone-hearth" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -24,6 +24,8 @@ var clock = Stopwatch.StartNew();
 // A's claim, raised past the waking clearing the first time something claim-only is built.
 (float x, float z)? claimAt = null;
 bool bIsMember = false;
+
+const float Module_UnstuckRadius = 12.5f;
 
 void Pump(int ms)
 {
@@ -66,6 +68,26 @@ b.WalkTo(1f, 0f, 0.3f, Pump);
     Check(Structures.StageProcess((int)StructureKind.TiledHouse, 1) == Structures.DaubProcess && Structures.StageProcess((int)StructureKind.TiledHouse, 3) == Structures.RoofProcess, "its walls are daub work and its roof is roofing");
 }
 
+// The hen coop (building-16): claim-only, with the entry and roost points Animals target.
+{
+    var coop = Structures.Shape((int)StructureKind.HenCoop);
+    Check(!coop.Wild, "the hen coop has to stand inside a claim");
+    Check(coop.Stages.Length == 3 && coop.Costs.Length == 3, "the hen coop goes up in three stages");
+    Check(coop.Entry.Z > coop.HalfDepth && coop.Entry.Z < coop.HalfDepth + 2f, "the coop's entry is just outside its front");
+    Check(MathF.Abs(coop.Roost.X) < coop.HalfWidth && MathF.Abs(coop.Roost.Z) < coop.HalfDepth, "the roost is inside the coop");
+    Check(Structures.StageProcess((int)StructureKind.HenCoop, 1) == Structures.WattleProcess && Structures.StageProcess((int)StructureKind.HenCoop, 2) == Structures.RoofProcess, "its walls are wattle work and its roof is roofing");
+}
+
+// The stone-ringed hearth (D-286): wild like the campfire, a hearth, and a fire on it warms out to 8 m.
+{
+    var ring = Structures.Shape((int)StructureKind.StoneHearth);
+    Check(ring.Wild && ring.Hearth && !ring.Indoor, "the stone-ringed hearth stands outdoors, anywhere");
+    Check(ring.HeatRadius >= 8f && ring.HeatRadius > Fires.WarmthRadius, "a fire on it warms out to 8 m or more, past the campfire's 5 m");
+    Check(Fires.WarmthFrom(0, 0, 6f, 0, ring.HeatRadius) > 0f && Fires.WarmthFrom(0, 0, 6f, 0) == 0f, "6 m away is warm by the hearth and cold by a plain fire");
+    Check(Fires.WarmthFrom(0, 0, 2f, 0) == Fires.WarmthFrom(0, 0, 2f, 0, Fires.WarmthRadius), "a plain fire warms as before");
+    Check(Structures.StageProcess((int)StructureKind.StoneHearth, 1) == Structures.FrameProcess, "its stones are laid like a frame");
+}
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
 foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin, StructureKind.TiledHouse })
 {
@@ -99,6 +121,7 @@ if (Wants("clay-hut"))
         });
     HangDoor(hut);
     LayMat(hut);
+    UnstuckInHut(hut);
     BuildHearth(hut);
 }
 if (Wants("basket"))
@@ -121,6 +144,16 @@ if (Wants("fence"))
         new() { [Item.Stick] = 3 },
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
+
+if (Wants("coop"))
+    BuildTogether(StructureKind.HenCoop,
+        new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
+        new() { [Item.Stick] = 4, [Item.Fiber] = 5 });
+
+if (Wants("stone-hearth"))
+    WarmByStoneHearth(BuildTogether(StructureKind.StoneHearth,
+        new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
+        new() { [Item.Stone] = 3 }));
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
@@ -179,9 +212,25 @@ void WallsStopWalkers(ulong id)
 {
     Console.WriteLine("--- Walls stop walkers");
     var s = a.Conn.Db.Structure.Id.Find(id)!;
+    // Stand 0.9 m from the fence with the same distance on its far side as the target: a step that is
+    // short enough to be allowed in one go and free of trunks and boulders, which the server refuses
+    // (bugfix-45), however the bot happened to be standing after the last stage.
+    var og = new BotGround(a.Conn);
+    (float x, float z)? start = null, target = null;
+    foreach (var off in new[] { 0f, 0.5f, -0.5f, 0.9f, -0.9f })
+        foreach (var side in new[] { 1f, -1f })
+        {
+            var f = Structures.ToWorld(s.X, s.Z, s.Yaw, off, side * 0.9f);
+            var t = Structures.ToWorld(s.X, s.Z, s.Yaw, off, -side * 0.9f);
+            if (start != null || Obstacles.StepBlocked(og, 0.4f, f.x, f.z, t.x, t.z, 0f)
+                || Obstacles.PushOut(og, 0.4f, f.x, f.z, 0f) != (f.x, f.z) || Obstacles.PushOut(og, 0.4f, t.x, t.z, 0f) != (t.x, t.z)) continue;
+            start = f; target = t;
+        }
+    Check(start != null, "found clear ground either side of the fence");
+    a.WalkTo(start!.Value.x, start.Value.z, 0.2f, Pump);
     Pump(1200);
     var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, a.X, a.Z);
-    var across = Structures.ToWorld(s.X, s.Z, s.Yaw, lx, -lz);
+    var across = target!.Value;
     a.Conn.Reducers.Move(across.x, across.z, 0f);
     Pump(1000);
     var srv = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
@@ -389,6 +438,11 @@ void UseGate(ulong gate)
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: false }, 10, "the other player opened it");
     b.Conn.Reducers.ToggleDoor(gate);
     WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Closed: true }, 10, "and shut it again");
+    // A member of the claim bars and unbars its gate too (claims-21: owner, members and the town's Gatekeeper).
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "B, a member, barred the gate");
+    b.Conn.Reducers.ToggleLock(gate);
+    WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: false }, 10, "and unbarred it");
     StrangerB();
     a.Conn.Reducers.ToggleLock(gate);
     WaitFor(() => b.Conn.Db.StructureDoor.StructureId.Find(gate) is { Locked: true }, 10, "A barred the gate");
@@ -400,6 +454,28 @@ void UseGate(ulong gate)
 }
 
 // A raised hearth goes inside the finished hut, not outside it. A lays the stones, B the daub.
+// A fire lit on the stone-ringed hearth warms a player 6.5 m away but not 9.5 m (D-286).
+void WarmByStoneHearth(ulong id)
+{
+    var hearth = a.Conn.Db.Structure.Id.Find(id)!;
+    a.Craft("gather.tinder", Pump);
+    int fires = a.Conn.Db.Fire.Count;
+    a.Craft("fire.hand_drill", Pump);
+    WaitFor(() => a.Conn.Db.Fire.Count > fires, 10, "lit a fire beside the stone-ringed hearth");
+    var fire = a.Conn.Db.Fire.Iter().OrderByDescending(f => f.LitAt.MicrosecondsSinceUnixEpoch).First();
+    Check(MathF.Abs(fire.X - hearth.X) < 0.01f && MathF.Abs(fire.Z - hearth.Z) < 0.01f, "the fire sits on the stone-ringed hearth");
+    foreach (var (distance, warm) in new[] { (10.5f, false), (6.5f, true) })
+    {
+        b.WalkTo(hearth.X + distance, hearth.Z, 0.5f, Pump);
+        var seen = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+        float away = MathF.Sqrt((seen.X - hearth.X) * (seen.X - hearth.X) + (seen.Z - hearth.Z) * (seen.Z - hearth.Z));
+        if (MathF.Abs(away - distance) > 1.5f) { Console.WriteLine($"  (b stands {away:F1} m away, not {distance} m: terrain in the way)"); continue; }
+        Pump(2500);
+        foreach (var v in b.Conn.Db.MyVitals.Iter()) Console.WriteLine($"  vitals: near={v.NearHeat} rate={v.WarmthRate:F3} at {away:F1} m");
+        WaitFor(() => b.Conn.Db.MyVitals.Iter().Any(v => v.NearHeat == warm), 8, warm ? $"{away:F1} m from the stone-ringed hearth is warm" : $"{away:F1} m from it is not");
+    }
+}
+
 void BuildHearth(ulong hut)
 {
     Console.WriteLine("--- Raised hearth");
@@ -506,7 +582,66 @@ void LayMat(ulong hut)
     a.Conn.Reducers.RollUpMat();
     WaitFor(() => a.CountOf(Item.SleepingMat) == 1 && a.Conn.Db.SleepingMat.PlayerId.Find(me) is null, 10, "rolled it up again");
     a.Conn.Reducers.LayMat(hut);
-    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
+    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out");
+
+    // Laying a mat does not choose your waking place; A is asked, and the server checks the answer (survival-23).
+    Check(!a.Conn.Db.MyRespawnPoint.Iter().Any(), "laying a mat does not set the waking place by itself");
+    var mat = RestSpots.OfItem(Item.SleepingMat)!;
+    b.LastError = null;
+    b.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B choosing a mat that is not theirs to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => a.Conn.Db.MyRespawnPoint.Iter().Any(), 10, "A set the mat as their waking place");
+    var point = a.Conn.Db.MyRespawnPoint.Iter().First();
+    var laid = a.Conn.Db.SleepingMat.PlayerId.Find(me)!;
+    Check(point.StructureId == hut && point.Spot == mat.Id && MathF.Abs(point.X - laid.X) < 0.01f && MathF.Abs(point.Z - laid.Z) < 0.01f,
+        $"the waking place is the mat in the hut ({point.X:F1}, {point.Z:F1})");
+
+    // Lying down on the mat is a pose everyone sees, and only the mat's owner may do it (survival-27).
+    b.LastError = null;
+    b.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B lying on A's mat to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is { Kind: 2 } r && r.SpotId == hut, 10, "A lies on the mat, seen by B");
+    a.Conn.Reducers.StandUp();
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is null, 10, "A stands up again, seen by B");
+}
+
+// A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
+// puts A on free ground within its search radius; a second try inside the cooldown is refused (bugfix-44).
+void UnstuckInHut(ulong hut)
+{
+    Console.WriteLine("--- Unstuck");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var from = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    Check(Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, from.X, from.Z), "A stands inside the hut");
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId) is { } p && (p.X != from.X || p.Z != from.Z) || a.LastError != null, 10, "the server answered unstuck");
+    Check(a.LastError == null, $"unstuck was allowed ({a.LastError ?? "-"})");
+    var to = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    float moved = MathF.Sqrt((to.X - from.X) * (to.X - from.X) + (to.Z - from.Z) * (to.Z - from.Z));
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, to.X, to.Z), $"A now stands outside the hut ({to.X:F1}, {to.Z:F1})");
+    Check(moved <= Module_UnstuckRadius, $"A moved {moved:F1} m, within the search radius");
+    a.X = to.X; a.Z = to.Z;
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.LastError != null, 10, "a second unstuck inside the cooldown is answered");
+    Check(a.LastError!.Contains("again in"), $"the second try is refused for the cooldown ({a.LastError})");
+
+    // B stands on free ground in the yard: unstuck still helps, moving B at least 1.5 m (and within the radius).
+    var bFrom = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, bFrom.X, bFrom.Z, 0.25f), "B stands on free ground");
+    b.LastError = null;
+    b.Conn.Reducers.Unstuck();
+    WaitFor(() => b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId) is { } p && (p.X != bFrom.X || p.Z != bFrom.Z) || b.LastError != null, 10, "the server answered B's unstuck");
+    Check(b.LastError == null, $"unstuck from free ground was allowed ({b.LastError ?? "-"})");
+    var bTo = b.Conn.Db.PlayerPos.PlayerId.Find(b.MyId)!;
+    float bMoved = MathF.Sqrt((bTo.X - bFrom.X) * (bTo.X - bFrom.X) + (bTo.Z - bFrom.Z) * (bTo.Z - bFrom.Z));
+    Check(bMoved >= 1.4f && bMoved <= Module_UnstuckRadius, $"B was nudged {bMoved:F1} m");
+    b.X = bTo.X; b.Z = bTo.Z;
 }
 
 // A puts sticks in the basket; B takes one out.
@@ -544,6 +679,9 @@ sealed class Bot
     public uint MyId => myId;
     uint myId;
     ulong targetItem;
+    readonly HashSet<ulong> gone = new();
+    // What each bot is heading for, so two bots do not race for the same ground item.
+    static readonly Dictionary<string, ulong> gatherTargets = new();
     (int x, int z)? digCell;
     float actionTimer;
 
@@ -585,11 +723,14 @@ sealed class Bot
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
+                        "SELECT * FROM player_rest",
+                        "SELECT * FROM my_respawn_point",
                         "SELECT * FROM fire",
                         "SELECT * FROM chopped_tree",
                         "SELECT * FROM clay_piece",
                         "SELECT * FROM my_inventory",
                         "SELECT * FROM my_craft_job",
+                        "SELECT * FROM my_vitals",
                         "SELECT * FROM claim",
                         "SELECT * FROM claim_member",
                     });
@@ -609,7 +750,11 @@ sealed class Bot
     {
         Conn.Disconnect();
         pump(500);
+        Ready = false;
         Conn = Connect();
+        // A login that already has a character waits at the character menu (survival-24): play it.
+        for (int i = 0; i < 400 && !Ready; i++) pump(50);
+        if (Conn.Identity is { } login) Conn.Reducers.SelectCharacter(login);
     }
 
     public uint CountOf(Item item) => Conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
@@ -627,28 +772,80 @@ sealed class Bot
 
         if (missing.Contains(Item.Clay) && missing.Count == 1)
         {
-            digCell ??= NearestClay();
+            if (digCell == null)
+            {
+                digCell = NearestClay();
+                digClay = CountOf(Item.Clay);
+                digSince.Restart();
+                Console.WriteLine($"  {name}: digging clay at cell ({digCell.Value.Item1}, {digCell.Value.Item2})");
+            }
             var (cx, cz) = digCell.Value;
+            // A dig the server refused, or a cell that gives no clay for 25 s: say why, leave that cell alone, pick another.
+            if (LastError != null && digging)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: dig at ({cx}, {cz}) refused: {LastError}");
+                badCells.Add((cx, cz)); digCell = null; digging = false; LastError = null;
+                return;
+            }
+            if (digSince.Elapsed.TotalSeconds > 25 && CountOf(Item.Clay) <= digClay)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: no clay from ({cx}, {cz}) in 25 s (at {X:F1}, {Z:F1}, target {cx * World.CellSize - 0.8f:F1}, {cz * World.CellSize:F1})");
+                badCells.Add((cx, cz)); digCell = null; digging = false;
+                return;
+            }
+            if (CountOf(Item.Clay) > digClay) { digClay = CountOf(Item.Clay); digSince.Restart(); }
             float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
             if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
             else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
-                else Conn.Reducers.Dig(cx, cz);
+                else { digging = true; LastError = null; Conn.Reducers.Dig(cx, cz); }
             }
             return;
         }
 
-        var item = Conn.Db.WorldItem.Id.Find(targetItem);
-        if (item == null || !missing.Contains((Item)item.Item))
+        // The other bot got there first ("That item is gone"): never go for that one again, and pick another.
+        if (targetItem != 0 && LastError?.Contains("That item is gone") == true)
         {
-            item = Conn.Db.WorldItem.Iter()
-                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay)
-                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z))
-                .FirstOrDefault();
+            gone.Add(targetItem);
+            targetItem = 0;
+            LastError = null;
+        }
+        var item = Conn.Db.WorldItem.Id.Find(targetItem);
+        if (item == null || !missing.Contains((Item)item.Item) || gone.Contains(item.Id))
+        {
+            // Nearest item neither of us has lost, and not the one the other bot is already heading for.
+            var candidates = Conn.Db.WorldItem.Iter()
+                .Where(i => missing.Contains((Item)i.Item) && i.Item != (ushort)Item.Clay && !gone.Contains(i.Id))
+                .OrderBy(i => (i.X - X) * (i.X - X) + (i.Z - Z) * (i.Z - Z)).ToList();
+            item = candidates.FirstOrDefault(i => !gatherTargets.Any(t => t.Key != name && t.Value == i.Id)) ?? candidates.FirstOrDefault();
             targetItem = item?.Id ?? 0;
-            if (item == null) return;
+            gatherTargets[name] = targetItem;
+            if (item == null)
+            {
+                // Nothing left in the world to pick up: say so once, so a timeout reads as scarcity, not a stall.
+                if (!noneLogged)
+                {
+                    noneLogged = true;
+                    Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                    noneFor.Restart();
+                }
+                // The bots only see items near them, and earlier builds picked the nearby ones: walk on, round a
+                // widening spiral, until some come into view.
+                if (gatherPump != null && noneFor.Elapsed.TotalSeconds > 3)
+                {
+                    exploreStep++;
+                    float angle = exploreStep * 2.4f, reach = MathF.Min(15f + 8f * exploreStep, 90f);
+                    float ex = X + MathF.Cos(angle) * reach, ez = Z + MathF.Sin(angle) * reach;
+                    Console.WriteLine($"  {name}: looking further for {string.Join(", ", missing)}, step {exploreStep} to ({ex:F0}, {ez:F0})");
+                    WalkTo(ex, ez, 2f, gatherPump);
+                    noneFor.Restart();
+                }
+                return;
+            }
+            noneLogged = false;
+            exploreStep = 0;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -663,6 +860,13 @@ sealed class Bot
     // server has not moved the bot 0.3 m in 3 s and the bot is still out of reach of its target, hand the
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
+    bool noneLogged;
+    readonly HashSet<(int, int)> badCells = new();
+    bool digging;
+    uint digClay;
+    readonly Stopwatch digSince = Stopwatch.StartNew();
+    int exploreStep;
+    readonly Stopwatch noneFor = Stopwatch.StartNew();
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;
@@ -694,7 +898,7 @@ sealed class Bot
             for (int x = x0 - r; x <= x0 + r; x++)
                 for (int z = z0 - r; z <= z0 + r; z++)
                     if (Math.Max(Math.Abs(x - x0), Math.Abs(z - z0)) == r && World.IsClay(x, z)
-                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z))
+                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z) && !badCells.Contains((x, z)))
                         return (x, z);
         throw new Exception("No clay nearby");
     }

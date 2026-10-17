@@ -26,13 +26,26 @@ public partial class GroundItems : Node3D
 
     public bool Has(ulong id) => batchOf.ContainsKey(id);
 
+    // A maker's mark was added or changed (ceramics-15): the batches of marked pots redraw with the
+    // new stamp, so older pots follow the change as the design says.
+    public override void _EnterTree() => ClayItemLook.MarksChanged += RestyleMarked;
+
+    public override void _ExitTree() => ClayItemLook.MarksChanged -= RestyleMarked;
+
+    void RestyleMarked()
+    {
+        foreach (var (key, batch) in batches)
+            if (key.Item4 != 0 && ClayItemLook.MarkedMesh(key.Item1, (uint)key.Item4) is { } marked)
+                batch.Mesh.Mesh = PaintedItems.Paint(marked, PaintedItems.Family.Clay);
+    }
+
     // `mark` is the row's Wear number: for pots it is the maker's mark (shared/Marks.cs), drawn as
-    // a stamp, and pots with different marks are drawn in separate batches.
+    // a stamp, and slip round the rim (shared/Slip.cs); pots that look different are drawn in separate batches.
     public void Add(ulong id, Item item, Transform3D place, uint mark = 0)
     {
         if (batchOf.ContainsKey(id)) return;
         int px = Mathf.FloorToInt(place.Origin.X / PatchMeters), pz = Mathf.FloorToInt(place.Origin.Z / PatchMeters);
-        int variant = Marks.Has(mark) && Marks.Marked(item) ? (int)Marks.Maker(mark) + 1 : 0;
+        int variant = (int)ClayItemLook.Decoration(item, mark);
         if (!batches.TryGetValue((item, px, pz, variant), out var batch))
         {
             batch = new Batch
@@ -40,7 +53,7 @@ public partial class GroundItems : Node3D
                 Mesh = new MultiMesh
                 {
                     TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                    Mesh = (variant > 0 && ClayItemLook.MarkedMesh(item, (uint)(variant - 1)) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
+                    Mesh = (variant != 0 && ClayItemLook.MarkedMesh(item, (uint)variant) is { } marked ? PaintedItems.Paint(marked, PaintedItems.Family.Clay) : null) ?? ItemLook.MeshFor(item),
                 },
                 // Unused slots collapse to a point inside the patch, so they draw
                 // nothing and don't stretch the batch's bounds.

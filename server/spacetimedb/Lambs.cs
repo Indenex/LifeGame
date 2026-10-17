@@ -74,7 +74,7 @@ public static partial class Module
         }
 
         // Alongside her: do as she does, re-checking often so it never lags long.
-        var copy = mother.State == AnimalState.Graze ? AnimalState.Graze : AnimalState.Idle;
+        var copy = mother.State == AnimalState.Graze ? AnimalState.Graze : mother.State == AnimalState.Roost ? AnimalState.Roost : AnimalState.Idle;
         if (body.State != copy || now >= mind.StateUntil)
         {
             if (body.State != copy && copy == AnimalState.Idle)

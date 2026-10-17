@@ -67,6 +67,9 @@ public static class PlayerModel
             Remember(figure, look);
             var built = ChibiFigure.Build(ChibiLook(look));
             if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } chibi) chibi.Mesh = built.Mesh;
+            ChibiShell.Sync(figure, ChibiLook(look));
+            // The face set follows the new race and skin, keeping the face shown.
+            if (figure.HasMeta(ChibiFigure.FaceMeta)) ChibiFigure.DressFace(figure, ChibiLook(look));
             // Put back on whatever it wears, cut for the new race.
             for (byte slot = 0; slot <= Feet; slot++)
                 Wear(figure, slot, figure.HasMeta($"worn{slot}") ? (ushort)figure.GetMeta($"worn{slot}").AsInt32() : (ushort)0);
@@ -74,6 +77,24 @@ public static class PlayerModel
         }
         if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } body)
             body.Mesh = HumanFigure.Build(Style, look).Mesh;
+    }
+
+    static readonly NodePath FaceAttachPath = ChibiFigure.FaceAttach;
+
+    // Shows one face on a chibi figure (model-15): blink, happy, sleepy or open. A
+    // visibility flip between the four parts under its FaceAttach node, safe to call
+    // every frame: it returns at once when that face is already showing, and does
+    // nothing on a figure without a face set (the legacy adult).
+    public static void SetFace(Skeleton3D figure, Face face)
+    {
+        if (!figure.HasMeta(ChibiFigure.FaceMeta)) return;
+        int now = figure.GetMeta(ChibiFigure.FaceMeta).AsInt32();
+        if (now == (int)face) return;
+        var attach = figure.GetNodeOrNull(FaceAttachPath);
+        if (attach == null || (int)face >= attach.GetChildCount()) return;
+        for (int i = 0; i < attach.GetChildCount(); i++)
+            attach.GetChild<Node3D>(i).Visible = i == (int)face;
+        figure.SetMeta(ChibiFigure.FaceMeta, (int)face);
     }
 
     // A figure keeps its look, so its chibi wrap can be put back on.

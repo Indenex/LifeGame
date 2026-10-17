@@ -39,6 +39,10 @@ public partial class Sheep : Node3D
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
+    // How low a roosting animal sits (1 standing, 0.7 settled), eased in _Process.
+    float crouch = 1f, crouchTarget = 1f;
+    // Set by the herd: whether a finished hen coop stands over a spot, so roosting hens go inside it.
+    public static System.Func<float, float, bool>? InsideCoop;
     // The hen figure (model-7): same bones, but its "legs" 2 and 3 are wings and its head pecks.
     readonly bool hen;
     Color woolColor;
@@ -218,6 +222,10 @@ public partial class Sheep : Node3D
         // Just shorn: the fleece comes off in a soft burst of tufts.
         else if (woolTarget < wool - 0.5f) Tufts();
         state = a.State;
+        // A roosting animal settles low; one in its coop is out of sight.
+        bool roost = a.State == AnimalState.Roost;
+        crouchTarget = roost ? 0.7f : 1f;
+        Visible = !(roost && InsideCoop?.Invoke(a.X, a.Z) == true);
     }
 
     public override void _Process(double delta)
@@ -339,7 +347,8 @@ public partial class Sheep : Node3D
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));
         Fleece(Mathf.Lerp(0.6f, 1f, wool));
         growth = Mathf.Lerp(growth, growthTarget, 1f - Mathf.Exp(-0.5f * dt));
-        Scale = Vector3.One * adultSize * growth;
+        crouch = Mathf.Lerp(crouch, crouchTarget, 1f - Mathf.Exp(-3f * dt));
+        Scale = new Vector3(1f, crouch, 1f) * adultSize * growth;
     }
 
     void Lie(float dt, float time)

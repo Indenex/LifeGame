@@ -50,3 +50,7 @@ Each release body lists player-facing patch notes between `<!-- notes -->` and `
 ## Resizable window (release-10)
 
 Both launchers open at 860x560 and can be resized (minimum 640x540, and never smaller than the layout needs). The buttons wrap onto a second line when narrow, the "What's new" box takes the spare height, and the buttons stay at the bottom. On screens with a display scale above 100% (Windows DPI scaling) the window and everything in it is scaled to match. The size and position are remembered in `LifeGame/window.json` and restored on the next start if the window would still be on a screen. `--window-size=WxH` opens at a given size without restoring or saving (for screenshots).
+
+## Look (release-11, D-314)
+
+Both launchers wear the "Warm paper windows" look: a cream paper panel on a warm table, 24 px round corners with a soft shadow, brown Nunito text (`launcher/fonts/Nunito.font.bin`, SIL OFL, loaded from raw bytes so it needs no import and is exported by the `fonts/*` include filter), a pastel sage main button and terracotta for warnings and the wipe question. The colours are the constants at the top of `launcher.gd`.

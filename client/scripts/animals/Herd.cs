@@ -68,7 +68,9 @@ public partial class Herd : Node3D
         };
         Use.Register(new UseHandler { Id = "animals.shear", Priority = 15, Find = OfferShear });
         Use.Register(new UseHandler { Id = "animals.eggs", Priority = 15, Find = OfferEggs });
+        Sheep.InsideCoop = InsideCoop;
         Use.Register(new UseHandler { Id = "animals.butcher", Priority = 16, Find = OfferButcher });
+        Use.RegisterHint("animals.equip_blade", EquipBladeHint);
         Strike.Register("animals.animal", OfferStrike);
         Strike.Register("animals.bow", OfferShot);
         var racks = new HideRacks();
@@ -107,7 +109,7 @@ public partial class Herd : Node3D
     // Hunting needs a spear or a blade; other lanes set their own rules.
     StrikeOffer? OfferStrike(Vector3 at, Vector3 facing)
     {
-        if (conn == null || !(Carrying(ItemTags.Piercing) || Carrying(ItemTags.Cutting))) return null;
+        if (conn == null || !(InHand(ItemTags.Piercing) || InHand(ItemTags.Cutting))) return null;
         Animal? nearest = null;
         float best = World.Reach + 1.5f;
         foreach (var a in conn.Db.Animal.Iter())
@@ -131,7 +133,7 @@ public partial class Herd : Node3D
 
     StrikeOffer? OfferShot(Vector3 at, Vector3 facing)
     {
-        if (conn == null || !CarryingItem(Item.Bow) || !CarryingItem(Item.Arrow)) return null;
+        if (conn == null || Equipped.Item(conn) != Item.Bow || !CarryingItem(Item.Arrow)) return null;
         Animal? nearest = null;
         float best = BowRange;
         foreach (var a in conn.Db.Animal.Iter())
@@ -165,12 +167,25 @@ public partial class Herd : Node3D
             Hints.Request("strike");
     }
 
+    // The server only lets what is in hand work (crafting-29, Equip.cs), so offers follow the hand.
+    bool InHand(ItemTags tags) => Equipped.Has(conn, tags);
+
+    // A blade carried but not in hand at a sheep to shear or a carcass to butcher: say how to take it up.
+    string? EquipBladeHint(Vector3 at)
+    {
+        if (conn == null || InHand(ItemTags.Cutting) || !Carrying(ItemTags.Cutting)) return null;
+        bool sheep = conn.Db.Animal.Iter().Any(a => DistanceTo(a, at) <= World.Reach
+            && AnimalDefs.Get((byte)a.Species).Shearable && a.Fleece >= 80);
+        bool carcass = conn.Db.AnimalCarcass.Iter().Any(c => new Vector2(c.X - at.X, c.Z - at.Z).Length() <= World.Reach);
+        return sheep || carcass ? "Take your blade in hand: press its number key" : null;
+    }
+
     bool Carrying(ItemTags tags) =>
         conn?.Db.MyInventory.Iter().Any(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).Tags.HasFlag(tags)) == true;
 
     UseOffer? OfferButcher(Vector3 at)
     {
-        if (conn == null || !Carrying(ItemTags.Cutting)) return null;
+        if (conn == null || !InHand(ItemTags.Cutting)) return null;
         AnimalCarcass? nearest = null;
         float best = World.Reach;
         foreach (var c in conn.Db.AnimalCarcass.Iter())
@@ -188,7 +203,7 @@ public partial class Herd : Node3D
     // Only offered when shearing can work: a sheep in reach with its wool grown back.
     UseOffer? OfferShear(Vector3 at)
     {
-        if (conn == null || !Carrying(ItemTags.Cutting)) return null;
+        if (conn == null || !InHand(ItemTags.Cutting)) return null;
         Animal? nearest = null;
         float best = World.Reach;
         foreach (var a in conn.Db.Animal.Iter())
@@ -217,6 +232,15 @@ public partial class Herd : Node3D
         if (nearest == null) return null;
         ulong id = nearest.Id;
         return new UseOffer("Take eggs", best, () => conn.Reducers.CollectEggs(id), Again: Use.HoldInterval);
+    }
+
+    // A finished hen coop covers this spot (roosting hens are drawn inside it).
+    bool InsideCoop(float x, float z)
+    {
+        if (conn == null) return false;
+        foreach (var s in conn.Db.Structure.Iter())
+            if (s.Complete && s.Kind == StructureKind.HenCoop && new Vector2(s.X - x, s.Z - z).Length() < 0.9f) return true;
+        return false;
     }
 
     void Upsert(Animal a, bool inserted)

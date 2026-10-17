@@ -39,6 +39,9 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM my_vitals",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_admin",
+                "SELECT * FROM my_respawn_point",
+                "SELECT * FROM my_skills",
+                "SELECT * FROM player_pos",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -82,7 +85,8 @@ if (MathF.Abs(v0.FoodRate + Needs.FoodDrain) > Needs.FoodDrain * 0.02f)
 Ok("hunger is not eased");
 
 // --- Items come from the admin give; make this bot an admin through the CLI ---
-string name = "survcheck" + Random.Shared.Next(10000, 99999);
+// Names are letters only (Names.Problem, ui-31).
+string name = "Surv" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
 conn.Reducers.SetName(name);
 Settle(400);
 var psi = new ProcessStartInfo("spacetimedb-cli", new[] { "call", db, "--server", server, "make_admin", $"\"{name}\"" })
@@ -162,4 +166,59 @@ conn.Reducers.DrinkFrom((ushort)Item.Stick);
 Pump(() => lastError != null, 5, "drinking from a stick to be refused");
 Ok($"drinking from a stick is refused ({lastError})");
 
+// --- Waking places (survival-23): none to start, and the server refuses nonsense ---
+if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a new character should have no waking place");
+if (V().WakeKind != RestSpots.WokeAtEdge) Fail("a new character has not woken anywhere yet");
+Ok("a new character has no waking place");
+var matSpot = RestSpots.OfItem(Item.SleepingMat) ?? throw new Exception("the sleeping mat is a rest spot");
+lastError = null;
+conn.Reducers.SetRespawn(60000, 1);
+Pump(() => lastError != null, 5, "an unknown rest spot to be refused");
+if (!lastError!.Contains("not somewhere to sleep")) Fail($"unknown rest spot said: {lastError}");
+Ok($"an unknown rest spot is refused ({lastError})");
+lastError = null;
+conn.Reducers.SetRespawn(matSpot.Id, 9_999_999);
+Pump(() => lastError != null, 5, "a missing building to be refused");
+if (!lastError!.Contains("gone")) Fail($"a missing building said: {lastError}");
+Ok($"a building that is not there is refused ({lastError})");
+if (conn.Db.MyRespawnPoint.Iter().Any()) Fail("a refused choice must not set a waking place");
+Ok("a refused choice sets nothing (the accepted choice is checked in BuildTest; waking after a death has no check yet)");
+// --- Endurance is trained by running, which the server checks it saw (D-182) ---
+int Endurance() => conn.Db.MySkills.Iter().Where(r => r.Spec == Stamina.Skill).Sum(r => (int)r.Points);
+uint myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var here = conn.Db.PlayerPos.PlayerId.Find(myId)!;
+float px = here.X, pz = here.Z;
+void Walk(float meters)
+{
+    for (int i = 0; i < (int)(meters / 0.4f); i++)
+    {
+        px += 0.4f;
+        conn.Reducers.Move(px, pz, MathF.PI / 2);
+        Settle(100);
+    }
+}
+int e0 = Endurance();
+Settle((int)(Stamina.RunReportMoveWindow * 1000) + 1000);   // joining counts as having just moved
+conn.Reducers.Ran();
+Settle(500);
+if (Endurance() != e0) Fail("Endurance rose for a run reported by a player who was standing still");
+Ok("a run reported while standing still trains nothing");
+Walk(30);
+conn.Reducers.Ran();
+Pump(() => Endurance() > e0, 5, "Endurance to rise after a real stretch of walking");
+int e1 = Endurance();
+Ok("a run reported after real movement trains Endurance");
+Settle((int)(Stamina.RunPerUse * 0.95f * 1000));
+Walk(5);
+conn.Reducers.Ran();
+Settle(500);
+if (Endurance() != e1) Fail("Endurance rose for a second report from almost the same place");
+Ok("a second report from almost the same place trains nothing");
+Walk(30);
+conn.Reducers.Ran();
+Pump(() => Endurance() > e1, 5, "Endurance to rise after moving on");
+Ok("a report after moving on trains Endurance again");
+
 Console.WriteLine("Survival check passed");
+conn.Disconnect();
+return 0;

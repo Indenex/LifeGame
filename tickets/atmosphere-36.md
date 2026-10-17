@@ -1,7 +1,7 @@
 # atmosphere-36: Soft glow, light leaks, vignette, rim tint (D-313 picks #8, #10)
 Lane: Atmosphere
 Owner: World atmosphere lane (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-36-glow
 PR: #612
 
@@ -25,4 +25,4 @@ What's in `client/scripts/atmosphere/AtmosphereLens.cs`:
 - Modeling's rim (PR #620, Painted.Rim) reads `global uniform vec4 rim_tint;`: colour = LIGHT_COLOR * rim_tint.rgb, strength = RimStrength * rim_tint.a. #612 must merge first.
 
 ## Next step
-Wait for CI on #612 and Render B's before/after stills (requested 07:37), then tune.
+Done: merged as #612 (9dda1e47). Tuning from Render B's stills goes in a follow-up.

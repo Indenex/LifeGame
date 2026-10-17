@@ -30,7 +30,13 @@ public partial class WarmLook : Node
         On = !OS.GetCmdlineUserArgs().Contains("--cold");
         if (!On) return;
         GetTree().NodeAdded += Added;
-        GetTree().Root.Theme = Defaults();
+        var warm = Defaults();
+        GetTree().Root.Theme = warm;
+        // Windows and the HUD sit under CanvasLayers, and a theme set on the root window doesn't
+        // reach through a CanvasLayer: their plain buttons and text boxes fell back to Godot's
+        // own dark grey (ui-58, Render B's pairs). Merging into the engine's default theme
+        // reaches every control; anything that styles itself still wins.
+        ThemeDB.GetDefaultTheme().MergeWith(warm);
     }
 
     // The game-wide defaults (ui-44): Nunito for every control that doesn't choose a font, and
@@ -54,6 +60,51 @@ public partial class WarmLook : Node
         theme.SetColor("font_shadow_color", "TooltipLabel", new Color(0, 0, 0, 0));
         theme.SetFontSize("font_size", "TooltipLabel", 14);
         theme.SetFont("font", "TooltipLabel", Ui.Font(700));
+
+        // Buttons and text boxes that bring no style of their own (ui-51): paper a shade darker
+        // than the window, a soft brown edge, brown words. Godot's own dark grey fills read as
+        // cold holes in the paper. A selected tab chip (a plain button among flat ones) gets the
+        // same paper look.
+        foreach (var (state, bg, edge) in new[]
+        {
+            ("normal", Paper.Darkened(0.07f), 0.22f),
+            ("hover", Butter.Lerp(Paper, 0.55f), 0.35f),
+            ("pressed", Paper.Darkened(0.13f), 0.35f),
+            ("disabled", Paper.Darkened(0.04f), 0.12f),
+            ("focus", new Color(0, 0, 0, 0), 0f),
+        })
+        {
+            var s = new StyleBoxFlat
+            {
+                BgColor = bg, BorderColor = new Color(Ink, edge),
+                ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 4, ContentMarginBottom = 4,
+            };
+            s.SetBorderWidthAll(state == "focus" ? 0 : 2);
+            s.SetCornerRadiusAll(14);
+            theme.SetStylebox(state, "Button", s);
+        }
+        foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
+            theme.SetColor(key, "Button", Ink);
+        theme.SetColor("font_disabled_color", "Button", new Color(Ink, 0.45f));
+
+        // Text boxes: a lighter paper, like a slip of card to write on.
+        foreach (var (state, bg, edge) in new[] { ("normal", Paper.Lightened(0.4f), 0.28f), ("focus", new Color(0, 0, 0, 0), 0f), ("read_only", Paper.Darkened(0.04f), 0.15f) })
+        {
+            var s = new StyleBoxFlat
+            {
+                BgColor = bg, BorderColor = new Color(state == "focus" ? Coral : Ink, state == "focus" ? 0.8f : edge),
+                ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 4, ContentMarginBottom = 4,
+                DrawCenter = state != "focus",
+            };
+            s.SetBorderWidthAll(2);
+            s.SetCornerRadiusAll(12);
+            theme.SetStylebox(state, "LineEdit", s);
+        }
+        theme.SetColor("font_color", "LineEdit", Ink);
+        theme.SetColor("font_placeholder_color", "LineEdit", new Color(Ink, 0.45f));
+        theme.SetColor("caret_color", "LineEdit", Coral.Darkened(0.2f));
+        theme.SetColor("selection_color", "LineEdit", new Color(Butter, 0.5f));
+        theme.SetColor("clear_button_color", "LineEdit", new Color(Ink, 0.6f));
         return theme;
     }
 
@@ -72,6 +123,43 @@ public partial class WarmLook : Node
         }
         foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color" }) b.AddThemeColorOverride(key, new Color(1f, 0.98f, 0.95f));
         b.AddThemeColorOverride("font_disabled_color", new Color(1f, 0.98f, 0.95f, 0.7f));
+    }
+
+    // A panel that sits on the world rather than in a window (the needs gauges, the land chip):
+    // a small paper chip, round and a little see-through so the world shows at its edge, like
+    // the bar's paper buttons (ui-45, ui-54). Its insides are inked and left alone after.
+    public static void HudChip(PanelContainer p)
+    {
+        if (!On) return;
+        var s = new StyleBoxFlat
+        {
+            BgColor = new Color(Paper, 0.9f),
+            BorderColor = new Color(Ink, 0.22f),
+            ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.22f),
+            ShadowSize = 8,
+            ShadowOffset = new Vector2(0, 3),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        s.SetBorderWidthAll(2);
+        s.SetCornerRadiusAll(22);
+        p.AddThemeStyleboxOverride("panel", s);
+        p.SetMeta(Keep, true);
+        InkInside(p);
+    }
+
+    // Words floating in the world (names, chat bubbles, cues, "Your waking place", claim
+    // markers; ui-56): the warm look's rounded Nunito, and a soft brown edge instead of a near
+    // black one, so they sit in the warm light like the HUD's words do. A slanted font (emotes,
+    // cues) stays slanted. Colours are left alone.
+    static void WarmWorldWords(Label3D l)
+    {
+        if (l.HasMeta(Keep)) return;
+        l.SetMeta(Keep, true);
+        l.Font = l.Font is FontVariation slant && slant.BaseFont == null
+            ? new FontVariation { BaseFont = Ui.Font(800), VariationTransform = slant.VariationTransform }
+            : l.Font == null ? Ui.Font(800) : l.Font;
+        var edge = l.OutlineModulate;
+        if (edge.Luminance < 0.2f) l.OutlineModulate = new Color(0.24f, 0.13f, 0.07f, edge.A);
     }
 
     // Controls that style themselves for paper are left as they are.
@@ -109,6 +197,12 @@ public partial class WarmLook : Node
 
     void Added(Node node)
     {
+        if (node is Label3D words)
+        {
+            // After whoever made it has set its font and colours.
+            Callable.From(() => { if (IsInstanceValid(words)) WarmWorldWords(words); }).CallDeferred();
+            return;
+        }
         if (node is not Control c) return;
         // After the panel has set its own colours.
         Callable.From(() =>

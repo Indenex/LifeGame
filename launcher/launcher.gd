@@ -48,12 +48,15 @@ const MIN_SIZE := Vector2i(640, 540)   # never smaller than this (and never smal
 const NOTES_OPEN := "<!-- notes -->"      # the release body lists the patch notes between these
 const NOTES_CLOSE := "<!-- /notes -->"
 
-const BG := Color(0.07, 0.08, 0.06)
-const PANEL := Color(0.09, 0.10, 0.07, 0.92)
-const CREAM := Color(0.97, 0.94, 0.87)
-const MUTED := Color(0.97, 0.94, 0.87, 0.6)
-const ACCENT := Color(0.55, 0.68, 0.38)
-const WARN := Color(0.93, 0.62, 0.38)
+# The look is D-314 "Warm paper windows": cream paper with brown Nunito text, round corners, a
+# soft shadow and pastel accents, like the game's centre windows.
+const BG := Color(0.91, 0.85, 0.73)             # the table the paper lies on
+const PANEL := Color(0.985, 0.96, 0.90)         # the paper
+const INK := Color(0.36, 0.27, 0.19)            # brown text
+const MUTED := Color(0.36, 0.27, 0.19, 0.62)
+const ACCENT := Color(0.66, 0.79, 0.58)         # pastel sage: the one thing to press
+const ACCENT_DEEP := Color(0.52, 0.68, 0.44)    # its progress bar
+const WARN := Color(0.76, 0.38, 0.22)           # terracotta, readable on cream
 
 var opts := {}
 var repo := "Indenex/LifeGame"
@@ -282,7 +285,25 @@ func _client_ok(dir: String) -> bool:
 
 # --- UI ---------------------------------------------------------------------------
 
+# Nunito (SIL OFL, launcher/fonts), loaded from its raw bytes so it needs no import step; the
+# variable weight axis gives the light, regular and heavy faces. Falls back to the default font.
+var _nunito: FontFile
+func _font(weight: int) -> Font:
+	if _nunito == null and FileAccess.file_exists("res://fonts/Nunito.font.bin"):
+		_nunito = FontFile.new()
+		_nunito.data = FileAccess.get_file_as_bytes("res://fonts/Nunito.font.bin")
+	if _nunito == null:
+		return ThemeDB.fallback_font
+	var face := FontVariation.new()
+	face.base_font = _nunito
+	face.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	return face
+
 func _build_ui() -> void:
+	var th := Theme.new()
+	th.default_font = _font(600)
+	th.default_font_size = 15
+	theme = th
 	RenderingServer.set_default_clear_color(BG)
 	var bg := ColorRect.new()
 	bg.color = BG
@@ -294,10 +315,13 @@ func _build_ui() -> void:
 	panel.offset_left = 28; panel.offset_top = 28; panel.offset_right = -28; panel.offset_bottom = -28
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PANEL
-	sb.set_corner_radius_all(14)
+	sb.set_corner_radius_all(24)
 	sb.set_content_margin_all(26)
-	sb.border_color = Color(CREAM, 0.08)
+	sb.border_color = Color(INK, 0.10)
 	sb.set_border_width_all(1)
+	sb.shadow_color = Color(0.30, 0.20, 0.10, 0.20)
+	sb.shadow_size = 16
+	sb.shadow_offset = Vector2(0, 5)
 	panel.add_theme_stylebox_override("panel", sb)
 	add_child(panel)
 
@@ -308,7 +332,8 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "LifeGame"
 	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", CREAM)
+	title.add_theme_font_override("font", _font(850))
+	title.add_theme_color_override("font_color", INK)
 	col.add_child(title)
 
 	var versions := HBoxContainer.new()
@@ -325,7 +350,7 @@ func _build_ui() -> void:
 
 	status_label = Label.new()
 	status_label.add_theme_font_size_override("font_size", 20)
-	status_label.add_theme_color_override("font_color", CREAM)
+	status_label.add_theme_color_override("font_color", INK)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(status_label)
 	detail_label = _small("", MUTED)
@@ -341,6 +366,17 @@ func _build_ui() -> void:
 		address_edit.placeholder_text = "e.g. http://203.0.113.5:3000 (ask the host)"
 		address_edit.text = server_url
 		address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for k in ["normal", "focus", "read_only"]:
+			var st := _notes_style()
+			st.set_content_margin_all(9)
+			st.set_corner_radius_all(12)
+			if k == "focus":
+				st.border_color = Color(ACCENT_DEEP, 0.8)
+				st.set_border_width_all(2)
+			address_edit.add_theme_stylebox_override(k, st)
+		address_edit.add_theme_color_override("font_color", INK)
+		address_edit.add_theme_color_override("font_placeholder_color", MUTED)
+		address_edit.add_theme_color_override("caret_color", INK)
 		address_edit.text_submitted.connect(func(_t): _on_main())
 		addr_row.add_child(address_edit)
 
@@ -351,7 +387,7 @@ func _build_ui() -> void:
 	notes_box.custom_minimum_size = Vector2(0, 90)
 	notes_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	notes_box.add_theme_font_size_override("font_size", 15)
-	notes_box.add_theme_color_override("font_readonly_color", CREAM)
+	notes_box.add_theme_color_override("font_readonly_color", INK)
 	notes_box.add_theme_stylebox_override("normal", _notes_style())
 	notes_box.add_theme_stylebox_override("focus", _notes_style())
 	notes_box.add_theme_stylebox_override("read_only", _notes_style())
@@ -362,10 +398,10 @@ func _build_ui() -> void:
 	bar.show_percentage = false
 	bar.max_value = 1.0
 	var track := StyleBoxFlat.new()
-	track.bg_color = Color(CREAM, 0.12)
+	track.bg_color = Color(INK, 0.12)
 	track.set_corner_radius_all(4)
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = ACCENT
+	fill.bg_color = ACCENT_DEEP
 	fill.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("background", track)
 	bar.add_theme_stylebox_override("fill", fill)
@@ -414,7 +450,7 @@ func _build_wipe_overlay() -> void:
 	wipe_overlay.visible = false
 	add_child(wipe_overlay)
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.65)
+	dim.color = Color(0.30, 0.20, 0.10, 0.50)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	wipe_overlay.add_child(dim)
 	var center := CenterContainer.new()
@@ -425,11 +461,13 @@ func _build_wipe_overlay() -> void:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(540, 0)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.11, 0.12, 0.09)
-	sb.set_corner_radius_all(14)
+	sb.bg_color = PANEL
+	sb.set_corner_radius_all(24)
 	sb.set_content_margin_all(26)
 	sb.border_color = Color(WARN, 0.45)
 	sb.set_border_width_all(1)
+	sb.shadow_color = Color(0.30, 0.20, 0.10, 0.25)
+	sb.shadow_size = 18
 	box.add_theme_stylebox_override("panel", sb)
 	center.add_child(box)
 	var col := VBoxContainer.new()
@@ -440,7 +478,7 @@ func _build_wipe_overlay() -> void:
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", WARN)
 	col.add_child(title)
-	wipe_text = _small("", CREAM)
+	wipe_text = _small("", INK)
 	wipe_text.add_theme_font_size_override("font_size", 15)
 	wipe_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(wipe_text)
@@ -464,7 +502,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _notes_style() -> StyleBoxFlat:
 	var st := StyleBoxFlat.new()
-	st.bg_color = Color(CREAM, 0.05)
+	st.bg_color = Color(INK, 0.05)
 	st.set_corner_radius_all(8)
 	st.set_content_margin_all(12)
 	return st
@@ -486,24 +524,24 @@ func _button(text: String, primary: bool, danger := false) -> Button:
 		st.set_corner_radius_all(8)
 		st.content_margin_left = 22 if primary else 14
 		st.content_margin_right = st.content_margin_left
-		var base := ACCENT if primary else Color(WARN, 0.16) if danger else Color(CREAM, 0.10)
+		var base := ACCENT if primary else Color(WARN, 0.16) if danger else Color(INK, 0.10)
 		match s:
 			"hover": base = base.lightened(0.12) if primary else Color(base, base.a + 0.08)
 			"pressed": base = base.darkened(0.15)
 			"disabled": base = Color(base.darkened(0.35), base.a * 0.45)
 			"focus":
 				st.draw_center = false
-				st.border_color = Color(CREAM, 0.5)
+				st.border_color = Color(INK, 0.5)
 				st.set_border_width_all(1)
 		st.bg_color = base
 		b.add_theme_stylebox_override(s, st)
-	var fc := BG if primary else WARN if danger else CREAM
+	var fc := INK if primary else WARN if danger else INK
 	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(k, fc)
-	b.add_theme_color_override("font_disabled_color", Color(CREAM, 0.28))
+	b.add_theme_color_override("font_disabled_color", Color(INK, 0.28))
 	return b
 
-func _set_status(text: String, detail := "", color := CREAM) -> void:
+func _set_status(text: String, detail := "", color := INK) -> void:
 	status_label.text = text
 	status_label.add_theme_color_override("font_color", color)
 	detail_label.text = detail
@@ -704,14 +742,24 @@ func _fetch(rel: Dictionary, names: Array, from: float, to: float) -> Dictionary
 	var dir := home.path_join("downloads").path_join(rel.tag)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var manifest_path := dir.path_join("release.json")
-	if not rel.assets.has("release.json") or not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+	if not rel.assets.has("release.json"):
+		_set_status("Build %d has no file list." % rel.build, "It may still be publishing. Try Refresh in a minute.", WARN)
+		return {}
+	if not await _download(rel.assets["release.json"], manifest_path, "release.json", from, from):
+		_set_status("Download failed.", "Check the internet connection and try again.", WARN)
 		return {}
 	var manifest = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
-	if not manifest is Dictionary:
+	var sums := {}
+	if manifest is Dictionary:
+		var srv = manifest.get("server", {})
+		var cli = manifest.get("client", {})
+		for e in [srv, cli.get("linux", {}), cli.get("windows", {})]:
+			if e is Dictionary and e.has("file") and e.has("sha256"):
+				sums[e.file] = e.sha256
+	if sums.size() < 3:
+		DirAccess.remove_absolute(manifest_path)
+		_set_status("Build %d has a damaged file list." % rel.build, "Try Refresh in a minute; it will download fresh.", WARN)
 		return {}
-	var sums := {manifest.server.file: manifest.server.sha256,
-		manifest.client.linux.file: manifest.client.linux.sha256,
-		manifest.client.windows.file: manifest.client.windows.sha256}
 	var out := {}
 	var step: float = (to - from) / max(names.size(), 1)
 	for i in names.size():
@@ -1062,7 +1110,7 @@ func _play() -> void:
 	get_tree().quit()
 
 func _screenshot(path: String) -> void:
-	while busy:
+	while busy and not wipe_overlay.visible:   # --press leaves the wipe question open for the shot
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw

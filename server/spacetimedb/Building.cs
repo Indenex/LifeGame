@@ -25,8 +25,10 @@ public enum StructureKind
     RepairTable,
     TiledHouse,
     ClayTrough,
-    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. Provisionally 18, 19, 20
-    // (an enum cannot carry explicit values); renumbered to follow HenCoop, StoneHearth and the sundial.
+    HenCoop,
+    StoneHearth,
+    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. Provisionally 20, 21, 22
+    // (an enum cannot carry explicit values); renumbered to 21, 22, 23 once the sundial (20) is on main.
     SettlingTub,
     CrushingBlock,
     TemperingTrough,
@@ -122,7 +124,7 @@ public static partial class Module
         if (dx * dx + dz * dz > Structures.PlaceRange * Structures.PlaceRange)
             throw new Exception("Too far away to lay out");
 
-        int open = ctx.Db.Structure.Owner.Filter(ctx.Sender).Count(s => !s.Complete);
+        int open = ctx.Db.Structure.Owner.Filter(Me(ctx)).Count(s => !s.Complete);
         if (open >= Structures.MaxOpenSites)
             throw new Exception("Finish one of your building sites first");
 
@@ -149,7 +151,7 @@ public static partial class Module
             Yaw = yaw,
             ChunkX = World.ChunkOf(x),
             ChunkZ = World.ChunkOf(z),
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             Stage = 0,
             Needs = NeedsFor(k, 0),
             Complete = false,
@@ -167,7 +169,7 @@ public static partial class Module
         string what = Structures.Shape(kind).Name.ToLowerInvariant();
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
-        if (!HasClaimRights(ctx, claim, ctx.Sender))
+        if (!HasClaimRights(ctx, claim, Me(ctx)))
             throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
@@ -197,7 +199,12 @@ public static partial class Module
                 .Select(n => $"{n.Need - n.Have} {Items.Def((Item)n.Item).Count(n.Need - n.Have).ToLowerInvariant()}")));
 
         var need = s.Needs[slot];
+        // A jar or trough being set down keeps who made it (Ceramics, StructureMarks.cs).
+        bool marked = Marks.Marked((Item)need.Item);
+        uint markWear = 0, markMaker = 0;
+        if (marked) PeekVessel(ctx, (Item)need.Item, out markWear, out markMaker);
         float quality = Take(ctx, (Item)need.Item, 1);
+        if (marked) RememberStructureMark(ctx, s.Id, MarkFromStack(markWear, markMaker));
         var needs = new List<MaterialNeed>(s.Needs);
         needs[slot] = need with { Have = need.Have + 1 };
         var p = ProgressOf(ctx, s.Id);
@@ -228,7 +235,7 @@ public static partial class Module
     public static void Dismantle(ReducerContext ctx, ulong structureId)
     {
         var s = ctx.Db.Structure.Id.Find(structureId) ?? throw new Exception("That building is gone");
-        bool allowed = s.Owner == ctx.Sender;
+        bool allowed = s.Owner == Me(ctx);
         if (!allowed) CanClearStructure(ctx, s, ref allowed);
         if (!allowed)
             throw new Exception("Only whoever laid it out, or the land's owner, can take it down");
@@ -393,12 +400,12 @@ public static partial class Module
     static bool RecordBuilder(ReducerContext ctx, ulong structureId)
     {
         foreach (var row in ctx.Db.StructureBuilder.StructureId.Filter(structureId))
-            if (row.Builder == ctx.Sender)
+            if (row.Builder == Me(ctx))
             {
                 ctx.Db.StructureBuilder.Id.Update(row with { Added = row.Added + 1 });
                 return false;
             }
-        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = ctx.Sender, Added = 1 });
+        ctx.Db.StructureBuilder.Insert(new StructureBuilder { Id = 0, StructureId = structureId, Builder = Me(ctx), Added = 1 });
         return true;
     }
 }

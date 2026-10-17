@@ -29,12 +29,22 @@ public static partial class Module
         // the exact tool (Animation, anim-3).
         [Default((ushort)0)]
         public ushort Tool;
+        // That vessel's Wear number (its maker and slip) and Maker column, so the pot comes back as
+        // it went in (ceramics-7, crafting-25). 0 for none.
+        [Default(0u)]
+        public uint VesselWear;
+        [Default(0u)]
+        public uint VesselMaker;
+        // The average quality of what the job took, so ending it early (CancelJob) can return the
+        // inputs as they were. 0 for jobs started before this column existed.
+        [Default((byte)0)]
+        public byte InputQuality;
     }
 
     // Clients see only their own job, to show its progress.
     [SpacetimeDB.View(Accessor = "MyCraftJob", Public = true)]
     public static List<CraftJob> MyCraftJob(ViewContext ctx) =>
-        ctx.Db.CraftJob.Owner.Find(ctx.Sender) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
+        ctx.Db.CraftJob.Owner.Find(Me(ctx)) is { } job ? new List<CraftJob> { job } : new List<CraftJob>();
 
     [SpacetimeDB.Table(Accessor = "CraftTimer", Scheduled = nameof(FinishCraft), ScheduledAt = nameof(ScheduledAt))]
     public partial struct CraftTimer
@@ -120,7 +130,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var pos = RequirePos(ctx, player);
         var def = Processes.Find(processId) ?? throw new Exception("Unknown process");
-        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not null)
+        if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not null)
             throw new Exception("Your hands are busy");
         if (!float.IsFinite(score))
             throw new Exception("Invalid score");
@@ -164,8 +174,11 @@ public static partial class Module
         float inputQuality = 0f;
         uint taken = 0;
         byte vesselQuality = 0;
+        uint vesselWear = 0, vesselMaker = 0;
         foreach (var input in def.Consumes)
         {
+            // Which pot is about to go in, before it does (Ceramics): its maker and slip come back with it.
+            if (ClayRules.IsVessel(input.Item)) PeekVessel(ctx, input.Item, out vesselWear, out vesselMaker);
             float q = TakeFor(ctx, station, input.Item, input.Count);
             if (ClayRules.IsVessel(input.Item)) vesselQuality = (byte)Math.Round(q / input.Count);
             inputQuality += q;
@@ -214,7 +227,7 @@ public static partial class Module
         var finish = ctx.Timestamp + new TimeDuration((long)(seconds * 1_000_000));
         var started = ctx.Db.CraftJob.Insert(new CraftJob
         {
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             ProcessId = def.Id,
             StartedAt = ctx.Timestamp,
@@ -224,9 +237,12 @@ public static partial class Module
             X = fx,
             Z = fz,
             VesselQuality = vesselQuality,
+            VesselWear = vesselWear,
+            VesselMaker = vesselMaker,
             Tool = toolUsed,
+            InputQuality = (byte)Math.Clamp((int)MathF.Round(inputQuality), 0, 255),
         });
-        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = ctx.Sender });
+        ctx.Db.CraftTimer.Insert(new CraftTimer { ScheduledId = 0, ScheduledAt = new ScheduleAt.Time(finish), Owner = Me(ctx) });
         OnCraftStarted(ctx, started);
     }
 
@@ -257,7 +273,11 @@ public static partial class Module
         else if (def.Outcome == Outcome.Chop)
             ChopTree(ctx, job, def);
         else
-            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, Items.Def(def.Makes).HasQuality ? job.Quality : Items.RawQuality);
+        {
+            // What a hand makes carries its maker; raw material does not (crafting-25).
+            bool made = Items.Def(def.Makes).HasQuality;
+            AddToInventory(ctx, job.Owner, def.Makes, def.MakesCount, made ? job.Quality : Items.RawQuality, maker: made ? job.PlayerId : 0u);
+        }
     }
 
     // Puts one burnable item on a fire within reach.
@@ -371,7 +391,7 @@ public static partial class Module
     static uint CountOf(ReducerContext ctx, Item item)
     {
         uint n = 0;
-        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)))
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)))
             n += row.Count;
         return n;
     }
@@ -379,7 +399,7 @@ public static partial class Module
     // Takes items, best quality first, and returns the summed quality taken.
     static float Take(ReducerContext ctx, Item item, uint count)
     {
-        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((ctx.Sender, (ushort)item)).ToList();
+        var stacks = ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), (ushort)item)).ToList();
         stacks.Sort((a, b) => b.Quality.CompareTo(a.Quality));
         float sum = 0f;
         foreach (var stack in stacks)
@@ -398,7 +418,7 @@ public static partial class Module
     static InventoryItem? BestTool(ReducerContext ctx, ItemTags tags)
     {
         InventoryItem? best = null;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && (Items.Def((Item)row.Item).Tags & tags) == tags
                 && !(Durability.Wears((Item)row.Item) && Durability.IsSpent(row.Quality, row.Wear))
                 && (best is null || row.Quality > best.Value.Quality
@@ -411,7 +431,7 @@ public static partial class Module
     static bool HasSpareHammer(ReducerContext ctx, ProcessDef def)
     {
         uint hammers = 0;
-        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+        foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
             if (Items.IsKnown(row.Item) && Items.Def((Item)row.Item).Tags.HasFlag(ItemTags.Hammer))
                 hammers += row.Count;
         foreach (var input in def.Consumes)

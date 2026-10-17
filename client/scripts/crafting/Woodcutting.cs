@@ -34,8 +34,11 @@ public partial class Woodcutting : Node
             Find = at =>
             {
                 if (!HasAxe() || TreeNear(at) is not { } tree) return null;
-                float d = new Vector2(tree.X - at.X, tree.Y - at.Z).Length();
-                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y), Again: 0.3f);
+                float d = new Vector2(tree.Trunk.X - at.X, tree.Trunk.Y - at.Z).Length();
+                // How far the tree has come down: the chop about to land, out of all it takes (Trees.LogsPerTree).
+                int logs = conn?.Db.ChoppedTree.CellKey.Find(World.CellKey(tree.CellX, tree.CellZ))?.Logs ?? 0;
+                string label = Trees.Felling ? $"{chop.Name} ({logs + 1} of {Trees.LogsPerTree})" : chop.Name;
+                return new UseOffer(label, d, () => crafting.Start(chop), Target: new Vector3(tree.Trunk.X, at.Y, tree.Trunk.Y), Again: 0.3f);
             },
         });
     }
@@ -61,11 +64,11 @@ public partial class Woodcutting : Node
     bool HasAxe() => Equipped.Has(conn, ItemTags.Chopping);
 
     // The trunk of the nearest standing tree within reach, as the server will pick it.
-    Vector2? TreeNear(Vector3 at)
+    (Vector2 Trunk, int CellX, int CellZ)? TreeNear(Vector3 at)
     {
         if (terrain == null) return null;
         int cx = Mathf.RoundToInt(at.X), cz = Mathf.RoundToInt(at.Z);
-        Vector2? best = null;
+        (Vector2, int, int)? best = null;
         float bestD = World.Reach;
         for (int i = cx - 3; i <= cx + 3; i++)
             for (int j = cz - 3; j <= cz + 3; j++)
@@ -74,7 +77,7 @@ public partial class Woodcutting : Node
                 if (terrain.TileHeight(i, j) != World.Height(i, j, 0)) continue;
                 var (tx, tz) = Trees.Trunk(i, j);
                 float d = new Vector2(tx - at.X, tz - at.Z).Length();
-                if (d < bestD) { bestD = d; best = new Vector2(tx, tz); }
+                if (d < bestD) { bestD = d; best = (new Vector2(tx, tz), i, j); }
             }
         return best;
     }

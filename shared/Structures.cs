@@ -44,6 +44,10 @@ namespace LifeGame.Shared
         public bool Fence, Gate;
         // Built inside a finished hut or house (a raised hearth), so it sits within their clearance.
         public bool Indoor;
+        // A fire lit within reach goes onto it and its fuel burns longer (the raised and stone-ringed hearths).
+        public bool Hearth;
+        // How far a fire on this hearth warms, in meters; 0 means the plain fire's Fires.WarmthRadius.
+        public float HeatRadius;
         // Ceramics' updraft kiln and storage jar: found by shape, never by enum number (docs/CONTENT.md).
         public bool Kiln, Jar, Trough;
         // Extra metres of ground cleared of grass and trees round the footprint, beyond the usual
@@ -53,6 +57,9 @@ namespace LifeGame.Shared
         public bool Hut;
         // Which hand-built client model draws this kind (StructureModel); empty falls back on the flags above.
         public string Model = "";
+        // For a structure animals use (the hen coop): where they walk to go in, and where they settle
+        // inside, as offsets in the structure's own frame (+Z is its front). Scaled with the shape.
+        public (float X, float Z) Entry, Roost;
         // A crafting station of this kind once finished (D-098); None for anything else.
         public StationKind Station;
         // A rectangular room with four walls (HouseWallX/Z) and its doorway on +Z: the
@@ -116,6 +123,8 @@ namespace LifeGame.Shared
             shape.Clearance *= k;
             shape.DoorwayZ *= k;
             shape.SmokeY *= k;
+            shape.Entry = (shape.Entry.X * k, shape.Entry.Z * k);
+            shape.Roost = (shape.Roost.X * k, shape.Roost.Z * k);
         }
 
         public static float ScaleOf(int kind) => Shape(kind).Scale;
@@ -205,6 +214,7 @@ namespace LifeGame.Shared
 
         public static bool IsFence(int kind) => Shape(kind).Fence;
         public static bool IsIndoor(int kind) => Shape(kind).Indoor;
+        public static bool IsHearth(int kind) => Shape(kind).Hearth;
         // Huts and houses (the kinds with a doorway): where indoor things like a hearth may go.
         public static bool IsHome(int kind) => HasDoorway(kind);
         public static bool IsGate(int kind) => Shape(kind).Gate;
@@ -217,6 +227,8 @@ namespace LifeGame.Shared
             // Claim marker (claims-9): one stage, reported as claim.mark for the journal.
             _ when Shape(kind).Model == "ClaimMarker" => Social.MarkProcess,
             _ when Shape(kind).Model == "Basket" => WeaveProcess,
+            // Hen coop: the frame is framing, the wattle walls wattle work, the thatch roofing.
+            _ when Shape(kind).Model == "Coop" => stage switch { 0 => FrameProcess, 1 => WattleProcess, _ => RoofProcess },
             // Brick and tiled houses: footings and rafters are framing, walls are daub work, the roof is roofing.
             _ when Shape(kind).BrickWalls => stage switch { 1 => DaubProcess, 3 => RoofProcess, _ => FrameProcess },
             // Log cabin: sill, log walls and rafters are all framing; thatch is roofing.
@@ -224,6 +236,8 @@ namespace LifeGame.Shared
             // Fences: posts are framing; rails are wattle work; a gate's hurdle is door work.
             // Hearth: laying the stone ring is framing; the clay surround is daub work.
             _ when IsIndoor(kind) => stage == 0 ? FrameProcess : DaubProcess,
+            // A stone-ringed hearth: ring and kerb are both stone laid up like a frame.
+            _ when Shape(kind).Hearth => FrameProcess,
             _ when IsFence(kind) => stage == 0 ? FrameProcess : IsGate(kind) ? DoorProcess : WattleProcess,
             // Each crafting station reports its own id, so the journal knows it is built.
             _ when Shape(kind).Station != StationKind.None => StationInfo.BuildProcess(Shape(kind).Station),

@@ -9,6 +9,8 @@ namespace LifeGame;
 public partial class StructureView : Node3D
 {
     public readonly int Kind;
+    // The structure's row id, set by BuildingSystem; lets a set-down jar or trough find its maker (StructureMarks).
+    public ulong StructureId;
     readonly float baseScale = 1f;
     readonly List<(StructureModel.Piece piece, Node3D holder, MeshInstance3D mesh)> pieces = new();
     readonly HashSet<int> solid = new();
@@ -73,6 +75,41 @@ public partial class StructureView : Node3D
         }
     }
 
+    // A jar or trough carries who made it (ceramics-15): its solid piece is the pot's own material with the
+    // maker's stamp. Everything else keeps the piece's material.
+    Material? Skin(StructureModel.Piece piece)
+    {
+        if (piece.Stage < 0 || piece.Material is not ShaderMaterial plain || StructureId == 0) return piece.Material;
+        var shape = LifeGame.Shared.Structures.Shape(Kind);
+        if (!shape.Jar && !shape.Trough) return piece.Material;
+        uint mark = StructureMarks.Of(StructureId);
+        if (mark == 0) return piece.Material;
+        return ClayLook.WithMark(plain, mark, shape.Jar ? LifeGame.Shared.ClayForm.StorageJar : LifeGame.Shared.ClayForm.Trough, PotView.Size);
+    }
+
+    bool listening;
+
+    public override void _EnterTree()
+    {
+        if (listening) return;
+        listening = true;
+        StructureMarks.Changed += OnMarks;
+    }
+
+    public override void _ExitTree()
+    {
+        listening = false;
+        StructureMarks.Changed -= OnMarks;
+    }
+
+    // The maker's row arrived (or changed) after the model was drawn: restyle the solid pieces.
+    void OnMarks(ulong id)
+    {
+        if (id != StructureId) return;
+        for (int i = 0; i < pieces.Count; i++)
+            if (solid.Contains(i)) pieces[i].mesh.MaterialOverride = Skin(pieces[i].piece);
+    }
+
     // stage: the stage being built; fraction: how much of it is in, 0 to 1.
     // Returns how many pieces newly turned solid, so callers can add a puff of dust.
     public int Show(int stage, float fraction, bool complete, bool animate)
@@ -110,7 +147,7 @@ public partial class StructureView : Node3D
             {
                 solid.Add(i);
                 appeared++;
-                mesh.MaterialOverride = piece.Material;
+                mesh.MaterialOverride = Skin(piece);
                 mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
                 holder.Visible = true;
                 if (animate && IsInsideTree()) Settle(holder, piece.Anchor);
