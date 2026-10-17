@@ -16,6 +16,7 @@ Small hooks only in other lanes' files (material swaps; RoastView and Rack made 
 - 2026-10-17 15:20: caught up after the account switch (model-33 #818 and painted-17 #802 are on main; painted-18 #807 waits on Justin's rock-shade pick). Found the stragglers by grepping mesh code that never reaches Painted. Local build 0 errors.
 
 - 2026-10-17 15:10: rendered `--view=camp` on this branch and with the three material files at main. Side finding: on main the drying hides draw near-black (their StandardMaterial3D's lit side faces away); painted, they read wet pink and tan leather. Local build 0 errors.
+- 2026-10-17 15:30: PR #836 opened; renders and summary sent to the PM. Swept the rest of the client: structures, stations, kilns, claim posts and tables go through StructureModel.Pieces (painted), items through PaintedItems, players through ChibiLook, undergrowth on Environment's grass look. What's left unpainted are effects (fire, smoke, embers, rain, mist, motes, the waking-place ring) and the legacy non-chibi Garments (only with --legacy-player). So the D-292 rollout covers every model family once #836 lands. Also closed 35 Modeling tickets whose work is on main.
 
 ## Open questions / blockers
 - (none)
