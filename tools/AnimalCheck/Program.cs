@@ -544,13 +544,15 @@ var snareRow = conn.Db.SnareState.Iter().First();
 Ok("a rabbit snare is set down and the server keeps a row for it");
 
 // Rabbits stand where they are placed (no flock): three on the snare make a catch within a few seconds.
+int RabbitsAtSnare() => conn.Db.Animal.Iter().Count(a => a.Species == AnimalSpecies.Rabbit && MathF.Abs(a.X - snx) < 2f && MathF.Abs(a.Z - snz) < 2f);
 void WaitForCatch()
 {
-    var placed = new List<Animal>();
-    for (int i = 0; i < 3; i++) placed.Add(Spawn(AnimalSpecies.Rabbit, snx + 0.1f * i, snz));
+    for (int i = 0; i < 3; i++) Spawn(AnimalSpecies.Rabbit, snx + 0.1f * i, snz);
+    int before = RabbitsAtSnare();
     Pump(() => conn.Db.SnareState.ItemId.Find(snareRow.ItemId) is { Caught: not 0 }, 60, "the snare to catch a rabbit");
-    int gone = placed.Count(a => conn.Db.Animal.Id.Find(a.Id) == null);
-    if (gone != 1) Fail($"a catch took {gone} rabbits, expected 1");
+    Pump(() => RabbitsAtSnare() < before, 10, "the caught rabbit to leave the field");
+    Settle(300);
+    if (RabbitsAtSnare() != before - 1) Fail($"a catch took {before - RabbitsAtSnare()} rabbits, expected 1");
 }
 WaitForCatch();
 Ok("a rabbit within reach is caught, and only one");
