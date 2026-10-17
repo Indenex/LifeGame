@@ -196,3 +196,5 @@ Pump(() => InWorld() && Me.Key(conn) == spare.Key, 10, "a remaining character");
 Ok("a login can delete its first character and play another");
 
 Console.WriteLine($"Character check passed in {clock.Elapsed.TotalSeconds:F0} s");
+conn.Disconnect();
+return 0;
