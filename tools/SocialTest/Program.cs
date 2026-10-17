@@ -707,7 +707,13 @@ else
                 }
                 else Console.WriteLine("  (A carries no stick and fiber; upkeep from the store not checked)");
                 Check(Towns.Get(6)!.Powers.HasFlag(TownPower.Store | TownPower.Upkeep) && Towns.Get(Social.OfficeMayor)!.Powers.HasFlag(TownPower.Store), "the Treasurer and the Mayor keep the store, as data");
+                // The walks above use up most of a 30 s claim: both owners tend again before the checks below.
+                Walk(a, aClaim.X - 1.5f, aClaim.Z);
+                a.Conn.Reducers.TendClaim(aClaim.Id);
                 Walk(a, bClaim.X + 4f, bClaim.Z + 4f);
+                Walk(b, bClaim.X - 1.5f, bClaim.Z);
+                b.Conn.Reducers.TendClaim(bClaim.Id);
+                Wait(() => (a.Conn.Db.Claim.Id.Find(bClaim.Id)?.ExpiresAt.MicrosecondsSinceUnixEpoch ?? 0) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 + 20_000_000, 5);
             }
 
             // Builder rights now; the stash and the marker's upkeep stay B's.
