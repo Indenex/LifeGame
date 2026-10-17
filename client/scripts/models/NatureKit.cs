@@ -14,7 +14,7 @@ namespace LifeGame;
 // comparison. Meshes are cached and shared, so a MultiMesh can batch them.
 public static class NatureKit
 {
-    public const string Dir = "res://assets/naturekit/";
+    public const string Dir = "res://assets/quaternius/nature/";
 
     public enum Kind { Leaves, Bark, Rock, Plant, Flower }
 
