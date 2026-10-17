@@ -1003,3 +1003,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-247 — 2026-10-17 — New Character concepts lane: 10 fast character mockups (Opus)
 **Decision:** A new Character concepts lane (Opus) makes about 10 fast character model proposals: shorter models, cutesy, maybe even creature-type characters. They are quick mockups, basically storyboarding, with a lineup for Justin, who picks 1 to 3 to develop. This follows D-154: no player model style is built past a rough prototype until Justin picks.
 **Who:** Justin ("can you make a new worker that can create like..10 different new character model proposals? I want shorter models, cutesy, maybe even some kind of creature type things? I want FAST mockups though, dont spend all day on them. This is basically storyboarding, and use opus.")
+
+## D-248 — 2026-10-17 — Speed up merges, CI, builds and releases: all four measures approved
+**Decision:** To speed up merges, CI, builds and releases, Justin approved all four of: (1) a GitHub merge queue plus auto-merge (integration-8); (2) splitting the hot shared files into per-lane files with fixed ids (integration-9); (3) smarter, parallel CI with path filters, parallel server tests and caching (integration-10); (4) a flaky-test rule. The flaky-test rule and a no-push-after-green rule are added to Section 2 of `WORKER_LOOP.md`. Owner: Integration.
+**Who:** Justin (asked how to speed these up and approved all four options; relayed by the PM, no direct quote).
