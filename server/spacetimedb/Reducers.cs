@@ -203,6 +203,9 @@ public static partial class Module
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
+    // Lets a lane refuse a pick-up by throwing (Traps.cs: a snare holding a catch).
+    static partial void PickUpGuard(ReducerContext ctx, WorldItem item);
+
     [SpacetimeDB.Reducer]
     public static void PickUp(ReducerContext ctx, ulong itemId)
     {
@@ -210,6 +213,7 @@ public static partial class Module
         var item = ctx.Db.WorldItem.Id.Find(itemId) ?? throw new Exception("That item is gone");
         RequireReach(RequirePos(ctx, player), item.X, item.Z);
         RequireClaimAccess(ctx, item.X, item.Z);
+        PickUpGuard(ctx, item);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
         AddToInventory(ctx, Me(ctx), (Item)item.Item, 1, item.Quality, item.Wear, item.Maker);

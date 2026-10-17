@@ -142,4 +142,26 @@ public partial class Showcase
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0, 2.2f, 4.2f), new Vector3(0, 0.35f, -0.4f), Vector3.Up);
     }
+
+    // The rabbit snare (model-33): set across a run, sprung with its catch, and bundled to
+    // carry, with a rabbit at rest beside for scale. --side looks square on at the set snare.
+    [ShowcaseView("snare")]
+    void Snares()
+    {
+        var fur = PaintedAnimals.Coat(Look.Solid(RabbitFigure.Coats[0]));
+        AddChild(new MeshInstance3D { Mesh = ItemModels.SnareSet, Position = new Vector3(-0.35f, 0, 0), Rotation = new Vector3(0, 0.35f, 0) });
+        var sprung = ItemModels.SnareSprungWith(fur);
+        sprung.Position = new Vector3(0.12f, 0, -0.05f);
+        sprung.Rotation = new Vector3(0, 1.75f, 0);
+        AddChild(sprung);
+        AddChild(new MeshInstance3D { Mesh = ItemModels.SnareBundled, Position = new Vector3(0.5f, 0, 0.18f), Rotation = new Vector3(0, 0.4f, 0) });
+        var live = RabbitFigure.Create(PaintedAnimals.Coat(Look.Solid(RabbitFigure.Coats[2])));
+        live.Position = new Vector3(-0.68f, 0, 0.12f);
+        live.Rotation = new Vector3(0, 1.1f, 0);
+        AddChild(live);
+        var camera = new Camera3D { Fov = 30f, Current = true };
+        AddChild(camera);
+        if (args.ContainsKey("side")) camera.LookAtFromPosition(new Vector3(-0.35f, 0.12f, 0.9f), new Vector3(-0.35f, 0.1f, 0), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0.0f, 0.75f, 1.55f), new Vector3(0.0f, 0.06f, 0), Vector3.Up);
+    }
 }

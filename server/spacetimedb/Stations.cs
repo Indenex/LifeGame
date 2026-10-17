@@ -17,7 +17,7 @@ public static partial class Module
         if (ClaimAt(ctx, x, z) is not { } claim)
             throw new Exception($"A {what} has to stand inside your claim. Raise a claim marker first (build menu), away from the waking clearing");
         if (!HasClaimRights(ctx, claim, Me(ctx)))
-            throw new Exception($"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
+            throw new Exception(BanRefusal(ctx, claim, Me(ctx)) ?? $"This land is claimed by {claim.OwnerName}. Ask them to add you, or build a {what} on your own claim");
     }
 
     // How far a station's middle is from its edge, for reach.

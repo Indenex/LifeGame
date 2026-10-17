@@ -11,6 +11,7 @@ public static partial class Subscriptions
         $"SELECT * FROM animal WHERE {range}",
         $"SELECT * FROM animal_carcass WHERE {range}",
         $"SELECT * FROM hide_rack WHERE {range}",
+        $"SELECT * FROM snare_state WHERE {range}",
         "SELECT * FROM my_worn",
         "SELECT * FROM worn_item",
     };
