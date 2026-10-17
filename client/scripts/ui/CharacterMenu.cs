@@ -168,6 +168,29 @@ public partial class CharacterMenu : CanvasLayer
 
     public void Close() => root.Visible = false;
 
+    // While the page is up, the in-game HUD under it (the bar, the needs gauges, key hints) is
+    // hidden, and comes back as it was when the page closes (ui-59). Notes (a refused Play) still show.
+    readonly List<CanvasItem> hiddenItems = new();
+    readonly List<CanvasLayer> hiddenLayers = new();
+    float hudCheck;
+
+    void HideHud(bool hide)
+    {
+        if (!hide)
+        {
+            foreach (var item in hiddenItems) if (IsInstanceValid(item)) item.Visible = true;
+            foreach (var layer in hiddenLayers) if (IsInstanceValid(layer)) layer.Visible = true;
+            hiddenItems.Clear();
+            hiddenLayers.Clear();
+            return;
+        }
+        foreach (var node in GetTree().Root.FindChildren("*", "", true, false))
+        {
+            if (node is HotbarBar bar && bar.Visible) { bar.Visible = false; hiddenItems.Add(bar); }
+            else if (node is NeedsHud or Hints && node is CanvasLayer layer && layer.Visible) { layer.Visible = false; hiddenLayers.Add(layer); }
+        }
+    }
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (!IsOpen || e is not InputEventKey { Pressed: true, Echo: false } k) return;
@@ -179,7 +202,13 @@ public partial class CharacterMenu : CanvasLayer
 
     public override void _Process(double delta)
     {
-        if (!IsOpen) return;
+        // Hide the HUD while open (and catch any that appear later), restore it once closed.
+        if (!IsOpen)
+        {
+            if (hiddenItems.Count + hiddenLayers.Count > 0) HideHud(false);
+            return;
+        }
+        if ((hudCheck -= (float)delta) <= 0f) { hudCheck = 0.5f; HideHud(true); }
         time += (float)delta;
         // Each chibi bobs gently on its own beat, with a little sway.
         for (int i = 0; i < figures.Count; i++)
@@ -253,12 +282,15 @@ public partial class CharacterMenu : CanvasLayer
 
         // Long names (up to the 24-letter limit) shrink to fit the polaroid, then wrap to a
         // second line, rather than clip.
-        int nameSize = 21;
-        while (nameSize > 16 && Rounded(800).GetStringSize(c.Name, HorizontalAlignment.Left, -1, nameSize).X > card.Inner) nameSize--;
-        var name = Text(c.Name, nameSize, 800);
+        // Fitted with room at the sides (ui-59); a name that still won't fit breaks at the space
+        // nearest its middle into two set lines, so the card measures both and the badges stay inside.
+        var (nameText, nameSize) = FitName(c.Name, card.Inner - 20);
+        var name = Text(nameText, nameSize, 800);
         name.HorizontalAlignment = HorizontalAlignment.Center;
-        name.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        name.CustomMinimumSize = new Vector2(card.Inner, 0);
+        name.VerticalAlignment = VerticalAlignment.Center;
+        // Every card keeps room for two lines of name (ui-60), so a long name never pushes the
+        // badges past the card's edge, and the cards stay one height.
+        name.CustomMinimumSize = new Vector2(card.Inner, 52);
         column.AddChild(name);
         var badges = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
         badges.AddThemeConstantOverride("separation", 6);
@@ -274,6 +306,31 @@ public partial class CharacterMenu : CanvasLayer
         card.Pressed += () => { chosen = c.Id; Fill(); };
         if (picked) card.AddChild(new Sticker { Position = new Vector2(CardWidth - 24, -12), MouseFilter = Control.MouseFilterEnum.Ignore });
         return card;
+    }
+
+    static (string text, int size) FitName(string full, float width)
+    {
+        float Wide(string t, int size) => Rounded(800).GetStringSize(t, HorizontalAlignment.Left, -1, size).X;
+        for (int size = 21; size >= 16; size--)
+            if (Wide(full, size) <= width) return (full, size);
+        // Two lines, broken at the space nearest the middle.
+        int mid = full.Length / 2, cut = -1;
+        for (int d = 0; d <= mid && cut < 0; d++)
+        {
+            if (mid - d > 0 && full[mid - d] == ' ') cut = mid - d;
+            else if (mid + d < full.Length && full[mid + d] == ' ') cut = mid + d;
+        }
+        if (cut > 0)
+        {
+            string a = full[..cut], b = full[(cut + 1)..];
+            for (int size = 19; size >= 14; size--)
+                if (Mathf.Max(Wide(a, size), Wide(b, size)) <= width) return (a + "\n" + b, size);
+            return (a + "\n" + b, 14);
+        }
+        // One long word: smaller still.
+        int s2 = 15;
+        while (s2 > 11 && Wide(full, s2) > width) s2--;
+        return (full, s2);
     }
 
     static Control Badge(string text, Color ground)

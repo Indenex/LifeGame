@@ -77,7 +77,8 @@ public partial class WarmLook : Node
             var s = new StyleBoxFlat
             {
                 BgColor = bg, BorderColor = new Color(Ink, edge),
-                ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 4, ContentMarginBottom = 4,
+                // Snug sides, so rows of tabs and item buttons fit as they did on the dark look (ui-59).
+                ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 3, ContentMarginBottom = 3,
             };
             s.SetBorderWidthAll(state == "focus" ? 0 : 2);
             s.SetCornerRadiusAll(14);

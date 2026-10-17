@@ -92,7 +92,7 @@ public static partial class Module
     {
         if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(heading))
             throw new Exception("Invalid position");
-        var player = RequirePlayer(ctx);
+        var player = RequirePlayerUnmetered(ctx);
         var state = ctx.Db.PlayerState.PlayerId.Find(player.PlayerId) ?? throw new Exception("No state");
         var pending = ctx.Db.MoveInput.PlayerId.Find(player.PlayerId);
         var pos = RequirePos(ctx, player);
@@ -287,7 +287,15 @@ public static partial class Module
     }
 
     // The character the caller is playing; refused at the character menu (not in the world).
-    static Player RequirePlayer(ReducerContext ctx) =>
+    static Player RequirePlayer(ReducerContext ctx)
+    {
+        var p = RequirePlayerUnmetered(ctx);
+        SpendCall(ctx, p.PlayerId);
+        return p;
+    }
+
+    // Move (its own distance budget) and Heartbeat (a timer) skip the call bucket (RateLimit.cs).
+    static Player RequirePlayerUnmetered(ReducerContext ctx) =>
         ctx.Db.Player.Identity.Find(Me(ctx)) is { Online: true } p ? p : throw new Exception("No player for this connection");
 
     static PlayerPos RequirePos(ReducerContext ctx, Player player) =>

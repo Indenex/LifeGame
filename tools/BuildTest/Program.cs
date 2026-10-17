@@ -168,6 +168,16 @@ if (Wants("stone-hearth"))
         new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
         new() { [Item.Stone] = 3 }));
 
+// Not in "both": a chest takes six logs, which means axes and chopping (minutes). Opens like the basket.
+if (Wants("chest"))
+{
+    StoreInBasket(BuildTogether(StructureKind.Chest,
+        new() { [Item.Stone] = 2, [Item.Stick] = 4, [Item.Fiber] = 6 },
+        new() { [Item.Stone] = 2, [Item.Stick] = 3, [Item.Fiber] = 6 },
+        prepareA: () => { ChopLogs(a, 3); a.Craft("cord.twist", Pump); },
+        prepareB: () => { ChopLogs(b, 3); b.Craft("cord.twist", Pump); }));
+}
+
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
 {
@@ -274,7 +284,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // Gather side by side.
     a.Wants = forA;
     b.Wants = forB;
-    var until = clock.Elapsed + TimeSpan.FromSeconds(420);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(525);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
@@ -305,7 +315,7 @@ ulong BuildTogether(StructureKind kind, Dictionary<Item, uint> forA, Dictionary<
     // left B 0.1 m outside the work reach (hut radius + 2.2 m) and every Build was refused.
     b.WalkTo(front.x + 0.6f, front.z, 0.3f, Pump);
     a.WalkTo(front.x - 0.6f, front.z, 0.3f, Pump);
-    until = clock.Elapsed + TimeSpan.FromSeconds(180);
+    until = clock.Elapsed + TimeSpan.FromSeconds(225);
     while (a.Conn.Db.Structure.Id.Find(id) is { Complete: false } && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.TryBuild(id);
@@ -439,8 +449,51 @@ void SundialCovers(ulong id)
     Check(a.Conn.Db.Structure.Id.Find(id) is { Complete: true, Yaw: 0f }, "the sundial stands finished, facing north");
     WaitFor(() => a.Conn.Db.MySundial.Count > 0, 10, "the claim's owner has the time of day");
     WaitFor(() => b.Conn.Db.MySundial.Count > 0, 10, "so does a member of the claim");
+    // While B may still take things inside A's claim, B picks up a claim marker's sticks and fibre for the town check.
+    b.Wants = new() { [Item.Stick] = Social.MarkerSticks, [Item.Fiber] = Social.MarkerFiber };
+    var gatherUntil = clock.Elapsed + TimeSpan.FromSeconds(240);
+    while (!b.HasWants && clock.Elapsed < gatherUntil) { b.GatherStep(0.1f); Pump(100); }
+    Check(b.HasWants, $"B gathered a claim marker's materials ({b.Carried()})");
     StrangerB();
     WaitFor(() => b.Conn.Db.MySundial.Count == 0, 10, "a stranger does not");
+    SundialTown();
+}
+
+// The town path of my_sundial: B raises a claim of their own (no sundial in it), then A starts a town and
+// B signs it. A's sundial then tells B the hour, through the roster, with no membership of A's claim.
+void SundialTown()
+{
+    Console.WriteLine("--- Sundial, by town");
+    // 42 to 58 m from A's marker: clear of A's claim (40 m) and near enough to sign (60 m).
+    var spot = b.FindRingSite(StructureKind.ClaimMarker, claimAt!.Value, 42f, 58f);
+    Check(spot != null, "found ground for B's own claim near A's");
+    var (mx, mz) = spot!.Value;
+    b.WalkTo(mx, mz + 2.5f, 1f, Pump);
+    int before = b.Conn.Db.Structure.Count;
+    b.Conn.Reducers.PlaceStructure(StructureKind.ClaimMarker, mx, mz, 0f);
+    WaitFor(() => b.Conn.Db.Structure.Count > before, 10, "B's marker laid out");
+    var marker = b.Conn.Db.Structure.Iter().OrderByDescending(r => r.PlacedAt.MicrosecondsSinceUnixEpoch).First();
+    var front = Structures.ToWorld(mx, mz, marker.Yaw, 0.6f, 1.9f);
+    b.WalkTo(front.x, front.z, 0.3f, Pump);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(120);
+    while (b.Conn.Db.Structure.Id.Find(marker.Id) is { Complete: false } && clock.Elapsed < until)
+    {
+        b.TryBuild(marker.Id);
+        Pump(650);
+    }
+    WaitFor(() => b.Conn.Db.Claim.Iter().Any(c => c.StructureId == marker.Id), 10, "B's own claim is raised");
+    Pump(1500);
+    Check(b.Conn.Db.MySundial.Count == 0, "B owns a claim but has no dial yet: neither claim of theirs has a sundial");
+
+    a.Conn.Reducers.StartTown("Dialtown");
+    WaitFor(() => a.Conn.Db.Town.Iter().Any(), 10, "A started a town");
+    var town = a.Conn.Db.Town.Iter().First();
+    a.Conn.Reducers.InviteToTown(b.MyId);
+    Pump(1500);
+    b.LastError = null;
+    b.Conn.Reducers.SignTown(town.Id);
+    WaitFor(() => b.Conn.Db.TownSigner.Iter().Any(t => t.PlayerId == b.MyId), 10, $"B signed the roster ({b.LastError})");
+    WaitFor(() => b.Conn.Db.MySundial.Count > 0, 10, "B has the time of day through the town");
 }
 
 void StrangerB()
@@ -509,7 +562,7 @@ void BuildHearth(ulong hut)
     LeaveHut(hut);
     a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
     b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
-    var until = clock.Elapsed + TimeSpan.FromSeconds(300);
+    var until = clock.Elapsed + TimeSpan.FromSeconds(375);
     while (bots.Any(x => !x.HasWants) && clock.Elapsed < until)
     {
         foreach (var bot in bots) bot.GatherStep(0.1f);
@@ -799,6 +852,8 @@ sealed class Bot
                         "SELECT * FROM my_sundial",
                         "SELECT * FROM claim",
                         "SELECT * FROM claim_member",
+                        "SELECT * FROM town",
+                        "SELECT * FROM town_signer",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"));
@@ -1020,14 +1075,14 @@ sealed class Bot
         {
             detourLeft -= dt;
             float px = -dz / dist * detourSign, pz = dx / dist * detourSign;
-            X += px * 5f * dt; Z += pz * 5f * dt;
+            X += px * BotWalker.WalkMetresPerSecond * dt; Z += pz * BotWalker.WalkMetresPerSecond * dt;
             Conn.Reducers.Move(X, Z, MathF.Atan2(px, pz));
             return dist;
         }
         float moved = 0f; // how far this call really walked: waiting for the server is not progress
         if (dist > 0.05f)
         {
-            float step = MathF.Min(dist, 5f * dt);
+            float step = MathF.Min(dist, BotWalker.WalkMetresPerSecond * dt);
             // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once
             // it has caught up, and keep reporting where we are, as a real client does (bugfix-24).
             if (Conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - X) + MathF.Abs(seen.Z - Z) < 0.8f)
@@ -1089,6 +1144,23 @@ sealed class Bot
                 float angle = k * MathF.Tau / 16, x = cx + MathF.Cos(angle) * r, z = cz + MathF.Sin(angle) * r;
                 if (kind == StructureKind.ClaimMarker && x * x + z * z < keepOut * keepOut) continue;
                 if (inClaim is { } c && (x - c.x) * (x - c.x) + (z - c.z) * (z - c.z) > (Social.ClaimRadius - 5f) * (Social.ClaimRadius - 5f)) continue;
+                if (Structures.GroundProblem((int)kind, x, z, 0f, H) != null) continue;
+                if (Conn.Db.Structure.Iter().Any(s => Structures.TooClose((int)kind, x, z, (int)s.Kind, s.X, s.Z))) continue;
+                return (x, z);
+            }
+        return null;
+    }
+
+    // A site for a claim marker between rmin and rmax metres from `center`, on clear ground.
+    public (float, float)? FindRingSite(StructureKind kind, (float x, float z) center, float rmin, float rmax)
+    {
+        float H(float x, float z) => Structures.GroundAt(x, z, (i, j) => Conn.Db.TerrainEdit.CellKey.Find(World.CellKey(i, j))?.Depth ?? 0);
+        const float keepOut = Social.SpawnClearRadius + Social.ClaimRadius + 0.5f;
+        for (float r = rmin; r <= rmax; r += 2f)
+            for (int k = 0; k < 24; k++)
+            {
+                float angle = k * MathF.Tau / 24, x = center.x + MathF.Cos(angle) * r, z = center.z + MathF.Sin(angle) * r;
+                if (x * x + z * z < keepOut * keepOut) continue;
                 if (Structures.GroundProblem((int)kind, x, z, 0f, H) != null) continue;
                 if (Conn.Db.Structure.Iter().Any(s => Structures.TooClose((int)kind, x, z, (int)s.Kind, s.X, s.Z))) continue;
                 return (x, z);

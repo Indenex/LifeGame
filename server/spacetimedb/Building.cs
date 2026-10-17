@@ -28,6 +28,13 @@ public enum StructureKind
     HenCoop,
     StoneHearth,
     Sundial,
+    // Crafting's batch devices (crafting-23, D-195), numbered by merge order. 21, 22, 23 (an enum cannot carry
+    // explicit values, so a kind's number is its position here: after HenCoop 18, StoneHearth 19, Sundial 20).
+    SettlingTub,
+    CrushingBlock,
+    TemperingTrough,
+    // House building: a wooden chest, after Crafting's devices (24; the enum position is the kind number).
+    Chest,
 }
 
 // One material a structure's current stage still needs.

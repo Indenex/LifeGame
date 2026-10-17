@@ -9,6 +9,8 @@ public enum AnimalSpecies
     Deer,
     // Hens (animals-19): a tame yard flock that lays eggs.
     Hen,
+    // Wild rabbits (animals-22): small, quick and skittish, in warrens at the meadow edges.
+    Rabbit,
 }
 
 // What an animal is doing, so clients can pick the matching animation.
@@ -144,6 +146,9 @@ public static partial class Module
         public long SneakReportAt;
         [Default(0L)]
         public long ShotAt;
+        // When this player last swung at an animal (Hunting.cs), so one player's swings are paced whichever animal they hit.
+        [Default(0L)]
+        public long SwungAt;
     }
 
     [SpacetimeDB.Table(Accessor = "AnimalTickTimer", Scheduled = nameof(AnimalTick), ScheduledAt = nameof(ScheduledAt))]

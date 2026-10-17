@@ -153,6 +153,14 @@ jobs:
             parts: clay-hut
           - part: other structures
             parts: lean-to,basket,fence
+          # House building's claim-only buildings (coop, stone hearth, sundial and its town path); a new one
+          # adds its part name to this list, or starts a part of its own if this one nears 5 minutes.
+          - part: coop, hearth, sundial
+            parts: coop,stone-hearth,sundial
+          # The wooden chest runs alone (like the log cabin it is not in "both"): about 3.5 to 4 minutes of chopping.
+          # Until its BuildTest part is on main this job finds nothing to run and passes at once.
+          - part: wooden chest
+            parts: chest
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb

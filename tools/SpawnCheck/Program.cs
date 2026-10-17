@@ -245,6 +245,42 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     // A giant oak's broad trunk (bugfix-48): a landmark, so it is found by its feature cell.
     Probe(true, "giant oak", (x, z) => Features.At(x, z, FeatureGround.Dry) is { Block: FeatureBlock.Trunk }, 200);
     Probe(false, "boulder");
+    // A landmark's stones are found by square (bugfix-49): the server must hold an outcrop's stones and
+    // a fallen giant's trunk and stones too. Walking to one is slow, so probe the nearest of either kind.
+    {
+        (float X, float Z, float R, float D)? best = null;
+        foreach (var feature in Features.All.Where(f => f.Block == FeatureBlock.Stones))
+        {
+            int sx0 = Landmarks.SquareOf(World.CellOf(px), feature.Square), sz0 = Landmarks.SquareOf(World.CellOf(pz), feature.Square);
+            for (int sx = sx0 - 6; sx <= sx0 + 6; sx++)
+                for (int sz = sz0 - 6; sz <= sz0 + 6; sz++)
+                {
+                    if (!feature.In(sx, sz, out int cx, out int cz)) continue;
+                    foreach (var (cxs, czs, cr) in LandmarkBlocks.Circles(feature, cx, cz))
+                    {
+                        float lane = cxs - cr - 1.2f;
+                        float d = MathF.Sqrt((cxs - px) * (cxs - px) + (czs - pz) * (czs - pz));
+                        if (cr < 0.5f || (best != null && d >= best.Value.D) || Obstacles.StepBlocked(ground, 0.4f, lane, czs, cxs - cr - 0.5f, czs, 0f)
+                            || Obstacles.PushOut(ground, 0.4f, lane, czs, 0f) != (lane, czs)) continue;
+                        best = (cxs, czs, cr, d);
+                    }
+                }
+        }
+        Check(best != null, "found a landmark stone near the player");
+        var (ox, oz, r, _) = best!.Value;
+        Walk(ox - r - 1.2f, oz);
+        for (int i = 0; i < 12; i++)
+        {
+            px = MathF.Min(px + 0.2f, ox);
+            conn.Reducers.Move(px, oz, MathF.PI / 2);
+            Pump(120);
+        }
+        Pump(400);
+        var at = MyPos()!;
+        float dist = MathF.Sqrt((at.X - ox) * (at.X - ox) + (at.Z - oz) * (at.Z - oz));
+        Check(dist >= r + 0.2f, $"the server kept us out of a landmark stone ({dist:F2} m from its middle, radius {r:F2})");
+        px = at.X; pz = at.Z;
+    }
 }
 
 // "I'm stuck" puts the player on ground clear of trunks and boulders too (bugfix-47): we stand right
@@ -256,6 +292,21 @@ Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the 
     WaitFor(() => MyPos() is { } p && (p.X != before.X || p.Z != before.Z), 10, "the server moved us on unstuck");
     var to = MyPos()!;
     Check(Obstacles.PushOut(ground, 0.4f, to.X, to.Z, 0f) == (to.X, to.Z), $"unstuck left us clear of trunks and boulders ({to.X:F1}, {to.Z:F1})");
+}
+
+// A client that hammers a reducer is slowed down (bugfix-50, audit item 9): the bucket holds a burst
+// and refills at a steady rate, refused calls cost nothing, and play carries on afterwards.
+{
+    int slowed = 0;
+    void OnError(ReducerEventContext _, Exception e) { if (e.Message.Contains("Slow down")) slowed++; }
+    conn.OnUnhandledReducerError += OnError;
+    for (int i = 0; i < 300; i++) conn.Reducers.SetSneaking(i % 2 == 0);
+    Pump(2500);
+    conn.OnUnhandledReducerError -= OnError;
+    Check(slowed >= 100, $"hammering a reducer 300 times was slowed down ({slowed} refused)");
+    Pump(3000);
+    conn.Reducers.SetSneaking(false);
+    WaitFor(() => conn.Db.PlayerSneaking.PlayerId.Find(myId) == null, 10, "and play carries on once the bucket has refilled");
 }
 
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");

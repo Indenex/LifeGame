@@ -1,7 +1,7 @@
 # crafting-26: A spade (dig faster)
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-shovel
 PR: (open after the local CraftCheck passes)
 
@@ -16,4 +16,4 @@ Justin: "interact with the world more. Chop trees, dig with a shovel, etc." Add 
 - Chop loop review sent to the PM (no stump, no sapling stage, no partial-chop sign, spent axe still offered).
 
 ## Next step
-Check /tmp/cc_spade.log (or rerun CraftCheck), push, open the PR.
+None: merged (#500). Later sections below are history.

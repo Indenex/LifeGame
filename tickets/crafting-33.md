@@ -1,7 +1,7 @@
 # crafting-33: Animal offers follow the hand
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-hints2
 PR: (see below)
 
@@ -12,4 +12,4 @@ Since crafting-29 the server only lets the equipped tool strike, shear or butche
 - 2026-10-17: change made, client builds.
 
 ## Next step
-Wait for CI, send the green sha to the PM; tell Animals (small edit in their Herd.cs).
+None: merged (#672). Later sections below are history.

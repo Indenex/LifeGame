@@ -1,7 +1,7 @@
 # crafting-29: World tool actions need the tool equipped
 Lane: Crafting
 Owner: Crafting thread
-Status: in_progress
+Status: done
 Branch: crafting-equip
 PR: (none yet)
 
@@ -34,7 +34,7 @@ Coordinate the interaction priority part with Integration (session_015g3pLB5eJ4q
 - CI hold from the PM (release).
 
 ## Next step
-When the PM lifts the CI hold: merge main, run CraftCheck, ClayCheck, BuildTest and tools/upgrade-check.sh origin/main (the new table is additive), push, open the PR, send the PM the green sha, and ask Render for the clip (loot next to a tree, with and without an axe).
+None: merged (#582, #615). Later sections below are history.
 
 ## Update 2026-10-17: equip-axe hint
 - `Woodcutting.cs` registers `Use.RegisterHint("crafting.equip_axe", ...)` (Integration's #579): at a standing tree, carrying a working axe that is not in hand, with no loot within reach, the hint reads "Take your axe in hand to chop: press its number key". The chop handler keeps Priority 10, equal to the loot handlers.

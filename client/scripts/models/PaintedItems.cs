@@ -85,11 +85,11 @@ public static class PaintedItems
         Item.RawMutton or Item.CookedMutton or Item.BurntMutton or Item.Berries
             or Item.Egg or Item.BoiledEgg or Item.BurntEgg
             or Item.RawChicken or Item.CookedChicken or Item.BurntChicken => Family.Food,
-        // By number until the items reach main: clothing (D-074), the deer (animals-14) and wool (animals-8).
-        (Item)Garments.WoolTunic or (Item)Garments.FootWraps or (Item)203 or (Item)198 or (Item)199 => Family.Hide,
-        (Item)202 or (Item)214 or (Item)215 or (Item)216 or Item.CookedVenison or Item.BurntVenison or Item.Tallow => Family.Food,
-        (Item)217 => Family.Hide,
-        (Item)197 or (Item)204 or (Item)16 or (Item)17 or (Item)18 => Family.Wood,
+        // Clothing (D-074), the deer (animals-14) and wool (animals-8).
+        (Item)Garments.WoolTunic or (Item)Garments.FootWraps or Item.DeerHide or Item.Yarn or Item.WoolCloth => Family.Hide,
+        Item.RawVenison or Item.RawRabbit or Item.CookedRabbit or Item.BurntRabbit or Item.CookedVenison or Item.BurntVenison or Item.Tallow or Item.Hazelnuts => Family.Food,
+        Item.RabbitFur => Family.Hide,
+        Item.DropSpindle or Item.Antler or Item.Bow or Item.Arrow or Item.Spade => Family.Wood,
         _ => ClayItemLook.MeshFor(item) != null ? Family.Clay : Family.Plain,
     };
 

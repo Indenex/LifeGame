@@ -43,6 +43,8 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM device_job",
+                "SELECT * FROM device_output",
                 "SELECT * FROM player_equip",
                 "SELECT * FROM my_skills",
             });
@@ -483,6 +485,10 @@ if (runStations)
             conn.Reducers.StartCraft("chop.log", 0);
             Pump(() => lastError != null || conn.Db.MyCraftJob.Count > 0, 5, "a chop to start");
             if (lastError != null) Fail($"chop for the walk-away check: {lastError}");
+            // The server chops the nearest standing tree in reach, which can be another than the one walked to:
+            // measure the walk against the tree the job really has.
+            var chopJob = conn.Db.MyCraftJob.Iter().First();
+            trunk0 = (chopJob.X, chopJob.Z);
             // Walk off along a line the ground leaves free (no boulder, trunk, water or steep cell on it), in
             // steps, reading where the server really has us: a raw line into an obstacle would leave the player
             // in reach and the check would time out for the wrong reason.
@@ -597,6 +603,86 @@ if (runStations)
         Fail($"the spade did not dig faster than a stick ({lastError})");
     Console.WriteLine("A spade digs faster than a stick");
 }
+
+    // Crafting-23: a batch device (D-195, D-209). A settling tub cleans a loaded batch of clay
+// on its own; a process with no minigame by hand is a plain queue.
+{
+    // The two parts run apart in CI, so this part digs its own clay (by hand, a few cells if need be).
+    for (int attempt = 0; CountOf(Item.Clay) < 12 && attempt < 6; attempt++)
+    {
+        var (dcx, dcz) = Enumerable.Range(1 + attempt * 3, 40)
+            .SelectMany(r => Enumerable.Range(-r, 2 * r + 1).SelectMany(o => new[] { (o, -r), (o, r), (-r, o), (r, o) }))
+            .Select(c => (cx: World.CellOf(x) + c.Item1, cz: World.CellOf(z) + c.Item2))
+            .First(c => World.IsClay(c.cx, c.cz) && World.Height(c.cx, c.cz, 0) > Needs.WaterLevel + 0.4f
+                && conn.Db.TerrainEdit.CellKey.Find(World.CellKey(c.cx, c.cz)) is null);
+        WalkTo(dcx * World.CellSize, dcz * World.CellSize);
+        for (int dig = 0; dig < World.MaxDigDepth && CountOf(Item.Clay) < 12; dig++)
+        {
+            uint clayBefore = CountOf(Item.Clay);
+            lastError = null;
+            conn.Reducers.Dig(dcx, dcz);
+            Pump(() => lastError != null || CountOf(Item.Clay) > clayBefore, 5, "clay from digging for the tub");
+            if (lastError != null) break;
+            Pump(() => false, World.DigCooldownMicros / 1_000_000f + 0.1f, null);
+        }
+    }
+    if (CountOf(Item.Clay) < 12) Fail($"only {CountOf(Item.Clay)} clay for the tub check");
+    Gather(Item.Stick, 6);
+    Gather(Item.Fiber, 8);
+    while (CountOf(Item.Cordage) < 2) Craft("cord.twist", 0, null);
+    if (CountOf(Item.Log) < 1)
+    {
+        var (lx, lz) = NearestTree();
+        var tr = Trees.Trunk(lx, lz);
+        WalkTo(tr.X, tr.Z);
+        Craft("chop.log", 0, Item.Log);
+    }
+    WalkTo(table.X, table.Z);
+    var tub = BuildHere(StructureKind.SettlingTub);
+    Console.WriteLine($"Built a settling tub at ({tub.X:F1}, {tub.Z:F1})");
+    WalkTo(tub.X, tub.Z);
+
+    uint CleanClay() => conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.CleanClay).Aggregate(0u, (n, r) => n + r.Count);
+    DeviceOutput[] Waiting() => conn.Db.DeviceOutput.Iter().Where(o => o.StructureId == tub.Id).ToArray();
+
+    // A tub that is not loaded has nothing to collect; one tub does only its own process.
+    lastError = null;
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => lastError != null, 5, "collecting from an empty tub to be refused");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.grit", 1);
+    Pump(() => lastError != null, 5, "the wrong process to be refused");
+    Console.WriteLine($"Empty tub: {lastError}");
+
+    // Clean clay has no minigame by hand, so the tub is a plain queue (D-209): the same
+    // output as by hand, loaded and left, and nothing to play.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start");
+    lastError = null;
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 1);
+    Pump(() => lastError != null, 5, "loading a working tub to be refused");
+    lastError = null;
+    conn.Reducers.WorkDevice(tub.Id, 1f);
+    Pump(() => lastError != null, 5, "working a plain queue to be refused");
+    Console.WriteLine($"Working a plain queue: {lastError}");
+    Pump(() => Waiting().Length > 0, 40, "the first unit to finish");
+    var one = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 && Waiting().Length == 0, 5, "the first clay to be collected");
+    if (one.Count != 1 || one.Quality != Items.RawQuality) Fail($"one unit made {one.Count} at quality {one.Quality}, not 1 at {Items.RawQuality}");
+
+    // Five units in a batch: five come out, at the by-hand quality, with no bonus.
+    conn.Reducers.LoadDevice(tub.Id, "clay.clean", 5);
+    Pump(() => conn.Db.DeviceJob.StructureId.Find(tub.Id) != null, 5, "the tub to start again");
+    Pump(() => Waiting().Length > 0, 60, "the batch to finish");
+    var batch = Waiting().Single();
+    conn.Reducers.CollectDevice(tub.Id);
+    Pump(() => CleanClay() == 1 + batch.Count, 5, "the batch to be collected");
+    if (batch.Count != 5 || batch.Quality != Items.RawQuality) Fail($"five units made {batch.Count} at quality {batch.Quality}, not 5 at {Items.RawQuality}");
+    Console.WriteLine($"Plain batch: {batch.Count} clean clay at quality {batch.Quality}, same as by hand");
+}
+
+    
 
 // Roasting needs raw mutton, which only Animals hands out. Set CRAFTCHECK_ROAST=1
     // and put some in this player's inventory (the identity is printed) to check it.

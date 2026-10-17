@@ -63,6 +63,7 @@ double P(double q) => latencies.Length == 0 ? double.NaN : latencies[(int)Math.M
 Console.WriteLine();
 Console.WriteLine($"Bots: {ready}, duration: {elapsed:F0}s, tick: 10 Hz, compression: {compression}");
 Console.WriteLine($"Moves sent: {bots.Sum(b => b.MovesSent)}, digs: {bots.Sum(b => b.Digs)}, pickups: {bots.Sum(b => b.Pickups)}, reducer errors: {bots.Sum(b => b.Errors)}");
+Console.WriteLine($"Calls refused by the rate limit: {bots.Sum(b => b.Throttled)}");
 Console.WriteLine($"Move round trip ms (until others see it): p50 {P(0.5):F1}, p95 {P(0.95):F1}, p99 {P(0.99):F1}, max {(latencies.Length > 0 ? latencies[^1] : double.NaN):F1}");
 if (startStats is { } s0 && endStats is { } s1)
 {
@@ -78,6 +79,8 @@ if (loBytes > 0)
     Console.WriteLine($"Loopback traffic, both directions: {loBytes / elapsed / 1024:F0} KB/s total, {loBytes / elapsed / ready / 1024:F1} KB/s per player");
 
 foreach (var b in bots) b.Conn.Disconnect();
+// Honest-rate bots must never meet the reducer rate limit (bugfix-50).
+if (bots.Sum(b => b.Throttled) > 0) { Console.WriteLine("FAIL  load-test bots were throttled by the reducer rate limit"); return 1; }
 return 0;
 
 static long LoopbackBytes()
@@ -96,7 +99,7 @@ sealed class Bot
 {
     public readonly DbConnection Conn;
     public bool Ready;
-    public int MovesSent, Digs, Pickups, Errors;
+    public int MovesSent, Digs, Pickups, Errors, Throttled;
     public readonly List<double> MoveLatenciesMs = new();
 
     readonly Random rng;
@@ -140,7 +143,7 @@ sealed class Bot
                 }
             }
         };
-        Conn.OnUnhandledReducerError += (ctx, e) => Errors++;
+        Conn.OnUnhandledReducerError += (ctx, e) => { Errors++; if (e.Message.Contains("Slow down")) Throttled++; };
         Conn.Db.PlayerPos.OnInsert += (ctx, row) =>
         {
             if (Ready || me is not { } id || ctx.Db.Player.Identity.Find(id) is not { } mine) return;

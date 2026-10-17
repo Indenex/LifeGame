@@ -6,7 +6,8 @@ using SpacetimeDB.Types;
 namespace LifeGame;
 
 // Drives each avatar's work pose from its running craft job, other players' sneaking
-// from player_sneaking, and everyone's clothes from worn_item. Your own job comes from
+// from player_sneaking, and everyone's clothes from worn_item, plus held tools, rest,
+// quick actions and flinches. Your own job comes from
 // my_craft_job; other players' from the public craft_work table (D-072), which
 // Atmosphere already subscribes to.
 public static class AvatarWork
@@ -157,6 +158,7 @@ public static class AvatarWork
     static void Start(Avatar avatar, string? processId, DbConnection? conn = null, ushort tool = 0)
     {
         avatar.Work = WorkMotions.For(processId);
+        avatar.WorkStanding = WorkMotions.Standing(processId);
         var (right, left) = HeldTools.For(processId, conn?.Db.MyInventory.Iter().Select(i => (i.Item, i.Quality)));
         if (tool != 0 && Items.IsKnown(tool)) right = (Item)tool;
         avatar.Hold(right, left);

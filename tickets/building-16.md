@@ -1,9 +1,9 @@
 # building-16: Hen coop
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: in_review
+Status: done
 Branch: claude/house-building-8ueqz2-coop
-PR: (see STATUS)
+PR: #479 (merged)
 
 ## Goal
 A small claim-only hen coop (Justin picked option 1; Animals' hens #454 roost in it at night). Players build it in three stages inside their claim: a shed on legs with woven walls, a pop-hole and ramp at the front, and a thatched roof. Animals targets two points per coop, both in the shape data: `Entry` (where a hen walks to go in, at the foot of the ramp) and `Roost` (where it settles inside), as local offsets scaled with the shape.
@@ -22,4 +22,4 @@ A small claim-only hen coop (Justin picked option 1; Animals' hens #454 roost in
 - Animals: read `Structures.Shape(kind).Entry` / `.Roost` with `Structures.ToWorld(sx, sz, yaw, x, z)` for the world points; the coop is not solid and has no door, so nothing blocks hens walking in.
 
 ## Next step
-Wait for CI and send the PM the green sha; then answer any Animals questions about Entry/Roost.
+Nothing; merged.
