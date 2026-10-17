@@ -20,7 +20,7 @@ The chop and dig effects fire on Animation's impact frame: anim-7's `Avatar.Impa
 - 2026-10-17 03:55: following Animation's notes, figures face +Z, the handler takes the fifth `ushort item` argument, and Feed sparks rise from the nearest fire within 2.5 m of the hand (the Fire table), not from the hand.
 
 ## Open questions / blockers
-- anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 PR opens after #485) in ConnectImpacts. The handler is ready.
+- anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 is PR #496) in ConnectImpacts. The handler is ready.
 
 ## Next step
 Wait for #486 CI and send the PM the green sha. Animation and Render requests are sent.
