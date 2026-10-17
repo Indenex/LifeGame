@@ -1,7 +1,7 @@
 # env-35: Ambient life, part two (dragonflies; birds pending Atmosphere)
 Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
-Status: in_review
+Status: done
 Branch: claude/environment-np240l (continues claude/environment-ambient-life-2)
 PR: #828
 
@@ -38,4 +38,4 @@ setting (D-145 next item, option (b) sent to the PM):
 - (none waiting on Justin.) Audio waits for the branch to land to build its sounds.
 
 ## Next step
-Wait for the PR's CI; send the green sha to the PM and Audio's sha note; Render clip requested through the PM.
+None, merged as #828 (2026-10-17 15:04). Render clip requested via the PM.

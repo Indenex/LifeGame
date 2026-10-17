@@ -1,8 +1,8 @@
 # env-37: One water level
 Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
-Status: in_progress
-Branch: local `env-37-local` until #828 merges, then claude/environment-np240l
+Status: in_review
+Branch: claude/environment-np240l
 PR: (none yet)
 
 ## Goal
@@ -17,7 +17,7 @@ so the PM tells those lanes.
 - 2026-10-17 15:10: edits made locally; no Godot/dotnet in this container, CI builds it.
 
 ## Open questions / blockers
-- Waiting on #828 to merge before pushing (one branch per session).
+- (none)
 
 ## Next step
-After #828 merges: reset claude/environment-np240l to origin/main, cherry-pick env-37, update CONTENT.md's "Next" note, push, open the PR.
+Wait for the PR's CI (shared with env-31); send the green sha to the PM.
