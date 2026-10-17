@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "coop" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "coop" or "treelod" or "rocks" or "logs" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -41,6 +41,9 @@ public partial class Showcase : Node3D
             else if (view == "coop") Coop();
             else if (view == "hen") Hen();
             else if (view == "stonehearth") StoneHearthView();
+            else if (view == "treelod") TreeLod();
+            else if (view == "rocks") Rocks();
+            else if (view == "logs") Logs();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -310,6 +313,82 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.3f, 1.9f, 3.0f), new Vector3(0.3f, 0.15f, 0), Vector3.Up);
+    }
+
+    // The painted trees as the world draws them (model-10): each variant's detailed
+    // version in the front row and its far version behind, pines left, broadleaf right.
+    void TreeLod()
+    {
+        for (int v = 0; v < PaintedTrees.Variants; v++)
+            for (int far = 0; far < 2; far++)
+            {
+                var basis = Basis.FromScale(Vector3.One * 1.5f);
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Pine(v, far == 1), MaterialOverride = PaintedTrees.PineMaterial, Position = new Vector3(-11f + v * 2.8f, 0, -far * 4.5f), Basis = basis });
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Broadleaf(v, far == 1), MaterialOverride = PaintedTrees.BroadleafMaterial, Position = new Vector3(1.5f + v * 3f, 0, -far * 4.5f), Basis = basis });
+            }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Rocks as the world draws them (painted-1): today's material in the back row, the
+    // painted one in front: boulders, outcrops and river stones.
+    void Rocks()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int row = 0; row < 2; row++)
+        {
+            var material = row == 0 ? Look.RockSurface : Painted.Rock;
+            float z = row == 0 ? -3.5f : 0.5f;
+            for (int v = 0; v < PropMeshes.RockVariants; v++)
+                Place(PropMeshes.Rock(v), material, new Vector3(-6.5f + v * 1.6f, 0, z), Look.WorldRock, 0.9f);
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Outcrop(v), material, new Vector3(0.6f + v * 2.8f, 0, z - 0.6f), Look.Rock);
+            for (int v = 0; v < 4; v++)
+                Place(PropMeshes.RiverStone(v), material, new Vector3(6.2f + v * 0.5f, 0, z + 0.6f), Look.Rock.Lightened(0.1f), 0.9f);
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Bark and leaves as the world draws them (painted-3): today's materials in the back
+    // row, the painted ones in front: birches with their canopies and fallen logs.
+    void Logs()
+    {
+        void Place(Mesh mesh, Material material, Transform3D at, Color tint)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, at);
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        for (int row = 0; row < 2; row++)
+        {
+            var bark = row == 0 ? Look.TreeBark : Painted.Bark;
+            var leaves = row == 0 ? Look.TreeFoliage : Painted.Leaves;
+            float z = row == 0 ? -5f : 0f;
+            for (int v = 0; v < 3; v++)
+            {
+                var at = new Transform3D(new Basis(Vector3.Up, v * 1.3f).Scaled(Vector3.One * 0.6f), new Vector3(-7f + v * 3f, 0, z));
+                Place(PropMeshes.Birch(v % PropMeshes.BirchVariants), bark, at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(v * 0.05f));
+                Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+            }
+            for (int v = 0; v < PropMeshes.FallenLogVariants && v < 3; v++)
+                Place(PropMeshes.FallenLog(v), bark, new Transform3D(new Basis(Vector3.Up, 0.3f + v * 0.5f), new Vector3(3.5f + v * 1.4f, 0, z + 1.5f + v * 0.5f)), Look.Bark.Darkened(0.1f));
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 7f, 18f), new Vector3(0f, 2f, -2.5f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish

@@ -161,6 +161,8 @@ public partial class Main : Node3D
         lookPicker.Conn = () => conn;
         lookPicker.MyId = () => myId;
         AddChild(lookPicker);
+        // The sundial's time-of-day arc (ui-32); Has reads House building's my_sundial view (a finished sundial in your claim or town).
+        AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay, Has = () => conn != null && conn.Db.MySundial.Count > 0 });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
