@@ -77,6 +77,12 @@ public partial class WarmLook : Node
     // Controls that style themselves for paper are left as they are.
     const string Keep = "warm_keep";
 
+    // A colour swatch shows a real colour (skin, hair, a mark's ink): never re-inked.
+    public static void KeepColours(Control c) => c.SetMeta(Keep, true);
+
+    // The ring round a swatch: cream on dark, brown ink on paper.
+    public static Color RingColour(float alpha) => On ? new Color(Ink, alpha) : new Color(Look.Cream, alpha);
+
     // Content already on paper (a tooltip note): ink it like a window's, without a frame.
     public static void InkInside(Control c)
     {
