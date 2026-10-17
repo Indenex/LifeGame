@@ -39,6 +39,7 @@ public static partial class Module
         if (ctx.Db.Player.Identity.Find(ctx.Sender) is { } existing)
         {
             ctx.Db.Player.Identity.Update(existing with { Online = true });
+            MarkSeen(ctx, existing.PlayerId);
             if (ctx.Db.PlayerState.PlayerId.Find(existing.PlayerId) is { } state)
                 ctx.Db.PlayerState.PlayerId.Update(state with { LastMoveAt = ctx.Timestamp });
             SurvivalConnected(ctx, existing with { Online = true });
@@ -72,6 +73,7 @@ public static partial class Module
             LastMoveAt = ctx.Timestamp,
             LastActionAt = ctx.Timestamp,
         });
+        MarkSeen(ctx, player.PlayerId);
         SurvivalConnected(ctx, player);
         EnsureHealth(ctx, player.PlayerId);
     }
@@ -90,7 +92,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void SetName(ReducerContext ctx, string name)
     {
-        name = name.Trim();
+        name = Social.StripControl(name).Trim();
         if (name.Length < 1 || name.Length > 24)
             throw new Exception("Name must be 1 to 24 characters");
         var player = RequirePlayer(ctx);
@@ -120,20 +122,24 @@ public static partial class Module
         var pos = RequirePos(ctx, player);
         float fromX = pending?.X ?? pos.X, fromZ = pending?.Z ?? pos.Z;
 
-        float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
-        var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
-        float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
-        float dx = x - fromX, dz = z - fromZ;
-        float dist = MathF.Sqrt(dx * dx + dz * dz);
-        if (dist > allowed)
+        // An admin who is flying (/fly, admin-1) is exempt from the walking pace; nobody else is.
+        if (!IsFlyingAdmin(ctx, player.PlayerId))
         {
-            x = fromX + dx / dist * allowed;
-            z = fromZ + dz / dist * allowed;
-            dist = allowed;
+            float speed = World.MaxSpeed * CarryWalkFactor(ctx, ctx.Sender);
+            var bank = ctx.Db.MoveBank.PlayerId.Find(player.PlayerId);
+            float allowed = World.MoveAllowance(bank?.Meters ?? float.MaxValue, speed, SecondsBetween(state.LastMoveAt, ctx.Timestamp));
+            float dx = x - fromX, dz = z - fromZ;
+            float dist = MathF.Sqrt(dx * dx + dz * dz);
+            if (dist > allowed)
+            {
+                x = fromX + dx / dist * allowed;
+                z = fromZ + dz / dist * allowed;
+                dist = allowed;
+            }
+            var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
+            if (bank is null) ctx.Db.MoveBank.Insert(left);
+            else ctx.Db.MoveBank.PlayerId.Update(left);
         }
-        var left = new MoveBank { PlayerId = player.PlayerId, Meters = allowed - dist };
-        if (bank is null) ctx.Db.MoveBank.Insert(left);
-        else ctx.Db.MoveBank.PlayerId.Update(left);
 
         var input = new MoveInput { PlayerId = player.PlayerId, X = x, Z = z, Heading = heading };
         if (pending is not null)
@@ -176,7 +182,8 @@ public static partial class Module
         var edit = ctx.Db.TerrainEdit.CellKey.Find(key);
         short depth = edit?.Depth ?? 0;
         // A digging stick reaches one level deeper than hands, down to finer clay (D-041).
-        bool stick = BestTool(ctx, ItemTags.Digging) is not null;
+        var stickTool = BestTool(ctx, ItemTags.Digging);
+        bool stick = stickTool is not null;
         if (depth >= World.MaxDigDepth + (stick ? 1 : 0))
             throw new Exception(stick ? "Too deep even for a digging stick" : "Too deep to dig by hand");
 
@@ -197,8 +204,9 @@ public static partial class Module
         if (World.IsClay(cellX, cellZ))
             GiveDugClay(ctx, player, depth);
 
+        if (stickTool is { } digger) WearTool(ctx, digger);
         PerformedProcess(ctx, player.PlayerId, Skills.Dig, cellX * World.CellSize, cellZ * World.CellSize);
-        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, BestTool(ctx, ItemTags.Digging) is { } digger ? (Item)digger.Item : 0);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Dig, stickTool is { } dug ? (Item)dug.Item : 0);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -211,7 +219,7 @@ public static partial class Module
         RequireClaimAccess(ctx, item.X, item.Z);
 
         ctx.Db.WorldItem.Id.Delete(itemId);
-        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality);
+        AddToInventory(ctx, ctx.Sender, (Item)item.Item, 1, item.Quality, item.Wear);
         PerformedProcess(ctx, player.PlayerId, Skills.Forage, item.X, item.Z);
         NoteAct(ctx, player.PlayerId, WorkMotion.PickUp, (Item)item.Item);
     }
@@ -228,6 +236,7 @@ public static partial class Module
             Id = 0,
             Item = item,
             Quality = quality,
+            Wear = stack.Wear,
             X = pos.X,
             Z = pos.Z,
             ChunkX = pos.ChunkX,
@@ -241,6 +250,7 @@ public static partial class Module
     public static void RespawnItems(ReducerContext ctx, RespawnTimer timer)
     {
         RequireServer(ctx);
+        SweepPresence(ctx);
         int r = World.SpawnRadiusChunks;
         for (int cx = -r; cx < r; cx++)
             for (int cz = -r; cz < r; cz++)
@@ -310,20 +320,53 @@ public static partial class Module
     static float SecondsBetween(Timestamp a, Timestamp b) =>
         (b.MicrosecondsSinceUnixEpoch - a.MicrosecondsSinceUnixEpoch) / 1_000_000f;
 
+    // The stack of this item and quality to move or use. Tools of the same quality can
+    // differ in wear (shared/Durability.cs); the most worn goes first, so a player
+    // never loses their best tool by dropping, storing or trading "a stone axe".
     static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
+        InventoryItem? found = null;
         foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
-            if (row.Quality == quality)
+            if (row.Quality == quality && (found is null || Durability.Used(row.Wear) > Durability.Used(found.Value.Wear)))
+                found = row;
+        return found;
+    }
+
+    static InventoryItem? FindStack(ReducerContext ctx, Identity owner, Item item, byte quality, uint wear)
+    {
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality && row.Wear == wear)
                 return row;
         return null;
     }
 
-    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality)
+    // How many of an item and quality are carried, whatever their wear.
+    static uint CarriedCount(ReducerContext ctx, Identity owner, Item item, byte quality)
     {
-        if (FindStack(ctx, owner, item, quality) is { } stack)
+        uint n = 0;
+        foreach (var row in ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, (ushort)item)))
+            if (row.Quality == quality) n += row.Count;
+        return n;
+    }
+
+    // Moves carried items from one player to another, the most worn first, wear and all.
+    static void MoveCarried(ReducerContext ctx, Identity from, Identity to, Item item, byte quality, uint count)
+    {
+        while (count > 0 && FindStack(ctx, from, item, quality) is { } stack)
+        {
+            uint n = Math.Min(count, stack.Count);
+            RemoveFromStack(ctx, stack, n);
+            AddToInventory(ctx, to, item, n, quality, stack.Wear);
+            count -= n;
+        }
+    }
+
+    static void AddToInventory(ReducerContext ctx, Identity owner, Item item, uint count, byte quality, uint wear = 0)
+    {
+        if (FindStack(ctx, owner, item, quality, wear) is { } stack)
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count + count });
         else
-            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count });
+            ctx.Db.InventoryItem.Insert(new InventoryItem { Id = 0, Owner = owner, Item = (ushort)item, Quality = quality, Count = count, Wear = wear });
     }
 
     static void RemoveFromStack(ReducerContext ctx, InventoryItem stack, uint count)

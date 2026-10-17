@@ -555,6 +555,7 @@ sealed class Bot
     float Step(float tx, float tz, float dt)
     {
         float dx = tx - X, dz = tz - Z, dist = MathF.Sqrt(dx * dx + dz * dz);
+        float moved = 0f; // how far this call really walked: waiting for the server is not progress
         if (dist > 0.05f)
         {
             float step = MathF.Min(dist, 5f * dt);
@@ -564,12 +565,13 @@ sealed class Bot
             {
                 X += dx / dist * step;
                 Z += dz / dist * step;
+                moved = step;
             }
             Conn.Reducers.Move(X, Z, MathF.Atan2(dx, dz));
         }
         else if (Lag() > 0.05f)
             Conn.Reducers.Move(X, Z, 0f); // there already: keep reporting until the server agrees
-        return MathF.Max(0, dist - 5f * dt);
+        return MathF.Max(0, dist - moved);
     }
 
     // Walks to a point and checks the SERVER has the bot there. The walk is a straight line, so a tree
@@ -594,7 +596,8 @@ sealed class Bot
 
     void WalkStraight(float tx, float tz, float within, Action<int> pump)
     {
-        while (Step(tx, tz, 0.1f) > within) pump(100);
+        // The cap keeps a bot that is held in place (a wall, the pace) from waiting for ever.
+        for (int guard = 0; Step(tx, tz, 0.1f) > within && guard < 900; guard++) pump(100);
         // The server limits the pace (bugfix-24): keep reporting until it has us here too.
         for (int i = 0; i < 300 && Lag() > 0.3f; i++)
         {

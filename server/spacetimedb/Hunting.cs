@@ -54,7 +54,7 @@ public static partial class Module
 
         var spear = BestTool(ctx, ItemTags.Piercing);
         var blade = BestTool(ctx, ItemTags.Cutting);
-        if (spear == null && blade == null) throw new Exception("You need a spear or a blade to hunt with");
+        if (spear == null && blade == null) throw new Exception(NoToolMessage(ctx, ItemTags.Piercing | ItemTags.Cutting, "You need a spear or a blade to hunt with"));
 
         // A spear reaches a little further; a running target gets some slack for
         // where the hunter saw it a moment ago.
@@ -71,6 +71,7 @@ public static partial class Module
         int bonus = SneakCrit(ctx, player.PlayerId, animal, damage);
         OnProcessPerformed(ctx, player.PlayerId, HuntProcess, (spear ?? blade)!.Value.Quality, false);
         NoteAct(ctx, player.PlayerId, WorkMotion.Strike, (Item)(spear ?? blade)!.Value.Item);
+        WearTool(ctx, (spear ?? blade)!.Value);
         HurtAnimal(ctx, animal, mind, damage + bonus, pos.X, pos.Z, StartleLeap, now, bonus > 0);
     }
 
@@ -188,13 +189,14 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception("You need a blade to butcher with");
+        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need a blade to butcher with"));
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);
         byte quality = Math.Min(tool.Quality, cap);
         OnProcessPerformed(ctx, player.PlayerId, ButcherProcess, quality, false);
         NoteAct(ctx, player.PlayerId, WorkMotion.Butcher, (Item)tool.Item);
+        WearTool(ctx, tool);
 
         // What a carcass gives comes from its species' Def: a grown animal gives its cuts, its
         // hide and any extra (a deer's antler); a young one a single small cut.
