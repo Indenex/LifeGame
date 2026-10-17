@@ -57,6 +57,8 @@ public partial class Main : Node3D
     readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
+    readonly CharacterMenu characterMenu = new();
+    bool characterHooks;
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -162,9 +164,9 @@ public partial class Main : Node3D
         lookPicker.MyId = () => myId;
         lookPicker.Note = hud.Note;
         AddChild(lookPicker);
-        // ui-39: the character menu. It shows only in its preview (--screenshot-characters) until
-        // Survival's multi-character model lands and the menu becomes the first screen.
-        AddChild(new CharacterMenu());
+        // ui-39: the character menu, the first screen once a login has characters (AtCharacterMenu).
+        characterMenu.NewCharacter = () => NewCharacter(null);
+        AddChild(characterMenu);
         // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
         AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
@@ -188,7 +190,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { ToCharacters = ReturnToMenu, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -498,13 +500,58 @@ public partial class Main : Node3D
         Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
     }
 
-    // The login has characters and none is in the world yet. UX's character menu (Play, New,
-    // Delete) replaces this; until it lands the game plays the last character you had.
+    // The login has characters and none is in the world yet: the character menu (ui-39).
     void AtCharacterMenu()
     {
         if (conn == null) return;
-        if (conn.Db.MyActiveCharacter.Iter().FirstOrDefault() is { } active) conn.Reducers.SelectCharacter(active.Key);
-        else if (Me.Characters(conn).FirstOrDefault() is { } first) conn.Reducers.SelectCharacter(first.Key);
+        if (!characterHooks)
+        {
+            characterHooks = true;
+            characterMenu.Attach(new ServerCharacterLink(conn));
+            // A refused Play or Delete comes back to the menu with the server's reason.
+            conn.Reducers.OnSelectCharacter += (ctx, _) =>
+            {
+                if (ctx.Event.Status is not SpacetimeDB.Status.Failed(var reason)) return;
+                hud.Note(reason);
+                characterMenu.Open();
+            };
+            conn.Reducers.OnDeleteCharacter += (ctx, _, _) =>
+            {
+                if (ctx.Event.Status is SpacetimeDB.Status.Failed(var reason)) hud.Note(reason);
+            };
+            conn.Reducers.OnCreateCharacter += (ctx, _, _, _, _, _) =>
+            {
+                if (ctx.Event.Status is SpacetimeDB.Status.Failed(var reason)) NewCharacter(reason);
+            };
+        }
+        characterMenu.Open();
+    }
+
+    // New character: today's look picker and name field (Justin: "can be used temporarily"),
+    // then CreateCharacter, which steps straight into the world. Esc goes back to the menu.
+    void NewCharacter(string? refused)
+    {
+        characterMenu.Close();
+        lookPicker.OpenNew(
+            (name, look) => conn?.Reducers.CreateCharacter(name, (byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0)),
+            () => characterMenu.Open(),
+            refused);
+    }
+
+    // Back to the character menu from the pause menu: the server takes the character out of the
+    // world, the area subscription goes (its rows leave, so the views clear), and the menu opens.
+    // Picking one again comes back in through EnterWorldArea.
+    void ReturnToMenu()
+    {
+        if (conn == null || !spawned) return;
+        conn.Reducers.ReturnToMenu();
+        subscription?.Unsubscribe();
+        subscription = null;
+        subscribedChunk = (int.MinValue, int.MinValue);
+        spawned = false;
+        foreach (var other in others.Values) other.QueueFree();
+        others.Clear();
+        AtCharacterMenu();
     }
 
     PlayerPos? MyPos() => conn?.Db.MyPlayerPos.Iter().FirstOrDefault();

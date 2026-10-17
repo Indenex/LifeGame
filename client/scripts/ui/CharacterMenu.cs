@@ -216,7 +216,8 @@ public partial class CharacterMenu : CanvasLayer
 
         var name = card.Line(c.Name, Ui.TitleSize - 2);
         card.Column.AddChild(name);
-        var about = card.Line($"{c.Race}  ·  {Played(c.LastPlayed)}", 13);
+        // The race shows once #471's rows reach the character list.
+        var about = card.Line(c.Race.Length > 0 ? $"{c.Race}  ·  {Played(c.LastPlayed)}" : Played(c.LastPlayed), 13);
         about.Modulate = new Color(1, 1, 1, 0.65f);
         card.Column.AddChild(about);
         return card;
@@ -255,6 +256,8 @@ public partial class CharacterMenu : CanvasLayer
     {
         if (chosen == 0) return;
         Link.Play(chosen);
+        // Main reopens the menu if the server refuses.
+        Close();
     }
 
     // --- Deleting ------------------------------------------------------------
