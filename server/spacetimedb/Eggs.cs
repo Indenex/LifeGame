@@ -17,7 +17,7 @@ public static partial class Module
         if (AnimalDefs.Get((byte)animal.Species).Egg is not { } egg) throw new Exception("That animal doesn't lay eggs");
         RequireReach(RequirePos(ctx, player), animal.X, animal.Z);
         // Hens in a claim are the claim's: its members (the Claims lane's builder rights) take their eggs; out in the open, anyone may.
-        if (ClaimAt(ctx, animal.X, animal.Z) is { } claim && !HasClaimRights(ctx, claim, Me(ctx)))
+        if (ClaimAt(ctx, animal.X, animal.Z) is { } claim && !IsOwnerOrMember(ctx, claim, Me(ctx)))
             throw new Exception($"These hens belong to {claim.OwnerName}'s yard. Ask them for an egg");
         var mind = ctx.Db.AnimalMind.AnimalId.Find(animalId) ?? throw new Exception("That hen has wandered off");
         if (animal.Eggs == 0) throw new Exception("No egg to take just now");

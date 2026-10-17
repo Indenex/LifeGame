@@ -152,7 +152,7 @@ public static partial class Module
         var rack = ctx.Db.HideRack.Id.Find(rackId) ?? throw new Exception("That rack is gone");
         RequireReach(RequirePos(ctx, player), rack.X, rack.Z);
         // The leather is its maker's, or the claim's members' (the Claims lane's builder rights), not a passer-by's.
-        if (rack.MadeBy != player.PlayerId && !(ClaimAt(ctx, rack.X, rack.Z) is { } claim && HasClaimRights(ctx, claim, Me(ctx))))
+        if (rack.MadeBy != player.PlayerId && !(ClaimAt(ctx, rack.X, rack.Z) is { } claim && IsOwnerOrMember(ctx, claim, Me(ctx))))
             throw new Exception("That leather is still drying for whoever hung it");
         if (HideMoisture(rack, ctx.Timestamp.MicrosecondsSinceUnixEpoch) > 0f)
             throw new Exception("The hide is still damp. Leave it to dry");
