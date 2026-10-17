@@ -12,6 +12,8 @@ Every new Audio sound used to add a line to `AudioHooks.cs` and a scene to `Audi
 - 2026-10-17: `AudioHooks` finds classes marked `[AudioSounds]` by reflection and calls their `Connect(DbConnection)` once and `Tick(double)` each frame (delegates cached once, in name order; a Connect that throws is logged and skipped; a Tick that throws is logged once and switched off). The ten existing schedulers (Tool, Roast, Storage, Structure, Pot, Rest, Emote, DeerGrazing, Lamp, Rabbit) are tagged. `AudioScenes` is now `partial`, one `[Scene("name")]` method per file under `tools/SoundPreview/Scenes/`, found by reflection; `Program.cs` is unchanged. All eleven existing scenes render byte-identical WAVs before and after. `docs/CONTENT.md` Sound cue row updated. Client builds, 0 errors; the reflection pattern was run in a scratch console app.
 - How to add a sound now: `CueDefs<Family>.cs` for cues, `<Thing>Sounds.cs` marked `[AudioSounds]`, `Scenes/<Thing>.cs` for the preview. No shared file.
 
+- 2026-10-17: PM asked for proof the hooks still connect in the real game. `AudioHooks.Connect` now prints `Audio: N sound schedulers hooked up: <names>` and pushes an error if none are found or fewer than the floor (`AtLeast` = 10, never lowered, no change needed when adding a scheduler). Render C (session_01KA7oA899HvQKhMWZhZYnuU) is asked to run the branch headless and confirm that line and one sound playing.
+
 ## Open questions / blockers
 - The Godot client could not be run here, so the reflection in `AudioHooks` is checked by build and a scratch program, not in the running game.
 

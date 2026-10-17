@@ -29,8 +29,22 @@ static class AudioHooks
             ? (T)Delegate.CreateDelegate(typeof(T), method)
             : null;
 
+    // A floor, not an exact count: the number of schedulers when this check was added. Reflection can
+    // find too few (assembly trimming, load order), which would silence sounds without any error.
+    // Never lower it; adding a scheduler needs no change here.
+    const int AtLeast = 10;
+
+    // The schedulers found, for the startup log line and for tests.
+    public static IReadOnlyList<string> Found => sounds.Value.Select(x => x.Name).ToArray();
+
     public static void Connect(DbConnection conn)
     {
+        var found = Found;
+        if (found.Count == 0)
+            GD.PushError("Audio: no [AudioSounds] schedulers found, so no sound will be hooked up (reflection failed?)");
+        else if (found.Count < AtLeast)
+            GD.PushError($"Audio: only {found.Count} [AudioSounds] schedulers found, expected at least {AtLeast}: {string.Join(", ", found)}");
+        GD.Print($"Audio: {found.Count} sound schedulers hooked up: {string.Join(", ", found)}");
         foreach (var (name, connect, _) in sounds.Value)
         {
             try { connect?.Invoke(conn); }
