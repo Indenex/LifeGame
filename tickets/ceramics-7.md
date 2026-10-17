@@ -1,9 +1,9 @@
 # ceramics-7: Cooking pot (broth and stew)
 Lane: Clay and ceramics
 Owner: Clay and ceramics thread (session_01Diab34HTvew38VmUaqhj5Q)
-Status: in_review
+Status: done
 Branch: claude/clay-ceramics-7-kfr4kr (stacked on claude/clay-ceramics-kfr4kr / PR #105 until that merges)
-PR: (none yet)
+PR: #256 (with ceramics-8)
 
 ## Goal
 A second use for fired pots: cook in them. Done when:
@@ -21,6 +21,8 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 - 2026-10-16 18:21: Justin confirmed ceramics-7 (D-106). ClayCheck --pot run 1 voided by a pit crack; check now fires two coil pots (0e010ef), rerunning on c7pot2.
 - 2026-10-16 18:12: Survival's shape applied (0835adc) and approved by Survival.
 
+- 2026-10-17: #256 (with ceramics-8) merged. Cooking in a fired pot: nothing left.
+
 ## Open questions / blockers
 - Crafting: the eaten-from pot comes back at the dish's (skill-capped) quality, so a q60 pot came back q36 in testing. Asked Crafting 2026-10-16 18:33 for a VesselQuality column on CraftJob (recommended) / pull the pot in OnPlaced / leave it. Shipping 'leave it' meanwhile.
 - Survival #119 (D-111 well fed) touches Survival.Eat next to our pot-return lines and adds `Needs.GoodMeal`. On the main merge after #119: keep both sides, and make GoodMeal `item is Item.CookedMutton or Item.PotOfBroth or Item.PotOfStew`.
@@ -29,4 +31,4 @@ Justin sees screenshots via the Render lane: a stew simmering on a fire, and eat
 - Survival agreed broth 45/30, stew 65/30 (option 1) and reviewed/approved the hooks at 0835adc (Needs.EatenFrom, Eat keeps stack quality, weights 4). Justin approved the meals as proposed (D-118); comment added in Needs.cs.
 
 ## Next step
-Ships with ceramics-8 (see tickets/ceramics-8.md).
+Merged. Cooking in a fired pot: nothing left.

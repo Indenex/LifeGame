@@ -113,7 +113,7 @@ public static class Look
 
     // Trees between the camera and the player fade softly, so you can always see
     // yourself in the woods. A faded tree is drawn by its ghost: the same surface,
-    // transparent, drawn by a second instance that only shows trees in the way.
+    // see-through, drawn by a second instance that only shows trees in the way.
     // Anything drawn with a see-through material needs its ghost drawn too, or a
     // tree in the way would just vanish.
     public static ShaderMaterial TreeBark => treeBark ??= SeeThrough(BarkSurface);
@@ -357,14 +357,14 @@ public static class Look
 
     // The same surface drawn transparent, for trees fading out of the way.
     static Shader GhostShader => ghostShader ??= MakeShader(PaintedCode
-        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
+        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_prepass_alpha;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
     // A building's ghost: open faces stay visible as on the solid, and an opaque depth pass first,
     // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
     static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
         .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
-        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST\n#define STRUCTURE_GHOST"));
 
     internal const string PaintedCode = """
             shader_type spatial;
@@ -422,9 +422,9 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                // A canopy reaches about 1.9 times the tree's width from its axis; fade
-                // fully inside that and ease out a little beyond.
-                return 1.0 - smoothstep(1.9 * wide, 2.7 * wide, d);
+                // Only a tree truly across the line fades (env-25): fully within 1.5
+                // times its width of the axis, easing out by 2.1.
+                return 1.0 - smoothstep(1.5 * wide, 2.1 * wide, d);
             }
 
             varying vec3 tint;
@@ -543,12 +543,14 @@ public static class Look
                 // cavity) stay clear of it. Tiny glints sparkle as you move.
                 if (frost > 0.0 && cavity > 0.01) {
                     float patches = texture(detail, world_pos.xz * 0.06).r;
-                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * frost_local(world_pos) * 1.25 - 0.12);
+                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * (0.5 + 0.5 * frost_local(world_pos)) * 1.25 - 0.12);
                     // Only on the raised grain of what faces up, so the colour beneath
                     // still shows through: a dusting, not a snow cover. Bare ground
                     // takes less than rocks and leaves, which the grass covers anyway.
-                    rime *= smoothstep(0.2, 0.75, world_normal.y) * smoothstep(0.35, 0.8, h) * (1.0 - snow);
-                    rime *= puddles_ok > 0.5 ? 0.3 : 0.55;
+                    // Rocks and leaves take a clear white edge on their upper faces and
+                    // raised grain (Justin: "in between"); flat bare ground only a trace.
+                    rime *= smoothstep(0.1, 0.6, world_normal.y) * smoothstep(0.25, 0.65, h) * (1.0 - snow);
+                    rime *= puddles_ok > 0.5 ? 0.2 : 0.75;
                     vec3 cell = floor(world_pos * 28.0);
                     float glint = step(0.985, fract(sin(dot(cell + floor(view_camera_position * 3.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453));
                     color = mix(color, FROST * (1.0 + paint), rime);
@@ -607,6 +609,7 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
+            #ifdef STRUCTURE_GHOST
                 if (cut_mode > 1.5) {
                     // cut_floor 1 clears the whole roof (player inside); 0 clears only the
                     // circle round the player (player behind the building).
@@ -619,6 +622,13 @@ public static class Look
                     ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
                 }
                 if (ALPHA < 0.04) discard;
+            #else
+                // A tree in the way thins to about 55% (env-25), a little more right round
+                // the player. The ghost draws its depth first (depth_prepass_alpha), so only
+                // the front-most surface blends: overlapping crowns never stack up.
+                float opening = 1.0 - smoothstep(0.04, 0.42, apart);
+                ALPHA = 1.0 - fade * (0.45 + 0.2 * opening * opening);
+            #endif
             #endif
             }
 
@@ -713,9 +723,9 @@ public static class Look
                 // Frost silvers the blades, most at the tips, gone first where it melts.
                 if (frost > 0.0) {
                     float patches = texture(clouds, world_pos.xz * 0.035).r;
-                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * frost_local(world_pos) * 1.3 - 0.15) * (1.0 - snow_cover);
-                    // Just the tips silver over; the blades stay green below.
-                    color = mix(color, FROST, rime * 0.55 * smoothstep(0.45, 1.0, tip));
+                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * (0.5 + 0.5 * frost_local(world_pos)) * 1.3 - 0.15) * (1.0 - snow_cover);
+                    // The tips are clearly silvered; the blades stay green below.
+                    color = mix(color, FROST, rime * 0.8 * smoothstep(0.35, 0.9, tip));
                 }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
