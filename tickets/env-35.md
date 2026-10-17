@@ -1,8 +1,8 @@
 # env-35: Ambient life, part two (dragonflies; birds pending Atmosphere)
 Lane: Environment
-Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_progress
-Branch: claude/environment-ambient-life-2
+Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
+Status: in_review
+Branch: claude/environment-np240l (continues claude/environment-ambient-life-2)
 PR: (none yet)
 
 ## Goal
@@ -29,9 +29,12 @@ setting (D-145 next item, option (b) sent to the PM):
 - 2026-10-17 14:40: a debug run at (-46,-22) with --life=1 logged all 6 dragonflies spawned
   over water (~0.6 m above the surface) and moving between spots, so the logic works; they
   are small at the default zoom, so take the clip close (camera-zoom about -2 to 1).
+- 2026-10-17 14:58: lane moved back to this account; new session continues on
+  claude/environment-np240l, main merged in cleanly. No Godot in this container, so the
+  pond render goes to the Render lane (D-059) and CI does the build.
 
 ## Open questions / blockers
 - (none waiting on Justin.) Audio waits for the branch to land to build its sounds.
 
 ## Next step
-Render at the pond with --life=1 (e.g. `--debug-position=-44,-20 --camera-zoom=2 --time-of-day=0.5`) for a still where they read clearly (logic already confirmed); then open the PR, send Audio the sha, request a Render clip (pond by day; a flock at dusk with --life=1, which spawns flocks 20x as often), and send the green sha to the PM.
+Wait for the PR's CI; send the green sha to the PM and Audio's sha note; Render clip requested through the PM.
