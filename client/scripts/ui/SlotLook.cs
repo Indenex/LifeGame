@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 
 namespace LifeGame;
 
@@ -72,6 +73,41 @@ void fragment() {
 }");
 
     static ShaderMaterial Material(string code) => new() { Shader = new Shader { Code = code } };
+}
+
+// How much life a worn tool has left (ui-79): a thin arc along the bottom of its slot, shown only
+// once the tool is worn (Durability.WornBelow), butter turning coral as it nears spent, so fresh
+// tools leave the bar calm. The arc's length is the life left.
+public partial class WearArc : Control
+{
+    public float Radius = 26f;
+    float left = 1f;
+
+    // Life left, 0 to 1 (Durability.Left); 1 for anything that doesn't wear.
+    public float Left
+    {
+        get => left;
+        set { if (value != left) { left = value; QueueRedraw(); } }
+    }
+
+    public override void _Ready()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        SetAnchorsPreset(LayoutPreset.FullRect);
+    }
+
+    public override void _Draw()
+    {
+        if (left > Durability.WornBelow) return;
+        var centre = Size / 2;
+        // A 120-degree track centred on the bottom, filled from its left end by the life left.
+        float from = Mathf.DegToRad(150f), span = Mathf.DegToRad(-120f);
+        var track = WarmLook.On ? new Color(WarmLook.Ink, 0.22f) : new Color(Look.Cream, 0.22f);
+        var c = left <= Durability.NearlySpentBelow ? WarmLook.Coral.Darkened(WarmLook.On ? 0.1f : 0f) : WarmLook.Butter.Darkened(WarmLook.On ? 0.18f : 0f);
+        DrawArc(centre, Radius, from, from + span, 32, track, 3.5f, true);
+        float fill = left / Durability.WornBelow;
+        if (fill > 0.01f) DrawArc(centre, Radius, from, from + span * fill, 32, c, 3.5f, true);
+    }
 }
 
 // The ring round the slot in hand (ui-70): soft and warm, just outside the disc, with a gentle

@@ -37,6 +37,7 @@ public partial class HotbarBar : Control
     readonly Label name = new() { HorizontalAlignment = HorizontalAlignment.Center };
     readonly Dictionary<Item, uint> carried = new();
     readonly Dictionary<Item, string> labels = new();
+    readonly Dictionary<Item, float> lifeLeft = new();
     float sinceChange = IdleAfter, nameTime, alpha = 1f, cover;
     int nameAt = -1;
     string? floatingName;
@@ -75,7 +76,9 @@ public partial class HotbarBar : Control
         // It stays up once the game connects (the server's bar would replace it, ui-73).
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-hotbar")) && Link is MockHotbarLink mock)
         {
-            SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1), new InventoryEntry(Item.StoneAxe, "Stone axe", 1) });
+            // =worn: the hand axe is worn and the stone axe nearly spent, to show their wear arcs (ui-79).
+            bool worn = OS.GetCmdlineUserArgs().Contains("--screenshot-hotbar=worn");
+            SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1, worn ? 0.18f : 1f), new InventoryEntry(Item.StoneAxe, "Stone axe", 1, worn ? 0.05f : 1f) });
             mock.Set(0, Item.Berries);
             mock.Set(1, Item.HandAxe);
             mock.Set(2, Item.StoneAxe);
@@ -104,10 +107,13 @@ public partial class HotbarBar : Control
         var before = new Dictionary<Item, uint>(carried);
         carried.Clear();
         labels.Clear();
+        lifeLeft.Clear();
         foreach (var e in items)
         {
             carried[e.Item] = carried.GetValueOrDefault(e.Item) + e.Count;
             labels.TryAdd(e.Item, e.Label);
+            // A tool's best stack, so the arc shows only when every one you carry is worn (ui-79).
+            lifeLeft[e.Item] = Mathf.Max(lifeLeft.GetValueOrDefault(e.Item, 0f), e.Left);
         }
 
         double now = Time.GetTicksMsec() / 1000.0;
@@ -155,6 +161,7 @@ public partial class HotbarBar : Control
             uint n = item is { } it ? carried.GetValueOrDefault(it) : 0;
             views[i].Show(item, n, item is { } x && labels.TryGetValue(x, out var l) ? l : item is { } y ? ItemName(y) : "",
                 KeyName(i), equipped: item != null && Link.Equipped == i);
+            views[i].Wear(n > 0 && item is { } w ? lifeLeft.GetValueOrDefault(w, 1f) : 1f);
         }
     }
 
@@ -348,6 +355,7 @@ public partial class HotbarSlotView : PanelContainer
     Panel plate = null!;
     TextureRect shadow = null!;
     readonly ActiveRing ring = new() { Radius = HotbarBar.Slot / 2 + 6 };
+    readonly WearArc wear = new() { Radius = HotbarBar.Slot / 2 - 3 };
     Item? item;
     float pop;
 
@@ -368,6 +376,7 @@ public partial class HotbarSlotView : PanelContainer
         picture.OffsetRight = picture.OffsetBottom = -2;
         (plate, shadow) = SlotLook.Behind(stack, picture, HotbarBar.Slot);
         stack.AddChild(picture);
+        stack.AddChild(wear);
         stack.AddChild(ring);
 
         count = Hud.Text("", 13);
@@ -432,6 +441,9 @@ public partial class HotbarSlotView : PanelContainer
         key.AddThemeColorOverride("font_shadow_color", new Color(0.22f, 0.12f, 0.06f, 0.75f));
         key.Modulate = new Color(1, 1, 1, equipped ? 1f : 0.85f);
     }
+
+    // How much life the tool here has left (ui-79); the arc shows only once it is worn.
+    public void Wear(float left) => wear.Left = left;
 
     // A small bounce when its key is pressed.
     public void Pop() => pop = 1f;
