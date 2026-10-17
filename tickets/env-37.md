@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
 Status: in_review
 Branch: claude/environment-np240l
-PR: (none yet)
+PR: #833
 
 ## Goal
 docs/CONTENT.md lists "water level defined in several places" as the landmark family's

@@ -3,7 +3,7 @@ Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
 Status: in_progress
 Branch: claude/environment-ground-looks (old account); refresh rides claude/environment-np240l after env-37
-PR: (none; prototypes for Justin's pick, D-154)
+PR: #833
 
 ## Goal
 Justin passed on old, A and B+ (env-27) and picked two reference directions to see:
@@ -49,4 +49,4 @@ Built on top of env-27 (merged in) so `PaintedTerrain.Chosen` picks the style.
 - (none)
 
 ## Next step
-After env-37's PR merges: push this on claude/environment-np240l, open the PR, send the PM the green sha and a render request (before `--ground=old` / after, noon and golden hour, spawn meadow, path edge, stream bank).
+Wait for #833 CI; send the PM the green sha. Render requested 179bc02b (before --ground=old / after, noon and golden hour).
