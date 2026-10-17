@@ -78,7 +78,30 @@ public partial class Placing : Node
     const float Reach = World.Reach - 0.15f, OfferFor = 10f;
     static readonly Color Fits = new(0.85f, 1f, 0.8f, 0.38f), Blocked = new(1f, 0.6f, 0.5f, 0.3f);
 
-    public bool Active => thing != null;
+    public bool Active => thing != null || spotPicked != null;
+
+    // Picking a spot on the ground rather than setting an item down (ui-30: where a fire goes).
+    Action<float, float>? spotPicked;
+    string spotLabel = "";
+    float spotMin;
+
+    // Shows a ring at the cursor within reach; a click (or Use, or Enter) picks the spot,
+    // Esc lets it go. Too close to stand by it shows amber. The server has the last word.
+    public void PickSpot(string label, float minDistance, Action<float, float> picked)
+    {
+        if (Active) Stop();
+        spotPicked = picked;
+        spotLabel = label;
+        spotMin = minDistance;
+        ghost = new MeshInstance3D { Mesh = SpotRing(), MaterialOverride = ghostMaterial };
+        View.AddChild(ghost);
+        ghostPos = Me.Position + CameraRig.Forward * 1.5f;
+        hint.Visible = true;
+        UpdateHint();
+    }
+
+    // A ring of stones on the ground, the size of a small fire.
+    static Mesh SpotRing() => new TorusMesh { InnerRadius = 0.3f, OuterRadius = 0.48f, Rings = 24, RingSegments = 8 };
 
     Placeable? thing;
     MeshInstance3D? ghost;
@@ -164,6 +187,7 @@ public partial class Placing : Node
     void Stop()
     {
         thing = null;
+        spotPicked = null;
         ghost?.QueueFree();
         ghost = null;
         hint.Visible = false;
@@ -171,6 +195,14 @@ public partial class Placing : Node
 
     void SetDown()
     {
+        if (spotPicked is { } picked)
+        {
+            if (problem != null) { Note(problem); return; }
+            var at = ghostPos;
+            Stop();
+            picked(at.X, at.Z);
+            return;
+        }
         if (thing is not { } t) return;
         if (problem != null) { Note(problem); return; }
         Link.Place(t, ghostPos.X, ghostPos.Z, yawTarget);
@@ -216,9 +248,9 @@ public partial class Placing : Node
     {
         float dt = (float)delta;
         offerLeft -= dt;
-        if (thing is not { } t || ghost == null) return;
+        if ((thing == null && spotPicked == null) || ghost == null) return;
         // Put back when it's gone from the bag (traded, dropped) or a panel opens.
-        if (!Link.InBag().Contains(t) || Panels.Open()) { Stop(); return; }
+        if ((thing is { } t && !Link.InBag().Contains(t)) || Panels.Open()) { Stop(); return; }
 
         var target = PointUnderMouse() ?? Me.Position + CameraRig.Forward * 1.5f;
         var offset = target - Me.Position;
@@ -231,13 +263,20 @@ public partial class Placing : Node
         ghost.Visible = !OverBar(GetViewport().GetMousePosition());
         ghost.Rotation = new Vector3(0, yaw, 0);
 
-        problem = Link.Fits(t, ghostPos.X, ghostPos.Z, yawTarget);
+        var away = new Vector2(ghostPos.X - Me.Position.X, ghostPos.Z - Me.Position.Z).Length();
+        problem = thing is { } item ? Link.Fits(item, ghostPos.X, ghostPos.Z, yawTarget)
+            : away < spotMin ? "A little further from you" : null;
         ghostMaterial.AlbedoColor = ghostMaterial.AlbedoColor.Lerp(problem == null ? Fits : Blocked, 1f - Mathf.Exp(-10f * dt));
         UpdateHint();
     }
 
     void UpdateHint()
     {
+        if (spotPicked != null)
+        {
+            hint.Text = problem ?? $"{spotLabel}  Click to choose    Esc lets it go";
+            return;
+        }
         if (thing is not { } t) return;
         string more = Link.InBag().Count() > 1 ? "    Tab next" : "";
         hint.Text = problem ?? $"{Capital(Name(t))}: click to set it down    T or the wheel turns it{more}    Esc puts it back";

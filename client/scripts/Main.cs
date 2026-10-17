@@ -91,6 +91,7 @@ public partial class Main : Node3D
         // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
         placing.Terrain = terrain;
         placing.Me = me;
+        crafting.PickSpot = placing.PickSpot; // fires go where you choose (ui-30)
         placing.CameraRig = cameraRig;
         placing.View = view;
         placing.Note = hud.Note;
