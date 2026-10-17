@@ -42,6 +42,7 @@ public partial class StructureView : Node3D
     {
         if (ghost != null || (fill, working) == device) return;
         device = (fill, working);
+        Unmerge();
         foreach (var (_, holder, _) in pieces) holder.QueueFree();
         pieces.Clear();
         solid.Clear();
@@ -114,6 +115,12 @@ public partial class StructureView : Node3D
     // Returns how many pieces newly turned solid, so callers can add a puff of dust.
     public int Show(int stage, float fraction, bool complete, bool animate)
     {
+        this.complete = complete;
+        if (Merged)
+        {
+            if (complete) return 0;
+            Unmerge();
+        }
         var perStage = new Dictionary<int, int>();
         foreach (var (piece, _, _) in pieces)
             perStage[piece.Stage] = perStage.GetValueOrDefault(piece.Stage) + 1;
@@ -165,6 +172,7 @@ public partial class StructureView : Node3D
             }
             else if (visible) holder.Visible = true;
         }
+        if (complete) MergeWhenSettled(animate && appeared > 0);
         return appeared;
     }
 
@@ -194,6 +202,8 @@ public partial class StructureView : Node3D
         float roofTarget = hides || inside ? 1f : 0f, wallTarget = hides || inside ? 1f : 0f;
         // Solid and staying solid: nothing to do. Anything else keeps ticking, since the cut follows the camera.
         if (roofFade <= 0f && wallFade <= 0f && roofTarget <= 0f && wallTarget <= 0f) return;
+        // Pieces fade by role, so a merged building goes back to its pieces while cut away.
+        Unmerge();
         // In a little quicker than out, so leaving reads calmer.
         roofFade = Mathf.MoveToward(roofFade, roofTarget, dt * (roofTarget > roofFade ? 3.5f : 2.5f));
         wallFade = Mathf.MoveToward(wallFade, wallTarget, dt * (wallTarget > wallFade ? 3.5f : 2.5f));
@@ -250,6 +260,8 @@ public partial class StructureView : Node3D
             // clear partly and the roof only round the player.
             material.SetShaderParameter("cut_floor", role == StructureModel.PieceRole.Roof ? roofFloor : wallFloor);
         }
+        // Solid again: back to one mesh per material.
+        if (!Fading && complete) MergeWhenSettled(false);
     }
 
     ShaderMaterial SeeThroughMaterial(ShaderMaterial source, StructureModel.PieceRole role)
@@ -348,8 +360,10 @@ public partial class StructureView : Node3D
         var grime = amount > 0 ? Grime.Duplicate() as StandardMaterial3D : null;
         if (grime != null)
             grime.AlbedoColor = Colors.White.Lerp(new Color(0.55f, 0.5f, 0.45f), amount);
+        overlay = grime;
         foreach (var (_, _, mesh) in pieces)
             mesh.MaterialOverlay = grime;
+        if (merged != null) merged.MaterialOverlay = grime;
         // Sag: it settles and leans a little as it gives way.
         Scale = new Vector3(baseScale, baseScale * (1f - 0.12f * amount), baseScale);
         RotationDegrees = new Vector3(4f * amount, RotationDegrees.Y, -3f * amount);

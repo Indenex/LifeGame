@@ -12,7 +12,8 @@ public sealed record PlayerFacts(
     uint Id, string Name, float Distance,
     string? Town, string[] Offices, (Glyph glyph, Color ink)? Mark,
     bool AskedYou, bool Trading, bool MayInvite, string? InviteWhyNot,
-    bool GroupAskedYou = false, string? GroupWhyNot = null);
+    bool GroupAskedYou = false, string? GroupWhyNot = null,
+    bool InYourGroup = false, bool InYourTown = false);
 
 // Right-click a player (ui-35, Justin: "make it so right clicking a person opens a menu to
 // invite them to group, trade, etc. just being near them and hitting E shouldn't do
@@ -21,6 +22,7 @@ public sealed record PlayerFacts(
 // (ui-38's group shell; Join their group while they're asking you).
 // Items you can't use now are greyed, with the reason on hover. The server checks every
 // action again (reach for trades, roster rights for invites). Esc or a click away closes it.
+// Resting the cursor on someone shows a small note with their name and status (PlayerHover, ui-72).
 public partial class PlayerMenu : CanvasLayer
 {
     // How far away a player can be and still be right-clicked.
@@ -37,6 +39,8 @@ public partial class PlayerMenu : CanvasLayer
     public Action<string> OpenChat = _ => { };
     // True while something else has the screen (a panel, placing, typing).
     public Func<bool> Blocked = () => false;
+    // True while another player stands within Reach: the moment to teach the menu (ui-75).
+    public Func<bool> SomeoneNear = () => false;
 
     public bool IsOpen => root.Visible;
 
@@ -44,7 +48,8 @@ public partial class PlayerMenu : CanvasLayer
     PanelContainer frame = null!;
     VBoxContainer column = null!;
     uint target;
-    bool inspecting;
+    bool inspecting, hinted;
+    float nearCheck;
     Vector2 at;
 
     public override void _Ready()
@@ -68,15 +73,20 @@ public partial class PlayerMenu : CanvasLayer
         style.ContentMarginLeft = style.ContentMarginRight = 10;
         style.ContentMarginTop = style.ContentMarginBottom = 8;
         root.AddChild(frame);
+        // The note that names whoever the cursor rests on (ui-72).
+        AddChild(new PlayerHover { Menu = this });
 
         // --screenshot-playermenu opens it on a pretend Mara; =inspect shows her details,
         // =far has her out of reach so Trade and Whisper are greyed.
+        // =hover leaves the menu shut and rests the cursor on her: the name note (ui-72).
         foreach (var arg in OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--screenshot-playermenu")))
         {
             string how = arg.Split('=').ElementAtOrDefault(1) ?? "";
             Facts = _ => new PlayerFacts(7, "Mara Thistledown", how == "far" ? 6.5f : 2.2f, "Fernhill", new[] { "Mayor" },
                 Marks.Find(1) is { } g ? (g, new Color(0.36f, 0.45f, 0.62f)) : null,
-                AskedYou: false, Trading: false, MayInvite: false, InviteWhyNot: "Mara is already on a town roster");
+                AskedYou: how == "hover", Trading: false, MayInvite: false, InviteWhyNot: "Mara is already on a town roster",
+                InYourTown: how == "hover");
+            if (how == "hover") { PlayerAt = _ => 7; continue; }
             GetTree().CreateTimer(1.5).Timeout += () =>
             {
                 Open(7, GetViewport().GetVisibleRect().Size * new Vector2(0.55f, 0.4f));
@@ -99,6 +109,8 @@ public partial class PlayerMenu : CanvasLayer
         at = point;
         inspecting = false;
         if (Facts(id) == null) { Close(); return; }
+        // Found it on their own: the hint is never taught after the fact.
+        Hints.Done("player_menu");
         root.Visible = true;
         Fill();
     }
@@ -118,6 +130,13 @@ public partial class PlayerMenu : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // The first time someone comes near, the corner hint teaches the right click (shown once
+        // per install, and never if the menu was already found).
+        if (!hinted && (nearCheck -= (float)delta) <= 0f)
+        {
+            nearCheck = 1f;
+            if (!Blocked() && SomeoneNear()) { Hints.Request("player_menu"); hinted = true; }
+        }
         if (!IsOpen) return;
         // Walking well away, the player leaving, or another panel opening closes it.
         if (Facts(target) is not { } f || f.Distance > Reach + 2f || Blocked()) Close();
@@ -260,7 +279,9 @@ public static class PlayerMenuFacts
             AskedYou: incomingTradeFrom == them, Trading: conn.Db.MyTrade.Count > 0,
             MayInvite: mayInvite, InviteWhyNot: whyNot,
             GroupAskedYou: conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == them && i.InviteeId == me),
-            GroupWhyNot: GroupWhyNot(conn, me, them, p.Name, d));
+            GroupWhyNot: GroupWhyNot(conn, me, them, p.Name, d),
+            InYourGroup: conn.Db.MyGroup.Iter().Any(m => m.PlayerId == them),
+            InYourTown: mySigner != null && theirSigner?.TownId == mySigner.TownId);
     }
 
     // Why you can't invite them to your group now, or null when you can (the server checks again).

@@ -5,15 +5,22 @@
 // bench, lights a fire beside them,
 // fires one while still damp (it must crack), lets the other dry, fires it, picks
 // the fired pot up and fills it with water. Then it crushes the sherds into grog
-// and tempers more clay with it. Takes about ten real minutes, because drying and
-// firing take real time. Exits non-zero on the first failure.
+// and tempers more clay with it. Exits non-zero on the first failure.
+// The plain run sets the server's test speed-up (set_test_speed, admin-only, 1 in every
+// player's world) to 60 through spacetimedb-cli as the database owner, so drying,
+// firing and crafting take seconds instead of minutes. --speed=N picks another factor
+// (1 for real times); the other modes keep real times unless given --speed.
+// The plain run also starts with its materials in hand (Justin, 2026-10-17): the bot is made an
+// admin through the CLI and given the stone, sticks, fiber, clay and log a new player would gather,
+// so it goes straight to the claim and bench. --full keeps the fresh-character path.
 //
-// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame]
+// Usage: dotnet run -- [uri=http://127.0.0.1:3000] [db=lifegame] [--speed=60]
 //        dotnet run -- <uri> <db> --token=path --goto=x,z   (walk that player somewhere and stop)
 //        dotnet run -- <uri> <db> --kiln   (instead: bricks and daub, build an updraft kiln blueprint, load and fire it;
 //        about 12 minutes; needs the Kiln structure kind from Building and Claims on main)
 //        dotnet run -- <uri> <db> --kiln --jar   (the kiln run plus a storage jar: a campfire refuses it,
 //        the kiln fires it, it is set down from the build menu and stores a stack; ceramics-6)
+//        dotnet run -- <uri> <db> --full   (the plain run from a fresh character: gathers, digs and chops for itself)
 //        dotnet run -- <uri> <db> --pot   (instead: a coil pot fired in a campfire and filled, berries
 //        picked, berry broth simmered by the fire, taken off and eaten, the pot comes back; ceramics-7)
 using System.Diagnostics;
@@ -32,6 +39,11 @@ bool lampRun = args.Contains("--lamp");
 bool tileRun = args.Contains("--tile");
 bool tallowRun = Environment.GetEnvironmentVariable("CLAYCHECK_TALLOW") == "1";
 bool kilnRun = jarRun || args.Contains("--kiln");
+bool plainRun = !(potRun || lampRun || tileRun || kilnRun || tokenPath != null || goTo != null);
+float speed = float.Parse(args.FirstOrDefault(a => a.StartsWith("--speed="))?[8..] ?? (plainRun ? "60" : "1"),
+    System.Globalization.CultureInfo.InvariantCulture);
+if (speed != 1f) OwnerCall("set_test_speed", speed.ToString(System.Globalization.CultureInfo.InvariantCulture));
+bool kit = plainRun && !args.Contains("--full");
 
 Identity? me = null;
 Fire fire = null!;
@@ -72,6 +84,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                "SELECT * FROM my_admin",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"));
@@ -114,15 +127,16 @@ Log($"Clay at {clayX}, {clayZ}; water at {waterX}, {waterZ}");
 // Stones: a hammer that is never used up, one for the hand axe, two for the
 // potter's bench and up to two for grit. Sticks and fiber: also the axe's haft and
 // cordage, and the claim marker.
+if (kit) GiveKit();
 Gather(Item.Stone, jarRun ? 14u : 6u);
 Gather(Item.Stick, 10 + 1 + Social.MarkerSticks);
 Gather(Item.Fiber, (kilnRun ? 12u : 4u) + 3 + Social.MarkerFiber);
 Log("STAGE gathered-stone-stick-fiber");
 
 // Dig: every dig in a clay patch gives a lump of clay.
-WalkTo(clayX, clayZ, 1.2f);
 int cell = 0;
 uint clayWanted = jarRun ? 70u : kilnRun ? 38u : potRun ? 17u : lampRun ? (tallowRun ? 12u : 4u) : 12u;
+if (CountOf(Item.Clay) < clayWanted) WalkTo(clayX, clayZ, 1.2f);
 while (CountOf(Item.Clay) < clayWanted)
 {
     int cx = clayX + cell % 5 - 2, cz = clayZ + cell / 5 % 5 - 2;
@@ -160,23 +174,26 @@ Craft("clay.temper_grit", 0, Item.TemperedClay);
 if (CountOf(Item.TemperedClay) != 4) Fail($"expected 4 tempered clay, have {CountOf(Item.TemperedClay)}");
 Log("STAGE clay-tempered");
 
-// Shape two pinch pots at the bench; they are set down beside it, on our side.
-AtBench();
-int piecesBefore = conn.Db.ClayPiece.Count;
-Craft("clay.pinch_pot", 0.9f, null);
-Craft("clay.pinch_pot", 0.9f, null);
-Pump(() => conn.Db.ClayPiece.Count >= piecesBefore + 2, 5, "two pots set down to dry");
-var pots = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).ToList();
-var damp = pots[0];
-var good = pots[1];
-
-// A fire right beside the wet pots, off the bench, fed well enough for a firing.
-LightFireNear(pots.Average(p => p.X) + 1.3f, pots.Average(p => p.Z));
+// A fire beside the bench, off it, where the pots will be set down (just south of the
+// bench, on our side). It goes in first: sped up, a wet pot dries in seconds, so the
+// damp one is shaped and fired straight away.
+LightFireNear(bench.X + 1.3f, bench.Z + 1.3f);
 Log($"Fire at {fire.X:F1}, {fire.Z:F1}");
-Log("STAGE pots-shaped-and-fire-lit");
 KeepFireGoing();
-Log($"Two wet pots at {damp.X:F1},{damp.Z:F1} and {good.X:F1},{good.Z:F1}; rate {good.DryRate * 480:F2}x");
-if (DistanceTo(good.X, good.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
+
+// Shape a pinch pot at the bench; it is set down beside it, on our side.
+ClayPiece ShapePot()
+{
+    AtBench();
+    int piecesBefore = conn.Db.ClayPiece.Count;
+    Craft("clay.pinch_pot", 0.9f, null);
+    Pump(() => conn.Db.ClayPiece.Count > piecesBefore, 5, "a pot set down to dry");
+    var pot = conn.Db.ClayPiece.Iter().Where(p => p.MadeBy == myId).OrderBy(p => p.Id).Last();
+    if (DistanceTo(pot.X, pot.Z, fire.X, fire.Z) > ClayRules.FireReach) Fail("pot set down out of the fire's reach");
+    return pot;
+}
+var damp = ShapePot();
+Log($"Wet pot at {damp.X:F1},{damp.Z:F1}; rate {damp.DryRate * ClayRules.BaseDrySeconds:F2}x");
 
 // Firing a damp pot is refused without confirmation, then cracks.
 WalkTo(damp.X, damp.Z, 1.2f);
@@ -188,6 +205,8 @@ lastError = null;
 conn.Reducers.TendClay(damp.Id, true);
 Pump(() => lastError != null || conn.Db.ClayPiece.Id.Find(damp.Id)?.Stage == (byte)ClayStage.Firing, 3, "the damp pot to go in the fire");
 if (lastError != null) Fail($"firing damp pot: {lastError}");
+var good = ShapePot();
+Log("STAGE pots-shaped-and-fire-lit");
 Log("STAGE wet-pots-and-damp-firing");
 
 // Wait for the other pot to dry, keeping the fire going.
@@ -931,7 +950,7 @@ int PotCheck()
     {
         if (watch.Elapsed > TimeSpan.FromMinutes(3)) Fail("could not pick 3 berries");
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now)
+        var bush = conn.Db.ForageBush.Iter().Where(b => b.RipeAt.MicrosecondsSinceUnixEpoch <= now && Forages.Of(b.Kind, b.Id).Yield == Item.Berries)
             .OrderBy(b => DistanceTo(b.X, b.Z, x, z)).FirstOrDefault();
         if (bush == null) { Pump(() => false, 2, null); continue; }
         WalkTo(bush.X, bush.Z, 1.5f);
@@ -1046,13 +1065,17 @@ void JarCheck(Structure kiln)
 // A stone axe, one log, a claim past the spawn clearing and a potter's bench in it.
 void SetUpBench()
 {
-    Craft("knap.hand_axe", 0.95f, Item.HandAxe);
-    Craft("cord.twist", 0, Item.Cordage);
-    Craft("lash.stone_axe", 0, Item.StoneAxe);
-    var (treeX, treeZ) = NearestTree();
-    var trunk = Trees.Trunk(treeX, treeZ);
-    WalkTo(trunk.X, trunk.Z, 1.2f);
-    Craft("chop.log", 0, Item.Log);
+    // A kit run already holds its log.
+    if (CountOf(Item.Log) < 1)
+    {
+        Craft("knap.hand_axe", 0.95f, Item.HandAxe);
+        Craft("cord.twist", 0, Item.Cordage);
+        Craft("lash.stone_axe", 0, Item.StoneAxe);
+        var (treeX, treeZ) = NearestTree();
+        var trunk = Trees.Trunk(treeX, treeZ);
+        WalkTo(trunk.X, trunk.Z, 1.2f);
+        Craft("chop.log", 0, Item.Log);
+    }
     Log("STAGE axe-and-log");
 
     // Claims stay out of the spawn clearing: walk out past it, away from the origin.
@@ -1212,7 +1235,7 @@ void KeepFireGoing()
 {
     var f = conn.Db.Fire.Id.Find(fire.Id) ?? throw new Exception("fire went out");
     double left = (f.FuelUntil.MicrosecondsSinceUnixEpoch - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000) / 1e6;
-    while (left < ClayRules.PitFireSeconds + 30)
+    while (left < ClayRules.PitFireSeconds / speed + 30)
     {
         if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 4);
         WalkTo(fire.X, fire.Z, 1.2f);
@@ -1316,6 +1339,42 @@ void Pump(Func<bool> until, float seconds, string? what)
         conn.FrameTick();
         Thread.Sleep(10);
     }
+}
+
+// The materials a new player gathers before the bench, given as an admin (the kit run).
+void GiveKit()
+{
+    string name = "Clay" + new string(Enumerable.Range(0, 8).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
+    conn.Reducers.SetName(name);
+    Pump(() => conn.Db.Player.PlayerId.Find(myId)?.Name == name, 10, "the name to be set");
+    OwnerCall("make_admin", $"\"{name}\"");
+    Pump(() => conn.Db.MyAdmin.Iter().Any(), 15, "the bot to become an admin");
+    foreach (var (item, count) in new[] { (Item.Stone, 6u), (Item.Stick, 11u + Social.MarkerSticks), (Item.Fiber, 7u + Social.MarkerFiber), (Item.Clay, 12u), (Item.Log, 1u) })
+    {
+        uint before = CountOf(item);
+        lastError = null;
+        conn.Reducers.AdminGive((ushort)item, count, 50);
+        Pump(() => lastError != null || CountOf(item) >= before + count, 10, $"{item} to be given");
+        if (lastError != null) Fail($"giving {item}: {lastError}");
+    }
+    Log("Started with a kit: stone, sticks, fiber, clay and a log");
+}
+
+// A test-only reducer called as the database owner through the CLI (the bot is not the
+// owner). Runs from the temp folder: inside server/ the CLI reads spacetime.json.
+void OwnerCall(string reducer, string arg)
+{
+    var info = new ProcessStartInfo("spacetimedb-cli", new[] { "call", "--no-config", "--server", uri, db, reducer, arg })
+    {
+        WorkingDirectory = Path.GetTempPath(),
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+    };
+    using var p = Process.Start(info) ?? throw new Exception("could not start spacetimedb-cli");
+    string output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+    p.WaitForExit();
+    if (p.ExitCode != 0) Fail($"{reducer} {arg}: {output}");
+    Log($"{reducer} {arg}");
 }
 
 static void Log(string message)

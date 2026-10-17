@@ -287,6 +287,26 @@ namespace LifeGame.Shared
             return MathF.Abs(lx) <= shape.HalfWidth + margin && MathF.Abs(lz) <= shape.HalfDepth + margin;
         }
 
+        // Whether a spot is under cover (building-25, from playtest 5): well inside the
+        // footprint, except a lean-to, whose roof reaches out to its open front and
+        // stops short of the low back. Server and client both use this.
+        public static bool Shelters(int kind, float sx, float sz, float yaw, float px, float pz)
+        {
+            var shape = Shape(kind);
+            if (shape.Model != "LeanTo") return Contains(kind, sx, sz, yaw, px, pz, -0.2f);
+            var (lx, lz) = ToLocal(sx, sz, yaw, px, pz);
+            return MathF.Abs(lx) <= shape.HalfWidth - 0.2f && lz >= -shape.HalfDepth + 0.3f && lz <= shape.HalfDepth;
+        }
+
+        // Why a footprint can't go over a fire, or null (building-25, from playtest 5). A home
+        // may be built around one well inside its walls, as its hearth, and a hearth goes under one.
+        public static string? FireProblem(int kind, float sx, float sz, float yaw, float fx, float fz)
+        {
+            if (IsIndoor(kind) || !Contains(kind, sx, sz, yaw, fx, fz, 0.4f)) return null;
+            if (HasDoorway(kind) && !IsGate(kind) && Contains(kind, sx, sz, yaw, fx, fz, -1.0f)) return null;
+            return "Too close to a fire";
+        }
+
         // The two ends of a fence in world space.
         public static ((float x, float z) a, (float x, float z) b) FenceEnds(float sx, float sz, float yaw) =>
             (ToWorld(sx, sz, yaw, -FenceHalfLength, 0f), ToWorld(sx, sz, yaw, FenceHalfLength, 0f));

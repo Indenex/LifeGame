@@ -34,6 +34,22 @@ namespace LifeGame.Shared
         public const int HazelnutsPerPick = 3, HazelEvery = 3;
         public static bool IsHazelBush(ulong bushId) => bushId % HazelEvery == 0;
         public static bool HazelnutsRipe(Season season) => season == Season.Autumn;
+        // Mushrooms (survival-35, a lane default): a nibble like a hazelnut, a little more
+        // water; they come back slower than berries. Placed in shade near trees, about
+        // MushroomsPerChunk patches to a chunk.
+        public const float MushroomFood = 0.07f;
+        public const float MushroomWater = 0.01f;
+        public const long MushroomRegrowMicros = 12L * 60 * 1_000_000;
+        public const int MushroomsPerChunk = 1;
+        // Wild roots (survival-36, a lane default): open meadow, dug with a digging tool, the
+        // one wild food that lasts through winter. A bit more filling than a mushroom for
+        // the tool and the effort; a dug patch comes back slowly.
+        public const float RootFood = 0.09f;
+        public const float RootWater = 0.01f;
+        public const long RootRegrowMicros = 20L * 60 * 1_000_000;
+        public const int RootsPerChunk = 1;
+        // No standing tree within this many cells of a root patch: roots want open ground.
+        public const int RootOpenRadius = 3;
         // Mutton (Justin, D-039): roast fills 40% of hunger. Burnt is a default of
         // ours; raw is not eaten for now.
         public const float RoastMuttonFood = 0.4f;
@@ -101,9 +117,12 @@ namespace LifeGame.Shared
         // Ripe berries grow back this long after a bush is picked.
         public const long BushRegrowMicros = 8L * 60 * 1_000_000;
         public const int BushesPerChunk = 2;
-        // How close you must stand to pick a bush. The client offers it a little
-        // inside this so a picking never gets refused for being a step too far.
+        // How close you must stand to pick a bush, measured to its leafy edge (its
+        // center less BushRadius), so the prompt shows when you look like you touch
+        // it. The client offers it a little inside this so a picking never gets
+        // refused for being a step too far.
         public const float BushReach = 2.5f;
+        public const float BushRadius = 0.6f;
         // The process id picking berries reports, so it trains Foraging. Not a crafting
         // recipe, so it lives here rather than in Processes.List (like ClayRules.FillProcess).
         public const string ForageProcess = "gather.berries";
@@ -113,6 +132,10 @@ namespace LifeGame.Shared
 
         // Below this a need is worth warning about.
         public const float Low = 0.25f;
+
+        // After dying you wake where no tree stands within this many cells, if such
+        // a spot exists near the edge of the starting area (D-081: death is mild).
+        public const int WakeOpenRadius = 4;
 
         // What eating one of an item gives: (food, water). Zero for anything inedible.
         public static (float food, float water) Nourishment(Item item) =>

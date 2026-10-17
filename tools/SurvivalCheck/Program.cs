@@ -139,11 +139,39 @@ Settle(200);
 if (MathF.Abs((V().Food - foodH) - Needs.HazelnutFood) > 0.01f)
     Fail($"a hazelnut gave {V().Food - foodH:F3} food, expected {Needs.HazelnutFood:F3}");
 Ok($"a hazelnut gives {Needs.HazelnutFood:P0} food (from Foods)");
-var allBushes = conn.Db.ForageBush.Iter().ToList();
+var allBushes = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.BerryBushKind).ToList();
 int hazels = allBushes.Count(b => Needs.IsHazelBush(b.Id));
 if (allBushes.Count < 6 || hazels * 5 < allBushes.Count || hazels * 2 > allBushes.Count)
     Fail($"{hazels} of {allBushes.Count} bushes are hazel; expected about a third");
 Ok($"{hazels} of {allBushes.Count} bushes are hazel, the rest bear berries");
+
+// --- Mushrooms (survival-35): patches in the shade beside trees, and they feed like the data says ---
+var patches = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.MushroomKind).ToList();
+if (patches.Count < allBushes.Count / 4) Fail($"only {patches.Count} mushroom patches for {allBushes.Count} bushes");
+foreach (var m in patches)
+{
+    int mx = World.CellOf(m.X), mz = World.CellOf(m.Z);
+    if (Trees.GrowsAt(mx, mz)) Fail($"a mushroom patch at ({m.X:F1}, {m.Z:F1}) sits on a tree");
+    bool shade = false;
+    for (int dx = -3; dx <= 3 && !shade; dx++)
+        for (int dz = -3; dz <= 3 && !shade; dz++)
+            shade = dx * dx + dz * dz <= 9 && Trees.GrowsAt(mx + dx, mz + dz);
+    if (!shade) Fail($"a mushroom patch at ({m.X:F1}, {m.Z:F1}) has no tree within 3 m");
+}
+Ok($"{patches.Count} mushroom patches, each beside a tree");
+
+// --- Wild roots (survival-36): patches in open meadow, no tree close by ---
+var roots = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.RootKind).ToList();
+if (roots.Count < allBushes.Count / 4) Fail($"only {roots.Count} root patches for {allBushes.Count} bushes");
+foreach (var rp in roots)
+{
+    int rx = World.CellOf(rp.X), rz = World.CellOf(rp.Z), o = Needs.RootOpenRadius;
+    for (int dx = -o; dx <= o; dx++)
+        for (int dz = -o; dz <= o; dz++)
+            if (dx * dx + dz * dz <= o * o && Trees.GrowsAt(rx + dx, rz + dz))
+                Fail($"a root patch at ({rp.X:F1}, {rp.Z:F1}) has a tree within {o} m");
+}
+Ok($"{roots.Count} root patches, each in the open");
 
 // --- Stew: a good meal, the pot comes back at its quality ---
 Give(Item.PotOfStew, 77);
@@ -288,6 +316,39 @@ honest += PaceFor(0.56f, 5);
 float wanted = fresh * 2 * 0.9f;
 if (honest < wanted) Fail($"an honest run, rest, run was slowed: {honest:F1} m, expected at least {wanted:F1} m");
 Ok($"an honest run and rest pattern is never slowed ({honest:F1} m)");
+
+// --- Waking after a death with no waking place: the rim of the starting area, under open sky ---
+// A fresh world has no felled trees, so the shared tree rule says where trees stand.
+long diedBefore = V().DiedAt.MicrosecondsSinceUnixEpoch;
+conn.Reducers.AdminDie();
+Pump(() => V().DiedAt.MicrosecondsSinceUnixEpoch != diedBefore, 10, "the bot to die and wake");
+if (V().WakeKind != RestSpots.WokeAtEdge) Fail($"with no waking place the bot should wake at the edge, woke as {V().WakeKind}");
+var woke = conn.Db.PlayerPos.PlayerId.Find(myId)!;
+int wcx = World.CellOf(woke.X), wcz = World.CellOf(woke.Z), near = 0;
+for (int dx = -Needs.WakeOpenRadius; dx <= Needs.WakeOpenRadius; dx++)
+    for (int dz = -Needs.WakeOpenRadius; dz <= Needs.WakeOpenRadius; dz++)
+        if (dx * dx + dz * dz <= Needs.WakeOpenRadius * Needs.WakeOpenRadius && Trees.GrowsAt(wcx + dx, wcz + dz)) near++;
+if (near > 0) Fail($"woke at ({woke.X:F1}, {woke.Z:F1}) with {near} trees within {Needs.WakeOpenRadius} m");
+Ok($"woke in the open at ({woke.X:F1}, {woke.Z:F1}), no tree within {Needs.WakeOpenRadius} m");
+
+// A mushroom feeds like the data says (survival-35); checked here, where waking left room to eat.
+Give(Item.Mushrooms);
+float foodM = V().Food;
+conn.Reducers.Eat((ushort)Item.Mushrooms);
+Pump(() => CountOf(Item.Mushrooms) == 0, 5, "the mushroom to be eaten");
+Settle(200);
+if (MathF.Abs((V().Food - foodM) - Needs.MushroomFood) > 0.01f)
+    Fail($"a mushroom gave {V().Food - foodM:F3} food, expected {Needs.MushroomFood:F3}");
+Ok($"a mushroom gives {Needs.MushroomFood:P0} food (from Foods)");
+
+Give(Item.WildRoots);
+float foodR = V().Food;
+conn.Reducers.Eat((ushort)Item.WildRoots);
+Pump(() => CountOf(Item.WildRoots) == 0, 5, "the root to be eaten");
+Settle(200);
+if (MathF.Abs((V().Food - foodR) - Needs.RootFood) > 0.01f)
+    Fail($"a wild root gave {V().Food - foodR:F3} food, expected {Needs.RootFood:F3}");
+Ok($"a wild root gives {Needs.RootFood:P0} food (from Foods)");
 
 Console.WriteLine("Survival check passed");
 conn.Disconnect();

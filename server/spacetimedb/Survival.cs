@@ -62,6 +62,11 @@ public static partial class Module
         // How you woke after your last death (RestSpots.WokeAtEdge / WokeAtRestSpot / WokeBedGone), for the wake-up message.
         [Default((byte)0)]
         public byte WakeKind;
+        // Where the player last died, so their client can point back to what they dropped (survival-33).
+        [Default(0f)]
+        public float DiedX;
+        [Default(0f)]
+        public float DiedZ;
     }
 
     // How wet each player looks, from 0 (dry) to 10 (soaked), so everyone nearby
@@ -92,6 +97,9 @@ public static partial class Module
         public int ChunkX;
         public int ChunkZ;
         public Timestamp RipeAt;
+        // What grows here (Forages: 0 berry or hazel bush, 1 mushrooms; survival-35).
+        [Default((byte)0)]
+        public byte Kind;
     }
 
     [SpacetimeDB.Table(Accessor = "SurvivalTimer", Scheduled = nameof(SurvivalTick), ScheduledAt = nameof(ScheduledAt))]
@@ -253,20 +261,28 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var bush = ctx.Db.ForageBush.Id.Find(bushId) ?? throw new Exception("That bush is gone");
         var pos = RequirePos(ctx, player);
-        float dx = bush.X - pos.X, dz = bush.Z - pos.Z;
-        if (dx * dx + dz * dz > Needs.BushReach * Needs.BushReach)
+        var def = Forages.Of(bush.Kind, bush.Id);
+        float dx = bush.X - pos.X, dz = bush.Z - pos.Z, reach = Needs.BushReach + def.Radius;
+        if (dx * dx + dz * dz > reach * reach)
             throw new Exception("Out of reach");
-        bool hazel = Needs.IsHazelBush(bush.Id);
-        if (hazel && !Needs.HazelnutsRipe(SeasonNow(ctx).Season))
-            throw new Exception("The hazelnuts are not ripe until autumn");
+        if (!def.InSeason(SeasonNow(ctx).Season))
+            throw new Exception(def.OutOfSeason);
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
-            throw new Exception(hazel ? "No ripe hazelnuts yet" : "No ripe berries yet");
+            throw new Exception(def.NotReady);
+        InventoryItem? tool = null;
+        if (def.Tool != 0 && (tool = EquippedTool(ctx, def.Tool)) == null)
+            throw new Exception(def.NoTool);
         var state = RequireCooldown(ctx, player);
 
-        var yield = hazel ? Item.Hazelnuts : Item.Berries;
-        ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
-        AddToInventory(ctx, Me(ctx), yield, hazel ? (uint)Needs.HazelnutsPerPick : 3, Items.RawQuality);
-        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
+        var yield = def.Yield;
+        ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, def.RegrowMicros) });
+        AddToInventory(ctx, Me(ctx), yield, def.PerPick, Items.RawQuality);
+        if (tool is { } digger)
+        {
+            WearTool(ctx, digger);
+            NoteAct(ctx, player.PlayerId, WorkMotion.Dig, (Item)digger.Item);
+        }
+        else NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -392,22 +408,56 @@ public static partial class Module
             WokeX = sx,
             WokeZ = sz,
             WakeKind = wakeKind,
+            DiedX = pos.X,
+            DiedZ = pos.Z,
         }, spawn, online: true));
         Log.Info($"{player.Name} died of {cause}");
     }
 
-    // A dry spot on the rim of the seeded area, at a random bearing.
+    // Where a player wakes after dying: near the rim of the seeded area at a random
+    // bearing, on dry ground in the open, so they wake under sky rather than deep in
+    // the trees. Tries 4 rings x 24 bearings; the first spot with no standing tree
+    // within Needs.WakeOpenRadius wins, else the least crowded.
     static (float, float) WildernessEdge(ReducerContext ctx)
     {
-        float rim = World.SpawnRadiusChunks * World.ChunkSize * World.CellSize - 6f;
+        float edge = World.SpawnRadiusChunks * World.ChunkSize * World.CellSize - 6f;
         float start = (float)(ctx.Rng.NextDouble() * Math.PI * 2);
-        for (int i = 0; i < 24; i++)
+        (float, float)? best = null;
+        float bestCrowding = float.MaxValue;
+        for (int ring = 0; ring < 4; ring++)
         {
-            float angle = start + i * MathF.PI * 2f / 24f;
-            float x = MathF.Cos(angle) * rim, z = MathF.Sin(angle) * rim;
-            if (IsDry(x, z)) return (x, z);
+            float rim = edge - ring * 4f;
+            for (int i = 0; i < 24; i++)
+            {
+                float angle = start + i * MathF.PI * 2f / 24f;
+                float x = MathF.Cos(angle) * rim, z = MathF.Sin(angle) * rim;
+                if (!IsDry(x, z)) continue;
+                float crowding = TreeCrowding(ctx, x, z, Needs.WakeOpenRadius);
+                if (crowding == 0f) return (x, z);
+                if (crowding < bestCrowding)
+                {
+                    bestCrowding = crowding;
+                    best = (x, z);
+                }
+            }
         }
-        return FindDry(0, 0);
+        return best ?? FindDry(0, 0);
+    }
+
+    // How crowded by standing trees a spot is: trees within radius cells, nearer
+    // ones counting more. 0 means open sky. Felled trees don't count.
+    static float TreeCrowding(ReducerContext ctx, float wx, float wz, int radius)
+    {
+        int cx = World.CellOf(wx), cz = World.CellOf(wz);
+        float sum = 0f;
+        for (int dx = -radius; dx <= radius; dx++)
+            for (int dz = -radius; dz <= radius; dz++)
+            {
+                float d = MathF.Sqrt(dx * dx + dz * dz);
+                if (d > radius || !Trees.GrowsAt(cx + dx, cz + dz) || !TreeStands(ctx, cx + dx, cz + dz)) continue;
+                sum += 1f + (radius - d);
+            }
+        return sum;
     }
 
     // --- Needs math --------------------------------------------------------
@@ -611,6 +661,86 @@ public static partial class Module
                         });
                     }
         }
+
+        // Mushrooms came later (survival-35), so a world seeded before them gets its patches now.
+        bool hasMushrooms = false;
+        foreach (var b in ctx.Db.ForageBush.Iter())
+            if (b.Kind == Forages.MushroomKind) { hasMushrooms = true; break; }
+        if (!hasMushrooms) SeedMushrooms(ctx);
+
+        // Roots came later still (survival-36).
+        bool hasRoots = false;
+        foreach (var b in ctx.Db.ForageBush.Iter())
+            if (b.Kind == Forages.RootKind) { hasRoots = true; break; }
+        if (!hasRoots) SeedRoots(ctx);
+    }
+
+    // A root patch per chunk in open meadow: the first of a handful of random tries that
+    // lands on dry ground with no standing tree within Needs.RootOpenRadius cells.
+    static void SeedRoots(ReducerContext ctx)
+    {
+        int r = World.SpawnRadiusChunks;
+        float span = World.ChunkSize * World.CellSize;
+        for (int cx = -r; cx < r; cx++)
+            for (int cz = -r; cz < r; cz++)
+                for (int i = 0; i < Needs.RootsPerChunk; i++)
+                    for (int attempt = 0; attempt < 12; attempt++)
+                    {
+                        float x = (cx + (float)ctx.Rng.NextDouble()) * span;
+                        float z = (cz + (float)ctx.Rng.NextDouble()) * span;
+                        if (!IsDry(x, z) || TreeCrowding(ctx, x, z, Needs.RootOpenRadius) > 0) continue;
+                        ctx.Db.ForageBush.Insert(new ForageBush
+                        {
+                            Id = 0,
+                            X = x,
+                            Z = z,
+                            ChunkX = World.ChunkOf(x),
+                            ChunkZ = World.ChunkOf(z),
+                            RipeAt = ctx.Timestamp,
+                            Kind = Forages.RootKind,
+                        });
+                        break;
+                    }
+    }
+
+    // A few mushroom patches per chunk, each in the shade beside a tree: the first of
+    // a handful of random tries that lands on dry ground with a standing tree within
+    // 1 to 3 cells but none on the spot itself.
+    static void SeedMushrooms(ReducerContext ctx)
+    {
+        int r = World.SpawnRadiusChunks;
+        float span = World.ChunkSize * World.CellSize;
+        for (int cx = -r; cx < r; cx++)
+            for (int cz = -r; cz < r; cz++)
+                for (int i = 0; i < Needs.MushroomsPerChunk; i++)
+                    for (int attempt = 0; attempt < 12; attempt++)
+                    {
+                        float x = (cx + (float)ctx.Rng.NextDouble()) * span;
+                        float z = (cz + (float)ctx.Rng.NextDouble()) * span;
+                        if (!IsDry(x, z) || !InTreeShade(ctx, x, z)) continue;
+                        ctx.Db.ForageBush.Insert(new ForageBush
+                        {
+                            Id = 0,
+                            X = x,
+                            Z = z,
+                            ChunkX = World.ChunkOf(x),
+                            ChunkZ = World.ChunkOf(z),
+                            RipeAt = ctx.Timestamp,
+                            Kind = Forages.MushroomKind,
+                        });
+                        break;
+                    }
+    }
+
+    static bool InTreeShade(ReducerContext ctx, float wx, float wz)
+    {
+        int cx = World.CellOf(wx), cz = World.CellOf(wz);
+        if (Trees.GrowsAt(cx, cz)) return false;
+        for (int dx = -3; dx <= 3; dx++)
+            for (int dz = -3; dz <= 3; dz++)
+                if (dx * dx + dz * dz <= 9 && Trees.GrowsAt(cx + dx, cz + dz) && TreeStands(ctx, cx + dx, cz + dz))
+                    return true;
+        return false;
     }
 
     static Timestamp Later(ReducerContext ctx, long micros) =>

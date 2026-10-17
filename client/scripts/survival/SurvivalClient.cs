@@ -16,7 +16,10 @@ public partial class SurvivalClient : Node
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
     readonly RestSpotView restSpots = new();
-    readonly Dictionary<ulong, BerryBush> bushes = new();
+    readonly DeathMarker deathMarker = new();
+    // Whether the death card says which way your things lie; Justin picked line and light (2026-10-17).
+    const bool DeathCardDirection = true;
+    readonly Dictionary<ulong, Node3D> bushes = new();
 
     Node world = null!;
     Terrain terrain = null!;
@@ -28,7 +31,8 @@ public partial class SurvivalClient : Node
     DbConnection? conn;
     Vitals? vitals;
     uint deathsSeen = uint.MaxValue;
-    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened;
+    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened, wasInWater;
+    long coldWaterNotedAt;
     float ripenTimer;
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
@@ -67,6 +71,24 @@ public partial class SurvivalClient : Node
         this.hud = hud;
         wetLook = WetLook.On(player);
         restSpots.Setup(world, terrain, player, hud);
+        world.AddChild(deathMarker);
+        // --death-preview=SECONDS shows the death card and marker that long after start,
+        // as if you had just died 13 m to the northwest. For screenshots only.
+        var preview = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--death-preview="));
+        if (preview != null && float.TryParse(preview["--death-preview=".Length..], out var at))
+        {
+            var timer = new Timer { WaitTime = at, OneShot = true, Autostart = true };
+            AddChild(timer);
+            timer.Timeout += () =>
+            {
+                var p = player.Position;
+                var fell = new Vector3(p.X - 8f, terrain.HeightAt(p.X - 8f, p.Z - 10f), p.Z - 10f);
+                needsHud.ShowDeath("cold", RestSpots.WokeAtEdge, DeathMarker.Direction(new Vector2(p.X, p.Z), new Vector2(fell.X, fell.Z)));
+                deathMarker.Show(fell, player);
+            };
+        }
+        // Picked mushrooms on the ground, in the hand and as the icon: Modeling's pile (model-34).
+        ItemModels.MushroomItem = Item.Mushrooms;
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -88,7 +110,8 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                && Forages.Of(bush.Kind, bush.Id) is var def
+                ? new UseOffer(def.Prompt, Mathf.Max(0f, new Vector2(bush.X - at.X, bush.Z - at.Z).Length() - def.Radius), () => conn.Reducers.Forage(bush.Id),
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
@@ -120,7 +143,7 @@ public partial class SurvivalClient : Node
         conn.Db.MyVitals.OnUpdate += (_, _, v) => OnVitals(v);
         conn.Db.Drenched.OnDelete += (_, d) => { if (AvatarOf(d.PlayerId) is { } a && a.GetNodeOrNull<WetLook>(nameof(WetLook)) is { } w) w.Wetness = 0f; };
         conn.Db.ForageBush.OnInsert += (_, b) => AddBush(b);
-        conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) n.Ripe = IsRipe(b); };
+        conn.Db.ForageBush.OnUpdate += (_, _, b) => { if (bushes.TryGetValue(b.Id, out var n)) SetRipe(n, IsRipe(b)); };
         conn.Db.ForageBush.OnDelete += (_, b) => RemoveNode(bushes, b.Id);
     }
 
@@ -149,13 +172,24 @@ public partial class SurvivalClient : Node
         vitals = v;
         if (deathsSeen != uint.MaxValue && v.Deaths > deathsSeen)
         {
-            needsHud.ShowDeath(v.LastDeath, v.WakeKind);
+            // Point back to where your things fell: a line on the card and a faint light over the spot.
+            var fell = new Vector2(v.DiedX, v.DiedZ);
+            needsHud.ShowDeath(v.LastDeath, v.WakeKind, DeathCardDirection ? DeathMarker.Direction(new Vector2(v.WokeX, v.WokeZ), fell) : null);
+            deathMarker.Show(new Vector3(v.DiedX, terrain.HeightAt(v.DiedX, v.DiedZ), v.DiedZ), player);
             // Wake at the edge of the wilderness. Main follows the player from here.
             player.Position = new Vector3(v.WokeX, terrain.HeightAt(v.WokeX, v.WokeZ), v.WokeZ);
             warnedCold = warnedFood = warnedWater = false;
         }
         deathsSeen = v.Deaths;
         if (v.NearHeat && !wasNearHeat) hud.Note("The fire's warmth seeps into you");
+        // Cold water bites fast, so say so as you step in, well before the "freezing" warning
+        // (at most once a minute, and only while the water is chilling you).
+        if (v.Wet && !wasInWater && v.WarmthRate < 0f && NowMicros - coldWaterNotedAt > 60_000_000)
+        {
+            hud.Note("The water is bitterly cold");
+            coldWaterNotedAt = NowMicros;
+        }
+        wasInWater = v.Wet;
         wasNearHeat = v.NearHeat;
     }
 
@@ -190,7 +224,7 @@ public partial class SurvivalClient : Node
             ripenTimer = 1f;
             UpdateSeason();
             foreach (var b in conn.Db.ForageBush.Iter())
-                if (bushes.TryGetValue(b.Id, out var node)) node.Ripe = IsRipe(b);
+                if (bushes.TryGetValue(b.Id, out var node)) SetRipe(node, IsRipe(b));
         }
 
         if (!walkedThisFrame) Rest((float)delta);
@@ -336,14 +370,15 @@ public partial class SurvivalClient : Node
         if (conn == null) return null;
         var p = player.Position;
         ForageBush? best = null;
-        float bestDistance = Needs.BushReach - 0.2f;
+        float bestEdge = Needs.BushReach - 0.2f;
         foreach (var b in conn.Db.ForageBush.Iter())
         {
-            float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();
-            if (d <= bestDistance && IsRipe(b))
+            // Measured to the edge of what grows there, as the server does.
+            float edge = new Vector2(b.X - p.X, b.Z - p.Z).Length() - Forages.Of(b.Kind, b.Id).Radius;
+            if (edge <= bestEdge && IsRipe(b))
             {
                 best = b;
-                bestDistance = d;
+                bestEdge = edge;
             }
         }
         return best;
@@ -366,7 +401,7 @@ public partial class SurvivalClient : Node
         return false;
     }
 
-    // A hazel bush (survival-30) is ripe only in autumn, whatever its timer says; refreshed with the bushes.
+    // Hazels (survival-30) bear only in autumn and mushrooms never in winter, whatever their timer says; refreshed with the bushes.
     Season season = Season.Spring;
 
     void UpdateSeason()
@@ -376,16 +411,28 @@ public partial class SurvivalClient : Node
     }
 
     bool IsRipe(ForageBush b) =>
-        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && (!Needs.IsHazelBush(b.Id) || Needs.HazelnutsRipe(season));
+        NowMicros >= b.RipeAt.MicrosecondsSinceUnixEpoch && Forages.Of(b.Kind, b.Id).InSeason(season);
+
+    static void SetRipe(Node3D node, bool ripe)
+    {
+        if (node is BerryBush bush) bush.Ripe = ripe;
+        else if (node is MushroomPatch patch) patch.Ripe = ripe;
+        else if (node is RootPatch roots) roots.Ripe = ripe;
+    }
 
     // --- World objects -----------------------------------------------------
 
     void AddBush(ForageBush b)
     {
         if (bushes.ContainsKey(b.Id)) return;
-        var bush = new BerryBush(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.05f, b.Z), Ripe = IsRipe(b) };
-        bushes[b.Id] = bush;
-        world.AddChild(bush);
+        Node3D node = b.Kind == Forages.MushroomKind
+            ? new MushroomPatch(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.01f, b.Z) }
+            : b.Kind == Forages.RootKind
+            ? new RootPatch(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.01f, b.Z) }
+            : new BerryBush(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.05f, b.Z) };
+        SetRipe(node, IsRipe(b));
+        bushes[b.Id] = node;
+        world.AddChild(node);
     }
 
     static void RemoveNode<T>(Dictionary<ulong, T> nodes, ulong id) where T : Node

@@ -1,7 +1,7 @@
 # model-13: Every tree painted; no hole in the crown top
 Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
-Status: in_review
+Status: done
 Branch: claude/model-13-tree-fixes
 PR: #617
 
