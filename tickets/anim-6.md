@@ -2,8 +2,8 @@
 Lane: Animation
 Owner: Animation session (Opus), session_019roNRWQBPw4ozNLDhzseig
 Status: in_progress
-Branch: claude/anim-6 (built on claude/anim-5, #398)
-PR: (open once #398 merges)
+Branch: claude/anim-6
+PR: (opening)
 
 ## Goal
 PM 01:51 (D-145): keep busy on the new chibi base (Modeling, claude/model-6-chibi: Bramble and Pebble, 1.35 m, 2.8 heads, same 16-bone rig) and the new water movement (#414, shared/Wading.cs).
