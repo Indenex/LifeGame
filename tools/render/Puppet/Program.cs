@@ -434,7 +434,7 @@ bool Step(string line)
                 float d = MathF.Sqrt((rx - x) * (rx - x) + (rz - z) * (rz - z));
                 if (d < bd) { bd = d; best = r; }
             }
-            if (best == null) { Console.WriteLine($"puppet: no {tok} found"); break; }
+            if (best == null) { Console.WriteLine($"puppet: no {tok} found (table {table}: {(tbl == null ? "no such property" : rows == null ? "no Iter" : rows.Count + " rows")})"); break; }
             float bx = Convert.ToSingle(best.GetType().GetField("X")!.GetValue(best)), bz = Convert.ToSingle(best.GetType().GetField("Z")!.GetValue(best));
             float dd = MathF.Max(bd, 0.01f);
             if (bd > 1.0f) WalkTo(bx + (x - bx) / dd * 1.0f, bz + (z - bz) / dd * 1.0f);
