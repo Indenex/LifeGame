@@ -342,6 +342,7 @@ public partial class Atmosphere : Node3D
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
             ToolSounds.Tick(dt);
+            PotSounds.Tick(dt);
         }
     }
 

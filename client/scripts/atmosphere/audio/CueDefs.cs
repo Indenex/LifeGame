@@ -375,6 +375,29 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.22f, 0.025f, 0.11f, 1500f, 5000f, 0.003f),
     });
 
+    // --- Cooking pots (audio-19): broth and stew simmering by a fire.
+
+    // A small bubble rising and breaking: a quick blip that climbs in pitch and a faint wet tick.
+    public static readonly CueDef BubbleSmall = new("pot.bubble.small", 0.15f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.035f, 0.0144f, 380f, 820f, 0.004f),
+        new CueLayer(Src.Noise, 0f, 0.01f, 0.0048f, 1500f, 5000f, 0.002f),
+    });
+
+    // A big slow bubble of thick stew: a lower, rounder "gloop".
+    public static readonly CueDef BubbleBig = new("pot.bubble.big", 0.28f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.0192f, 200f, 480f, 0.006f),
+        new CueLayer(Src.Noise, 0.01f, 0.03f, 0.0072f, 400f, 1500f, 0.004f),
+    });
+
+    // A bubble breaking at the surface: a tiny wet pop.
+    public static readonly CueDef BubblePop = new("pot.bubble.pop", 0.12f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.01f, 0.012f, 2000f, 6000f, 0.002f),
+        new CueLayer(Src.Tone, 0f, 0.015f, 0.0048f, 900f, 600f, 0.002f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,

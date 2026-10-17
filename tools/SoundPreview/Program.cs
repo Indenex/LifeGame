@@ -220,6 +220,20 @@ foreach (var scene in scenes)
             if (At(12.5)) mix.Play(CueDefs.DirtThrow);
             if (At(14)) mix.Play(CueDefs.DigHands);
         }
+        // Pot scene: a thin broth bubbling for 5 s, then a thick stew.
+        if (parts[0] == "pot")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            var prng = new Random((int)(a * 100));
+            for (double t0 = Math.Floor(a * 20) / 20; t0 < b; t0 += 0.05)
+            {
+                if (t0 < a) continue;
+                bool stew = t0 > 6;
+                double r = (stew ? 0.9 : 1.8) * 0.05, roll = prng.NextDouble();
+                if (prng.NextDouble() >= r) continue;
+                mix.Play(stew ? (roll < 0.55 ? CueDefs.BubbleBig : roll < 0.85 ? CueDefs.BubbleSmall : CueDefs.BubblePop) : (roll < 0.6 ? CueDefs.BubbleSmall : roll < 0.9 ? CueDefs.BubblePop : CueDefs.BubbleBig));
+            }
+        }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")
         {
