@@ -83,6 +83,7 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
+var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
 float x = start.X, z = start.Z;
 
@@ -595,8 +596,10 @@ void HuntMutton()
         {
             // Short steps, so the sheep isn't startled.
             float dx = a.X - x, dz = a.Z - z, d = MathF.Sqrt(dx * dx + dz * dz);
+            float px = x, pz = z;
             x += dx / d * 0.15f;
             z += dz / d * 0.15f;
+            (x, z) = ground.Slide(px, pz, x, z);
             conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
             Pump(() => false, 0.1f, null);
             a = conn.Db.Animal.Id.Find(id);
@@ -1098,20 +1101,20 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within `near` of a spot.
 void WalkTo(float tx, float tz, float near)
 {
+    // Round trunks and boulders by a route, then straight in (bugfix-34).
+    var route = ground.Route(x, z, tx, tz);
+    for (int i = 0; i < route.Count - 1; i++) Leg(route[i].X, route[i].Z, 0.4f);
+    Leg(tx, tz, near);
+}
+
+void Leg(float tx, float tz, float near)
+{
     int lagged = 0;
-    for (int guard = 0; ; guard++)
+    while (true)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d <= near) break;
-        if (guard > 900)
-        {
-            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
-            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
-            var around = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
-                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
-            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", around)}");
-        }
-        float step = Math.Min(d - near * 0.9f, 0.5f);
+        float step = Math.Min(near < 0.5f ? d : d - near * 0.9f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
         var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
@@ -1124,8 +1127,10 @@ void WalkTo(float tx, float tz, float near)
         else lagged = 0;
         if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
+            float px = x, pz = z;
             x += dx / d * step;
             z += dz / d * step;
+            (x, z) = ground.Slide(px, pz, x, z); // round things and walls, as a player meets them
         }
         conn.Reducers.Move(x, z, MathF.Atan2(dx, dz));
         Pump(() => false, 0.1f, null);

@@ -205,7 +205,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
+            .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
         ToolSounds.Connect(conn);
