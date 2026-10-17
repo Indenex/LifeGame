@@ -673,6 +673,14 @@ public partial class Showcase : Node3D
         foreach (var (x, z) in new[] { (5.5f, -3.5f), (-2.5f, -8.5f) })
             Card(cypress[rng.RandiRange(0, 2)], new Vector3(x, 0, z), 5.5f + rng.Randf());
         Card("Forest_big_tree_leaf_01", new Vector3(8f, 0, -1f), 6f);
+        // A dense wall of forest behind, so the high camera sees trees, not sky.
+        for (int i = 0; i < 26; i++)
+        {
+            float x = -16f + i * 1.3f + rng.Randf() * 0.6f, z = -13f - rng.Randf() * 5f;
+            float tall = 7f + rng.Randf() * 2.5f;
+            if (meshTrees) AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x * 1.7f, 0) });
+            else Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), tall);
+        }
         Card("Forest_big_stone_01", new Vector3(-4.2f, 0, -1.8f), 1.6f);
         Card("Forest_big_stone_02", new Vector3(6.2f, 0, 2.4f), 1.2f);
         Card("Forest_small_tree_stump_01", new Vector3(3.6f, 0, -0.8f), 0.7f);

@@ -59,7 +59,13 @@ public static class MaterialLook
             if (pattern == Pattern.Bark) color *= new Color(0.95f, 0.92f, 1.06f);
             if (pattern == Pattern.Wood) color *= new Color(1.05f, 0.95f, 0.88f);
             // Straw toward the pack's golden hay, a little deeper than today's pale thatch.
-            if (pattern == Pattern.Straw) color *= new Color(0.86f, 0.8f, 0.72f);
+            // Muted toward the pack's dusty hay, so the roof sits in the olive palette.
+            if (pattern == Pattern.Straw)
+            {
+                color *= new Color(0.86f, 0.8f, 0.72f);
+                float lum = color.R * 0.3f + color.G * 0.59f + color.B * 0.11f;
+                color = color.Lerp(new Color(lum * 1.08f, lum * 1.0f, lum * 0.82f), 0.45f) * 0.88f;
+            }
             // Figures a touch deeper and warmer, so pale skin and cloth keep their
             // shape under the creamy grade.
             if (pattern == Pattern.Skin) color *= new Color(0.9f, 0.82f, 0.76f);
