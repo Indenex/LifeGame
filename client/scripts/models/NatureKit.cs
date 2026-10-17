@@ -16,7 +16,7 @@ public static class NatureKit
 {
     public const string Dir = "res://assets/quaternius/nature/";
 
-    public enum Kind { Leaves, Bark, Rock, Plant, Flower }
+    public enum Kind { Leaves, Bark, Rock, Plant, Flower, Grass }
 
     static readonly Dictionary<(string, bool), Mesh?> Meshes = new();
 
@@ -53,7 +53,7 @@ public static class NatureKit
     // Terrain's tree placements scaled by a kit tree's extra scale.
     public static List<(Transform3D, Color, Color)> Scaled(List<(Transform3D, Color, Color)> items, float scale) =>
         items.ConvertAll(i => (new Transform3D(i.Item1.Basis * Basis.FromScale(Vector3.One * scale), i.Item1.Origin), i.Item2, i.Item3));
-    static readonly Dictionary<(Texture2D?, Kind), ShaderMaterial> Materials = new();
+    static readonly Dictionary<(Texture2D?, string), ShaderMaterial> Materials = new();
 
     // The model's mesh with the blended look (or the kit's own materials), null if the asset
     // isn't there (not imported yet).
@@ -85,7 +85,7 @@ public static class NatureKit
             // Our materials on the imported mesh itself, so it keeps the LODs Godot made for it.
             for (int s = 0; s < found.GetSurfaceCount(); s++)
                 if (found.SurfaceGetMaterial(s) is var source && source is not ShaderMaterial)
-                    found.SurfaceSetMaterial(s, Blended(source, KindOf(name, source)));
+                    found.SurfaceSetMaterial(s, Blended(source, name));
             return found;
         }
         // The kit's own look: a copy, its materials as they came.
@@ -106,31 +106,113 @@ public static class NatureKit
         return null;
     }
 
-    static Kind KindOf(string model, Material? material)
+    static Kind KindOf(string model, string material)
     {
-        string m = material?.ResourceName ?? "";
-        if (m.StartsWith("Bark")) return Kind.Bark;
-        if (m.StartsWith("Rocks") || m.StartsWith("PathRocks")) return Kind.Rock;
-        if (m.StartsWith("Flowers") || m.StartsWith("Mushrooms")) return Kind.Flower;
-        if (model.StartsWith("CommonTree") || model.StartsWith("Pine") || model.StartsWith("TwistedTree") || model.StartsWith("Bush")) return Kind.Leaves;
+        if (material.StartsWith("Bark")) return Kind.Bark;
+        if (material.StartsWith("Rocks") || material.StartsWith("PathRocks")) return Kind.Rock;
+        if (material.StartsWith("Flowers") || material.StartsWith("Mushrooms")) return Kind.Flower;
+        if (material.StartsWith("Grass")) return Kind.Grass;
+        if (Leaf(model) != null) return Kind.Leaves;
         return Kind.Plant;
     }
 
-    // Our material for one of the kit's: its texture, our light.
-    public static ShaderMaterial Blended(Material? source, Kind kind)
+    // The kit's own colours, from its Godot material instances (naturekit-godot.zip,
+    // Materials/MI_*.tres). Its tree leaves are not painted by their texture (that gives only
+    // the card's outline): they are one green fading to a cool blue-green low down, with a
+    // fresnel glow of light through the leaves. Some kinds also stand their cards up to face
+    // the camera, which is what makes their crowns read as soft round clumps.
+    readonly record struct LeafLook(Color Top, Color Low, Color Glow, float GlowStrength, float GlowBlend, bool Cards);
+    static readonly Color KitLow = new(0.13f, 0.33f, 0.25f);
+    static readonly LeafLook CommonLeaves = new(new(0.474f, 0.633f, 0.089f), KitLow, new(0.459f, 0.722f, 0f), 2f, 0.2f, false);
+    static readonly LeafLook BushLeaves = new(new(0.348f, 0.658f, 0.216f), KitLow, new(0.539f, 0.733f, 0.092f), 2f, 0.2f, true);
+    static readonly LeafLook PineLeaves = new(new(0.111f, 0.321f, 0f), KitLow, new(0.65f, 0.7f, 0f), 1.946f, 0.085f, false);
+    static readonly LeafLook GiantPineLeaves = new(new(0f, 0.729f, 0.45f), KitLow, new(0f, 0.743f, 0.802f), 3.088f, -0.044f, false);
+    static readonly LeafLook BirchLeaves = new(new(1f, 0.252f, 0.066f), KitLow, new(1f, 0.495f, 0.127f), 1.836f, 0.335f, true);
+    static readonly LeafLook TwistedLeaves = new(new(0.767f, 0f, 0.029f), KitLow, new(0.547f, 0f, 0.131f), 1.51f, 0.61f, true);
+
+    static LeafLook? Leaf(string model) =>
+        model.StartsWith("CommonTree") || model.StartsWith("Bush_Common") ? CommonLeaves
+        : model.StartsWith("GiantPine") ? GiantPineLeaves
+        : model.StartsWith("Pine") ? PineLeaves
+        : model.StartsWith("Birch") ? BirchLeaves
+        : model.StartsWith("TwistedTree") ? TwistedLeaves
+        : model.StartsWith("Bush_") ? BushLeaves
+        : null; // ferns, plants and clover keep their painted texture
+
+    // Bark darkens toward the kit's tint at the foot (vertex colour red is 0 there).
+    static Color BarkFoot(string material) => material switch
     {
-        var texture = (source as BaseMaterial3D)?.AlbedoTexture;
+        "Bark_Birch" => new(0.289f, 0.354f, 0f),
+        "Bark_DeadTree" => new(0f, 0f, 0f),
+        "Bark_Pine" => new(0.545f, 0.659f, 0f),
+        "Bark_TwistedTree" => new(0.219f, 0.271f, 0f),
+        _ => new(0.235f, 0.29f, 0f),
+    };
+
+    // Grass blades: bottom to top colour by vertex colour, a broad world tint, and wind lines.
+    static (Color Bottom, Color Top, Color Line, Color World) GrassOf(string model) =>
+        model.StartsWith("Grass_Wide") ? (new(0f, 0.247f, 0.018f), new(0.233f, 0.719f, 0f), new(0.354f, 0.64f, 0f), new(0.193f, 0.512f, 0f))
+        : model.StartsWith("Grass_Wispy") ? (new(0.244f, 0.193f, 0f), new(0.665f, 0.615f, 0f), new(0.692f, 0.525f, 0f), new(0.501f, 0.428f, 0f))
+        : (new(0.09f, 0.239f, 0f), new(0.545f, 0.659f, 0f), new(0.549f, 0.588f, 0f), new(0f, 0.514f, 0.306f));
+
+    static Texture2D? noiseWind, noisePerlin;
+    static Texture2D? Noise(ref Texture2D? cache, string file) =>
+        cache ??= ResourceLoader.Exists(Dir + "textures/" + file) ? GD.Load<Texture2D>(Dir + "textures/" + file) : null;
+
+    // Our material for one of the kit's on the given model: the kit's colours, our light.
+    public static ShaderMaterial Blended(Material? source, string model)
+    {
+        var standard = source as BaseMaterial3D;
+        var texture = standard?.AlbedoTexture;
+        string name = source?.ResourceName ?? "";
+        var kind = KindOf(model, name);
+        var leaf = kind == Kind.Leaves ? Leaf(model) : null;
+        string look = kind switch
+        {
+            Kind.Leaves => leaf == CommonLeaves ? "common" : model.Split('_')[0],
+            Kind.Grass => model.StartsWith("Grass_Wide") ? "wide" : model.StartsWith("Grass_Wispy") ? "wispy" : "common",
+            _ => kind.ToString(),
+        };
         lock (Materials)
         {
-            if (Materials.TryGetValue((texture, kind), out var done)) return done;
+            if (Materials.TryGetValue((texture, look + name), out var done)) return done;
             var m = new ShaderMaterial { Shader = Shader };
             if (texture != null) m.SetShaderParameter("albedo_tex", texture);
             m.SetShaderParameter("has_tex", texture != null);
-            m.SetShaderParameter("albedo", (source as BaseMaterial3D)?.AlbedoColor ?? Colors.White);
+            m.SetShaderParameter("albedo", standard?.AlbedoColor ?? Colors.White);
             bool cut = kind is Kind.Leaves or Kind.Plant or Kind.Flower;
             m.SetShaderParameter("cutout", cut ? 0.5f : 0f);
+            m.SetShaderParameter("mode", kind switch { Kind.Leaves => 1, Kind.Grass => 2, Kind.Bark => 3, Kind.Plant or Kind.Flower => 4, _ => 0 });
+            if (leaf is { } l)
+            {
+                m.SetShaderParameter("leaf_top", l.Top);
+                m.SetShaderParameter("leaf_low", l.Low);
+                m.SetShaderParameter("glow_color", l.Glow);
+                m.SetShaderParameter("glow_strength", l.GlowStrength);
+                m.SetShaderParameter("glow_blend", l.GlowBlend);
+                m.SetShaderParameter("cards", l.Cards ? 1f : 0f);
+            }
+            if (kind == Kind.Bark)
+            {
+                m.SetShaderParameter("bark_foot", BarkFoot(name));
+                if (standard is { NormalEnabled: true, NormalTexture: { } normal })
+                {
+                    m.SetShaderParameter("normal_tex", normal);
+                    m.SetShaderParameter("has_normal", true);
+                }
+            }
+            if (kind == Kind.Grass)
+            {
+                var g = GrassOf(model);
+                m.SetShaderParameter("grass_bottom", g.Bottom);
+                m.SetShaderParameter("grass_top", g.Top);
+                m.SetShaderParameter("grass_line", g.Line);
+                m.SetShaderParameter("grass_world", g.World);
+                if (Noise(ref noiseWind, "Noise_Wind.png") is { } wind) m.SetShaderParameter("wind_noise", wind);
+                if (Noise(ref noisePerlin, "Noise_Perlin.png") is { } perlin) m.SetShaderParameter("world_noise", perlin);
+            }
             // Leaves sway from the crown, plants from their roots.
-            m.SetShaderParameter("sway", kind switch { Kind.Leaves => 0.07f, Kind.Plant => 0.05f, Kind.Flower => 0.03f, _ => 0f });
+            m.SetShaderParameter("sway", kind switch { Kind.Leaves => 0.07f, Kind.Plant or Kind.Grass => 0.05f, Kind.Flower => 0.03f, _ => 0f });
             m.SetShaderParameter("sway_height", kind == Kind.Leaves ? 6f : 0.6f);
             m.SetShaderParameter("autumn", kind == Kind.Leaves ? 1f : 0f);
             // Leaf cards: the crown is lit as one soft mass rather than card by card.
@@ -142,7 +224,7 @@ public static class NatureKit
                 Kind.Bark => new Color(0.68f, 0.6f, 0.82f),
                 _ => new Color(0.62f, 0.66f, 0.86f),
             });
-            Materials[(texture, kind)] = m;
+            Materials[(texture, look + name)] = m;
             return m;
         }
     }
@@ -150,6 +232,8 @@ public static class NatureKit
     static Shader? shader;
     static Shader Shader => shader ??= new Shader { Code = Code };
 
+    // mode: 0 texture as painted (rocks), 1 kit leaves (flat green gradient, glow, cards),
+    // 2 kit grass, 3 kit bark (foot tint, normal map), 4 foliage texture shaded by vertex colour.
     static readonly string Code = """
         shader_type spatial;
         render_mode cull_disabled, depth_draw_opaque;
@@ -157,12 +241,29 @@ public static class NatureKit
 
         global uniform float wind_strength;
         global uniform float wind_gust;
+        global uniform vec2 wind_dir;
         global uniform float season_autumn;
         global uniform float wetness;
         uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
         uniform bool has_tex = true;
         uniform vec4 albedo : source_color = vec4(1.0);
+        uniform int mode = 0;
         uniform float cutout = 0.0;
+        uniform vec3 leaf_top : source_color = vec3(0.474, 0.633, 0.089);
+        uniform vec3 leaf_low : source_color = vec3(0.13, 0.33, 0.25);
+        uniform vec3 glow_color : source_color = vec3(0.459, 0.722, 0.0);
+        uniform float glow_strength = 2.0;
+        uniform float glow_blend = 0.2;
+        uniform float cards = 0.0;
+        uniform vec3 bark_foot : source_color = vec3(0.235, 0.29, 0.0);
+        uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap, repeat_enable;
+        uniform bool has_normal = false;
+        uniform vec3 grass_bottom : source_color = vec3(0.09, 0.239, 0.0);
+        uniform vec3 grass_top : source_color = vec3(0.545, 0.659, 0.0);
+        uniform vec3 grass_line : source_color = vec3(0.549, 0.588, 0.0);
+        uniform vec3 grass_world : source_color = vec3(0.0, 0.514, 0.306);
+        uniform sampler2D wind_noise : hint_default_black, filter_linear_mipmap, repeat_enable;
+        uniform sampler2D world_noise : hint_default_white, filter_linear_mipmap, repeat_enable;
         uniform float sway = 0.0;
         uniform float sway_height = 1.0;
         uniform float autumn = 0.0;
@@ -173,12 +274,25 @@ public static class NatureKit
         const float BAND_BREAK = 0.0;
         varying vec3 world_pos;
         varying float tree_seed;
+        varying float height_mask;
+        varying float vertex_r;
+        varying vec3 glow;
 
         void vertex() {
             vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
             vec3 origin = MODEL_MATRIX[3].xyz;
+            // The kit's leaf colour runs over the first metre of the model's height.
+            height_mask = clamp(VERTEX.y, 0.0, 1.0);
+            vertex_r = COLOR.r;
+            if (cards > 0.0) {
+                // The kit's trick: each leaf card also spreads out facing the camera, so a
+                // crown reads as soft round clumps from any side.
+                vec3 orient = vec3(1.0 - UV.x, 1.0 - UV.y, 0.0) * 2.0 - vec3(1.0);
+                vec3 offset = reflect((INV_VIEW_MATRIX * vec4(orient, 0.0)).xyz, INV_VIEW_MATRIX[0].xyz);
+                VERTEX += (vec4(offset, 0.0) * MODEL_MATRIX).xyz * cards;
+            }
             if (sway > 0.0) {
-                float h = clamp(VERTEX.y / sway_height, 0.0, 1.5);
+                float h = mode == 2 ? COLOR.r : clamp(VERTEX.y / sway_height, 0.0, 1.5);
                 float t = TIME * 0.9 + world.x * 0.21 + world.z * 0.17;
                 float gust = (0.45 + 0.45 * wind_gust + 0.15 * sin(TIME * 0.23 + world.x * 0.03)) * (0.5 + wind_strength * 1.6);
                 // Leaves flutter a little on top of the whole crown's sway.
@@ -198,11 +312,28 @@ public static class NatureKit
 
         void fragment() {
             vec4 tex = has_tex ? texture(albedo_tex, UV) : vec4(1.0);
-            vec3 color = tex.rgb * albedo.rgb;
             if (cutout > 0.0 && tex.a < cutout) discard;
+            vec3 color = tex.rgb * albedo.rgb;
+            glow = vec3(0.0);
+            if (mode == 1) {
+                color = mix(leaf_low, leaf_top, height_mask);
+                vec3 through = mix(color, glow_color, glow_strength);
+                glow = through * max(height_mask, 0.1) * glow_blend;
+            } else if (mode == 2) {
+                vec2 uv = world_pos.xz / 50.0 + TIME * 0.03 * (0.4 + wind_strength) * normalize(wind_dir + vec2(1e-4));
+                float line = clamp(pow(texture(wind_noise, uv).r, 5.0), 0.0, 1.0) * (0.3 + wind_strength);
+                color = mix(grass_bottom, grass_top, vertex_r);
+                color = mix(color, grass_line, line) * mix(vec3(1.0), grass_world, texture(world_noise, world_pos.xz / 50.0).r);
+                NORMAL *= FRONT_FACING ? 1.0 : -1.0;
+            } else if (mode == 3) {
+                color = mix(color * bark_foot, color, vertex_r);
+                if (has_normal) NORMAL_MAP = texture(normal_tex, UV).rgb;
+            } else if (mode == 4) {
+                color *= vertex_r;
+            }
             if (autumn > 0.0 && season_autumn > 0.0) {
                 // Each tree its own mix of gold, orange and red, brown before they fall;
-                // the kit's own light-dark leaf painting is kept in the turn.
+                // the leaves' light-dark painting is kept in the turn.
                 float lum = dot(color, vec3(0.3, 0.59, 0.11));
                 vec3 turned = mix(vec3(0.95, 0.62, 0.12), vec3(0.85, 0.24, 0.08), tree_seed) * (0.55 + lum * 1.4);
                 turned = mix(turned, vec3(0.42, 0.28, 0.15) * (0.6 + lum), smoothstep(0.75, 1.0, season_autumn));
@@ -220,6 +351,12 @@ public static class NatureKit
         """ + Painted.Light + """
             if (rim > 0.0) {
         """ + Painted.Rim + """
+            }
+            if (mode == 1 && LIGHT_IS_DIRECTIONAL) {
+                // The kit's light through the leaves at the crown's edges, as sunlight rather than
+                // a glow of its own, so it fades with the sun and stays warm at golden hour.
+                float fresnel = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+                SPECULAR_LIGHT += LIGHT_COLOR * glow * fresnel * mix(0.5, 1.0, ATTENUATION) / PI;
             }
         }
         """;
