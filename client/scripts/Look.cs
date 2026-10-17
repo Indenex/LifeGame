@@ -685,10 +685,31 @@ public static class Look
 
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
-                float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
-                DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                if (stylised > 0.5) {
+                    // The painted light of the ground and props (Painted, env-25): shade,
+                    // mid and lit in soft steps, the shade leaning violet, at the ground's
+                    // overall brightness (PaintedTerrain) so blades and soil match.
+                    float elevation = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).y;
+                    float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
+                    float wrap = mix(0.3, 0.6, low_sun);
+                    float l = clamp(dot(NORMAL, LIGHT) * (1.0 - wrap) + wrap, 0.0, 1.0) * ATTENUATION * sky;
+                    float mid = smoothstep(0.29, 0.35, l);
+                    float lit = smoothstep(0.61, 0.67, l);
+                    float band = 0.12 + 0.2 * low_sun + 0.4 * mid + 0.36 * lit;
+                    vec3 tone = mix(vec3(0.72, 0.7, 0.88), vec3(1.0), mid);
+                    float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
+                    DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach * PAINTED_GROUND_LEVEL / PI;
+                } else {
+                    float wrapped = clamp((dot(NORMAL, LIGHT) + 0.3) / 1.3, 0.0, 1.0);
+                    DIFFUSE_LIGHT += LIGHT_COLOR * wrapped * wrapped * ATTENUATION * sky / PI;
+                }
             }
-            """);
+            """.Replace("PAINTED_GROUND_LEVEL", PaintedGroundLevel.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)));
+
+    // How bright the painted ground and grass are lit next to the painted props: the
+    // props' stepped light suits shapes that turn from the sun, but the ground faces it,
+    // so it is scaled down to the old ground's brightness (env-25).
+    internal const float PaintedGroundLevel = 0.66f;
 
     // Open water: a calm, deep color that only softly catches the light (no mirror
     // shine), slow shimmering ripples that stir with the wind's gusts, rain rings

@@ -115,6 +115,7 @@ public partial class Terrain
         _ = Undergrowth.Reed;
         _ = Undergrowth.Flowers;
         _ = Undergrowth.Bush;
+        _ = PaintedTerrain.Ground;
         foreach (var material in new Material[] { Look.Ground, Look.RockSurface, Look.Foliage, Look.TreeBark, Look.TreeFoliage, Look.Grass, Look.GrassTufts })
             _ = Look.GhostOf(material);
     }
@@ -185,7 +186,7 @@ public partial class Terrain
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays,
             flags: (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
-        root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = Look.Ground });
+        root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = PaintedTerrain.Ground });
         foreach (var (batchMesh, material, items, shadow, range) in data.Batches)
             AddMulti(root, batchMesh, items, material, shadow, range);
         return root;
