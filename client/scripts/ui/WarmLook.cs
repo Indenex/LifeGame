@@ -54,6 +54,51 @@ public partial class WarmLook : Node
         theme.SetColor("font_shadow_color", "TooltipLabel", new Color(0, 0, 0, 0));
         theme.SetFontSize("font_size", "TooltipLabel", 14);
         theme.SetFont("font", "TooltipLabel", Ui.Font(700));
+
+        // Buttons and text boxes that bring no style of their own (ui-51): paper a shade darker
+        // than the window, a soft brown edge, brown words. Godot's own dark grey fills read as
+        // cold holes in the paper. A selected tab chip (a plain button among flat ones) gets the
+        // same paper look.
+        foreach (var (state, bg, edge) in new[]
+        {
+            ("normal", Paper.Darkened(0.07f), 0.22f),
+            ("hover", Butter.Lerp(Paper, 0.55f), 0.35f),
+            ("pressed", Paper.Darkened(0.13f), 0.35f),
+            ("disabled", Paper.Darkened(0.04f), 0.12f),
+            ("focus", new Color(0, 0, 0, 0), 0f),
+        })
+        {
+            var s = new StyleBoxFlat
+            {
+                BgColor = bg, BorderColor = new Color(Ink, edge),
+                ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 4, ContentMarginBottom = 4,
+            };
+            s.SetBorderWidthAll(state == "focus" ? 0 : 2);
+            s.SetCornerRadiusAll(14);
+            theme.SetStylebox(state, "Button", s);
+        }
+        foreach (var key in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
+            theme.SetColor(key, "Button", Ink);
+        theme.SetColor("font_disabled_color", "Button", new Color(Ink, 0.45f));
+
+        // Text boxes: a lighter paper, like a slip of card to write on.
+        foreach (var (state, bg, edge) in new[] { ("normal", Paper.Lightened(0.4f), 0.28f), ("focus", new Color(0, 0, 0, 0), 0f), ("read_only", Paper.Darkened(0.04f), 0.15f) })
+        {
+            var s = new StyleBoxFlat
+            {
+                BgColor = bg, BorderColor = new Color(state == "focus" ? Coral : Ink, state == "focus" ? 0.8f : edge),
+                ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 4, ContentMarginBottom = 4,
+                DrawCenter = state != "focus",
+            };
+            s.SetBorderWidthAll(2);
+            s.SetCornerRadiusAll(12);
+            theme.SetStylebox(state, "LineEdit", s);
+        }
+        theme.SetColor("font_color", "LineEdit", Ink);
+        theme.SetColor("font_placeholder_color", "LineEdit", new Color(Ink, 0.45f));
+        theme.SetColor("caret_color", "LineEdit", Coral.Darkened(0.2f));
+        theme.SetColor("selection_color", "LineEdit", new Color(Butter, 0.5f));
+        theme.SetColor("clear_button_color", "LineEdit", new Color(Ink, 0.6f));
         return theme;
     }
 

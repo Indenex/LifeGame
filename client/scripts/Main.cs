@@ -95,6 +95,8 @@ public partial class Main : Node3D
         // Setting crafted things down (ui-16): from the bag, a hotbar key or the after-craft prompt.
         placing.Terrain = terrain;
         placing.Me = me;
+        // Fires go where you choose (ui-30); the ring turns amber where the server would say no.
+        crafting.PickSpot = (label, min, picked) => placing.PickSpot(label, min, picked, FireSpotProblem);
         placing.CameraRig = cameraRig;
         placing.View = view;
         placing.Note = hud.Note;
@@ -159,6 +161,7 @@ public partial class Main : Node3D
         station.Conn = () => conn;
         station.Crafting = crafting;
         station.Me = () => me.Position;
+        crafting.PlayerAt = () => me.Position;
         AddChild(station);
         // Choosing how you look (ui-21): opens by itself at first join, and from Options.
         lookPicker.Conn = () => conn;
@@ -206,6 +209,13 @@ public partial class Main : Node3D
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -429,7 +439,9 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        // A dig that lands inside the server's cooldown ("Still working") is not a failure to give up on: a held
+        // key tries again after the next interval, so one early repeat on a laggy link does not end the hold.
+        conn.OnUnhandledReducerError += (_, e) => { if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
@@ -505,6 +517,18 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+    }
+
+    // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
+    // rocks and trunks) and the spacing from other fires and hearths, as the server checks them.
+    string? FireSpotProblem(float x, float z)
+    {
+        if (!FireGround.Clear(x, z, terrain.DepthAt, terrain.ClearedAt)) return "Not here: a fire wants level, dry ground clear of rocks and trees";
+        if (conn == null) return null;
+        bool near(float fx, float fz) => new Vector2(fx - x, fz - z).Length() < Fires.Spacing;
+        if (conn.Db.Fire.Iter().Any(f => near(f.X, f.Z)) || conn.Db.ColdHearth.Iter().Any(h => near(h.X, h.Z)))
+            return "Too close to another fire";
+        return null;
     }
 
     PlayerPos? MyPos() =>

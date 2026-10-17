@@ -188,7 +188,7 @@ public partial class ClaimPanel : CanvasLayer
             {
                 Kind = "stash", Width = 5, Empty = "Empty",
                 Source = () => Conn != null && Claim is { } c
-                    ? Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == c.Id).Select(s => new BagStack((Item)s.Item, s.Quality, s.Count))
+                    ? Conn.Db.MyClaimStash.Iter().Where(s => s.ClaimId == c.Id).Select(s => new BagStack((Item)s.Item, s.Quality, s.Count, 0, -1, Marks.MakerOf((Item)s.Item, s.Wear)))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "bag",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.StashItem(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
@@ -199,7 +199,7 @@ public partial class ClaimPanel : CanvasLayer
             {
                 Kind = "bag", Width = 5, Empty = "Nothing",
                 Source = () => Conn != null
-                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                    ? Conn.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count, 0, -1, Marks.MakerOf((Item)i.Item, i.Wear)))
                     : Enumerable.Empty<BagStack>(),
                 Accepts = d => d["from"].AsString() == "stash",
                 Receive = d => { if (Claim is { } c) Conn?.Reducers.TakeFromStash(c.Id, (ushort)d["item"].AsInt32(), (byte)d["quality"].AsInt32(), (uint)d["count"].AsInt64()); },
