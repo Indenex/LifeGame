@@ -304,6 +304,58 @@ public static class CueDefs
         new CueLayer(Src.Noise, 0.05f, 0.4f, 0.02f, 250f, 800f, 0.3f),
     });
 
+    // --- Tool work (audio-14): chopping, felling, digging. Timed off Animation's contact moments.
+
+    // Chop: the axe bites the trunk (contact at 0.918 s of each 1.176 s swing): a dull "thock" of
+    // wood, the sharp bite of the blade and a few chips flying.
+    public static readonly CueDef ChopThunk = new("tool.chop", 0.5f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.128f, 190f, 110f, 0.003f),
+        new CueLayer(Src.Noise, 0f, 0.012f, 0.192f, 800f, 3500f, 0.002f),
+        new CueLayer(Src.Noise, 0.02f, 0.06f, 0.0768f, 300f, 1500f, 0.004f),
+    });
+
+    // Tree creak: the trunk giving way, a low groan that slides down with stutters of fibres tearing,
+    // ending in the snap.
+    public static readonly CueDef TreeCreak = new("tool.treecreak", 1.1f, new[]
+    {
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.075f, 260f, 190f, 0.3f),
+        new CueLayer(Src.Tone, 0f, 0.5f, 0.0625f, 273f, 200f, 0.3f),
+        new CueLayer(Src.Noise, 0.1f, 0.05f, 0.075f, 400f, 1200f, 0.01f),
+        new CueLayer(Src.Noise, 0.35f, 0.05f, 0.0875f, 400f, 1400f, 0.01f),
+        new CueLayer(Src.Noise, 0.6f, 0.05f, 0.1f, 500f, 1600f, 0.01f),
+        new CueLayer(Src.Noise, 0.85f, 0.015f, 0.3125f, 2000f, 6000f, 0.002f),
+    });
+
+    // Tree crash: a rush of branches and leaves, the heavy thud of the trunk and the crackle and
+    // rustle settling after.
+    public static readonly CueDef TreeCrash = new("tool.treecrash", 2.2f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.5f, 0.09f, 800f, 5000f, 0.5f),
+        new CueLayer(Src.Tone, 0.9f, 0.25f, 0.18f, 70f, 40f, 0.01f),
+        new CueLayer(Src.Noise, 0.9f, 0.3f, 0.2025f, 60f, 900f, 0.01f),
+        new CueLayer(Src.Noise, 0.9f, 0.15f, 0.0675f, 1500f, 6000f, 0.005f),
+        new CueLayer(Src.Noise, 1.1f, 0.5f, 0.045f, 1000f, 4000f, 0.1f),
+    }, Send: 0.3f);
+
+    // Dig with a stick (0.9 s): the point plunges in about 0.3 s, then the lever and the crumbling soil.
+    public static readonly CueDef DigStick = new("tool.dig.stick", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0.28f, 0.05f, 0.3f, 300f, 2000f, 0.006f),
+        new CueLayer(Src.Tone, 0.28f, 0.06f, 0.12f, 110f, 80f, 0.006f),
+        new CueLayer(Src.Noise, 0.45f, 0.2f, 0.08f, 800f, 4000f, 0.15f),
+        new CueLayer(Src.Noise, 0.6f, 0.02f, 0.1f, 1500f, 5000f, 0.003f),
+        new CueLayer(Src.Noise, 0.7f, 0.02f, 0.08f, 1500f, 5000f, 0.003f),
+    });
+
+    // Dig with bare hands (0.9 s): fingers raking in and a soft scoop of loose earth.
+    public static readonly CueDef DigHands = new("tool.dig.hands", 0.9f, new[]
+    {
+        new CueLayer(Src.Noise, 0.2f, 0.2f, 0.192f, 1000f, 5000f, 0.08f),
+        new CueLayer(Src.Noise, 0.45f, 0.1f, 0.24f, 400f, 2000f, 0.02f),
+        new CueLayer(Src.Noise, 0.65f, 0.025f, 0.112f, 1500f, 5000f, 0.003f),
+    });
+
     public static CueDef? ForCue(Cue cue) => cue switch
     {
         Cue.Place => Place,

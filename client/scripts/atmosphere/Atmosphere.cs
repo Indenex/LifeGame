@@ -206,6 +206,7 @@ public partial class Atmosphere : Node3D
             .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
+        ToolSounds.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -331,6 +332,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
+            ToolSounds.Tick(dt);
         }
     }
 

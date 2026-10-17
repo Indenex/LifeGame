@@ -188,8 +188,9 @@ public partial class Atmosphere
 
     // Sounds for the quick body actions (player_act): data cues (CueDefs) timed to the motion,
     // played from where that player stands, so nearby players hear each other.
-    static CueDef? SoundOfAct(WorkMotion motion) => motion switch
+    static CueDef? SoundOfAct(WorkMotion motion, ushort item) => motion switch
     {
+        WorkMotion.Dig => item != 0 ? CueDefs.DigStick : CueDefs.DigHands,
         WorkMotion.Drink => CueDefs.Drink,
         WorkMotion.Eat => CueDefs.Eat,
         WorkMotion.Pluck => CueDefs.Pluck,
@@ -199,7 +200,7 @@ public partial class Atmosphere
 
     void HearAct(DbConnection conn, PlayerAct act)
     {
-        if (SoundOfAct((WorkMotion)act.Motion) is not { } def) return;
+        if (SoundOfAct((WorkMotion)act.Motion, act.Item) is not { } def) return;
         if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
         Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
     }

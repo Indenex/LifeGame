@@ -138,7 +138,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -202,6 +202,19 @@ foreach (var scene in scenes)
             if (At(7.5)) mix.Play(CueDefs.HenSquawk);
             if (At(10)) mix.Play(CueDefs.HenRoost);
             if (At(12.5)) mix.Play(CueDefs.HenLay);
+        }
+        // Tools scene: three chops, a creak and the crash, a stick dig and a hand dig.
+        if (parts[0] == "tools")
+        {
+            double a = done / (double)rate, b = (done + n) / (double)rate;
+            bool At(double x) => a < x && b >= x;
+            if (At(1)) mix.Play(CueDefs.ChopThunk);
+            if (At(2.2)) mix.Play(CueDefs.ChopThunk);
+            if (At(3.4)) mix.Play(CueDefs.ChopThunk);
+            if (At(5)) mix.Play(CueDefs.TreeCreak);
+            if (At(5.95)) mix.Play(CueDefs.TreeCrash);
+            if (At(10)) mix.Play(CueDefs.DigStick);
+            if (At(12.5)) mix.Play(CueDefs.DigHands);
         }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")
