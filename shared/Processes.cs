@@ -391,6 +391,13 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                // A big coiled basin; kiln-fired only, set down to hold water (ceramics-13).
+                Id = "clay.trough", Name = "Build a clay trough", Doing = "Coiling a clay trough", Tier = 3,
+                Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.TroughClay) },
+                Seconds = Base(3, 3f), Minigame = Minigame.Coil, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+            },
+            new ProcessDef
+            {
                 // Too big for a campfire: it is fired in a kiln (ceramics-6).
                 Id = "clay.storage_jar", Name = "Build a storage jar", Doing = "Coiling a storage jar", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay, ClayRules.JarClay) },

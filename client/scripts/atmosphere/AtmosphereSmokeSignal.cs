@@ -225,7 +225,8 @@ public partial class Atmosphere
 
     // The most fuel this fire can hold (Crafting's FuelCapSeconds: the lighter's cap,
     // or a feeder's if higher, hearth bonus included), so anyone can signal by filling
-    // their own fire (Justin). 0 marks a fire from before the cap was kept.
+    // their own fire (Justin). 0 marks a fire from before the cap was kept. The map is
+    // AtmosphereSound's (HearFireCaps), shared with the fire's sound.
     float FireMost(ulong id) => fireCaps.TryGetValue(id, out var cap) && cap > 0f ? cap : Fires.MaxSeconds;
 
     // The stoked fires near the player, nearest first, a few at most.
