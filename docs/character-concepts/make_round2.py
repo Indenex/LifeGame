@@ -9,7 +9,8 @@ import os
 from make_concepts import (D, P, face, legs, dark, rim, light, mix, ground, fence, ruler, write, FONT, OUT)
 
 HY, HR = -0.66, 0.2           # head centre and radius (shared)
-BASE_H = 0.84                 # head top of the bare base
+BASE_H = 0.84                 # head top of the bare base, in drawing units
+K = 1.35 / BASE_H             # Justin: in-game height 1.3-1.4 m (world is built for a 1.75 m player)
 
 
 def base(t, sp):
@@ -48,7 +49,7 @@ def base(t, sp):
     for slot in ("muzzle", "top", "front"):
         if slot in sp:
             sp[slot](d, t)
-    return d.svg(), sp.get("h", BASE_H)
+    return '<g transform="scale(%.4f)">%s</g>' % (K, d.svg()), sp.get("h", BASE_H) * K
 
 
 # ------------------------------------------------------------ part library (reusable slot pieces)
@@ -226,12 +227,12 @@ def wick(t):  # lantern folk
 
 
 def dusk(t):  # moth
-    def wings(d, t):
+    def wings(d, t):  # wing-patterned cape, static (no wings per Modeling's limits)
         x = P(t, 0, -0.12)
+        d.path("M%.3f -0.46 Q%.3f -0.30 %.3f -0.08 Q%.3f -0.12 %.3f -0.06 Q%.3f -0.12 %.3f -0.06 Q%.3f -0.12 %.3f -0.08 Q%.3f -0.30 %.3f -0.46 Z" % (
+            x - 0.14, x - 0.26, x - 0.24, x - 0.16, x - 0.08, x, x + 0.08, x + 0.16, x + 0.24, x + 0.26, x + 0.14), "#b5a2da", off=0.03)
         for s in (-1, 1):
-            d.ell(x + s * 0.2, -0.43, 0.13, 0.09, "#c8b6e8", rot=s * -30)
-            d.ell(x + s * 0.17, -0.25, 0.09, 0.065, "#b5a2da", rot=s * 25)
-            d.ell(x + s * 0.24, -0.45, 0.03, 0.03, "#f2cf5a", hl=False)
+            d.ell(x + s * 0.2, -0.2, 0.03, 0.03, "#f2cf5a", hl=False)
     def antennae(d, t):
         for s in (-1, 1):
             x = P(t, s * 0.06, 0.05)
@@ -335,6 +336,15 @@ OLD = [
 ]
 
 
+def table(x, y, S):
+    """0.75 m crafting table, 0.9 m wide."""
+    w, h = 0.9 * S, 0.75 * S
+    out = '<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="3" fill="#94704d" stroke="#3f2c26" stroke-width="2"/>' % (x - w / 2, y - h, w, 0.07 * S)
+    for lx in (x - w / 2 + 0.05 * S, x + w / 2 - 0.12 * S):
+        out += '<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="#6a4c34" stroke="#3f2c26" stroke-width="2"/>' % (lx, y - h + 0.07 * S, 0.07 * S, h - 0.07 * S)
+    return out
+
+
 def char(fn, t, x, y, S):
     svg, _ = fn(t)
     return '<g transform="translate(%.1f %.1f) scale(%.2f)">%s</g>' % (x, y, S, svg)
@@ -345,17 +355,18 @@ def text(x, y, s, size=14, col="#3f2c26", anchor="middle"):
 
 
 def base_sheet():
-    S = 420
-    W, H, gy = 1500, 680, 580
+    S = 300
+    W, H, gy = 1500, 760, 660
     b = ground(W, gy)
-    b += ruler(14, gy, S, 1.1)
+    b += ruler(14, gy, S, 1.8)
     # height band
-    for hm, lab in ((BASE_H, "base head top 0.84 m"), (1.10, "max with parts 1.10 m")):
+    for hm, lab in ((BASE_H * K, "base head top 1.35 m (band 1.3–1.4 m)"), (1.10 * K, "tallest ears or hat about 1.77 m")):
         y = gy - hm * S
         b += '<path d="M60 %.1f L880 %.1f" stroke="#c8553d" stroke-width="1.5" stroke-dasharray="8 6"/>' % (y, y)
         b += text(180, y - 7, lab, 13, "#c8553d", "start")
     b += fence(110, gy, S)
     b += text(110, gy + 40, "1 m fence post")
+    b += table(1250, gy, S) + text(1250, gy + 40, "0.75 m crafting table")
     # bare base + skeleton
     bx = 360
     b += char(bare, 0, bx, gy, S)
@@ -375,47 +386,50 @@ def base_sheet():
     b += char(bare, 0, sk, gy, S).replace("<g transform", "<g opacity='0.35' transform", 1)
     for a, c in links:
         (x1, y1), (x2, y2) = bones[a], bones[c]
-        b += '<path d="M%.1f %.1f L%.1f %.1f" stroke="#3f2c26" stroke-width="3"/>' % (sk + x1 * S, gy + y1 * S, sk + x2 * S, gy + y2 * S)
+        b += '<path d="M%.1f %.1f L%.1f %.1f" stroke="#3f2c26" stroke-width="3"/>' % (sk + x1 * S * K, gy + y1 * S * K, sk + x2 * S * K, gy + y2 * S * K)
     for n, (x, y) in bones.items():
-        b += '<circle cx="%.1f" cy="%.1f" r="6" fill="#c8553d" stroke="#3f2c26" stroke-width="1.5"/>' % (sk + x * S, gy + y * S)
+        b += '<circle cx="%.1f" cy="%.1f" r="6" fill="#c8553d" stroke="#3f2c26" stroke-width="1.5"/>' % (sk + x * S * K, gy + y * S * K)
     b += text(sk, gy + 40, "16-bone rig (Hips, Spine, Neck, Head, 3 per arm, 3 per leg)", 13)
     b += text(bx, gy + 40, "bare base (front)", 13)
     # slot callouts on the bare base
     slots = [("head-top: hat, cap, crest, flame", (0, -0.86)), ("ears: tri, round, long, tufts, antennae", (-0.17, -0.80)),
              ("face: eyes, muzzle, beak, pattern", (0.12, -0.62)), ("front: scarf, collar, ruff, held item", (0.0, -0.46)),
-             ("outfit: tunic, vest, overalls", (0.1, -0.30)), ("back: wings, shell, pack (static)", (-0.14, -0.38)),
+             ("outfit: tunic, vest, overalls", (0.1, -0.30)), ("back: cape, shell, pack (static)", (-0.14, -0.38)),
              ("tail: rides on Hips, no bones", (-0.1, -0.18)), ("colour + pattern: skin, belly, hands, feet", (0.06, -0.06))]
     for i, (lab, (x, y)) in enumerate(slots):
-        lx, ly = 920, 140 + i * 48
-        b += '<path d="M%.1f %.1f L%.1f %.1f" stroke="#7a5f4a" stroke-width="1.2" stroke-dasharray="3 3"/>' % (sk + x * S, gy + y * S, lx - 8, ly - 5)
-        b += '<circle cx="%.1f" cy="%.1f" r="4" fill="#7a5f4a"/>' % (sk + x * S, gy + y * S)
+        lx, ly = 920, 110 + i * 40
+        b += '<path d="M%.1f %.1f L%.1f %.1f" stroke="#7a5f4a" stroke-width="1.2" stroke-dasharray="3 3"/>' % (sk + x * S * K, gy + y * S * K, lx - 8, ly - 5)
+        b += '<circle cx="%.1f" cy="%.1f" r="4" fill="#7a5f4a"/>' % (sk + x * S * K, gy + y * S * K)
         b += text(lx, ly, lab, 16, "#3f2c26", "start")
     b += text(24, 38, "Shared base: one body, one skeleton, one animation set", 28, anchor="start")
-    b += text(24, 64, "Every concept is this body plus swappable parts. Height stays in a 0.84–1.10 m band, and the world can scale the whole base uniformly (e.g. to 1.3 m).", 15, "#7a5f4a", "start")
+    b += text(24, 64, "Every concept is this body plus swappable parts. In game the bare base stands 1.35 m (band 1.3–1.4 m), so doors, 0.75 m tables, tools and camera still fit.", 15, "#7a5f4a", "start")
     write("r2-shared-base", W, H, b)
 
 
 def main():
     base_sheet()
     for key, name, kind, fn in NEW + OLD:
-        S = 300
-        W, Hh, gy = 760, 470, 400
+        S = 200
+        W, Hh, gy = 960, 470, 400
         _, H = fn(0)
         b = ground(W, gy)
-        b += fence(90, gy, S)
+        b += fence(90, gy, S) + table(810, gy, S) + text(810, 452, "0.75 m table")
         b += char(fn, 0, 300, gy, S) + char(fn, 1, 560, gy, S)
         b += text(24, 38, "%s <tspan font-size='18' fill='#7a5f4a'>· %s · %.2f m · shared base</tspan>" % (name, kind, H), 28, anchor="start")
         for x, lab in ((300, "front"), (560, "three-quarter"), (90, "1 m fence post")):
             b += text(x, 452, lab)
         write("r2-" + key, W, Hh, b)
-    S, slot = 210, 140
+    S, slot = 150, 140
     allc = NEW + OLD
-    W = 120 + slot * (len(allc) + 2)
-    Hh, gy = 420, 330
+    W = 120 + slot * (len(allc) + 2) + 160
+    Hh, gy = 460, 370
     b = ground(W, gy)
-    b += ruler(14, gy, S, 1.2)
-    b += '<path d="M60 %.1f L%d %.1f" stroke="#c8553d" stroke-width="1" stroke-dasharray="6 6"/>' % (gy - 1.1 * S, W, gy - 1.1 * S)
-    b += fence(110, gy, S) + text(110, gy + 36, "fence 1 m", 13)
+    b += ruler(14, gy, S, 1.8)
+    for hm in (1.3, 1.4):
+        b += '<path d="M60 %.1f L%d %.1f" stroke="#c8553d" stroke-width="1" stroke-dasharray="6 6"/>' % (gy - hm * S, W, gy - hm * S)
+    b += text(W - 20, gy - 1.4 * S - 6, "body band 1.3–1.4 m", 12, "#c8553d", "end")
+    b += fence(80, gy, S) + text(80, gy + 36, "fence 1 m", 13)
+    b += table(W - 90, gy, S) + text(W - 90, gy + 36, "0.75 m table", 13)
     b += char(bare, 0, 110 + slot, gy, S) + text(110 + slot, gy + 36, "shared base", 13)
     for i, (key, name, kind, fn) in enumerate(allc):
         x = 110 + slot * (i + 2)

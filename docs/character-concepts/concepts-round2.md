@@ -9,16 +9,16 @@ Justin asked for "another 10. Multiple character models/themes would be nice too
 
 ## The shared base
 
-- **Body:** one round chibi body, 0.84 m to the head top, about 2.3 heads tall. It has a big round head, a round torso, stubby arms with mitten hands, and short legs.
+- **Body:** one round chibi body, about 2.3 heads tall. Per Justin's height decision, it stands **1.35 m** in game (band 1.3–1.4 m) next to the 1 m fence and a 0.75 m crafting table, because the world is built for a 1.75 m player. It has a big round head, a round torso, stubby arms with mitten hands, and short legs.
 - **Skeleton:** Modeling's 16-bone rig. That is Hips, Spine, Neck and Head, plus upper arm, lower arm and hand on each side, and upper leg, lower leg and foot on each side. The same walk, work and jump animations apply to every concept.
-- **Height band:** 0.84 m bare, up to 1.10 m with ears or a hat. Because everyone shares one body, the whole base can be scaled uniformly, for example to about 1.3 m as Modeling recommends for doors and stations, without breaking animations.
+- **Height band:** the body is 1.35 m for everyone. Ears, hats and flames add up to about 0.4 m on top, which stays well under door height.
 - **Slots:** none of them adds bones.
   - head-top: hat, cap, crest, flame, cloud, spikes
   - ears: triangle, round, long, tufts, antennae
   - face: eyes, muzzle, beak, face pattern
   - front: scarf, collar, ruff, held item
   - outfit: tunic, vest, overalls
-  - back: wings, shell, pack, all static
+  - back: cape, shell, pack, all static (no wings, per Modeling's limits)
   - tail: rides on Hips
   - colour: skin, belly, hands and feet colours, plus pattern
 
@@ -32,7 +32,7 @@ Justin asked for "another 10. Multiple character models/themes would be nice too
 | 4 | **Quill** | Hedgehog | spiky head-top, back spikes, button nose, vest | A spiky brown hedgehog with a soft tan face and a green vest. It reads instantly, it's very cute, and the spikes cost nothing to animate. |
 | 5 | **Ripple** | Otter | small round ears, cream face mask, thick tail, held shell | A sleek brown otter holding a pink shell. It's a cheerful water and fishing fit. |
 | 6 | **Nutkin** | Acorn folk | acorn-cap hat, freckles, leaf tunic | A little acorn person with a hatched cap, freckles and a leaf tunic. It's a plant sprite on a humanoid face. |
-| 7 | **Dusk** | Moth | feathery antennae, static back wings, fluffy ruff | A lilac moth with soft wings and a cream ruff. It's dreamy, with a night theme. Its wings are static, but could flutter later with one bone. |
+| 7 | **Dusk** | Moth | feathery antennae, wing-patterned cape, fluffy ruff | A lilac moth in a wing-patterned cape with a cream ruff. It's dreamy, with a night theme, and has no real wings (Modeling's limit). |
 | 8 | **Wick** | Lantern folk | candle-flame head-top with glow, wax drips, vest | A waxy candle person with a little flame on top. Its glow is lovely at night and in caves, and it ties into fire. |
 | 9 | **Nimbus** | Cloud sprite | cloud-puff head-top, star clip, puff collar | A pale-blue sky sprite with cloud hair and a star clip. It has a gentle, airy feel. |
 | 10 | **Pebble** | Tortoise | static back shell, belly plate, head flower | A green tortoise with a domed shell and a tiny flower on its head. It's slow and steady, and the shell could double as a backpack. |
