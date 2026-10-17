@@ -53,6 +53,7 @@ public partial class Main : Node3D
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
+    readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
     readonly LookPicker lookPicker = new();
     bool spawned;
@@ -97,6 +98,9 @@ public partial class Main : Node3D
         HotbarBar.Placeable = item => Items.IsKnown((ushort)item) && Items.Def(item).Placeable;
         hud.Hotbar.PlaceRequested += placing.StartItem;
         AddChild(placing);
+        // The maker's mark (ui-23): chosen from Options, shown on made things' tooltips.
+        BagGrid.Makers = markPicker.Link;
+        AddChild(markPicker);
         AddChild(woodcutting);
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
@@ -162,7 +166,8 @@ public partial class Main : Node3D
             || trade.IsOpen
             || equipment.IsOpen
             || station.IsOpen
-            || buildMenu.IsOpen;
+            || buildMenu.IsOpen
+            || markPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
@@ -407,6 +412,8 @@ public partial class Main : Node3D
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         placing.Attach(new ServerPlaceLink(conn, crafting, terrain.HeightAt));
         equipment.Bag.Link = new ServerBagLink(conn);
+        markPicker.Attach(new ServerMarkLink(conn, () => myId));
+        BagGrid.Makers = markPicker.Link;
         buildMenu.Carried = item => conn.Db.MyInventory.Iter().Where(i => i.Item == (ushort)item).Aggregate(0u, (n, i) => n + i.Count);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));

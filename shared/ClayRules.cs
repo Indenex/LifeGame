@@ -138,7 +138,7 @@ namespace LifeGame.Shared
         public static string FormName(ClayForm form) => form switch
         {
             ClayForm.PinchPot => "pinch pot",
-            ClayForm.CoilPot => "coil pot",
+            ClayForm.CoilPot => "clay pot",
             ClayForm.StorageJar => "storage jar",
             ClayForm.Lamp => "lamp",
             ClayForm.Tile => "roof tile",
