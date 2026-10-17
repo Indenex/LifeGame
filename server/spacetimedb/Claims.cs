@@ -199,7 +199,6 @@ public static partial class Module
     // Rules for laying out a claim marker, on top of Building's own placement checks.
     static partial void CheckStructureSite(ReducerContext ctx, StructureKind kind, float x, float z)
     {
-        if (kind == StructureKind.Stall) { CheckStallSite(ctx, x, z); return; }
         if (kind != StructureKind.ClaimMarker) return;
         EnsureDecayTimer(ctx);
 
@@ -272,7 +271,6 @@ public static partial class Module
 
     static partial void OnStructureRemoved(ReducerContext ctx, Structure s)
     {
-        SpillStall(ctx, s);
         if (s.Kind == StructureKind.ClaimMarker && ctx.Db.Claim.StructureId.Find(s.Id) is { } claim)
             RemoveClaim(ctx, claim);
     }

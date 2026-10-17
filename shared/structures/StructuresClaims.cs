@@ -32,27 +32,6 @@ namespace LifeGame.Shared
                     },
                 },
             },
-            // claims-31: a trading stall, sold from while its owner is away (Stall.cs). 26: its
-            // StructureKind position, after House building's Bed = 25.
-            new StructureDef
-            {
-                Kind = Stalls.Kind,
-                Shape = new StructureShape
-                {
-                    Name = "Trading stall",
-                    Model = "Stall",
-                    Category = "Claims",
-                    Round = true, Radius = 0.8f,
-                    Clearance = 1.5f,
-                    Solid = true,
-                    Stages = new[] { "Frame", "Woven counter" },
-                    Costs = new (Item Item, uint Count)[][]
-                    {
-                        new[] { (Item.Stick, 6u), (Item.Fiber, 2u) },
-                        new[] { (Item.Fiber, 4u), (Item.Stick, 2u) },
-                    },
-                },
-            },
         };
     }
 }
