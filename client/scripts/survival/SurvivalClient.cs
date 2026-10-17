@@ -16,6 +16,9 @@ public partial class SurvivalClient : Node
     readonly NeedsHud needsHud = new();
     readonly StaminaBar staminaBar = new();
     readonly RestSpotView restSpots = new();
+    readonly DeathMarker deathMarker = new();
+    // Whether the death card says which way your things lie (Justin's call, via the PM).
+    const bool DeathCardDirection = true;
     readonly Dictionary<ulong, BerryBush> bushes = new();
 
     Node world = null!;
@@ -67,6 +70,22 @@ public partial class SurvivalClient : Node
         this.hud = hud;
         wetLook = WetLook.On(player);
         restSpots.Setup(world, terrain, player, hud);
+        world.AddChild(deathMarker);
+        // --death-preview=SECONDS shows the death card and marker that long after start,
+        // as if you had just died 13 m to the northwest. For screenshots only.
+        var preview = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).FirstOrDefault(a => a.StartsWith("--death-preview="));
+        if (preview != null && float.TryParse(preview["--death-preview=".Length..], out var at))
+        {
+            var timer = new Timer { WaitTime = at, OneShot = true, Autostart = true };
+            AddChild(timer);
+            timer.Timeout += () =>
+            {
+                var p = player.Position;
+                var fell = new Vector3(p.X - 8f, terrain.HeightAt(p.X - 8f, p.Z - 10f), p.Z - 10f);
+                needsHud.ShowDeath("cold", RestSpots.WokeAtEdge, DeathMarker.Direction(new Vector2(p.X, p.Z), new Vector2(fell.X, fell.Z)));
+                deathMarker.Show(fell, player);
+            };
+        }
         if (BerryCloseup.Wanted) world.AddChild(new BerryCloseup(terrain, player));
     }
 
@@ -149,7 +168,10 @@ public partial class SurvivalClient : Node
         vitals = v;
         if (deathsSeen != uint.MaxValue && v.Deaths > deathsSeen)
         {
-            needsHud.ShowDeath(v.LastDeath, v.WakeKind);
+            // Point back to where your things fell: a line on the card and a faint light over the spot.
+            var fell = new Vector2(v.DiedX, v.DiedZ);
+            needsHud.ShowDeath(v.LastDeath, v.WakeKind, DeathCardDirection ? DeathMarker.Direction(new Vector2(v.WokeX, v.WokeZ), fell) : null);
+            deathMarker.Show(new Vector3(v.DiedX, terrain.HeightAt(v.DiedX, v.DiedZ), v.DiedZ), player);
             // Wake at the edge of the wilderness. Main follows the player from here.
             player.Position = new Vector3(v.WokeX, terrain.HeightAt(v.WokeX, v.WokeZ), v.WokeZ);
             warnedCold = warnedFood = warnedWater = false;

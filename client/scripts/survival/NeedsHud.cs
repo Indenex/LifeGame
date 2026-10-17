@@ -108,7 +108,7 @@ public partial class NeedsHud : CanvasLayer
         // True while the death card covers the screen, so nothing offers itself over it.
     public bool Mourning => fade.Color.A > 0.02f;
 
-    public void ShowDeath(string cause, byte wakeKind = RestSpots.WokeAtEdge)
+    public void ShowDeath(string cause, byte wakeKind = RestSpots.WokeAtEdge, string? whereThingsLie = null)
     {
         deathTitle.Text = cause switch
         {
@@ -120,10 +120,12 @@ public partial class NeedsHud : CanvasLayer
         };
         deathLine.Text = wakeKind switch
         {
-            RestSpots.WokeAtRestSpot => "You wake where you chose to rest, with nothing.\nWhat you learned stays with you.",
-            RestSpots.WokeBedGone => "Your bed was gone; you woke at the edge of the wilderness with nothing.\nWhat you learned stays with you.",
-            _ => "You wake at the edge of the wilderness with nothing.\nWhat you learned stays with you.",
-        };
+            RestSpots.WokeAtRestSpot => "You wake where you chose to rest, with nothing.\n",
+            RestSpots.WokeBedGone => "Your bed was gone; you woke at the edge of the wilderness with nothing.\n",
+            _ => "You wake at the edge of the wilderness with nothing.\n",
+        }
+            + (whereThingsLie != null ? $"Your things lie where you fell, {whereThingsLie}.\n" : "")
+            + "What you learned stays with you.";
         var box = fade.GetChild<Control>(0);
         var tween = CreateTween();
         tween.TweenProperty(fade, "color:a", 1f, 0.8f);
