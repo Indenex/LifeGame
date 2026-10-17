@@ -22,7 +22,8 @@ public partial class LookPicker : CanvasLayer
     public bool IsOpen => panel.Visible;
 
     Control panel = null!;
-    Label title = null!;
+    Label title = null!, welcome = null!;
+    ColorRect scrim = null!;
     SubViewport view = null!;
     Skeleton3D? figure;
     HumanFigure.Appearance look = HumanFigure.Appearance.Default;
@@ -34,6 +35,12 @@ public partial class LookPicker : CanvasLayer
     public override void _Ready()
     {
         Layer = 5;
+        // The world dims behind the picker, so it is plain the game is waiting on this choice
+        // (Justin missed it at first join and found the bag "not working"); it also keeps clicks
+        // off the world while it is up.
+        scrim = new ColorRect { Color = new Color(0.04f, 0.04f, 0.03f, 0.55f), MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
+        scrim.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(scrim);
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
@@ -51,11 +58,12 @@ public partial class LookPicker : CanvasLayer
             ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
         title.Text = first ? "Choose how you look" : "Your look";
-        panel.Visible = true;
+        welcome.Visible = first;
+        panel.Visible = scrim.Visible = true;
         Show(look);
     }
 
-    public void Close() => panel.Visible = false;
+    public void Close() => panel.Visible = scrim.Visible = false;
 
     public override void _Process(double delta)
     {
@@ -96,8 +104,14 @@ public partial class LookPicker : CanvasLayer
     {
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 12);
-        title = Hud.Text("Choose how you look", 20);
+        title = Hud.Text("Choose how you look", 26);
         box.AddChild(title);
+        // At first join: say why the game is waiting, and that it isn't final.
+        welcome = Hud.Text("Welcome. Pick how you look before you set out. Done (or Enter) starts your day; you can change it any time in Options.", 15);
+        welcome.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        welcome.CustomMinimumSize = new Vector2(560, 0);
+        welcome.Modulate = new Color(1f, 0.9f, 0.72f, 0.9f);
+        box.AddChild(welcome);
 
         var columns = new HBoxContainer();
         columns.AddThemeConstantOverride("separation", 26);
@@ -139,14 +153,7 @@ public partial class LookPicker : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.88f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
     }
 

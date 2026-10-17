@@ -40,12 +40,12 @@ public partial class BuildMenu : CanvasLayer
     // Tabs in this order; any category not listed comes after, so a new one still shows.
     static readonly string[] Preferred = { "Shelter", "Storage", "Crafting", "Fire", "Fences and gates", "Claims" };
     static IEnumerable<string> Order => Preferred
-        .Concat(Enumerable.Range(0, Structures.Shapes.Length).Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
+        .Concat(Structures.Kinds.Select(CategoryOf).Distinct().Where(c => !Preferred.Contains(c)));
 
     // Everything it takes, all stages together.
     public static List<(Item item, uint count)> Costs(int kind) =>
-        kind < Structures.StageCosts.Length
-            ? Structures.StageCosts[kind].SelectMany(stage => stage)
+        Structures.Exists(kind)
+            ? Structures.Costs(kind).SelectMany(stage => stage)
                 .GroupBy(c => c.Item).Select(g => (g.Key, (uint)g.Sum(c => c.Count))).ToList()
             : new();
 
@@ -55,12 +55,14 @@ public partial class BuildMenu : CanvasLayer
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
+        Panels.Centre(this, Close);
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-buildmenu")))
             GetTree().CreateTimer(1.5).Timeout += Open;
     }
 
     public void Open()
     {
+        Panels.Opening(this);
         panel.Visible = true;
         if (category == "") category = Order.First(c => Kinds(c).Any());
         Refresh();
@@ -84,7 +86,7 @@ public partial class BuildMenu : CanvasLayer
     }
 
     static IEnumerable<int> Kinds(string category) =>
-        Enumerable.Range(0, Structures.Shapes.Length).Where(k => CategoryOf(k) == category);
+        Structures.Kinds.Where(k => CategoryOf(k) == category);
 
     Control MakePanel()
     {
@@ -102,14 +104,7 @@ public partial class BuildMenu : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
+        var outer = Ui.Window(box);
         return outer;
     }
 
@@ -146,7 +141,7 @@ public partial class BuildMenu : CanvasLayer
         tile.Pressed += () => { Close(); Place(kind); };
         tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
         tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
-            : afford ? "" : "You don't carry enough yet";
+            : afford ? "" : Shortfall(costs);
 
         var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -200,6 +195,13 @@ public partial class BuildMenu : CanvasLayer
         return tile;
     }
 
+    // What you still need for a kind, one line per short item with where to get it (the
+    // crafting cards' wording). You can lay out a footprint first and bring the rest later.
+    string Shortfall(List<(Item item, uint count)> costs) =>
+        "You can lay it out now and bring the rest as you build. Still to find:\n" + string.Join("\n", costs
+            .Where(c => Carried(c.item) < c.count)
+            .Select(c => $"{c.count - Carried(c.item)} {Items.Def(c.item).Count(c.count - Carried(c.item)).ToLowerInvariant()}. {CraftingUi.WhereFrom(c.item)}"));
+
     // Renders each kind, finished, in a small lit scene of its own, one per frame.
     async void RenderPictures()
     {
@@ -227,7 +229,7 @@ public partial class BuildMenu : CanvasLayer
             },
         });
 
-        for (int kind = 0; kind < Structures.Shapes.Length; kind++)
+        foreach (int kind in Structures.Kinds)
         {
             var model = new StructureView(kind);
             view.AddChild(model);

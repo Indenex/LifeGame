@@ -49,6 +49,7 @@ public partial class Avatar : Node3D
             Position = new Vector3(0, 2.05f, 0),
         };
         AddChild(nameplate);
+        PlaceNameplate();
     }
 
     // Set from player_sneaking for other players; tracks the key for your own.
@@ -168,6 +169,15 @@ public partial class Avatar : Node3D
         // A new look may be a differently shaped body: poses that reach the face re-measure it.
         rig.Measure();
         PlaceMouth();
+        PlaceNameplate();
+    }
+
+    // The name floats a little above the head, whatever the body's height (a 1.75 m
+    // adult or a 1.35 m chibi): the top of the body mesh plus a gap.
+    void PlaceNameplate()
+    {
+        if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { Mesh: { } mesh })
+            nameplate.Position = new Vector3(0, mesh.GetAabb().End.Y + 0.3f, 0);
     }
 
     // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
