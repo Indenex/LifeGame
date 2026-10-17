@@ -27,6 +27,7 @@ public static class Recipes
         ["build.roof"] = "Thatch a shelter with plant fiber using {use}.",
         ["build.weave"] = "{build_mode} to lay out a storage basket, then weave it with {use}.",
         ["build.door"] = "Hang a door on a finished hut with {use}.",
+        [Skills.Eggs] = "{use} beside a hen that has been sitting a while.",
         [Skills.Shear] = "{use} beside a calm sheep while you carry something sharp. Sneak up with {sneak}.",
         [Skills.Kill] = "{strike} to strike an animal. A spear hits harder.",
         [Skills.Sneak] = "Hold {sneak} and creep toward a wary animal. The closer you get before it bolts, the better you learn.",
@@ -38,6 +39,9 @@ public static class Recipes
         ["build.rack"] = "{build_mode} to lay out a leather drying rack in your claim, then add its materials with {use}.",
         ["claim.mark"] = "{build_mode} to lay out a claim marker away from the clearing, then add sticks and fiber with {use}.",
         ["chop.log"] = "{use} beside a standing tree with an axe in your bag. Stand clear when it falls.",
+        [Wading.WadeProcess] = "Walk into a pond or stream and keep going. Time in the water builds Swimming.",
+        [Wading.FloatProcess] = "Keep going past where your feet touch the bottom, and the water carries you.",
+        [Skills.Repair] = "Stand at a repair table in your claim and mend a worn tool with {use}.",
         [Skills.Run] = "Hold {run} to run. Running far builds Endurance; slow down to get your breath back.",
         [Skills.DryHide] = "Leave a stretched hide on its rack until it dries, then take the leather with {use}.",
     };

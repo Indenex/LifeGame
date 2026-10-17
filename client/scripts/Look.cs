@@ -20,6 +20,9 @@ public static class Look
     public static readonly Color LeafLight = new(0.42f, 0.50f, 0.20f);
     public static readonly Color LeafWarm = new(0.66f, 0.50f, 0.18f);
     public static readonly Color Rock = new(0.46f, 0.47f, 0.46f);
+    // Boulders, river stones and outcrops in the world (env-16): paler and warmer than
+    // Rock, after the art references. Tools, stations and items keep Rock.
+    public static readonly Color WorldRock = new(0.64f, 0.61f, 0.55f);
     // Wildflowers in the grass (Environment's undergrowth).
     public static readonly Color FlowerWhite = new(0.95f, 0.93f, 0.84f);
     public static readonly Color FlowerButtercup = new(0.93f, 0.78f, 0.25f);

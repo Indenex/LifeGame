@@ -1,7 +1,7 @@
 # integration-10: Smarter, parallel CI
 Lane: Integration
 Owner: Integration thread
-Status: in_review
+Status: in_review (PR #413 merged; follow-up on claude/integration-craft-faster)
 Branch: claude/integration-parallel-ci
 PR: (see GitHub)
 
@@ -18,7 +18,11 @@ Server job 16:20 = setup+module build 0:45, bindings 0:18, load+BuildTest+SpawnC
 - `Server module and load test` is now a gate job that passes when all of those passed or were skipped (and fails if the change detection failed).
 - Composite actions `.github/actions/setup-stdb` and `start-server` replace the copied setup steps.
 
+## After (PR #413, run 38991156084): 8 min 46 s wall (was 16 min 38 s)
+Crafting check 7:31 (longest), Building check 6:11, Load/spawn/social 3:10, Upgrade 1:33, module build 1:00, clients 1:31 (Linux) and 1:56 (Windows). Client Export step (with the Godot import) is 17 s of that, so an import cache is not worth its stale-cache risk.
+
 ## Progress log
+- 2026-10-17: follow-up: CraftCheck's 60 s wait for the first fire to burn down now runs last, so the rest of the check passes the time (about -1 min). BuildTest (6:11) becomes the long pole.
 - 2026-10-17: workflow written (PR). After numbers to be filled in from the PR's own run.
 
 ## Next step

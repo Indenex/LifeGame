@@ -7,6 +7,8 @@ public enum AnimalSpecies
     Sheep,
     // Red deer (animals-14): shy herds at the woodland edges.
     Deer,
+    // Hens (animals-19): a tame yard flock that lays eggs.
+    Hen,
 }
 
 // What an animal is doing, so clients can pick the matching animation.
@@ -63,6 +65,9 @@ public static partial class Module
         // How grown up the animal is: lambs are born at LambGrowth and reach 100.
         [Default((byte)100)]
         public byte Growth;
+        // Eggs a hen is holding, up to its Def's EggCap, for a player to collect.
+        [Default((byte)0)]
+        public byte Eggs;
     }
 
     // What each animal is thinking. Server only.
@@ -96,6 +101,9 @@ public static partial class Module
         // A lamb's mother, whom it trails until it is grown; 0 for none.
         [Default(0UL)]
         public ulong MotherId;
+        // When a hen's next egg started coming, or 0 for none yet.
+        [Default(0L)]
+        public long EggAt;
     }
 
     [SpacetimeDB.Table(Accessor = "Flock")]
@@ -310,9 +318,10 @@ public static partial class Module
                 AnimalDecide(ctx, ref body, ref mind, flock, leader.Body, isLeader, watchers, calmedByStillPlayer, huddle, now);
             AnimalMove(ctx, ref body, ref mind, before, i);
             RegrowFleece(ref body, mind, now);
+            LayEggs(ref body, ref mind, now);
             AnimalGrowAndHeal(ref body, ref mind, now);
 
-            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece || body.Growth != was.Growth
+            if (body.X != was.X || body.Z != was.Z || body.State != was.State || body.Fleece != was.Fleece || body.Growth != was.Growth || body.Eggs != was.Eggs
                 || MathF.Abs(body.Heading - was.Heading) > 0.01f)
             {
                 body.ChunkX = World.ChunkOf(body.X);

@@ -7,6 +7,12 @@ namespace LifeGame.Shared
     // about half speed. D-075: gentle numbers; no stamina cost, no new animation.
     public static class Wading
     {
+        // Process ids for the Swimming skill (swim prefix): every WaterPerUse seconds spent moving
+        // through water, measured on the server's own positions, is one report.
+        public const string WadeProcess = "swim.wade";
+        public const string FloatProcess = "swim.float";
+        public const float WaterPerUse = 20f;
+
         // Deeper than this and the feet stop following the bed.
         public const float FloatDepth = 0.9f;
         // Walking speed left at FloatDepth, and once properly afloat, as fractions of full speed.
@@ -24,15 +30,18 @@ namespace LifeGame.Shared
         public static float FeetY(float bedHeight) => System.Math.Max(bedHeight, World.WaterLevel - FloatDepth);
 
         // Fraction of walking speed at a depth. Eased, so there is no step at the shore.
-        public static float SpeedFactor(float depth)
+        public static float SpeedFactor(float depth, int swimmingRank = 0)
         {
+            // The Swimming skill eases both ends; rank 0 gives the constants above exactly.
+            float wadeFloor = Progression.Effect(EffectKind.WadeSpeed, swimmingRank);
+            float floatSpeed = Progression.Effect(EffectKind.FloatSpeed, swimmingRank);
             if (depth <= 0f) return 1f;
             float t = System.Math.Min(depth / FloatDepth, 1f);
             float eased = t * t * (3f - 2f * t);
-            float f = 1f + (WadeFloor - 1f) * eased;
+            float f = 1f + (wadeFloor - 1f) * eased;
             if (depth <= FloatDepth) return f;
             float u = System.Math.Min((depth - FloatDepth) / FloatEase, 1f);
-            return WadeFloor + (FloatSpeed - WadeFloor) * (u * u * (3f - 2f * u));
+            return wadeFloor + (floatSpeed - wadeFloor) * (u * u * (3f - 2f * u));
         }
     }
 }

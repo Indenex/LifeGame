@@ -125,6 +125,7 @@ public partial class Atmosphere : Node3D
         ReadyFronts();
         ReadyGrade();
         ReadyFrost();
+        ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
 
@@ -181,6 +182,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Weather.OnInsert += (_, w) => OnWeather(w);
         conn.Db.Weather.OnUpdate += (_, _, w) => OnWeather(w);
         ConnectSeasons(conn);
+        ConnectImpacts(conn);
         ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
@@ -318,6 +320,7 @@ public partial class Atmosphere : Node3D
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
         UpdateFrost(dt);
+        UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)

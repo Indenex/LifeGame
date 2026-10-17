@@ -10,7 +10,10 @@ using LifeGame.Shared;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
+// What to build: "both" (the default: lean-to, clay hut, basket, fence and gate), or one or more of
+// lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 string which = args.Length > 0 ? args[0] : "both";
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -73,11 +76,11 @@ foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, St
     Check(shape.DoorwayZ >= wall - 0.2f, $"{shape.Name}: the door sits in the front wall");
 }
 
-if (which is "lean-to" or "both")
+if (Wants("lean-to"))
     BuildTogether(StructureKind.LeanTo,
         new() { [Item.Stick] = 5, [Item.Fiber] = 6 },
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 });
-if (which is "clay-hut" or "both")
+if (Wants("clay-hut"))
 {
     ulong hut = BuildTogether(StructureKind.ClayHut,
         new() { [Item.Stick] = 11, [Item.Stone] = 2, [Item.Fiber] = 9 },
@@ -93,7 +96,7 @@ if (which is "clay-hut" or "both")
     LayMat(hut);
     BuildHearth(hut);
 }
-if (which is "basket" or "both")
+if (Wants("basket"))
     StoreInBasket(BuildTogether(StructureKind.Basket,
         new() { [Item.Fiber] = 3, [Item.Stick] = 2 },
         new() { [Item.Fiber] = 9 },
@@ -104,7 +107,7 @@ if (which is "basket" or "both")
             Check(b.CountOf(Item.Cordage) >= 2, $"twisted cordage for the basket ({b.Carried()})");
         }));
 
-if (which is "fence" or "both")
+if (Wants("fence"))
 {
     WallsStopWalkers(BuildTogether(StructureKind.Fence,
         new() { [Item.Stick] = 2 },
@@ -115,7 +118,7 @@ if (which is "fence" or "both")
 }
 
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
-if (which is "brick-house")
+if (Wants("brick-house"))
 {
     ulong house = BuildTogether(StructureKind.BrickHouse,
         new() { [Item.Stone] = 6, [Item.Stick] = 16, [Item.Fiber] = 20 },
@@ -145,7 +148,7 @@ if (which is "brick-house")
 }
 
 // Not in "both": each player makes a stone axe and chops ten logs, which takes minutes (log-cabin).
-if (which is "log-cabin")
+if (Wants("log-cabin"))
 {
     ulong cabin = BuildTogether(StructureKind.LogCabin,
         new() { [Item.Stone] = 7, [Item.Stick] = 7, [Item.Fiber] = 3 },
@@ -387,22 +390,7 @@ void UseGate(ulong gate)
 void BuildHearth(ulong hut)
 {
     Console.WriteLine("--- Raised hearth");
-    // The bots are still inside the hut from the mat, and its walls stop the server's players
-    // (bugfix-27): go out through the doorway before gathering, or they stay penned in.
-    var hutRow = a.Conn.Db.Structure.Id.Find(hut)!;
-    var doorway = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).DoorwayZ + 0.6f);
-    var yard = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).Radius + 2.5f);
-    a.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
-    if (a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true })
-    {
-        a.Conn.Reducers.ToggleDoor(hut); // a shut door stops walkers too
-        WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the hut door opens for the way out");
-    }
-    foreach (var bot in bots)
-    {
-        bot.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
-        bot.WalkTo(yard.x, yard.z, 0.5f, Pump);
-    }
+    LeaveHut(hut);
     a.Wants = new() { [Item.Stone] = 4, [Item.Stick] = 2, [Item.Fiber] = 2 };
     b.Wants = new() { [Item.Clay] = 4, [Item.Fiber] = 2 };
     var until = clock.Elapsed + TimeSpan.FromSeconds(300);
@@ -457,10 +445,32 @@ void BuildHearth(ulong hut)
     b.WalkTo(door.x + 0.5f, door.z, 0.3f, Pump);
 }
 
+// The hut's walls (and its shut door) stop the server's players (bugfix-27), so bots that finished
+// something inside must go out through the doorway before they gather: the door is opened, then
+// both walk out to the yard in front of it.
+void LeaveHut(ulong hut)
+{
+    var hutRow = a.Conn.Db.Structure.Id.Find(hut)!;
+    var doorway = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).DoorwayZ + 0.6f);
+    var yard = Structures.ToWorld(hutRow.X, hutRow.Z, hutRow.Yaw, 0f, Structures.Shape((int)hutRow.Kind).Radius + 2.5f);
+    a.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+    if (a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: true })
+    {
+        a.Conn.Reducers.ToggleDoor(hut);
+        WaitFor(() => a.Conn.Db.StructureDoor.StructureId.Find(hut) is { Closed: false }, 10, "the hut door opens for the way out");
+    }
+    foreach (var bot in bots)
+    {
+        bot.WalkTo(doorway.x, doorway.z, 0.3f, Pump);
+        bot.WalkTo(yard.x, yard.z, 0.5f, Pump);
+    }
+}
+
 // A weaves a sleeping mat, lays it out inside the hut, and rolls it up again.
 void LayMat(ulong hut)
 {
     Console.WriteLine("--- Sleeping mat");
+    LeaveHut(hut);
     a.Wants = new() { [Item.Fiber] = 8 };
     var until = clock.Elapsed + TimeSpan.FromSeconds(120);
     while (!a.HasWants && clock.Elapsed < until)

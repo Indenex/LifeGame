@@ -1075,3 +1075,89 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
 **Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
 **Who:** Justin (relayed by the PM; no direct quote).
+
+## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
+**Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
+**Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
+
+## D-267 — 2026-10-17 — Eggs cook into a boiled egg (follows D-259)
+**Decision:** Eggs cook into a boiled egg.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-268 — 2026-10-17 — Feathers fletch better arrows; plain arrows still work (follows D-259)
+**Decision:** Feathers fletch better arrows. Plain arrows still work.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-269 — 2026-10-17 — Hens roost in their coop at night and come out at dawn (follows D-259, D-265)
+**Decision:** Hens roost in their coop at night and come out at dawn.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-270 — 2026-10-17 — Other players in water get ripples and splashes, but no wet legs
+**Decision:** Other players in water get ripples and splashes, but no wet legs.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
+**Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
+**Who:** PM default (Justin not yet asked).
+
+## D-272 — 2026-10-17 — Maker's mark: players pick from a glyph panel with a colour picker; inspecting an item shows its maker (refines D-266)
+**Decision:** Players pick their maker's mark from a panel with many glyphs (fantasy, scientific and more) and a colour picker. Inspecting any made item tells you who made it. Owner: Ceramics.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-273 — 2026-10-17 — Atmosphere builds morning frost next
+**Decision:** Atmosphere builds morning frost next (atmosphere-28).
+**Who:** Justin, picking morning frost (relayed by the PM; no direct quote).
+
+## D-274 — 2026-10-17 — Pines: keep the v2 shapes; next is a painted shader and lighting pass (follows D-261, D-253)
+**Decision:** Justin liked the v2 pines (commit 7355afe8, 16 seeded variants). The v2 shapes stay. He still wants more of the painted texture look, which may be reachable with custom shaders and lighting, so the next step is a painted shader and lighting pass. Owner: Modeling leads, with Atmosphere.
+**Who:** Justin ("Those trees are waaay better and in the right direction. I still want more of the painted texture look. Maybe we can achieve some of that with custom shaders/lighting?")
+
+## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
+**Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
+**Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-285 — 2026-10-17 — Pines keep the darker noon look, more lit colour at low sun, tidier bottom ring
+**Decision:** Pines keep the darker noon look (D-282) but let more lit colour through at low sun. The bottom ring of boughs is made more uniform.
+**Who:** Justin: "clean up the bottom ring of leaves and make them more uniform, some are all over the place" (relayed by the PM).
