@@ -1269,3 +1269,42 @@ Owner: Claims.
 ## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
 **Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
 **Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
+
+## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
+**Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
+**Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
+
+## D-314 — 2026-10-17 — UI look: "Warm paper windows"
+**Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
+**Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
+
+## D-315 — 2026-10-17 — Cutesy extras picked
+**Decision:** Cutesy extras picked, with owners:
+- #1 soft rim light (Modeling, with Atmosphere).
+- #8 soft bloom and light leaks, and #10 gentle vignette (Atmosphere, each with a toggle).
+- #12 ambient life: butterflies, fireflies, pollen, falling leaves, snow (Environment).
+- #15 idle fidgets, #16 blinking and expressions, and #17 hop and squish movement (Animation).
+- #18 bouncy UI with reduce-motion (UX).
+
+Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
+**Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
+
+## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
+**Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
+**Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
+
+## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
+**Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
+**Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).

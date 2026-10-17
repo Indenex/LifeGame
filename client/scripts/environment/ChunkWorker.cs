@@ -178,7 +178,7 @@ public partial class Terrain
     }
 
     // On the main thread: the chunk's nodes from a finished build.
-    Node3D Assemble(int cx, int cz, ChunkData data)
+    Node3D Assemble(int cx, int cz, ChunkData data, bool plants = true)
     {
         var root = new Node3D { Name = $"Chunk_{cx}_{cz}" };
         var arrays = new Godot.Collections.Array();
@@ -191,10 +191,22 @@ public partial class Terrain
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays,
             flags: (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
         root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = Look.Ground });
-        foreach (var (batchMesh, material, items, shadow, range) in data.Batches)
-            AddMulti(root, batchMesh, items, material, shadow, range);
+        if (plants) AddPlants(root, data);
         return root;
     }
+
+    // The chunk's trees, rocks and plants under one child node, so they can move into a
+    // far region's shared batches and back without rebuilding the chunk (env-24).
+    static Node3D AddPlants(Node3D root, ChunkData data)
+    {
+        var holder = new Node3D { Name = PlantsName };
+        root.AddChild(holder);
+        foreach (var (batchMesh, material, items, shadow, range) in data.Batches)
+            AddMulti(holder, batchMesh, items, material, shadow, range);
+        return holder;
+    }
+
+    const string PlantsName = "Plants";
 
     // Builds a chunk right here, on the main thread (the bench).
     Node3D BuildChunk(int cx, int cz) => Assemble(cx, cz, Compute(TakeSnapshot(cx, cz)));
@@ -225,11 +237,15 @@ public partial class Terrain
                 }
                 if (!InRange(key)) continue;
                 if (chunks.Remove(key, out var old)) old.QueueFree();
-                var node = Assemble(key.Item1, key.Item2, task.Result);
+                // A far chunk draws only its ground; its plants join its region's shared
+                // batches (env-24).
+                bool far = IsFar(key);
+                var node = Assemble(key.Item1, key.Item2, task.Result, plants: !far);
                 if (task.Result.Tufts) tufted.Add(key); else tufted.Remove(key);
                 AddChild(node);
                 chunks[key] = node;
-                if (node.GetNodeOrNull<Node3D>(GhostsName) is { } ghosts) ghostHolders[key] = ghosts;
+                Placed(key, task.Result, far);
+                if (node.GetNodeOrNull<Node3D>($"{PlantsName}/{GhostsName}") is { } ghosts) ghostHolders[key] = ghosts;
                 else ghostHolders.Remove(key);
             }
         }
