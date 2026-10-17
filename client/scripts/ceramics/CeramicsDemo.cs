@@ -63,7 +63,7 @@ public partial class CeramicsDemo : Node3D
         if (ShowMarkSheet)
         {
             // All the glyphs flat on a clay slab, for judging the line art (rough, until Justin picks).
-            var sheetY = 2.2f;
+            var sheetY = 3.6f;
             row.AddChild(new MeshInstance3D
             {
                 Mesh = new BoxMesh { Size = new Vector3(4.9f, 4.3f, 0.05f) },
@@ -101,7 +101,7 @@ public partial class CeramicsDemo : Node3D
                     Mesh = PotMesh.For(form, id),
                     MaterialOverride = ClayLook.Stamped(plain, slots[g], new Color(Marks.Presets[g % Marks.Presets.Length]), form),
                     // Turned so the stamp faces the camera, which looks along -Z.
-                    Position = new Vector3((g % 6 - 2.5f) * 0.55f, 0, (g / 6) * 0.65f),
+                    Position = new Vector3((g % 6 - 2.5f) * 0.7f, 0, -(g / 6) * 1.1f),
                     Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
                     Scale = Vector3.One * PotView.Size,
                 });
@@ -200,11 +200,18 @@ public partial class CeramicsDemo : Node3D
         anchor.Visible = false;
         if (ShowMarkSheet)
         {
-            camera.Position = at + new Vector3(0f, 2.3f, 7.8f);
-            camera.LookAt(at + new Vector3(0f, 2.2f, 0), Vector3.Up);
+            camera.Position = at + new Vector3(0f, 3.7f, 7.8f);
+            camera.LookAt(at + new Vector3(0f, 3.6f, 0), Vector3.Up);
             return;
         }
-        if (ShowLamps || ShowMarks)
+        if (ShowMarks)
+        {
+            // High enough to see over the front row to the back one.
+            camera.Position = at + new Vector3(0f, 2.3f, 4.6f);
+            camera.LookAt(at + new Vector3(0f, 0.2f, -0.5f), Vector3.Up);
+            return;
+        }
+        if (ShowLamps)
         {
             camera.Position = at + new Vector3(0f, 1.2f, 3.2f);
             camera.LookAt(at + new Vector3(0f, 0.1f, 0), Vector3.Up);
