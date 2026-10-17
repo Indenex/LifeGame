@@ -175,6 +175,11 @@ WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after rec
     WaitFor(Swam, 10, "time spent wading is journalled as swim.wade or swim.float");
 }
 
+// The atmosphere subscription (clock, weather, seasons) must apply: one private or unknown table in it
+// fails the whole thing and no client ever sees the time or season change (bugfix-39).
+Subscribe(Subscriptions.Atmosphere, 20, "the clock, weather and season subscription applies");
+Check(conn.Db.WorldClock.Iter().Any() && conn.Db.SeasonClock.Iter().Any(), "the world clock and season clock arrive");
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;
