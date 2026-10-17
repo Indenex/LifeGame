@@ -24,7 +24,7 @@ public partial class SunShadows : Node
 
     public static Level Setting
     {
-        get => Override ?? (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
+        get => Override ?? (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.Medium), 0, Names.Length - 1);
         set
         {
             Settings.Set("graphics", "shadows", (int)value);

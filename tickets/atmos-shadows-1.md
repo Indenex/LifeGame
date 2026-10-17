@@ -26,8 +26,27 @@ before and after; Render shows noon and dusk, walking, before and after.
 - 2026-10-17 07:10: measuring main vs this: 40 frames at --fixed-fps 30, noon and 0.725,
   /root/perf/out-<sha>-<t> (frame PNGs + stats.json).
 
+- 2026-10-17 08:05: measured (fixed 30 fps game step, 40 frames, offline spawn, 1280x720,
+  software Vulkan/llvmpipe, so frame ms are relative only; GPU timers read 0 there).
+  "flicker" = % of pixels changing >6/255 between consecutive frames with the player still
+  (grass sway is part of it in every run).
+
+  | run | draw calls | primitives | frame ms (sw) | flicker |
+  |---|---|---|---|---|
+  | main, noon | 701 | 1.96 M | 2323 | 2.23% |
+  | Low, noon | 501 | 1.65 M | 2298 | 1.94% |
+  | Medium (trimmed, default), noon | 718 | 2.42 M | 2783 | 1.71% |
+  | High, noon | 1182 | 3.30 M | 3493 | 1.78% |
+  | main, dusk 0.725 | 1540 | 4.16 M | 3484 | 0.39% |
+  | Medium, dusk | 1819 | 4.97 M | 4102 | 0.39% |
+  | High, dusk | 2401 | 6.04 M | 5333 | 0.24% |
+
+  First Medium (60 m, wide fit) cost 1010 draw calls at noon; trimmed to 50 m with the near
+  cascades tight (6b624d5c). Default is now Medium; High is the opt-in crisp mode. Crops of
+  noon (main / Medium / High): tree shadow edges visibly crisper on Medium and High.
+
 ## Open questions / blockers
 - Push target: PM to confirm claude/atmos-shadows-1 (or another route) before push and PR.
 
 ## Next step
-Read /root/perf/out-*/stats.json and the frame diffs; record before/after in this ticket.
+Push once the PM confirms the branch, wait for CI, send Render the before/after request (noon and dusk, walking), send the PM the green sha.
