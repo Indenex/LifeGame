@@ -2,7 +2,7 @@
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
 Status: in_progress
-Branch: claude/anim-13 (stacked on claude/anim-12, #600)
+Branch: claude/anim-13 (on main since #600 merged)
 PR: #613
 
 ## Goal
