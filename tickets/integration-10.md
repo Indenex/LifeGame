@@ -27,3 +27,6 @@ Crafting check 7:31 (longest), Building check 6:11, Load/spawn/social 3:10, Upgr
 
 ## Next step
 Compare the PR's run time with the before figures, fix anything the run shows, then send the PM the green sha. Later: Godot .godot import cache.
+
+## integration-13: main builds and releases first (Justin)
+`.github/workflows/priority.yml` ("Main priority"): GitHub has no job priority, so while a push-triggered Build or any Release is queued or running, queued and in-progress pull_request Build runs are cancelled (job summary: "paused for a main build; re-runs automatically"). When main is idle (after each finished Build or Release, and on a 15-minute schedule) the newest cancelled run per open PR head is re-run. Merge-queue and manual runs and Release runs are never touched; PR runs a newer push replaced are left alone. Needs `actions: write`. WORKER_LOOP.md step 5b tells lanes a cancelled run is not red.
