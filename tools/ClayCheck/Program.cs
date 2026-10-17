@@ -84,6 +84,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_inventory",
                 "SELECT * FROM my_craft_job",
+                "SELECT * FROM my_admin",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"));
