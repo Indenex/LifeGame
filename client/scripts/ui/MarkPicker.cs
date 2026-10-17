@@ -145,15 +145,7 @@ public partial class MarkPicker : CanvasLayer
         hint.Modulate = new Color(1, 1, 1, 0.65f);
         box.AddChild(hint);
 
-        var outer = Hud.Panel(box, Vector2.Zero);
-        var st = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        st.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.88f);
-        st.ContentMarginTop = st.ContentMarginBottom = 14;
-        st.ContentMarginLeft = st.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
-        return outer;
+        return Ui.Window(box);
     }
 
     void Refresh()
