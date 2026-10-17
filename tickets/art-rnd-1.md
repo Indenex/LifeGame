@@ -30,7 +30,10 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: merged birch + pine: renders/art-rnd-1-birch.png, -pine.png (+ -close); sent to the PM.
 
+- 2026-10-17: PM: tree palette (fresh vs olive) waits for Justin (world palette, D-154). Opus helper started on 3 seeded variants per tree (D-166) + a rounded pine tip.
+
 ## Open questions / blockers
+- Justin (morning): tree palette (a) fresh greens, recommended, (b) partway to olive, (c) mixed; D-154, not defaulted.
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
 ## Next step
