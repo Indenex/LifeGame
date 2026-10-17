@@ -519,6 +519,8 @@ public partial class Showcase : Node3D
         today.Position = new Vector3(-2.6f, 0, 0);
         today.Rotation = new Vector3(0, yaw, 0);
         AddChild(today);
+        // --flat draws them with today's shader, to compare with the painted look.
+        ChibiFigure.Painted = !args.ContainsKey("flat");
         var looks = new[]
         {
             new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 1, 1),

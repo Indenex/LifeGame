@@ -34,7 +34,9 @@ public static class ChibiFigure
     public static readonly Color[] Creams = { new(0.96f, 0.9f, 0.8f), new(0.98f, 0.97f, 0.94f) };
 
     static readonly Dictionary<string, HumanFigure.Built> Cache = new();
-    static Material? material;
+    static Material? flat;
+    // The painted banded look (ChibiLook); false draws them with today's shader.
+    public static bool Painted = true;
     static readonly Color Eye = new(0.1f, 0.08f, 0.07f);
     static readonly Color Nose = new(0.15f, 0.1f, 0.09f);
     static readonly Color Boot = new(0.24f, 0.18f, 0.16f);
@@ -47,9 +49,9 @@ public static class ChibiFigure
 
     public static HumanFigure.Built Build(Look look)
     {
-        string key = look.ToString();
+        string key = look.ToString() + Painted;
         if (Cache.TryGetValue(key, out var done)) return done;
-        material ??= LifeGame.Look.Solid(Colors.White);
+        var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
         bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
         var body = kit ? Furs[look.Main % Furs.Length] : pebble ? PebbleSkins[look.Main % PebbleSkins.Length] : Skins[look.Main % Skins.Length];
         var second = kit ? Creams[look.Second % Creams.Length] : pebble ? Shells[look.Second % Shells.Length] : Hairs[look.Second % Hairs.Length];
