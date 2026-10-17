@@ -25,6 +25,8 @@ var clock = Stopwatch.StartNew();
 (float x, float z)? claimAt = null;
 bool bIsMember = false;
 
+const float Module_UnstuckRadius = 12.5f;
+
 void Pump(int ms)
 {
     var until = clock.Elapsed + TimeSpan.FromMilliseconds(ms);
@@ -98,6 +100,7 @@ if (Wants("clay-hut"))
         });
     HangDoor(hut);
     LayMat(hut);
+    UnstuckInHut(hut);
     BuildHearth(hut);
 }
 if (Wants("basket"))
@@ -506,6 +509,29 @@ void LayMat(ulong hut)
     WaitFor(() => a.CountOf(Item.SleepingMat) == 1 && a.Conn.Db.SleepingMat.PlayerId.Find(me) is null, 10, "rolled it up again");
     a.Conn.Reducers.LayMat(hut);
     WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
+}
+
+// A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
+// puts A on free ground within its search radius; a second try inside the cooldown is refused (bugfix-44).
+void UnstuckInHut(ulong hut)
+{
+    Console.WriteLine("--- Unstuck");
+    var s = a.Conn.Db.Structure.Id.Find(hut)!;
+    var from = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    Check(Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, from.X, from.Z), "A stands inside the hut");
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId) is { } p && (p.X != from.X || p.Z != from.Z) || a.LastError != null, 10, "the server answered unstuck");
+    Check(a.LastError == null, $"unstuck was allowed ({a.LastError ?? "-"})");
+    var to = a.Conn.Db.PlayerPos.PlayerId.Find(a.MyId)!;
+    float moved = MathF.Sqrt((to.X - from.X) * (to.X - from.X) + (to.Z - from.Z) * (to.Z - from.Z));
+    Check(!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, to.X, to.Z), $"A now stands outside the hut ({to.X:F1}, {to.Z:F1})");
+    Check(moved <= Module_UnstuckRadius, $"A moved {moved:F1} m, within the search radius");
+    a.X = to.X; a.Z = to.Z;
+    a.LastError = null;
+    a.Conn.Reducers.Unstuck();
+    WaitFor(() => a.LastError != null, 10, "a second unstuck inside the cooldown is answered");
+    Check(a.LastError!.Contains("again in"), $"the second try is refused for the cooldown ({a.LastError})");
 }
 
 // A puts sticks in the basket; B takes one out.

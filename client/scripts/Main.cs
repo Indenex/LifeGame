@@ -434,6 +434,7 @@ public partial class Main : Node3D
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
+        HookUnstuck(c);
         c.SubscriptionBuilder()
             .OnApplied(_ => { if (c.Db.ServerInfo.Id.Find(0) is { } info) ServerCheck.Compare(info.Build); })
             .OnError((_, e) => ServerCheck.Failed(e.Message, hud.Note))
