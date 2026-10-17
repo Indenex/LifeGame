@@ -46,7 +46,7 @@ public sealed class PlayerRig
     readonly Node3D?[] pivots = new Node3D?[Pose.Count];
     readonly Skeleton3D? skeleton;
     readonly int[] bones = new int[Pose.Count];
-    readonly Vector3 hipsRest;
+    Vector3 hipsRest;
 
     public PlayerRig(Node3D figure)
     {
@@ -57,17 +57,52 @@ public sealed class PlayerRig
             if (skeleton != null) bones[i] = skeleton.FindBone(name);
             else pivots[i] = figure.FindChild(name, true, false) as Node3D;
         }
+        Measure();
+    }
+
+    // Reads the body's proportions from the rest pose. Call again if the figure's
+    // skeleton changes shape (a different body for a new look).
+    public void Measure()
+    {
         hipsRest = RestPosition(Joint.Hips);
         LegLength = -(RestPosition(Joint.KneeL).Y + RestPosition(Joint.FootL).Y);
         if (LegLength < 0.2f) LegLength = 0.8f;
+        UpperArm = RestPosition(Joint.ElbowL).Length();
+        Forearm = RestPosition(Joint.HandL).Length();
+        if (UpperArm < 0.05f || Forearm < 0.05f) (UpperArm, Forearm) = (0.3f, 0.27f);
+        ShoulderL = BodyPosition(Joint.ShoulderL);
+        ShoulderR = BodyPosition(Joint.ShoulderR);
+        // Until the figure says where its mouth is: a little in front of the head joint.
+        Mouth = BodyPosition(Joint.Head) + new Vector3(0, 0.08f, 0.1f);
     }
 
     Vector3 RestPosition(Joint j) => skeleton != null
         ? bones[(int)j] >= 0 ? skeleton.GetBoneRest(bones[(int)j]).Origin : Vector3.Zero
         : pivots[(int)j]?.Position ?? Vector3.Zero;
 
+    // Where a joint sits on the whole figure at rest (rest rotations are all zero).
+    Vector3 BodyPosition(Joint j)
+    {
+        if (skeleton != null)
+            return bones[(int)j] >= 0 ? skeleton.GetBoneGlobalRest(bones[(int)j]).Origin : Vector3.Zero;
+        var at = Vector3.Zero;
+        for (Node? n = pivots[(int)j]; n is Node3D p && n != skeleton; n = n.GetParent())
+        {
+            at += p.Position;
+            if (p.Name == nameof(Joint.Hips)) break;
+        }
+        return at;
+    }
+
     // Hip joint to ankle at rest, for keeping the feet on the ground.
-    public readonly float LegLength;
+    public float LegLength { get; private set; }
+    // Arm bone lengths and where the shoulders and mouth are on the resting figure,
+    // so hands can reach the face on any body (a 1.75 m adult or a 1.35 m chibi).
+    public float UpperArm { get; private set; }
+    public float Forearm { get; private set; }
+    public Vector3 ShoulderL { get; private set; }
+    public Vector3 ShoulderR { get; private set; }
+    public Vector3 Mouth { get; set; }
 
     public void Apply(Pose pose)
     {
