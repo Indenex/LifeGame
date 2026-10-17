@@ -127,10 +127,11 @@ jobs:
         with:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
-      - name: Short load test and spawn check
+      - name: Short load test, spawn and survival checks
         run: |
           (cd tools/LoadTest && dotnet run -c Release -- 5 5)
           (cd tools/SpawnCheck && dotnet run -c Release)
+          (cd tools/SurvivalCheck && dotnet run -c Release)
       - name: Check chat, claim and PvP rules with two players
         run: |
           (cd server && spacetimedb-cli call lifegame --server local set_claim_lifetime 30)
