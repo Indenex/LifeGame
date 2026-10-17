@@ -28,6 +28,7 @@ public static class NextSteps
         [Skills.Dig] = "The ground holds more than roots. Try {dig} where the soil is low and damp.",
         ["gather.tinder"] = "Fire needs something fine and dry to catch. Plant fiber can be shredded.",
         ["fire.hand_drill"] = "Two sticks and a bundle of tinder hold a fire, if you spin hard enough.",
+        ["fire.signal"] = "A bundle of fiber set alight burns fast and smokes thick, and carries a long way.",
         ["knap.flake"] = "Stone breaks sharp when it is struck with stone.",
         ["knap.hand_axe"] = "A stone shaped with patience makes a heavy tool for the hand.",
         ["cook.meat"] = "Raw meat is better over a fire.",
