@@ -1,0 +1,215 @@
+From 3577a36696bd814a58afc07f8d5c1cb0293d3c6a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 06:51:46 +0000
+Subject: [PATCH 1/5] atmos-shadows-1: fitted, blended, steady sun shadows with
+ a quality setting
+
+- SunShadows fits the 4 cascades to the follow camera (first ends just past the player),
+  blends splits, lowers depth bias and keeps a moderate normal bias.
+- The sun's shadow direction steps by 0.1 degrees instead of turning every frame, so
+  Godot's texel snapping holds and edges stop crawling.
+- Options > Shadows: Low (2048, 2 splits, 40 m), Medium (4096, 4, 60 m), High (8192, 4, 70 m).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP
+---
+ client/scripts/atmosphere/Atmosphere.cs |   4 +-
+ client/scripts/atmosphere/SunShadows.cs | 119 ++++++++++++++++++++++++
+ client/scripts/ui/OptionsPage.cs        |  12 +++
+ 3 files changed, 134 insertions(+), 1 deletion(-)
+ create mode 100644 client/scripts/atmosphere/SunShadows.cs
+
+diff --git a/client/scripts/atmosphere/Atmosphere.cs b/client/scripts/atmosphere/Atmosphere.cs
+index 85c03deb..94a9816b 100644
+--- a/client/scripts/atmosphere/Atmosphere.cs
++++ b/client/scripts/atmosphere/Atmosphere.cs
+@@ -113,6 +113,7 @@ public partial class Atmosphere : Node3D
+         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
+         sky.SetShaderParameter(NClouds, Look.Clouds);
+         sun.ShadowEnabled = true;
++        AddChild(new SunShadows(sun));
+ 
+         AddChild(rain);
+         AddChild(fireflies);
+@@ -405,7 +406,8 @@ public partial class Atmosphere : Node3D
+         float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
+         Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
+         float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
+-        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
++        // Stepped, not turned every frame, so shadow edges hold still (SunShadows).
++        sun.Rotation = SunShadows.Steady(elevation, isDay ? azimuth : azimuth + 180f);
+ 
+         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
+         float h = Mathf.Clamp(sunHeight, 0f, 1f);
+diff --git a/client/scripts/atmosphere/SunShadows.cs b/client/scripts/atmosphere/SunShadows.cs
+new file mode 100644
+index 00000000..825f4089
+--- /dev/null
++++ b/client/scripts/atmosphere/SunShadows.cs
+@@ -0,0 +1,119 @@
++using System;
++using Godot;
++
++namespace LifeGame;
++
++// Steadier, crisper sun shadows (atmos-shadows-1, after the Unity spike, unity-1).
++//
++// - The four cascades are fitted to the follow camera: the first ends just past the
++//   player, so the player and the ground round them get the sharpest shadow map
++//   (Godot's default splits left them in the third). Splits are refitted only when
++//   the zoom settles somewhere new, so they never creep while walking.
++// - Neighbouring cascades blend, so there is no visible seam where one hands over.
++// - The sun's shadow direction moves in small steps instead of every frame. Godot
++//   already snaps the cascades to whole texels as the camera moves; a sun that turns
++//   a little every frame defeats that and makes every edge crawl.
++// - Lower depth bias and a moderate normal bias: no acne on the painted surfaces,
++//   and shadows that stay attached to the feet of trees and the player.
++// - Shadows quality (Options page): Low, Medium, High. One setting picks the atlas size,
++//   the cascades, the reach and the softness filter.
++public partial class SunShadows : Node
++{
++    public enum Level { Low, Medium, High }
++    public static readonly string[] Names = { "Low", "Medium", "High" };
++
++    public static Level Setting
++    {
++        get => (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
++        set
++        {
++            Settings.Set("graphics", "shadows", (int)value);
++            Changed?.Invoke();
++        }
++    }
++
++    static event Action? Changed;
++
++    // What each level costs: shadow atlas size (px, shared by the cascades), cascade
++    // count, reach (m) and Godot's soft-shadow filter.
++    readonly record struct Tier(int Atlas, int Splits, float Reach, RenderingServer.ShadowQuality Filter);
++    static readonly Tier[] Tiers =
++    {
++        new(2048, 2, 40f, RenderingServer.ShadowQuality.SoftLow),
++        new(4096, 4, 60f, RenderingServer.ShadowQuality.SoftMedium),
++        new(8192, 4, 70f, RenderingServer.ShadowQuality.SoftHigh),
++    };
++
++    // How far (m) past the player the first cascade reaches, and the second and third.
++    const float FirstPast = 5f, SecondPast = 16f, ThirdPast = 34f;
++    // The sun's shadow direction steps by this much (degrees). At the normal day
++    // length that is one small step about every 1.5 s; a 10 m tree's shadow tip moves
++    // under 2 cm, within one texel of the nearest cascade.
++    public const float SunStepDegrees = 0.1f;
++    // Splits refit once the zoom settles this many metres from where they were fitted.
++    const float RefitMetres = 1.5f;
++
++    readonly DirectionalLight3D sun;
++    float fittedFor = -1f;
++    Level applied = (Level)(-1);
++
++    public SunShadows(DirectionalLight3D sun) => this.sun = sun;
++
++    public override void _Ready()
++    {
++        Changed += OnChanged;
++        sun.ShadowEnabled = true;
++        sun.DirectionalShadowBlendSplits = true;
++        sun.DirectionalShadowFadeStart = 0.85f;
++        // Godot's defaults (0.1 depth, 2.0 normal) float the shadows off the feet of
++        // trees; these keep them attached with no acne on the painted ground.
++        sun.ShadowBias = 0.03f;
++        sun.ShadowNormalBias = 1.2f;
++        ApplyLevel();
++    }
++
++    public override void _ExitTree() => Changed -= OnChanged;
++
++    void OnChanged() => ApplyLevel();
++
++    void ApplyLevel()
++    {
++        var level = Setting;
++        if (level == applied) return;
++        applied = level;
++        var tier = Tiers[(int)level];
++        RenderingServer.DirectionalShadowAtlasSetSize(tier.Atlas, true);
++        RenderingServer.DirectionalSoftShadowFilterSetQuality(tier.Filter);
++        sun.DirectionalShadowMode = tier.Splits == 4
++            ? DirectionalLight3D.ShadowMode.Parallel4Splits
++            : DirectionalLight3D.ShadowMode.Parallel2Splits;
++        sun.DirectionalShadowMaxDistance = tier.Reach;
++        fittedFor = -1f;
++    }
++
++    public override void _Process(double delta)
++    {
++        // The follow camera sits Camera.Position.Z metres behind the player (CameraRig).
++        if (GetViewport().GetCamera3D() is not { } camera) return;
++        float toPlayer = camera.GetParent() is CameraRig ? camera.Position.Z : 16f;
++        if (fittedFor >= 0f && Mathf.Abs(toPlayer - fittedFor) < RefitMetres) return;
++        fittedFor = toPlayer;
++        float reach = sun.DirectionalShadowMaxDistance;
++        float Split(float past, float min) => Mathf.Clamp((toPlayer + past) / reach, min, 0.95f);
++        float s1 = Split(FirstPast, 0.08f);
++        float s2 = Mathf.Max(Split(SecondPast, 0.2f), s1 + 0.05f);
++        float s3 = Mathf.Max(Split(ThirdPast, 0.4f), s2 + 0.05f);
++        if (sun.DirectionalShadowMode == DirectionalLight3D.ShadowMode.Parallel2Splits)
++            s1 = Split(SecondPast, 0.25f);
++        sun.DirectionalShadowSplit1 = s1;
++        sun.DirectionalShadowSplit2 = s2;
++        sun.DirectionalShadowSplit3 = s3;
++    }
++
++    // The sun's rotation (degrees: elevation, azimuth) snapped to SunStepDegrees, so
++    // the shadow map's texel grid holds still between steps.
++    public static Vector3 Steady(float elevationDegrees, float azimuthDegrees) => new(
++        Mathf.DegToRad(-Mathf.Snapped(elevationDegrees, SunStepDegrees)),
++        Mathf.DegToRad(Mathf.Snapped(azimuthDegrees, SunStepDegrees)),
++        0f);
++}
+diff --git a/client/scripts/ui/OptionsPage.cs b/client/scripts/ui/OptionsPage.cs
+index 7b41f27e..eb85dfd3 100644
+--- a/client/scripts/ui/OptionsPage.cs
++++ b/client/scripts/ui/OptionsPage.cs
+@@ -29,6 +29,7 @@ public partial class OptionsPage : Control
+     readonly Label[] percents = new Label[Levels.Length];
+     Button music = null!;
+     Button lightRays = null!;
++    Button shadows = null!;
+     HSlider view = null!;
+     Button markButton = null!;
+     Label viewName = null!;
+@@ -100,6 +101,14 @@ public partial class OptionsPage : Control
+         });
+         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+         column.AddChild(lightRays);
++        // Sun shadow quality (SunShadows): Low for slower PCs.
++        shadows = ControlsPage.TextButton(ShadowsText(), () =>
++        {
++            SunShadows.Setting = (SunShadows.Level)(((int)SunShadows.Setting + 1) % SunShadows.Names.Length);
++            shadows.Text = ShadowsText();
++        });
++        shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
++        column.AddChild(shadows);
+ 
+         // How you look (ui-21): the same picker as at first join.
+         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
+@@ -118,6 +127,8 @@ public partial class OptionsPage : Control
+ 
+     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
+ 
++    static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
++
+     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
+ 
+     public void Open()
+@@ -132,6 +143,7 @@ public partial class OptionsPage : Control
+         view.SetValueNoSignal((int)ViewDistance.Setting);
+         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
+         lightRays.Text = RaysText();
++        shadows.Text = ShadowsText();
+         Visible = true;
+     }
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,46 @@
+From e4dea7de81350ac17bbb7d4b47100f82affd984d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 07:00:46 +0000
+Subject: [PATCH 3/5] atmos-shadows-1: --shadows= override for renders and
+ benchmarks
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017Weex8fujB3VFsrpg84jEP
+---
+ client/scripts/atmosphere/SunShadows.cs | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/client/scripts/atmosphere/SunShadows.cs b/client/scripts/atmosphere/SunShadows.cs
+index 825f4089..aa9e6721 100644
+--- a/client/scripts/atmosphere/SunShadows.cs
++++ b/client/scripts/atmosphere/SunShadows.cs
+@@ -24,7 +24,7 @@ public partial class SunShadows : Node
+ 
+     public static Level Setting
+     {
+-        get => (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
++        get => Override ?? (Level)Math.Clamp(Settings.Get("graphics", "shadows", (int)Level.High), 0, Names.Length - 1);
+         set
+         {
+             Settings.Set("graphics", "shadows", (int)value);
+@@ -34,6 +34,17 @@ public partial class SunShadows : Node
+ 
+     static event Action? Changed;
+ 
++    // --shadows=low|medium|high on the command line wins over the saved setting (renders, benchmarks).
++    static readonly Level? Override = ReadOverride();
++
++    static Level? ReadOverride()
++    {
++        foreach (var arg in OS.GetCmdlineUserArgs())
++            if (arg.StartsWith("--shadows=") && Enum.TryParse<Level>(arg["--shadows=".Length..], true, out var level))
++                return level;
++        return null;
++    }
++
+     // What each level costs: shadow atlas size (px, shared by the cascades), cascade
+     // count, reach (m) and Godot's soft-shadow filter.
+     readonly record struct Tier(int Atlas, int Splits, float Reach, RenderingServer.ShadowQuality Filter);
+-- 
+2.43.0
+
