@@ -4,8 +4,8 @@ name: Main priority
 # GitHub has no job priority, so this frees runners when main is actually waiting for one: while a main
 # Build (a push) or a Release has a queued run or queued jobs, queued pull request Builds are cancelled, and
 # so are running ones that started under PAUSE_AFTER_MIN minutes ago; a PR run further along is left to
-# finish. When no main Build or Release is queued or running, the newest cancelled run per open PR head is
-# re-run. Merge-queue and manual runs and Release runs are never touched. Nothing is stored: a PR run counts
+# finish. When main is not waiting for a runner (it may be running), the newest cancelled run per open PR head
+# is re-run, a few per pass. Merge-queue and manual runs and Release runs are never touched. Nothing is stored: a PR run counts
 # as paused when it was cancelled and nothing newer ran for its head commit.
 # Triggers: a push to main, a pull request push (a new PR run may start while main waits), a finished main
 # Build or Release, and a 5-minute schedule.
@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Pause or resume pull request builds
         run: |
-          PAUSE_AFTER_MIN=4
+          PAUSE_AFTER_MIN=4 RESUME_PER_PASS=6
           active() { for s in queued in_progress waiting pending; do gh api --paginate "repos/$REPO/actions/workflows/$1/runs?status=$s&per_page=100" --jq "$2"; done; }
           # Main runs (push Builds and Releases) that are queued or running: "id status".
           main_runs=$( { active build.yml '.workflow_runs[] | select(.event == "push") | "\(.id) \(.status)"'; active release.yml '.workflow_runs[] | "\(.id) \(.status)"'; } )
@@ -55,7 +55,6 @@ jobs:
             queued=$(gh api "repos/$REPO/actions/runs/$id/jobs?per_page=100" --jq '[.jobs[] | select(.status == "queued")] | length')
             if [ "$queued" -gt 0 ]; then starved=1; break; fi
           done <<< "$main_runs"
-          if [ -n "$main_runs" ] && [ "$starved" = 0 ]; then echo "Main is running and not waiting for a runner; nothing to do."; exit 0; fi
           if [ "$starved" = 1 ]; then
             echo "### Paused for a main build; re-runs automatically" >> "$GITHUB_STEP_SUMMARY"
             now=$(date +%s)
@@ -70,12 +69,17 @@ jobs:
             done
             exit 0
           fi
-          echo "### Resumed after main" >> "$GITHUB_STEP_SUMMARY"
+          # Main is not waiting for a runner (it may be running): the PR builds it paused can go again. A few per pass,
+          # so a long backlog does not swamp the runners and starve main again.
+          echo "### Resumed (main is not waiting for a runner)" >> "$GITHUB_STEP_SUMMARY"
+          resumed=0
           gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" --jq '.[] | "\(.number) \(.head.sha)"' | while read -r number sha; do
+            [ "$resumed" -lt "$RESUME_PER_PASS" ] || break
             # The newest Build run for this exact head commit; paused means it was cancelled.
             run=$(gh api "repos/$REPO/actions/workflows/build.yml/runs?event=pull_request&head_sha=$sha&per_page=1" --jq '.workflow_runs[0] | select(. != null) | "\(.id) \(.conclusion)"')
             [ "${run#* }" = cancelled ] || continue
             if gh api -X POST "repos/$REPO/actions/runs/${run%% *}/rerun" >/dev/null 2>&1; then
+              resumed=$((resumed + 1))
               echo "- PR #$number: re-ran run ${run%% *} (${sha:0:8})" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           done

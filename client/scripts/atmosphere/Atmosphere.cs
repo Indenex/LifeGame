@@ -119,6 +119,7 @@ public partial class Atmosphere : Node3D
         AddChild(mist);
         AddChild(leaves);
         ReadyWater();
+        ReadyWaterSurface();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
@@ -331,6 +332,7 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateWaterSurface(dt, focus);
         UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
@@ -433,6 +435,7 @@ public partial class Atmosphere : Node3D
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
+        (waterSkyTop, waterSkyHorizon, waterSunDir) = (top, horizon, sunDir);
         sky.SetShaderParameter(NGroundColor, Grey(mood.Ground, grey, 1f) * dim);
         sky.SetShaderParameter(NSunColor, sunColor * (1f - overcast * 0.8f));
         sky.SetShaderParameter(NSunDir, sunDir);
