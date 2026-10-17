@@ -1023,3 +1023,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-252 — 2026-10-17 — Merge queue CI design: doc-only PRs skip their steps; world-wipe PRs are merged by hand (#403)
 **Decision:** In the merge queue's CI design (#403), doc-only PRs run the three checks but skip their steps. World-wipe PRs are merged by hand, outside the queue.
 **Who:** PM technical decision.
+
+## D-253 — 2026-10-17 — Trees stay 3D, restyled to read about 85% like the painted card pines (follows D-240)
+**Decision:** Trees stay 3D (scalloped pines), restyled to read about 85% like the artist's painted card pines: silhouette, colour bands, outline and painted strokes. Modeling iterates with side-by-side renders against the card pines.
+**Who:** Justin ("Can you make the 3d ones look more like the painted card pines? Like, 85% the same or something?")
