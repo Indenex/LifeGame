@@ -28,6 +28,7 @@ public partial class Atmosphere : Node3D
     static readonly StringName NPlayerPosition = "player_position";
     static readonly StringName NViewCameraPosition = "view_camera_position";
     static readonly StringName NTopColor = "top_color";
+    static readonly StringName NHazeColor = "haze_color";
     static readonly StringName NHorizonColor = "horizon_color";
     static readonly StringName NGroundColor = "ground_color";
     static readonly StringName NSunColor = "sun_color";
@@ -124,6 +125,7 @@ public partial class Atmosphere : Node3D
         AddChild(life);
         ReadyWater();
         ReadyWaterSurface();
+        ReadyClouds();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
@@ -301,6 +303,7 @@ public partial class Atmosphere : Node3D
 
         ApplyLight();
         RenderingServer.GlobalShaderParameterSet(NFogTint, env.FogLightColor);
+        sky.SetShaderParameter(NHazeColor, env.FogLightColor);
 
         var focus = Player is { } p && p.IsInsideTree() ? p.GlobalPosition : Vector3.Zero;
         RenderingServer.GlobalShaderParameterSet(NPlayerPosition, focus);
@@ -366,9 +369,9 @@ public partial class Atmosphere : Node3D
         new(0.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
         new(0.21f, new(0.07f, 0.09f, 0.20f), new(0.30f, 0.24f, 0.32f), new(0.06f, 0.06f, 0.07f), new(0.26f, 0.24f, 0.32f), new(0.55f, 0.50f, 0.60f), new(0.20f, 0.22f, 0.32f), 0.009f, 0.010f, 0.55f, 1.3f),
         new(0.26f, new(0.28f, 0.40f, 0.60f), new(0.88f, 0.74f, 0.68f), new(0.20f, 0.21f, 0.20f), new(0.58f, 0.61f, 0.67f), new(0.80f, 0.83f, 0.88f), new(0.15f, 0.17f, 0.21f), 0.007f, 0.006f, 0.48f, 1.08f),
-        new(0.32f, new(0.30f, 0.47f, 0.68f), new(0.86f, 0.80f, 0.70f), new(0.24f, 0.28f, 0.22f), new(0.66f, 0.70f, 0.72f), new(0.90f, 0.90f, 0.88f), new(0.08f, 0.09f, 0.08f), 0.007f, 0.009f, 0.4f, 1.0f),
-        new(0.50f, new(0.27f, 0.46f, 0.72f), new(0.76f, 0.82f, 0.86f), new(0.24f, 0.28f, 0.22f), new(0.64f, 0.71f, 0.77f), new(0.88f, 0.90f, 0.92f), new(0.06f, 0.07f, 0.07f), 0.005f, 0.005f, 0.4f, 0.95f),
-        new(0.68f, new(0.30f, 0.45f, 0.62f), new(0.80f, 0.74f, 0.62f), new(0.24f, 0.28f, 0.22f), new(0.62f, 0.68f, 0.70f), new(0.86f, 0.88f, 0.86f), new(0.0f, 0.0f, 0.0f), 0.006f, 0.007f, 0.38f, 1.0f),
+        new(0.32f, new(0.30f, 0.54f, 0.76f), new(0.86f, 0.80f, 0.70f), new(0.24f, 0.28f, 0.22f), new(0.66f, 0.70f, 0.72f), new(0.90f, 0.90f, 0.88f), new(0.08f, 0.09f, 0.08f), 0.007f, 0.009f, 0.4f, 1.0f),
+        new(0.50f, new(0.29f, 0.59f, 0.84f), new(0.78f, 0.88f, 0.91f), new(0.24f, 0.28f, 0.22f), new(0.64f, 0.71f, 0.77f), new(0.88f, 0.90f, 0.92f), new(0.06f, 0.07f, 0.07f), 0.005f, 0.005f, 0.4f, 0.95f),
+        new(0.68f, new(0.30f, 0.52f, 0.72f), new(0.80f, 0.74f, 0.62f), new(0.24f, 0.28f, 0.22f), new(0.62f, 0.68f, 0.70f), new(0.86f, 0.88f, 0.86f), new(0.0f, 0.0f, 0.0f), 0.006f, 0.007f, 0.38f, 1.0f),
         new(0.745f, new(0.26f, 0.32f, 0.52f), new(0.92f, 0.64f, 0.46f), new(0.20f, 0.19f, 0.17f), new(0.66f, 0.58f, 0.54f), new(0.88f, 0.80f, 0.74f), new(0.12f, 0.11f, 0.14f), 0.007f, 0.008f, 0.42f, 1.05f),
         new(0.79f, new(0.07f, 0.09f, 0.21f), new(0.34f, 0.22f, 0.32f), new(0.05f, 0.05f, 0.07f), new(0.22f, 0.20f, 0.30f), new(0.50f, 0.44f, 0.58f), new(0.18f, 0.20f, 0.32f), 0.008f, 0.008f, 0.55f, 1.3f),
         new(1.00f, new(0.025f, 0.04f, 0.09f), new(0.07f, 0.10f, 0.18f), new(0.03f, 0.04f, 0.05f), new(0.10f, 0.13f, 0.22f), new(0.30f, 0.38f, 0.58f), new(0.18f, 0.24f, 0.40f), 0.007f, 0.006f, 0.5f, 1.35f),
@@ -454,6 +457,7 @@ public partial class Atmosphere : Node3D
         sky.SetShaderParameter(NCloudCover, cloud);
         sky.SetShaderParameter(NCloudOffset, cloudOffset);
         sky.SetShaderParameter(NStars, (1f - daylight) * (1f - overcast));
+        UpdateClouds();
         UpdateFronts((float)GetProcessDeltaTime(), sunHeight, overcast);
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
@@ -633,6 +637,10 @@ public partial class Atmosphere : Node3D
     {
         Code = """
             shader_type sky;
+            // The painted clouds need the half-resolution pass switched on. The scene's
+            // fog is kept off the sky (it washed the whole dome to cream) and laid on
+            // here only along the horizon, where it meets the fogged land.
+            render_mode use_half_res_pass, disable_fog;
 
             uniform vec3 top_color : source_color;
             uniform vec3 horizon_color : source_color;
@@ -664,6 +672,13 @@ public partial class Atmosphere : Node3D
             uniform vec3 flash_dir = vec3(0.0, 0.25, -1.0);
             // Soft glow (AtmosphereLens): a wide warm halo round the sun, 0 off.
             uniform float halo = 0.0;
+            // Painted clouds (AtmosphereClouds): 0 the flat layer, 1 painted, 2 high;
+            // the camera, to place them over the world; how heavy the rain is.
+            uniform float cloud_quality = 1.0;
+            uniform vec3 cloud_cam = vec3(0.0);
+            uniform float rain_heavy = 0.0;
+            // The distance haze's colour (Environment.FogLightColor).
+            uniform vec3 haze_color : source_color = vec3(0.64, 0.71, 0.77);
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -671,99 +686,203 @@ public partial class Atmosphere : Node3D
                 return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
             }
 
+            // The cloud field over a point of the world, 0 clear to 1 thick: the same
+            // noise and edge as the cloud shadows on the ground (Look.cloud_shadow), with
+            // a finer puff layered on so the edges billow.
+            float cloud_field(vec2 w, float cover) {
+                float n = texture(clouds, (w + cloud_offset) * 0.01).r;
+                float puff = texture(clouds, (w + cloud_offset) * 0.037 + vec2(0.31, 0.17)).r;
+                // Only the heart of each shadow patch is cloud (its soft fringe is shade
+                // spreading on the ground), so a fair sky keeps blue between the clouds.
+                float edge = mix(0.68, 0.2, cover) + 0.12;
+                return clamp((n + (puff - 0.5) * 0.16 - edge) / 0.18, 0.0, 1.0);
+            }
+
+            // Painted cumulus seen along d: a few steps through the slab of cloud, each
+            // cloud a dome on a flat base, lit in soft bands. Colour and opacity.
+            vec4 painted_clouds(vec3 d, float cover, float upwind) {
+                const float base = 160.0;
+                const float depth = 40.0;
+                float dy = max(d.y, 0.035);
+                float t0 = max(base - cloud_cam.y, 1.0) / dy;
+                float t1 = min((base + depth - cloud_cam.y) / dy, t0 + 350.0);
+                int n = cloud_quality > 1.5 ? 12 : 7;
+                float dt = (t1 - t0) / float(n);
+                vec2 toward_sun = normalize(sun_dir.xz + vec2(0.0001)) * 22.0;
+                float sun_up = smoothstep(-0.1, 0.2, sun_dir.y);
+                float sun_low = smoothstep(-0.05, 0.05, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
+                // Warm white tops (peach near a low sun), cool lavender-grey bases.
+                // (Justin's reference, the Stylized Nature kit: clean white tops over a
+                // bright sky, soft grey-lavender undersides.)
+                vec3 lit_col = mix(vec3(1.0, 1.0, 0.98), vec3(1.0, 0.76, 0.56), sun_low);
+                vec3 shade_col = mix(vec3(0.70, 0.72, 0.84), horizon_color, 0.25);
+                float bright = 0.18 + 0.82 * daylight;
+                vec4 acc = vec4(0.0);
+                // A per-pixel offset to the steps hides the slices between them.
+                float jit = hash(d * 517.0);
+                for (int i = 0; i < 12; i++) {
+                    if (i >= n || acc.a > 0.97) break;
+                    vec3 p = cloud_cam + d * (t0 + (float(i) + jit) * dt);
+                    float f = cloud_field(p.xz, cover);
+                    if (f <= 0.0) continue;
+                    float top = depth * sqrt(f);
+                    float h = p.y - base;
+                    float inside = smoothstep(-5.0, 5.0, top - h);
+                    if (inside <= 0.0) continue;
+                    // Lit toward the dome's top and on the side facing the sun.
+                    float up = clamp(h / max(top, 1.0), 0.0, 1.0);
+                    float sunward = 1.0 - cloud_field(p.xz + toward_sun, cover);
+                    float light = (0.55 * up + 0.45 * sunward) * (0.4 + 0.6 * sun_up);
+                    float band = 0.3 * smoothstep(0.32, 0.37, light) + 0.7 * smoothstep(0.61, 0.66, light);
+                    vec3 c = mix(shade_col, lit_col, band) * bright;
+                    // Rain and storms: grey and heavy, darkest underneath.
+                    float heavy = max(rain_heavy, front_rain * upwind);
+                    c = mix(c, vec3(dot(c, vec3(0.33))) * 0.7, heavy * 0.8) * (1.0 - 0.35 * heavy * (1.0 - up));
+                    c = mix(c, c * vec3(0.55, 0.6, 0.68), storm * (1.0 - up));
+                    // Thin at the wispy edges, solid in the heart.
+                    float a = inside * smoothstep(0.0, 0.35, f) * (0.55 + 0.3 * heavy);
+                    // The same opacity through the slab whatever the step count.
+                    a = 1.0 - pow(1.0 - a, 5.0 / float(n));
+                    acc.rgb += (1.0 - acc.a) * a * c;
+                    acc.a += (1.0 - acc.a) * a;
+                }
+                if (acc.a > 0.0) acc.rgb /= acc.a;
+                // Far clouds fade into the haze along the horizon.
+                acc.rgb = mix(acc.rgb, horizon_color, (1.0 - smoothstep(0.03, 0.25, d.y)) * 0.55);
+                acc.a *= smoothstep(0.0, 0.1, d.y);
+                return acc;
+            }
+
             void sky() {
-                vec3 d = normalize(EYEDIR);
-                float up = clamp(d.y, 0.0, 1.0);
-                vec3 col = mix(horizon_color, top_color, pow(up, 0.45));
-                col = mix(col, ground_color, 1.0 - smoothstep(-0.25, 0.0, d.y));
-
-                // A soft glow around the sun, and its disc.
-                float s = max(dot(d, sun_dir), 0.0);
-                float sun_vis = smoothstep(-0.15, 0.05, sun_dir.y);
-                col += sun_color * (pow(s, 5.0) * 0.3 + pow(s, 60.0) * 0.5) * sun_vis;
-                col += sun_color * smoothstep(0.9993, 0.9997, s) * 6.0 * step(-0.02, sun_dir.y);
-                col += sun_color * vec3(1.0, 0.86, 0.72) * (pow(s, 3.0) * 0.08 + pow(s, 16.0) * 0.12) * sun_vis * halo;
-
-                float night = 1.0 - daylight;
-                float m = max(dot(d, moon_dir), 0.0);
-                col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
-                col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
-                // A pale ring around the moon when thin cloud veils it.
-                float veil = smoothstep(0.25, 0.5, cloud_cover) * (1.0 - smoothstep(0.75, 0.95, cloud_cover));
-                col += vec3(0.75, 0.8, 0.9) * exp(-pow((m - 0.927) / 0.008, 2.0)) * veil * night * 0.08 * step(0.0, moon_dir.y);
-
-                // How much of this direction belongs to the coming weather: the
-                // upwind side, low in the sky.
-                vec2 flat_dir = normalize(d.xz + vec2(0.0001));
-                float upwind = smoothstep(0.1, 0.85, dot(flat_dir, normalize(front_dir.xz))) * (1.0 - smoothstep(0.05, 0.55, d.y)) * front_amount;
-
-                if (d.y > 0.0) {
-                    if (stars > 0.0) {
-                        // A band of the galaxy arching across a clear night: faint,
-                        // mottled, and thick with extra stars.
-                        vec3 axis = normalize(vec3(0.35, 0.45, 0.82));
-                        float band = exp(-pow(dot(d, axis) / 0.2, 2.0));
-                        float dust = texture(clouds, d.xz / (d.y + 0.4) * 0.35 + vec2(0.13, 0.71)).r;
-                        float high = smoothstep(0.0, 0.3, d.y);
-                        col += vec3(0.50, 0.55, 0.72) * band * smoothstep(0.3, 0.8, dust) * 0.09 * stars * high;
-
-                        vec3 p = d * 260.0;
-                        float r = hash(floor(p));
-                        float threshold = 0.985 - 0.01 * band;
-                        float star = step(threshold, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - threshold) * 66.0;
-                        // Each star twinkles at its own pace and has its own tint,
-                        // from pale blue to warm white.
-                        float twinkle = 0.75 + 0.25 * sin(TIME * (1.5 + r * 3.0) + r * 90.0);
-                        vec3 tint = mix(vec3(0.80, 0.88, 1.0), vec3(1.0, 0.92, 0.80), fract(r * 37.0));
-                        col += tint * star * twinkle * stars * high * 1.4;
+                if (AT_HALF_RES_PASS) {
+                    // The painted clouds alone, at half resolution; the full pass lays
+                    // them over the sky.
+                    vec3 hd = normalize(EYEDIR);
+                    vec4 cl = vec4(0.0);
+                    if (hd.y > 0.0 && cloud_quality > 0.5 && !AT_CUBEMAP_PASS) {
+                        vec2 hflat = normalize(hd.xz + vec2(0.0001));
+                        float hup = smoothstep(0.1, 0.85, dot(hflat, normalize(front_dir.xz))) * (1.0 - smoothstep(0.05, 0.55, hd.y)) * front_amount;
+                        cl = painted_clouds(hd, mix(cloud_cover, max(cloud_cover, front_cloud), hup), hup);
                     }
-                    // The same cloud layer whose shadows drift over the ground.
-                    vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
-                    float n = texture(clouds, uv).r;
-                    float cover = mix(cloud_cover, max(cloud_cover, front_cloud), upwind);
-                    float edge = 1.0 - cover;
-                    float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
-                    float lit = 0.25 + 0.75 * daylight;
-                    vec3 cloud_col = mix(horizon_color * 1.1, vec3(0.92, 0.92, 0.95) * lit + sun_color * 0.15 * sun_vis, 0.5 + 0.5 * n);
-                    cloud_col *= 1.0 - 0.45 * cover * smoothstep(0.4, 0.8, n);
-                    // Rain clouds on the way are darker underneath.
-                    cloud_col *= 1.0 - 0.5 * front_rain * upwind;
-                    // Storm clouds hang heavy and dark, bruised blue-grey underneath.
-                    cloud_col = mix(cloud_col, cloud_col * vec3(0.55, 0.6, 0.68), storm * smoothstep(0.3, 0.7, n));
-                    // With the grade on, clouds near a low sun glow with warm rims.
-                    float sun_low = smoothstep(-0.05, 0.05, sun_dir.y) * (1.0 - smoothstep(0.2, 0.45, sun_dir.y));
-                    cloud_col += sun_color * pow(s, 4.0) * (1.0 - smoothstep(0.35, 0.8, n)) * 1.4 * sun_low * grade;
-                    col = mix(col, cloud_col, c * 0.9);
+                    COLOR = cl.rgb;
+                    ALPHA = cl.a;
+                } else {
+                    vec3 d = normalize(EYEDIR);
+                    float up = clamp(d.y, 0.0, 1.0);
+                    vec3 col = mix(horizon_color, top_color, pow(up, 0.45));
+                    col = mix(col, ground_color, 1.0 - smoothstep(-0.25, 0.0, d.y));
 
-                    // Lightning lights the clouds from inside, brightest toward the strike.
-                    float toward = pow(max(dot(d, flash_dir), 0.0), 5.0);
-                    col += vec3(0.72, 0.78, 1.0) * flash * toward * (0.35 + 1.4 * c * n);
+                    // A soft glow around the sun, and its disc.
+                    float s = max(dot(d, sun_dir), 0.0);
+                    float sun_vis = smoothstep(-0.15, 0.05, sun_dir.y);
+                    col += sun_color * (pow(s, 5.0) * 0.3 + pow(s, 60.0) * 0.5) * sun_vis;
+                    col += sun_color * smoothstep(0.9993, 0.9997, s) * 6.0 * step(-0.02, sun_dir.y);
+                    col += sun_color * vec3(1.0, 0.86, 0.72) * (pow(s, 3.0) * 0.08 + pow(s, 16.0) * 0.12) * sun_vis * halo;
 
-                    // Grey curtains of rain hanging from them down to the horizon.
-                    float around = atan(d.x, d.z);
-                    float streak = texture(clouds, vec2(around * 2.0 + cloud_offset.x * 0.002, d.y * 0.6 + TIME * 0.004)).r;
-                    float curtain = front_rain * upwind * (1.0 - smoothstep(0.0, 0.16, d.y)) * smoothstep(0.35, 0.75, streak);
-                    col = mix(col, horizon_color * mix(0.55, 0.8, daylight), curtain * 0.7);
+                    float night = 1.0 - daylight;
+                    float m = max(dot(d, moon_dir), 0.0);
+                    col += vec3(0.85, 0.9, 1.0) * smoothstep(0.99955, 0.9998, m) * 2.0 * night;
+                    col += vec3(0.25, 0.3, 0.45) * pow(m, 24.0) * 0.3 * night;
+                    // A pale ring around the moon when thin cloud veils it.
+                    float veil = smoothstep(0.25, 0.5, cloud_cover) * (1.0 - smoothstep(0.75, 0.95, cloud_cover));
+                    col += vec3(0.75, 0.8, 0.9) * exp(-pow((m - 0.927) / 0.008, 2.0)) * veil * night * 0.08 * step(0.0, moon_dir.y);
 
-                    // A rainbow 42 degrees from the point opposite the sun, red outside.
-                    if (rainbow > 0.001) {
-                        float r = dot(d, -sun_dir);
-                        float t = (r - 0.743) / 0.022;
-                        float band = exp(-t * t);
-                        vec3 hue = clamp(vec3(1.0 - abs(t + 0.7) * 1.4, 1.0 - abs(t) * 1.4, 1.0 - abs(t - 0.7) * 1.4), 0.0, 1.0);
-                        col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
+                    // How much of this direction belongs to the coming weather: the
+                    // upwind side, low in the sky.
+                    vec2 flat_dir = normalize(d.xz + vec2(0.0001));
+                    float upwind = smoothstep(0.1, 0.85, dot(flat_dir, normalize(front_dir.xz))) * (1.0 - smoothstep(0.05, 0.55, d.y)) * front_amount;
+
+                    if (d.y > 0.0) {
+                        if (stars > 0.0) {
+                            // A band of the galaxy arching across a clear night: faint,
+                            // mottled, and thick with extra stars.
+                            vec3 axis = normalize(vec3(0.35, 0.45, 0.82));
+                            float band = exp(-pow(dot(d, axis) / 0.2, 2.0));
+                            float dust = texture(clouds, d.xz / (d.y + 0.4) * 0.35 + vec2(0.13, 0.71)).r;
+                            float high = smoothstep(0.0, 0.3, d.y);
+                            col += vec3(0.50, 0.55, 0.72) * band * smoothstep(0.3, 0.8, dust) * 0.09 * stars * high;
+
+                            vec3 p = d * 260.0;
+                            float r = hash(floor(p));
+                            float threshold = 0.985 - 0.01 * band;
+                            float star = step(threshold, r) * smoothstep(0.35, 0.0, length(fract(p) - 0.5)) * (r - threshold) * 66.0;
+                            // Each star twinkles at its own pace and has its own tint,
+                            // from pale blue to warm white.
+                            float twinkle = 0.75 + 0.25 * sin(TIME * (1.5 + r * 3.0) + r * 90.0);
+                            vec3 tint = mix(vec3(0.80, 0.88, 1.0), vec3(1.0, 0.92, 0.80), fract(r * 37.0));
+                            col += tint * star * twinkle * stars * high * 1.4;
+                        }
+                        // High wispy streaks on fair days (painted clouds only): long brush
+                        // strokes stretched along the wind, far above the cumulus.
+                        if (cloud_quality > 0.5) {
+                            vec2 q = d.xz / (d.y + 0.08) * 4.0 + cloud_offset * 0.0015;
+                            vec2 wdir = normalize(-front_dir.xz + vec2(0.0001));
+                            vec2 sq = vec2(dot(q, wdir) * 0.06, dot(q, vec2(-wdir.y, wdir.x)) * 0.5);
+                            float wisp = texture(clouds, sq + vec2(0.53, 0.29)).r;
+                            float fair = (1.0 - smoothstep(0.35, 0.7, cloud_cover)) * (1.0 - storm);
+                            float streaks = smoothstep(0.6, 0.7, wisp) * smoothstep(0.08, 0.35, d.y) * fair;
+                            vec3 wisp_col = mix(horizon_color, vec3(1.0, 0.99, 0.97), 0.7) * (0.25 + 0.75 * daylight);
+                            col = mix(col, wisp_col, streaks * 0.45);
+                        }
+                        // The same cloud layer whose shadows drift over the ground.
+                        vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;
+                        float n = texture(clouds, uv).r;
+                        float cover = mix(cloud_cover, max(cloud_cover, front_cloud), upwind);
+                        float edge = 1.0 - cover;
+                        float c = smoothstep(edge - 0.08, edge + 0.22, n) * smoothstep(0.0, 0.18, d.y);
+                        bool painted = cloud_quality > 0.5 && !AT_CUBEMAP_PASS;
+                        if (painted) {
+                            // The painted clouds from the half-resolution pass.
+                            vec4 hc = HALF_RES_COLOR;
+                            col = mix(col, hc.rgb, hc.a);
+                            c = hc.a;
+                            n = 0.4 + 0.5 * hc.a;
+                        } else {
+                            float lit = 0.25 + 0.75 * daylight;
+                            vec3 cloud_col = mix(horizon_color * 1.1, vec3(0.92, 0.92, 0.95) * lit + sun_color * 0.15 * sun_vis, 0.5 + 0.5 * n);
+                            cloud_col *= 1.0 - 0.45 * cover * smoothstep(0.4, 0.8, n);
+                            // Rain clouds on the way are darker underneath.
+                            cloud_col *= 1.0 - 0.5 * front_rain * upwind;
+                            // Storm clouds hang heavy and dark, bruised blue-grey underneath.
+                            cloud_col = mix(cloud_col, cloud_col * vec3(0.55, 0.6, 0.68), storm * smoothstep(0.3, 0.7, n));
+                            // With the grade on, clouds near a low sun glow with warm rims.
+                            float sun_low = smoothstep(-0.05, 0.05, sun_dir.y) * (1.0 - smoothstep(0.2, 0.45, sun_dir.y));
+                            cloud_col += sun_color * pow(s, 4.0) * (1.0 - smoothstep(0.35, 0.8, n)) * 1.4 * sun_low * grade;
+                            col = mix(col, cloud_col, c * 0.9);
+                        }
+
+                        // Lightning lights the clouds from inside, brightest toward the strike.
+                        float toward = pow(max(dot(d, flash_dir), 0.0), 5.0);
+                        col += vec3(0.72, 0.78, 1.0) * flash * toward * (0.35 + 1.4 * c * n);
+
+                        // Grey curtains of rain hanging from them down to the horizon.
+                        float around = atan(d.x, d.z);
+                        float streak = texture(clouds, vec2(around * 2.0 + cloud_offset.x * 0.002, d.y * 0.6 + TIME * 0.004)).r;
+                        float curtain = front_rain * upwind * (1.0 - smoothstep(0.0, 0.16, d.y)) * smoothstep(0.35, 0.75, streak);
+                        col = mix(col, horizon_color * mix(0.55, 0.8, daylight), curtain * 0.7);
+
+                        // A rainbow 42 degrees from the point opposite the sun, red outside.
+                        if (rainbow > 0.001) {
+                            float r = dot(d, -sun_dir);
+                            float t = (r - 0.743) / 0.022;
+                            float band = exp(-t * t);
+                            vec3 hue = clamp(vec3(1.0 - abs(t + 0.7) * 1.4, 1.0 - abs(t) * 1.4, 1.0 - abs(t - 0.7) * 1.4), 0.0, 1.0);
+                            col += hue * band * rainbow * 0.22 * smoothstep(0.0, 0.08, d.y) * (1.0 - c * 0.7);
+                        }
                     }
+                    // The land's distance haze, along the horizon only.
+                    col = mix(col, haze_color, (1.0 - smoothstep(-0.05, 0.25, d.y)) * 0.5);
+                    // Pastel: a touch lighter and softer by day, a rosy-peach band along
+                    // the horizon at dawn and dusk, and a gentler blue at night.
+                    if (cosy > 0.0) {
+                        float low = smoothstep(-0.08, 0.04, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
+                        float grey = dot(col, vec3(0.3, 0.55, 0.15));
+                        vec3 pastel = mix(col, vec3(grey), 0.18) * 0.9 + vec3(0.09, 0.085, 0.10) * (0.35 + 0.65 * daylight);
+                        pastel += vec3(0.28, 0.12, 0.16) * low * pow(1.0 - up, 3.0) * smoothstep(-0.1, 0.0, d.y);
+                        col = mix(col, pastel, cosy);
+                    }
+                    COLOR = col;
                 }
-                // Pastel: a touch lighter and softer by day, a rosy-peach band along
-                // the horizon at dawn and dusk, and a gentler blue at night.
-                if (cosy > 0.0) {
-                    float low = smoothstep(-0.08, 0.04, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
-                    float grey = dot(col, vec3(0.3, 0.55, 0.15));
-                    vec3 pastel = mix(col, vec3(grey), 0.18) * 0.9 + vec3(0.09, 0.085, 0.10) * (0.35 + 0.65 * daylight);
-                    pastel += vec3(0.28, 0.12, 0.16) * low * pow(1.0 - up, 3.0) * smoothstep(-0.1, 0.0, d.y);
-                    col = mix(col, pastel, cosy);
-                }
-                COLOR = col;
             }
             """,
     };

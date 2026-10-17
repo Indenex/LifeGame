@@ -1,7 +1,7 @@
 # env-37: One water level
 Lane: Environment
 Owner: Environment thread (session_014EL1FHDJi92N6gKixNv6Q5)
-Status: in_review
+Status: done
 Branch: claude/environment-np240l
 PR: #833
 
@@ -20,4 +20,4 @@ so the PM tells those lanes.
 - (none)
 
 ## Next step
-Wait for the PR's CI (shared with env-31); send the green sha to the PM.
+None, merged as #833.

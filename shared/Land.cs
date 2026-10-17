@@ -68,6 +68,20 @@ namespace LifeGame.Shared
         // stream; further out it may read short, but never under 26.
         public static float StreamDistance(int x, int z) => RiverDistance(x, z);
 
+        // Which way the nearest stream's line runs at (x, z), as a unit (dx, dz) with dz
+        // never negative (downstream is taken as south). Taken from the line's own smooth
+        // field, so it holds steady mid-channel, where the slope of StreamDistance flips
+        // from one bank to the other (env-38, the water's flow map).
+        public static (float dx, float dz) StreamAlong(int x, int z)
+        {
+            float gx = (River(x + 1, z) - River(x - 1, z)) * 0.5f;
+            float gz = (River(x, z + 1) - River(x, z - 1)) * 0.5f;
+            float len = MathF.Sqrt(gx * gx + gz * gz);
+            if (len < 1e-4f) return (0f, 1f);
+            float ax = -gz / len, az = gx / len;
+            return az < 0f ? (-ax, -az) : (ax, az);
+        }
+
         // The line wanders on four scales: broad bends every few hundred meters,
         // meanders every few tens and small kinks, so no stretch runs straight for long.
         static float River(int x, int z) =>
