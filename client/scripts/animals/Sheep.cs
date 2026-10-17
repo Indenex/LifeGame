@@ -148,7 +148,7 @@ public partial class Sheep : Node3D
         skeleton.AddChild(mesh);
 
         // Not every sheep is the same size; stags are bigger than hinds.
-        adultSize = 0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f + (stag ? 0.1f : 0f);
+        adultSize = (0.9f + Terrain.Hash01((int)id, 3, 9) * 0.2f + (stag ? 0.1f : 0f)) * def.Size;
         Scale = Vector3.One * adultSize;
     }
 

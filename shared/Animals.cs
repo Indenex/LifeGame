@@ -59,6 +59,10 @@ namespace LifeGame.Shared
         public byte EggCap;
         // Settles for the night in a coop (or a sheltered spot) and comes out at dawn.
         public bool Roosts;
+        // Damage is multiplied by this: a small animal falls to a light blow (rabbit 4).
+        public float DamageTaken = 1f;
+        // Drawn this big compared with the model plan's normal size.
+        public float Size = 1f;
 
         // The client's model plan ("sheep", "deer" or "hen") and the share of males that carry antlers.
         public string Model = "sheep";
@@ -69,7 +73,7 @@ namespace LifeGame.Shared
 
     public static class AnimalDefs
     {
-        public const byte Sheep = 0, Deer = 1, Hen = 2;
+        public const byte Sheep = 0, Deer = 1, Hen = 2, Rabbit = 3;
 
         // Sheep keep exactly the numbers they always had.
         public static readonly AnimalDef[] All =
@@ -109,6 +113,18 @@ namespace LifeGame.Shared
                 Egg = Item.Egg, EggDays = 1.5f, EggCap = 3, Roosts = true,
                 Model = "hen",
                 Herds = new[] { new AnimalHerdSpot(-8f, 7f, 4, 4f) },
+            },
+            // Wild rabbits (animals-22): small, quick and skittish, in warrens at the meadow edges. A light blow
+            // brings one down; it gives a small meal and a scrap of fur. Drawn as a small sheep until Modeling's rabbit.
+            new()
+            {
+                Id = Rabbit, Key = "animal.rabbit", Name = "Rabbit",
+                Walk = 0.8f, Trot = 2.0f, Run = 7.5f, Notice = 18f, CalmSpeed = 1.4f,
+                HomeRange = 9f, FleeAhead = 10f, WanderMin = 2f, WanderMax = 7f, WoodPref = 0.2f, Curious = false,
+                Wary = 6f, DamageTaken = 4f, Size = 0.4f,
+                Meat = Item.RawRabbit, MeatGrown = 1, MeatYoung = 1, Hide = Item.RabbitFur,
+                Model = "sheep",
+                Herds = new[] { new AnimalHerdSpot(18f, 14f, 4, 8f), new AnimalHerdSpot(-22f, -12f, 3, 10f), new AnimalHerdSpot(50f, -8f, 4, 12f) },
             },
         };
 

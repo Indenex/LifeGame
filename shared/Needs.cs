@@ -34,6 +34,8 @@ namespace LifeGame.Shared
         public const float BurntMuttonFood = 0.1f;
         // Hens (animals-19): a raw egg is a snack, a roast chicken a little under mutton.
         public const float EggFood = 0.08f, RoastChickenFood = 0.3f, BurntChickenFood = 0.08f;
+        // Rabbit (animals-22): a small animal, so a small meal (D-075).
+        public const float RoastRabbitFood = 0.2f, BurntRabbitFood = 0.05f;
         // A boiled egg is a better snack than a raw one, still light (crafting-24).
         public const float BoiledEggFood = 0.2f, BurntEggFood = 0.05f;
         // Cooked in a pot (Justin, D-118; ceramics-7, agreed by Survival and Ceramics): better than

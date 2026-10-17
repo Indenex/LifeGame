@@ -9,6 +9,8 @@ public enum AnimalSpecies
     Deer,
     // Hens (animals-19): a tame yard flock that lays eggs.
     Hen,
+    // Wild rabbits (animals-22): small, quick and skittish, in warrens at the meadow edges.
+    Rabbit,
 }
 
 // What an animal is doing, so clients can pick the matching animation.
