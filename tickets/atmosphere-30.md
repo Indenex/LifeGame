@@ -3,7 +3,7 @@ Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
 Branch: claude/atmosphere-30-impacts
-PR: (opening)
+PR: #486
 
 ## Goal
 The PM's add-on after frost, from Justin's "interact with the world more". Tool work gets painted, stylised impact feedback, client-only:
@@ -19,4 +19,4 @@ The chop and dig effects fire at Animation's contact moment, through `Atmosphere
 - Animation (session_019roNRWQBPw4ozNLDhzseig) needs to call `Atmosphere.ToolContact?.Invoke(motion, toolHeadWorldPos, facing)` when a Chop swing lands (u = 0.78 in WorkMotion.Chop) and at the bottom of a Dig stab (about t = 0.45 s), for both you and other players.
 
 ## Next step
-Open the PR, ask Animation for the call and Render for a clip with `--impacts=2`, then wait for CI.
+Wait for #486 CI and send the PM the green sha. Animation and Render requests are sent.
