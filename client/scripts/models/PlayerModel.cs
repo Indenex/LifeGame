@@ -28,9 +28,12 @@ public static class PlayerModel
 
     public static string SlotNode(byte slot) => $"Worn{slot}";
 
-    public static Skeleton3D Build()
+    public static Skeleton3D Build() => Build(HumanFigure.Appearance.Default);
+
+    // A player's own look (skin, hair, cut, beard) on the shared figure.
+    public static Skeleton3D Build(HumanFigure.Appearance look)
     {
-        var skeleton = HumanFigure.Create(Style);
+        var skeleton = HumanFigure.Create(Style, look);
         float drop = HumanFigure.Build(Style).GripDrop;
         foreach (var (bone, tool) in new[] { (HumanRig.HandR, "ToolR"), (HumanRig.HandL, "ToolL") })
         {
@@ -42,6 +45,13 @@ public static class PlayerModel
         // own frame; the mouth is at MouthAt.
         skeleton.AddChild(new BoneAttachment3D { Name = "HeadAttach", BoneName = HumanRig.Names[HumanRig.Head] });
         return skeleton;
+    }
+
+    // Gives a built figure another look; the skeleton and anything worn stay.
+    public static void SetLook(Skeleton3D figure, HumanFigure.Appearance look)
+    {
+        if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { } body)
+            body.Mesh = HumanFigure.Build(Style, look).Mesh;
     }
 
     // Puts on what a player wears in a slot (item 0 for nothing): a garment from
