@@ -11,6 +11,7 @@ public partial class Atmosphere
 {
     float stepPhase;
     Vector3 lastPlayerPos;
+    float lastWaterDepth, lapTimer;
 
     // One step per stride, matching the avatar's leg swing.
     void Footsteps()
@@ -23,12 +24,41 @@ public partial class Atmosphere
         flat.Y = 0;
         lastPlayerPos = pos;
         float distance = flat.Length();
+        float depth = Wading.Depth(pos.Y);
+        WaterBody(pos, depth, distance);
+        lastWaterDepth = depth;
         if (distance > 2f || distance < 0.0005f) return;
         float before = stepPhase;
         stepPhase += distance * 2.4f;
         if (Mathf.Floor(before / Mathf.Pi + 0.5f) == Mathf.Floor(stepPhase / Mathf.Pi + 0.5f)) return;
 
-        sound.Step(GroundAt(pos), wetness);
+        if (depth > 0.05f && Sheltered?.Invoke(pos) != true) WadeStep(depth);
+        else sound.Step(GroundAt(pos), wetness);
+    }
+
+    // One stride in water: a splash that gets deeper with the water, or a paddle stroke when afloat.
+    void WadeStep(float depth)
+    {
+        lapTimer = 0f;
+        sound.Play(depth >= Wading.FloatDepth ? CueDefs.Paddle : depth > 0.65f ? CueDefs.WadeDeep : depth > 0.3f ? CueDefs.WadeKnee : CueDefs.WadeShallow);
+    }
+
+    // Going in (a splash by how fast), coming out (dripping), and the quiet lapping while afloat and still.
+    void WaterBody(Vector3 pos, float depth, float distance)
+    {
+        if (Sheltered?.Invoke(pos) == true) return;
+        float dt = (float)GetProcessDeltaTime();
+        if (lastWaterDepth <= 0.05f && depth > 0.05f)
+        {
+            float speed = dt > 0f ? Mathf.Min(distance, 2f) / dt : 0f;
+            Sfx.Splash(pos, Mathf.Clamp(speed / 6f, 0.15f, 1f));
+        }
+        else if (lastWaterDepth > 0.05f && depth <= 0.05f) sound.Play(CueDefs.Drip);
+        if (depth >= Wading.FloatDepth && distance < 0.0005f)
+        {
+            lapTimer += dt;
+            if (lapTimer > 2.6f) { lapTimer = 0f; sound.Play(CueDefs.Lap); }
+        }
     }
 
     // What is underfoot at a position: used by footsteps and by landings (Sfx.Land).
