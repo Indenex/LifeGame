@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "logs" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -42,6 +42,7 @@ public partial class Showcase : Node3D
             else if (view == "stonehearth") StoneHearthView();
             else if (view == "treelod") TreeLod();
             else if (view == "rocks") Rocks();
+            else if (view == "bushes") Bushes();
             else if (view == "logs") Logs();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
@@ -342,6 +343,47 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.5f, 4.2f, 9.5f), new Vector3(0.5f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // Bushes as the world draws them (painted-2): today's in the back row (forest bush,
+    // heather, gorse, a stand-in for the old berry bush's sphere lobes), the painted ones
+    // in front, with a berry bush ripe and one picked.
+    void Bushes()
+    {
+        void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, new Transform3D(new Basis(Vector3.Up, 0.6f).Scaled(Vector3.One * scale), at));
+            multi.SetInstanceColor(0, tint);
+            AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = material });
+        }
+        var leaf = Look.Leaf.Lerp(Look.Pine, 0.2f);
+        for (int row = 0; row < 2; row++)
+        {
+            bool painted = row == 1;
+            float z = painted ? 0.6f : -2.6f;
+            var foliage = painted ? Painted.Foliage : Look.Foliage;
+            for (int i = 0; i < 3; i++)
+            {
+                var tint = leaf.Lerp(Look.Pine, i * 0.2f);
+                if (painted) Place(PaintedBushes.Bush, Painted.Bush, new Vector3(-5.2f + i * 1.3f, 0, z + (i % 2) * 0.4f), PaintedBushes.Tint(tint), 0.8f + i * 0.2f);
+                else Place(Undergrowth.Bush, Look.Foliage, new Vector3(-5.2f + i * 1.3f, 0, z + (i % 2) * 0.4f), Undergrowth.Olive(tint), 0.8f + i * 0.2f);
+            }
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Heather(v), foliage, new Vector3(-1.2f + v * 0.8f, 0, z + 0.3f), Colors.White);
+            for (int v = 0; v < 2; v++)
+                Place(PropMeshes.Gorse(v), foliage, new Vector3(0.9f + v * 1.3f, 0, z), Colors.White);
+        }
+        // Today's berry bush: four faceted sphere lobes, berries left off.
+        var oldLobe = Look.Faceted(new SphereMesh { Radius = 0.42f, Height = 0.6f, RadialSegments = 8, Rings = 4 }, new Color(0.20f, 0.33f, 0.14f));
+        Vector3[] centers = { new(0, 0.3f, 0), new(0.3f, 0.22f, 0.1f), new(-0.25f, 0.2f, 0.18f), new(0.05f, 0.24f, -0.3f) };
+        foreach (var c in centers) AddChild(new MeshInstance3D { Mesh = oldLobe, Position = new Vector3(4.4f, 0, -2.6f) + c, Scale = Vector3.One * 0.9f });
+        AddChild(new BerryBush(424242) { Position = new Vector3(3.9f, 0, 0.7f), Ripe = true });
+        AddChild(new BerryBush(77) { Position = new Vector3(5.2f, 0, 1.4f), Ripe = false });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.2f, 3.4f, 9.8f), new Vector3(0.2f, 0.3f, -0.6f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
