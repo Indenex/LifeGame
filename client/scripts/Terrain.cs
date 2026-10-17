@@ -278,6 +278,14 @@ public partial class Terrain : Node3D
         return color.Lightened((Hash01(x, z, 7) - 0.5f) * 0.08f);
     }
 
+    // Low bushes lean toward the muted olive of the grass tufts (env-20), so they sit
+    // with the meadow instead of standing out saturated green.
+    static Color Olive(Color color)
+    {
+        float lum = color.R * 0.3f + color.G * 0.59f + color.B * 0.11f;
+        return color.Lerp(new Color(lum * 1.1f, lum * 1.05f, lum * 0.6f, color.A), 0.4f);
+    }
+
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
 
     // A dry cell within two meters of open water, where reeds and stones gather.
@@ -444,7 +452,7 @@ public partial class Terrain : Node3D
                     else if (plant < heather + gorse + sedge + fernChance)
                         ferns.Add((Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 53) * 0.6f), Look.Leaf.Lerp(Look.LeafLight, Hash01(x, z, 54) * 0.4f), custom));
                     else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density)
-                        bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
+                        bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Olive(Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f)), custom));
                 }
                 else if (shore && Hash01(x, z, 60) < 0.25f)
                     reeds.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 61) * 0.4f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
