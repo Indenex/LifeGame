@@ -28,6 +28,7 @@ public partial class OptionsPage : Control
     readonly HSlider[] sliders = new HSlider[Levels.Length];
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
+    Button lightRays = null!;
     HSlider view = null!;
     Label viewName = null!;
 
@@ -96,6 +97,15 @@ public partial class OptionsPage : Control
         viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
+        // Beams of low sunlight through the air (Atmosphere); Off for slower PCs.
+        lightRays = ControlsPage.TextButton(RaysText(), () =>
+        {
+            Atmosphere.GodRays = (Atmosphere.GodRays + 1) % 3;
+            Settings.Set("graphics", "light_rays", Atmosphere.GodRays);
+            lightRays.Text = RaysText();
+        });
+        lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(lightRays);
 
         var back = ControlsPage.TextButton("Back", () => Back());
         back.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
@@ -103,6 +113,8 @@ public partial class OptionsPage : Control
     }
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
+
+    static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
     public void Open()
     {
@@ -114,6 +126,7 @@ public partial class OptionsPage : Control
         }
         view.SetValueNoSignal((int)ViewDistance.Setting);
         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
+        lightRays.Text = RaysText();
         Visible = true;
     }
 

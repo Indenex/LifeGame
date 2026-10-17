@@ -1,7 +1,7 @@
 # atmosphere-24: Falling leaves and blossom
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_review
+Status: done
 Branch: claude/atmosphere-24-falling-leaves
 PR: #349
 
@@ -14,9 +14,10 @@ Justin's pick (2026-10-16, via the PM): leaves drift down under broadleaf trees 
   - New client/scripts/atmosphere/FallingLeaves.cs: one GpuParticles3D per entry (120 max, 12 s life), in a 28 m box from 8 to 14 m up round the player. Drag holds the fall to about 1 m/s, turbulence adds flutter, pieces spin, and each shrinks away at the end. Gravity leans with WindDirection, 0.3 + 2.2 x wind. Emission scales by AmountRatio; out of season it is off. Colours come from the def, lit by the scene.
   - Atmosphere.cs: adds the node and calls `leaves.Follow(focus, Year, wind, woods, WindDirection)` next to the woodedness easing. "Under trees" uses the same woodedness (Forest.Density around the player) as the sun shafts, so it is not species-aware yet.
   - `--leaves=1` holds every entry at full, for renders.
+- 2026-10-16 23:40: CI run 38981101988 green on 6dac9f8; PR #349 merged.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for #349 CI and send the PM the green sha. Render clip requested (autumn woods --season=0.62 --wind=0.5 --leaves=1; spring optional). Tune size, count and fall speed from it.
+Done. Tune size, count and fall speed from the Render autumn clip when it arrives.
