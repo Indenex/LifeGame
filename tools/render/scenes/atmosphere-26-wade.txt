@@ -1,0 +1,24 @@
+# atmosphere-26 (PR #429): wading at the pond near (30,76): step in (splash), stand still in
+# the water (rings), walk back out onto the shore (wet legs). The water there is at most 0.4 m deep
+# (no swimming water within 300 m of spawn). 12 fps movie; s = walk (+x,+z), w = walk (-x,-z).
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --cloud=0.2 --rain=0 --wind=0.1 --debug-position=29,75 --render-cam=4.5,1.2,35,0.4
+sql UPDATE player_pos SET x = 29.0, z = 75.0, chunk_x = 1, chunk_z = 4
+frames 360
+key Return
+frames +12
+mark wade-start
+keydown s
+frames +60
+keyup s
+frames +48
+keydown s
+frames +24
+keyup s
+frames +48
+keydown w
+frames +96
+keyup w
+frames +24
+mark wade-end
