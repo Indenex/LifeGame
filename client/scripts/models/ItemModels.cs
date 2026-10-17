@@ -220,14 +220,14 @@ public static class ItemModels
         Item.ScrapedHide => (k => RolledHide(k, false), true),
         Item.Leather => (Leather, true),
         Item.SleepingMat => (SleepingMat, true),
-        // Clothing (D-074), by number until the items reach main.
+        // Clothing (D-074).
         (Item)Garments.WoolTunic => (Tunic, true),
         (Item)Garments.FootWraps => (FootWraps, true),
-        // Bow and arrow (Crafting's ids, PR #266; animals-15), by number until on main.
-        (Item)16 => (Bow, false),
-        (Item)17 => (Arrow, false),
-        // Red deer (animals-14), by number until the items reach main.
-        (Item)202 => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
+        // Bow and arrow (Crafting's ids, PR #266; animals-15).
+        Item.Bow => (Bow, false),
+        Item.Arrow => (Arrow, false),
+        // Red deer (animals-14).
+        Item.RawVenison => (k => Venison(k, new Color(0.40f, 0.12f, 0.11f), new Color(0.46f, 0.15f, 0.13f), new Color(0.88f, 0.84f, 0.76f)), true),
         // Roast and burnt venison (model-20's icon pass: they had no model and drew as a plain blob).
         // Tallow and grog (model-20's icon pass: their stand-in shapes read as plain blobs).
         Item.Tallow => (Tallow, true),
@@ -235,12 +235,12 @@ public static class ItemModels
         Item.Grog => (Grog, true),
         Item.CookedVenison => (k => Venison(k, new Color(0.45f, 0.24f, 0.11f), new Color(0.58f, 0.34f, 0.16f), new Color(0.72f, 0.52f, 0.28f)), true),
         Item.BurntVenison => (k => Venison(k, new Color(0.1f, 0.08f, 0.07f), new Color(0.17f, 0.12f, 0.09f), new Color(0.3f, 0.26f, 0.21f)), true),
-        (Item)203 => (k => RolledHide(k, true, DeerCoat), true),
-        (Item)204 => (AntlerItem, false),
-        // Wool (animals-8), by number until the items reach main.
-        (Item)197 => (DropSpindle, false),
-        (Item)198 => (Yarn, true),
-        (Item)199 => (WoolCloth, true),
+        Item.DeerHide => (k => RolledHide(k, true, DeerCoat), true),
+        Item.Antler => (AntlerItem, false),
+        // Wool (animals-8).
+        Item.DropSpindle => (DropSpindle, false),
+        Item.Yarn => (Yarn, true),
+        Item.WoolCloth => (WoolCloth, true),
         // The hen (animals-19, model-7): eggs, a feather and chicken legs.
         Item.Egg => (k => Egg(k, EggShell, false), true),
         Item.Feather => (Feather, true),
@@ -250,11 +250,11 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
-        // Rabbit (animals-22), by number until the items reach main: raw, roast and burnt, and its fur.
-        (Item)214 => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
-        (Item)215 => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
-        (Item)216 => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
-        (Item)217 => (RabbitFur, true),
+        // Rabbit (animals-22): raw, roast and burnt, and its fur.
+        Item.RawRabbit => (k => Rabbit(k, new Color(0.84f, 0.56f, 0.52f), new Color(0.9f, 0.7f, 0.64f)), true),
+        Item.CookedRabbit => (k => Rabbit(k, new Color(0.56f, 0.32f, 0.15f), new Color(0.72f, 0.5f, 0.24f)), true),
+        Item.BurntRabbit => (k => Rabbit(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
+        Item.RabbitFur => (RabbitFur, true),
         // Spade (Crafting's crafting-shovel).
         Item.Spade => (Spade, false),
         // Waterskins (survival-20).
@@ -816,7 +816,7 @@ public static class ItemModels
             k.Plain.Paint(Crack).Ellipsoid(new Vector3(0.015f, -0.32f, 0.15f), new Vector3(0.016f, 0.016f, 0.03f), 6, 3);
             LooseEnd(k, new Vector3(0, -0.3f, 0.06f), w);
         },
-        [(Item)16] = (k, w) =>
+        [Item.Bow] = (k, w) =>
         {
             LooseEnd(k, new Vector3(0, 0.55f, -0.12f), w);
             if (w > 1) CrackLine(k, new Vector3(0.02f, 0.2f, -0.01f), new Vector3(0.02f, 0.38f, -0.03f));
