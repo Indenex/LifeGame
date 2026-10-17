@@ -123,15 +123,9 @@ public partial class GroupView : CanvasLayer
     {
         if (conn == null || playerId == MyId()) return null;
         if (conn.Db.PlayerPos.PlayerId.Find(playerId) is not { } them || conn.Db.PlayerPos.PlayerId.Find(MyId()) is not { } me) return null;
-        var v = new Vector2(them.X - me.X, them.Z - me.Z);
-        float d = v.Length();
-        if (d < 12f) return "close by";
-        string way = Compass[(int)Mathf.PosMod(Mathf.Round(Mathf.RadToDeg(Mathf.Atan2(v.X, -v.Y)) / 45f), 8f)];
-        return d >= 300f ? $"far off to the {way}" : $"{Mathf.RoundToInt(d / 10f) * 10} m {way}";
+        // The same words as the friends list (shared/Friends.cs).
+        return Friends.HowFar(them.X - me.X, them.Z - me.Z);
     }
-
-    // -Z is north and +X is east, as on the death marker (DeathMarker.Direction).
-    static readonly string[] Compass = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest" };
 
     // "wants you in their group" over the inviter's head while you are asked; only you see it.
     void Cue(uint from)
