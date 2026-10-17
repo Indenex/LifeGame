@@ -1296,3 +1296,23 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
 **Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
 **Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
+
+## D-320 — 2026-10-17 — Merge queue with batches replaces PR-pausing priority
+**Decision:** "Merge queue + batches". Green PRs go into GitHub's merge queue and are tested together in batches every ~10 to 15 minutes, then land and release as one. No PR runs are paused or cancelled any more. This supersedes D-301 and D-316. Ticket integration-16.
+**Who:** Justin, choosing "Merge queue + batches" (relayed by the PM; no direct quote).
+
+## D-321 — 2026-10-17 — Hotbar look: "Paper buttons"
+**Decision:** The hotbar is "Paper buttons": cream paper discs with a soft brown rim and shadow, the key number in brown Nunito, and a butter-gold ring on the item in hand (ui-45).
+**Who:** Justin, choosing "Paper buttons" (relayed by the PM; no direct quote).
+
+## D-322 — 2026-10-17 — Sitting and lying down are just a pose
+**Decision:** Sitting and lying down are "Just a pose", with no gameplay effect.
+**Who:** Justin, choosing "Just a pose" (relayed by the PM; no direct quote).
