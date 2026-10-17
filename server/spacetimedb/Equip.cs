@@ -17,22 +17,51 @@ public static partial class Module
         [PrimaryKey]
         public Identity Owner;
         public byte Slot;
+        // The item in hand, so other players' clients can show it (they cannot read someone's
+        // hotbar). Kept in step with the slot by EquipSlot and SyncEquip.
+        [Default((ushort)0)]
+        public ushort Item;
     }
 
-    // Equips a hotbar slot (0 to 9). The slot already equipped, or 255, puts it away.
+    // Equips a hotbar slot (0 to 9): whatever sits on it comes to hand, tool or not (Justin: every
+    // slot equips). The slot already equipped, an empty slot, or 255 puts it away.
     [SpacetimeDB.Reducer]
     public static void EquipSlot(ReducerContext ctx, byte index)
     {
         RequirePlayer(ctx);
         var row = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender);
-        if (index >= HotbarSlots || (row is { } r && r.Slot == index))
+        var held = index < HotbarSlots ? SlotAt(ctx, index) : null;
+        if (held is not { Item: not 0 } || (row is { } r && r.Slot == index))
         {
             if (row is not null) ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
             return;
         }
-        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index };
+        var next = new PlayerEquip { Owner = ctx.Sender, Slot = index, Item = held.Value.Item };
         if (row is null) ctx.Db.PlayerEquip.Insert(next);
         else ctx.Db.PlayerEquip.Owner.Update(next);
+    }
+
+    // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
+    // emptied slot puts the hand away.
+    static void SyncEquip(ReducerContext ctx)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) is not { } equip) return;
+        if (SlotAt(ctx, equip.Slot) is { Item: not 0 } slot)
+        {
+            if (slot.Item != equip.Item) ctx.Db.PlayerEquip.Owner.Update(equip with { Item = slot.Item });
+        }
+        else
+            ctx.Db.PlayerEquip.Owner.Delete(ctx.Sender);
+    }
+
+    // Uses the item in hand the way its Def says (eat, drink, wear): a click on the held item. The
+    // item is the server's own record of what is in hand, never a client argument.
+    [SpacetimeDB.Reducer]
+    public static void UseHeld(ReducerContext ctx)
+    {
+        RequirePlayer(ctx);
+        var equip = ctx.Db.PlayerEquip.Owner.Find(ctx.Sender) ?? throw new Exception("You are holding nothing");
+        UseItem(ctx, equip.Item);
     }
 
     // The tool in the equipped slot if it carries these tags, is in the bag (not on the tools
