@@ -29,8 +29,10 @@ Justin (via the PM, 2026-10-17): "this asset pack ... is closer to the style I w
 
 - 2026-10-17 17:45: kit trees and rocks topple, sink and grow in on cleared or regrown cells as Look's painted ones do (INSTANCE_CUSTOM x/y/z, world_seconds).
 
+- 2026-10-17 18:00: Justin picked the kit trees as they come (trio middle row): trees now use the kit's own leaf and bark textures with plain Lambert light (kit_light), keeping our wind, autumn, wetness, fade and fall, plus a per-tree shade (7e2621dd, e51354d2). TreesTextured = false would switch to the kit's flat Godot-shader greens. Shots: /mnt/project-files/screenshots/naturekit/trees-kit-look-{noon,golden}.png. Sawn-off kit trees for TreeFall: NatureKit.Felled drops triangles below the stump cut (one-line hook in TreeFall.cs).
+
 ## Open questions / blockers
 - Look pick for Justin (via the PM): how far to take it.
 
 ## Next step
-Watch CI on PR #853 and send the green sha to the PM. Then: a sawn-off kit tree for TreeFall (cut the mesh above the stump), and Justin's picks on twisted/birch and giant-pine colours.
+Watch CI on PR #853 and send the green sha to the PM; then Survival's wild-root patch (survival-36, #856: rosette with white umbels, dug mound, root item) in the blended plant look.

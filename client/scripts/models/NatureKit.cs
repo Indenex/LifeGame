@@ -132,6 +132,39 @@ public static class NatureKit
         return (new Transform3D(basis * Basis.FromScale(Vector3.One * scale), item.Item1.Origin - basis.Y * sink), item.Item2, item.Item3);
     }
 
+    static readonly Dictionary<Mesh, Mesh> FelledMeshes = new();
+
+    // A kit tree sawn off at the stump, for TreeFall to drop (the stump stays standing):
+    // the world copy without the triangles that reach below the cut. Null for other meshes.
+    public static Mesh? Felled(Mesh mesh)
+    {
+        lock (TreeMeshes)
+        {
+            if (FelledMeshes.TryGetValue(mesh, out var done)) return done;
+            float scale = 0f;
+            foreach (var t in TreeMeshes.Values) if (t.Mesh == mesh) scale = t.Scale;
+            if (scale == 0f || mesh is not ArrayMesh source) return null;
+            float cut = LifeGame.Shared.Trees.StumpHeight / scale;
+            var felled = new ArrayMesh();
+            for (int s = 0; s < source.GetSurfaceCount(); s++)
+            {
+                var arrays = source.SurfaceGetArrays(s);
+                var vertices = arrays[(int)Godot.Mesh.ArrayType.Vertex].AsVector3Array();
+                var indices = arrays[(int)Godot.Mesh.ArrayType.Index].AsInt32Array();
+                var kept = new List<int>(indices.Length);
+                for (int i = 0; i + 2 < indices.Length; i += 3)
+                    if (vertices[indices[i]].Y >= cut && vertices[indices[i + 1]].Y >= cut && vertices[indices[i + 2]].Y >= cut)
+                        kept.AddRange(new[] { indices[i], indices[i + 1], indices[i + 2] });
+                if (kept.Count == 0) continue;
+                arrays[(int)Godot.Mesh.ArrayType.Index] = kept.ToArray();
+                felled.AddSurfaceFromArrays(Godot.Mesh.PrimitiveType.Triangles, arrays);
+                felled.SurfaceSetMaterial(felled.GetSurfaceCount() - 1, source.SurfaceGetMaterial(s));
+            }
+            FelledMeshes[mesh] = felled;
+            return felled;
+        }
+    }
+
     // Whether a chunk batch's mesh is one of the kit trees (TreeFall draws it falling).
     public static bool IsTree(Mesh mesh)
     {
