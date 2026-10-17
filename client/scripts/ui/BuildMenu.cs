@@ -141,7 +141,7 @@ public partial class BuildMenu : CanvasLayer
         tile.Pressed += () => { Close(); Place(kind); };
         tile.Modulate = new Color(1, 1, 1, afford && !claimless ? 1f : 0.45f);
         tile.TooltipText = claimless ? "Needs a claim: stand inside your claim to build this"
-            : afford ? "" : "You don't carry enough yet";
+            : afford ? "" : Shortfall(costs);
 
         var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         column.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -194,6 +194,13 @@ public partial class BuildMenu : CanvasLayer
         }
         return tile;
     }
+
+    // What you still need for a kind, one line per short item with where to get it (the
+    // crafting cards' wording). You can lay out a footprint first and bring the rest later.
+    string Shortfall(List<(Item item, uint count)> costs) =>
+        "You can lay it out now and bring the rest as you build. Still to find:\n" + string.Join("\n", costs
+            .Where(c => Carried(c.item) < c.count)
+            .Select(c => $"{c.count - Carried(c.item)} {Items.Def(c.item).Count(c.count - Carried(c.item)).ToLowerInvariant()}. {CraftingUi.WhereFrom(c.item)}"));
 
     // Renders each kind, finished, in a small lit scene of its own, one per frame.
     async void RenderPictures()

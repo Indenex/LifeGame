@@ -325,7 +325,7 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // One short line on where a new player gets an item.
-    static string WhereFrom(Item item)
+    internal static string WhereFrom(Item item)
     {
         string Key(string action) =>
             Controls.World.FirstOrDefault(b => b.Action == action) is { } b && Controls.KeysFor(b) is { } k ? $" ({k})" : "";
