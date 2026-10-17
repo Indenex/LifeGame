@@ -1,0 +1,48 @@
+# building-23 straw bed (#781, on main) standing finished in the world. A bed is claim-only, so the
+# camera player (puppet) walks off the waking clearing by SQL, raises a claim marker (4 sticks,
+# 2 fiber), then lays out and builds a straw bed (frame 8 sticks + 2 cordage, tick 12 fiber).
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.1 --season=0.25 --render-cam=6,2.6,25,0.5
+wait 35
+sql UPDATE player_pos SET x = 35, z = -30, chunk_x = 2, chunk_z = -2
+wait 10
+give 1 20 50
+give 3 20 50
+give 8 4 50
+place 2 3 1.5 0
+build
+build
+build
+build
+build
+build
+wait 3
+place 25 -1.5 -2.5 70
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+build
+wait 15
+snap
+wait 8
+snap
