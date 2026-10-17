@@ -13,10 +13,13 @@ public static class PlayerModel
     public static HumanFigure.Style Style = HumanFigure.Carved;
 
     // The chibi roster (model-6, D-249): Bramble or Pebble by the look's race, on
-    // the 1.35 m base. It replaces today's figure once the 1.35 m tweaks (camera,
-    // nameplate, tool scale, poses) land; until then `--chibi` on the command line
-    // turns it on. Garments don't fit it yet: the body slot shows the race's own wrap.
-    public static bool Chibi = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--chibi") >= 0;
+    // the 1.35 m base, the player figure since Justin turned it on. `--legacy-player`
+    // on the command line brings back the 1.75 m figure for comparison. Garments
+    // don't fit the chibi yet: the body slot shows the race's own wrap.
+    public static bool Chibi = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--legacy-player") < 0;
+
+    // How tall the player figure stands, for the camera and the nameplate.
+    public static float Height => Chibi ? ChibiFigure.Height : 1.75f;
 
     public static ChibiFigure.Look ChibiLook(HumanFigure.Appearance look) => new((ChibiFigure.Race)look.Race, look.Skin, look.Hair, look.Cut);
 

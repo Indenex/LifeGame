@@ -58,7 +58,7 @@ public partial class CameraRig : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        Position = Position.Lerp(Focus + Vector3.Up * 1.2f, 1f - Mathf.Exp(-6f * dt));
+        Position = Position.Lerp(Focus + Vector3.Up * 1.2f * PlayerModel.Height / 1.75f, 1f - Mathf.Exp(-6f * dt));
         yaw = Mathf.Lerp(yaw, yawTarget, 1f - Mathf.Exp(-TurnEase * dt));
         distance = Mathf.Lerp(distance, distanceTarget, 1f - Mathf.Exp(-6f * dt));
 

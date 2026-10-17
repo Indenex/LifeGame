@@ -46,7 +46,7 @@ public partial class Avatar : Node3D
             Modulate = Look.Cream,
             OutlineSize = 6,
             OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.55f),
-            Position = new Vector3(0, 2.05f, 0),
+            Position = new Vector3(0, PlayerModel.Height + 0.3f, 0),
         };
         AddChild(nameplate);
     }
