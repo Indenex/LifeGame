@@ -204,6 +204,7 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
+        HearFireCaps(conn);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(Subscriptions.Atmosphere);
@@ -471,7 +472,7 @@ public partial class Atmosphere : Node3D
     {
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
         float total = 0f, nearest = 0f, pan = 0f, stoke = 0f;
-        foreach (var (x, z, fuelUntil) in fires.Values)
+        foreach (var (id, (x, z, fuelUntil)) in fires)
         {
             float left = (fuelUntil - now) / 1_000_000f;
             if (left <= 0f) continue;
@@ -484,7 +485,7 @@ public partial class Atmosphere : Node3D
             {
                 nearest = g;
                 // Stoked: fuel left against what a fire holds at most (a well-fed fire roars).
-                stoke = Mathf.Clamp(left / Fires.MaxSeconds, 0f, 1f);
+                stoke = Stoke(id, left);
                 pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
             }
         }
