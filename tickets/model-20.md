@@ -13,9 +13,10 @@ Sheet: `renders/model-20-icons.png`.
 
 ## Progress log
 - 2026-10-17: added the icons view; fixed venison; build has 0 errors. The rest of the sheet reads well.
+- 2026-10-17: tallow is now a pale waxy cake on a leaf (Food family), and grog a heap of crushed fired-clay crumbs. Both used to be Ceramics' plain ClayItemLook stand-ins, which ItemModels now overrides; Ceramics told via the PM.
 
 ## Open questions / blockers
-- Lesser candidates, not changed: the stone flake and hand axe are both plain grey slabs; grog and tallow are plain octagons (old meshes). Worth a later pass.
+- Lesser candidates, not changed: the stone flake and hand axe are both plain grey slabs. Worth a later pass.
 
 ## Next step
 Wait for CI on the PR, then send the green sha to the PM.
