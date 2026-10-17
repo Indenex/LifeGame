@@ -13,10 +13,14 @@ namespace LifeGame;
 //      2 to 3 crisp bands with blue-violet shade, a soft dark rim at the edges,
 //      painted strokes in 3 tones (scallops on foliage, bark stripes, stone
 //      cracks, grass blades), and the reference palette.
+//   E  D with the artist's own painted tiles (Golden Skull iso-starter pack,
+//      docs/art-packs, D-235) for wood, bark, stone and ground: each tile's side
+//      or top face unskewed into a square and wrapped round the object, its
+//      colours kept, shaded by the vertex colours' brightness.
 // Colours still come from the vertex colours and albedo, so palettes stay as they are.
 public static class MaterialLook
 {
-    public enum Variant { Current, A, B, C, D }
+    public enum Variant { Current, A, B, C, D, E }
     public enum Pattern { Plain, Wood, Bark, Stone, Leaves, Straw, Wool, Skin, Grass }
 
     static Shader? shader;
@@ -27,8 +31,8 @@ public static class MaterialLook
     // and how strongly it shows.
     static (float Scale, Vector2 Stretch, float Strength) Layout(Pattern p) => p switch
     {
-        Pattern.Wood => (1.4f, new Vector2(0.3f, 1f), 1f),
-        Pattern.Bark => (1.6f, new Vector2(1f, 0.35f), 1f),
+        Pattern.Wood => (1.2f, new Vector2(0.5f, 1f), 1f),
+        Pattern.Bark => (1.4f, new Vector2(1f, 0.6f), 1f),
         Pattern.Stone => (0.8f, Vector2.One, 1f),
         Pattern.Leaves => (0.6f, Vector2.One, 1.2f),
         Pattern.Straw => (0.8f, new Vector2(1f, 1f), 1f),
@@ -44,11 +48,16 @@ public static class MaterialLook
         if (materials.TryGetValue((pattern, variant, color), out var done)) return done;
         shader ??= new Shader { Code = Code };
         var (scale, stretch, strength) = Layout(pattern);
-        bool sharp = variant == Variant.A, painted = variant == Variant.D;
-        if (painted)
+        bool sharp = variant == Variant.A, painted = variant is Variant.D or Variant.E;
+        var art = variant == Variant.E ? ArtTexture(pattern) : null;
+        if (painted && art == null)
         {
             // The reference palette: stone leans grey-violet, foliage olive.
+            // Tuned to the Golden Skull tiles (docs/art-packs): stone grey with a
+            // violet lean, bark a purple-brown, wood a warm red-brown.
             if (pattern == Pattern.Stone) color *= new Color(0.92f, 0.9f, 1.08f);
+            if (pattern == Pattern.Bark) color *= new Color(0.95f, 0.92f, 1.06f);
+            if (pattern == Pattern.Wood) color *= new Color(1.05f, 0.95f, 0.88f);
             if (pattern == Pattern.Leaves) color *= new Color(1.0f, 1.0f, 0.78f);
             if (pattern == Pattern.Leaves) (scale, stretch) = (0.8f, Vector2.One);
         }
@@ -61,8 +70,69 @@ public static class MaterialLook
         material.SetShaderParameter("strength", strength);
         material.SetShaderParameter("vary", variant is Variant.C or Variant.D ? 0.18f : 0f);
         material.SetShaderParameter("banded", painted);
+        if (art != null)
+        {
+            material.SetShaderParameter("art", art.Value.Texture);
+            material.SetShaderParameter("use_art", true);
+            material.SetShaderParameter("scale", art.Value.Scale);
+            material.SetShaderParameter("stretch", Vector2.One);
+        }
         materials[(pattern, variant, color)] = material;
         return material;
+    }
+
+    // The artist's tile for a pattern, as a square texture, and how many times it
+    // repeats per metre. Null when the pack has none for it.
+    static readonly Dictionary<Pattern, (ImageTexture Texture, float Scale)?> art = new();
+    const string Tiles = "res://../docs/art-packs/golden-skull/iso-starter/Sprites/";
+
+    static (ImageTexture Texture, float Scale)? ArtTexture(Pattern p)
+    {
+        if (art.TryGetValue(p, out var done)) return done;
+        (string File, bool Top, float Scale)? source = p switch
+        {
+            Pattern.Wood => ("Wood/ISO_Tile_Wood_01.png", false, 1.1f),
+            Pattern.Bark => ("Wood/ISO_Tile_Tree_01.png", false, 1.2f),
+            Pattern.Stone => ("Stone/ISO_Tile_Stone_01.png", false, 0.8f),
+            Pattern.Grass => ("Grass/ISO_Tile_Dirt_01_Grass_01.png", true, 1.6f),
+            _ => null,
+        };
+        (ImageTexture, float)? result = null;
+        if (source is { } s)
+        {
+            var image = Image.LoadFromFile(ProjectSettings.GlobalizePath(Tiles + s.File));
+            if (image != null && !image.IsEmpty())
+            {
+                image.Convert(Image.Format.Rgba8);
+                result = (ImageTexture.CreateFromImage(Unskew(image, s.Top)), s.Scale);
+            }
+        }
+        art[p] = result;
+        return result;
+    }
+
+    // The tiles are 148 x 164 isometric cubes: a top diamond from (5, 35) across to
+    // (143, 35) with its point at (74, 0), and side faces 93 px tall below it. Pick
+    // the right side face (or the top) and resample it into a 128 px square, a few
+    // pixels in from the painted outline.
+    static Image Unskew(Image tile, bool top)
+    {
+        const int n = 128;
+        const float inset = 0.12f;
+        var square = Image.CreateEmpty(n, n, false, Image.Format.Rgba8);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float u = Mathf.Lerp(inset, 1f - inset, (x + 0.5f) / n), v = Mathf.Lerp(inset, 1f - inset, (y + 0.5f) / n);
+                Vector2 at = top
+                    ? new Vector2(5f, 35f) + u * new Vector2(69f, -35f) + v * new Vector2(69f, 35f)
+                    : new Vector2(74f, 70f) + u * new Vector2(69f, -35f) + v * new Vector2(0f, 93f);
+                int ix = Mathf.Clamp((int)at.X, 0, tile.GetWidth() - 1), iy = Mathf.Clamp((int)at.Y, 0, tile.GetHeight() - 1);
+                var c = tile.GetPixel(ix, iy);
+                square.SetPixel(x, y, new Color(c.R, c.G, c.B, 1f));
+            }
+        square.GenerateMipmaps();
+        return square;
     }
 
     // Which painted pattern stands in for one of today's materials, read from the
@@ -216,35 +286,50 @@ public static class MaterialLook
             }
             case Pattern.Bark:
             {
-                // Long vertical stripes: mid bark, narrow dark furrows, a light edge
-                // beside each.
-                float f = Mathf.PosMod(u * 6f + Noise(u * 6, v * 2, 6, 4) * 0.35f, 1f);
-                return f < 0.16f ? 0f : f < 0.32f ? 1f : 0.5f;
+                // Scaly plates, as in the artist's tree tiles: long upright plates
+                // outlined dark, each lit along its top.
+                float col = Mathf.Floor(u * 5f);
+                float fu = Mathf.PosMod(u * 5f, 1f);
+                float shift = MeshKit.Hash((int)col, 82);
+                float row = Mathf.Floor(v * 2.5f + shift);
+                float fv = Mathf.PosMod(v * 2.5f + shift, 1f);
+                float wob = (MeshKit.Hash((int)col, (int)row + 83) - 0.5f) * 0.15f;
+                if (fu < 0.1f + wob * 0.3f || fu > 0.92f || fv < 0.07f) return 0f;
+                return fv > 0.78f ? 1f : 0.5f;
             }
             case Pattern.Stone:
             {
-                // Big soft planes: light on the upper part of each cell, a dark crack
-                // between cells.
-                const int cells = 2;
+                // Cobbles, as in the artist's stone tiles: dark mortar between, a lit
+                // rim along each stone's upper edge, mid inside.
+                const int cells = 3;
                 float best = 9f, second = 9f;
                 Vector2 centre = Vector2.Zero;
                 for (int i = -1; i <= cells; i++)
                     for (int j = -1; j <= cells; j++)
                     {
                         int wi = ((i % cells) + cells) % cells, wj = ((j % cells) + cells) % cells;
-                        var c = new Vector2((i + MeshKit.Hash(wi, wj + 40)) / cells, (j + MeshKit.Hash(wi + 7, wj + 41)) / cells);
+                        var c = new Vector2((i + 0.2f + 0.6f * MeshKit.Hash(wi, wj + 40)) / cells, (j + 0.2f + 0.6f * MeshKit.Hash(wi + 7, wj + 41)) / cells);
                         float d = c.DistanceTo(new Vector2(u, v));
                         if (d < best) { second = best; best = d; centre = c; }
                         else if (d < second) second = d;
                     }
-                if (second - best < 0.025f) return 0f;
-                return v > centre.Y + 0.05f ? 1f : 0.5f;
+                float edge = second - best;
+                if (edge < 0.02f) return 0f;
+                return edge < 0.07f && v > centre.Y ? 1f : 0.5f;
             }
             case Pattern.Wood:
             {
-                float wave = Noise(u * 3, v * 4, 3, 1) * 0.6f;
-                float f = Mathf.PosMod(v * 4f + wave, 1f);
-                return f < 0.1f ? 0f : f < 0.25f ? 1f : 0.5f;
+                // Planks, as in the artist's wood tiles: a dark seam under each
+                // plank, a lit top edge, an end joint here and there, and a few
+                // grain strokes.
+                float row = Mathf.Floor(v * 3f);
+                float f = Mathf.PosMod(v * 3f, 1f);
+                if (f < 0.07f) return 0f;
+                if (f > 0.86f) return 1f;
+                float joint = MeshKit.Hash((int)row, 84);
+                if (Mathf.Abs(Mathf.PosMod(u - joint, 1f) - 0.5f) > 0.485f) return 0f;
+                float grain = Mathf.PosMod(f * 3f + Noise(u * 3, v * 3, 3, 1) * 0.8f, 1f);
+                return grain < 0.1f ? 0f : 0.5f;
             }
             case Pattern.Grass:
             {
@@ -290,17 +375,22 @@ public static class MaterialLook
         uniform float vary = 0.0;
         // Variant D: light in crisp bands, shade leaning blue-violet, dark rims.
         uniform bool banded = false;
+        // Variant E: the artist's painted tile, its own colours.
+        uniform sampler2D art : source_color, filter_linear_mipmap, repeat_enable;
+        uniform bool use_art = false;
         uniform vec3 shade_tint : source_color = vec3(0.55, 0.52, 0.82);
 
         varying vec3 tint;
         varying vec3 obj;
         varying vec3 obj_normal;
+        varying float bright;
 
         void vertex() {
             // Palette colours are authored in sRGB.
             tint = pow(COLOR.rgb, vec3(2.2)) * albedo.rgb;
             obj = VERTEX;
             obj_normal = NORMAL;
+            bright = dot(pow(COLOR.rgb, vec3(2.2)), vec3(0.3, 0.59, 0.11));
             if (vary > 0.0) {
                 // Each placed object its own slight shade and warmth.
                 vec3 o = MODEL_MATRIX[3].xyz;
@@ -324,6 +414,13 @@ public static class MaterialLook
             w /= (w.x + w.y + w.z);
             float t = paint(obj.zy) * w.x + paint(obj.xz) * w.y + paint(obj.xy) * w.z;
             ALBEDO = clamp(tint * mix(1.0, mix(0.55, 1.2, t), strength), 0.0, 1.0);
+            if (use_art) {
+                // Mirrored repeats hide the tile's edges.
+                vec2 a = obj.zy * scale, b = obj.xz * scale, c = obj.xy * scale;
+                a = abs(fract(a * 0.5) * 2.0 - 1.0); b = abs(fract(b * 0.5) * 2.0 - 1.0); c = abs(fract(c * 0.5) * 2.0 - 1.0);
+                vec3 painted = texture(art, a).rgb * w.x + texture(art, b).rgb * w.y + texture(art, c).rgb * w.z;
+                ALBEDO = clamp(painted * clamp(bright * 1.35, 0.5, 1.5), 0.0, 1.0);
+            }
             if (banded) {
                 // A soft dark line round each shape's silhouette.
                 float rim = 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0);

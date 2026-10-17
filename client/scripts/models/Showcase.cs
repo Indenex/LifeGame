@@ -375,7 +375,7 @@ public partial class Showcase : Node3D
     {
         var variant = args.GetValueOrDefault("look", "A") switch
         {
-            "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, "D" => MaterialLook.Variant.D, _ => MaterialLook.Variant.A,
+            "current" => MaterialLook.Variant.Current, "B" => MaterialLook.Variant.B, "C" => MaterialLook.Variant.C, "D" => MaterialLook.Variant.D, "E" => MaterialLook.Variant.E, _ => MaterialLook.Variant.A,
         };
         string time = args.GetValueOrDefault("time", "golden");
         // With --time-of-day the game's own Atmosphere drives sun, sky, fog and grade
@@ -388,7 +388,7 @@ public partial class Showcase : Node3D
             AddChild(new Atmosphere());
         }
         bool now = variant == MaterialLook.Variant.Current;
-        bool d = variant == MaterialLook.Variant.D;
+        bool d = variant is MaterialLook.Variant.D or MaterialLook.Variant.E;
 
         Material Pick(Material original, MaterialLook.Pattern? pattern = null, Color? color = null)
         {
@@ -467,7 +467,7 @@ public partial class Showcase : Node3D
         // Ground: today's grass, or the painted plain pattern in grass colour.
         foreach (var child in GetChildren())
             if (child is MeshInstance3D { Mesh: PlaneMesh } ground && !now)
-                ground.MaterialOverride = d ? MaterialLook.For(MaterialLook.Pattern.Grass, variant, new Color(0.5f, 0.62f, 0.27f)) : MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
+                ground.MaterialOverride = d ? MaterialLook.For(MaterialLook.Pattern.Grass, variant, new Color(0.56f, 0.66f, 0.28f)) : MaterialLook.For(MaterialLook.Pattern.Plain, variant, Look.GrassLow);
 
         // Light for the time of day.
         foreach (var child in GetChildren())
