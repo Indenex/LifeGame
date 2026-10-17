@@ -191,57 +191,164 @@ public static class PropMeshes
     }
 
     // A pine matched to the Golden Skull card pine (Forest_big_tree_needle_04), one
-    // unit tall (scale it to the tree's height): a bare trunk to a fifth of the
-    // height, then five tiers of long pointed fingers drooping out and down from a
-    // cone, the tiers at the heights and widths of the card's own. Its colours come
-    // from projecting the card's painting onto it (MaterialLook.CardPine).
-    public static Mesh PaintedPine => paintedPine ??= BuildPaintedPine();
-    static Mesh? paintedPine;
+    // unit tall (scale it to the tree's height): a bare trunk to about a fifth of
+    // the height, then five to seven close tiers of broad drooping boughs, each
+    // tier's tips hanging over the tier below so the crown reads full. Every variant
+    // differs (D-166): tier count, width, trunk height, lean, a fuller side, now and
+    // then a missing bough, and a slight colour shift. Drawn with MaterialLook.CardPine,
+    // which paints the boughs in the card's flat bands from their UVs: UV.x runs
+    // across a bough (-1 edge, 0 ridge, 1 edge), UV.y from root to tip; UV2.x tells
+    // the parts apart (0 trunk, 1 core, 2 bough) and UV2.y is a per-bough random;
+    // the vertex colour carries the variant's tint.
+    public const int PineVariants = 16;
+    public static Mesh PaintedPine(int variant) => Variant("paintedpine", variant, PineVariants, BuildPaintedPine);
 
-    static ArrayMesh BuildPaintedPine()
+    static ArrayMesh BuildPaintedPine(int v)
     {
+        float R(int salt) => H(v * 97 + 5, salt + 400);
+        float trunkTop = 0.16f + R(1) * 0.06f;
+        int tiers = 5 + (int)(R(2) * 2.99f);
+        float width = 0.85f + R(3) * 0.3f;
+        float leanAmount = R(4) * 0.05f, leanAngle = R(5) * Mathf.Tau;
+        var leanDir = new Vector3(Mathf.Sin(leanAngle), 0, Mathf.Cos(leanAngle));
+        float fullAngle = R(6) * Mathf.Tau, fullAmount = 0.08f + R(7) * 0.18f;
+        int gapTier = R(8) < 0.65f ? 1 + (int)(R(9) * (tiers - 2)) : -1;
+        float gapAngle = R(10) * Mathf.Tau;
+        // A slight shift in value and hue, bluer or yellower.
+        float value = 0.9f + R(11) * 0.18f, warm = (R(12) - 0.5f) * 0.12f;
+        var tint = new Color(value * (1f + warm), value, value * (1f - warm));
+        Vector3 Lean(Vector3 p) => p + leanDir * leanAmount * p.Y * p.Y;
+
         var k = Kit();
-        k.Paint(Colors.White).Loft(Vector3.Zero, new Vector3(0, 0.45f, 0), new MeshKit.Ring[]
+        k.Paint(Colors.White).Loft(Vector3.Zero, Lean(new Vector3(0, trunkTop + 0.25f, 0)), new MeshKit.Ring[]
         {
-            new(0f, 0.034f, 0.034f), new(0.1f, 0.026f, 0.026f), new(1f, 0.018f, 0.018f),
+            new(0f, 0.036f, 0.036f), new(0.1f, 0.027f, 0.027f), new(1f, 0.018f, 0.018f),
         }, 7, 0.2f);
-        // Root flare: a few roots spreading into the ground, as on the card.
         for (int i = 0; i < 4; i++)
         {
-            float a = i * Mathf.Tau / 4 + 0.4f;
+            float a = i * Mathf.Tau / 4 + 0.4f + R(13 + i) * 0.6f;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-            k.Paint(Colors.White).Tube(new[] { dir * 0.012f + Vector3.Up * 0.05f, dir * 0.06f + Vector3.Up * 0.004f }, 0.012f, 4, 0.004f);
+            k.Paint(Colors.White).Tube(new[] { dir * 0.012f + Vector3.Up * 0.05f, dir * 0.065f + Vector3.Up * 0.004f }, 0.012f, 4, 0.004f);
         }
-        // (bottom, apex, radius) of each tier, from the card's outline.
-        var tiers = new (float Bottom, float Apex, float R)[]
+
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        void Vert(Vector3 p, Vector3 n, Vector2 uv, Vector2 uv2)
         {
-            (0.19f, 0.44f, 0.2f), (0.3f, 0.6f, 0.245f), (0.5f, 0.75f, 0.19f), (0.69f, 0.89f, 0.13f), (0.83f, 0.99f, 0.07f),
-        };
-        for (int t = 0; t < tiers.Length; t++)
+            st.SetColor(tint);
+            st.SetNormal(n);
+            st.SetUV(uv);
+            st.SetUV2(uv2);
+            st.AddVertex(Lean(p));
+        }
+        // One triangle, wound so its front faces along the hint.
+        void Tri(Vector3 a, Vector3 b, Vector3 c, Vector2 ua, Vector2 ub, Vector2 uc, Vector3 hint, Vector2 uv2)
         {
-            var (bottom, apex, r) = tiers[t];
-            k.Paint(Colors.White).Loft(new Vector3(0, bottom + 0.04f, 0), new Vector3(0, apex, 0), new MeshKit.Ring[]
+            var face = (c - a).Cross(b - a);
+            if (face.LengthSquared() < 1e-12f) return;
+            if (face.Dot(hint) < 0f) { (b, c) = (c, b); (ub, uc) = (uc, ub); }
+            var n = hint.Normalized();
+            Vert(a, n, ua, uv2);
+            Vert(b, n, ub, uv2);
+            Vert(c, n, uc, uv2);
+        }
+        // A bough: a strip from root out and down to its tip, folded along a raised
+        // ridge, widest past halfway. Its tip splits into three points, the side ones
+        // shorter, like the card's lobes.
+        void Bough(Vector3 root, Vector3 dir, float length, float droop, float wide, float rnd)
+        {
+            var side = new Vector3(dir.Z, 0, -dir.X);
+            float bend = (rnd - 0.5f) * 0.3f;
+            Vector3 At(float t) => root + (dir + side * bend * t) * length * t + Vector3.Down * droop * Mathf.Pow(t, 1.7f);
+            const int segs = 5;
+            var uv2 = new Vector2(2f, rnd);
+            for (int i = 0; i < segs; i++)
             {
-                new(0f, r * 0.72f, r * 0.72f), new(0.5f, r * 0.4f, r * 0.4f), new(1f, 0.004f, 0.004f),
-            }, 10, 0.1f);
-            int fingers = 16 - t * 2 + (int)(H(t, 12) * 3);
-            for (int i = 0; i < fingers; i++)
+                float t0 = (float)i / segs, t1 = (float)(i + 1) / segs;
+                Vector3 p0 = At(t0), p1 = At(t1);
+                float w0 = wide * Profile(t0), w1 = wide * Profile(t1);
+                var up0 = (Vector3.Up + dir * 0.6f).Normalized();
+                var ridge = up0 * wide * 0.12f;
+                // Left, ridge, right at both ends of the segment.
+                Vector3 l0 = p0 - side * w0, l1 = p1 - side * w1, r0 = p0 + side * w0, r1 = p1 + side * w1;
+                Vector3 m0 = p0 + ridge * Profile(t0), m1 = p1 + ridge * Profile(t1);
+                Tri(l0, m0, m1, new(-1, t0), new(0, t0), new(0, t1), up0, uv2);
+                Tri(l0, m1, l1, new(-1, t0), new(0, t1), new(-1, t1), up0, uv2);
+                Tri(m0, r0, r1, new(0, t0), new(1, t0), new(1, t1), up0, uv2);
+                Tri(m0, r1, m1, new(0, t0), new(1, t1), new(0, t1), up0, uv2);
+            }
+            // The split tip: a long middle point and two short side points.
+            var end = At(1f);
+            var nUp = (Vector3.Up + dir * 0.6f).Normalized();
+            float tipW = wide * Profile(1f);
+            var tipC = end + (dir * 0.6f + Vector3.Down * 0.8f).Normalized() * length * 0.22f;
+            Tri(end - side * tipW, end + side * tipW, tipC, new(-1, 0.9f), new(1, 0.9f), new(0, 1f), nUp, uv2);
+            foreach (float s in new[] { -1f, 1f })
             {
-                float a = (i + H(t * 31 + i, 7) * 0.5f) * Mathf.Tau / fingers + t * 0.9f;
-                var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-                // Long fingers from high on the cone, drooping well below the tier's base.
-                float h = bottom + (apex - bottom) * (0.62f + H(t * 31 + i, 8) * 0.25f);
-                var root = new Vector3(0, h, 0) + dir * r * 0.18f;
-                // Each finger its own length and droop, and a little twist sideways, as
-                // the card's brush strokes are never even.
-                var sideways = new Vector3(dir.Z, 0, -dir.X) * (H(t * 31 + i, 11) - 0.5f) * r * 0.5f;
-                var tip = dir * r * (0.7f + H(t * 31 + i, 9) * 0.45f) + sideways + new Vector3(0, bottom - 0.03f - H(t * 31 + i, 10) * 0.08f, 0);
-                var normal = (Vector3.Up + dir * 0.9f).Normalized();
-                k.Paint(Colors.White).Blade(root, tip, normal, Mathf.Tau * r / fingers * 1.45f, 0.035f);
+                var baseA = At(0.6f) + side * s * wide * Profile(0.6f);
+                var baseB = end + side * s * tipW;
+                var tip = baseA.Lerp(baseB, 0.4f) + (side * s * 0.7f + dir * 0.4f + Vector3.Down * 0.7f).Normalized() * length * (0.2f + rnd * 0.12f);
+                Tri(baseA, baseB, tip, new(s, 0.8f), new(s, 0.9f), new(s * 0.2f, 1f), nUp, uv2);
             }
         }
-        return Done(k);
+        // A dark cone at each tier's heart, so no light shows between the boughs.
+        void Core(float bottom, float top, float radius)
+        {
+            const int sides = 10;
+            var uv2 = new Vector2(1f, 0f);
+            for (int i = 0; i < sides; i++)
+            {
+                float a0 = i * Mathf.Tau / sides, a1 = (i + 1) * Mathf.Tau / sides;
+                var d0 = new Vector3(Mathf.Sin(a0), 0, Mathf.Cos(a0));
+                var d1 = new Vector3(Mathf.Sin(a1), 0, Mathf.Cos(a1));
+                var apex = new Vector3(0, top, 0);
+                Vector3 b0 = d0 * radius + Vector3.Up * bottom, b1 = d1 * radius + Vector3.Up * bottom;
+                Tri(apex, b0, b1, new(0, 0), new(0, 0), new(0, 0), (d0 + d1) * 0.5f + Vector3.Up * 0.4f, uv2);
+                Tri(new Vector3(0, bottom, 0), b1, b0, new(0, 0), new(0, 0), new(0, 0), Vector3.Down, uv2);
+            }
+        }
+
+        float foliage = trunkTop + 0.13f, span = 1f - foliage, step = span / (tiers + 0.3f);
+        for (int t = 0; t < tiers; t++)
+        {
+            float rootY = foliage + step * t;
+            float frac = (rootY - foliage) / span;
+            float length = (0.015f + 0.215f * Mathf.Pow(1f - frac, 1.05f)) * width;
+            float droop = Mathf.Max(length * 0.72f, step * 1.2f);
+            Core(rootY - droop * 0.75f, Mathf.Min(rootY + step * 1.3f, 1f), length * 0.5f);
+            int count = Mathf.Max(5, Mathf.RoundToInt(Mathf.Tau * length / (0.07f * width)));
+            float wide = Mathf.Tau * length * 0.5f / count * 1.15f;
+            float turn = R(30 + t) * Mathf.Tau;
+            for (int ring = 0; ring < 2; ring++)
+            {
+                int n = ring == 0 ? count : Mathf.Max(4, count * 2 / 3);
+                for (int i = 0; i < n; i++)
+                {
+                    float rnd = H(v * 131 + t * 17 + ring * 7, i + 500);
+                    float a = (i + (ring == 0 ? 0f : 0.5f) + (rnd - 0.5f) * 0.4f) * Mathf.Tau / n + turn;
+                    var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                    float full = 1f + fullAmount * Mathf.Cos(a - fullAngle);
+                    if (t == gapTier && ring == 0 && Mathf.Abs(Mathf.AngleDifference(a, gapAngle)) < 0.55f) continue;
+                    // Hem lobes of uneven length, some hanging well below the rest, as on the card.
+                    float hang = H(v * 53 + t * 11, i + 700);
+                    float len = length * full * (ring == 0 ? 0.8f + rnd * 0.3f + (hang > 0.75f ? 0.18f : 0f) : 0.55f);
+                    float y = rootY + (ring == 0 ? 0f : step * 0.5f) + (rnd - 0.5f) * step * 0.25f;
+                    Bough(new Vector3(0, y, 0) + dir * length * 0.08f, dir, len, droop * (ring == 0 ? 0.85f + rnd * 0.3f + (hang > 0.75f ? 0.25f : 0f) : 0.7f), wide * (ring == 0 ? 1f : 0.85f), rnd);
+                }
+            }
+        }
+        // The leader: a small upright spike at the top.
+        Core(1f - step * 0.6f, 1.01f, 0.014f * width);
+
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, k.CommitToArrays());
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, st.CommitToArrays());
+        return mesh;
     }
+
+    // A bough's half-width along its length: narrow at the trunk, broadest past
+    // halfway, then narrowing to the split tip.
+    static float Profile(float t) => 0.25f + 0.75f * Mathf.Sin(Mathf.Min(t * 1.25f, 1f) * Mathf.Pi * 0.5f) * (1f - 0.35f * Mathf.Max(0f, t - 0.8f) / 0.2f);
 
     // A broadleaf crown of rounded leaf clumps, each with a jagged lower edge, for
     // the reference look's leafy trees. Sits on PropMeshes.Trunk (top at 2.8 m).

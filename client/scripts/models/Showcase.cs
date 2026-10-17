@@ -668,7 +668,7 @@ public partial class Showcase : Node3D
         {
             float tall = 6.5f + rng.Randf() * 1.5f;
             if (!meshTrees) { Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), tall); continue; }
-            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x, 0) });
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine((int)(x * 7 + z * 13)), MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x, 0) });
         }
         foreach (var (x, z) in new[] { (5.5f, -3.5f), (-2.5f, -8.5f) })
             Card(cypress[rng.RandiRange(0, 2)], new Vector3(x, 0, z), 5.5f + rng.Randf());
@@ -678,7 +678,7 @@ public partial class Showcase : Node3D
         {
             float x = -16f + i * 1.3f + rng.Randf() * 0.6f, z = -13f - rng.Randf() * 5f;
             float tall = 7f + rng.Randf() * 2.5f;
-            if (meshTrees) AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x * 1.7f, 0) });
+            if (meshTrees) AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine(i + 3), MaterialOverride = pineMat, Position = new Vector3(x, 0, z), Scale = Vector3.One * tall, Rotation = new Vector3(0, x * 1.7f, 0) });
             else Card(needles[rng.RandiRange(0, 1)], new Vector3(x, 0, z), tall);
         }
         Card("Forest_big_stone_01", new Vector3(-4.2f, 0, -1.8f), 1.6f);
@@ -806,22 +806,26 @@ public partial class Showcase : Node3D
         }
     }
 
-    // The artist's card pine beside the 3D pine painted from it (Justin: "85% the
-    // same"), then the 3D pine turned 90, 180 and 270 degrees.
+    // The artist's card pine beside eight 3D pines painted after it (Justin: "85%
+    // the same", then "fuller ... random sides, widths, heights"): each a different
+    // variant, height and turn.
     void PineTest()
     {
         var image = Image.LoadFromFile(ProjectSettings.GlobalizePath("res://../docs/art-packs/golden-skull/foliage/Forest_big_tree_needle_04.png"));
         image.GenerateMipmaps();
         var card = ImageTexture.CreateFromImage(image);
         const float tall = 6.5f;
-        var sprite = new Sprite3D { Texture = card, PixelSize = tall / card.GetHeight(), Billboard = BaseMaterial3D.BillboardModeEnum.FixedY, Shaded = true, DoubleSided = true, AlphaCut = SpriteBase3D.AlphaCutMode.Discard, Centered = false, Offset = new Vector2(-card.GetWidth() * 0.5f, 0), Position = new Vector3(-6f, 0, 0) };
+        var sprite = new Sprite3D { Texture = card, PixelSize = tall / card.GetHeight(), Billboard = BaseMaterial3D.BillboardModeEnum.FixedY, Shaded = true, DoubleSided = true, AlphaCut = SpriteBase3D.AlphaCutMode.Discard, Centered = false, Offset = new Vector2(-card.GetWidth() * 0.5f, 0), Position = new Vector3(-12f, 0, 0) };
         AddChild(sprite);
         var material = MaterialLook.CardPine(card);
-        for (int i = 0; i < 4; i++)
-            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine, MaterialOverride = material, Position = new Vector3(-2f + i * 4f, 0, 0), Scale = Vector3.One * tall, Rotation = new Vector3(0, i * Mathf.Pi / 2, 0) });
+        for (int i = 0; i < 8; i++)
+        {
+            float h = tall * (0.82f + MeshKit.Hash(i, 61) * 0.36f);
+            AddChild(new MeshInstance3D { Mesh = PropMeshes.PaintedPine(i), MaterialOverride = material, Position = new Vector3(-8.5f + i * 3.3f, 0, (i % 2) * -1.2f), Scale = Vector3.One * h, Rotation = new Vector3(0, i * 2.1f, 0) });
+        }
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(2f, 4.5f, 18f), new Vector3(2f, 3.0f, 0), Vector3.Up);
+        camera.LookAtFromPosition(new Vector3(1f, 4.5f, 24f), new Vector3(1f, 3.0f, 0), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 

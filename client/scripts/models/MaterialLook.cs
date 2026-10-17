@@ -152,11 +152,12 @@ public static class MaterialLook
         return square;
     }
 
-    // A pine (PropMeshes.PaintedPine, one unit tall) wearing the card pine's own
-    // painting: each point takes the colour the card shows at its height and at its
-    // distance from the trunk, so the card's lit edges, shade bands and outlines
-    // land on the matching tiers from every side. Lit in soft bands so it sits in
-    // the scene's light without fighting the painted shading.
+    // A pine (PropMeshes.PaintedPine, one unit tall) painted like the card pine:
+    // flat bands rather than mottling. Each bough is the card's deep green with one
+    // lighter patch along its upper middle, darkening toward the trunk where the
+    // tier above shades it, and a soft ink line round its edge and points. The trunk
+    // takes the card's own bark. Lit in soft bands so it sits in the scene's light
+    // without fighting the painted shading.
     public static ShaderMaterial CardPine(Texture2D card)
     {
         var material = new ShaderMaterial { Shader = new Shader { Code = CardPineCode } };
@@ -168,47 +169,51 @@ public static class MaterialLook
         shader_type spatial;
         render_mode cull_disabled;
         uniform sampler2D card : source_color, filter_linear_mipmap, repeat_disable;
-        // The card's trunk centre and the scale from tree units to card width.
-        uniform float centre = 0.5;
-        uniform float aspect = 1.914;
+        // Colours picked from the card.
+        uniform vec3 shade_col : source_color = vec3(0.13, 0.19, 0.15);
+        uniform vec3 base_col : source_color = vec3(0.21, 0.31, 0.23);
+        uniform vec3 lit_col : source_color = vec3(0.31, 0.43, 0.3);
+        uniform vec3 ink : source_color = vec3(0.08, 0.12, 0.09);
         varying vec3 obj;
-        void vertex() { obj = VERTEX; }
+        varying vec3 world_n;
+        void vertex() {
+            obj = VERTEX;
+            world_n = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+        }
         void fragment() {
-            float r = length(obj.xz);
-            float v = clamp(1.0 - obj.y, 0.0, 1.0);
-            // Foliage never reaches below the card's lowest needles; the trunk
-            // takes the card's trunk.
-            bool trunk = r < 0.045 && obj.y < 0.2;
-            if (!trunk) v = min(v, 0.75);
-            // Right half of the card: the trunk at its centre, the tier tips at its edge.
-            vec4 c = vec4(0.0);
-            // Around the tree the card is read from both its halves, swinging between
-            // them with the angle, so the clumps change as you walk round instead of
-            // repeating in rings.
-            float ang = atan(obj.x, obj.z);
-            float wobble = 0.03 * sin(ang * 5.0 + obj.y * 23.0);
-            float vv = clamp(v + wobble, 0.04, 0.97);
-            // Read from both halves of the card and blend between them with the
-            // angle, so the clumps change as you walk round without a seam.
-            vec4 lit = vec4(0.0), shade = vec4(0.0);
-            for (int i = 0; i < 8 && lit.a < 0.95; i++) {
-                float rr = r * (1.0 - float(i) * 0.12);
-                lit = textureLod(card, vec2(centre + (trunk ? 0.0 : rr * aspect), vv), 0.0);
+            vec3 col;
+            if (UV2.x < 0.5) {
+                // Trunk: the card's bark, read up its middle.
+                col = textureLod(card, vec2(0.5 + obj.x * 0.6, clamp(0.97 - obj.y * 0.6, 0.8, 0.97)), 0.0).rgb * 0.75;
+            } else if (UV2.x < 1.5) {
+                col = shade_col * COLOR.rgb;
+            } else {
+                float across = abs(UV.x), along = UV.y, rnd = UV2.y;
+                // The lighter patch: on the upper side, along the bough's middle, its
+                // edge wavering like a brush stroke.
+                float edge = 0.62 + 0.14 * sin(along * 7.0 + rnd * 40.0) + 0.12 * rnd;
+                float patch = (1.0 - smoothstep(edge - 0.06, edge + 0.06, across))
+                    * smoothstep(0.2 + 0.12 * rnd, 0.3 + 0.12 * rnd, along)
+                    * (1.0 - smoothstep(0.8, 0.88, along));
+                patch *= FRONT_FACING ? smoothstep(0.1, 0.35, world_n.y) : 0.0;
+                col = mix(base_col, lit_col, patch);
+                // Darker toward its sides, so the gaps between lobes read as shadow.
+                col = mix(col, shade_col, 0.7 * smoothstep(0.7, 0.98, across) * (1.0 - patch));
+                // Darker toward the trunk, under the tier above.
+                col = mix(shade_col, col, smoothstep(0.18, 0.45, along));
+                if (!FRONT_FACING) col = mix(col, shade_col, 0.6);
+                // A soft ink line round the edge and the points.
+                float line = smoothstep(0.9, 1.0, across) * smoothstep(0.7, 0.9, along) * 0.5 + smoothstep(0.9, 1.0, along);
+                col = mix(col, ink, 0.7 * clamp(line, 0.0, 1.0));
+                col *= COLOR.rgb;
             }
-            for (int i = 0; i < 8 && shade.a < 0.95; i++) {
-                float rr = r * (1.0 - float(i) * 0.12);
-                shade = textureLod(card, vec2(centre - (trunk ? 0.0 : rr * aspect), vv), 0.0);
-            }
-            c = mix(shade, lit, 0.35 + 0.65 * smoothstep(-0.8, 0.4, sin(ang * 1.5)));
-            // A soft dark rim, like the card's ink line round each tier.
-            float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
-            ALBEDO = c.rgb * 0.9 * mix(1.0, 0.6, smoothstep(0.7, 0.92, rim));
+            ALBEDO = col;
             ROUGHNESS = 0.95;
             SPECULAR = 0.05;
         }
         void light() {
             float l = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
-            float band = 0.42 + 0.16 * smoothstep(0.45, 0.55, l);
+            float band = 0.4 + 0.3 * smoothstep(0.45, 0.6, l);
             DIFFUSE_LIGHT += LIGHT_COLOR * band / PI;
         }
         """;
