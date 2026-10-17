@@ -17,6 +17,7 @@ public partial class MushroomPatch : Node3D
         picked = new MeshInstance3D { Mesh = Mushrooms.Picked(variant), MaterialOverride = Mushrooms.Material, Visible = false };
         AddChild(ripe);
         AddChild(picked);
+        GrassClearings.Track(this);
     }
 
     public bool Ripe

@@ -2,12 +2,13 @@ using Godot;
 
 namespace LifeGame;
 
-// Woodland mushrooms (model-34, for Survival's survival-35 mushroom patches): a brown cap
-// mushroom like a penny bun, about 1.3x life so it reads from a few metres. A thick pale
+// Woodland mushrooms (model-34, for Survival's survival-35 mushroom patches): a warm cap
+// mushroom like a penny bun, about 1.6x life so it reads from the play camera (model-37), with
+// the grass laid flat round the patch by GrassClearings. A thick pale
 // stem swelling a little at the foot, a domed warm-brown cap with a paler rolled rim and a
 // cream ring of gills under it. Colours are in the vertices; draw with Mushrooms.Material.
 //
-// - Patch(variant): a ripe cluster in a tree's shade, four to seven of mixed sizes, some
+// - Patch(variant): a ripe cluster in a tree's shade, three to five of mixed sizes, some
 //   leaning, the biggest near the middle, with a scrap of moss and a fallen leaf.
 // - Picked(variant): the same spot after picking: two tiny buttons just breaking the soil
 //   and the cut stubs of the stems that were taken. Same variant, same spot.
@@ -21,8 +22,9 @@ public static class Mushrooms
     static readonly Color Gill = new(0.86f, 0.76f, 0.56f);
     static readonly Color Moss = new(0.5f, 0.66f, 0.34f);
     static readonly Color Leaf = new(0.6f, 0.44f, 0.27f);
-    // Caps from a warm chestnut to a paler hazel; each patch keeps to two of them.
-    static readonly Color[] Caps = { new(0.5f, 0.31f, 0.17f), new(0.58f, 0.38f, 0.2f), new(0.45f, 0.29f, 0.18f), new(0.64f, 0.46f, 0.27f) };
+    // Caps from a russet to a warm amber, picked to stand out against green grass and moss;
+    // each patch keeps to two of them.
+    static readonly Color[] Caps = { new(0.72f, 0.36f, 0.15f), new(0.78f, 0.47f, 0.2f), new(0.64f, 0.3f, 0.14f), new(0.82f, 0.55f, 0.26f) };
 
     static readonly System.Collections.Generic.Dictionary<(int, bool), Mesh> Built = new();
     static Mesh? pile;
@@ -91,14 +93,14 @@ public static class Mushrooms
             k.Paint(i == 0 ? Leaf : Leaf.Darkened(0.25f), 0.85f + H(v, 6 + i) * 0.3f).Blade(leafAt, tip, Vector3.Up, 0.032f, 0.006f);
         }
 
-        int count = 4 + (int)(H(v, 7) * 4f);
+        int count = 3 + (int)(H(v, 7) * 2.99f);
         for (int i = 0; i < count; i++)
         {
             // Bunched toward the middle: the biggest first, the rest smaller round it.
             float a = i * 2.4f + H(v, 10 + i);
-            float rad = i == 0 ? 0.01f : 0.05f + H(v, 20 + i) * 0.09f;
+            float rad = i == 0 ? 0.01f : 0.07f + H(v, 20 + i) * 0.08f;
             var foot = new Vector3(Mathf.Cos(a) * rad, 0, Mathf.Sin(a) * rad);
-            float size = i == 0 ? 1.2f : 0.55f + H(v, 30 + i) * 0.55f;
+            float size = i == 0 ? 1.55f : 0.85f + H(v, 30 + i) * 0.55f;
             if (ripe)
             {
                 // The outer ones lean out from the middle, as they push for the light.
