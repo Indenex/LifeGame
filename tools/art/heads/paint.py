@@ -275,7 +275,8 @@ def face_cell(expr, kind, n=1024):
             put(curve_dist(x, z, cx, ez + 0.012, rx * 1.0, -0.022) < 0.005, EYE)
         # Brows: short soft strokes, raised when happy, drooping when sleepy.
         bz = ez + 0.058 + (0.01 if expr == 2 else -0.006 if expr == 3 else 0.0)
-        tilt = -0.006 if expr == 3 else 0.004
+        # Gentle: the inner ends a touch higher (never a frown), more so when sleepy.
+        tilt = -0.007 if expr == 3 else -0.0025
         put(seg_dist(x, z, (cx - side * 0.018, bz - tilt), (cx + side * 0.02, bz + tilt)) < 0.0042, brow)
     # Mouth.
     w = 0.03 if pebble else 0.02

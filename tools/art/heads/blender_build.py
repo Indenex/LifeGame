@@ -174,7 +174,7 @@ def pebble():
         ball((0, -0.205, -0.108), (0.045, 0.035, 0.03)),
     ]
     for side in (-1, 1):
-        balls.append(ball((side * 0.1, -0.165, 0.06), (0.07, 0.045, 0.035)))
+        balls.append(ball((side * 0.1, -0.16, 0.06), (0.06, 0.035, 0.028)))
     skin = meta("PebbleSkin", balls, resolution=0.008)
     smooth_mesh(skin, 4, ratio=0.12)
     bpy.context.view_layer.objects.active = skin
