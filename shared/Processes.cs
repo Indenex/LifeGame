@@ -92,6 +92,8 @@ namespace LifeGame.Shared
         public uint MakesCount = 1;
         // Below this minigame score the attempt fails and the inputs are lost.
         public float FailBelow;
+        // Added to the made quality (still within the crafter's cap): a better recipe for the same item.
+        public byte QualityBonus;
         // The station it is made at; None is a hand craft from the C menu.
         public StationKind Station;
         // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
@@ -181,6 +183,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "cook.egg", Name = "Boil an egg", Doing = "Setting an egg in the embers", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.Egg) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.BoiledEgg,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
@@ -217,6 +225,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick, 3), new Ingredient(Item.Fiber, 10) },
                 Seconds = Base(2, 2.5f), Makes = Item.Basket, Station = StationKind.Table,
             },
+            // A hide waterskin (survival-20): carries a little water before pottery. Hand craft.
+            new ProcessDef
+            {
+                Id = "hide.waterskin", Name = "Make a waterskin", Doing = "Sewing a hide into a waterskin", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.SheepHide), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Waterskin,
+            },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
             {
@@ -236,6 +251,13 @@ namespace LifeGame.Shared
                 Id = "carve.arrows", Name = "Make arrows", Doing = "Shaving and fletching arrows", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Fiber, 2) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(2, 1f), Makes = Item.Arrow, MakesCount = 3,
+            },
+            // Fletched with feathers (crafting-24): the same arrows, truer. Plain arrows still work.
+            new ProcessDef
+            {
+                Id = "carve.fletched_arrows", Name = "Fletch arrows", Doing = "Fletching arrows with feathers", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Stick, 2), new Ingredient(Item.Feather, 3), new Ingredient(Item.Fiber) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1f), Makes = Item.Arrow, MakesCount = 3, QualityBonus = 10,
             },
             new ProcessDef
             {

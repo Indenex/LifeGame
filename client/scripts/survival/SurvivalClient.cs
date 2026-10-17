@@ -103,7 +103,7 @@ public partial class SurvivalClient : Node
             Id = "survival.drink_pot",
             Priority = 1,
             Find = at => conn != null && vitals != null && Current().water < 0.9f && !WaterNearby() && PotOfWater() is { } pot
-                ? new UseOffer("Drink from your pot", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
+                ? new UseOffer("Drink from what you carry", float.MaxValue, () => { conn.Reducers.DrinkFrom((ushort)pot); Sfx.Play(Cue.Drink); })
                 : null,
         });
     }
