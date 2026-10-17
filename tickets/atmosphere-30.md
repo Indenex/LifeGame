@@ -2,7 +2,7 @@
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
 Status: in_progress
-Branch: claude/atmosphere-30-impacts (merged); follow-up claude/atmosphere-30b-impact-hook
+Branch: claude/atmosphere-30-impacts (merged); follow-up claude/atmosphere-30b-impact-hook (#505, merged); next claude/atmosphere-30c-tree-landed
 PR: #486 (merged); follow-up opens when #496 lands
 
 ## Goal
@@ -23,8 +23,11 @@ The chop and dig effects fire on Animation's impact frame: anim-7's `Avatar.Impa
 
 - 2026-10-17 03:55: #496 is on main. Subscribed `Avatar.Impact += OnAvatarImpact` once in ConnectImpacts; the handler ignores the event if the atmosphere or avatar has been freed. The client builds with 0 errors.
 
+- 2026-10-17 04:01: #505 merged (green sha 5961f9fa, CI run 39000342708). Chips, crumbs, clods, flakes and sparks are live on Avatar.Impact.
+- Next: Environment's env-22 (branch claude/environment-tree-fall, PR coming) adds `TreeFall.Landed(Vector3 crownImpact, Vector3 direction)`, firing 1.6 s after Felled when the crown hits, for every fresh felling. Move the dust and leaves onto it (a ring at crownImpact, a smaller one at foot + direction × 2 m, leaves bursting round the crown) and drop the ChoppedTree trigger.
+
 ## Open questions / blockers
 - anim-7 (branch claude/anim-7) must reach main before I can subscribe: `Avatar.Impact += (a, m, p, thrown, item) => OnAvatarImpact(a, m, p, thrown, item);` (anim-7 is PR #496) in ConnectImpacts. The handler is ready.
 
 ## Next step
-Open the follow-up PR, wait for CI, send the PM the green sha.
+When env-22 is on main: on claude/atmosphere-30c-tree-landed, merge main, subscribe to TreeFall.Landed in ConnectImpacts, drop the ChoppedTree handlers, build, open a PR and send the PM the green sha.
