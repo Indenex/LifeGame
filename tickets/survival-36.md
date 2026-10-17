@@ -14,8 +14,9 @@ Leafy patches of wild roots (a rosette with one or two white-flowered stalks, li
 - 2026-10-17 16:37: #856 green at b90563e8, CI run https://github.com/Indenex/LifeGame/actions/runs/39049249575 (all 14 jobs). Justin chose "dug with a tool"; merged 16:39.
 - 2026-10-17 16:45: winter pacing check (by hand, from shared/ numbers). Food drains full to empty in 90 min (Needs.FoodDrain); a new character starts at 0.8 (72 min), a respawn at 0.6 (54 min). A digging stick is tier 1 (one stick plus a flake to cut with), a few minutes in. One dig gives 0.18 food, about 16 min of hunger, and the patch is back in 20 min, so one patch alone almost keeps pace (0.18 vs 0.22 drained per 20 min) and two patches in rotation more than do. Patches sit about one per chunk, with the nearest a median of 6 m from a first spawn. Winter is lean but never starving, which fits D-081. No tuning proposed.
 
+- 2026-10-17 16:50: Modeling's wild carrot (model-35, `WildRoots.Patch/Dug/Material`, `ItemModels.WildRootItem`) is on #853. Wired on claude/survival-5zelch: RootPatch draws the two meshes, Setup sets WildRootItem, the stand-in root left SurvivalItemLook. It compiles only once #853 is on main.
+
 ## Open questions / blockers
-- Modeling: a painted root patch and root item to replace the stand-ins (request sent through the PM).
 
 ## Next step
-When Modeling's painted root patch and root item land on main, swap RootPatch.cs and SurvivalItemLook to them (as survival-35 did for mushrooms), then open a PR and send the green sha to the PM.
+Once #853 merges, merge main into claude/survival-5zelch, open the PR, wait for CI and send the green sha to the PM.
