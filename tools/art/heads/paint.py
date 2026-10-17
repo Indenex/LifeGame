@@ -145,17 +145,20 @@ def bramble(part, pos, nrm, curv, ao):
     strand = noise3(np.stack([az * 4, height * 3, np.zeros_like(az)], -1), 5)
     # A few large, very soft strokes, lock-wide; nothing finer.
     fine = noise3(np.stack([az * 5, height * 3, np.ones_like(az)], -1), 6)
-    light = 0.18 + 0.42 * ao ** 1.5 + 0.28 * np.clip(nrm[..., 2], -1, 1) + 0.9 * (curv - 0.5) + (strand - 0.5) * 0.25
-    col = tones(light, B_HAIR["shade"], B_HAIR["mid"], B_HAIR["lit"], lo=0.32, hi=0.66)
-    col = col * (1 + (fine - 0.5) * 0.08)[..., None]
-    # A pale lit edge on the convex upper sides of each clump.
-    bevel = smooth(0.53, 0.6, curv) * smooth(0.1, 0.5, nrm[..., 2])
-    col = mix(col, HAIR_SHINE, bevel * 0.55)
-    # A broken shine band round the crown, a few strokes long.
-    band = (1 - smooth(0.014, 0.03, np.abs(height - 0.15 - (strand - 0.5) * 0.04))) * smooth(0.4, 0.6, strand) * smooth(0.0, 0.4, nrm[..., 2] - 0.1)
-    col = mix(col, HAIR_SHINE, band * 0.45)
-    # The crevice line between clumps: cocoa, soft.
-    col = mix(col, HAIR_LINE, smooth(0.47, 0.43, curv) * 0.75)
+    # Light from the up-facing normal and the AO only; the curvature no longer drives the
+    # tone (it striped every lock lit / dark like a plastic sheen, worst on the back).
+    light = 0.2 + 0.42 * ao ** 1.5 + 0.28 * np.clip(nrm[..., 2], -1, 1) + 0.35 * (curv - 0.5) + (strand - 0.5) * 0.2
+    col = tones(light, B_HAIR["shade"], B_HAIR["mid"], B_HAIR["lit"], lo=0.3, hi=0.68, edge=0.04)
+    col = col * (1 + (fine - 0.5) * 0.06)[..., None]
+    # A gentle pale edge on the convex tops of the clumps, only where they face up.
+    bevel = smooth(0.54, 0.62, curv) * smooth(0.35, 0.75, nrm[..., 2])
+    col = mix(col, HAIR_SHINE, bevel * 0.35)
+    # A broken shine band round the crown, a few strokes long, front half only.
+    front = smooth(0.05, -0.08, rel[..., 1])
+    band = (1 - smooth(0.014, 0.03, np.abs(height - 0.15 - (strand - 0.5) * 0.04))) * smooth(0.4, 0.6, strand) * smooth(0.0, 0.4, nrm[..., 2] - 0.1) * front
+    col = mix(col, HAIR_SHINE, band * 0.35)
+    # The crevice line between clumps: cocoa, soft and broad.
+    col = mix(col, HAIR_LINE, smooth(0.47, 0.42, curv) * 0.6)
     col = mix(col, HAIR_LINE, (1 - smooth(0.25, 0.55, ao)) * 0.7)
     img[hair] = col[hair]
     return img
@@ -177,6 +180,15 @@ def pebble(part, pos, nrm, curv, ao):
     # The beak: the snout's front paler and warmer, with a crisp edge.
     beak = smooth(0.012, 0.0, np.hypot((pos[..., 0]) / 0.1, (pos[..., 2] + 0.1) / 0.055) - 1) * smooth(0.0, 0.1, -pos[..., 1] - 0.12)
     col = mix(col, BEAK, beak * 0.5)
+    # Front-on, the beak reads by a soft darker line round its top and two small nostril
+    # dots near the tip (a soft core, no grain).
+    face_on = smooth(0.2, 0.6, -nrm[..., 1])
+    rim = np.abs(np.hypot(pos[..., 0] / 0.1, (pos[..., 2] + 0.1) / 0.055) - 1)
+    upper = smooth(-0.11, -0.085, pos[..., 2])
+    col = mix(col, SCALE_LINE * 0.85, (1 - smooth(0.04, 0.14, rim)) * upper * face_on * 0.55)
+    for side in (-1, 1):
+        d = np.hypot((pos[..., 0] - side * 0.017) / 0.0075, (pos[..., 2] + 0.071) / 0.0055)
+        col = mix(col, SCALE_LINE * 0.7, (1 - smooth(0.6, 1.0, d)) * face_on * 0.75)
     # A pale painted highlight on the upper forehead, as on the turnaround.
     d = np.hypot((pos[..., 0] + 0.08) / 0.065, (pos[..., 2] - 0.14) / 0.04)
     col = mix(col, P_SKIN["lit"] * 1.04, (1 - smooth(0.7, 1.0, d)) * smooth(0.0, 0.3, -nrm[..., 1]) * 0.6)

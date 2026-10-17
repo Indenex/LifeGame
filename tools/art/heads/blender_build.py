@@ -133,32 +133,37 @@ def bramble():
     bpy.ops.object.shade_smooth()
     set_part(skin, SKIN)
 
-    balls = [ball((0, 0.035, 0.05), (0.262, 0.262, 0.218))]
+    # The cap hugs the skull, only a little proud of it, so the hair reads as soft
+    # volume on the head rather than a mushroom cap overhanging the sides.
+    balls = [ball((0, 0.03, 0.055), (0.257, 0.25, 0.212))]
     # Fringe: chunky locks from the crown down over the forehead, swept to the
-    # figure's right (-X), the middle ones lowest.
+    # figure's right (-X), the middle ones lowest. Their tips lie on the forehead.
     for az in (-66, -44, -22, 0, 22, 44, 66):
         lift = abs(az) / 66
         root = on_head(az + 6, 0.17, 0.0)
-        tip = on_head(az - 16, 0.05 + 0.035 * lift, 0.026)
-        ctrl = on_head(az - 4, 0.13, 0.05)
-        balls += chain(root, tip, ctrl, 0.052, 0.02, 11)
-    # Sides: locks down past the ears that flick outward at the ends.
+        tip = on_head(az - 16, 0.05 + 0.035 * lift, 0.012)
+        ctrl = on_head(az - 4, 0.13, 0.03)
+        balls += chain(root, tip, ctrl, 0.05, 0.018, 11)
+    # Sides: locks down past the ears, tucked in close, the ends curling only a little.
     for side in (-1, 1):
-        for az, low in ((84, -0.035), (104, -0.06), (124, -0.08)):
+        for az, low in ((84, -0.03), (104, -0.05), (124, -0.07)):
             root = on_head(side * az, 0.12, 0.0)
-            tip = on_head(side * (az + 6), low, 0.045)
-            ctrl = on_head(side * az, 0.0, 0.025)
-            balls += chain(root, tip, ctrl, 0.056, 0.021, 11)
-    # The back: long locks to the nape, their ends turning out a little.
+            tip = on_head(side * (az + 4), low, 0.006)
+            ctrl = on_head(side * az, 0.02, 0.012)
+            balls += chain(root, tip, ctrl, 0.05, 0.017, 11)
+    # The back: soft locks to the nape, lying on the head, the ends tucking under.
     for az in (146, 168, 192, 214):
         root = on_head(az, 0.1, 0.0)
-        tip = on_head(az, -0.17, 0.05)
-        ctrl = on_head(az, -0.06, 0.03)
-        balls += chain(root, tip, ctrl, 0.064, 0.024, 12)
-    # The crown tuft: a fat lock standing up and curling back, like the turnaround's.
-    balls += chain((0.0, 0.0, 0.21), (0.03, 0.075, 0.325), (0.01, -0.035, 0.345), 0.05, 0.015, 14)
-    hair = meta("BrambleHair", balls)
-    smooth_mesh(hair, 6, ratio=0.1)
+        tip = on_head(az, -0.15, 0.012)
+        ctrl = on_head(az, -0.04, 0.016)
+        balls += chain(root, tip, ctrl, 0.056, 0.02, 12)
+    # The crown cowlick: a slim lock rising from the crown, curving forward and over,
+    # tapering to a fine tip (the concept's little curl).
+    balls += chain((0.0, 0.035, 0.205), (-0.03, -0.055, 0.315), (0.018, 0.005, 0.375), 0.034, 0.008, 18)
+    hair = meta("BrambleHair", balls, resolution=0.005)
+    # Decimate to about 5k triangles.
+    tris = sum(len(p.vertices) - 2 for p in hair.data.polygons)
+    smooth_mesh(hair, 6, ratio=5000 / tris)
     bpy.context.view_layer.objects.active = hair
     bpy.ops.object.shade_smooth()
     set_part(hair, HAIR)
@@ -171,7 +176,7 @@ def pebble():
     balls = [
         ball((0, 0.0, 0.0), (0.25, 0.236, 0.236)),
         ball((0, -0.14, -0.075), (0.15, 0.125, 0.1)),
-        ball((0, -0.205, -0.108), (0.045, 0.035, 0.03)),
+        ball((0, -0.215, -0.1), (0.05, 0.04, 0.032)),
     ]
     for side in (-1, 1):
         balls.append(ball((side * 0.1, -0.16, 0.06), (0.06, 0.035, 0.028)))
