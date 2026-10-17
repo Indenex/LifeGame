@@ -56,6 +56,7 @@ public partial class Main : Node3D
     float heading, sendTimer;
     Vector3 lastSent = new(float.NaN, 0, float.NaN);
     (int, int) subscribedChunk = (int.MinValue, int.MinValue);
+    int subscribedFar = -1;
     SubscriptionHandle? subscription;
     MeshInstance3D water = null!;
     readonly SubViewport view = new() { Msaa3D = Viewport.Msaa.Msaa4X, ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa };
@@ -94,6 +95,20 @@ public partial class Main : Node3D
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        // The hotbar's number keys (ui-19) rest while something else has the keys.
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Note = hud.Note;
+        // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
+        hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
+        equipment.Bag.Use = hud.Hotbar.UseItem;
+        equipment.Bag.TakeOff = slot => equipment.Link.TakeOff(slot);
+        equipment.Bag.ClearHotbar = i => hud.Hotbar.Link.Set(i, null);
+        equipment.Bag.OverPanel = at => equipment.Covers(at) || hud.Hotbar.RowRect.HasPoint(at);
+        equipment.Bag.PlaceOrDrop = (item, quality) =>
+        {
+            if (HotbarBar.Placeable(item)) { equipment.Close(); hud.Hotbar.RequestPlace(item); }
+            else equipment.Bag.Link.Drop(item, quality);
+        };
         social.HideChip = () => survival.Mourning;
         // What you wear (ui-10, D-074).
         equipment.Note = hud.Note;
@@ -344,6 +359,8 @@ public partial class Main : Node3D
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
         equipment.Attach(new ServerEquipLink(conn));
+        hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
+        equipment.Bag.Link = new ServerBagLink(conn);
         crafting.Attach(conn);
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
@@ -400,9 +417,12 @@ public partial class Main : Node3D
 
     void Subscribe(int chunkX, int chunkZ)
     {
-        if (conn == null || subscribedChunk == (chunkX, chunkZ)) return;
+        // Resubscribes when you cross a chunk or the far radius (view distance setting) changes.
+        if (conn == null || (subscribedChunk == (chunkX, chunkZ) && subscribedFar == Subscriptions.FarRadius)) return;
         subscribedChunk = (chunkX, chunkZ);
+        subscribedFar = Subscriptions.FarRadius;
         string range = Subscriptions.Range(chunkX, chunkZ, World.ViewRadiusChunks);
+        string farRange = Subscriptions.Range(chunkX, chunkZ, subscribedFar);
         var old = subscription;
         // Subscribe to the new area before dropping the old one so nothing pops out.
         // The first area is where we wake up: appear once it has loaded, all at once.
@@ -418,7 +438,7 @@ public partial class Main : Node3D
                 // Still wake up and walk: one failed subscription must not freeze the player.
                 if (!spawned) Spawn(MyPos() is { } p ? new Vector3(p.X, terrain.HeightAt(p.X, p.Z), p.Z) : Vector3.Zero);
             })
-            .Subscribe(Subscriptions.Area(range).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
+            .Subscribe(Subscriptions.Area(range, farRange).Concat(SurvivalClient.Queries(range)).Concat(BuildingSystem.Queries()).ToArray());
     }
 
     void OnPlayer(Player p)
