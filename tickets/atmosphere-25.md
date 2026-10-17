@@ -1,7 +1,7 @@
 # atmosphere-25: Valheim-grand lighting grade (prototype)
 Lane: World atmosphere (visual)
 Owner: Atmosphere thread (session_01KvVF5vpkYEHTKNRpHC18WN)
-Status: in_progress
+Status: in_review
 Branch: claude/atmosphere-25-grade
 PR: (none yet)
 
@@ -49,9 +49,11 @@ Justin's art direction (2026-10-16, via the PM): "closer to Valheim", cutesy, "b
   - By day, shade leans purple-grey (0.48, 0.44, 0.60) at 20%. Golden hour stays blue-violet.
   - Test: `--view=painted --time-of-day=0.92 --cloud=0.1 --grade=1` on Modeling's branch.
 
+- 2026-10-17 02:50: Justin said YES (via the PM): the grade is now the default (`--grade` defaults to 1; `--grade=0` turns it off for comparison). The Options toggle "Light rays: Off/Normal/High" ships with it. Opening the PR.
+
 ## Open questions / blockers
 - Render with/without pairs, then Justin's sign-off (D-154), before making --grade the default.
 - (Reference images are now on main in docs/art-reference/.)
 
 ## Next step
-Wait for Justin's pick (via the PM) and the Render with/without pairs (requested from session_015S96hNrEu92FrCoNZqZZjs). Then make the picked option the default and open the PR.
+Wait for the PR's CI, then send the PM the green sha.

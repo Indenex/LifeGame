@@ -2,9 +2,9 @@ using Godot;
 
 namespace LifeGame;
 
-// A prototype colour grade for Justin's "closer to Valheim, awe-inspiring
-// lighting" direction (atmosphere-25, options a + c to the PM). Off by default
-// until Justin picks (D-154); --grade=1 turns it on fully, in-between values blend.
+// The colour grade for Justin's "closer to Valheim, awe-inspiring lighting"
+// direction (atmosphere-25; Justin picked it as the default, 2026-10-17). On by
+// default; --grade=0 turns it off for comparison, in-between values blend.
 //
 // Tuned to Justin's reference images (docs/art-reference/): a slightly faded, warm
 // grade (blacks lifted toward violet, highlights a touch creamy, a little less
@@ -46,7 +46,7 @@ public partial class Atmosphere
 
     void ReadyGrade()
     {
-        grade = Mathf.Clamp(ArgFloat("grade") ?? 0f, 0f, 1f);
+        grade = Mathf.Clamp(ArgFloat("grade") ?? 1f, 0f, 1f);
         GodRays = Mathf.Clamp(Settings.Get("graphics", "light_rays", 1), 0, 2);
         if (ArgFloat("godrays") is { } level) GodRays = Mathf.Clamp((int)level, 0, 2);
     }
