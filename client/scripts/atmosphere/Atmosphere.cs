@@ -702,8 +702,10 @@ public partial class Atmosphere : Node3D
                 float sun_up = smoothstep(-0.1, 0.2, sun_dir.y);
                 float sun_low = smoothstep(-0.05, 0.05, sun_dir.y) * (1.0 - smoothstep(0.18, 0.4, sun_dir.y));
                 // Warm white tops (peach near a low sun), cool lavender-grey bases.
-                vec3 lit_col = mix(vec3(1.0, 0.98, 0.95), vec3(1.0, 0.76, 0.56), sun_low);
-                vec3 shade_col = mix(vec3(0.66, 0.68, 0.80), horizon_color, 0.3);
+                // (Justin's reference, the Stylized Nature kit: clean white tops over a
+                // bright sky, soft grey-lavender undersides.)
+                vec3 lit_col = mix(vec3(1.0, 1.0, 0.98), vec3(1.0, 0.76, 0.56), sun_low);
+                vec3 shade_col = mix(vec3(0.70, 0.72, 0.84), horizon_color, 0.25);
                 float bright = 0.18 + 0.82 * daylight;
                 vec4 acc = vec4(0.0);
                 for (int i = 0; i < 9; i++) {
@@ -719,13 +721,13 @@ public partial class Atmosphere : Node3D
                     float up = clamp(h / max(top, 1.0), 0.0, 1.0);
                     float sunward = 1.0 - cloud_field(p.xz + toward_sun, cover);
                     float light = (0.55 * up + 0.45 * sunward) * (0.4 + 0.6 * sun_up);
-                    float band = 0.3 * smoothstep(0.3, 0.38, light) + 0.7 * smoothstep(0.6, 0.68, light);
+                    float band = 0.3 * smoothstep(0.32, 0.37, light) + 0.7 * smoothstep(0.61, 0.66, light);
                     vec3 c = mix(shade_col, lit_col, band) * bright;
                     // Rain and storms: grey and heavy, darkest underneath.
                     float heavy = max(rain_heavy, front_rain * upwind);
                     c = mix(c, vec3(dot(c, vec3(0.33))) * 0.7, heavy * 0.8) * (1.0 - 0.35 * heavy * (1.0 - up));
                     c = mix(c, c * vec3(0.55, 0.6, 0.68), storm * (1.0 - up));
-                    float a = inside * (0.5 + 0.3 * heavy);
+                    float a = inside * (0.6 + 0.25 * heavy);
                     acc.rgb += (1.0 - acc.a) * a * c;
                     acc.a += (1.0 - acc.a) * a;
                 }
@@ -794,6 +796,18 @@ public partial class Atmosphere : Node3D
                             float twinkle = 0.75 + 0.25 * sin(TIME * (1.5 + r * 3.0) + r * 90.0);
                             vec3 tint = mix(vec3(0.80, 0.88, 1.0), vec3(1.0, 0.92, 0.80), fract(r * 37.0));
                             col += tint * star * twinkle * stars * high * 1.4;
+                        }
+                        // High wispy streaks on fair days (painted clouds only): long brush
+                        // strokes stretched along the wind, far above the cumulus.
+                        if (cloud_quality > 0.5) {
+                            vec2 q = d.xz / (d.y + 0.08) * 4.0 + cloud_offset * 0.0015;
+                            vec2 wdir = normalize(-front_dir.xz + vec2(0.0001));
+                            vec2 sq = vec2(dot(q, wdir) * 0.06, dot(q, vec2(-wdir.y, wdir.x)) * 0.5);
+                            float wisp = texture(clouds, sq + vec2(0.53, 0.29)).r;
+                            float fair = (1.0 - smoothstep(0.35, 0.7, cloud_cover)) * (1.0 - storm);
+                            float streaks = smoothstep(0.6, 0.7, wisp) * smoothstep(0.08, 0.35, d.y) * fair;
+                            vec3 wisp_col = mix(horizon_color, vec3(1.0, 0.99, 0.97), 0.7) * (0.25 + 0.75 * daylight);
+                            col = mix(col, wisp_col, streaks * 0.45);
                         }
                         // The same cloud layer whose shadows drift over the ground.
                         vec2 uv = (d.xz / (d.y + 0.03) * 120.0 + cloud_offset) * 0.01;

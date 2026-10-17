@@ -29,6 +29,12 @@ quality setting. Stills at noon, golden hour and rain through Render.
 - 2026-10-17 16:00: written; not run here (the network blocks the Godot download).
   Cost: half-res, 5 steps x 4 texture reads per sky pixel.
 
+- 2026-10-17 16:15: PM: Justin likes the Stylized Nature Mega Kit look (bright cyan sky,
+  painted cumulus, wispy streaks; /mnt/project-files/Stylized_Nature_MegaKitStandard.zip
+  Preview_1). Added high wispy streaks stretched along the wind on fair days, whiter
+  tops, lavender-grey bases and crisper bands. A brighter cyan sky is a palette change
+  (D-154): offered to the PM as options, not built.
+
 ## Open questions / blockers
 - (none)
 
