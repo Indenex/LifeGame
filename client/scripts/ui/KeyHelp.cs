@@ -115,7 +115,8 @@ public partial class KeyHelp : CanvasLayer
     {
         var key = new Label { Text = row.Keys, HorizontalAlignment = HorizontalAlignment.Right };
         Hud.Soft(key, 17, 1f);
-        var what = new Label { Text = row.Help };
+        // Long help lines wrap rather than stretch the list to the screen's edges (ui-68).
+        var what = new Label { Text = row.Help, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(300, 0) };
         Hud.Soft(what, 17, 0.8f);
         grid.AddChild(key);
         grid.AddChild(what);
