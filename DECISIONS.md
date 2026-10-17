@@ -1320,3 +1320,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-323 — 2026-10-17 — Autopilot while Justin sleeps
 **Decision:** While Justin sleeps, the PM decides open design questions on the recommended option and records each as a PM-default decision marked "PM default while Justin asleep; revisit". The PM keeps merging green PRs. Look choices (D-154) that are already prototyped wait for his morning review rather than being finalised.
 **Who:** Justin (2026-10-17, about 08:00): "I'm going to sleep. Can you handle things automatically until then? No questions?"
+
+PM defaults taken under this decision (each: PM default while Justin asleep; revisit):
+1. Animation's next item is emotes: wave, cheer, a little dance and a bow, on a key or wheel, shown to everyone through PlayerAct. UX adds the wheel. Not chosen: chibi swimming polish, two-arm heavy carry. (PM default while Justin asleep; revisit)
+2. UX ui-47 adds a "Waking up..." paper veil with a bobbing sun while the game connects. It fades over 0.6 s and is built under D-313 and the Cutesy page. (PM default while Justin asleep; revisit)
