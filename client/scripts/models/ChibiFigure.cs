@@ -44,13 +44,15 @@ public static class ChibiFigure
     // The roster-1 colour keys.
     static readonly Color Tunic = new(0.44f, 0.56f, 0.31f), Trousers = new(0.42f, 0.35f, 0.30f), BrambleBoot = new(0.48f, 0.31f, 0.20f), Strap = new(0.55f, 0.37f, 0.24f);
     public static readonly Color[] PebbleSkins = { new(0.66f, 0.76f, 0.48f), new(0.62f, 0.72f, 0.5f), new(0.74f, 0.74f, 0.52f) };
-    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.5f, 0.42f, 0.36f), new(0.6f, 0.5f, 0.3f) };
+    // Pebble's shell colours (D-313 palette): caramel (the one ChibiShell's texture is
+    // painted in), honey and sage-olive.
+    public static readonly Color[] Shells = { new(0.54f, 0.42f, 0.28f), new(0.6f, 0.5f, 0.29f), new(0.41f, 0.43f, 0.27f) };
     static readonly Color ShellRim = new(0.79f, 0.64f, 0.42f), BellyPlate = new(0.91f, 0.85f, 0.63f), PebbleFeet = new(0.56f, 0.66f, 0.40f);
     static readonly Color Petal = new(0.96f, 0.94f, 0.89f), PetalHeart = new(0.95f, 0.81f, 0.35f);
 
     public static HumanFigure.Built Build(Look look)
     {
-        string key = look.ToString() + Painted;
+        string key = look.ToString() + Painted + ChibiShell.Enabled;
         if (Cache.TryGetValue(key, out var done)) return done;
         var material = Painted ? (Material)ChibiLook.Material : flat ??= LifeGame.Look.Solid(Colors.White);
         bool kit = look.Race == Race.Kit, pebble = look.Race == Race.Pebble, bramble = look.Race == Race.Bramble;
@@ -102,7 +104,8 @@ public static class ChibiFigure
                 new Vector3(-0.16f, shoulderY + 0.02f, 0.07f), new Vector3(-0.05f, waistY + 0.12f, 0.19f), new Vector3(0.1f, waistY - 0.04f, 0.2f), new Vector3(0.19f, hipY - 0.02f, 0.1f),
             }, 0.018f, 5);
         }
-        if (pebble)
+        // The authored shell (ChibiShell) replaces the built belly plate and shell.
+        if (pebble && !ChibiShell.Enabled)
         {
             // The belly plate: a pale shield on the front with painted seam lines.
             k.Bone(HumanRig.Spine).Paint(BellyPlate).Ellipsoid(new Vector3(0, waistY - 0.02f, 0.15f), new Vector3(0.14f, 0.19f, 0.06f), 14, 8);
@@ -369,6 +372,7 @@ public static class ChibiFigure
         var skeleton = HumanRig.Skeleton(built.Joints);
         skeleton.AddChild(new MeshInstance3D { Name = "Body", Mesh = built.Mesh, Skeleton = new NodePath("..") });
         skeleton.AddChild(new MeshInstance3D { Name = PlayerModel.SlotNode(PlayerModel.Body), Mesh = built.LeafWrap, Skeleton = new NodePath("..") });
+        ChibiShell.Sync(skeleton, look);
         return skeleton;
     }
 }
