@@ -23,6 +23,9 @@ public partial class Terrain : Node3D
 
     // Cells under buildings: no trees or grass, and the ground is trodden bare.
     public Func<int, int, bool>? Cleared;
+    // Cells whose clearing is drawn by something else (TreeFall), so the chunk shows
+    // the change at once instead of easing it.
+    public Func<int, int, bool>? NoEase;
 
     // When a cell is cleared or grows back, its grass flattens or regrows and the
     // ground color shifts over a second or two instead of popping (D-036).
@@ -169,7 +172,7 @@ public partial class Terrain : Node3D
                 long key = World.CellKey(x, z);
                 bool cleared = Cleared?.Invoke(x, z) == true;
                 bool was = cleared ? !wasCleared.Add(key) : wasCleared.Remove(key);
-                if (rebuilt && was != cleared) clearChanges[key] = (now, cleared);
+                if (rebuilt && was != cleared && NoEase?.Invoke(x, z) != true) clearChanges[key] = (now, cleared);
                 else if (clearChanges.TryGetValue(key, out var c) && now - c.At > ClearFadeSeconds + 1f) clearChanges.Remove(key);
             }
     }
@@ -268,7 +271,12 @@ public partial class Terrain : Node3D
         float clay = Mathf.SmoothStep(0.64f, 0.85f, World.ClayScore(x, z));
         color = color.Lerp(Look.Clay, clay * 0.35f);
 
-        if (top < Look.WaterLevel + 0.2f) color = Look.Shore.Lerp(color, 0.2f);
+        // Banks fade from grass to sand over the last few hand-widths above the water,
+        // and the sand darkens to damp at the waterline (env-21), instead of one hard strip.
+        float sand = 1f - Mathf.SmoothStep(Look.WaterLevel + 0.08f, Look.WaterLevel + 0.34f, top);
+        color = color.Lerp(Look.Shore, sand * 0.8f);
+        float damp = 1f - Mathf.SmoothStep(Look.WaterLevel - 0.02f, Look.WaterLevel + 0.12f, top);
+        color = color.Lerp(DampShore, damp * 0.7f);
 
         if (Depth(x, z) > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
@@ -298,6 +306,7 @@ public partial class Terrain : Node3D
         return lin.Lerp(olive with { A = lin.A }, cover * UnderGrassMatch).LinearToSrgb();
     }
 
+    static readonly Color DampShore = new(0.50f, 0.45f, 0.34f);
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
 
     // A dry cell within two meters of open water, where reeds and stones gather.
@@ -337,6 +346,7 @@ public partial class Terrain : Node3D
             for (int j = 0; j < n; j++)
             {
                 int x = cx * n + i, z = cz * n + j;
+                if (building?.Only is { } only && (x != only.X || z != only.Z)) continue;
                 // A cell cleared a moment ago keeps its grass, trees and rocks just long
                 // enough for them to go: grass flattens, trees topple, rocks sink.
                 var change = ClearChange(x, z);
@@ -392,7 +402,7 @@ public partial class Terrain : Node3D
                 }
                 float sapling = tree + 0.03f * edge * (1f - heath);
                 float rocky = Mathf.SmoothStep(0.7f, 0.85f, World.Noise(x, z, 16f, 65));
-                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? 0.08f : 0f);
+                float rock = sapling + 0.004f + 0.07f * rocky + (shore ? ShoreStones(x, z) : 0f);
                 if (!nearSpawn && roll < sapling)
                 {
                     // Saplings crowd the grove edges, a half to three quarters full size.
@@ -476,8 +486,22 @@ public partial class Terrain : Node3D
                     else if (plant < heather + gorse + sedge + fernChance + 0.035f * edge + 0.01f * density + 0.08f * rim)
                         bushes.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 55) * 0.6f), Look.Leaf.Lerp(Look.Pine, Hash01(x, z, 56) * 0.4f), custom));
                 }
-                else if (shore && Hash01(x, z, 60) < 0.25f)
-                    reeds.Add((Plant(fx, top, fz, yaw, 0.7f + Hash01(x, z, 61) * 0.4f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom));
+                else if (shore)
+                {
+                    // Reeds stand in clumps along the bank with open stretches between
+                    // (env-21): a patch noise sets where, and a clump holds two or three.
+                    float clump = Mathf.SmoothStep(0.45f, 0.7f, World.Noise(x + 4421, z - 2203, 6f, 99));
+                    if (Hash01(x, z, 60) < 0.08f + 0.6f * clump)
+                    {
+                        int stems = 1 + (int)(Hash01(x, z, 72) * 2.999f * clump);
+                        for (int s = 0; s < stems; s++)
+                        {
+                            float ox = (Hash01(x + s * 31, z, 64) - 0.5f) * 0.7f, oz = (Hash01(x, z + s * 31, 65) - 0.5f) * 0.7f;
+                            reeds.Add((Plant(fx + ox, top, fz + oz, yaw + s * 2.1f, 0.6f + Hash01(x + s, z, 61) * 0.5f),
+                                Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z + s, 62) * 0.3f), custom));
+                        }
+                    }
+                }
 
                 // Wildflowers in patches across the open ground.
                 if (density < 0.2f && heath < 0.5f && !shore && World.Noise(x, z, 6f, 63) > 0.62f && Hash01(x, z, 57) < 0.45f)

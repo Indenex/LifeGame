@@ -52,7 +52,7 @@ public partial class Journal : CanvasLayer
             say($"You leave a note about {Skills.ProcessName(id).ToLowerInvariant()} at your feet");
         };
         panel.SetMode = (spec, mode) => conn?.Reducers.SetSkillMode(spec, mode);
-        Bind("journal", Key.J);
+        // The J key lives in ui/Controls.cs (it shows on the keys page and can be rebound).
         // Placeholder until UX/UI picks the key (D-047): held while starting a craft, a Master plays the minigame.
         Bind(CraftingUi.PlayMinigame, Key.Ctrl);
         // G reads a note you can learn from (KEYMAP.md priority 5).
