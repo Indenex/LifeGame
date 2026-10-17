@@ -22,7 +22,8 @@ public partial class LookPicker : CanvasLayer
     public bool IsOpen => panel.Visible;
 
     Control panel = null!;
-    Label title = null!;
+    Label title = null!, welcome = null!;
+    ColorRect scrim = null!;
     SubViewport view = null!;
     Skeleton3D? figure;
     HumanFigure.Appearance look = HumanFigure.Appearance.Default;
@@ -34,10 +35,19 @@ public partial class LookPicker : CanvasLayer
     public override void _Ready()
     {
         Layer = 5;
+        // The world dims behind the picker, so it is plain the game is waiting on this choice
+        // (Justin missed it at first join and found the bag "not working"); it also keeps clicks
+        // off the world while it is up.
+        scrim = new ColorRect { Color = new Color(0.04f, 0.04f, 0.03f, 0.55f), MouseFilter = Control.MouseFilterEnum.Stop, Visible = false };
+        scrim.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(scrim);
         panel = MakePanel();
         panel.Visible = false;
         AddChild(panel);
         OpenFromMenu = () => Open(first: false);
+        // One centre window at a time (D-283): opening the bag, journal or build menu puts the picker away (Esc
+        // semantics: you keep the look you had). It never counts as a covering panel, so it can't trap input.
+        Panels.Centre(this, Close);
         // --screenshot-look opens it on a default look, as at first join.
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-look")))
             GetTree().CreateTimer(1.5).Timeout += () => Open(first: true);
@@ -51,11 +61,13 @@ public partial class LookPicker : CanvasLayer
             ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
         title.Text = first ? "Choose how you look" : "Your look";
-        panel.Visible = true;
+        if (!first) Panels.Opening(this);
+        welcome.Visible = first;
+        panel.Visible = scrim.Visible = true;
         Show(look);
     }
 
-    public void Close() => panel.Visible = false;
+    public void Close() => panel.Visible = scrim.Visible = false;
 
     public override void _Process(double delta)
     {
@@ -67,7 +79,12 @@ public partial class LookPicker : CanvasLayer
             else if (now - firstSeen > 3f)
             {
                 asked = true;
-                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null) Open(first: true);
+                // Once only (bugfix-41): a character that never chose a look is not asked again every session.
+                if (c.Db.PlayerLook.PlayerId.Find(MyId()) == null && !Settings.Get("look", "asked", false))
+                {
+                    Settings.Set("look", "asked", true);
+                    Open(first: true);
+                }
             }
         }
         if (!IsOpen || figure == null) return;
@@ -96,8 +113,14 @@ public partial class LookPicker : CanvasLayer
     {
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 12);
-        title = Hud.Text("Choose how you look", 20);
+        title = Hud.Text("Choose how you look", 26);
         box.AddChild(title);
+        // At first join: say why the game is waiting, and that it isn't final.
+        welcome = Hud.Text("Welcome. Pick how you look before you set out. Done (or Enter) starts your day; you can change it any time in Options.", 15);
+        welcome.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        welcome.CustomMinimumSize = new Vector2(560, 0);
+        welcome.Modulate = new Color(1f, 0.9f, 0.72f, 0.9f);
+        box.AddChild(welcome);
 
         var columns = new HBoxContainer();
         columns.AddThemeConstantOverride("separation", 26);
@@ -108,9 +131,10 @@ public partial class LookPicker : CanvasLayer
         view = new SubViewport { OwnWorld3D = true, TransparentBg = true, Msaa3D = Viewport.Msaa.Msaa4X, Size = new Vector2I(240, 360) };
         frame.AddChild(view);
         columns.AddChild(frame);
-        var camera = new Camera3D { Fov = 28f, Position = new Vector3(0, 1.05f, 4.4f) };
+        var camera = new Camera3D { Fov = 28f };
         view.AddChild(camera);
-        camera.LookAt(new Vector3(0, 0.92f, 0), Vector3.Up);
+        // Not in the tree yet, so aim it from a position rather than with LookAt.
+        camera.LookAtFromPosition(new Vector3(0, 1.05f, 4.4f), new Vector3(0, 0.92f, 0), Vector3.Up);
         view.AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-35, 30, 0), LightEnergy = 1.1f });
         view.AddChild(new WorldEnvironment
         {

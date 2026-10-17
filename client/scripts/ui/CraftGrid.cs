@@ -100,31 +100,72 @@ public partial class CraftGrid : VBoxContainer
                 search.Text = arg["--screenshot-craft-search=".Length..];
                 Refresh();
             }
-        if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover"))) return;
-        GetTree().CreateTimer(1.0).Timeout += () =>
+        // --screenshot-craft-hover pins the first can't-make card's hover, since a still can't point.
+        if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-craft-hover")))
+            GetTree().CreateTimer(1.0).Timeout += () => pinned = Shown.FindIndex(p => Missing(p) != null);
+    }
+
+    // The hover for a card: drawn by us beside the card, not Godot's tooltip at the mouse,
+    // so it never covers the card's own text or the panel's footer (Render B). One panel on
+    // a layer above every window, shown for whichever card the mouse is over each frame.
+    static CanvasLayer? tipLayer;
+    static PanelContainer? tip;
+    static Label? tipText;
+    static Control? tipFor;
+    int pinned = -1;
+
+    public override void _Process(double delta)
+    {
+        Control? over = null;
+        if (IsVisibleInTree())
         {
-            int i = Shown.FindIndex(p => Missing(p) != null);
-            if (i < 0 || grid.GetChildOrNull<Control>(i) is not { } card) return;
-            // On a layer of its own above the panel, where a real tooltip would draw.
-            var layer = new CanvasLayer { Layer = 20 };
-            GetTree().Root.AddChild(layer);
-            var tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.95f), BorderColor = new Color(Look.Cream, 0.3f) };
+            if (pinned >= 0) over = grid.GetChildOrNull<Control>(pinned);
+            else if (GetViewport().GuiGetHoveredControl() is { } hovered)
+                for (Node? n = hovered; n != null && n != this; n = n.GetParent())
+                    if (n.GetParent() == grid && n is Control c) { over = c; break; }
+        }
+        if (over != null && over.HasMeta("tip")) ShowTip(over);
+        // Only this grid's own card's tip is ours to hide (the C menu and a station share it).
+        else if (tip != null && tipFor != null && (!IsInstanceValid(tipFor) || !tipFor.IsInsideTree() || grid.IsAncestorOf(tipFor)))
+        {
+            tip.Visible = false;
+            tipFor = null;
+        }
+    }
+
+    void ShowTip(Control card)
+    {
+        if (tip == null)
+        {
+            tipLayer = new CanvasLayer { Layer = 20 };
+            GetTree().Root.AddChild(tipLayer);
+            tip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+            var style = new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.07f, 0.96f), BorderColor = new Color(Look.Cream, 0.3f) };
             style.SetBorderWidthAll(1);
             style.SetCornerRadiusAll(6);
             style.ContentMarginLeft = style.ContentMarginRight = 10;
             style.ContentMarginTop = style.ContentMarginBottom = 6;
             tip.AddThemeStyleboxOverride("panel", style);
-            tip.AddChild(Hud.Text(card.TooltipText, 14));
-            layer.AddChild(tip);
-            // Beside the card, where it doesn't cover the card's own text: right of it, or left
-            // when the card is in the last column near the screen's edge.
-            var rect = card.GetGlobalRect();
-            float width = tip.GetCombinedMinimumSize().X;
-            bool right = rect.End.X + 8 + width < GetViewportRect().Size.X;
-            tip.Position = new Vector2(right ? rect.End.X + 8 : rect.Position.X - 8 - width, rect.Position.Y + 8);
-        };
+            tipText = Hud.Text("", 14);
+            tip.AddChild(tipText);
+            tipLayer.AddChild(tip);
+        }
+        string text = card.GetMeta("tip").AsString();
+        if (tipFor == card && tipText!.Text == text && tip.Visible) return;
+        tipFor = card;
+        tipText!.Text = text;
+        tip.ResetSize();
+        tip.Visible = true;
+        // Beside the card at its top: right of it, or left near the screen's edge; kept on screen.
+        var rect = card.GetGlobalRect();
+        var size = tip.GetCombinedMinimumSize();
+        var screen = GetViewportRect().Size;
+        bool right = rect.End.X + 8 + size.X < screen.X;
+        float x = right ? rect.End.X + 8 : Mathf.Max(4, rect.Position.X - 8 - size.X);
+        float y = Mathf.Clamp(rect.Position.Y, 4, Mathf.Max(4, screen.Y - size.Y - 4));
+        tip.Position = new Vector2(x, y);
     }
+
 
     public void ClearSearch()
     {
@@ -214,7 +255,7 @@ public partial class CraftGrid : VBoxContainer
         card.AddThemeStyleboxOverride("hover", hover);
         card.AddThemeStyleboxOverride("pressed", hover);
         card.Modulate = new Color(1, 1, 1, ready ? 1f : 0.45f);
-        card.TooltipText = Describe(def, missing);
+        card.SetMeta("tip", Describe(def, missing));
         // Acts on the press, so holding it down can repeat (Held).
         card.ActionMode = BaseButton.ActionModeEnum.Press;
         card.Pressed += () => { Held = def; Make(def); };
