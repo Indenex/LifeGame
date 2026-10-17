@@ -1,9 +1,9 @@
 # env-36: Grass without stepped bands
 Lane: Environment
 Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
-Status: in_progress
+Status: in_review
 Branch: claude/environment-grass-bands
-PR: (none yet)
+PR: #816
 
 ## Goal
 Render B saw flat colour bands in the grass on main (noon too). Atmosphere traced it to
@@ -22,4 +22,4 @@ with only +-6% jitter per patch; the average height and the blade count are unch
 - (none)
 
 ## Next step
-Check the renders, open the PR, send the green sha to the PM.
+Wait for PR #816 CI; send the green sha to the PM.
