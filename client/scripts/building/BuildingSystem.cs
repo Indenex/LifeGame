@@ -86,6 +86,7 @@ public partial class BuildingSystem : Node
         Hud.Style(prompt, 16, 1f);
         prompt.HorizontalAlignment = HorizontalAlignment.Center;
         promptPanel = Hud.Panel(prompt, Vector2.Zero);
+        WarmLook.HudChip(promptPanel);
         promptPanel.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         promptPanel.GrowHorizontal = Control.GrowDirection.Both;
         promptPanel.GrowVertical = Control.GrowDirection.Begin;

@@ -51,7 +51,7 @@ public static class LandmarkProps
 
     // How broad a giant tree's trunk is, as a multiple of an ordinary tree (collision
     // reads it too).
-    public static float GiantGirth(int x, int z) => Range(x, z, 2, 2.4f, 3.6f);
+    public static float GiantGirth(int x, int z) => Landmarks.GiantGirth(x, z);
 
     // A huge old tree standing alone in a glade: most are oaks with a broad,
     // lumpy crown of several lobes; some are ancient pines. Each has its own girth,

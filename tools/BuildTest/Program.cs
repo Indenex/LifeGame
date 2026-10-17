@@ -604,7 +604,31 @@ void LayMat(ulong hut)
     a.Conn.Reducers.RollUpMat();
     WaitFor(() => a.CountOf(Item.SleepingMat) == 1 && a.Conn.Db.SleepingMat.PlayerId.Find(me) is null, 10, "rolled it up again");
     a.Conn.Reducers.LayMat(hut);
-    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out to wake on");
+    WaitFor(() => b.Conn.Db.SleepingMat.PlayerId.Find(me) is not null, 10, "and laid it out");
+
+    // Laying a mat does not choose your waking place; A is asked, and the server checks the answer (survival-23).
+    Check(!a.Conn.Db.MyRespawnPoint.Iter().Any(), "laying a mat does not set the waking place by itself");
+    var mat = RestSpots.OfItem(Item.SleepingMat)!;
+    b.LastError = null;
+    b.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B choosing a mat that is not theirs to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.SetRespawn(mat.Id, hut);
+    WaitFor(() => a.Conn.Db.MyRespawnPoint.Iter().Any(), 10, "A set the mat as their waking place");
+    var point = a.Conn.Db.MyRespawnPoint.Iter().First();
+    var laid = a.Conn.Db.SleepingMat.PlayerId.Find(me)!;
+    Check(point.StructureId == hut && point.Spot == mat.Id && MathF.Abs(point.X - laid.X) < 0.01f && MathF.Abs(point.Z - laid.Z) < 0.01f,
+        $"the waking place is the mat in the hut ({point.X:F1}, {point.Z:F1})");
+
+    // Lying down on the mat is a pose everyone sees, and only the mat's owner may do it (survival-27).
+    b.LastError = null;
+    b.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.LastError != null, 5, "B lying on A's mat to be refused");
+    Check(b.LastError!.Contains("no sleeping mat"), $"it says there is no mat for B ({b.LastError})");
+    a.Conn.Reducers.LieOnRestSpot(mat.Id, hut);
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is { Kind: 2 } r && r.SpotId == hut, 10, "A lies on the mat, seen by B");
+    a.Conn.Reducers.StandUp();
+    WaitFor(() => b.Conn.Db.PlayerRest.PlayerId.Find(me) is null, 10, "A stands up again, seen by B");
 }
 
 // A stands inside the finished hut (A is at the bed after LayMat) and asks to be moved out: the server
@@ -721,6 +745,8 @@ sealed class Bot
                         "SELECT * FROM structure_door",
                         "SELECT * FROM basket_item",
                         "SELECT * FROM sleeping_mat",
+                        "SELECT * FROM player_rest",
+                        "SELECT * FROM my_respawn_point",
                         "SELECT * FROM fire",
                         "SELECT * FROM chopped_tree",
                         "SELECT * FROM clay_piece",
@@ -769,15 +795,35 @@ sealed class Bot
 
         if (missing.Contains(Item.Clay) && missing.Count == 1)
         {
-            digCell ??= NearestClay();
+            if (digCell == null)
+            {
+                digCell = NearestClay();
+                digClay = CountOf(Item.Clay);
+                digSince.Restart();
+                Console.WriteLine($"  {name}: digging clay at cell ({digCell.Value.Item1}, {digCell.Value.Item2})");
+            }
             var (cx, cz) = digCell.Value;
+            // A dig the server refused, or a cell that gives no clay for 25 s: say why, leave that cell alone, pick another.
+            if (LastError != null && digging)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: dig at ({cx}, {cz}) refused: {LastError}");
+                badCells.Add((cx, cz)); digCell = null; digging = false; LastError = null;
+                return;
+            }
+            if (digSince.Elapsed.TotalSeconds > 25 && CountOf(Item.Clay) <= digClay)
+            {
+                Console.WriteLine($"::warning::BuildTest {name}: no clay from ({cx}, {cz}) in 25 s (at {X:F1}, {Z:F1}, target {cx * World.CellSize - 0.8f:F1}, {cz * World.CellSize:F1})");
+                badCells.Add((cx, cz)); digCell = null; digging = false;
+                return;
+            }
+            if (CountOf(Item.Clay) > digClay) { digClay = CountOf(Item.Clay); digSince.Restart(); }
             float clayLeft = StepRouted(cx * World.CellSize - 0.8f, cz * World.CellSize, dt);
             if (GatherStalled(clayLeft, 0.3f)) WalkTo(cx * World.CellSize - 0.8f, cz * World.CellSize, 0.3f, gatherPump!);
             else if (clayLeft < 0.3f && Lag() < 0.8f && actionTimer <= 0)
             {
                 actionTimer = 0.7f;
                 if (DugOut(cx, cz)) digCell = null;
-                else Conn.Reducers.Dig(cx, cz);
+                else { digging = true; LastError = null; Conn.Reducers.Dig(cx, cz); }
             }
             return;
         }
@@ -806,10 +852,23 @@ sealed class Bot
                 {
                     noneLogged = true;
                     Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                    noneFor.Restart();
+                }
+                // The bots only see items near them, and earlier builds picked the nearby ones: walk on, round a
+                // widening spiral, until some come into view.
+                if (gatherPump != null && noneFor.Elapsed.TotalSeconds > 3)
+                {
+                    exploreStep++;
+                    float angle = exploreStep * 2.4f, reach = MathF.Min(15f + 8f * exploreStep, 90f);
+                    float ex = X + MathF.Cos(angle) * reach, ez = Z + MathF.Sin(angle) * reach;
+                    Console.WriteLine($"  {name}: looking further for {string.Join(", ", missing)}, step {exploreStep} to ({ex:F0}, {ez:F0})");
+                    WalkTo(ex, ez, 2f, gatherPump);
+                    noneFor.Restart();
                 }
                 return;
             }
             noneLogged = false;
+            exploreStep = 0;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -825,6 +884,12 @@ sealed class Bot
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
     bool noneLogged;
+    readonly HashSet<(int, int)> badCells = new();
+    bool digging;
+    uint digClay;
+    readonly Stopwatch digSince = Stopwatch.StartNew();
+    int exploreStep;
+    readonly Stopwatch noneFor = Stopwatch.StartNew();
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;
@@ -856,7 +921,7 @@ sealed class Bot
             for (int x = x0 - r; x <= x0 + r; x++)
                 for (int z = z0 - r; z <= z0 + r; z++)
                     if (Math.Max(Math.Abs(x - x0), Math.Abs(z - z0)) == r && World.IsClay(x, z)
-                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z))
+                        && World.Height(x, z, 0) > Structures.WaterLevel + 0.4f && !DugOut(x, z) && !badCells.Contains((x, z)))
                         return (x, z);
         throw new Exception("No clay nearby");
     }

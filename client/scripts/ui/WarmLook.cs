@@ -30,7 +30,13 @@ public partial class WarmLook : Node
         On = !OS.GetCmdlineUserArgs().Contains("--cold");
         if (!On) return;
         GetTree().NodeAdded += Added;
-        GetTree().Root.Theme = Defaults();
+        var warm = Defaults();
+        GetTree().Root.Theme = warm;
+        // Windows and the HUD sit under CanvasLayers, and a theme set on the root window doesn't
+        // reach through a CanvasLayer: their plain buttons and text boxes fell back to Godot's
+        // own dark grey (ui-58, Render B's pairs). Merging into the engine's default theme
+        // reaches every control; anything that styles itself still wins.
+        ThemeDB.GetDefaultTheme().MergeWith(warm);
     }
 
     // The game-wide defaults (ui-44): Nunito for every control that doesn't choose a font, and
@@ -119,6 +125,43 @@ public partial class WarmLook : Node
         b.AddThemeColorOverride("font_disabled_color", new Color(1f, 0.98f, 0.95f, 0.7f));
     }
 
+    // A panel that sits on the world rather than in a window (the needs gauges, the land chip):
+    // a small paper chip, round and a little see-through so the world shows at its edge, like
+    // the bar's paper buttons (ui-45, ui-54). Its insides are inked and left alone after.
+    public static void HudChip(PanelContainer p)
+    {
+        if (!On) return;
+        var s = new StyleBoxFlat
+        {
+            BgColor = new Color(Paper, 0.9f),
+            BorderColor = new Color(Ink, 0.22f),
+            ShadowColor = new Color(0.15f, 0.08f, 0.05f, 0.22f),
+            ShadowSize = 8,
+            ShadowOffset = new Vector2(0, 3),
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        s.SetBorderWidthAll(2);
+        s.SetCornerRadiusAll(22);
+        p.AddThemeStyleboxOverride("panel", s);
+        p.SetMeta(Keep, true);
+        InkInside(p);
+    }
+
+    // Words floating in the world (names, chat bubbles, cues, "Your waking place", claim
+    // markers; ui-56): the warm look's rounded Nunito, and a soft brown edge instead of a near
+    // black one, so they sit in the warm light like the HUD's words do. A slanted font (emotes,
+    // cues) stays slanted. Colours are left alone.
+    static void WarmWorldWords(Label3D l)
+    {
+        if (l.HasMeta(Keep)) return;
+        l.SetMeta(Keep, true);
+        l.Font = l.Font is FontVariation slant && slant.BaseFont == null
+            ? new FontVariation { BaseFont = Ui.Font(800), VariationTransform = slant.VariationTransform }
+            : l.Font == null ? Ui.Font(800) : l.Font;
+        var edge = l.OutlineModulate;
+        if (edge.Luminance < 0.2f) l.OutlineModulate = new Color(0.24f, 0.13f, 0.07f, edge.A);
+    }
+
     // Controls that style themselves for paper are left as they are.
     const string Keep = "warm_keep";
 
@@ -154,6 +197,12 @@ public partial class WarmLook : Node
 
     void Added(Node node)
     {
+        if (node is Label3D words)
+        {
+            // After whoever made it has set its font and colours.
+            Callable.From(() => { if (IsInstanceValid(words)) WarmWorldWords(words); }).CallDeferred();
+            return;
+        }
         if (node is not Control c) return;
         // After the panel has set its own colours.
         Callable.From(() =>

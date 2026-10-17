@@ -1,7 +1,7 @@
 # anim-13: Idle fidgets and hop-and-squish movement (cutesy #15, #17)
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-13 (on main since #600 merged)
 PR: #613
 

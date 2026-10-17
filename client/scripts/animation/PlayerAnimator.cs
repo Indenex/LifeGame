@@ -122,7 +122,7 @@ public sealed class PlayerAnimator
             sitFidget = warmth > 0.2f && pick < 2 ? RestPoses.SitFidget.Warm
                 : Atmosphere.Night > 0.5f && pick == 2 ? RestPoses.SitFidget.LookUp
                 : !ground ? (pick % 2 == 0 ? RestPoses.SitFidget.LookUp : RestPoses.SitFidget.Warm)
-                : pick % 2 == 0 ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
+                : pick % 2 == 0 || Shell ? RestPoses.SitFidget.HugKnees : RestPoses.SitFidget.LeanBack;
             if (!ground && sitFidget == RestPoses.SitFidget.Warm && warmth <= 0.2f) sitFidget = RestPoses.SitFidget.LookUp;
             sitFidgetFor = 0f;
         }
@@ -192,6 +192,7 @@ public sealed class PlayerAnimator
         bool lying = Rest == RestKind.Lie && restStage > 2.5f;
         Face mood =
             lying && Asleep ? Face.Closed
+            : shownGesture == Gesture.Doze ? (gestureTime < 3.5f ? Face.Closed : Face.Open)
             : lying || shownGesture == Gesture.Yawn ? Face.Sleepy
             : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Face.Happy
             : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Face.Sleepy
@@ -207,6 +208,11 @@ public sealed class PlayerAnimator
         }
         Face = blinkLeft > 0f && mood is Face.Open or Face.Sleepy ? Face.Closed : mood;
     }
+
+    // A side-to-side rock of the hips over each foot in the walk, 0 to 1 (Pebble's waddle).
+    public float Waddle;
+    // A shell on the back: poses that put the arms behind the body are left out.
+    public bool Shell;
 
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
     float Bounce => rig.HipHeight < 0.6f ? 1f : 0.15f;
@@ -242,7 +248,7 @@ public sealed class PlayerAnimator
         if (walkBlend > 0.005f) Walk(walk);
         pose.Blend(idle, walk, walkBlend > 0.995f ? 1f : walkBlend < 0.005f ? 0f : walkBlend);
 
-        if (crouch > 0.005f) Crouch(pose, crouch);
+        if (crouch > 0.005f) Crouch(pose, crouch, sneak: true);
         if (wade > 0.005f) Wade(pose, wade);
         if (afloat > 0.005f)
         {
@@ -297,6 +303,8 @@ public sealed class PlayerAnimator
     // little to hold it out from the leg, and the arm's walking swing is damped. Swap()
     // plays a quick 0.3 s reach down to the hip and back, to draw or stow it.
     public bool Carrying;
+    public bool CarryingHeavy;
+    float heavy;
     public const float SwapSeconds = 0.3f;
     float carry, swapTime = -1f;
 
@@ -312,6 +320,25 @@ public sealed class PlayerAnimator
             pose[Joint.ShoulderR].Z = Mathf.Lerp(pose[Joint.ShoulderR].Z, -0.16f, c);
             pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, Mathf.Min(pose[Joint.ElbowR].X, -0.85f), c);
             pose[Joint.HandR].X = Mathf.Lerp(pose[Joint.HandR].X, 0.15f, c);
+        }
+        // Something heavy (anim-18: Carry.Weight at least HeavyHold) is hugged in both
+        // arms in front, the chest leaning back against it, with a slow side-to-side
+        // waddle while walking.
+        heavy = Mathf.MoveToward(heavy, CarryingHeavy ? 1f : 0f, dt / 0.3f);
+        if (heavy > 0f)
+        {
+            float h = Mathf.SmoothStep(0f, 1f, heavy) * (1f - workBlend);
+            float waddle = Mathf.Cos(phase) * walkBlend * h;
+            pose[Joint.Spine].X = Mathf.Lerp(pose[Joint.Spine].X, -0.12f, h);
+            pose[Joint.Neck].X = Mathf.Lerp(pose[Joint.Neck].X, 0.1f, h);
+            pose[Joint.ShoulderL] = pose[Joint.ShoulderL].Lerp(new Vector3(-0.8f, 0, 0.02f), h);
+            pose[Joint.ShoulderR] = pose[Joint.ShoulderR].Lerp(new Vector3(-0.8f, 0, -0.02f), h);
+            pose[Joint.ElbowL].X = Mathf.Lerp(pose[Joint.ElbowL].X, -1.35f, h);
+            pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, -1.35f, h);
+            pose[Joint.Hips].Z += 0.07f * waddle;
+            pose[Joint.HipL].Z -= 0.07f * waddle;
+            pose[Joint.HipR].Z -= 0.07f * waddle;
+            pose[Joint.Spine].Z -= 0.05f * waddle;
         }
         if (swapTime < 0f) return;
         swapTime += dt;
@@ -332,12 +359,12 @@ public sealed class PlayerAnimator
     // around or rolls its shoulders; it waves at someone close by, sways happily by a
     // fire, and in the cold rubs its hands and shivers (#15, kept gentle: D-313). Each
     // figure keeps its own timing (seed), so a crowd never moves in step.
-    enum Gesture { None, Stretch, LookAround, Shoulders, RubHands, Yawn, Wave, Sway }
+    enum Gesture { None, Stretch, LookAround, Shoulders, RubHands, Yawn, Wave, Sway, Doze }
     Gesture shownGesture;
     float stillFor, gestureTime, nextGesture = 4f, lastWave = -999f, waveYaw;
     const float GestureSeconds = 2.6f;
 
-    static float LengthOf(Gesture g) => g switch { Gesture.Sway => 6f, Gesture.Yawn => 2.8f, Gesture.Wave => 2.2f, _ => GestureSeconds };
+    static float LengthOf(Gesture g) => g switch { Gesture.Doze => 5f, Gesture.Sway => 6f, Gesture.Yawn => 2.8f, Gesture.Wave => 2.2f, _ => GestureSeconds };
 
     // What is around the figure when it next fidgets: warmth from a burning fire (0 to
     // 1) and the turn to the nearest other player close enough to wave at (radians,
@@ -356,6 +383,8 @@ public sealed class PlayerAnimator
         int pick = (int)Mathf.PosMod(time * 7.3f + seed * 13f, 4f);
         if (warmth > 0.2f && pick < 2) return Gesture.Sway;
         if (cold > 0.5f && pick != 1) return Gesture.RubHands;
+        // Late at night a figure standing about nods off on its feet now and then (anim-23).
+        if (Atmosphere.Night > 0.75f && pick >= 2) return Gesture.Doze;
         return pick switch { 0 => Gesture.Stretch, 1 => Gesture.LookAround, 2 => Gesture.Shoulders, _ => Gesture.Yawn };
     }
 
@@ -442,6 +471,24 @@ public sealed class PlayerAnimator
                 p[Joint.ElbowL].X = -0.2f;
                 p[Joint.ElbowR].X = -0.2f;
                 p[Joint.Neck].Z = 0.18f * Mathf.Sin(t * 2.4f);
+                break;
+            }
+            case Gesture.Doze:
+            {
+                // Dozing on its feet: the head sinks slowly forward, the shoulders slump and
+                // the body sways, then with a little start it jerks awake and straightens.
+                float sink = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 3.4f, 0f, 1f));
+                float wake = Mathf.Clamp((t - 3.5f) / 0.25f, 0f, 1f);
+                float droop = sink * (1f - wake);
+                float startle = Mathf.Sin(Mathf.Clamp((t - 3.5f) / 0.5f, 0f, 1f) * Mathf.Pi);
+                p.HipsOffset = new Vector3(0, -0.01f * droop, 0);
+                p[Joint.Spine].X = 0.12f * droop - 0.06f * startle;
+                p[Joint.Spine].Z = 0.04f * droop * Mathf.Sin(t * 0.9f);
+                p[Joint.Neck].X = 0.55f * droop - 0.15f * startle;
+                p[Joint.ShoulderL] = new Vector3(-0.02f, 0, 0.06f - 0.03f * droop + 0.08f * startle);
+                p[Joint.ShoulderR] = new Vector3(-0.02f, 0, -0.06f + 0.03f * droop - 0.08f * startle);
+                p[Joint.ElbowL].X = -0.1f;
+                p[Joint.ElbowR].X = -0.1f;
                 break;
             }
             case Gesture.Sway:
@@ -613,7 +660,7 @@ public sealed class PlayerAnimator
             -Mathf.Lerp(0.03f, 0.018f, g) * c * (1f - 0.5f * r),
             Mathf.Lerp(walkY, runY, r) + hop,
             0);
-        p[Joint.Hips] = new Vector3(0.03f * g, -Mathf.Lerp(0.1f, 0.16f, g) * s, -0.045f * c);
+        p[Joint.Hips] = new Vector3(0.03f * g, -Mathf.Lerp(0.1f, 0.16f, g) * s, -(0.045f + 0.11f * Waddle * (1f - r)) * c);
         Legs(p);
 
         Leg(p, Joint.HipL, Joint.KneeL, Joint.FootL, phase, hipAmp, kneeAmp, stance);
@@ -627,8 +674,12 @@ public sealed class PlayerAnimator
         // Arms swing against the legs and bend more at the front of the swing.
         float armAmp = Mathf.Lerp(Mathf.Lerp(0.3f, 0.55f, g), 0.8f, r);
         float elbow = Mathf.Lerp(Mathf.Lerp(0.22f, 1.2f, g), 1.5f, r);
-        p[Joint.ShoulderL] = new Vector3(armAmp * s, 0, 0.1f);
-        p[Joint.ShoulderR] = new Vector3(-armAmp * s, 0, -0.1f);
+        // Behind the body a shell is in the way: the arms swing back less and a little wider.
+        float backL = armAmp * s, backR = -armAmp * s;
+        if (Shell) (backL, backR) = (Mathf.Min(backL, 0.25f), Mathf.Min(backR, 0.25f));
+        float wide = Shell ? 0.18f : 0.1f;
+        p[Joint.ShoulderL] = new Vector3(backL, 0, wide);
+        p[Joint.ShoulderR] = new Vector3(backR, 0, -wide);
         p[Joint.ElbowL].X = -elbow - 0.35f * Mathf.Max(-s, 0f);
         p[Joint.ElbowR].X = -elbow - 0.35f * Mathf.Max(s, 0f);
         p[Joint.HandL] = new Vector3(-0.1f, 0, 0.06f);
@@ -741,8 +792,13 @@ public sealed class PlayerAnimator
 
     // Sneaking: knees bent and hips low with the feet still planted, chest over the knees,
     // head up and hands held ready. Added on top of whatever idle or walk is doing.
-    void Crouch(Pose p, float w)
+    void Crouch(Pose p, float w, bool sneak = false)
     {
+        if (sneak && Bounce >= 1f)
+        {
+            Tiptoe(p, w);
+            return;
+        }
         const float bend = 0.62f; // thigh angle; the hips drop by LegLength * (1 - cos bend)
         p.HipsOffset.Y -= rig.LegLength * (1f - Mathf.Cos(bend)) * w;
         p[Joint.HipL].X -= bend * w;
@@ -757,6 +813,29 @@ public sealed class PlayerAnimator
         p[Joint.ShoulderR].X -= 0.3f * w;
         p[Joint.ElbowL].X -= 0.55f * w;
         p[Joint.ElbowR].X -= 0.55f * w;
+    }
+
+    // A small round body sneaks on tiptoe (anim-22): up on the balls of the feet with
+    // the knees soft, chest forward, head up, and the hands held up in front like paws.
+    void Tiptoe(Pose p, float w)
+    {
+        const float bend = 0.3f;
+        p.HipsOffset.Y += (0.035f * rig.LegLength - rig.LegLength * (1f - Mathf.Cos(bend))) * w;
+        p[Joint.HipL].X -= bend * w;
+        p[Joint.HipR].X -= bend * w;
+        p[Joint.KneeL].X += 2f * bend * w;
+        p[Joint.KneeR].X += 2f * bend * w;
+        // Heels up.
+        p[Joint.FootL].X -= (bend + 0.35f) * w;
+        p[Joint.FootR].X -= (bend + 0.35f) * w;
+        p[Joint.Spine].X += 0.22f * w;
+        p[Joint.Neck].X -= 0.2f * w;
+        p[Joint.ShoulderL] = p[Joint.ShoulderL].Lerp(new Vector3(-0.55f, 0, 0.12f), w);
+        p[Joint.ShoulderR] = p[Joint.ShoulderR].Lerp(new Vector3(-0.55f, 0, -0.12f), w);
+        p[Joint.ElbowL].X = Mathf.Lerp(p[Joint.ElbowL].X, -1.65f, w);
+        p[Joint.ElbowR].X = Mathf.Lerp(p[Joint.ElbowR].X, -1.65f, w);
+        p[Joint.HandL].X = Mathf.Lerp(p[Joint.HandL].X, 0.8f, w);
+        p[Joint.HandR].X = Mathf.Lerp(p[Joint.HandR].X, 0.8f, w);
     }
 
     // One leg through the cycle; at legPhase 0 it passes under the body swinging forward.

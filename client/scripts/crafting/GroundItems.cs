@@ -26,6 +26,19 @@ public partial class GroundItems : Node3D
 
     public bool Has(ulong id) => batchOf.ContainsKey(id);
 
+    // A maker's mark was added or changed (ceramics-15): the batches of marked pots redraw with the
+    // new stamp, so older pots follow the change as the design says.
+    public override void _EnterTree() => ClayItemLook.MarksChanged += RestyleMarked;
+
+    public override void _ExitTree() => ClayItemLook.MarksChanged -= RestyleMarked;
+
+    void RestyleMarked()
+    {
+        foreach (var (key, batch) in batches)
+            if (key.Item4 != 0 && ClayItemLook.MarkedMesh(key.Item1, (uint)key.Item4) is { } marked)
+                batch.Mesh.Mesh = PaintedItems.Paint(marked, PaintedItems.Family.Clay);
+    }
+
     // `mark` is the row's Wear number: for pots it is the maker's mark (shared/Marks.cs), drawn as
     // a stamp, and slip round the rim (shared/Slip.cs); pots that look different are drawn in separate batches.
     public void Add(ulong id, Item item, Transform3D place, uint mark = 0)
