@@ -210,6 +210,13 @@ bool Step(string line)
             stroll = (x + d[0], z + d[1]);
             break;
         }
+        case "sh":
+        {
+            using var sp = Process.Start(new ProcessStartInfo("bash", new[] { "-c", rest }) { RedirectStandardOutput = true, RedirectStandardError = true })!;
+            while (!sp.HasExited) Pump(0.05);
+            Console.WriteLine($"puppet: sh: {sp.StandardOutput.ReadToEnd()}{sp.StandardError.ReadToEnd()}");
+            break;
+        }
         case "pos":
         {
             var sp = conn.Db.PlayerPos.PlayerId.Find(myId);
