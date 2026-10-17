@@ -562,6 +562,14 @@ public partial class Showcase : Node3D
         for (int i = 0; i < looks.Length; i++)
         {
             var figure = ChibiFigure.Create(looks[i]);
+            // --dressed puts on the wool tunic and the foot wraps.
+            if (args.ContainsKey("dressed"))
+            {
+                figure.GetNode(PlayerModel.SlotNode(PlayerModel.Body)).Free();
+                foreach (var (slot, item) in new[] { (PlayerModel.Body, Garments.WoolTunic), (PlayerModel.Feet, Garments.FootWraps) })
+                    if (ChibiFigure.Garment(looks[i], slot, item) is { } worn)
+                        figure.AddChild(new MeshInstance3D { Mesh = worn, Skeleton = new NodePath("..") });
+            }
             figure.Position = new Vector3(-1.6f + i * 1.25f, 0, 0);
             figure.Rotation = new Vector3(0, yaw + (i % 2 == 1 ? -0.6f : 0f), 0);
             AddChild(figure);
