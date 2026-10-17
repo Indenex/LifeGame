@@ -113,6 +113,7 @@ public partial class Atmosphere : Node3D
         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
         sky.SetShaderParameter(NClouds, Look.Clouds);
         sun.ShadowEnabled = true;
+        AddChild(new SunShadows(sun));
 
         AddChild(rain);
         AddChild(fireflies);
@@ -213,9 +214,7 @@ public partial class Atmosphere : Node3D
             .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
-        ToolSounds.Connect(conn);
-        RoastSounds.Connect(conn);
-        StructureSounds.Connect(conn);
+        AudioHooks.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -345,8 +344,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
-            ToolSounds.Tick(dt);
-            RoastSounds.Tick(dt);
+            AudioHooks.Tick(dt);
         }
     }
 
@@ -411,7 +409,8 @@ public partial class Atmosphere : Node3D
         float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
         Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
         float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
-        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
+        // Stepped, not turned every frame, so shadow edges hold still (SunShadows).
+        sun.Rotation = SunShadows.Steady(elevation, isDay ? azimuth : azimuth + 180f);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
         float h = Mathf.Clamp(sunHeight, 0f, 1f);

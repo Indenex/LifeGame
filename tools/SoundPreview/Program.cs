@@ -140,7 +140,7 @@ foreach (var scene in scenes)
         mix.StreamPan = 0.4f;
         mix.Water = water * water;
         mix.WaterPan = -0.4f;
-        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && parts[0] != "roast" && parts[0] != "doors" && work == Work.None && t < seconds / 2;
+        bool walks = parts[0] is "approach" or "streamwalk" ? t < seconds * 0.8 : !parts[0].StartsWith("pond") && parts[0] != "still" && parts[0] != "cues" && parts[0] != "water" && parts[0] != "hens" && parts[0] != "tools" && !AudioScenes.Owns(parts[0]) && parts[0] != "doors" && work == Work.None && t < seconds / 2;
         if (work != Work.None && !workEnded && t >= seconds - 1)
         {
             mix.Working(Work.None);
@@ -214,27 +214,14 @@ foreach (var scene in scenes)
             if (At(2.2)) mix.Play(CueDefs.ChopThunk);
             if (At(3.4)) mix.Play(CueDefs.ChopThunk);
             if (At(5)) mix.Play(CueDefs.TreeCreak);
-            if (At(5.95)) mix.Play(CueDefs.TreeCrash);
+            if (At(5)) mix.Play(CueDefs.TreeRush);
+            if (At(6.6)) mix.Play(CueDefs.TreeImpact);
             if (At(10)) mix.Play(CueDefs.DigStick);
             if (At(11.5)) mix.Play(CueDefs.DigSpade);
             if (At(12.5)) mix.Play(CueDefs.DirtThrow);
             if (At(14)) mix.Play(CueDefs.DigHands);
         }
-        // Roast scene: browning (0-6 s), ready (6-12 s), charring (12-18 s).
-        if (parts[0] == "roast")
-        {
-            double a = done / (double)rate, b = (done + n) / (double)rate;
-            var prng = new Random((int)(a * 100) + 7);
-            for (double t0 = Math.Floor(a * 20) / 20; t0 < b; t0 += 0.05)
-            {
-                if (t0 < a) continue;
-                bool ready = t0 > 6, charring = t0 > 12;
-                double sizzle = charring ? 0.5 : ready ? 0.7 : 1.1, spit = charring ? 1.1 : ready ? 0.25 : 0.6, drip = ready && !charring ? 0.35 : 0.15;
-                if (prng.NextDouble() < sizzle * 0.05) mix.Play(CueDefs.RoastSizzle);
-                if (prng.NextDouble() < spit * 0.05) mix.Play(CueDefs.RoastSpit);
-                if (prng.NextDouble() < drip * 0.05) mix.Play(CueDefs.RoastDrip);
-            }
-        }
+        AudioScenes.Render(parts[0], mix, done, n, rate);
         // Doors scene: open, shut, bar, unbar.
         if (parts[0] == "doors")
         {

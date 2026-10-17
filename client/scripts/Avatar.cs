@@ -31,6 +31,7 @@ public partial class Avatar : Node3D
         rig = new PlayerRig(figure);
         PlaceMouth();
         animator = new PlayerAnimator(rig, GetInstanceId());
+        animator.Surroundings = Surroundings;
         animator.Impact = (motion, thrown) =>
             Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : RightBase) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
@@ -50,6 +51,36 @@ public partial class Avatar : Node3D
         };
         AddChild(nameplate);
         PlaceNameplate();
+    }
+
+    // Every avatar in the world, for fidgets that notice each other (waving).
+    static readonly System.Collections.Generic.List<Avatar> all = new();
+    public override void _EnterTree() => all.Add(this);
+    public override void _ExitTree() => all.Remove(this);
+
+    // 0 to 1: warmth from burning fires at a spot (AvatarWork sets it from the fire table).
+    public static System.Func<Vector3, float>? FireWarmthAt;
+
+    const float WaveReach = 6f;
+
+    (float, float?) Surroundings()
+    {
+        float warmth = FireWarmthAt?.Invoke(Position) ?? 0f;
+        float? friend = null;
+        float best = WaveReach * WaveReach;
+        foreach (var a in all)
+        {
+            if (a == this || !a.IsVisibleInTree()) continue;
+            var d = a.Position - Position;
+            float d2 = d.X * d.X + d.Z * d.Z;
+            if (d2 >= best || d2 < 0.5f) continue;
+            // Only someone roughly in front: nobody waves over their shoulder.
+            float yaw = Mathf.AngleDifference(Rotation.Y, Mathf.Atan2(d.X, d.Z));
+            if (Mathf.Abs(yaw) > 1.4f) continue;
+            best = d2;
+            friend = yaw;
+        }
+        return (warmth, friend);
     }
 
     // Set from player_sneaking for other players; tracks the key for your own.
@@ -97,7 +128,34 @@ public partial class Avatar : Node3D
     // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
     // the last landing was (0 to 1, set on the frame you land). The avatar's height is
     // moved by whoever moves it; this only poses the body.
-    public void SetJump(bool airborne, bool rising, float landing) => animator.Jump(airborne, rising, landing);
+    public void SetJump(bool airborne, bool rising, float landing)
+    {
+        animator.Jump(airborne, rising, landing);
+        // A squishy landing (#17): the body squashes down and springs back, keeping
+        // its volume; taking off stretches it a little.
+        if (landing > 0.01f) Squish(-0.16f * Mathf.Clamp(landing, 0.3f, 1f));
+        else if (airborne && rising && !wasRising) Squish(0.07f);
+        wasRising = airborne && rising;
+    }
+
+    float squish, squishTime = 99f;
+    bool wasRising;
+
+    void Squish(float amount)
+    {
+        squish = amount;
+        squishTime = 0f;
+    }
+
+    void SquishTick(float dt)
+    {
+        if (squishTime > 1f) return;
+        squishTime += dt;
+        float y = 1f + squish * Mathf.Exp(-8f * squishTime) * Mathf.Cos(20f * squishTime);
+        if (squishTime > 1f) y = 1f;
+        float side = 1f / Mathf.Sqrt(y);
+        figure.Scale = new Vector3(side, y, side);
+    }
 
     // Lifts the figure off the ground by this many metres without moving the avatar node.
     // Use it for other players' jumps: their node glides toward the server position every
@@ -285,6 +343,7 @@ public partial class Avatar : Node3D
             // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
             animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
             CarryTick(dt);
+            SquishTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
             // The name comes down with the head when sitting or lying.

@@ -209,6 +209,13 @@ public partial class Main : Node3D
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -432,7 +439,9 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        // A dig that lands inside the server's cooldown ("Still working") is not a failure to give up on: a held
+        // key tries again after the next interval, so one early repeat on a laggy link does not end the hold.
+        conn.OnUnhandledReducerError += (_, e) => { if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));

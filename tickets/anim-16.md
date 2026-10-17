@@ -1,7 +1,7 @@
 # anim-16: Emotes (wave, cheer, dance, bow)
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-16 (from main)
 PR: #653
 
