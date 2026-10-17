@@ -37,6 +37,12 @@ public sealed class ServerPlaceLink : IPlaceLink
 
     public string? Fits(Placeable thing, float x, float z, float yaw) => Placement.Check(thing.Item, x, z, groundAt);
 
-    public void Place(Placeable thing, float x, float z, float yaw) =>
-        conn.Reducers.PlaceItem((ushort)thing.Item, thing.Quality, thing.Wear, x, z, yaw);
+    // Takes the item in hand first (Main: the hotbar's TakeInHand), since the server sets down
+    // only what is in hand (crafting-29).
+    public Func<Item, bool> TakeInHand = _ => true;
+
+    public void Place(Placeable thing, float x, float z, float yaw)
+    {
+        if (TakeInHand(thing.Item)) conn.Reducers.PlaceItem((ushort)thing.Item, thing.Quality, thing.Wear, x, z, yaw);
+    }
 }
