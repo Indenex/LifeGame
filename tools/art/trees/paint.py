@@ -1,9 +1,11 @@
 """Painted trees, step 2 of 2 (art-rnd-1): paint the albedo from the bakes, in 3D.
 
-    python3 tools/art/trees/paint.py <bake dir> <out dir> <birch|pine>
+    python3 tools/art/trees/paint.py <bake dir> <out dir> <birch|pine> [seed]
 
-Reads <bake dir>/<tree>_bake.npz (AO, object-space normal, position and leaf mask per
-texel, from blender_build.py) and writes <out>/<tree>_albedo.png. Every stroke is
+Reads <bake dir>/<tree>_<seed>_bake.npz (AO, object-space normal, position and leaf mask
+per texel, from blender_build.py) and writes <out>/<tree>_<seed>_albedo.png. Every
+variant uses the same painting rules and palette; the seed only moves the leaf clusters
+and the bark marks (for the birch also their spacing and how many there are). Every stroke is
 placed by the texel's position on the tree, not by its UV, so the painting runs across
 the UV seams.
 
@@ -30,8 +32,10 @@ import numpy as np
 from PIL import Image
 
 bake, out, TREE = sys.argv[1], sys.argv[2], sys.argv[3]
+SEED = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+NAME = f"{TREE}_{SEED}"
 os.makedirs(out, exist_ok=True)
-d = np.load(os.path.join(bake, f"{TREE}_bake.npz"))
+d = np.load(os.path.join(bake, f"{NAME}_bake.npz"))
 
 
 def c(*rgb):
@@ -122,7 +126,7 @@ m = valid & leaf
 p, n, a = P[m], N[m], ao[m]
 # The crown's form: up-facing is lit, down-facing and occluded is shade.
 form = 0.5 + 0.42 * n[:, 1] + 1.0 * (a - 0.85)
-d1, d2, off, rnd = cells(p, CLUSTER, 3)
+d1, d2, off, rnd = cells(p, CLUSTER, 3 + 17 * SEED)
 edge = d2 - d1                                  # 0 on a border between clusters
 oy = off[:, 1] / CLUSTER[1]                     # about -0.6..0.6, down..up in a cluster
 # Each cluster: a gentle light on its top half, a soft shade crescent under its lower
@@ -145,13 +149,15 @@ lit = 0.5 + 0.5 * n[:, 1]
 col = ramp(lit, np.array([BARK["shade"], BARK["mid"], BARK["lit"]]), [0.42, 0.62], 0.05)
 if TREE == "birch":
     # A few soft cocoa marks across the trunk, wider than tall, and a darker foot.
-    d1, d2, off, rnd = cells(p, np.array([0.26, 0.11, 0.26]), 31)
-    mark = (rnd < 0.5) * smooth(0.5, 0.36, np.linalg.norm(off / np.array([1.0, 0.28, 1.0]), axis=1) / 0.3) * (p[:, 1] > 0.35)
+    # Per variant: the mark grid's spacing and how many cells carry a mark.
+    rows, share = [(0.11, 0.5), (0.15, 0.42), (0.09, 0.58)][SEED % 3]
+    d1, d2, off, rnd = cells(p, np.array([0.26, rows, 0.26]), 31 + 17 * SEED)
+    mark = (rnd < share) * smooth(0.5, 0.36, np.linalg.norm(off / np.array([1.0, 0.28, 1.0]), axis=1) / 0.3) * (p[:, 1] > 0.35)
     col = mix(col, np.repeat(BARK["mark"][None], len(a), 0), 0.85 * mark)
     col = mix(col, np.repeat(BARK["foot"][None], len(a), 0), smooth(0.45, 0.12, p[:, 1]))
 else:
     # Long vertical plates with soft cocoa crevices and a pale top on each plate.
-    d1, d2, off, rnd = cells(p, np.array([0.12, 0.4, 0.12]), 41)
+    d1, d2, off, rnd = cells(p, np.array([0.12, 0.4, 0.12]), 41 + 17 * SEED)
     col = mix(col, np.repeat(BARK["lit"][None], len(a), 0), 0.35 * smooth(0.1, 0.4, off[:, 1] / 0.4) * smooth(0.2, 0.4, d2 - d1))
     col = mix(col, np.repeat(BARK["mark"][None], len(a), 0), 0.8 * smooth(0.16, 0.05, d2 - d1))
 col = mix(col, np.repeat(COCOA[None], len(a), 0), 0.45 * smooth(0.8, 0.3, a))
@@ -160,5 +166,5 @@ img[m] = col
 # Unused texels: the mid leaf green, so mip levels don't bleed black.
 img[~valid] = LEAF[2]
 im = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8).reshape(SIZE, SIZE, 3))
-im.save(os.path.join(out, f"{TREE}_albedo.png"), optimize=True)
-print("painted", os.path.join(out, f"{TREE}_albedo.png"))
+im.save(os.path.join(out, f"{NAME}_albedo.png"), optimize=True)
+print("painted", os.path.join(out, f"{NAME}_albedo.png"))

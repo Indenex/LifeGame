@@ -4,8 +4,8 @@ namespace LifeGame;
 
 // art-rnd-1 showcase piece: today's painted broadleaf (PaintedTrees, built at runtime
 // from rows of small leaf lobes) beside a Blender-authored birch (tools/art/trees/,
-// rebuilt with tools/art/trees/build.sh). The authored crown is a dozen chunky leaf
-// clumps fused into one surface (about 5.6k triangles), with the leaf clusters, lit
+// rebuilt with tools/art/trees/build.sh, three seeded variants). The authored crown is a dozen chunky leaf
+// clumps fused into one surface (about 5.6k triangles, 6.9k with the wood), with the leaf clusters, lit
 // tops, violet-leaning undersides and the white bark's dark marks painted into one
 // 1024 px texture over baked AO. It stands at today's scale (about 4.4 m).
 //
@@ -33,6 +33,13 @@ public static class ArtBirch
         return root;
     }
 
-    public static Node3D Authored() =>
-        PaintedAsset.Instance(Dir + "birch.glb", PaintedAsset.Material(Dir + "birch_albedo.png"));
+    // Three seeded variants (D-166), birch_0..2: Authored() hands them out in turn, so the
+    // showcase's three authored slots show one of each.
+    public const int Variants = 3;
+    static int next;
+
+    public static Node3D Authored() => Variant(next++ % Variants);
+
+    public static Node3D Variant(int seed) =>
+        PaintedAsset.Instance(Dir + $"birch_{seed}.glb", PaintedAsset.Material(Dir + $"birch_{seed}_albedo.png"));
 }

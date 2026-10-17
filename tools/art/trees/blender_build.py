@@ -1,6 +1,14 @@
 """Painted trees, step 1 of 2 (art-rnd-1): run inside Blender.
 
-    blender -b --factory-startup -P tools/art/trees/blender_build.py -- <out dir> <birch|pine>
+    blender -b --factory-startup -P tools/art/trees/blender_build.py -- <out dir> <birch|pine> [seed]
+
+The seed (default 0) picks one variant (D-166: repeated world features vary strongly per
+instance). Seeds 0, 1 and 2 are hand-tuned to differ clearly; any other seed draws its
+numbers at random from the same ranges. A variant changes the overall height (about
++-12% round the 4.4 m nominal frame, base at the origin), the lean (amount and
+direction), the crown width, and for the birch the crown's clump count, placement and
+sizes; for the pine the tier count (4 to 6), the tiers' droop and a slight asymmetry
+(each tier a little off-centre and oval). Outputs are named <tree>_<seed>.
 
 Builds one tree as a game mesh in Godot units (Y up, standing about 4.4 m tall like
 PaintedTrees.Height), unwraps it, and bakes with Cycles on the CPU what paint.py needs to
@@ -29,6 +37,8 @@ import numpy as np
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 out = os.path.abspath(argv[0] if argv else os.getcwd())
 TREE = argv[1] if len(argv) > 1 else "birch"
+SEED = int(argv[2]) if len(argv) > 2 else 0
+NAME = f"{TREE}_{SEED}"
 os.makedirs(out, exist_ok=True)
 SIZE = 1024
 CROWN_TRIS = 5600
@@ -119,43 +129,65 @@ def tri_count(ob):
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
-rng = np.random.default_rng(7 if TREE == "birch" else 11)
+rng = np.random.default_rng((7 if TREE == "birch" else 11) + 1000 * SEED)
+
+
+def pick(table, lo, hi):
+    """The hand-tuned value for seeds 0..2, otherwise a random one in [lo, hi]."""
+    return table[SEED] if SEED < len(table) else float(rng.uniform(lo, hi))
+
+
+# Per-variant shape: height scale, crown width scale, lean (metres at the top) and
+# lean direction (radians round Y, 0 = +x).
+HS = pick([1.0, 0.89, 1.11], 0.88, 1.12)
+WS = pick([1.0, 1.14, 0.88], 0.86, 1.15)
+LEAN = pick([0.24, 0.4, 0.1], 0.06, 0.42) if TREE == "birch" else pick([0.04, 0.16, 0.09], 0.0, 0.18)
+LEAN_DIR = pick([0.0, 2.3, -2.0], -np.pi, np.pi)
+LD = np.array([np.cos(LEAN_DIR), 0.0, np.sin(LEAN_DIR)])
 wood_parts = []          # (verts, faces) in Godot space
 
 if TREE == "birch":
     # The trunk: white, slender, leaning gently to +x with a soft S, a little root flare.
-    TOP = 3.0
+    TOP = 3.0 * HS
+    WIG = pick([1.3, 2.1, 0.9], 0.8, 2.2)       # the trunk's soft S
+
+    def trunk_at(y):
+        y = np.asarray(y, float)
+        side = 0.06 * np.sin(y * WIG)
+        lean = LEAN * (y / TOP) ** 1.7
+        return np.stack([lean * LD[0] - side * LD[2], y, lean * LD[2] + side * LD[0]], -1)
+
     ys = np.linspace(0, TOP, 24)
-    path = np.stack([0.24 * (ys / TOP) ** 1.7, ys, 0.06 * np.sin(ys * 1.3)], -1)
+    path = trunk_at(ys)
     radii = 0.085 + 0.08 * (1 - ys / TOP) ** 1.2 + 0.08 * np.exp(-ys / 0.16)
     wood_parts.append(tube(path, radii, 12))
 
-    def trunk_at(y):
-        return np.array([0.24 * (y / TOP) ** 1.7, y, 0.06 * np.sin(y * 1.3)])
-
     # The crown: clumps on an egg-shaped envelope round the crown's heart.
-    heart = np.array([0.2, 2.78, 0.0])
-    env = np.array([1.0, 1.0, 1.0])
-    clumps = [(heart + np.array([0.02, 1.0, 0.0]), 0.66)]
+    heart = trunk_at(2.78 * HS) + LD * 0.04
+    env = np.array([WS, pick([1.0, 0.86, 1.1], 0.85, 1.1), WS])
+    clumps = [(heart + np.array([0.02, 1.0 * env[1], 0.0]), 0.66 * np.sqrt(WS))]
     golden = np.pi * (3 - np.sqrt(5))
-    n = 15
+    n = int(pick([15, 11, 19], 10, 20))
+    spin = pick([0.4, 1.9, 3.3], 0, 2 * np.pi)
+    # Leave a couple of low clumps out, so gaps show the branches.
+    skip = set(int(i) for i in rng.choice(np.arange(int(n * 0.7), n), 2, replace=False))
     for i in range(n):
         y = 0.82 - 1.55 * (i + 0.5) / n
         r = np.sqrt(max(0.0, 1 - y * y))
-        a = i * golden + 0.4
+        a = i * golden + spin + rng.uniform(-0.25, 0.25)
         d = np.array([r * np.cos(a), y, r * np.sin(a)])
-        # Leave a couple of low clumps out, so gaps show the branches.
-        if i in (11, 13):
+        if i in skip:
             continue
-        rad = rng.uniform(0.5, 0.66) * (1.0 if y > -0.3 else 0.88)
-        clumps.append((heart + d * env * rng.uniform(0.86, 1.0), rad))
+        # Fewer clumps are bigger, so the crown stays full.
+        rad = rng.uniform(0.48, 0.7) * (1.0 if y > -0.3 else 0.88) * np.sqrt(15 / n) ** 0.7 * np.sqrt(WS)
+        clumps.append((heart + d * env * rng.uniform(0.84, 1.02), rad))
     # Two inner clumps hold the middle together.
-    clumps.append((heart + np.array([0.1, -0.05, 0.1]), 0.7))
-    clumps.append((heart + np.array([-0.15, 0.3, -0.1]), 0.65))
+    clumps.append((heart + np.array([0.1, -0.05, 0.1]), 0.7 * np.sqrt(WS)))
+    clumps.append((heart + np.array([-0.15, 0.3, -0.1]), 0.65 * np.sqrt(WS)))
 
     # Branches from the trunk up into the lower and outer clumps.
     for i, (c, rad) in enumerate(clumps[1:14:2]):
-        y0 = 1.8 + 0.2 * (i % 4)
+        y0 = (1.8 + 0.2 * (i % 4)) * HS
         p0 = trunk_at(y0)
         ctrl = p0 + np.array([0, (c[1] - p0[1]) * 0.6 + 0.2, 0])
         t = np.linspace(0, 1, 8)[:, None]
@@ -192,26 +224,51 @@ if TREE == "birch":
     apply_modifier(crown, "SMOOTH", factor=0.6, iterations=6)
     apply_modifier(crown, "DECIMATE", ratio=min(1.0, CROWN_TRIS / max(1, tri_count(crown))))
     crown_tris = tri_count(crown)
-    H_TOP, R_CROWN, AXIS = 4.4, 1.7, heart
+    H_TOP, R_CROWN, AXIS = 4.4 * HS, 1.7 * WS, heart
 else:
     # The trunk: short, warm brown, with a root flare.
-    TOP = 2.6
+    TOP = 2.6 * HS
     ys = np.linspace(0, TOP, 14)
-    path = np.stack([0.03 * (ys / TOP) ** 2, ys, np.zeros_like(ys)], -1)
+    path = np.stack([LEAN * LD[0] * (ys / 4.4 / HS) ** 2, ys, LEAN * LD[2] * (ys / 4.4 / HS) ** 2], -1)
     radii = 0.07 + 0.07 * (1 - ys / TOP) + 0.09 * np.exp(-ys / 0.14)
     wood_parts.append(tube(path, radii, 10))
 
-    # (hem y, apex y, radius, lobes)
-    tiers = [(0.82, 2.05, 1.16, 9), (1.5, 2.7, 0.98, 8), (2.18, 3.3, 0.79, 7), (2.84, 3.86, 0.6, 6), (3.42, 4.42, 0.4, 5)]
+    # (hem y, apex y, radius, lobes), spread from the lowest tier to the top one; the
+    # top tier is a short, chubby dome (see TIP below), not a cone.
+    NT = int(pick([5, 4, 6], 4, 6.99))
+    DROOP = pick([1.0, 1.45, 0.7], 0.65, 1.5)
+    ASYM = pick([0.5, 1.0, 1.4], 0.4, 1.5)
+    tiers = []
+    for i in range(NT):
+        f = i / (NT - 1)
+        hem = (0.82 + f * (3.5 - 0.82)) * HS
+        if i == NT - 1:
+            apex = hem + 0.86 * HS
+            R = 0.47 * WS
+        else:
+            apex = hem + (1.23 - 0.2 * f) * HS + 0.15 * (5 - NT) * HS
+            R = (1.16 - f * (1.16 - 0.52)) * WS
+        tiers.append((hem, apex, R, int(round(9 - 4 * f))))
     # Profile of one tier as (radius fraction, height fraction above the hem) from the
     # apex down the puffy top, round the rolled hem, and back in along the underside.
     prof = np.array([
         (0.0, 1.0), (0.12, 0.9), (0.3, 0.7), (0.5, 0.5), (0.68, 0.33), (0.83, 0.18), (0.94, 0.07),
         (1.0, -0.03), (0.97, -0.12), (0.87, -0.15), (0.68, -0.09), (0.44, 0.0), (0.2, 0.1), (0.0, 0.16),
     ])
+    # The top tier's profile: a blunt, rounded dome that ends in a soft tuft (D-313:
+    # cute), flat at the very top instead of a sharp point.
+    TIP = np.array([
+        (0.0, 1.0), (0.16, 0.985), (0.3, 0.94), (0.44, 0.86), (0.58, 0.73), (0.72, 0.53), (0.85, 0.3), (0.95, 0.1),
+        (1.0, -0.03), (0.97, -0.12), (0.87, -0.15), (0.68, -0.09), (0.44, 0.0), (0.2, 0.1), (0.0, 0.16),
+    ])
     verts, faces = [], []
     for ti, (hem, apex, R, lobes) in enumerate(tiers):
         h = apex - hem
+        top = ti == len(tiers) - 1
+        pr = TIP if top else prof
+        # Slight asymmetry: each tier a little off-centre and oval.
+        shift = rng.normal(size=2) * 0.035 * ASYM * R
+        ovl, ova = 0.06 * ASYM * rng.uniform(0.5, 1.0), rng.uniform(0, np.pi)
         segs = lobes * 6
         theta = np.linspace(0, 2 * np.pi, segs, endpoint=False) + rng.uniform(0, 2 * np.pi)
         u = theta * lobes / (2 * np.pi)
@@ -219,14 +276,15 @@ else:
         k = np.floor(u).astype(int) % lobes
         var = rng.uniform(-1, 1, lobes)[k]
         base = len(verts)
-        rows = len(prof)
-        for (rf, yf) in prof:
+        rows = len(pr)
+        tdroop = DROOP * (1 + 0.25 * rng.uniform(-1, 1))
+        for (rf, yf) in pr:
             w = rf ** 2
-            m = (1 - 0.2 * (1 - b) * w) * (1 + 0.07 * var * b * w)
-            droop = (0.13 + 0.04 * var) * h * b * rf ** 3
+            m = (1 - 0.2 * (1 - b) * w) * (1 + 0.07 * var * b * w) * (1 + ovl * np.cos(2 * (theta - ova)) * w)
+            droop = (0.13 + 0.04 * var) * h * b * rf ** 3 * tdroop * (0.6 if top else 1.0)
             for j in range(segs):
                 r = R * rf * m[j]
-                verts.append((r * np.cos(theta[j]), hem + yf * h - droop[j], r * np.sin(theta[j])))
+                verts.append((shift[0] * w + r * np.cos(theta[j]), hem + yf * h - droop[j], shift[1] * w + r * np.sin(theta[j])))
         for i in range(rows - 1):
             for j in range(segs):
                 jn = (j + 1) % segs
@@ -239,8 +297,10 @@ else:
                 else:
                     faces.append((a0, a1, b1, b0))
     verts = np.array(verts)
-    # A slight lean.
-    verts[:, 0] += 0.04 * (verts[:, 1] / 4.4) ** 2
+    # The lean, matching the trunk's.
+    lean = LEAN * (verts[:, 1] / 4.4 / HS) ** 2
+    verts[:, 0] += lean * LD[0]
+    verts[:, 2] += lean * LD[2]
     crown = make_object("Crown", verts, faces)
     bpy.context.view_layer.objects.active = crown
     crown.select_set(True)
@@ -250,7 +310,7 @@ else:
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode="OBJECT")
     crown_tris = tri_count(crown)
-    H_TOP, R_CROWN, AXIS = 4.42, 1.2, np.array([0.0, 0.0, 0.0])
+    H_TOP, R_CROWN, AXIS = 4.42 * HS, 1.2 * WS, np.array([0.0, 0.0, 0.0])
 
 # The wood as one object.
 wv, wf, off = [], [], 0
@@ -345,7 +405,7 @@ for name, kind, src in (("ao", "AO", None), ("normal", "NORMAL", None), ("pos", 
     img.pixels.foreach_get(px)
     maps[name] = px.reshape(SIZE, SIZE, 4)[::-1]      # row 0 = top (v = 1), as in a PNG
     print("baked", name)
-np.savez_compressed(os.path.join(out, f"{TREE}_bake.npz"), **maps)
+np.savez_compressed(os.path.join(out, f"{NAME}_bake.npz"), **maps)
 
 # Export only the tree, without its bake material.
 me.materials.clear()
@@ -355,7 +415,7 @@ bpy.ops.object.select_all(action="DESELECT")
 tree.select_set(True)
 bpy.context.view_layer.objects.active = tree
 bpy.ops.export_scene.gltf(
-    filepath=os.path.join(out, f"{TREE}.glb"),
+    filepath=os.path.join(out, f"{NAME}.glb"),
     use_selection=True,
     export_format="GLB",
     export_texcoords=True,
@@ -364,4 +424,4 @@ bpy.ops.export_scene.gltf(
     export_materials="NONE",
     export_yup=True,
 )
-print(f"exported {TREE}.glb: {len(me.vertices)} verts, {tri_count(tree)} tris (crown {crown_tris}, wood {wood_tris})")
+print(f"exported {NAME}.glb: {len(me.vertices)} verts, {tri_count(tree)} tris (crown {crown_tris}, wood {wood_tris})")
