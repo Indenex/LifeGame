@@ -11,11 +11,12 @@ namespace LifeGame;
 // assigned keybind"). Ten round slots along the bottom edge in the bag row's quiet
 // style (D-045), each with its key in the corner. A new kind of item takes the first
 // empty slot by itself; drag a slot onto another to swap them, or off the bar to clear
-// it. The key uses the item through the server (UseItem): eat, drink or wear. A tool's
-// key takes it in hand instead, and again puts it away (crafting-29, Justin: "for a tool
-// to be used, it needs to be on your bar and equipped"); the slot in hand wears a gold
-// ring. Tools fill slots by themselves like anything else now. A slot keeps its item
-// while you have none left, shown faded.
+// it. A slot's key takes its item in hand and again puts it away (crafting-29, Justin:
+// "for a tool to be used, it needs to be on your bar and equipped", then "every slot
+// equips"); the slot in hand wears a gold ring. A click in the world uses what you hold:
+// eat, drink, put on, or set a made thing down; with a tool or weapon it is the strike as
+// before, and E still chops or digs with the tool in hand. A slot keeps its item while
+// you have none left, shown faded.
 // The row dims when nothing changes and brightens when you gain or use something; a
 // newly gained item's name floats up above its slot.
 public partial class HotbarBar : Control
@@ -158,6 +159,13 @@ public partial class HotbarBar : Control
 
     public override void _UnhandledInput(InputEvent e)
     {
+        // A click in the world uses what you hold (Justin's pick (b): "every slot equips").
+        if (InputMap.HasAction("strike") && e.IsActionPressed("strike") && !e.IsEcho() && !Blocked() && HeldUse() is { } use)
+        {
+            use();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e is not InputEventKey { Pressed: true, Echo: false } || Blocked()) return;
         for (int i = 0; i < Slots; i++)
         {
@@ -168,9 +176,9 @@ public partial class HotbarBar : Control
         }
     }
 
-    // A tool's key takes it in hand, and again puts it away (crafting-29, Justin: "for a tool
-    // to be used, it needs to be on your bar and equipped"); an empty slot's key puts away
-    // what you hold. Anything else is used as before (eaten, drunk, worn, set down).
+    // A slot's key takes its item in hand, and again puts it away (crafting-29; Justin: "for a
+    // tool to be used, it needs to be on your bar and equipped", then "every slot equips").
+    // An empty slot's key puts away what you hold. A click then uses what you hold (HeldUse).
     public void UseSlot(int i)
     {
         if (Link.SlotItem(i) is not { } item)
@@ -179,8 +187,7 @@ public partial class HotbarBar : Control
             return;
         }
         views[i].Pop();
-        if (Items.UseOf(item) == UseAction.Tool) { Equip(i, item); return; }
-        UseItem(item);
+        Equip(i, item);
     }
 
     void Equip(int i, Item item)
@@ -189,10 +196,24 @@ public partial class HotbarBar : Control
         bool away = Link.Equipped == i;
         Link.Equip(i);
         string what = labels.TryGetValue(item, out var l) ? l : ItemName(item);
-        floatingName = away ? $"{what} put away" : $"{what} in hand";
+        floatingName = away ? $"{what} put away" : ClickVerb(item) is { } verb ? $"{what} in hand    Click to {verb}" : $"{what} in hand";
         nameAt = i;
-        nameTime = 1.6f;
+        nameTime = away ? 1.6f : 2.6f;
     }
+
+    // The item in hand, if any.
+    public Item? Held => Link.Equipped >= 0 ? Link.SlotItem(Link.Equipped) : null;
+
+    // What a click does with the item in hand, or null when a click is the strike as before
+    // (tools and weapons swing, and E still chops or digs with the tool in hand).
+    static string? ClickVerb(Item item) =>
+        Placeable(item) ? "set it down"
+        : Items.UseOf(item) switch { UseAction.Eat => "eat", UseAction.Drink => "drink", UseAction.Wear => "put it on", _ => null };
+
+    // True while a click would use the held item, so the strike leaves the click alone (Main).
+    public bool ClickUsesHeld => !Blocked() && Held is { } h && ClickVerb(h) != null;
+
+    Action? HeldUse() => Held is { } item && ClickVerb(item) != null ? () => UseItem(item) : null;
 
     // Uses one carried item: places it, or asks the server to eat, drink, wear or hold it.
     public void UseItem(Item item)
