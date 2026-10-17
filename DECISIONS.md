@@ -1300,3 +1300,7 @@ Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, 
 ## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
 **Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
 **Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."
