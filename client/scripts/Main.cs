@@ -427,6 +427,11 @@ public partial class Main : Node3D
         journal.Attach(conn, () => me.Position, terrain.HeightAt, hud.Note);
         // A maker's mark carries 16 bits of the maker's id; this finds their name (ceramics-15).
         ItemLook.MakerName = id => conn.Db.Player.Iter().FirstOrDefault(p => (p.PlayerId & 0xFFFFu) == id)?.Name;
+        // ui-53: a marked jar or trough under the Use prompt names its maker.
+        Use.MakerAt = at => conn.Db.Structure.Iter()
+            .Where(s => StructureMarks.Of(s.Id) != 0 && new Vector2(s.X - at.X, s.Z - at.Z).Length() < 0.75f)
+            .Select(s => Marks.MakerOf(Item.StorageJar, StructureMarks.Of(s.Id)))
+            .Where(m => m != 0).Select(m => ItemLook.MakerName?.Invoke(m)).FirstOrDefault(n => n != null);
         ClayLook.MarkLookup = id =>
         {
             var m = conn.Db.PlayerMark.Iter().FirstOrDefault(r => (r.PlayerId & 0xFFFFu) == id);

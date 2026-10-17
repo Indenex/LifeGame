@@ -92,6 +92,7 @@ public partial class UseKey : CanvasLayer
             hintLeft = 0f;
             var others = Use.Others(Player(), Facing(), offer);
             if (others.Count > 0) secondText = "also: " + others[0].Prompt;
+            else if (offer.Target is { } target && Use.MakerAt(target) is { } maker) secondText = $"made by {maker}";
         }
         else if (!Blocked())
         {
