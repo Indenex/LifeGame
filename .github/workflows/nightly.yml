@@ -1,0 +1,80 @@
+name: Nightly
+
+# Long checks that would slow every pull request. Today: ClayCheck (tools/ClayCheck), a fresh character from
+# nothing to a fired pot of water, about 13 minutes of real time because drying and firing take real time.
+# It runs once a day on the newest main, and not at all when main has not changed since the last green
+# nightly. The manual button always runs it. A red nightly is reported to the PM and the lanes that own the
+# check (Crafting, Ceramics); it never blocks a pull request or a merge.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+env:
+  SPACETIME_VERSION: 2.12.0
+
+jobs:
+  # Is there anything new to test? Scheduled runs only; the manual button always says yes.
+  check:
+    name: Has main changed
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.what.outputs.run }}
+    steps:
+      - id: what
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          last=$(gh api "repos/${{ github.repository }}/actions/workflows/nightly.yml/runs?status=success&branch=main&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
+          echo "last green nightly: ${last:-none}; main now: ${{ github.sha }}"
+          if [ "$last" = "${{ github.sha }}" ]; then echo "run=false" >> "$GITHUB_OUTPUT"; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+
+  module:
+    name: Build server module
+    needs: check
+    if: needs.check.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - name: Build module
+        working-directory: server
+        run: spacetimedb-cli build
+      - name: Generate client bindings
+        run: tools/gen-bindings.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: LifeGame-Server
+          path: server/spacetimedb/bin/Release/net8.0/wasi-wasm/AppBundle/StdbModule.wasm
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: module-bindings
+          path: client/module_bindings
+          retention-days: 1
+          if-no-files-found: error
+
+  clay:
+    name: Clay check (fresh character to a fired pot)
+    needs: module
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-stdb
+        with:
+          spacetime-version: ${{ env.SPACETIME_VERSION }}
+      - uses: ./.github/actions/start-server
+      - name: Clay check
+        run: cd tools/ClayCheck && dotnet run -c Release

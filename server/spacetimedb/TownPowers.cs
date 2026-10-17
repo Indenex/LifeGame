@@ -57,6 +57,17 @@ public static partial class Module
         return false;
     }
 
+    // claims-26: why a banned player is refused on a town's claim, with the time left; null when no live ban applies.
+    static string? BanRefusal(ReducerContext ctx, Claim claim, Identity who)
+    {
+        if (!BannedFromClaim(ctx, claim, who) || ctx.Db.TownSigner.ClaimId.Find(claim.Id) is not { } there) return null;
+        long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
+        var ban = ctx.Db.TownBan.Banned.Filter(who).First(b => b.TownId == there.TownId && b.Until.MicrosecondsSinceUnixEpoch > now);
+        long minutes = Math.Max(1, (ban.Until.MicrosecondsSinceUnixEpoch - now) / 60_000_000);
+        string left = minutes < 60 ? $"{minutes} min" : $"{(minutes + 30) / 60} h";
+        return $"You are kept off {ctx.Db.Town.Id.Find(there.TownId)?.Name ?? "the town"}'s claims for about {left} more";
+    }
+
     static void ExpireBans(ReducerContext ctx)
     {
         long now = ctx.Timestamp.MicrosecondsSinceUnixEpoch;
@@ -68,6 +79,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void BanFromTown(ReducerContext ctx, uint playerId, int days)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can ban someone");
         if (days <= 0) days = Towns.BanDaysDefault;
@@ -88,6 +100,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void LiftTownBan(ReducerContext ctx, uint playerId)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Ban)) throw new Exception("Only the town's Marshal can lift a ban");
         var ban = ctx.Db.TownBan.ByTown.Filter(mine.TownId).FirstOrDefault(b => b.BannedId == playerId);
@@ -101,6 +114,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void WriteTownLog(ReducerContext ctx, string text)
     {
+        MeterCall(ctx);
         var mine = SignerOf(ctx, Me(ctx)) ?? throw new Exception("You are not on a town roster");
         if (!HasTownPower(ctx, mine.TownId, Me(ctx), TownPower.Log)) throw new Exception("Only the town's Scribe can write in its log");
         text = Social.StripControl(text).Trim();

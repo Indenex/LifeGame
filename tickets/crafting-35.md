@@ -1,7 +1,7 @@
 # crafting-35: D-182 audit of the crafting reducers
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-audit
 PR: (see below)
 

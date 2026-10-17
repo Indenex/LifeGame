@@ -11,11 +11,12 @@ public partial class Card : Button
 {
     const float Pad = 8f;
     public readonly VBoxContainer Column = new() { MouseFilter = MouseFilterEnum.Ignore };
-    readonly float width;
+    readonly float width, minHeight;
 
     public Card(float width, float minHeight = 0f)
     {
         this.width = width;
+        this.minHeight = minHeight;
         FocusMode = FocusModeEnum.None;
         ClipContents = true;
         CustomMinimumSize = new Vector2(width, minHeight);
@@ -31,15 +32,17 @@ public partial class Card : Button
         Column.OffsetLeft = Column.OffsetTop = Pad;
         Column.OffsetRight = Column.OffsetBottom = -Pad;
         Column.AddThemeConstantOverride("separation", 4);
-        Column.MinimumSizeChanged += UpdateMinimumSize;
+        Column.MinimumSizeChanged += Measure;
         AddChild(Column);
     }
 
-    // As tall as the content needs; never narrower than asked.
-    public override Vector2 _GetMinimumSize()
+    // As tall as the content needs; never narrower or shorter than asked. A Button's minimum size
+    // comes from its own text and icon (Godot never asks a Button script for _GetMinimumSize), so
+    // the measured size goes into CustomMinimumSize, which every Control honours (ui-62).
+    void Measure()
     {
         var inside = Column.GetCombinedMinimumSize();
-        return new Vector2(Mathf.Max(width, inside.X + 2 * Pad), inside.Y + 2 * Pad);
+        CustomMinimumSize = new Vector2(Mathf.Max(width, inside.X + 2 * Pad), Mathf.Max(minHeight, inside.Y + 2 * Pad));
     }
 
     // The width content may use inside the card.

@@ -132,6 +132,7 @@ jobs:
           (cd tools/LoadTest && dotnet run -c Release -- 5 5)
           (cd tools/SpawnCheck && dotnet run -c Release)
           (cd tools/SurvivalCheck && timeout 300 dotnet run -c Release)
+          (cd tools/AnimalCheck && timeout 240 dotnet run -c Release)
           (cd tools/CharacterCheck && timeout 300 dotnet run -c Release)
       - name: Check chat, claim and PvP rules with two players
         run: |
@@ -161,6 +162,9 @@ jobs:
           # Until its BuildTest part is on main this job finds nothing to run and passes at once.
           - part: wooden chest
             parts: chest
+          # The straw bed (about 105 s) has its own entry too; like the chest it passes at once until its part exists.
+          - part: straw bed
+            parts: bed
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb

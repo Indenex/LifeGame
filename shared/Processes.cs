@@ -224,6 +224,13 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stick), new Ingredient(Item.Flake), new Ingredient(Item.Cordage) },
                 Seconds = Base(2, 1f), Makes = Item.StoneKnife,
             },
+            // A rabbit snare (animals-34): a cord noose on two sticks. Hand craft; set it near a warren.
+            new ProcessDef
+            {
+                Id = "cord.snare", Name = "Tie a rabbit snare", Doing = "Tying a noose of cordage", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Cordage), new Ingredient(Item.Stick, 2) },
+                Seconds = Base(2, 1f), Makes = Item.RabbitSnare, Motion = WorkMotion.Twist,
+            },
             new ProcessDef
             {
                 Id = "weave.basket", Name = "Weave a basket", Doing = "Weaving a basket", Tier = 2,

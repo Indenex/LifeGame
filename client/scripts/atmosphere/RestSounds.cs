@@ -1,4 +1,5 @@
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -7,6 +8,7 @@ namespace LifeGame;
 // everyone nearby. Reads the public player_rest table (a row exists only while a player rests;
 // Animation, anim-12). Only changes made by a reducer sound, so a player already resting when you
 // arrive stays silent.
+[AudioSounds]
 static class RestSounds
 {
     const float Hearing = 14f;   // metres
@@ -28,8 +30,17 @@ static class RestSounds
     static void Settle(DbConnection c, EventContext ctx, PlayerRest r)
     {
         if (Where(c, ctx, r.PlayerId) is not { } at) return;
-        var def = r.Kind == Lie ? (r.SpotId != 0 ? CueDefs.RestLieMat : CueDefs.RestLie) : CueDefs.RestSit;
+        var def = r.Kind == Lie ? LieCue(c, r.SpotId) : CueDefs.RestSit;
         Sfx.PlayAnimal(def, at, Hearing);
+    }
+
+    // On the ground, a laid mat (reeds) or a built straw bed: SpotId is the structure it is on.
+    static CueDef LieCue(DbConnection c, ulong spotId)
+    {
+        if (spotId == 0) return CueDefs.RestLie;
+        return c.Db.Structure.Id.Find(spotId) is { } s && Structures.Shape((int)s.Kind).Model == "Bed"
+            ? CueDefs.RestLieBed
+            : CueDefs.RestLieMat;
     }
 
     // Where the player is, if this change was made by a reducer (not a row arriving with a chunk).

@@ -1,7 +1,7 @@
 # crafting-8: Batch items lying on the ground
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-batch-items
 PR: #62
 
@@ -20,4 +20,4 @@ Items on the ground (sticks, stones, fiber, dropped tools) draw as one MultiMesh
 - (none)
 
 ## Next step
-Wait for CI on the PR, then the PM merges.
+None. Merged to main; kept for history.

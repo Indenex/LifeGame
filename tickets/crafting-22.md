@@ -1,7 +1,7 @@
 # crafting-22: Fire-lit sound and (later) night fire reach
 Lane: Crafting
 Owner: Crafting thread (Sonnet, D-159)
-Status: in_review
+Status: done
 Branch: crafting-fire-sfx (merged as #269); crafting-fire-night (night reach)
 PR: (to open)
 
@@ -15,4 +15,4 @@ Two small client hooks other lanes asked for. (1) Audio (audio-3): a fire lit wi
 - (2) needs Atmosphere's PR #245 on main first, or it won't compile.
 
 ## Next step
-Open the PR for (1); when #245 is on main, add the OmniRange line from a fresh branch off main.
+None. Merged to main; kept for history.
