@@ -65,7 +65,7 @@ public static partial class Module
         if (!s.Complete || !Devices.IsDevice(station)) throw new Exception("That isn't a working device");
         if (Dist(s.X, s.Z, pos.X, pos.Z) - StationRadius(s) > Structures.WorkReach)
             throw new Exception("Too far away");
-        if (ClaimAt(ctx, s.X, s.Z) is not { } claim || !HasClaimRights(ctx, claim, ctx.Sender))
+        if (ClaimAt(ctx, s.X, s.Z) is not { } claim || !HasClaimRights(ctx, claim, Me(ctx)))
             throw new Exception($"A {StationInfo.Name(station)} works only inside a claim you have rights to");
         return s;
     }
@@ -98,7 +98,7 @@ public static partial class Module
         if (def.NeedsTool.HasFlag(ItemTags.Hammer))
         {
             uint hammers = 0;
-            foreach (var row in ctx.Db.InventoryItem.Owner.Filter(ctx.Sender))
+            foreach (var row in ctx.Db.InventoryItem.Owner.Filter(Me(ctx)))
                 if (Items.IsKnown(row.Item) && Items.Def((Item)row.Item).Tags.HasFlag(ItemTags.Hammer)) hammers += row.Count;
             foreach (var input in def.Consumes)
                 if (Items.Def(input.Item).Tags.HasFlag(ItemTags.Hammer)) hammers -= Math.Min(hammers, input.Count * units);
@@ -119,7 +119,7 @@ public static partial class Module
         var job = new DeviceJob
         {
             StructureId = structureId,
-            Owner = ctx.Sender,
+            Owner = Me(ctx),
             PlayerId = player.PlayerId,
             ProcessId = def.Id,
             Remaining = units,
@@ -176,7 +176,7 @@ public static partial class Module
     [SpacetimeDB.Reducer]
     public static void FinishDeviceRound(ReducerContext ctx, DeviceTimer timer)
     {
-        if (ctx.Sender != ctx.DatabaseIdentity) throw new Exception("Only the server finishes a round");
+        RequireServer(ctx);
         if (ctx.Db.DeviceJob.StructureId.Find(timer.StructureId) is not { } job || job.Token != timer.Token) return;
         var def = Processes.Find(job.ProcessId);
         if (def is null) { ctx.Db.DeviceJob.StructureId.Delete(job.StructureId); return; }
@@ -226,7 +226,7 @@ public static partial class Module
         if (rows.Count == 0) throw new Exception("There is nothing to collect yet");
         foreach (var row in rows)
         {
-            AddToInventory(ctx, ctx.Sender, (Item)row.Item, row.Count, row.Quality);
+            AddToInventory(ctx, Me(ctx), (Item)row.Item, row.Count, row.Quality);
             ctx.Db.DeviceOutput.Id.Delete(row.Id);
         }
     }
