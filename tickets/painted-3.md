@@ -3,7 +3,7 @@ Lane: Modeling
 Owner: Modeling session (session_01JKX3FNjkrEkAqoTaFJiXAm)
 Status: in_review
 Branch: claude/painted-3-props (stacked on painted-1, claude/painted-1-rocks)
-PR: (opening)
+PR: #559
 
 ## Goal
 Part of the painted rollout (painted-1 rocks, -2 bushes, -3 logs and old trees, -4 animals, -5 structures, -6 items). Everything still drawn with Look's tree bark and foliage goes onto the shared painted shader. That covers fallen logs, birches and their canopies, and the landmark trees that PaintedTrees doesn't replace. Justin sees the same flat strokes and stepped light on these as on the painted pines, broadleaves and rocks.
