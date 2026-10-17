@@ -19,10 +19,11 @@ A joint job with Modeling from Justin, on the pines: "I still want more of the p
   - 4, new, soft bands only: 4 steps, 70%, no dab pass, so the cheapest.
   The bands work on compressed brightness, keep hue, and never crush shade to black. `--painterly-bands=N` overrides the step count. The client builds with 0 errors.
 - 2026-10-17 09:35: PM caution: D-319 says smooth with no grain (dab textures risk speckle), and painted props already light in steps (Painted.Light), so a screen-wide band pass would double-band them. I reworked it: the screen bands are gone. The light steps now live in Look.cs's ground and grass light() behind the global `ground_bands` (0 smooth to 1 the same shade/mid/lit steps as Painted.Light), so every surface is stepped exactly once, with no post pass and no texture. `--painterly=3` sets full steps and `--painterly=4` half. Levels 1 and 2 (paint dabs) are kept only for comparison and will likely be dropped under D-319.
+- 2026-10-17 14:36: session wrap-up (account switch). Head ef483f6c, behind a flag, no PR (a D-154 look choice). Note: main has since gained atmosphere-40 (#767), which changed the same two Look.cs light() blocks (the low-sun wrap). Merge main before anything else and keep both: the low-sun wrap first, then `ground_bands` applied to the wrapped `lit` value.
 
 ## Open questions / blockers
-- Waiting on Render: comparison shots and the GPU cost.
-- Waiting on Modeling: their stepped-ramp material, so I can check it under sun, moon, fog and rays.
+- WAITING ON JUSTIN, via the PM (D-154): painterly lighting options. A (recommended): soft light steps on ground and grass, full, matching the painted props' shade/mid/lit steps (`--painterly=3`). B: the same at half strength (`--painterly=4`). C: none, smooth ground light as today. The paint-dab options (`--painterly=1/2`) are likely dropped under D-319 (smooth, no grain).
+- Waiting on Render B: off / 3 / 4 / 1 stills at noon, dusk and night in one view (requested 09:40 on ef483f6c).
 
 ## Next step
-Render B: noon, dusk and night stills of off / 3 / 4 (and 1, only to show it reads as grain) at the same view with the chibi and a painted prop; then send the PM the options for Justin.
+Merge main into claude/atmosphere-29-painterly (resolve the Look.cs light() blocks as noted in the log, build), then wait for Justin's pick; on A or B, make it the default and open a PR, on C delete Painterly.cs and the ground_bands global.
