@@ -23,7 +23,7 @@ More of Justin's "other activities should have similar animations" (anim-4, #382
   - Server, client and tools build.
 
 ## Open questions / blockers
-- Claims' SocialLayer still squash-tweens a struck player's scale. The flinch pose now covers it; ask Claims whether to drop the tween.
+- Claims agreed (02:03) to drop SocialLayer's squash tween on a struck player; removed in this PR (SocialLayer.Fighting.cs, with Claims' OK).
 
 ## Next step
 Open the PR, get CI green and send the sha to the PM; ask Render for clips (strike styles, bow, dig, shear, butcher, feed, flinch).
