@@ -3,7 +3,7 @@
 # (no swimming water within 300 m of spawn). 12 fps movie; s = walk (+x,+z), w = walk (-x,-z).
 client-as-puppet
 client-movie 12
-client --time-of-day=0.45 --cloud=0.2 --rain=0 --wind=0.1 --debug-position=29,75 --render-cam=4.5,1.2,35,0.4
+client --time-of-day=0.45 --cloud=0.2 --rain=0 --wind=0.1 --debug-position=29,75 --render-cam=3.2,0.8,35,0.3
 sql UPDATE player_pos SET x = 29.0, z = 75.0, chunk_x = 1, chunk_z = 4
 frames 360
 key Return
@@ -12,13 +12,16 @@ mark wade-start
 keydown s
 frames +60
 keyup s
+frames +12
+keydown a
 frames +48
-keydown s
-frames +24
-keyup s
+keyup a
+keydown d
 frames +48
+keyup d
+frames +36
 keydown w
-frames +96
+frames +120
 keyup w
-frames +24
+frames +36
 mark wade-end
