@@ -13,9 +13,11 @@ Forage is now data (D-206): `shared/Forages.cs` has one `ForageDef` per kind (yi
 ## Progress log
 - 2026-10-17 15:45: built. Server: `Forage` reads the Def; `EnsureSurvivalWorld` seeds mushroom patches once (also into an existing world): one try-up-to-12 per chunk for dry ground with a standing tree within 3 m and none on the spot. Offline simulation over shared/: 59 patches in 64 chunks (119 berry bushes). Client: `MushroomPatch.cs` (stand-in look: 4 to 7 pale-stemmed brown caps, two buttons that stay when picked), `SurvivalItemLook` stand-in cap for the item. SurvivalCheck: berry/hazel count filters by Kind, every patch is beside and not on a tree, and a mushroom feeds 0.07. ClayCheck and FirstEvening count only berry bushes. Server compiles; ctx-sender gate ok.
 
+- 2026-10-17 15:25: Modeling's painted mushrooms are on #836 (model-34: `Mushrooms.Patch(v)`, `Mushrooms.Picked(v)`, `ItemModels.MushroomItem`). The wiring commit is ready as /mnt/project-files/survival/survival-35/0001-survival-35-draw-mushrooms-with-Modeling-s-painted-p.patch: MushroomPatch draws the two meshes (Ripe picks which), SurvivalClient.Setup sets `ItemModels.MushroomItem = Item.Mushrooms`, the stand-in cap leaves SurvivalItemLook. It won't compile until #836 is on main.
+
 ## Open questions / blockers
-- Modeling: a proper mushroom item and patch model (asked via the PM).
+- Waiting on #836 to merge before the model wiring can be pushed.
 - Justin: whether mushrooms are the next wild food at all (PM question, option 1 of 3).
 
 ## Next step
-Wait for CI on the mushrooms PR; send the green sha to the PM after #832 merges.
+When #836 merges: merge main into claude/survival-mushrooms, `git am` the patch above, push, wait for CI and send the green sha to the PM (after #832 merges).
