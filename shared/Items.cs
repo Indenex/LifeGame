@@ -88,6 +88,9 @@ namespace LifeGame.Shared
         CookedChicken = 209,
         BurntChicken = 210,
         Feather = 211,
+        // A boiled egg, roasted on a fire like meat (crafting-24); eggs left on too long burn.
+        BoiledEgg = 212,
+        BurntEgg = 213,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -221,6 +224,8 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.Egg, Name = "Egg", Plural = "Eggs", HasQuality = true },
             new ItemDef { Id = Item.RawChicken, Name = "Raw chicken", Plural = "Raw chicken", HasQuality = true },
             new ItemDef { Id = Item.Feather, Name = "Feather", Plural = "Feathers", HasQuality = true },
+            new ItemDef { Id = Item.BoiledEgg, Name = "Boiled egg", Plural = "Boiled eggs", HasQuality = true },
+            new ItemDef { Id = Item.BurntEgg, Name = "Burnt egg", Plural = "Burnt eggs", HasQuality = true },
             new ItemDef { Id = Item.CookedChicken, Name = "Roast chicken", Plural = "Roast chicken", HasQuality = true },
             new ItemDef { Id = Item.BurntChicken, Name = "Burnt chicken", Plural = "Burnt chicken" });
 
