@@ -168,6 +168,16 @@ if (Wants("stone-hearth"))
         new() { [Item.Stone] = 5, [Item.Stick] = 2, [Item.Fiber] = 2 },
         new() { [Item.Stone] = 3 }));
 
+// Not in "both": a chest takes six logs, which means axes and chopping (minutes). Opens like the basket.
+if (Wants("chest"))
+{
+    StoreInBasket(BuildTogether(StructureKind.Chest,
+        new() { [Item.Stone] = 2, [Item.Stick] = 4, [Item.Fiber] = 6 },
+        new() { [Item.Stone] = 2, [Item.Stick] = 3, [Item.Fiber] = 6 },
+        prepareA: () => { ChopLogs(a, 3); a.Craft("cord.twist", Pump); },
+        prepareB: () => { ChopLogs(b, 3); b.Craft("cord.twist", Pump); }));
+}
+
 // Not in "both": sun-dried bricks take minutes to dry, so this runs on its own (brick-house).
 if (Wants("brick-house"))
 {

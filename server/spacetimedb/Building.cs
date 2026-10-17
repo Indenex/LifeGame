@@ -28,6 +28,8 @@ public enum StructureKind
     HenCoop,
     StoneHearth,
     Sundial,
+    // House building: a wooden chest. Provisional position 21; Crafting's devices take 21 to 23, so renumber at merge (D-323).
+    Chest,
 }
 
 // One material a structure's current stage still needs.
