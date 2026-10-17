@@ -24,6 +24,13 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
 3. Screen reflections took anything within 2 x step + 0.4 m behind the ray as a hit, so
    the bank's grass smeared across the water. Fixed: tighter hit test (1.2 x step + 0.15).
 4. Splash droplets were unshaded near-white: they glowed at night. Fixed: lit material.
+5. The milky white water (Render's env35-pond-47bafb1-*.png, and likely Justin's "buggy"):
+   WaterRipples' two buffers are never drawn before the first step reads them, so they
+   hold black, which reads as the surface pushed 0.5 down everywhere in the 32 m square
+   round the player. The shader painted it as crest foam until the waves damped out
+   (seconds at 60 fps; much longer at a low frame rate, as in the software renders).
+   Fixed: the first two steps write a calm surface. Crest foam also needs a higher
+   crest now (5 to 9 cm, was 3.5 to 7).
 
 ## Look changes
 - Flat painted bands by vertical depth: pale aqua shelf, teal middle (streams), soft
@@ -39,6 +46,9 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
   trough still reads as deep water.
 
 ## Progress log
+- 2026-10-17 15:50: PM: dragonflies nearly invisible in Render's pond shots. Bigger (0.45),
+  stronger jewel bodies with a faint glow, a glint flashing on the wings, lower (0.15 to
+  0.6 m), over open water only (bed 0.18 m down). Rides this PR as an env-35 follow-up.
 - 2026-10-17 15:40: built the pass locally (not compiled here: the network policy blocks
   the Godot and .NET downloads); before/after renders requested through the PM.
 

@@ -23,8 +23,12 @@ public partial class AmbientLife
     readonly Dragonfly[] darters = new Dragonfly[MaxDragonflies];
     MultiMeshInstance3D dragonflies = null!;
 
-    // Soft jewel bodies (D-313): teal, sky blue, a warm amber one now and then.
-    static readonly Color[] DragonflyBodies = { new(0.22f, 0.62f, 0.6f), new(0.34f, 0.55f, 0.86f), new(0.82f, 0.56f, 0.28f) };
+    // Jewel bodies (D-313): teal, sky blue, a warm amber one now and then. Stronger since
+    // the first renders, where they were lost against the water at gameplay distance.
+    static readonly Color[] DragonflyBodies = { new(0.08f, 0.72f, 0.66f), new(0.18f, 0.48f, 0.98f), new(0.98f, 0.55f, 0.14f) };
+
+    // Their size: a little larger than life so they read from the follow camera.
+    const float DragonflySize = 0.45f;
 
     void ReadyDragonflies()
     {
@@ -47,8 +51,8 @@ public partial class AmbientLife
         AddChild(dragonflies);
     }
 
-    // Open water: a cell whose ground lies below the water's surface.
-    static bool Water(int x, int z) => World.BaseHeight(x, z) < World.WaterLevel - 0.1f;
+    // Open water: a cell whose bed lies well below the surface, off the reedy shelf.
+    static bool Water(int x, int z) => World.BaseHeight(x, z) < World.WaterLevel - 0.18f;
 
     void UpdateDragonflies(float dt, Vector3 focus, int wanted)
     {
@@ -65,7 +69,7 @@ public partial class AmbientLife
                 int x = World.CellOf(focus.X + Mathf.Cos(angle) * dist), z = World.CellOf(focus.Z + Mathf.Sin(angle) * dist);
                 if (!Water(x, z)) continue;
                 var home = new Vector3(x + 0.5f, World.WaterLevel, z + 0.5f);
-                d = new Dragonfly { Home = home, Position = home + Vector3.Up * 0.6f, Target = home + Vector3.Up * 0.6f, Hover = Rand(0.3f, 1.5f), Phase = Rand(0f, 100f), Alive = true };
+                d = new Dragonfly { Home = home, Position = home + Vector3.Up * 0.35f, Target = home + Vector3.Up * 0.35f, Hover = Rand(0.3f, 1.5f), Phase = Rand(0f, 100f), Alive = true };
                 multi.SetInstanceColor(i, DragonflyBodies[random.Next(DragonflyBodies.Length)]);
             }
             d.Shown = forced && d.Alive ? 1f : Mathf.MoveToward(d.Shown, d.Alive && keep ? 1f : 0f, dt * 0.8f);
@@ -76,7 +80,7 @@ public partial class AmbientLife
                 continue;
             }
             Dart(ref d, dt);
-            var basis = new Basis(Vector3.Up, d.Heading) * Basis.FromScale(Vector3.One * 0.3f * d.Shown);
+            var basis = new Basis(Vector3.Up, d.Heading) * Basis.FromScale(Vector3.One * DragonflySize * d.Shown);
             multi.SetInstanceTransform(i, new Transform3D(basis, d.Position));
             multi.SetInstanceCustomData(i, new Color(d.Phase, 0f, 0f, 0f));
             visible = i + 1;
@@ -105,7 +109,7 @@ public partial class AmbientLife
             float angle = Rand(0f, Mathf.Tau), dist = Rand(0.8f, 3.5f);
             float x = d.Home.X + Mathf.Cos(angle) * dist, z = d.Home.Z + Mathf.Sin(angle) * dist;
             if (!Water(World.CellOf(x), World.CellOf(z))) continue;
-            d.Target = new Vector3(x, World.WaterLevel + Rand(0.25f, 1.1f), z);
+            d.Target = new Vector3(x, World.WaterLevel + Rand(0.15f, 0.6f), z);
             DragonflyDart?.Invoke(d.Position);
             break;
         }
@@ -140,20 +144,26 @@ public partial class AmbientLife
         return mesh;
     }
 
-    // Wings shimmer with a fast small beat and catch the light pale and see-through; the
-    // body takes the instance's soft jewel colour.
+    // Wings shimmer with a fast small beat, pale and see-through, and flash a bright glint
+    // as each beat turns them to the light; the body takes the instance's jewel colour
+    // with a faint glow so it reads against the water.
     const string DragonflyShader = """
         shader_type spatial;
         render_mode cull_disabled, diffuse_lambert_wrap, specular_disabled, depth_draw_opaque;
 
         varying float wing;
+        varying float glint;
         varying vec3 body_tint;
 
         void vertex() {
             wing = UV.x;
             body_tint = COLOR.rgb;
+            glint = 0.0;
             if (wing > 0.5) {
-                float beat = sin((TIME + INSTANCE_CUSTOM.x) * 38.0 + VERTEX.z * 4.0) * 0.32;
+                float phase = (TIME + INSTANCE_CUSTOM.x) * 38.0 + VERTEX.z * 4.0;
+                float beat = sin(phase) * 0.32;
+                // A short flash near the top of each slow sweep of the beat.
+                glint = pow(max(sin(phase * 0.125 + INSTANCE_CUSTOM.x * 3.0), 0.0), 12.0);
                 float s = sign(VERTEX.x), r = abs(VERTEX.x);
                 VERTEX = vec3(s * r * cos(beat), VERTEX.y + r * sin(beat), VERTEX.z);
             }
@@ -161,10 +171,12 @@ public partial class AmbientLife
 
         void fragment() {
             if (wing > 0.5) {
-                ALBEDO = vec3(0.86, 0.93, 1.0);
-                ALPHA = 0.42;
+                ALBEDO = vec3(0.88, 0.95, 1.0);
+                ALPHA = 0.5 + 0.4 * glint;
+                EMISSION = vec3(0.9, 0.95, 1.0) * glint * 0.8;
             } else {
                 ALBEDO = body_tint;
+                EMISSION = body_tint * 0.18;
             }
             ROUGHNESS = 0.6;
             BACKLIGHT = ALBEDO * 0.4;

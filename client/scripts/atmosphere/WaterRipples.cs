@@ -27,7 +27,7 @@ public partial class WaterRipples : Node
     const int LandRes = 96;
 
     static readonly StringName NPrev = "prev", NShift = "shift", NImpulses = "impulses", NCount = "count",
-        NOrigin = "origin", NLand = "land", NLandRect = "land_rect";
+        NOrigin = "origin", NLand = "land", NLandRect = "land_rect", NCalm = "calm";
 
     readonly SubViewport[] buffers = new SubViewport[2];
     readonly ShaderMaterial[] steps = new ShaderMaterial[2];
@@ -37,6 +37,11 @@ public partial class WaterRipples : Node
     readonly Image land = Image.CreateEmpty(LandRes, LandRes, false, Image.Format.R8);
     readonly RandomNumberGenerator rng = new();
     int current;
+    // Steps left that write a calm surface instead of reading the last one: until each
+    // buffer has been drawn once it holds nothing (black), which read as the water pushed
+    // half a metre down everywhere, and the shader painted it all as crest foam: the milky
+    // white water in renders and on starting the game (env-38).
+    int calmSteps = 2;
     float clock;
     Vector2 origin, landOrigin = new(float.MaxValue, 0f);
     bool started;
@@ -107,6 +112,8 @@ public partial class WaterRipples : Node
         for (int i = 0; i < MaxImpulses; i++) impulseArray[i] = i < impulses.Count ? impulses[i] : Vector4.Zero;
         step.SetShaderParameter(NImpulses, impulseArray);
         step.SetShaderParameter(NCount, impulses.Count);
+        step.SetShaderParameter(NCalm, calmSteps > 0);
+        if (calmSteps > 0) calmSteps--;
         impulses.Clear();
         buffers[next].RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
         current = next;
@@ -147,6 +154,7 @@ public partial class WaterRipples : Node
             uniform float texel;
             uniform vec4 impulses[16];
             uniform int count;
+            uniform bool calm;
 
             // Heights are stored plus a half, so the surface at rest reads 0.5.
             float height(vec2 uv) {
@@ -173,6 +181,8 @@ public partial class WaterRipples : Node
                 if (texture(land, luv).r > 0.5) next = 0.0;
                 next = clamp(next, -0.49, 0.49);
                 COLOR = vec4(next + 0.5, now + 0.5, 0.0, 1.0);
+                // Until both buffers hold a surface, start from calm water.
+                if (calm) COLOR = vec4(0.5, 0.5, 0.0, 1.0);
             }
             """,
     };

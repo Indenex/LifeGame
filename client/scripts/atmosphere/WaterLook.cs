@@ -336,7 +336,7 @@ public static class WaterLook
             // It stays on the bank's slope, shallower than any stream or pond bed.
             float lap_at = 0.07 + 0.08 * lap;
             foam = max(foam, (1.0 - smoothstep(0.0, 0.012, abs(depth - lap_at))) * (1.0 - lap) * 0.7 * shore_lap);
-            foam = max(foam, smoothstep(0.035, 0.07, abs(sim(p))) * 0.6);
+            foam = max(foam, smoothstep(0.05, 0.09, abs(sim(p))) * 0.5);
             // Pale streaks of foam slide down a running stream.
             float fl = length(f);
             if (fl > 0.02) {
