@@ -124,8 +124,8 @@ public static class Painted
     }
 
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: null));
-    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_draw_always;"));
-    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;"));
+    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_prepass_alpha;"));
+    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;", structure: true));
     static Shader? shader, ghostShader, structureGhostShader;
 
     static NoiseTexture2D Dabs => dabs ??= new NoiseTexture2D
@@ -146,37 +146,63 @@ public static class Painted
     }
 
     // ghost: the render mode of a see-through variant, or null for the solid.
-    static string Code(string? ghost)
+    // structure: a building's ghost, which keeps Look's structure fade rules (env-25).
+    static string Code(string? ghost, bool structure = false)
     {
         string code = Look.PaintedCode;
-        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
+        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : "") + (structure ? "\n#define STRUCTURE_GHOST" : ""));
         if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
-        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
-        code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", """
+        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + RimUniform);
+        code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", $$"""
             dab = dab_at(world_pos);
-                // Flat strokes: the brush only nudges the colour, and the faces that look up
-                // catch a few lighter dabs, as a painter lights from above.
-                float lift = smoothstep(0.56, 0.6, dab) * smoothstep(0.3, 0.7, world_normal.y);
-                vec3 color = mix(tint, base_paint * dot(tint, vec3(0.3, 0.59, 0.11)) / 0.45, base_mix) * (1.0 + paint * 0.6) * (1.0 + lit_dabs * lift);
+                // Clean colour (D-319): the brush only drifts the colour in broad, soft
+                // patches, the faces that look up are a touch lighter in a wide wash, and the
+                // whole shape shades softly from its top to its underside.
+                float lift = smoothstep(0.35, 0.8, dab) * smoothstep(0.2, 0.9, world_normal.y);
+                vec3 color = mix(tint, base_paint * dot(tint, vec3(0.3, 0.59, 0.11)) / 0.45, base_mix) * (1.0 + paint * {{F(Smooth.Paint)}}) * (1.0 + lit_dabs * {{F(Smooth.LitDabs)}} * lift);
+                color *= mix(1.0 - {{F(Smooth.TopGradient)}}, 1.0 + {{F(Smooth.TopGradient)}}, smoothstep(-0.6, 0.9, world_normal.y));
             """);
-        code = Splice(code, "color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));", """
-            // Crevices in one darker tone, their edge broken by the brush.
-                color *= mix(1.0 - cavity * 1.4, 1.0 + cavity * 0.2, smoothstep(crevice - 0.03, crevice + 0.03, h + (dab - 0.5) * 0.12));
+        code = Splice(code, "color *= mix(1.0 - cavity, 1.0 + cavity * 0.35, smoothstep(0.15, 0.75, h));", $$"""
+            // Only the deepest hollows darken, gently and broadly: no speckle.
+                color *= mix(1.0 - cavity * {{F(Smooth.Crevice)}}, 1.0, smoothstep(crevice - 0.25, crevice + 0.25, h));
             """);
-        code = Splice(code, "ALBEDO = clamp(color, 0.0, 1.0);", """
-            // A soft dark line round each shape, like the ink round the card art.
+        code = Splice(code, "ALBEDO = clamp(color, 0.0, 1.0);", $$"""
+            // A soft, faint darkening round each shape, like a light ink line.
                 float rim = 1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0);
-                color *= mix(1.0, 0.62, ink * smoothstep(0.66, 0.9, rim));
+                color *= mix(1.0, 0.7, ink * {{F(Smooth.Ink)}} * smoothstep(0.6, 0.95, rim));
                 ALBEDO = clamp(color, 0.0, 1.0);
             """);
-        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
+        // No fine relief: the small bumps bent into the normals and the noise in the AO are
+        // what read as pitting.
+        code = Splice(code, "NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);", $"NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035 * {F(Smooth.Relief)});");
+        code = Splice(code, "AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);", $"AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6 * {F(Smooth.Relief)});");
+        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n" + Rim + "\n#else\n");
         code = code.TrimEnd();
         if (!code.EndsWith("}")) throw new System.InvalidOperationException("Painted: Look's shader no longer ends with light()");
         return code[..^1] + "#endif\n}\n";
     }
 
     // The painted uniforms and dab_at(); spliced after Look's varyings. Environment's ground uses it too.
-    internal const string Declarations = """
+    // D-319, Justin: "the weird pitted look is not cutesy". Every painted family (rocks,
+    // bushes, logs, animals, structures, items) is smooth and clean: broad soft colour
+    // drift instead of small dabs, no fine relief or crevice speckle, softer light bands,
+    // a faint ink edge. These are the one set to tune; 0 relief means no bump at all.
+    internal static class Smooth
+    {
+        public const float Relief = 0f;       // fine bump and AO noise kept (was 1)
+        public const float Paint = 0.15f;     // fine brush noise in the colour (was 0.6)
+        public const float LitDabs = 0.6f;    // the lighter wash on top faces, times each family's lit_dabs
+        public const float DabScale = 4f;     // brush patches this many times larger (was 1)
+        public const float Crevice = 0.25f;   // hollow darkening, times cavity (was 1.4, sharp)
+        public const float Ink = 0.5f;        // edge darkening, times each family's ink (was 1)
+        public const float BandSoft = 0.1f;   // light-band edge width (was 0.03)
+        public const float BandBreak = 0.04f; // how much the brush breaks the bands (was 0.16)
+        public const float TopGradient = 0.06f; // soft top-to-underside shading
+    }
+
+    static string F(float v) => v.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static readonly string Declarations = $$"""
         uniform sampler2D dabs : filter_linear_mipmap, repeat_enable;
         uniform vec3 shade_tint : source_color = vec3(0.74, 0.72, 0.9);
         uniform float lit_dabs = 0.14;
@@ -188,12 +214,34 @@ public static class Painted
         // Relief below this reads as a crevice, in one darker tone.
         uniform float crevice = 0.39;
         varying float dab;
+        // The smooth look's constants (Painted.Smooth), shared with anything splicing Light.
+        const float DAB_SCALE = {{F(Smooth.DabScale)}};
+        const float BAND_SOFT = {{F(Smooth.BandSoft)}};
+        const float BAND_BREAK = {{F(Smooth.BandBreak)}};
 
         float dab_at(vec3 p) {
-            vec2 a = vec2(p.x + p.y * 0.3, p.z - p.y * 0.2) / dab_size;
-            vec2 b = vec2(p.z * 0.9, p.y * 1.2) / dab_size + 0.37;
+            vec2 a = vec2(p.x + p.y * 0.3, p.z - p.y * 0.2) / (dab_size * DAB_SCALE);
+            vec2 b = vec2(p.z * 0.9, p.y * 1.2) / (dab_size * DAB_SCALE) + 0.37;
             return mix(texture(dabs, a).r, texture(dabs, b).r, 0.45);
         }
+        """;
+
+    // The soft rim light (D-313, Justin's pick): a thin warm glow round the edges of a shape
+    // that face away from the sun, strongest when it is backlit, as the cards outline their
+    // figures against the light. Characters (ChibiLook), animals, props, buildings and items
+    // all add it; trees and the ground do not. Its colour is the sun's times Atmosphere's
+    // global rim_tint (cream by day, peach at golden hour, rose at dusk, cool blue at night;
+    // its alpha scales the strength, #612). RimStrength is the one constant to raise.
+    // Shaders that splice Rim declare RimUniform once at the top level.
+    internal const float RimStrength = 0.5f;
+    internal const string RimUniform = "global uniform vec4 rim_tint;";
+    internal static readonly string Rim = $$"""
+            if (LIGHT_IS_DIRECTIONAL) {
+                float rim_edge = smoothstep(0.5, 0.9, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0));
+                float rim_back = smoothstep(-0.2, 0.8, dot(-VIEW, LIGHT));
+                float rim_away = 1.0 - smoothstep(0.0, 0.5, dot(NORMAL, LIGHT));
+                DIFFUSE_LIGHT += LIGHT_COLOR * rim_tint.rgb * rim_edge * mix(0.5, 1.0, rim_back) * rim_away * rim_tint.a * {{RimStrength.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture)}} / PI;
+            }
         """;
 
     // Stepped light as on the painted trees: shade, mid and lit with brush-broken edges,
@@ -204,11 +252,14 @@ public static class Painted
             float low_sun = LIGHT_IS_DIRECTIONAL ? 1.0 - smoothstep(0.2, 0.55, elevation) : 0.0;
             float wrap = mix(0.3, 0.6, low_sun);
             float wrapped = clamp(dot(NORMAL, LIGHT) * (1.0 - wrap) + wrap, 0.0, 1.0);
-            float l = wrapped * ATTENUATION * sky + (dab - 0.5) * 0.16;
-            float soft = 0.03;
+            float l = wrapped * ATTENUATION * sky + (dab - 0.5) * BAND_BREAK;
+            float soft = BAND_SOFT;
             float mid = smoothstep(0.32 - soft, 0.32 + soft, l);
             float lit = smoothstep(0.64 - soft, 0.64 + soft, l);
-            float band = 0.12 + 0.2 * low_sun + 0.4 * mid + 0.36 * lit;
+            // At low sun the shade lifts (it wraps further), but the lit side does not: the
+            // golden light is bright enough, and lifting both washed sunlit faces out to a
+            // pale peach at dusk (painted-11).
+            float band = 0.12 + 0.2 * low_sun * (1.0 - mid) + 0.4 * mid * (1.0 - 0.2 * low_sun) + 0.36 * lit * (1.0 - 0.5 * low_sun);
             vec3 tone = mix(shade_tint, vec3(1.0), mid);
             float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
             DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;
