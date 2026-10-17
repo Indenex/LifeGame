@@ -182,6 +182,20 @@ public static class HumanFigure
                 k.Paint(skin, 0.92f).Ellipsoid(new Vector3(side * hh * 0.4f, chin + hh * 0.5f, -hh * 0.02f), new Vector3(hh * 0.05f, hh * 0.12f, hh * 0.08f), 8, 5);
         for (int side = -1; side <= 1; side += 2)
             k.Paint(Eye).Ellipsoid(new Vector3(side * hh * 0.16f, chin + hh * 0.55f, hh * (s.Flat ? 0.37f : 0.405f)), new Vector3(hh * 0.055f, hh * 0.065f, hh * 0.03f) * s.EyeSize, s.Flat ? 5 : 8, s.Flat ? 3 : 5);
+        if (s.Flat)
+        {
+            // Painted face details, after the reference art's clean, friendly figures:
+            // a bright catch-light in each eye, a brow stroke in the hair colour, a
+            // little mouth and warm cheeks.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                k.Paint(new Color(0.96f, 0.94f, 0.88f)).Ellipsoid(new Vector3(side * hh * 0.16f + hh * 0.018f, chin + hh * 0.575f, hh * 0.395f), new Vector3(hh * 0.017f, hh * 0.017f, hh * 0.01f), 4, 2);
+                var brow = new Vector3(side * hh * 0.16f, chin + hh * 0.66f, hh * 0.39f);
+                k.Paint(hairColor, 0.8f).Tube(new[] { brow - new Vector3(side * hh * 0.07f, -hh * 0.012f, 0), brow + new Vector3(side * hh * 0.06f, -hh * 0.006f, -hh * 0.01f) }, hh * 0.014f, 4, hh * 0.008f);
+                k.Paint(skin.Lerp(new Color(0.86f, 0.42f, 0.36f), 0.35f)).Ellipsoid(new Vector3(side * hh * 0.22f, chin + hh * 0.42f, hh * 0.37f), new Vector3(hh * 0.045f, hh * 0.025f, hh * 0.008f), 6, 2, new Basis(Vector3.Up, side * 0.6f));
+            }
+            k.Paint(skin.Lerp(new Color(0.45f, 0.18f, 0.16f), 0.6f)).Ellipsoid(new Vector3(0, chin + hh * 0.3f, hh * 0.43f), new Vector3(hh * 0.05f, hh * 0.013f, hh * 0.02f), 6, 2);
+        }
 
         // Hair: a cap set high and back so the face shows, then the cut.
         int cut = look.Cut % Cuts;
