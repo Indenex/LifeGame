@@ -3,7 +3,7 @@ Lane: Journal & skills
 Owner: Journal & skills thread
 Status: in_review
 Branch: claude/journal-skills-22
-PR: (to open; needs #683 merged first so carve.spade is reachable)
+PR: (opening)
 
 ## Goal
 `tools/JournalCheck` fails if any `Skills.AllProcessIds()` id has no skill, or cannot be reached through the Things-to-try hints. Run: `dotnet run --project tools/JournalCheck`.
