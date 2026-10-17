@@ -350,7 +350,9 @@ public partial class Showcase : Node3D
             }
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        // --top: from high above, as the camera sees the crowns when zoomed out.
+        if (args.ContainsKey("top")) camera.LookAtFromPosition(new Vector3(-4.5f, 19f, 9f), new Vector3(-4.5f, 2.5f, -2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
@@ -443,7 +445,8 @@ public partial class Showcase : Node3D
             {
                 var at = new Transform3D(new Basis(Vector3.Up, v * 1.3f).Scaled(Vector3.One * 0.6f), new Vector3(-7f + v * 3f, 0, z));
                 Place(PropMeshes.Birch(v % PropMeshes.BirchVariants), bark, at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(v * 0.05f));
-                Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                if (row == 0) Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                else Place(PaintedTrees.BroadleafCrown(v, false), PaintedTrees.BroadleafMaterial, Terrain.BirchCrown(at), Terrain.BirchLeaf.Darkened(v * 0.05f));
             }
             for (int v = 0; v < PropMeshes.FallenLogVariants && v < 3; v++)
                 Place(PropMeshes.FallenLog(v), bark, new Transform3D(new Basis(Vector3.Up, 0.3f + v * 0.5f), new Vector3(3.5f + v * 1.4f, 0, z + 1.5f + v * 0.5f)), Look.Bark.Darkened(0.1f));
