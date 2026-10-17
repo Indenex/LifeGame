@@ -223,6 +223,7 @@ public partial class Main : Node3D
             InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
             JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < PlayerMenu.Reach),
         };
         AddChild(playerMenu);
         // ui-38: your group's members, and the invitation waiting for you.

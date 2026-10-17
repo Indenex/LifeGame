@@ -12,7 +12,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
-| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (Join their group while they ask you). A right click that moves under 6 px within 250 ms is a click; more is a drag. Resting the cursor on a player for 0.3 s shows a small note with their name, how they stand with you and their town (ui-72). In the F1 list (ui-74); fixed, since it shares the right button with turning the view | UX/UI | ui-35, ui-72 |
+| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (Join their group while they ask you). A right click that moves under 6 px within 250 ms is a click; more is a drag. Resting the cursor on a player for 0.3 s shows a small note with their name, how they stand with you and their town (ui-72). In the F1 list (ui-74); its one-time hint shows the first time someone stands within 8 m (ui-75); fixed, since it shares the right button with turning the view | UX/UI | ui-35, ui-72 |
 | Hold Shift | Run (uses stamina). In the F1 list | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (bugfix-25; reads the `jump` action). In the F1 list | Bug fixes | ui-17 |

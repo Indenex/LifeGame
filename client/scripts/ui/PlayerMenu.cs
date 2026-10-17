@@ -39,6 +39,8 @@ public partial class PlayerMenu : CanvasLayer
     public Action<string> OpenChat = _ => { };
     // True while something else has the screen (a panel, placing, typing).
     public Func<bool> Blocked = () => false;
+    // True while another player stands within Reach: the moment to teach the menu (ui-75).
+    public Func<bool> SomeoneNear = () => false;
 
     public bool IsOpen => root.Visible;
 
@@ -46,7 +48,8 @@ public partial class PlayerMenu : CanvasLayer
     PanelContainer frame = null!;
     VBoxContainer column = null!;
     uint target;
-    bool inspecting;
+    bool inspecting, hinted;
+    float nearCheck;
     Vector2 at;
 
     public override void _Ready()
@@ -106,6 +109,8 @@ public partial class PlayerMenu : CanvasLayer
         at = point;
         inspecting = false;
         if (Facts(id) == null) { Close(); return; }
+        // Found it on their own: the hint is never taught after the fact.
+        Hints.Done("player_menu");
         root.Visible = true;
         Fill();
     }
@@ -125,6 +130,13 @@ public partial class PlayerMenu : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // The first time someone comes near, the corner hint teaches the right click (shown once
+        // per install, and never if the menu was already found).
+        if (!hinted && (nearCheck -= (float)delta) <= 0f)
+        {
+            nearCheck = 1f;
+            if (!Blocked() && SomeoneNear()) { Hints.Request("player_menu"); hinted = true; }
+        }
         if (!IsOpen) return;
         // Walking well away, the player leaving, or another panel opening closes it.
         if (Facts(target) is not { } f || f.Distance > Reach + 2f || Blocked()) Close();
