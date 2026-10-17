@@ -1,9 +1,9 @@
 # building-17: Stone-ringed hearth
 Lane: House building
 Owner: House building thread (Sonnet)
-Status: in_review
+Status: done
 Branch: claude/house-building-8ueqz2-ring
-PR: (see STATUS)
+PR: #518 (merged)
 
 ## Goal
 Justin's D-286: a buildable outdoor stone-ringed hearth so builders can work through winter nights. A fire lit on it warms out to 8 m (campfire and raised hearth: 5 m). Wild-buildable like the campfire, modest stone cost (5 + 3 stones over two stages), fuel burns 1.5x as long and tops up from nearby storage like the raised hearth (D-148, D-149).
@@ -21,4 +21,4 @@ Justin's D-286: a buildable outdoor stone-ringed hearth so builders can work thr
 - Stacked on #513 and #516 (merged into this branch). Merge those first, or this PR carries their commits.
 
 ## Next step
-Wait for CI and send the PM the green sha; then answer Survival and Modeling.
+Nothing; merged.
