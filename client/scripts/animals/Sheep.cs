@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using LifeGame.Shared;
 using SpacetimeDB.Types;
 
 namespace LifeGame;
@@ -90,14 +91,15 @@ public partial class Sheep : Node3D
 
     // About a third of deer are antlered stags; Audio uses this too so the roar
     // comes from the stags that are drawn.
-    public static bool IsStag(ulong id) => Terrain.Hash01((int)id, 13, 21) < 0.35f;
+    public static bool IsStag(ulong id) => Terrain.Hash01((int)id, 13, 21) < AnimalDefs.Get(AnimalDefs.Deer).AntlerShare;
 
     public Sheep(ulong id, Terrain terrain, AnimalSpecies species = AnimalSpecies.Sheep)
     {
         this.terrain = terrain;
         seed = Terrain.Hash01((int)id, 7, 33) * 100f;
-        bool deer = species == AnimalSpecies.Deer;
-        // About a third of deer are antlered stags.
+        var def = AnimalDefs.Get((byte)species);
+        bool deer = def.Model == "deer";
+        // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
         if (deer) BuildDeerMeshes();
@@ -168,9 +170,24 @@ public partial class Sheep : Node3D
     // Butchered: sink softly into the grass and go.
     public void FadeAway() => fading = 0f;
 
-    // A hit landed from `from` (a crit hits harder). Animation fills this in.
-    // anim: stub
-    public void Flinch(bool crit, Vector3 from) { }
+    // A hit landed from `from` (the hitter's position; a crit hits harder): the body
+    // jerks away from the blow and the head snaps up. A crit also buckles the hind legs
+    // and the animal stumbles for half a second before it gets away.
+    public void Flinch(bool crit, Vector3 from)
+    {
+        var away = new Vector2(Position.X - from.X, Position.Z - from.Z);
+        if (away.LengthSquared() < 1e-4f) away = new Vector2(Mathf.Sin(Rotation.Y), Mathf.Cos(Rotation.Y));
+        away = away.Normalized();
+        // Into the body's own frame: x to its left (+X), y forward (+Z).
+        float h = Rotation.Y;
+        flinchAway = new Vector2(away.X * Mathf.Cos(h) - away.Y * Mathf.Sin(h), away.X * Mathf.Sin(h) + away.Y * Mathf.Cos(h));
+        flinchCrit = crit;
+        flinch = 0f;
+    }
+    float flinch = -1f;
+    bool flinchCrit;
+    Vector2 flinchAway;
+    const float FlinchSeconds = 0.4f, StumbleSeconds = 0.5f, BuckleSeconds = 0.8f;
 
 
     public void Apply(Animal a, bool snap)
@@ -209,7 +226,9 @@ public partial class Sheep : Node3D
             return;
         }
 
-        glide = Mathf.Min(glide + dt / GlideSeconds, 1f);
+        // A crit's stumble holds the animal back a moment; it catches up as it bolts.
+        bool stumbling = flinchCrit && flinch >= 0f && flinch < StumbleSeconds;
+        glide = Mathf.Min(glide + dt / GlideSeconds * (stumbling ? 0.3f : 1f), 1f);
         var flat = from.Lerp(to, glide);
         float ground = terrain.HeightAt(flat.X, flat.Y);
         Position = new Vector3(flat.X, Mathf.Lerp(Position.Y, ground, 1f - Mathf.Exp(-12f * dt)), flat.Y);
@@ -257,7 +276,27 @@ public partial class Sheep : Node3D
         float breathe = Mathf.Sin(time * 1.7f) * 0.006f * (1f - walk);
         // Lean into turns, more at speed.
         float lean = Mathf.Clamp(turnRate * speed * 0.05f, -0.22f, 0.22f);
-        Body(new Vector3(0, hopLift + bounce, 0), new Vector3(-run * Mathf.Cos(gait) * 0.08f, 0, -lean), new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
+        // A hit: a sharp jerk away from the blow that settles quickly.
+        float jerk = 0f, buckle = 0f;
+        if (flinch >= 0f)
+        {
+            flinch += dt;
+            jerk = flinch < 0.05f ? flinch / 0.05f : Mathf.Exp(-(flinch - 0.05f) * 9f);
+            if (flinchCrit)
+            {
+                jerk *= 1.5f;
+                buckle = flinch < 0.1f ? Mathf.SmoothStep(0f, 1f, flinch / 0.1f)
+                    : flinch < 0.45f ? 1f : 1f - Mathf.SmoothStep(0f, 1f, (flinch - 0.45f) / (BuckleSeconds - 0.45f));
+            }
+            if (flinch > (flinchCrit ? BuckleSeconds : FlinchSeconds)) flinch = -1f;
+        }
+        Body(new Vector3(flinchAway.X * 0.07f * jerk, hopLift + bounce - 0.07f * buckle, flinchAway.Y * 0.07f * jerk),
+            new Vector3(-run * Mathf.Cos(gait) * 0.08f + flinchAway.Y * 0.18f * jerk - 0.22f * buckle, 0, -lean - flinchAway.X * 0.18f * jerk),
+            new Vector3(1f + breathe, 1f - breathe * 0.5f, 1f));
+        // Hind legs fold under the rump in a crit's buckle.
+        if (buckle > 0f)
+            for (int i = 2; i < 4; i++)
+                Leg(i, new Vector3(Mathf.Lerp(Mathf.Lerp(i == 2 ? -s : s, back, run), 0.75f, buckle), 0, 0));
 
         // Head down to nibble when grazing, up and looking about when idle or alarmed.
         float targetPitch, targetYaw = 0f;
@@ -281,7 +320,8 @@ public partial class Sheep : Node3D
         if (speed > 0.3f) targetYaw += Mathf.Clamp(turnRate * 0.25f, -0.5f, 0.5f);
         pitch = Mathf.Lerp(pitch, targetPitch, 1f - Mathf.Exp(-4f * dt));
         yaw = Mathf.Lerp(yaw, targetYaw, 1f - Mathf.Exp(-3f * dt));
-        Head(new Vector3(pitch, yaw, 0));
+        // The head snaps up and away from the blow.
+        Head(new Vector3(pitch - 0.5f * jerk, yaw + flinchAway.X * 0.3f * jerk, 0));
 
         // Wool shrinks away quickly when shorn and creeps back as it regrows.
         wool = Mathf.Lerp(wool, woolTarget, 1f - Mathf.Exp(-(woolTarget < wool ? 10f : 1f) * dt));

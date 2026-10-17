@@ -1,8 +1,8 @@
 # audio-4: Red deer sounds
 Lane: Audio
 Owner: Audio lane (Sonnet session_01SXcxtoyeqDmypiHxkHedU6)
-Status: in_progress
-Branch: claude/audio-4-deer
+Status: in_review
+Branch: claude/audio-4-deer (sounds, merged #242); claude/audio-4-wiring (this PR)
 PR: (after CI)
 
 ## Goal
@@ -19,8 +19,10 @@ Deer are quiet except: a short hoarse alarm bark when a deer starts to run (one 
 
 - 2026-10-16: Justin picked "others see your jump" (via Bug fixes): added positional `Sfx.PlayAt(Cue, worldPos)` and `Sfx.LandAt(strength, ground, worldPos)` (Atmosphere reports the listener each frame via Sfx.Listen; others sit at 0.4 gain, silent beyond 30 m, panned to their side). SoundMix.Play/Land gained gain and pan.
 
+- 2026-10-16: #219 (deer) merged (f940fa3). Wired: Atmosphere reports deer to DeerVoices (Seen/Gone/Tick; Deer.Cry = sound.DeerCry; RoarTime = autumn x dusk), AnimalHit.OnInsert plays Cue.Crit or Cue.Hit via new Sfx.PlayHit (your own blows full volume, others' positional). The client builds locally now (installed the SpacetimeDB CLI to ~/stdb and ran tools/gen-bindings.sh): 0 errors.
+
 ## Open questions / blockers
 - Wiring waits for #219 (AnimalSpecies.Deer, Sheep.IsStag) and #217 (Atmosphere sheep-only bleats).
 
 ## Next step
-When #219 and #217 are on main: in client/scripts/atmosphere/Atmosphere.cs add `public readonly DeerVoices Deer = new();` with `Deer.Cry = sound.DeerCry;`, feed it from conn.Db.Animal OnInsert/OnUpdate/OnDelete for Species == AnimalSpecies.Deer with `Deer.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, Sheep.IsStag(a.Id))` (the Animals class named Sheep, not the SheepVoices field; qualify as needed), `Deer.Gone(id)` on delete, call `Deer.Tick(dt, focus, ear.GlobalBasis.X)` each frame, and set `Deer.RoarTime` to the autumn dusk weight (Season == Autumn, smoothstep on evening TimeOfDay). Also subscribe to `AnimalHit` (`conn.Db.AnimalHit.OnInsert`): play Cue.Crit when Crit else Cue.Hit, only when the hit is within ~30 m of the player (volume: use Sfx.Play for now; a positional version is a later nicety). Then render `deer:24` and `cues:26`, request a Render clip, open the PR.
+Wait for CI on the audio-4-wiring PR; send the PM the green sha. Later: a bowstring cue for #355 (bow shots are otherwise quiet).

@@ -935,3 +935,31 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-230 — 2026-10-16 — Atmosphere next: falling leaves and blossom
 **Decision:** Atmosphere's next work is falling leaves and blossom: leaves drifting under broadleaf trees in autumn, petals in spring, and more of both in wind. Justin chose it over the dawn valley mist and the sky reflected in still water. Owner: Atmosphere.
 **Who:** Justin, picking falling leaves and blossom (relayed by the PM; no direct quote).
+
+## D-231 — 2026-10-16 — Buildings scale about 25% bigger and doorways become a real opening (building-14)
+**Decision:** All house-type buildings scale by about 1.25 (about 25% bigger) with the same material costs. Doorways become a real opening, at least about 2.1 m clear and with nothing across the floor, that players walk through freely. Owner: House building (building-14).
+**Who:** Justin ("the scale of the buildings probably needs to be a bit bigger, and leave an actual doorway opening so the character can walk in, right now he hits his head and his feet on the entrance"), picking about 25% bigger.
+
+## D-232 — 2026-10-16 — Art direction: low-poly shapes with simple painted material textures, Valheim-like (pending Justin's pick of renders, D-154)
+**Decision:** The direction is low-poly shapes with simple, low-res, painted material textures (Valheim-like), a cutesy warm feel, and lighting and atmosphere carrying the awe. Justin did not want flat colour. This is a direction only: per D-154 it is pending Justin's pick of renders, so no art is built past a prototype yet. Modeling is prototyping 2 to 3 texture variants, and Atmosphere is lighting the test renders.
+**Who:** Justin ("I dont like the textures the models are using; I want things to be less textures, but still very stylized with our pretty low poly look." When offered flat colour: "I want things to have material looks/texture still, closer to valheim I think. I want the game to be cutesy and beautiful/awe inspiring with lighting and stuff.")
+
+## D-233 — 2026-10-16 — Players pick their look at first join, from Modeling's carved parts
+**Decision:** Each player picks skin tone, hair colour, cut and beard at first join, from Modeling's carved parts. The server validates the choice. Justin chose this over an automatic look from the player id or keeping everyone identical. Owner: Modeling.
+**Who:** Justin (relayed by the PM; no direct quote), picking the first-join choice.
+
+## D-234 — 2026-10-16 — Lighting: prototype the colour grade, richer sky and god rays; the original reference screenshots are the target look (D-154)
+**Decision:** Prototype all three lighting options: the time-of-day colour grade, the richer sky, and god rays everywhere at low sun with a quality setting. Renders come before anything ships (D-154). Justin's original reference world, terrain and character screenshots are the target look for the game. Owner: Atmosphere.
+**Who:** Justin ("go look back at our original reference world/terrain/character screenshots I sent you. That's what the game should look like."), with his pick of all three lighting options.
+
+## D-235 — 2026-10-16 — Reference images are stored in docs/art-reference/; every player-visual lane matches against them (follows D-234)
+**Decision:** Justin shared his reference images on 2026-10-16. They are stored in `docs/art-reference/` (#368) with a README style guide, and more are coming. Every player-visual lane matches against them.
+**Who:** Justin (shared the images; relayed by the PM, no direct quote).
+
+## D-236 — 2026-10-17 — Bought art packs from Golden Skull Art; Dofus is a second style reference (follows D-234, D-235)
+**Decision:** Justin bought Golden Skull Art's (Max Heyder) 2D Isometric Foliage Pack and Isometric Starter Pack, with a commercial licence and his stated permission to host them in the public repo temporarily. They are in `docs/art-packs/golden-skull/` (#378). Dofus is now a second style reference alongside `docs/art-reference`.
+**Who:** Justin ("Our other inspiration is a game called Dofus. Beautiful, hand crafted artwork, scenery, etc. It's a similar 2d but 3d engine type thing.")
+
+## D-237 — 2026-10-17 — Activity animations: drinking, crafting, chopping, mining, berries and a light pickup (anim-4)
+**Decision:** Activities get their own animations with seamless transitions. When drinking from a river, the character bends down and scoops the water up with their mouth. Crafting something, chopping wood, mining, picking berries and eating berries get similar animations, and picking things up off the ground gets a very basic one, since it happens constantly. Motions are driven from data, other players see them, and sounds come from Audio. The pickup stays very light and quick. Owner: Animation, ticket anim-4, after anim-3.
+**Who:** Justin ("when drinking from a river, make it so the character bends down and scoops the water up with their mouth with seamless transitions. Other activities should have similar animations; crafting something, chopping wood, mining, picking berries, eating berries, a very basic animation when picking things up off the ground since it happens constantly")

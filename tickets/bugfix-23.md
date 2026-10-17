@@ -1,9 +1,9 @@
 # bugfix-23: collision for trees, rocks and every structure
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-23
-PR: (none yet)
+PR: #228
 
 ## Goal
 From Justin: "I want trees and houses etc. to have collision." Walking into a tree trunk or a rock slides you around it instead of through it. Every structure kind that should be solid is solid. Crowns stay walk-under. Client side only for now (BuildingSystem.Collide via Main.Walk); server movement checks are out of scope.
@@ -22,8 +22,10 @@ From Justin: "I want trees and houses etc. to have collision." Walking into a tr
 
 - 2026-10-16: audit: lean-to now blocks its sides and back (open front), claim marker made Solid; kilns, baskets, jars, huts, houses, fences already collided. Fires are not solid (you stand at them to use them); stations (#160) and hearth (#202) are not on main yet, so those lanes get a note. Client builds.
 
+- 2026-10-16: #228 merged (trees, rocks, lean-to and claim marker collide); CI green on c397493 (https://github.com/Indenex/LifeGame/actions/runs/38962957529). Follow-ups: Environment extended TerrainCollision for giant trees and outcrops (#247); Animals will add server-side trunk avoidance; Crafting and House building set Solid on stations and the hearth.
+
 ## Open questions / blockers
 - Need a lookup hook in Terrain.cs from Environment (asked).
 
 ## Next step
-Push, then ask Animals about AnimalStepBlocked, send Render request, tell Crafting/House building to mark stations and hearth Solid.
+None; done and merged.
