@@ -1,7 +1,7 @@
 # anim-12: Sitting and lying down
 Lane: Animation
 Owner: Animation lane (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
+Status: done
 Branch: claude/anim-12
 PR: #600
 

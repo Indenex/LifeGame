@@ -420,9 +420,13 @@ ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone,
 // The land's owner can clear anything on it; nobody else can take down the owner's things.
 Walk(b, site.X + 1.5f, site.Z);
 ExpectError(b, () => b.Conn.Reducers.Dismantle(site.Id), "take it down", "B cannot take down A's marker");
-Walk(a, hx - 2, hz);
+// Stand in front of the lean-to, outside its side walls: two metres west of its middle is on the wall
+// itself, which no route can reach (the "stuck on leg 2/2 to (38.0, 33.4)" flake).
+var hutShape = Structures.Shape((int)hut!.Kind);
+var hutFront = Structures.ToWorld(hut.X, hut.Z, hut.Yaw, 0f, hutShape.HalfDepth + 1.2f);
+Walk(a, hutFront.x, hutFront.z);
 a.LastError = null;
-a.Conn.Reducers.Dismantle(hut!.Id);
+a.Conn.Reducers.Dismantle(hut.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
