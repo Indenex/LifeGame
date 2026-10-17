@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using LifeGame.Shared;
@@ -80,6 +81,9 @@ public partial class Terrain
         return stones;
     }
 
+    // How far a felled tree on a cell has grown back (0 to 1), or -1 (TreeFall sets it).
+    public Func<int, int, float>? FelledProgress;
+
     // The solid circle standing on cell (x, z): a tree trunk or a boulder. Crowns, small
     // stones, ferns and fallen trunks never block.
     bool ObstacleAt(int x, int z, out float ox, out float oz, out float radius, out float height)
@@ -87,7 +91,10 @@ public partial class Terrain
         (ox, oz) = Trees.Trunk(x, z);
         radius = 0f;
         height = float.MaxValue; // trunks are never hopped
-        if (depths.ContainsKey(World.CellKey(x, z)) || Cleared?.Invoke(x, z) == true) return false;
+        if (depths.ContainsKey(World.CellKey(x, z))) return false;
+        // A felled tree's stump, then its regrowth, blocks by the shared rule (env-29).
+        if (FelledProgress?.Invoke(x, z) is float felled and >= 0f) return Obstacles.Regrowing(x, z, felled, out radius, out height);
+        if (Cleared?.Invoke(x, z) == true) return false;
         float top = TileHeight(x, z);
         if (top < Look.WaterLevel + 0.1f) return false;
         // Features (env-5, env-10): a giant tree's broad trunk; an outcrop's middle cell
