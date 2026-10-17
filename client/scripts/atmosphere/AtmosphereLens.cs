@@ -18,8 +18,9 @@ namespace LifeGame;
 // the global rim_tint, set here by time of day. The sun already warms toward dusk,
 // so the tint is relative to it: Modeling's honey by day, a richer gold at golden
 // hour, warm peach just before sunset, and cooler under the moon. (Pink rims read
-// lilac on pale stone, atmosphere-41.) rgb is the colour, a scales Painted.RimStrength (1 by day, up to about 1.3 backlit at golden hour,
-// less at night and under cloud).
+// lilac on pale stone, atmosphere-41.) rgb is the colour, a scales
+// Painted.RimStrength (1 by day, up to about 1.3 backlit at golden hour, less at
+// night and under cloud).
 public partial class Atmosphere
 {
     public static bool SoftGlow = true, Vignette = true;
