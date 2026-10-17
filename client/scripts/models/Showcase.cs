@@ -30,7 +30,7 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "wear" or "devices" or "crowd")
+        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "wear" or "devices" or "crowd")
         {
             if (view == "hearth") Hearth();
             else if (view == "stations") Stations();
@@ -40,6 +40,7 @@ public partial class Showcase : Node3D
             else if (view == "deer") Deer();
             else if (view == "hen") Hen();
             else if (view == "stonehearth") StoneHearthView();
+            else if (view == "treelod") TreeLod();
             else if (view == "wear") WearRows();
             else if (view == "devices") Devices();
             else if (view == "crowd") Crowd();
@@ -295,6 +296,23 @@ public partial class Showcase : Node3D
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.3f, 1.9f, 3.0f), new Vector3(0.3f, 0.15f, 0), Vector3.Up);
+    }
+
+    // The painted trees as the world draws them (model-10): each variant's detailed
+    // version in the front row and its far version behind, pines left, broadleaf right.
+    void TreeLod()
+    {
+        for (int v = 0; v < PaintedTrees.Variants; v++)
+            for (int far = 0; far < 2; far++)
+            {
+                var basis = Basis.FromScale(Vector3.One * 1.5f);
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Pine(v, far == 1), MaterialOverride = PaintedTrees.PineMaterial, Position = new Vector3(-11f + v * 2.8f, 0, -far * 4.5f), Basis = basis });
+                AddChild(new MeshInstance3D { Mesh = PaintedTrees.Broadleaf(v, far == 1), MaterialOverride = PaintedTrees.BroadleafMaterial, Position = new Vector3(1.5f + v * 3f, 0, -far * 4.5f), Basis = basis });
+            }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish

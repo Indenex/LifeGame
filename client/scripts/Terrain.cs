@@ -410,7 +410,7 @@ public partial class Terrain : Node3D
                     {
                         // The odd tree on the heath is a broad old oak.
                         var broad = at.ScaledLocal(new Vector3(1.35f, 1.15f, 1.35f));
-                        painted[(false, Variant(x, z, 30, PaintedTrees.Variants))].Add((broad, Colors.White.Darkened(0.05f + Hash01(x, z, 19) * 0.08f), custom with { A = SeasonBroadleaf }));
+                        painted[(false, TreeVariant(x, z, 30))].Add((broad, Colors.White.Darkened(0.05f + Hash01(x, z, 19) * 0.08f), custom with { A = SeasonBroadleaf }));
                     }
                     else
                     {
@@ -418,9 +418,9 @@ public partial class Terrain : Node3D
                         // all, one of a few seeded shapes, each a shade lighter or darker.
                         var shade = Colors.White.Darkened(Hash01(x, z, 18) * 0.1f);
                         if (Hash01(x, z, 16) < 0.4f)
-                            painted[(true, Variant(x, z, 31, PaintedTrees.Variants))].Add((at, shade, custom));
+                            painted[(true, TreeVariant(x, z, 31))].Add((at, shade, custom));
                         else
-                            painted[(false, Variant(x, z, 30, PaintedTrees.Variants))].Add((at, shade, custom with { A = SeasonBroadleaf }));
+                            painted[(false, TreeVariant(x, z, 30))].Add((at, shade, custom with { A = SeasonBroadleaf }));
                     }
                 }
                 else if (roll < rock)
@@ -535,6 +535,12 @@ public partial class Terrain : Node3D
     // same over a stretch of ground, so neighbouring boulders look like one stone.
     static int Variant(int x, int z, uint salt, int count) => Math.Min((int)(Hash01(x, z, 1100u + salt) * count), count - 1);
     static int Regional(int x, int z, uint salt, int count) => Math.Min((int)(World.Noise(x + 211, z - 977, 30f, salt) * count), count - 1);
+
+    // Which painted tree shape stands on a cell: one of two neighbouring shapes chosen by
+    // the region, so a chunk holds about two of each kind (fewer draw calls) while the
+    // forest still changes shape as you walk through it (D-166).
+    internal static int TreeVariant(int x, int z, uint salt) =>
+        (Regional(x, z, salt, PaintedTrees.Variants) + (Hash01(x, z, 1200u + salt) < 0.5f ? 0 : 1)) % PaintedTrees.Variants;
 
     static Transform3D Plant(float x, float y, float z, float yaw, float scale) =>
         new(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), new Vector3(x, y, z));
