@@ -2,7 +2,7 @@
 Lane: Bug fixes
 Owner: Bug fixes thread
 Status: in_progress
-Branch: (waiting for a second branch name from the PM; local commit only, patch in /mnt/project-files/bugfix/bugfix-55/)
+Branch: claude/bugfix-rnwmoa-2
 PR: (none yet; the old PR #491 was closed unmerged)
 
 ## Goal
@@ -15,7 +15,7 @@ Land the three fixes from /mnt/project-files/handoff/bugfix-old-lane/ (made agai
 - 2026-10-17 15:15: the code commit applies cleanly to main 5064a254 (ticket patch dropped; numbers 37 to 39 are taken here). No local toolchain, so CI is the build check.
 
 ## Open questions / blockers
-- Needs its own branch (asked the PM).
+- (none)
 
 ## Next step
-Push this commit to the branch the PM names, open the PR, wait for CI.
+Wait for CI on the PR, then send the PM the green sha.
