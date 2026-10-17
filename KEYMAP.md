@@ -22,7 +22,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
 | B | Build menu: pictures by category (Shelter, Storage, Crafting, Fire, Fences and gates, Claims), costs on each tile, greyed when short; click one to lay it out (T turns, Tab next, click places, Esc or B cancels). B or Esc closes the menu | Building, UX/UI (ui-20) | Justin picked the picture panel |
-| K | Claim panel | Claims | T |
+| K | Claim panel at a marker you belong to; away from your markers it shows the way home: an arrow at top centre toward your nearest claim (ui-83), K again stops it | Claims, UX/UI | T |
 | J | Journal | Journal | same |
 | O | Friends list (claims-32): who you've marked, and for friends who marked you back, whether they're on and roughly where. O or Esc closes. Rebindable | Claims, UX/UI (ui-81, Justin picked O) | new |
 | Enter | Chat | Claims | same |

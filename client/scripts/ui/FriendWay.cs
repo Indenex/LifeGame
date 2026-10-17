@@ -8,7 +8,8 @@ namespace LifeGame;
 // turning as you turn, with their name and roughly how far ("Mara   40 m"). No box (D-045).
 // It reads the server's rounded spot for friends who marked you back (claims-32), so it is
 // never more exact than the Friends list. It lets go by itself when you reach them or they
-// leave, with a quiet note, and fades under open panels.
+// leave, with a quiet note, and fades under open panels. ui-83: the same arrow shows the way home
+// (K away from your claim), pointing at the marker of your nearest claim.
 public partial class FriendWay : CanvasLayer
 {
     // Where a friend is, when the server says they're online; null otherwise.
@@ -21,8 +22,11 @@ public partial class FriendWay : CanvasLayer
     const float Found = 12f;
     const float Width = 200f, Height = 52f;
 
+    // The friend it is showing the way to; 0 when none, or when it is showing the way home.
     public uint Target { get; private set; }
+    public bool ShowingHome => home != null;
     string name = "";
+    Vector2? home;
     WayView view = null!;
     float alpha;
 
@@ -45,15 +49,30 @@ public partial class FriendWay : CanvasLayer
     {
         if (Target == friend) { Stop(); return; }
         Target = friend;
+        home = null;
         name = NameOf(friend);
     }
 
-    public void Stop() => Target = 0;
+    // Show the way to your claim's marker, named by the place or "Home".
+    public void Home(string label, Vector2 at)
+    {
+        Target = 0;
+        home = at;
+        name = label;
+    }
+
+    public void Stop()
+    {
+        Target = 0;
+        home = null;
+    }
+
+    bool Showing => Target != 0 || home != null;
 
     public override void _Process(double delta)
     {
-        bool show = Target != 0 && !Panels.Open();
-        if (Target != 0 && !Preview && !Aim()) show = false;
+        bool show = Showing && !Panels.Open();
+        if (Showing && !Preview && !Aim()) show = false;
         if (Preview) { view.Angle = 0.35f; view.Text = $"{name}   40 m"; }
         alpha = Mathf.MoveToward(alpha, show ? 1f : 0f, (float)delta * 3f);
         view.Modulate = new Color(1, 1, 1, alpha);
@@ -65,11 +84,11 @@ public partial class FriendWay : CanvasLayer
     // Turns the arrow toward the friend; false (and lets go) once they're found or gone.
     bool Aim()
     {
-        if (Spot(Target) is not { } at) { Note($"{name} has gone"); Stop(); return false; }
+        if ((home ?? Spot(Target)) is not { } at) { Note($"{name} has gone"); Stop(); return false; }
         var me = MyPos();
         float dx = at.X - me.X, dz = at.Y - me.Z;
         float d = Mathf.Sqrt(dx * dx + dz * dz);
-        if (d < Found) { Note($"You've found {name}"); Stop(); return false; }
+        if (d < Found) { Note(home != null ? "You're home" : $"You've found {name}"); Stop(); return false; }
         if (GetViewport().GetCamera3D() is { } cam)
         {
             // Ahead is where the camera looks, flattened onto the ground.

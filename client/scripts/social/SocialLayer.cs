@@ -185,7 +185,7 @@ public partial class SocialLayer : Node
         {
             if (panel.IsOpen || town.IsOpen) { panel.Close(); town.Close(); return; }
             var marker = NearestMarker();
-            if (marker == null) hud.Note("Walk up to a claim marker first");
+            if (marker == null) WayHome();
             else if (!IsOwnerOrMember(marker)) hud.Note($"This marker belongs to {marker.OwnerName}");
             else panel.Open(marker, IsMine(marker));
         }
@@ -389,6 +389,17 @@ public partial class SocialLayer : Node
             .Where(c => Flat(c).DistanceTo(Flat(myPos)) <= Social.MarkerReach)
             .OrderBy(c => Flat(c).DistanceTo(Flat(myPos)))
             .FirstOrDefault();
+    }
+
+    // ui-83: K away from your markers shows the way to the nearest claim you own or belong to.
+    void WayHome()
+    {
+        if (way.ShowingHome) { way.Stop(); return; }
+        var home = conn?.Db.Claim.Iter().Where(IsOwnerOrMember).OrderBy(c => Flat(c).DistanceTo(Flat(myPos))).FirstOrDefault();
+        if (home == null) { hud.Note("Walk up to a claim marker first"); return; }
+        string place = conn!.Db.ClaimName.ClaimId.Find(home.Id)?.Name ?? "Home";
+        hud.Note($"{place} is {Friends.HowFar(home.X - myPos.X, home.Z - myPos.Z)}");
+        if (Flat(home).DistanceTo(Flat(myPos)) >= 12f) way.Home(place, new Vector2(home.X, home.Z));
     }
 
     bool IsMine(Claim c) => conn?.Db.Player.Identity.Find(c.Owner) is { } p ? p.PlayerId == myId : c.OwnerPlayerId == myId;
