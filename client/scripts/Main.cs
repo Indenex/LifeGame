@@ -56,6 +56,7 @@ public partial class Main : Node3D
     readonly BuildMenu buildMenu = new();
     readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
+    readonly GroupView groupView = new();
     readonly LookPicker lookPicker = new();
     readonly CharacterMenu characterMenu = new();
     bool characterHooks;
@@ -216,9 +217,15 @@ public partial class Main : Node3D
             AskTrade = id => conn?.Reducers.AskTrade(id),
             AnswerTrade = yes => trade.Link.Answer(yes),
             InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
+            JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-38: your group's members, and the invitation waiting for you.
+        groupView.AvatarOf = id => others.GetValueOrDefault(id);
+        groupView.MyId = () => myId;
+        AddChild(groupView);
         // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
         AddChild(new EmoteWheel
         {
@@ -454,6 +461,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => { BugLog.Error(e.Message); if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        groupView.Attach(conn);
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
