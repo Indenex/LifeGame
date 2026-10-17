@@ -26,6 +26,7 @@ Short gameplay clips (5-15 s, 12 fps movie, 960x540) requested by lanes or the P
 9. painted-6 items (PR #584, 4a90fc8b): swing stone axe and spade at noon, look for shimmering paint, hotbar icons
 10. anim-11 (PR #586 claude/anim-11): equip/stow draw clips
 11. painted-2 bushes walk-past clip (PR #561 10899ddd) if the PM wants it
+12. anim-12 sit/lie clip (PR #600 claude/anim-12 a030b0ce): Rest(1) sit, Rest(2) lie, StandUp, ~3 s apart (or H key); chibi (Bramble/Pebble) and adult, side and 3/4 views; look at ground clipping of the lying shoulder/arm and the nameplate
 Stills requests from Modeling (painted-1 rocks, painted-2 bushes) were forwarded to Render B.
 
 ## Progress log
