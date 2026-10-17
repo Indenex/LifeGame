@@ -355,6 +355,7 @@ public partial class SocialLayer : Node
             world.AddChild(marker);
         }
         marker.Set(c, IsOwnerOrMember(c));
+        marker.SetSign(signNames.GetValueOrDefault(c.Id));
         if (panel.Claim?.Id == c.Id) panel.Open(c, IsMine(c));
     }
 
