@@ -42,6 +42,40 @@ public static class ClayLook
         return m;
     }
 
+    static readonly Dictionary<(ShaderMaterial, int, uint, int), ShaderMaterial> StampedMaterials = new();
+
+    // Finds a maker's glyph (slot in the stamp atlas) and colour from their player id (low 16
+    // bits); Main fills this in from the player_mark table. Null when they have no mark.
+    public static System.Func<uint, (int slot, Color color)?>? MarkLookup;
+
+    // The same clay as `plain` with a maker's mark painted in (ceramics-15): the glyph's slot in the
+    // atlas and the stamp colour. The stamp sits at a height that suits the form.
+    public static ShaderMaterial Stamped(ShaderMaterial plain, int slot, Color color, ClayForm form)
+    {
+        uint packed = color.ToRgba32() >> 8;
+        var key = (plain, slot, packed, (int)form);
+        if (StampedMaterials.TryGetValue(key, out var m)) return m;
+        if (StampedMaterials.Count > 300) StampedMaterials.Clear();
+        m = new ShaderMaterial { Shader = Shader };
+        foreach (var name in new[] { "albedo", "wetness", "clouds", "broken", "seed", "glow" })
+            m.SetShaderParameter(name, plain.GetShaderParameter(name));
+        m.SetShaderParameter("stamp_atlas", MakerStamp.Atlas);
+        m.SetShaderParameter("stamp_glyph", (float)slot);
+        m.SetShaderParameter("stamp_grid", new Vector2(MakerStamp.Cols, MakerStamp.Rows));
+        m.SetShaderParameter("stamp_color", color);
+        float height = PotMesh.Height(form);
+        m.SetShaderParameter("stamp_spot", new Vector2(height * 0.55f, Mathf.Min(0.075f, height * 0.3f)));
+        StampedMaterials[key] = m;
+        return m;
+    }
+
+    // The plain material, or one with the maker's mark when the item row says who made it.
+    public static ShaderMaterial WithMark(ShaderMaterial plain, uint wear, ClayForm form)
+    {
+        if (!Marks.Has(wear) || form == ClayForm.Brick || MarkLookup?.Invoke(Marks.Maker(wear)) is not { } mark) return plain;
+        return Stamped(plain, mark.slot, mark.color, form);
+    }
+
     // A pot in the fire: smoke-darkened at first, then glowing orange as it fires
     // through. t is how far the firing has got, 0 to 1.
     public static ShaderMaterial Firing(float t, ulong id)
@@ -63,6 +97,20 @@ public static class ClayLook
     }
 
     public static ShaderMaterial Water => water ??= MakeWater();
+
+    static ShaderMaterial? troughWater;
+
+    // Trough water (ceramics-13): the same painted pond surface as the lakes (Look.WaterSurface:
+    // calm, deep, with slow ripples and rain rings), but with the shallow tint set deep, since a
+    // trough is only a hand deep and the pond's pale shallows would read as a thin film.
+    public static ShaderMaterial TroughWater => troughWater ??= MakeTroughWater();
+
+    static ShaderMaterial MakeTroughWater()
+    {
+        var m = (ShaderMaterial)Look.WaterSurface.Duplicate();
+        m.SetShaderParameter("shallow_color", new Color(0.09f, 0.22f, 0.26f));
+        return m;
+    }
 
     static ShaderMaterial MakeWater()
     {
@@ -98,12 +146,20 @@ public static class ClayLook
             uniform float broken = 0.0;
             uniform float seed = 0.0;
             uniform float glow = 0.0;
+            // A maker's mark (ceramics-15): the glyph's cell in the stamp atlas, or -1 for none.
+            uniform sampler2D stamp_atlas : filter_linear;
+            uniform float stamp_glyph = -1.0;
+            uniform vec2 stamp_grid = vec2(8.0, 7.0);
+            uniform vec3 stamp_color : source_color = vec3(0.7, 0.4, 0.12);
+            uniform vec2 stamp_spot = vec2(0.095, 0.075); // height of the stamp's centre, and its half size
 
             varying vec3 local_pos;
+            varying vec3 local_normal;
             varying float height;
 
             void vertex() {
                 local_pos = VERTEX;
+                local_normal = NORMAL;
                 height = UV.y;
             }
 
@@ -141,6 +197,33 @@ public static class ClayLook
                 float grain = noise(p * 1.6);
                 color *= 0.95 + grain * 0.08;
                 color *= 0.96 + fbm(vec3(p.x * 0.3, p.y * 2.5, p.z * 0.3)) * 0.08;
+
+                // A maker's mark pressed into the outside of the pot, twice, on opposite sides, so
+                // one is usually in view: dark in the dent, with a thin lighter lip.
+                if (stamp_glyph >= 0.0 && dot(local_normal.xz, local_pos.xz) > 0.0) {
+                    float radius = max(length(local_pos.xz), 0.001);
+                    float angle = atan(local_pos.z, local_pos.x);
+                    for (int side = 0; side < 2; side++) {
+                        float centre = float(side) * 3.14159265;
+                        float da = angle - centre;
+                        da = atan(sin(da), cos(da));
+                        vec2 uv = vec2(-da * radius / stamp_spot.y, -(local_pos.y - stamp_spot.x) / stamp_spot.y) * 0.5 + 0.5;
+                        if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
+                            float col = mod(stamp_glyph, stamp_grid.x);
+                            float row = floor(stamp_glyph / stamp_grid.x);
+                            vec2 cell = vec2((col + uv.x) / stamp_grid.x, (row + uv.y) / stamp_grid.y);
+                            float ink = texture(stamp_atlas, cell).a;
+                            // A pale lip round the dent, like light catching it, so dark colours still read.
+                            vec2 step_uv = vec2(0.05, 0.05) / stamp_grid;
+                            float near = max(max(texture(stamp_atlas, cell + vec2(step_uv.x, 0.0)).a, texture(stamp_atlas, cell - vec2(step_uv.x, 0.0)).a),
+                                             max(texture(stamp_atlas, cell + vec2(0.0, step_uv.y)).a, texture(stamp_atlas, cell - vec2(0.0, step_uv.y)).a));
+                            float lip = clamp(near - ink, 0.0, 1.0);
+                            color = mix(color, color * 0.6 + vec3(0.42, 0.38, 0.32), lip * 0.7);
+                            // Painted in the maker's colour, a touch darker where it sits in the clay.
+                            color = mix(color, stamp_color * (0.92 + grain * 0.1), ink * 0.94);
+                        }
+                    }
+                }
 
                 // Smoke clouds from an open fire: soft dark patches, heavier low down.
                 float cloud = smoothstep(0.38, 0.7, fbm(p * 0.25)) * clouds;

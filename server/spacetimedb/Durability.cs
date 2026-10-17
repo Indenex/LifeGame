@@ -97,5 +97,6 @@ public static partial class Module
             RemoveFromStack(ctx, again, 1);
             AddToInventory(ctx, ctx.Sender, (Item)item, 1, mendedQuality, mendedWear, again.Maker);
         }
+        PerformedProcess(ctx, player.PlayerId, Skills.Repair, pos.X, pos.Z);
     }
 }

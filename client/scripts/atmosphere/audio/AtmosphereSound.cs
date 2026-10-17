@@ -150,6 +150,8 @@ public partial class Atmosphere
         bool running = a.State == AnimalState.Run;
         if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, running, a.Growth < 100);
         else if (a.Species == AnimalSpecies.Deer) Deer.Seen(a.Id, a.X, a.Z, running, global::LifeGame.Sheep.IsStag(a.Id));
+        else if (AnimalDefs.Get((byte)a.Species).Model == "hen")
+            Hens.Seen(a.Id, a.X, a.Z, a.State switch { AnimalState.Graze => HenVoices.Mood.Peck, AnimalState.Walk => HenVoices.Mood.Walk, AnimalState.Run => HenVoices.Mood.Run, _ => HenVoices.Mood.Idle });
     }
 
     // How much it is stag-roaring weather, 0 to 1: dusk in autumn (the year runs 0 spring,
@@ -186,7 +188,7 @@ public partial class Atmosphere
 
     // Sounds for the quick body actions (player_act): data cues (CueDefs) timed to the motion,
     // played from where that player stands, so nearby players hear each other.
-    static CueDef? SoundOfAct(WorkMotion motion) => motion switch
+    static CueDef? SoundOfAct(WorkMotion motion, ushort item) => motion switch
     {
         WorkMotion.Drink => CueDefs.Drink,
         WorkMotion.Eat => CueDefs.Eat,
@@ -197,8 +199,28 @@ public partial class Atmosphere
 
     void HearAct(DbConnection conn, PlayerAct act)
     {
-        if (SoundOfAct((WorkMotion)act.Motion) is not { } def) return;
+        if (SoundOfAct((WorkMotion)act.Motion, act.Item) is not { } def) return;
         if (conn.Db.PlayerPos.PlayerId.Find(act.PlayerId) is not { } at) return;
         Sfx.PlayBy(def, new Vector3(at.X, 0f, at.Z));
+    }
+
+    // How much each fire can hold ahead of now (its lighter's Firecraft and a hearth's scale, set by
+    // the server on the fire row: FuelCapSeconds), so a well-stoked fire is judged against its own cap.
+    readonly System.Collections.Generic.Dictionary<ulong, float> fireCaps = new();
+
+    void HearFireCaps(DbConnection conn)
+    {
+        conn.Db.Fire.OnInsert += (_, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnUpdate += (_, _, f) => fireCaps[f.Id] = f.FuelCapSeconds;
+        conn.Db.Fire.OnDelete += (_, f) => fireCaps.Remove(f.Id);
+    }
+
+    // 0 to 1: how stoked a fire is, rising from 70% to 80% of its own cap (the same ramp as the
+    // smoke signal, so the roar and the plume come together). Fires from before the column
+    // (cap 0) are judged against the Master cap.
+    float Stoke(ulong id, float left)
+    {
+        float cap = fireCaps.TryGetValue(id, out var c) && c > 0f ? c : Fires.MasterMaxSeconds;
+        return Mathf.SmoothStep(0.70f, 0.80f, left / cap);
     }
 }

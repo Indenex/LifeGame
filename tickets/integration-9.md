@@ -1,7 +1,7 @@
 # integration-9: Split the hot shared files
 Lane: Integration
 Owner: Integration thread
-Status: in_progress (plan; no code yet)
+Status: in_progress (step 1 in review)
 Branch: claude/integration-split-*  (one branch per step below)
 PR: (see GitHub)
 
@@ -27,8 +27,12 @@ Lanes stop colliding in four files. Each lane/feature owns its own file and regi
 - Tell the lane owners which file to put their entries in the moment a step merges (and update docs/CONTENT.md).
 - Pending kinds (#271 LogCabin, #267 RepairTable, #285 devices) merge first or are rebased onto step 1.
 
+## Progress log
+- 2026-10-17: PM approved the plan and the lane ranges (House building 100+, Crafting stations 200+, Animals 300+, Claims 400+; existing kinds keep their values).
+- 2026-10-17: step 1 (structures) in PR #422: `StructureDef` registry, defs in shared/structures/Structures{Core,House,Crafting,Animals,Claims}.cs, callers use `Structures.Kinds/Exists/Costs/Shape`. Redone on top of main five times as other lanes edited Structures.cs; the conversion is mechanical (move each shape's text into its lane file). Checked: every field of every kind's scaled shape, costs included, is identical to main.
+
 ## Open questions
-- Lane id ranges for StructureKind (above are proposals; the PM decides, no player-visible change).
+- None.
 
 ## Next step
-Send this plan to the PM; start step 1 on a branch off main once #403 is merged.
+Merge step 1, tell the lanes where their defs live (add a def in your lane file, add the same id to StructureKind; #285, #417 rebase onto it), then step 2 (Subscriptions).

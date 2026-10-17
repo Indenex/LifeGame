@@ -25,6 +25,7 @@ public partial class Woodcutting : Node
         conn.Db.ChoppedTree.OnUpdate += (_, _, t) => Changed(t);
         conn.Db.ChoppedTree.OnDelete += (_, t) => { if (felled.Remove(t.CellKey)) terrain.Refresh(t.CellX, t.CellZ); };
 
+        Use.RegisterHint("crafting.equip_axe", EquipHint);
         var chop = Processes.Find("chop.log")!;
         Use.Register(new UseHandler
         {
@@ -34,9 +35,20 @@ public partial class Woodcutting : Node
             {
                 if (!HasAxe() || TreeNear(at) is not { } tree) return null;
                 float d = new Vector2(tree.X - at.X, tree.Y - at.Z).Length();
-                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y));
+                return new UseOffer(chop.Name, d, () => crafting.Start(chop), Target: new Vector3(tree.X, at.Y, tree.Y), Again: 0.3f);
             },
         });
+    }
+
+    // At a tree with an axe only in the bag: a nudge to take it in hand (crafting-29). Not while
+    // loot lies near, which is what E would pick up.
+    string? EquipHint(Vector3 at)
+    {
+        if (conn == null || HasAxe() || TreeNear(at) == null) return null;
+        if (conn.Db.WorldItem.Iter().Any(i => new Vector2(i.X - at.X, i.Z - at.Z).Length() <= World.Reach)) return null;
+        bool carriesAxe = conn.Db.MyInventory.Iter().Any(r => r.Count > 0 && Items.IsKnown(r.Item) && (Items.Def((Item)r.Item).Tags & ItemTags.Chopping) != 0
+            && !(Durability.Wears((Item)r.Item) && Durability.IsSpent(r.Quality, r.Wear)));
+        return carriesAxe ? "Take your axe in hand to chop: press its number key" : null;
     }
 
     void Changed(ChoppedTree t)
@@ -44,8 +56,9 @@ public partial class Woodcutting : Node
         if (t.Felled && felled.Add(t.CellKey)) terrain?.Refresh(t.CellX, t.CellZ);
     }
 
-    bool HasAxe() => conn != null && conn.Db.MyInventory.Iter()
-        .Any(i => i.Count > 0 && Items.IsKnown(i.Item) && Items.Def((Item)i.Item).Tags.HasFlag(ItemTags.Chopping));
+    // Only an axe that is equipped and still works chops (crafting-29, Equipped.cs); otherwise
+    // the tree is not offered and E goes to the loot near it.
+    bool HasAxe() => Equipped.Has(conn, ItemTags.Chopping);
 
     // The trunk of the nearest standing tree within reach, as the server will pick it.
     Vector2? TreeNear(Vector3 at)

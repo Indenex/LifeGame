@@ -26,6 +26,8 @@ public static class ClayItemLook
             Item.UnfiredLamp => Pot(ClayForm.Lamp, ClayStage.Drying, false),
             Item.RoofTile => Tile(ClayStage.Fired),
             Item.UnfiredRoofTile => Tile(ClayStage.Drying),
+            Item.ClayTrough => Trough(ClayStage.Fired),
+            Item.UnfiredClayTrough => Trough(ClayStage.Drying),
             Item.Tallow => Look.Faceted(new SphereMesh { Radius = 0.07f, Height = 0.08f, RadialSegments = 8, Rings = 4 }, new Color(0.93f, 0.88f, 0.72f)),
             Item.PotOfBroth => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Broth)),
             Item.PotOfStew => Pot(ClayForm.CoilPot, ClayStage.Fired, true, Look.Solid(SimmerView.Stew)),
@@ -47,9 +49,42 @@ public static class ClayItemLook
         return mesh;
     }
 
-    static Mesh Pot(ClayForm form, ClayStage stage, bool full, Material? liquid = null)
+    static readonly Dictionary<(Item, uint), Mesh?> MarkedMeshes = new();
+
+    // The same item with its maker's mark pressed in (ceramics-15): glyph 0 to 11. Null for an
+    // item that carries no mark, so the caller falls back to the plain mesh.
+    public static Mesh? MarkedMesh(Item item, uint maker)
     {
-        var mesh = Baked(PotMesh.For(form, 2), ClayLook.For(stage, FireKind.Pit, 0f, 2), PotView.Size);
+        if (MarkedMeshes.TryGetValue((item, maker), out var cached)) return cached;
+        var look = ClayLook.MarkLookup?.Invoke(maker);
+        if (look is not { } found)
+        {
+            MarkedMeshes[(item, maker)] = null;
+            return null;
+        }
+        var glyph = (slot: found.slot, color: found.color);
+        Mesh? mesh = item switch
+        {
+            Item.PinchPot => Pot(ClayForm.PinchPot, ClayStage.Fired, false, null, glyph),
+            Item.CoilPot => Pot(ClayForm.CoilPot, ClayStage.Fired, false, null, glyph),
+            Item.PinchPotOfWater => Pot(ClayForm.PinchPot, ClayStage.Fired, true, null, glyph),
+            Item.CoilPotOfWater => Pot(ClayForm.CoilPot, ClayStage.Fired, true, null, glyph),
+            Item.UnfiredPinchPot => Pot(ClayForm.PinchPot, ClayStage.Drying, false, null, glyph),
+            Item.UnfiredCoilPot => Pot(ClayForm.CoilPot, ClayStage.Drying, false, null, glyph),
+            Item.ClayLamp => Pot(ClayForm.Lamp, ClayStage.Fired, false, null, glyph),
+            Item.UnfiredLamp => Pot(ClayForm.Lamp, ClayStage.Drying, false, null, glyph),
+            Item.StorageJar => Jar(ClayStage.Fired, glyph),
+            Item.UnfiredStorageJar => Jar(ClayStage.Drying, glyph),
+            _ => null,
+        };
+        MarkedMeshes[(item, maker)] = mesh;
+        return mesh;
+    }
+
+    static Mesh Pot(ClayForm form, ClayStage stage, bool full, Material? liquid = null, (int slot, Color color)? glyph = null)
+    {
+        var plain = ClayLook.For(stage, FireKind.Pit, 0f, 2);
+        var mesh = Baked(PotMesh.For(form, 2), glyph is { } g ? ClayLook.Stamped(plain, g.slot, g.color, form) : plain, PotView.Size);
         if (full)
         {
             var line = PotMesh.WaterLine(form) * PotView.Size;
@@ -64,13 +99,20 @@ public static class ClayItemLook
         return mesh;
     }
 
+    // A trough is kiln-fired too (ceramics-13).
+    static Mesh Trough(ClayStage stage) =>
+        Baked(PotMesh.For(ClayForm.Trough, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
+
     // Roof tiles are kiln-fired too.
     static Mesh Tile(ClayStage stage) =>
         Baked(PotMesh.For(ClayForm.Tile, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
 
     // A jar on the ground is kiln-fired, so it takes the kiln's darker red.
-    static Mesh Jar(ClayStage stage) =>
-        Baked(PotMesh.For(ClayForm.StorageJar, 2), ClayLook.For(stage, FireKind.Kiln, 0f, 2), PotView.Size);
+    static Mesh Jar(ClayStage stage, (int slot, Color color)? glyph = null)
+    {
+        var plain = ClayLook.For(stage, FireKind.Kiln, 0f, 2);
+        return Baked(PotMesh.For(ClayForm.StorageJar, 2), glyph is { } g ? ClayLook.Stamped(plain, g.slot, g.color, ClayForm.StorageJar) : plain, PotView.Size);
+    }
 
     // A copy of a mesh, scaled, with its material baked in, since ground items
     // are drawn without a material override.

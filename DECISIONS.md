@@ -1153,3 +1153,154 @@ Owner: Claims.
 ## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
 **Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
 **Who:** PM default; Justin didn't answer.
+
+## D-284 — 2026-10-17 — Renders get faster with three Render workers
+**Decision:** Renders get faster with three Render workers. Render A (session_015S96hNrEu92FrCoNZqZZjs) does look checks. Render B (session_01AkKLF7VETNCk9bZ7SvfjkG, Sonnet) does UI and stills. Render C (session_01KA7oA899HvQKhMWZhZYnuU, Sonnet) does clips. Justin's requests jump the queue.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-285 — 2026-10-17 — Pines keep the darker noon look, more lit colour at low sun, tidier bottom ring
+**Decision:** Pines keep the darker noon look (D-282) but let more lit colour through at low sun. The bottom ring of boughs is made more uniform.
+**Who:** Justin: "clean up the bottom ring of leaves and make them more uniform, some are all over the place" (relayed by the PM).
+
+## D-286 — 2026-10-17 — A buildable stone-ringed hearth warms winter nights
+**Decision:** Survival's 2-hour building-session check found hunger and thirst gentle; winter nights in the open are the only friction (a warm-up is needed about every 7 minutes). The fix is a buildable stone-ringed hearth that warms out to about 8 m. House building builds it and Survival sets the numbers. No change to need drain.
+**Who:** Justin, picking the stone-ringed hearth as the fix (relayed by the PM; no direct quote).
+
+## D-287 — 2026-10-17 — A well-fuelled fire puts up a smoke-signal column
+**Decision:** From a playtester idea Justin wants: a fire above 75% fuel puts up a thick, tall smoke column that is visible from far away, like a smoke signal. It is 3D/volumetric and painted. Owner: Atmosphere, who builds it after the water.
+**Who:** Justin, wanting the playtester's idea (relayed by the PM; no direct quote).
+
+## D-288 — 2026-10-17 — Crafting hovers show the recipe chain only for discovered steps
+**Decision:** Crafting hovers show the full recipe chain only for steps already in the player's journal. Undiscovered steps get a nudge naming a place or material to try.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-289 — 2026-10-17 — "Coil pot" is displayed as "Clay pot"
+**Decision:** "Coil pot" is renamed "Clay pot" in display names only. Ids are unchanged.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-290 — 2026-10-17 — Smoke signals trigger at 75% of the lighter's own fuel cap
+**Decision:** Smoke signals (D-287) trigger at 75% of the lighter's own fuel cap, so anyone can signal by filling their fire. Homes and indoor hearths never signal; only open campfires and outdoor stone hearths do.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-291 — 2026-10-17 — Morning frost only in autumn, lighter rime
+**Decision:** Morning frost appears only in autumn. It appears randomly by local temperature, deterministic per seed, day and spot, and it is a lighter rime, as at 864924de. The heavy snow look Justin likes is kept for winter ground snow.
+**Who:** Justin, choosing autumn-only lighter rime and keeping the heavy snow look for winter (relayed by the PM; no direct quote).
+
+## D-292 — 2026-10-17 — Top priority: roll out the painted look and textures on everything
+**Decision:** The top priority is rolling out the painted look and textures on everything: ground, trees, rocks, plants, props, animals, structures and items. Order: trees (#544) first, then terrain (Environment) and props (Modeling), then animals, structures and items. Work goes in small PRs per family.
+**Who:** Justin, setting the painted look as top priority (relayed by the PM; no direct quote).
+
+## D-293 — 2026-10-17 — "I'm stuck" command for everyone
+**Decision:** An "I'm stuck" command in the Esc menu and as `/stuck`, for everyone including bots. It moves the player to the nearest free spot within about 12 m, then their claim, then spawn, with a 60 s cooldown, decided on the server (bugfix-44). Test bots use it as their last resort (integration-12).
+**Who:** Justin, asking for the stuck command (relayed by the PM; no direct quote).
+
+## D-294 — 2026-10-17 — The launcher shows patch notes for each release
+**Decision:** The launcher shows patch notes for each release, written from a `Player note:` line in each PR (release-9).
+**Who:** Justin, asking for launcher patch notes (relayed by the PM; no direct quote).
+
+## D-295 — 2026-10-17 — Town office powers
+**Decision:** Town office powers. Marshal: timed ban from the town's claims. Gatekeeper: opens or bars town gates for everyone. Scribe: keeps a town log only (the Mayor posts announcements). Elder: breaks tied votes. Treasurer: no power until there is a treasury.
+**Who:** Justin, picking the powers (relayed by the PM; no direct quote).
+
+## D-296 — 2026-10-17 — CI on main builds and releases fast; full checks run on PRs
+**Decision:** CI on pushes to main only builds the module and clients and runs the Upgrade check, then releases. The full gameplay checks run on every PR before merge, and draft PRs get a quick build only.
+**Who:** Justin: "Yes" (to the PM's proposal). Earlier he said: "Merge A is done -> Build -> release as fast as possible."
+
+## D-297 — 2026-10-17 — Players choose their name at character creation
+**Decision:** Players choose their name at character creation (ui-31). Names are 2 to 20 characters and unique, checked by the server.
+**Who:** Justin, asking for name choice at creation (relayed by the PM; no direct quote).
+
+## D-298 — 2026-10-17 — Unity comparison spike, lighting only
+**Decision:** A Unity comparison spike on branch `claude/unity-spike`. It is a lighting comparison and not a migration.
+**Who:** Justin, asking for the spike (relayed by the PM; no direct quote).
+
+## D-299 — 2026-10-17 — Sundial structure gives its claim a time-of-day arc
+**Decision:** A sundial structure. When one stands in a claim, every member of that claim (and its town) gets a time-of-day arc at top centre. Look: the painted sky ribbon, a thin brushstroke arc with a sun gliding from sunrise to sunset, dawn-amber and dusk-rose ends, and a crescent moon at night. Hover shows words, never numbers. Tickets: building-18, ui-32 and a Modeling model.
+**Who:** Justin: "everyone part of the claim gets it".
+
+## D-300 — 2026-10-17 — Beds offer to set your respawn point
+**Decision:** Rest spots (sleeping mats, beds and similar) become a data family. Using one offers "Wake here after a fall?" (Set / Not now), checked by the server. Nothing is set silently. Ticket survival-23.
+**Who:** Justin: "sleeping mats/beds, etc. should offer to set your respawn point".
+
+## D-301 — 2026-10-17 — Releases and builds get priority over PR CI
+**Decision:** Main builds and releases pause PR CI runs, which re-run automatically afterwards (integration-13). The PM applied this by hand on 2026-10-17 at 05:30 in the meantime.
+**Who:** Justin: "can we give releases and builds 100% priority over PRs?"
+
+## D-302 — 2026-10-17 — A tool must be equipped in the selected hotbar slot to be used in the world
+**Decision:** World tool actions (chop, dig, mine, cut) require the matching tool equipped in the selected hotbar slot, checked by the server. With no tool equipped, E near trees goes to loot first, because loot near trees was hard to pick up. Crafting recipes that need a tool still count belt and bag tools (D-263 unchanged). Ticket crafting-29.
+**Who:** Justin: "for a tool to be used, it needs to be on your bar and equipped".
+
+## D-303 — 2026-10-17 — Leave the Golden Skull pack on the PM branch for now
+**Decision:** The Golden Skull art pack (commercial licence; no redistribution) sits on the PM branch of the public LifeGame repo. The PM flagged that a public repo makes the raw pack downloadable. For now it is left as it is, and Justin accepts the risk until later. Revisit before outside players join or the game is promoted.
+**Who:** Justin, choosing "Leave it for now" (relayed by the PM).
+
+## D-304 — 2026-10-17 — Right-click a player for a menu; E never acts on players
+**Decision:** E never acts on players. Right-clicking a player opens a menu with Trade, Invite to town, Whisper, Inspect and Invite to group. A party system is to be proposed, so Invite to group is shown greyed until then. Ticket ui-34.
+**Who:** Justin: "make it so right clicking a person opens a menu to invite them to group, trade, etc. just being near them and hitting E shouldn't do anything".
+
+## D-305 — 2026-10-17 — Belt tools are storage only for world use
+**Decision:** Tools on the doll's tool section (belt) are storage only for world use. They stay weightless and count for crafting recipes, but chopping, digging, shearing, butchering and fighting with a spear or bow all need the tool or weapon on the hotbar and selected. This supersedes the ui-18 "belt tools work by themselves" for world actions. Equipped state is server-side: PlayerEquip and the EquipSlot reducer. Ticket crafting-29.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-306 — 2026-10-17 — Groups start as a plain shell
+**Decision:** Groups are built as a shell for now. Up to 10 members. Anyone can leave any time. A member offline for a day drops off. The group ends when one person is left. There is no leader. Invites go through the right-click player menu (D-304), wait 60 s, and are accepted with E or the menu. Perks (map markers, needs rings, bonuses) come later.
+**Who:** Justin: "just build a shell right now".
+
+## D-307 — 2026-10-17 — Every hotbar slot equips, Minecraft-style
+**Decision:** The hotbar is Minecraft-style. Any number key puts that slot's item in hand, the held item is used with a click (eat, drink, place, wear, swing), and the same key puts it away. The held item shows in the character's hand for everyone (Animation). The equipped slot is server-side (PlayerEquip, D-305). E stays for world interaction. Tickets: crafting-29, ui-36 (#583), anim-next.
+**Who:** Justin: "Every slot equips".
+
+## D-308 — 2026-10-17 — Frost "in between": silvered grass tips, white-edged rocks and leaves
+**Decision:** Frost sits "in between": grass tips clearly silvered, rocks and leaf tops white-edged, never snow-like (#597).
+**Who:** Justin, choosing the in-between frost look (relayed by the PM; no direct quote).
+
+## D-309 — 2026-10-17 — Character menu as a "Cutesy page"
+**Decision:** The character menu is a "Cutesy page": pastel paper, polaroid or sticker frames, chibis bobbing, doodles (ui-39).
+**Who:** Justin, choosing the Cutesy page (relayed by the PM; no direct quote).
+
+## D-310 — 2026-10-17 — No move to Unity; work on Godot shadows
+**Decision:** No move to Unity. The spike's conclusion is accepted. "Shadows might be nice", so Godot shadow quality work goes ahead (atmos-shadows-1). Merged meshes come via env-24.
+**Who:** Justin: "Shadows might be nice" (relayed by the PM).
+
+## D-311 — 2026-10-17 — Pot slip decoration is a banded rim with a free colour picker
+**Decision:** Pot slip decoration is a banded rim (one or two bands), with colours from a free picker in the mark's allowed range (ceramics-14).
+**Who:** Justin, choosing the banded rim (relayed by the PM; no direct quote).
+
+## D-312 — 2026-10-17 — The Unity worker may push claude/atmos-shadows-1 and open a PR
+**Decision:** The Unity worker may push `claude/atmos-shadows-1` and open a PR.
+**Who:** Justin, giving the go-ahead (relayed by the PM; no direct quote).
+
+## D-313 — 2026-10-17 — Art direction: cutesy, relaxing, with a hint of realism
+**Decision:** The art direction is now cutesy, relaxing, with a hint of realism. It refines the Golden Skull and Dofus painted direction (D-274) toward the chibi. The lighting and shadow feel of the Godot reference frames from the Unity spike (`renders/unity-spike-*-godot.png` on `claude/unity-spike`, our own current game with the HUD hidden) is kept as the baseline, but less realistic and more cutesy to match the chibi.
+**Who:** Justin: "I like the shadows/lighting from the unity screenshots, but I want something less realistic, more cutesy to match the chibi. Cutesy, relaxing, with a hint of realism should be our art direction in the meantime."
+
+## D-314 — 2026-10-17 — UI look: "Warm paper windows"
+**Decision:** The UI look is "Warm paper windows". Every centre window becomes cream paper like the character page: 24 px round corners, soft shadow, brown Nunito text, pastel accents. The HUD stays light and boxless, with Nunito and a soft warm outline. Tickets: ui-41 (font) and ui-42 (paper frame rollout).
+**Who:** Justin, choosing "Warm paper windows" (relayed by the PM; no direct quote).
+
+## D-315 — 2026-10-17 — Cutesy extras picked
+**Decision:** Cutesy extras picked, with owners:
+- #1 soft rim light (Modeling, with Atmosphere).
+- #8 soft bloom and light leaks, and #10 gentle vignette (Atmosphere, each with a toggle).
+- #12 ambient life: butterflies, fireflies, pollen, falling leaves, snow (Environment).
+- #15 idle fidgets, #16 blinking and expressions, and #17 hop and squish movement (Animation).
+- #18 bouncy UI with reduce-motion (UX).
+
+Not picked for now: wobbly sway, squash hits, toon water sparkles, fur shading, tilt-shift, paper grain, sparkles and emotes, footprint puffs, floating +1, photo mode.
+**Who:** Justin, picking the extras (relayed by the PM; no direct quote).
+
+## D-316 — 2026-10-17 — "Smart priority" for main builds over PR runs
+**Decision:** "Smart priority": the Main priority workflow pauses PR runs only while a main Build or Release is actually waiting for a runner, and never cancels a PR run already more than about 4 minutes in. This refines D-301.
+**Who:** Justin, choosing "Smart priority" (relayed by the PM; no direct quote).
+
+## D-317 — 2026-10-17 — Soft rim light defaults to 0.5
+**Decision:** The soft rim light (D-315 #1) defaults to `Painted.RimStrength` 0.5: a thin glow mostly visible when backlit, tinted by Atmosphere's `rim_tint` by time of day (#620).
+**Who:** Justin: "Do 0.5".
+
+## D-318 — 2026-10-17 — Pebble's shell replaced by the Art R&D Blender-pipeline shell
+**Decision:** Pebble's shell is replaced by the Art R&D Blender-pipeline shell (v4 cute: big friendly plates, chunky soft rim, caramel, honey and sage-olive colours), #623. It is the first asset authored in Blender headless with a script-painted texture. The pipeline is in `docs/art-pipeline.md`.
+**Who:** Justin: "Yes" (to the PM's proposal).
+
+## D-319 — 2026-10-17 — Painted surfaces must be smooth and clean
+**Decision:** Painted surfaces must be smooth and clean: soft broad gradients and soft light bands, with no small brush dabs, crevice speckle or noise. This refines D-274 and D-313. Modeling is changing the shared painted shader centrally, with a before/after for Justin before merging.
+**Who:** Justin: "The textures of those is awful, the weird pitted look is not cutesy."

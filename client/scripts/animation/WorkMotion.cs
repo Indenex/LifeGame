@@ -184,7 +184,33 @@ public static class WorkMotions
         : Items.Def(w).Tags.HasFlag(ItemTags.Cutting) ? StrikeStyle.Slash
         : StrikeStyle.Fist;
 
+    // How a hole is dug, from the tool: bare hands scoop, a digging stick stabs and
+    // levers, a spade is stepped into, levered and the dirt thrown aside.
+    public enum DigStyle : byte { Hands, Stick, Spade }
+
+    // The spade is Crafting's (id appended when it lands); found by name so this needs
+    // no change then. Any other digging tool is used like a stick.
+    static readonly Item? SpadeItem = System.Enum.TryParse<Item>("Spade", out var spade) ? spade : null;
+
+    public static DigStyle DigStyleOf(Item? tool) =>
+        tool is not { } t ? DigStyle.Hands : t == SpadeItem ? DigStyle.Spade : DigStyle.Stick;
+
+    // The variant of an action its item picks: a strike's style, a dig's style.
+    public static byte VariantOf(WorkMotion m, Item? item) => m switch
+    {
+        WorkMotion.Strike => (byte)StyleOf(item),
+        WorkMotion.Dig => (byte)DigStyleOf(item),
+        _ => 0,
+    };
+
     // How long one plays, in seconds, fades included.
+    public static float ActSeconds(WorkMotion m, byte variant) => m == WorkMotion.Dig ? (DigStyle)variant switch
+    {
+        DigStyle.Spade => 1.35f,
+        DigStyle.Hands => 0.8f,
+        _ => 0.9f,
+    } : ActSeconds(m);
+
     public static float ActSeconds(WorkMotion m) => m switch
     {
         WorkMotion.Drink => 2.4f,
@@ -203,14 +229,38 @@ public static class WorkMotions
 
     // Where an action repeated while it plays loops back to: from loopAt seconds to
     // loopTo, two moments with the same pose (hands back at the water, at the side).
-    public static (float loopAt, float loopTo) ActLoop(WorkMotion m) => m switch
+    public static (float loopAt, float loopTo) ActLoop(WorkMotion m, byte variant) => m switch
     {
+        WorkMotion.Dig => (ActSeconds(m, variant), 0f),
         WorkMotion.Drink => (2.3f, 0.3f),
         WorkMotion.Eat => (1.15f, 0.15f),
         WorkMotion.Pluck => (0.85f, 0f),
         WorkMotion.Shear => (1.2f, 0.2f),
         WorkMotion.Butcher => (1.4f, 0.2f),
-        _ => (ActSeconds(m), 0f),
+        _ => (ActSeconds(m, variant), 0f),
+    };
+
+    // When the tool meets its work, for chips, dirt and thunks to land on the frame
+    // (Avatar.Impact): seconds into a quick action, or the point in a craft loop's cycle
+    // (0 to 1) with how many cycles it plays a second. A negative time means no impact.
+    public static float ActImpact(WorkMotion m, byte variant) => m switch
+    {
+        WorkMotion.Strike => 0.21f,
+        WorkMotion.Dig => (DigStyle)variant switch { DigStyle.Spade => 0.55f, DigStyle.Hands => 0.3f, _ => 0.36f },
+        WorkMotion.Feed => 0.5f,
+        WorkMotion.PickUp => 0.22f,
+        _ => -1f,
+    };
+
+    // A spade's second beat: the dirt thrown off the blade.
+    public static float ActThrow(WorkMotion m, byte variant) =>
+        m == WorkMotion.Dig && (DigStyle)variant == DigStyle.Spade ? 1.02f : -1f;
+
+    public static (float rate, float phase) WorkImpact(WorkMotion m) => m switch
+    {
+        WorkMotion.Chop => (ChopRate, ChopHit),
+        WorkMotion.Knap => (1.3f, 0.99f),
+        _ => (0f, -1f),
     };
 
     // Seconds to blend in and out; a pick-up is quick and light so it never slows play.
@@ -231,14 +281,14 @@ public static class WorkMotions
     public static bool ActItemInLeft(WorkMotion m) => m == WorkMotion.Shoot;
 
     // The action's pose at t seconds in. The fades come from PlayerAnimator.
-    public static void ActPose(Pose p, WorkMotion m, float t, PlayerRig body, StrikeStyle style = StrikeStyle.Fist)
+    public static void ActPose(Pose p, WorkMotion m, float t, PlayerRig body, byte variant = 0)
     {
         p.Clear();
         float legLength = body.LegLength;
         switch (m)
         {
             case WorkMotion.Strike:
-                Strike(p, t, style);
+                Strike(p, t, (StrikeStyle)variant);
                 break;
             case WorkMotion.Shoot:
             {
@@ -254,10 +304,25 @@ public static class WorkMotions
                 Arm(p, false, Mathf.Lerp(-0.4f, -1.45f, up), Mathf.Lerp(0.1f, 0.45f, draw) - 0.25f * loose, Mathf.Lerp(-0.6f, -2.3f, draw) + 1.1f * loose);
                 break;
             }
+            case WorkMotion.Dig when (DigStyle)variant == DigStyle.Spade:
+                Spade(p, t, legLength);
+                break;
+            case WorkMotion.Dig when (DigStyle)variant == DigStyle.Hands:
+            {
+                // Crouched low, both hands scoop the earth toward the knees.
+                float scoop = Mathf.Sin(Mathf.Clamp(t / 0.8f, 0f, 1f) * Mathf.Pi);
+                float pull = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.3f) / 0.35f, 0f, 1f)) * scoop;
+                Kneel(p, legLength);
+                p[Joint.Spine].X = 0.75f + 0.1f * scoop;
+                p[Joint.Neck].X = -0.1f;
+                Arm(p, true, -1.15f - 0.1f * scoop + 0.45f * pull, -0.15f, -0.2f - 0.5f * pull);
+                Arm(p, false, -1.15f - 0.1f * scoop + 0.45f * pull, 0.15f, -0.2f - 0.5f * pull);
+                break;
+            }
             case WorkMotion.Dig:
             {
-                // Feet apart and knees bent, both hands drive the stick (or the fingers) down
-                // into the earth and lever it back.
+                // Feet apart and knees bent, both hands drive the stick down into the earth
+                // and lever it back.
                 float stab = Mathf.Sin(Mathf.Clamp(t / 0.9f, 0f, 1f) * Mathf.Pi);
                 float lever = Mathf.Sin(Mathf.Clamp((t - 0.35f) / 0.45f, 0f, 1f) * Mathf.Pi);
                 p.HipsOffset = new Vector3(0, -0.18f * legLength, -0.05f);
@@ -448,28 +513,76 @@ public static class WorkMotions
         Arm(p, false, -0.55f - 0.12f * work, 0.12f, -0.95f + 0.15f * work);
     }
 
-    // Felling with an axe: feet planted wide, wind the chest and both arms back over the
-    // right shoulder, then whip the swing across into the trunk at waist height.
+    // Chop cycles a second, and where in the cycle the axe bites.
+    const float ChopRate = 0.85f, ChopHit = 0.7f;
+
+    // Felling with an axe, with weight: feet planted wide, the axe lifted back over the
+    // right shoulder, held a beat at the top, then a downswing that gathers speed into
+    // the trunk at waist height. On the bite the knees dip, the body jolts and the axe
+    // kicks back a little before settling for the next lift.
     static void Chop(Pose p, float t)
     {
-        float u = Mathf.PosMod(t * 0.85f, 1f);
-        // 0 = struck, 1 = fully wound up.
-        float wind = u < 0.62f ? Mathf.SmoothStep(0f, 1f, u / 0.62f)
-            : u < 0.78f ? 1f - Mathf.SmoothStep(0f, 1f, (u - 0.62f) / 0.16f) * 1.05f
-            : -0.05f * (1f - (u - 0.78f) / 0.22f);
-        p.HipsOffset = new Vector3(0.02f * wind, -0.05f, 0);
+        float u = Mathf.PosMod(t * ChopRate, 1f);
+        // 0 = at the trunk, 1 = fully wound up.
+        float wind, shock = 0f;
+        if (u < 0.45f) wind = Mathf.SmoothStep(0f, 1f, u / 0.45f);
+        else if (u < 0.58f) wind = 1f + 0.06f * Mathf.Sin((u - 0.45f) / 0.13f * Mathf.Pi * 0.5f);
+        else if (u < ChopHit)
+        {
+            // Gathering speed: slow off the top, fastest into the wood.
+            float x = (u - 0.58f) / (ChopHit - 0.58f);
+            wind = 1.06f * (1f - x * x * x);
+        }
+        else
+        {
+            // The recoil: a kick back off the trunk, then settling.
+            float x = (u - ChopHit) / (1f - ChopHit);
+            wind = 0.14f * Mathf.Sin(Mathf.Min(x / 0.35f, 1f) * Mathf.Pi) * (x < 0.35f ? 1f : 0f);
+            shock = Mathf.Exp(-x * 9f);
+        }
+        p.HipsOffset = new Vector3(0.02f * wind, -0.05f - 0.04f * shock, 0.03f * shock);
         p[Joint.Hips].Y = -0.25f * wind;
-        p[Joint.HipL] = new Vector3(-0.15f, 0.25f * wind, 0.12f);
-        p[Joint.HipR] = new Vector3(0.1f, 0.25f * wind, -0.12f);
-        p[Joint.KneeL].X = 0.3f;
-        p[Joint.KneeR].X = 0.22f;
-        p[Joint.FootL].X = -0.12f;
-        p[Joint.FootR].X = -0.1f;
-        p[Joint.Spine] = new Vector3(0.22f + 0.08f * (1f - wind), -0.6f * wind + 0.15f, 0.08f * wind);
-        p[Joint.Neck] = new Vector3(0.1f, 0.5f * wind - 0.1f, 0);
+        p[Joint.HipL] = new Vector3(-0.15f - 0.1f * shock, 0.25f * wind, 0.12f);
+        p[Joint.HipR] = new Vector3(0.1f - 0.1f * shock, 0.25f * wind, -0.12f);
+        p[Joint.KneeL].X = 0.3f + 0.2f * shock;
+        p[Joint.KneeR].X = 0.22f + 0.2f * shock;
+        p[Joint.FootL].X = -0.12f - 0.1f * shock;
+        p[Joint.FootR].X = -0.1f - 0.1f * shock;
+        p[Joint.Spine] = new Vector3(0.22f + 0.08f * (1f - wind) + 0.08f * shock, -0.6f * wind + 0.15f, 0.08f * wind);
+        p[Joint.Neck] = new Vector3(0.1f - 0.08f * shock, 0.5f * wind - 0.1f, 0);
         // Both hands on the haft: the right arm leads the lift, the left reaches across.
         Arm(p, false, -1.05f - 0.75f * wind, 0.1f - 0.25f * wind, -0.25f - 0.55f * wind);
         Arm(p, true, -1.15f - 0.55f * wind, -0.45f, -0.2f - 0.6f * wind);
+    }
+
+    // A spade, over 1.35 s: set the blade upright in front, step the right foot onto it
+    // and drive it in, lever the handle back, then lift and throw the dirt off to the left.
+    static void Spade(Pose p, float t, float legLength)
+    {
+        float set = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t / 0.25f, 0f, 1f));
+        float foot = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.2f) / 0.2f, 0f, 1f))
+            * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.6f) / 0.15f, 0f, 1f)));
+        float press = Mathf.Sin(Mathf.Clamp((t - 0.42f) / 0.2f, 0f, 1f) * Mathf.Pi);
+        float lever = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.62f) / 0.2f, 0f, 1f))
+            * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.82f) / 0.12f, 0f, 1f)));
+        float lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 0.82f) / 0.15f, 0f, 1f))
+            * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp((t - 1.05f) / 0.3f, 0f, 1f)));
+        float toss = Mathf.Sin(Mathf.Clamp((t - 0.92f) / 0.2f, 0f, 1f) * Mathf.Pi);
+
+        // The step: right thigh up and the foot on the blade, then the weight on it.
+        p.HipsOffset = new Vector3(0, 0.04f * legLength * foot - 0.1f * legLength * press - 0.06f * legLength * lift, 0);
+        p[Joint.HipR] = new Vector3(-0.75f * foot + 0.15f * press, 0, -0.05f);
+        p[Joint.KneeR].X = 1.1f * foot - 0.2f * press;
+        p[Joint.FootR].X = -0.3f * foot;
+        p[Joint.KneeL].X = 0.15f + 0.35f * press + 0.3f * lift;
+        p[Joint.HipL].X = -0.15f * press - 0.15f * lift;
+        p[Joint.FootL].X = -0.15f * press - 0.12f * lift;
+        // Back and arms: hands on the upright handle, pulling it back, then lifting and
+        // swinging the blade across to the left.
+        p[Joint.Spine] = new Vector3(0.18f * set + 0.15f * press - 0.12f * lever + 0.35f * lift, 0.5f * toss, 0);
+        p[Joint.Neck] = new Vector3(0.05f, -0.3f * toss, 0);
+        Arm(p, false, -0.7f * set + 0.35f * lever - 0.35f * lift, 0.25f + 0.2f * toss, -1.2f * set + 0.4f * lever);
+        Arm(p, true, -0.55f * set + 0.25f * lever - 0.55f * lift, -0.3f - 0.2f * toss, -0.5f * set - 0.3f * lift);
     }
 
     // Shoulder swing (negative is forward), shoulder sideways (inward is negative on the

@@ -54,7 +54,7 @@ public static class ItemModels
     {
         wear = Mathf.Clamp(wear, 0, 2);
         if (Held.TryGetValue((item, wear), out var mesh) && mesh != null) return mesh;
-        mesh = Make(item, true, wear) ?? HungFromTop(ItemLook.MeshFor(item));
+        mesh = Make(item, true, wear) ?? HungFromTop(ItemLook.MeshFor(item), PaintedItems.FamilyOf(item));
         Held[(item, wear)] = mesh;
         return mesh;
     }
@@ -68,7 +68,7 @@ public static class ItemModels
         _ => 0,
     };
 
-    static Mesh HungFromTop(Mesh source)
+    static Mesh HungFromTop(Mesh source, PaintedItems.Family family)
     {
         var mesh = new ArrayMesh();
         var box = source.GetAabb();
@@ -80,7 +80,7 @@ public static class ItemModels
             for (int i = 0; i < verts.Length; i++) verts[i] += shift;
             arrays[(int)Mesh.ArrayType.Vertex] = verts;
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, source.SurfaceGetMaterial(s));
+            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, PaintedItems.Of(source.SurfaceGetMaterial(s), family, held: true));
         }
         return mesh;
     }
@@ -101,7 +101,8 @@ public static class ItemModels
         EnsureMaterials();
         var surfaces = new List<(Godot.Collections.Array Arrays, Material Material)>();
         // Use darkens wood and cord: handled, sweaty, weathered.
-        void Take(MeshKit k, Material groundMaterial, float darken)
+        // Each surface goes on its family's painted twin (painted-6).
+        void Take(MeshKit k, Material groundMaterial, float darken, PaintedItems.Family family)
         {
             if (k.Empty) return;
             var arrays = k.CommitToArrays();
@@ -115,12 +116,12 @@ public static class ItemModels
                 }
                 arrays[(int)Mesh.ArrayType.Color] = colors;
             }
-            surfaces.Add((arrays, held ? plain! : groundMaterial));
+            surfaces.Add((arrays, PaintedItems.Of(held ? plain! : groundMaterial, family, held)));
         }
-        Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f);
-        Take(kit.Stone, stone!, 1f);
-        Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f);
-        Take(kit.Plain, plain!, 1f);
+        Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f, PaintedItems.Family.Wood);
+        Take(kit.Stone, stone!, 1f, PaintedItems.Family.Stone);
+        Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f, PaintedItems.Family.Fibre);
+        Take(kit.Plain, plain!, 1f, PaintedItems.FamilyOf(item));
 
         // Rest on the ground, centered; held upright things hang from their top.
         var min = Vector3.Inf;
@@ -237,9 +238,14 @@ public static class ItemModels
         Item.RawChicken => (k => Drumstick(k, new Color(0.9f, 0.72f, 0.64f), new Color(0.96f, 0.86f, 0.76f)), true),
         Item.CookedChicken => (k => Drumstick(k, new Color(0.66f, 0.4f, 0.17f), new Color(0.8f, 0.56f, 0.26f)), true),
         Item.BurntChicken => (k => Drumstick(k, new Color(0.11f, 0.09f, 0.07f), new Color(0.2f, 0.15f, 0.11f)), true),
-        // Boiled and burnt eggs (crafting-24), by number until the items reach main.
-        (Item)212 => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
-        (Item)213 => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
+        // Boiled and burnt eggs (crafting-24).
+        Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
+        Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
+        // Spade (Crafting's crafting-shovel), by number until the item reaches main.
+        (Item)18 => (Spade, false),
+        // Waterskins (survival-20).
+        Item.Waterskin => (k => Waterskin(k, false), true),
+        Item.WaterskinOfWater => (k => Waterskin(k, true), true),
         _ => (null, false),
     };
 
@@ -364,6 +370,53 @@ public static class ItemModels
             new(0f, 0.007f, 0.019f), new(0.25f, 0.008f, 0.026f, 0.004f), new(0.8f, 0.006f, 0.02f, 0.006f), new(1f, 0.002f, 0.004f, 0.004f),
         }, 5, 0.3f, 0f);
         k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0, -0.035f, 0), Vector3.Down, 0.022f, 30, 4f, 0.05f), 0.005f, 4);
+    }
+
+    // A wooden spade carved from a log: a short straight handle, a flat blade about a
+    // forearm long, and a pale stone edge lashed across its tip. Held like the
+    // digging stick; the blade's flat faces look along ±X.
+    static void Spade(Kit k)
+    {
+        k.Wood.Paint(Whittled.Darkened(0.1f)).Loft(new Vector3(0, 0.12f, 0), new Vector3(0, -0.36f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.024f, 0.024f), new(0.85f, 0.021f, 0.022f), new(1f, 0.02f, 0.028f),
+        }, 6, 0.4f);
+        k.Wood.Paint(Whittled).Loft(new Vector3(0, -0.36f, 0), new Vector3(0, -0.76f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.018f, 0.03f), new(0.15f, 0.014f, 0.062f), new(0.6f, 0.012f, 0.075f), new(1f, 0.01f, 0.07f),
+        }, 6, 0.1f);
+        // The stone edge, set into the blade's end and lashed through.
+        k.Stone.Paint(Flint.Lightened(0.25f)).Loft(new Vector3(0, -0.75f, 0), new Vector3(0, -0.83f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.012f, 0.072f), new(0.6f, 0.009f, 0.068f), new(1f, 0.002f, 0.056f),
+        }, 6, 0.1f, 0f);
+        k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0, -0.735f, 0), Vector3.Down, 0.03f, 28, 3f, 0.03f), 0.005f, 4);
+        k.Plant.Paint(Cord, 0.9f).Tube(MeshKit.Circle(new Vector3(0, -0.37f, 0), Vector3.Down, 0.024f, 24, 3f, 0.025f), 0.005f, 4);
+    }
+
+    // A hide waterskin with a cord-tied neck: empty it lies slack and folded, full it
+    // stands swollen and taut, the neck pulled up tight.
+    static void Waterskin(Kit k, bool full)
+    {
+        var hide = HideSkin.Darkened(full ? 0.22f : 0.15f);
+        if (full)
+        {
+            k.Plain.Paint(hide).Ellipsoid(new Vector3(0, 0.1f, 0), new Vector3(0.1f, 0.1f, 0.085f), 12, 8);
+            k.Plain.Paint(hide, 0.95f).Ellipsoid(new Vector3(0, 0.05f, 0), new Vector3(0.105f, 0.06f, 0.09f), 12, 6);
+            k.Plain.Paint(hide).Loft(new Vector3(0, 0.18f, 0), new Vector3(0.01f, 0.26f, 0), new MeshKit.Ring[]
+            {
+                new(0f, 0.05f, 0.045f), new(0.6f, 0.022f, 0.02f), new(1f, 0.03f, 0.026f),
+            }, 8, 0.3f);
+            k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0.006f, 0.235f, 0), Vector3.Up, 0.024f, 20, 3f, 0.015f), 0.005f, 4);
+        }
+        else
+        {
+            // Lying on its side, flattened, with a fold across it and the neck flopped over.
+            k.Plain.Paint(hide).Ellipsoid(new Vector3(0, 0.025f, 0), new Vector3(0.11f, 0.025f, 0.09f), 12, 6, new Basis(Vector3.Up, 0.2f));
+            k.Plain.Paint(hide, 0.85f).Tube(new[] { new Vector3(-0.07f, 0.045f, -0.06f), new Vector3(0, 0.05f, 0.0f), new Vector3(0.08f, 0.044f, 0.05f) }, 0.008f, 5);
+            k.Plain.Paint(hide, 0.95f).Tube(new[] { new Vector3(0.09f, 0.03f, -0.02f), new Vector3(0.14f, 0.03f, -0.03f), new Vector3(0.17f, 0.018f, -0.05f) }, 0.02f, 6, 0.016f);
+            k.Plant.Paint(Cord).Tube(MeshKit.Circle(new Vector3(0.14f, 0.03f, -0.03f), Vector3.Right, 0.022f, 20, 3f, 0.015f), 0.005f, 4);
+        }
     }
 
     // A straight stick, its end whittled flat and hardened black in the fire.
@@ -697,8 +750,8 @@ public static class ItemModels
         ArrowParts(kit, new Vector3(0, 0, -0.36f), new Vector3(0, 0, 0.36f));
         EnsureMaterials();
         var mesh = new ArrayMesh();
-        foreach (var k in new[] { kit.Wood, kit.Stone, kit.Plant, kit.Plain })
-            if (!k.Empty) k.Commit(mesh, plain!);
+        foreach (var (k, family) in new[] { (kit.Wood, PaintedItems.Family.Wood), (kit.Stone, PaintedItems.Family.Stone), (kit.Plant, PaintedItems.Family.Fibre), (kit.Plain, PaintedItems.Family.Wood) })
+            if (!k.Empty) k.Commit(mesh, PaintedItems.Of(plain!, family, held: true));
         return mesh;
     }
 

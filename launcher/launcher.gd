@@ -40,8 +40,13 @@ extends Control
 #   --screenshot=PATH    save the window to PATH once the launcher is idle, then quit
 #   --no-shortcut        don't create the desktop and menu shortcuts
 #   --no-self-update     never replace the launcher itself
+#   --window-size=WxH    open at this size and neither restore nor remember the window (tests)
 
 const WIPE_MARK := "<!-- world-wipe -->"
+const BASE_SIZE := Vector2i(860, 560)  # the window's first size, before DPI scaling
+const MIN_SIZE := Vector2i(640, 540)   # never smaller than this (and never smaller than the layout needs)
+const NOTES_OPEN := "<!-- notes -->"      # the release body lists the patch notes between these
+const NOTES_CLOSE := "<!-- /notes -->"
 
 const BG := Color(0.07, 0.08, 0.06)
 const PANEL := Color(0.09, 0.10, 0.07, 0.92)
@@ -59,6 +64,12 @@ var stdb_server := "local"
 var server_url := "http://127.0.0.1:3000"
 var db := "lifegame"
 var manage_server := true
+var notes_box: TextEdit      # "What's new": the patch notes of the builds you are about to get / just got
+var whats_new_button: Button
+var whats_new_from := -1    # build the last update started from; -1 = use the installed build
+var spacer: Control            # takes the room the What's new box doesn't
+var window_timer: Timer       # saves the window after it stops moving
+var address_edit: LineEdit   # player build: where friends type the host's address
 var player := false        # the player build: no server parts, joins a server address
 
 var state := {"client_build": 0, "server_build": 0, "shortcut": 0}
@@ -89,6 +100,7 @@ signal wipe_answered(go: bool)
 
 func _ready() -> void:
 	_parse_args()
+	_setup_window()
 	_build_ui()
 	_load_state()
 	if FileAccess.file_exists("res://version.txt"):
@@ -106,9 +118,82 @@ func _ready() -> void:
 		else:
 			await _update_and_play()
 		if opts.has("quit"):
+			_save_window()
 			get_tree().quit(exit_code)
 	if opts.has("screenshot"):
 		await _screenshot(opts["screenshot"])
+
+# --- The window -------------------------------------------------------------------
+
+# Resizable, with a minimum that follows the layout, sharp on high-DPI screens, and back where
+# it was last time (LifeGame/window.json: x, y, w, h in screen pixels).
+func _setup_window() -> void:
+	var win := get_window()
+	var scale := 1.0
+	if not opts.has("window-size"):
+		scale = maxf(1.0, DisplayServer.screen_get_scale(win.current_screen))
+	win.content_scale_factor = scale
+	win.min_size = Vector2i(Vector2(MIN_SIZE) * scale)
+	win.wrap_controls = true   # the window can't be made smaller than the buttons and boxes need
+	var size := Vector2i(Vector2(BASE_SIZE) * scale)
+	var pos := Vector2i.ZERO
+	var has_pos := false
+	if opts.has("window-size"):
+		var wh: PackedStringArray = str(opts["window-size"]).split("x")
+		if wh.size() == 2 and wh[0].is_valid_int() and wh[1].is_valid_int():
+			size = Vector2i(wh[0].to_int(), wh[1].to_int())
+	else:
+		var saved := _read_window()
+		if not saved.is_empty():
+			size = saved.size
+			pos = saved.pos
+			has_pos = saved.has_pos
+	var usable := DisplayServer.screen_get_usable_rect(win.current_screen)
+	if usable.size.x > 0:
+		size = Vector2i(mini(size.x, usable.size.x), mini(size.y, usable.size.y))
+	win.size = size.max(win.min_size)
+	if has_pos and _on_a_screen(Rect2i(pos, win.size)):
+		win.position = pos
+	if not opts.has("window-size"):
+		window_timer = Timer.new()
+		window_timer.one_shot = true
+		window_timer.wait_time = 0.6
+		window_timer.timeout.connect(_save_window)
+		add_child(window_timer)
+		win.size_changed.connect(func(): window_timer.start())
+
+func _read_window() -> Dictionary:
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.READ)
+	if not f:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	if not (d is Dictionary) or not (d.has("w") and d.has("h")):
+		return {}
+	return {"size": Vector2i(int(d.w), int(d.h)), "pos": Vector2i(int(d.get("x", 0)), int(d.get("y", 0))), "has_pos": d.has("x") and d.has("y")}
+
+# True when most of the title bar of a window at this rect is on some screen.
+func _on_a_screen(r: Rect2i) -> bool:
+	var bar := Rect2i(r.position, Vector2i(r.size.x, 40))
+	for i in DisplayServer.get_screen_count():
+		var area := Rect2i(DisplayServer.screen_get_position(i), DisplayServer.screen_get_size(i))
+		var hit := area.intersection(bar)
+		if hit.size.x >= 120 and hit.size.y >= 20:
+			return true
+	return false
+
+func _save_window() -> void:
+	if opts.has("window-size"):
+		return
+	var win := get_window()
+	if win.mode != Window.MODE_WINDOWED:
+		return
+	var f := FileAccess.open(home.path_join("window.json"), FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"x": win.position.x, "y": win.position.y, "w": win.size.x, "h": win.size.y}))
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_save_window()
 
 # --- Options and state ------------------------------------------------------------
 
@@ -148,7 +233,7 @@ func _server_address() -> String:
 	if not player:
 		return server_url
 	var exe_dir := OS.get_executable_path().get_base_dir()
-	for path in [exe_dir.path_join("server.cfg"), home.path_join("server.cfg"), "res://server.txt"]:
+	for path in [home.path_join("server.cfg"), exe_dir.path_join("server.cfg"), "res://server.txt"]:
 		if FileAccess.file_exists(path):
 			var line := FileAccess.get_file_as_string(path).strip_edges().get_slice("\n", 0).strip_edges()
 			if line != "" and not line.begins_with("#"):
@@ -234,7 +319,7 @@ func _build_ui() -> void:
 	versions.add_child(game_label)
 	versions.add_child(world_label)
 
-	var spacer := Control.new()
+	spacer = Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(spacer)
 
@@ -246,6 +331,31 @@ func _build_ui() -> void:
 	detail_label = _small("", MUTED)
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(detail_label)
+
+	if player and not opts.has("server"):
+		var addr_row := HBoxContainer.new()
+		addr_row.add_theme_constant_override("separation", 10)
+		col.add_child(addr_row)
+		addr_row.add_child(_small("Server address", MUTED))
+		address_edit = LineEdit.new()
+		address_edit.placeholder_text = "e.g. http://203.0.113.5:3000 (ask the host)"
+		address_edit.text = server_url
+		address_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		address_edit.text_submitted.connect(func(_t): _on_main())
+		addr_row.add_child(address_edit)
+
+	notes_box = TextEdit.new()
+	notes_box.editable = false
+	notes_box.visible = false
+	notes_box.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	notes_box.custom_minimum_size = Vector2(0, 90)
+	notes_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	notes_box.add_theme_font_size_override("font_size", 15)
+	notes_box.add_theme_color_override("font_readonly_color", CREAM)
+	notes_box.add_theme_stylebox_override("normal", _notes_style())
+	notes_box.add_theme_stylebox_override("focus", _notes_style())
+	notes_box.add_theme_stylebox_override("read_only", _notes_style())
+	col.add_child(notes_box)
 
 	bar = ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 8)
@@ -268,8 +378,10 @@ func _build_ui() -> void:
 	log_box.add_theme_font_size_override("font_size", 12)
 	col.add_child(log_box)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	# A flow, so the buttons wrap onto a second line when the window is narrow.
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 10)
+	row.add_theme_constant_override("v_separation", 8)
 	col.add_child(row)
 	main_button = _button("Update and play", true)
 	main_button.pressed.connect(_on_main)
@@ -280,13 +392,13 @@ func _build_ui() -> void:
 	world_button = _button("Update world only", false)
 	world_button.pressed.connect(_on_world_only)
 	row.add_child(world_button)
-	var fill_space := Control.new()
-	fill_space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(fill_space)
 	refresh_button = _button("Refresh", false)
 	refresh_button.tooltip_text = "Check for a newer build again"
 	refresh_button.pressed.connect(_on_refresh)
 	row.add_child(refresh_button)
+	whats_new_button = _button("What's new", false)
+	whats_new_button.pressed.connect(_toggle_whats_new)
+	row.add_child(whats_new_button)
 	log_button = _button("Details", false)
 	log_button.pressed.connect(func(): log_box.visible = not log_box.visible)
 	row.add_child(log_button)
@@ -349,6 +461,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if wipe_overlay.visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		wipe_answered.emit(false)
+
+func _notes_style() -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(CREAM, 0.05)
+	st.set_corner_radius_all(8)
+	st.set_content_margin_all(12)
+	return st
 
 func _small(text: String, color: Color) -> Label:
 	var l := Label.new()
@@ -415,6 +534,7 @@ func _update_buttons() -> void:
 		play_button.visible = false
 	world_button.disabled = busy
 	refresh_button.disabled = busy
+	whats_new_button.disabled = busy
 	refresh_button.text = "Checking..." if checking else "Refresh"
 	game_label.text = "Game: " + _build_name(state.client_build)
 	if manage_server:
@@ -454,7 +574,8 @@ func _refresh() -> void:
 			var body = r.get("body", "")
 			releases.append({
 				"build": num.to_int(), "tag": tag, "title": r.get("name", tag),
-				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets})
+				"wipe": body is String and body.contains(WIPE_MARK), "assets": assets,
+				"notes": _parse_notes(body if body is String else "")})
 		releases.sort_custom(func(a, b): return a.build > b.build)
 	latest = releases[0] if not releases.is_empty() else {}
 	if not latest.is_empty() and await _self_update():
@@ -473,8 +594,56 @@ func _refresh() -> void:
 		if _wipe_ahead():
 			d += "  It wipes the world; you'll be asked first."
 		_set_status("An update is ready.", d)
+		_show_whats_new(true)
 	if manage_server and _find_spacetime() == "":
 		_needs_spacetime()
+
+# The bullet lines between the notes markers of a release body, without their "- ".
+func _parse_notes(body: String) -> Array:
+	var out := []
+	var a := body.find(NOTES_OPEN)
+	var b := body.find(NOTES_CLOSE)
+	if a < 0 or b < a:
+		return out
+	for line in body.substr(a + NOTES_OPEN.length(), b - a - NOTES_OPEN.length()).split("\n"):
+		var t := line.strip_edges().trim_prefix("- ").trim_prefix("* ").strip_edges()
+		if t != "":
+			out.append(t)
+	return out
+
+# What's new, newest first and grouped by build: every build after the one the game was on
+# (before an update, the installed build; after one, the build it started from), up to the
+# newest. With nothing newer, the last few builds.
+func _whats_new_text() -> String:
+	if releases.is_empty():
+		return ""
+	var from: int = whats_new_from if whats_new_from >= 0 else int(state.client_build)
+	var shown := []
+	for r in releases:
+		if r.build > from and r.build <= latest.build:
+			shown.append(r)
+	if shown.is_empty():
+		shown = releases.slice(0, 3)
+	var text := ""
+	for r in shown:
+		text += "Build %d\n" % r.build
+		if r.notes.is_empty():
+			text += "  - Small fixes and tweaks.\n"
+		for n in r.notes:
+			text += "  - %s\n" % n
+		text += "\n"
+	return text.strip_edges()
+
+func _show_whats_new(on: bool) -> void:
+	if on:
+		notes_box.text = _whats_new_text()
+		_log("What's new:\n" + notes_box.text)
+		notes_box.scroll_vertical = 0
+	notes_box.visible = on and notes_box.text != ""
+	spacer.visible = not notes_box.visible
+
+func _toggle_whats_new() -> void:
+	_show_whats_new(not notes_box.visible)
 
 func _wipe_ahead() -> bool:
 	if not manage_server or latest.is_empty():
@@ -593,6 +762,7 @@ func _update(client: bool, world: bool) -> bool:
 		return true
 	_set_busy(true)
 	exit_code = 0
+	var started_from: int = state.client_build
 	var wipe := false
 	if need_world and _wipe_ahead():
 		if opts.has("auto"):
@@ -629,6 +799,9 @@ func _update(client: bool, world: bool) -> bool:
 	bar.value = 1.0
 	_set_busy(false)
 	_set_status("Everything is up to date.", "Build %d" % latest.build)
+	if need_client:
+		whats_new_from = started_from
+		_show_whats_new(true)
 	return true
 
 func _fail() -> bool:
@@ -839,6 +1012,21 @@ func _remove_tree(path: String) -> void:
 		_remove_tree(path.path_join(sub))
 	DirAccess.remove_absolute(path)
 
+# The player's address box: remember what was typed in server.cfg in the launcher's folder, so
+# the next start is a double-click. A bare "host:3000" gets http:// in front.
+func _take_address() -> void:
+	var a := address_edit.text.strip_edges()
+	if a == "":
+		return
+	if not a.contains("://"):
+		a = "http://" + a
+	server_url = a
+	address_edit.text = a
+	var f := FileAccess.open(home.path_join("server.cfg"), FileAccess.WRITE)
+	if f:
+		f.store_string(a + "\n")
+	world_label.text = "Server: " + a
+
 func _play() -> void:
 	var exe := _game_exe()
 	if not _client_ok(home.path_join("game")):
@@ -848,8 +1036,12 @@ func _play() -> void:
 		if latest.is_empty() or not await _update(true, false) or not _client_ok(home.path_join("game")):
 			_set_status("The game isn't installed yet.", "Press Update and play when you're online.", WARN)
 			return
+	if player and address_edit:
+		_take_address()
 	if player and server_url == "":
-		_set_status("No server address yet.", "Ask the host for it, then put it in server.cfg next to the launcher.", WARN)
+		_set_status("No server address yet.", "Ask the host for it and type it in the Server address box.", WARN)
+		if address_edit:
+			address_edit.grab_focus()
 		return
 	if manage_server:
 		_set_busy(true)
@@ -864,7 +1056,9 @@ func _play() -> void:
 		return
 	_log("Started the game (pid %d)" % pid)
 	_set_status("Have a good evening in the woods.")
-	await get_tree().create_timer(1.5).timeout
+	# Leave the launcher up longer after an update, so the patch notes can be read.
+	await get_tree().create_timer(10.0 if notes_box.visible and not opts.has("auto") else 1.5).timeout
+	_save_window()
 	get_tree().quit()
 
 func _screenshot(path: String) -> void:

@@ -42,6 +42,8 @@ public partial class CeramicsView : Node
         RegisterUse();
         AttachSimmer(conn);
         AttachLamps(conn);
+        AttachTroughs(conn);
+        AttachMarks(conn);
         conn.Db.ClayPiece.OnInsert += (_, p) => Upsert(p);
         conn.Db.ClayPiece.OnUpdate += (_, _, p) => Upsert(p);
         conn.Db.ClayPiece.OnDelete += (_, p) =>
@@ -73,6 +75,7 @@ public partial class CeramicsView : Node
                 note(form switch
                 {
                     ClayForm.Brick => "The brick is drying. It turns pale when it is ready.",
+                    ClayForm.Trough => "Your clay trough is drying. It is too big for a campfire: once it is pale, fire it in a kiln.",
                     ClayForm.Tile => "Your roof tile is drying. It is too fine for a campfire: once it is pale, fire it in a kiln.",
                     ClayForm.StorageJar => "Your storage jar is drying. It is too big for a campfire: once it is pale, fire it in a kiln.",
                     _ => "Your pot is drying. It turns pale when it is ready to fire.",
@@ -101,7 +104,7 @@ public partial class CeramicsView : Node
             world.AddChild(view);
         }
         view.Position = new Vector3(p.X, 0, p.Z);
-        view.Show(p.Id, (ClayForm)p.Form, ClayStage.Drying, FireKind.Pit, p.Moisture, Seconds(p.MoistureAt), p.DryRate);
+        view.Show(p.Id, (ClayForm)p.Form, ClayStage.Drying, FireKind.Pit, p.Moisture, Seconds(p.MoistureAt), p.DryRate, false, p.Mark);
         if (p.Stage == (byte)ClayStage.Firing)
             view.Firing(Seconds(p.FireStart), Seconds(p.FireFinish));
     }
@@ -151,6 +154,8 @@ public partial class CeramicsView : Node
         // A lamp you face: feed it tallow, or pick it up once it's out. Setting one down
         // sits just under feeding a fire, so G at a fire still feeds the fire.
         Use.Register(new UseHandler { Id = "ceramics.lamp", Priority = 24, Find = LampOffer });
+        Use.Register(new UseHandler { Id = "ceramics.trough", Priority = 23, Find = TroughOffer });
+        Use.Register(new UseHandler { Id = "ceramics.mark", Priority = 2, Find = MarkOffer });
         Use.Register(new UseHandler { Id = "ceramics.set_lamp", Priority = 19, Find = SetLampOffer });
         Use.Register(new UseHandler { Id = "ceramics.fire_pots", Priority = 22, Find = FirePotsOffer });
         // Firing a dry pot that sits by a fire outranks feeding that fire, as setting pots in does.
@@ -311,7 +316,7 @@ public partial class CeramicsView : Node
         for (int gx = cx - r; gx <= cx + r; gx++)
             for (int gz = cz - r; gz <= cz + r; gz++)
                 if ((gx - me3.X) * (gx - me3.X) + (gz - me3.Z) * (gz - me3.Z) <= reach * reach && heightAt(gx, gz) < World.WaterLevel)
-                    return new UseOffer("Fill pots with water", 0.5f, () => conn.Reducers.FillPots());
+                    return new UseOffer("Fill your pots and waterskin with water", 0.5f, () => conn.Reducers.FillPots(), Again: Use.HoldInterval);
         return null;
     }
 
@@ -338,7 +343,7 @@ public partial class CeramicsView : Node
     static bool IsClayGood(Item item) => item is Item.Brick or Item.PinchPot or Item.CoilPot
         or Item.PinchPotOfWater or Item.CoilPotOfWater or Item.Potsherd or Item.StorageJar or Item.UnfiredStorageJar
         or Item.PotOfBroth or Item.PotOfStew or Item.ClayLamp or Item.Tallow
-        or Item.UnfiredRoofTile or Item.RoofTile;
+        or Item.UnfiredRoofTile or Item.RoofTile or Item.UnfiredClayTrough or Item.ClayTrough;
 
     float FuelSeconds() =>
         conn?.Db.MyInventory.Iter()

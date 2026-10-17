@@ -2,7 +2,11 @@ name: Build
 
 # Which checks run depends on what changed (job 'changes'): doc-only changes build nothing, client-only
 # changes skip the server tests, server- or tools-only changes skip the Windows export. On main that
-# is paths-ignore for docs; everything else on a push to main runs in full.
+# is paths-ignore for docs.
+# A push to main only builds and ships (Justin, integration-10): the module, the upgrade check (it
+# protects the live world) and the clients. The gameplay checks (load, building, crafting) already ran
+# on the PR before it merged, so main skips them and the release starts as soon as the exports finish.
+# Draft PRs run the module and the clients only; the full set runs when the PR is marked ready for review.
 # The three required checks (docs/MERGE_QUEUE.md) are 'Server module and load test', 'Client (Linux)'
 # and 'Client (Windows)'. They always report, even when they have nothing to do, because a branch rule
 # that requires a check blocks a PR whose check never shows up. Keep their names.
@@ -18,7 +22,7 @@ on:
       - 'tools/wiki-page/**'
   pull_request:
     # labeled/unlabeled so adding or removing world-wipe re-runs the checks.
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
   # The merge queue builds its temporary branches here (docs/MERGE_QUEUE.md).
   merge_group:
     types: [checks_requested]
@@ -115,6 +119,7 @@ jobs:
   load:
     name: Load, spawn and social checks
     needs: module
+    if: github.event_name != 'push' && github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -124,9 +129,7 @@ jobs:
       - uses: ./.github/actions/start-server
       - name: Short load test and spawn check
         run: |
-          # Pull requests get a quick smoke test; main gets the full 20 bots for 20 s.
-          if [ "${{ github.event_name }}" = "push" ]; then bots=20; secs=20; else bots=5; secs=5; fi
-          (cd tools/LoadTest && dotnet run -c Release -- $bots $secs)
+          (cd tools/LoadTest && dotnet run -c Release -- 5 5)
           (cd tools/SpawnCheck && dotnet run -c Release)
       - name: Check chat, claim and PvP rules with two players
         run: |
@@ -134,10 +137,20 @@ jobs:
           (cd server && spacetimedb-cli call lifegame --server local set_newcomer_grace 0)
           cd tools/SocialTest && dotnet run -c Release -- http://127.0.0.1:3000 lifegame 1
 
+  # The clay hut with its door, mat and hearth is most of the time (about 4 min of 5); the rest runs beside it.
   build-test:
-    name: Building check
+    name: Building check (${{ matrix.part }})
     needs: module
+    if: github.event_name != 'push' && github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: clay hut
+            parts: clay-hut
+          - part: other structures
+            parts: lean-to,basket,fence
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
@@ -145,19 +158,30 @@ jobs:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
       - name: Build structures with two players
-        run: cd tools/BuildTest && dotnet run -c Release
+        run: cd tools/BuildTest && dotnet run -c Release -- ${{ matrix.parts }}
 
+  # The crafting check in two parts (tools, fires and chopping / claim, stations, wear and repair) so it
+  # isn't the longest job; the second makes the few tools it needs itself.
   craft-test:
-    name: Crafting check
+    name: Crafting check (${{ matrix.part }})
     needs: module
+    if: github.event_name != 'push' && github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: tools
+          - part: stations
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-stdb
         with:
           spacetime-version: ${{ env.SPACETIME_VERSION }}
       - uses: ./.github/actions/start-server
-      - name: Crafting check (gathers, runs every process, lights and feeds a fire)
+      - name: Crafting check (${{ matrix.part }})
+        env:
+          CRAFTCHECK_PART: ${{ matrix.part }}
         run: cd tools/CraftCheck && dotnet run -c Release
 
   # Justin publishes each merge over his world without --delete-data (bugfix-3).
@@ -166,7 +190,7 @@ jobs:
   upgrade:
     name: Upgrade check
     needs: module
-    if: github.event_name == 'pull_request'
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -183,11 +207,25 @@ jobs:
         run: |
           spacetimedb-cli start --listen-addr 127.0.0.1:3000 > stdb.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/v1/ping && break; sleep 1; done
+      # A push to main has no PR labels, so ask GitHub which PR the commit came from.
+      - name: Is this a world-wipe change?
+        id: wipe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            wipe=${{ contains(github.event.pull_request.labels.*.name, 'world-wipe') }}
+          elif gh api "repos/${{ github.repository }}/commits/$GITHUB_SHA/pulls" --jq '.[].labels[].name' | grep -qx world-wipe; then
+            wipe=true
+          else
+            wipe=false
+          fi
+          echo "wipe=$wipe" >> "$GITHUB_OUTPUT"
       - name: World wipe (labelled, upgrade check skipped)
-        if: contains(github.event.pull_request.labels.*.name, 'world-wipe')
+        if: steps.wipe.outputs.wipe == 'true'
         run: echo "::warning::This PR is labelled world-wipe. Publishing it needs --delete-data and wipes Justin's world (D-129)."
       - name: Upgrade check (this module over the base branch's world, no wipe)
-        if: "!contains(github.event.pull_request.labels.*.name, 'world-wipe')"
+        if: steps.wipe.outputs.wipe != 'true'
         run: |
           # The merge commit's first parent is the base this PR was merged onto. The
           # base branch's tip can move while CI runs, so don't fetch it by name.
