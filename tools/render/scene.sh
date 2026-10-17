@@ -100,7 +100,7 @@ if [ "$movie_fps" != 0 ]; then
     name=${m%-start}; a=${f#frame=}
     b=$(grep -oE "mark $name-end frame=[0-9]+" "$work/puppet.log" | head -1 | sed 's/.*frame=//')
     [ -n "$b" ] || continue
-    ffmpeg -loglevel error -y -framerate "$movie_fps" -start_number "$a" -i "$movie_dir/frame%08d.png" -frames:v "$((b - a))" \
+    ffmpeg -nostdin -loglevel error -y -framerate "$movie_fps" -start_number "$a" -i "$movie_dir/frame%08d.png" -frames:v "$((b - a))" \
       -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "$RENDER_OUT/$ticket-$sha-$name.mp4" && echo "saved $RENDER_OUT/$ticket-$sha-$name.mp4"
   done
 fi
