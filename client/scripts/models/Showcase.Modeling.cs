@@ -107,4 +107,39 @@ public partial class Showcase
         AddChild(camera);
         camera.LookAtFromPosition(new Vector3(0.1f, 2.0f, 3.8f), new Vector3(0.1f, 0.35f, -0.5f), Vector3.Up);
     }
+
+    // The new wild things at world scale (model-27): a player, a sheep, a hen, a hazel bush
+    // and a berry bush as the world draws them, rabbits in the fleece colours Sheep.cs gives
+    // them today (left) and in RabbitFigure.Coats (right), all at their in-game sizes.
+    [ShowcaseView("wildlife")]
+    void Wildlife()
+    {
+        AddChild(new BerryBush(3) { Position = new Vector3(-1.8f, 0, -1.6f) });
+        AddChild(new BerryBush(4) { Position = new Vector3(1.9f, 0, -1.8f) });
+        var person = PlayerModel.Build();
+        person.Position = new Vector3(0f, 0, -0.9f);
+        AddChild(person);
+        var sheep = SheepFigure.Create(SheepFigure.Variant, PaintedAnimals.Wool(Look.Solid(new Color(0.74f, 0.71f, 0.63f))));
+        sheep.Position = new Vector3(1.1f, 0, -0.6f);
+        sheep.Rotation = new Vector3(0, -0.9f, 0);
+        AddChild(sheep);
+        var hen = HenFigure.Create(PaintedAnimals.Wool(Look.Solid(new Color(0.74f, 0.71f, 0.63f))));
+        hen.Position = new Vector3(-0.9f, 0, -0.4f);
+        hen.Rotation = new Vector3(0, 0.6f, 0);
+        AddChild(hen);
+        var fleeces = new[] { new Color(0.74f, 0.71f, 0.63f), new Color(0.68f, 0.62f, 0.52f), new Color(0.74f, 0.71f, 0.63f) };
+        for (int i = 0; i < 6; i++)
+        {
+            bool now = i < 3;
+            var fur = now ? PaintedAnimals.Wool(Look.Solid(fleeces[i])) : PaintedAnimals.Coat(Look.Solid(RabbitFigure.Coats[i - 3]));
+            var rabbit = RabbitFigure.Create(fur);
+            rabbit.Position = new Vector3((now ? -1.5f : 0.6f) + (i % 3) * 0.35f, 0, 0.3f + (i % 2) * 0.2f);
+            rabbit.Rotation = new Vector3(0, 0.8f - i * 0.3f, 0);
+            rabbit.Scale = Vector3.One * (0.9f + (i % 3) * 0.1f);
+            AddChild(rabbit);
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.2f, 4.2f), new Vector3(0, 0.35f, -0.4f), Vector3.Up);
+    }
 }
