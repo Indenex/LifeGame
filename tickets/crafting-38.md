@@ -1,7 +1,7 @@
 # crafting-38: The hand empties when its item leaves the bag
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-hand
 PR: (see below)
 
