@@ -370,5 +370,6 @@ public static partial class Module
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         else
             ctx.Db.InventoryItem.Id.Update(stack with { Count = stack.Count - count });
+        ClearHandIfGone(ctx, stack.Owner, stack.Item);
     }
 }

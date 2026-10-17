@@ -354,6 +354,8 @@ public static partial class Module
             }
             ctx.Db.InventoryItem.Id.Delete(stack.Id);
         }
+        // Nothing is left to hold.
+        if (ctx.Db.PlayerEquip.Owner.Find(player.Identity) != null) ctx.Db.PlayerEquip.Owner.Delete(player.Identity);
 
         var (sx, sz) = WildernessEdge(ctx);
         byte wakeKind = ChooseWake(ctx, player.PlayerId, ref sx, ref sz);

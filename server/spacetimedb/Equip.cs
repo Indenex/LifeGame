@@ -45,8 +45,19 @@ public static partial class Module
         CheckJobTool(ctx);
     }
 
-    static bool InBag(ReducerContext ctx, ushort item) =>
-        ctx.Db.InventoryItem.ByOwnerItem.Filter((Me(ctx), item)).Any(r => r.Count > 0 && !r.OnBelt);
+    static bool InBag(ReducerContext ctx, ushort item) => InBagOf(ctx, Me(ctx), item);
+
+    static bool InBagOf(ReducerContext ctx, Identity owner, ushort item) =>
+        ctx.Db.InventoryItem.ByOwnerItem.Filter((owner, item)).Any(r => r.Count > 0 && !r.OnBelt);
+
+    // After an item leaves the bag (used up, dropped, put on the belt, lost in a death): if it was in hand and
+    // none is left in the bag, the hand is empty. Other players see this, and a chop that needed it stops.
+    static void ClearHandIfGone(ReducerContext ctx, Identity owner, ushort item)
+    {
+        if (ctx.Db.PlayerEquip.Owner.Find(owner) is not { } equip || equip.Item != item || InBagOf(ctx, owner, item)) return;
+        ctx.Db.PlayerEquip.Owner.Delete(owner);
+        if (owner == Me(ctx)) CheckJobTool(ctx);
+    }
 
     // After the hotbar changes: the item in hand follows its slot (a swap or a new item), and an
     // emptied slot puts the hand away.
