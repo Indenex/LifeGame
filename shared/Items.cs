@@ -83,6 +83,11 @@ namespace LifeGame.Shared
         Antler = 204,
         CookedVenison = 205,
         BurntVenison = 206,
+        Egg = 207,
+        RawChicken = 208,
+        CookedChicken = 209,
+        BurntChicken = 210,
+        Feather = 211,
     }
 
     // What a material is and does. Properties drive processes rather than special
@@ -212,7 +217,12 @@ namespace LifeGame.Shared
             new ItemDef { Id = Item.DeerHide, Name = "Deer hide", Plural = "Deer hides", HasQuality = true },
             new ItemDef { Id = Item.Antler, Name = "Antler", Plural = "Antlers", HasQuality = true },
             new ItemDef { Id = Item.CookedVenison, Name = "Roast venison", Plural = "Roast venison", HasQuality = true },
-            new ItemDef { Id = Item.BurntVenison, Name = "Burnt venison", Plural = "Burnt venison" });
+            new ItemDef { Id = Item.BurntVenison, Name = "Burnt venison", Plural = "Burnt venison" },
+            new ItemDef { Id = Item.Egg, Name = "Egg", Plural = "Eggs", HasQuality = true },
+            new ItemDef { Id = Item.RawChicken, Name = "Raw chicken", Plural = "Raw chicken", HasQuality = true },
+            new ItemDef { Id = Item.Feather, Name = "Feather", Plural = "Feathers", HasQuality = true },
+            new ItemDef { Id = Item.CookedChicken, Name = "Roast chicken", Plural = "Roast chicken", HasQuality = true },
+            new ItemDef { Id = Item.BurntChicken, Name = "Burnt chicken", Plural = "Burnt chicken" });
 
         public static ItemDef Def(Item item) => All[item];
 

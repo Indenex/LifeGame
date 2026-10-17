@@ -1173,14 +1173,31 @@ void Gather(Item item, uint want)
 // Walks at a safe pace until within `near` of a spot.
 void WalkTo(float tx, float tz, float near)
 {
-    while (true)
+    int lagged = 0;
+    for (int guard = 0; ; guard++)
     {
         float dx = tx - x, dz = tz - z, d = MathF.Sqrt(dx * dx + dz * dz);
         if (d <= near) break;
+        if (guard > 900)
+        {
+            // 90 s without arriving: say where everyone is and what stands nearby, so the failure can be told apart.
+            var srv = conn.Db.PlayerPos.PlayerId.Find(myId);
+            var around = conn.Db.Structure.Iter().Where(st => MathF.Abs(st.X - x) < 6 && MathF.Abs(st.Z - z) < 6)
+                .Select(st => $"{st.Kind}@({st.X:F1},{st.Z:F1}) complete={st.Complete} stage={st.Stage}");
+            Fail($"stuck walking to ({tx:F1}, {tz:F1}): bot at ({x:F1}, {z:F1}), server at ({srv?.X:F1}, {srv?.Z:F1}), {d:F1} m left; structures within 6 m: {string.Join("; ", around)}");
+        }
         float step = Math.Min(d - near * 0.9f, 0.5f);
         // The server limits the pace (World.MoveAllowance, Carry.WalkFactor): only walk on once it
         // has caught up, and keep reporting where we are, as a real client does (bugfix-24).
-        if (conn.Db.PlayerPos.PlayerId.Find(myId) is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
+        var behind = conn.Db.PlayerPos.PlayerId.Find(myId);
+        if (behind is { } held && MathF.Abs(held.X - x) + MathF.Abs(held.Z - z) >= 1.5f)
+        {
+            // The server has not followed for a second: it refused the last step (something solid in the
+            // way). Take its word for where we are and carry on from there, like a player would.
+            if (++lagged > 10) { x = held.X; z = held.Z; lagged = 0; }
+        }
+        else lagged = 0;
+        if (behind is not { } seen || MathF.Abs(seen.X - x) + MathF.Abs(seen.Z - z) < 1.5f)
         {
             x += dx / d * step;
             z += dz / d * step;

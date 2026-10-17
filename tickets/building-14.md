@@ -14,6 +14,7 @@ Justin, looking at a log cabin at its first stage: "the scale of the buildings p
   - Tests: BuildTest checks each home is 1.25x and that the open doorway lets a step through, a shut door and the side wall do not (shared numbers both sides use). BuildTest default (343 s) passes; log-cabin (376 s) and tools/upgrade-check.sh origin/main pass.
   - Existing buildings in Justin's world take the new size through the shape data (rows hold only kind, position and yaw): no wipe. They may now overlap a neighbour a little; nothing is destroyed.
 - Render requested for a walk-through clip of the cabin doorway: see the PM message.
+- 2026-10-17: interior props (branch `claude/house-building-8ueqz2-props`): crafting table and repair table now `Scale = 1.25f` to match the roomier homes (reach, clearance and drawn size scale together; CraftCheck passes locally). Hearth/jar/basket stay 1x: the hearth's fire and ash ring are drawn separately at 1x (Atmosphere/Survival), so it needs their OK; asked the PM for Justin's pick.
 
 ## Open questions / blockers
 - Lean-to is also 1.25x (its 1.7 m ridge didn't fit a standing player). Say if not.

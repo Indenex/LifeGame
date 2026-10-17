@@ -175,6 +175,12 @@ namespace LifeGame.Shared
             },
             new ProcessDef
             {
+                Id = "cook.chicken", Name = "Roast chicken", Doing = "Setting a chicken over the fire", Tier = 1,
+                Consumes = new[] { new Ingredient(Item.RawChicken) },
+                Seconds = 1, Outcome = Outcome.Roast, Makes = Item.CookedChicken,
+            },
+            new ProcessDef
+            {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
                 Consumes = new[] { new Ingredient(Item.Stick) }, NeedsTool = ItemTags.Cutting,
                 Seconds = Base(1, 1f), Makes = Item.DiggingStick,
