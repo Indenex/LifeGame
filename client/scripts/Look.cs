@@ -54,6 +54,7 @@ public static class Look
         Add("moon_dir", RenderingServer.GlobalShaderParameterType.Vec3, new Vector3(0, -1, 0));
         Add("moon_light", RenderingServer.GlobalShaderParameterType.Float, 0f);
         Add("night_sky", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        Add("night_glow", RenderingServer.GlobalShaderParameterType.Float, 0f);
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -463,6 +464,53 @@ public static class Look
     // Open water: a calm, deep color that only softly catches the light (no mirror
     // shine), slow shimmering ripples that stir with the wind's gusts, rain rings
     // spreading on the surface while it rains, and a soft fade where it meets the bank.
+    // Night readability (drawn over the surface as a material overlay): a soft cool
+    // rim of moonlight on people, so you can always see yourself in the dark, and a
+    // faint slow glint on things lying on the ground, so a player without a fire can
+    // still find sticks and fiber. Both scale with the global night_glow and are
+    // nothing by day.
+    public static ShaderMaterial NightRim => nightRim ??= NightOverlay(new Color(0.55f, 0.65f, 0.95f), rim: 0.55f, fill: 0.05f, glint: 0f);
+    public static ShaderMaterial NightGlint => nightGlint ??= NightOverlay(new Color(0.85f, 0.85f, 0.75f), rim: 0.3f, fill: 0.07f, glint: 0.5f);
+    static ShaderMaterial? nightRim, nightGlint;
+
+    static ShaderMaterial NightOverlay(Color tint, float rim, float fill, float glint)
+    {
+        EnsureWeatherGlobals();
+        var material = new ShaderMaterial { Shader = NightOverlayShader };
+        material.SetShaderParameter("tint", tint);
+        material.SetShaderParameter("rim", rim);
+        material.SetShaderParameter("fill", fill);
+        material.SetShaderParameter("glint", glint);
+        return material;
+    }
+
+    static readonly Shader NightOverlayShader = new()
+    {
+        Code = """
+            shader_type spatial;
+            render_mode blend_add, unshaded, depth_draw_never, cull_back, shadows_disabled, fog_disabled;
+
+            global uniform float night_glow;
+            uniform vec4 tint : source_color;
+            uniform float rim = 0.5;
+            uniform float fill = 0.05;
+            uniform float glint = 0.0;
+            varying float seed;
+
+            void vertex() {
+                // Each thing glints at its own moments.
+                vec3 at = MODEL_MATRIX[3].xyz;
+                seed = fract(sin(dot(floor(at.xz * 4.0), vec2(12.9898, 78.233))) * 43758.5453);
+            }
+
+            void fragment() {
+                float edge = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
+                float twinkle = pow(0.5 + 0.5 * sin(TIME * (0.9 + seed * 0.8) + seed * 40.0), 10.0);
+                ALBEDO = tint.rgb * (edge * rim + fill + twinkle * glint * (0.3 + edge)) * night_glow;
+            }
+            """,
+    };
+
     public static ShaderMaterial WaterSurface => water ??= MakeWater();
     static ShaderMaterial? water;
 

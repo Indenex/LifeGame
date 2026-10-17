@@ -51,7 +51,7 @@ public partial class Avatar : Node3D
     }
 
     static MeshInstance3D Part(Mesh mesh, Material material, Vector3 at) =>
-        new() { Mesh = mesh, MaterialOverride = material, Position = at };
+        new() { Mesh = mesh, MaterialOverride = material, MaterialOverlay = Look.NightRim, Position = at };
 
     // A limb hangs from a pivot at the hip or shoulder so it can swing.
     Node3D Limb(Vector3 pivot, float radius, float length)

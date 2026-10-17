@@ -34,7 +34,7 @@ public partial class Atmosphere : Node3D
     static readonly StringName NMoonDir = "moon_dir";
     static readonly StringName NDaylight = "daylight";
     static readonly StringName NStars = "stars";
-    static readonly StringName NMoonPhase = "moon_phase", NMoonLight = "moon_light", NNightSky = "night_sky";
+    static readonly StringName NMoonPhase = "moon_phase", NMoonLight = "moon_light", NNightSky = "night_sky", NNightGlow = "night_glow";
 
     public Node3D? Player;
 
@@ -393,6 +393,9 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet(NMoonDir, moonDir);
         RenderingServer.GlobalShaderParameterSet(NMoonLight, moonLight * night * (1f - overcast));
         RenderingServer.GlobalShaderParameterSet(NNightSky, dark * dark * (1f - overcast));
+        // How much people and things on the ground need a touch of moonlight to be
+        // seen (Look.NightRim, NightGlint): more on dark, cloudy nights.
+        RenderingServer.GlobalShaderParameterSet(NNightGlow, dark * dark * (1f + 0.4f * overcast) * (1.15f - 0.3f * moonLight * moonAbove));
 
         env.FogLightColor = Grey(mood.Fog, grey, 0.95f) * dim;
         env.FogDensity = mood.FogDensity * (1f + 2.4f * storm + 0.3f * overcast);

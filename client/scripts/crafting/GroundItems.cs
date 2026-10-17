@@ -40,7 +40,7 @@ public partial class GroundItems : Node3D
                 Hidden = new Transform3D(new Basis(Vector3.Zero, Vector3.Zero, Vector3.Zero), place.Origin),
             };
             batches[(item, px, pz)] = batch;
-            AddChild(new MultiMeshInstance3D { Multimesh = batch.Mesh });
+            AddChild(new MultiMeshInstance3D { Multimesh = batch.Mesh, MaterialOverlay = Look.NightGlint });
         }
 
         int slot = batch.Ids.Count;
