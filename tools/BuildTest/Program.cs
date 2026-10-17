@@ -14,7 +14,7 @@ using SpacetimeDB.Types;
 // lean-to, clay-hut, basket, fence, brick-house, log-cabin separated by commas. CI runs two parts at once.
 ulong wakeHut = 0;
 string which = args.Length > 0 ? args[0] : "both";
-bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" or "stone-hearth" : which.Split(',').Contains(part);
+bool Wants(string part) => which == "both" ? part is "lean-to" or "clay-hut" or "basket" or "fence" or "coop" or "stone-hearth" or "sundial" : which.Split(',').Contains(part);
 string uri = args.Length > 1 ? args[1] : "http://127.0.0.1:3000";
 string db = args.Length > 2 ? args[2] : "lifegame";
 
@@ -89,6 +89,13 @@ b.WalkTo(1f, 0f, 0.3f, Pump);
     Check(Structures.StageProcess((int)StructureKind.StoneHearth, 1) == Structures.FrameProcess, "its stones are laid like a frame");
 }
 
+// The sundial (building-19): claim-only, always faces north, and its shape says it keeps the time.
+{
+    var dial = Structures.Shape((int)StructureKind.Sundial);
+    Check(dial.Sundial && dial.FixedYaw && !dial.Wild, "the sundial is claim-only and always faces north");
+    Check(dial.Stages.Length == 2 && dial.Costs.Length == 2, "the sundial goes up in two stages");
+}
+
 // Building size and doorways (building-14), checked on the shared numbers both sides use.
 foreach (var kind in new[] { StructureKind.ClayHut, StructureKind.BrickHouse, StructureKind.LogCabin, StructureKind.TiledHouse })
 {
@@ -147,6 +154,10 @@ if (Wants("fence"))
         new() { [Item.Stick] = 2, [Item.Fiber] = 2 }));
 }
 
+if (Wants("sundial"))
+    SundialCovers(BuildTogether(StructureKind.Sundial,
+        new() { [Item.Stone] = 3, [Item.Stick] = 1 },
+        new() { [Item.Stone] = 1 }));
 if (Wants("coop"))
     BuildTogether(StructureKind.HenCoop,
         new() { [Item.Stick] = 5, [Item.Fiber] = 5 },
@@ -419,6 +430,17 @@ void EnsureClaim()
     a.Conn.Reducers.AddClaimMember(b.MyId);
     WaitFor(() => b.Conn.Db.ClaimMember.Iter().Any(m => m.PlayerId == b.MyId), 10, "A let B into the claim");
     bIsMember = true;
+}
+
+// Everyone who belongs to the claim sees the time of day while a finished sundial stands in it; a stranger does not.
+void SundialCovers(ulong id)
+{
+    Console.WriteLine("--- Sundial access");
+    Check(a.Conn.Db.Structure.Id.Find(id) is { Complete: true, Yaw: 0f }, "the sundial stands finished, facing north");
+    WaitFor(() => a.Conn.Db.MySundial.Count > 0, 10, "the claim's owner has the time of day");
+    WaitFor(() => b.Conn.Db.MySundial.Count > 0, 10, "so does a member of the claim");
+    StrangerB();
+    WaitFor(() => b.Conn.Db.MySundial.Count == 0, 10, "a stranger does not");
 }
 
 void StrangerB()
@@ -774,6 +796,7 @@ sealed class Bot
                         "SELECT * FROM my_admin",
                         "SELECT * FROM my_craft_job",
                         "SELECT * FROM my_vitals",
+                        "SELECT * FROM my_sundial",
                         "SELECT * FROM claim",
                         "SELECT * FROM claim_member",
                     });
