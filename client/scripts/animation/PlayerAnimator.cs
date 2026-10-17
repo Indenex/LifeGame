@@ -135,6 +135,7 @@ public sealed class PlayerAnimator
         }
         else if (Work == WorkMotion.None) shownWork = WorkMotion.None;
 
+        Carry(dt);
         Gestures(dt);
         if (shownAct != WorkMotion.None) PlayAct(dt);
         air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
@@ -147,6 +148,41 @@ public sealed class PlayerAnimator
         pose[Joint.Hips].Z -= turnLean;
         pose[Joint.Neck].Z += turnLean * 0.7f;
         rig.Apply(pose);
+    }
+
+    // An equipped tool carried in the right hand (Avatar.Equip): the forearm comes up a
+    // little to hold it out from the leg, and the arm's walking swing is damped. Swap()
+    // plays a quick 0.3 s reach down to the hip and back, to draw or stow it.
+    public bool Carrying;
+    public const float SwapSeconds = 0.3f;
+    float carry, swapTime = -1f;
+
+    public void Swap() => swapTime = 0f;
+
+    void Carry(float dt)
+    {
+        carry = Mathf.MoveToward(carry, Carrying ? 1f : 0f, dt / 0.2f);
+        if (carry > 0f)
+        {
+            float c = Mathf.SmoothStep(0f, 1f, carry) * (1f - workBlend);
+            pose[Joint.ShoulderR].X = Mathf.Lerp(pose[Joint.ShoulderR].X, 0.35f * pose[Joint.ShoulderR].X - 0.18f, c);
+            pose[Joint.ShoulderR].Z = Mathf.Lerp(pose[Joint.ShoulderR].Z, -0.16f, c);
+            pose[Joint.ElbowR].X = Mathf.Lerp(pose[Joint.ElbowR].X, Mathf.Min(pose[Joint.ElbowR].X, -0.85f), c);
+            pose[Joint.HandR].X = Mathf.Lerp(pose[Joint.HandR].X, 0.15f, c);
+        }
+        if (swapTime < 0f) return;
+        swapTime += dt;
+        if (swapTime >= SwapSeconds)
+        {
+            swapTime = -1f;
+            return;
+        }
+        // Down and back to the right hip at the midpoint, then up again.
+        float s = Mathf.Sin(swapTime / SwapSeconds * Mathf.Pi);
+        pose[Joint.ShoulderR] += new Vector3(0.45f * s, 0, -0.2f * s);
+        pose[Joint.ElbowR].X -= 0.5f * s;
+        pose[Joint.Spine].Y -= 0.12f * s;
+        pose[Joint.Neck].Y -= 0.25f * s;
     }
 
     // Standing about for a while, a figure now and then stretches, looks around or rolls
