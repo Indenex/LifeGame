@@ -54,8 +54,8 @@ public partial class Atmosphere
         },
     };
 
-    // The cosy curve: darks lifted to a soft plum (shade never goes black), mids
-    // near neutral so greens stay green, lights a creamy peach-white.
+    // The cosy curve: darks lifted to a soft, barely violet grey (shade never goes
+    // black), mids near neutral so greens stay green, lights a creamy peach-white.
     static GradientTexture1D CosyCurve() => new()
     {
         Gradient = new Gradient
@@ -63,7 +63,7 @@ public partial class Atmosphere
             Offsets = new[] { 0f, 0.5f, 0.85f, 1f },
             Colors = new[]
             {
-                new Color(0.06f, 0.045f, 0.09f), new Color(0.53f, 0.52f, 0.50f),
+                new Color(0.06f, 0.05f, 0.075f), new Color(0.53f, 0.52f, 0.50f),
                 new Color(0.86f, 0.84f, 0.79f), new Color(0.97f, 0.95f, 0.90f),
             },
         },

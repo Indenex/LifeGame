@@ -16,9 +16,9 @@ namespace LifeGame;
 //
 // Modeling's soft rim light (Painted.Rim, D-313 #1) multiplies the light colour by
 // the global rim_tint, set here by time of day. The sun already warms toward dusk,
-// so the tint is relative to it: Modeling's honey by day, a touch pinker at golden
-// hour, rose just before sunset, and cooler under the moon. rgb is the colour, a
-// scales Painted.RimStrength (1 by day, up to about 1.3 backlit at golden hour,
+// so the tint is relative to it: Modeling's honey by day, a richer gold at golden
+// hour, warm peach just before sunset, and cooler under the moon. (Pink rims read
+// lilac on pale stone, atmosphere-41.) rgb is the colour, a scales Painted.RimStrength (1 by day, up to about 1.3 backlit at golden hour,
 // less at night and under cloud).
 public partial class Atmosphere
 {
@@ -115,8 +115,8 @@ public partial class Atmosphere
 
         // Rim tint, on top of the light colour, for Modeling's rim light.
         var rim = new Color(1f, 0.86f, 0.66f)
-            .Lerp(new Color(1f, 0.80f, 0.72f), golden * clear)
-            .Lerp(new Color(1f, 0.72f, 0.82f), golden * clear * (1f - Mathf.SmoothStep(0f, 0.08f, sunHeight)))
+            .Lerp(new Color(1f, 0.82f, 0.62f), golden * clear)
+            .Lerp(new Color(1f, 0.74f, 0.60f), golden * clear * (1f - Mathf.SmoothStep(0f, 0.08f, sunHeight)))
             .Lerp(new Color(0.78f, 0.86f, 1f), night);
         rim.A = (1f + 0.3f * golden * clear) * (1f - 0.3f * night) * (1f - 0.5f * overcast);
         RenderingServer.GlobalShaderParameterSet(NRimTint, rim);
