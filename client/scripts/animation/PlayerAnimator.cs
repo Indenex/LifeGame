@@ -10,7 +10,7 @@ public sealed class PlayerAnimator
 {
     readonly PlayerRig rig;
     readonly Pose idle = new(), walk = new(), work = new(), act = new(), swim = new(), gesture = new(), pose = new(), restFrom = new(), restTo = new();
-    // Set while a craft job runs; the figure kneels into it and back out.
+    // Set while a craft job runs; the figure kneels (or stands, WorkStanding) into it and back out.
     public WorkMotion Work;
     // The craft job is at a station: its hand motion is worked standing (anim-26).
     public bool WorkStanding;
@@ -25,8 +25,8 @@ public sealed class PlayerAnimator
     bool airborne, rising;
     float air, rise, landKick;
 
-    // A quick action (WorkMotions.IsAct): drink, eat, pluck, pick up. Plays once over
-    // whatever else is going on, fading in and out.
+    // A quick action (WorkMotions.IsAct): drink, eat, pluck, pick up, strike, dig, an
+    // emote and so on. Plays once over whatever else is going on, fading in and out.
     WorkMotion shownAct;
     float actTime, actBlend;
     // The same action again while it plays (another sip): it loops back round at its
@@ -95,10 +95,11 @@ public sealed class PlayerAnimator
     };
     const float RestStageSeconds = 0.55f;
 
-    float RestTarget => walkBlend > 0.5f || airborne ? 0f : Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
+    float RestTarget => walkBlend > 0.5f || airborne ? 0f : RestStageOf;
+    float RestStageOf => Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
 
     // Already resting when first seen (a player who sat down before you arrived).
-    public void SettleRest() => restStage = Rest switch { RestKind.Sit => 2f, RestKind.Lie => 3f, _ => 0f };
+    public void SettleRest() => restStage = RestStageOf;
 
     // Settled on the ground, a sitter shifts into a fidget every 8 to 16 s and holds it
     // a while (anim-15).
@@ -691,9 +692,10 @@ public sealed class PlayerAnimator
         p[Joint.HandR] = new Vector3(-0.1f, 0, -0.06f);
     }
 
+    static readonly Joint[] LegJoints = { Joint.HipL, Joint.HipR, Joint.KneeL, Joint.KneeR, Joint.FootL, Joint.FootR };
+
     // In the air: legs stop striding, tuck up on the way up and reach for the ground on
     // the way down; arms lift on take-off and spread for balance as the body falls.
-    static readonly Joint[] LegJoints = { Joint.HipL, Joint.HipR, Joint.KneeL, Joint.KneeR, Joint.FootL, Joint.FootR };
 
     static void Air(Pose p, float a, float up)
     {
