@@ -44,6 +44,7 @@ public partial class Atmosphere : Node3D
     readonly Rain rain = new();
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
+    readonly FallingLeaves leaves = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -113,6 +114,7 @@ public partial class Atmosphere : Node3D
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
+        AddChild(leaves);
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         ReadySeasons();
@@ -176,8 +178,8 @@ public partial class Atmosphere : Node3D
         ConnectHomes(conn);
         // Sheep bleat (only sheep: deer and other animals get their own voices);
         // Herd subscribes to the animal rows near the player.
-        conn.Db.Animal.OnInsert += (_, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
-        conn.Db.Animal.OnUpdate += (_, _, a) => { if (a.Species == AnimalSpecies.Sheep) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
+        conn.Db.Animal.OnInsert += (_, a) => { if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
+        conn.Db.Animal.OnUpdate += (_, _, a) => { if (AnimalDefs.Get((byte)a.Species).Bleats) Sheep.Seen(a.Id, a.X, a.Z, a.State == AnimalState.Run, a.Growth < 100); };
         conn.Db.Animal.OnDelete += (_, a) => Sheep.Gone(a.Id);
         // Campfires crackle; FireView subscribes to the fires near the player.
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
@@ -299,6 +301,7 @@ public partial class Atmosphere : Node3D
         sound.TimeOfDay = timeOfDay;
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
+        leaves.Follow(focus, Year, wind, woods, WindDirection);
         sound.Foliage = wooded;
         Lightning(dt, focus);
         if (GetViewport()?.GetCamera3D() is { } ear)

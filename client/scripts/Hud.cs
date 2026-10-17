@@ -10,7 +10,9 @@ namespace LifeGame;
 public partial class Hud : CanvasLayer
 {
     readonly Label status = new();
-    readonly InventoryBar inventory = new();
+    readonly HotbarBar inventory = new();
+    // The ten slots along the bottom (ui-19); Main attaches the server link.
+    public HotbarBar Hotbar => inventory;
     readonly Label toast = new();
     float toastTime, statusTime;
 
@@ -110,7 +112,7 @@ public partial class Hud : CanvasLayer
         toastTime = 3f;
     }
 
-    public void SetItems(IReadOnlyList<InventoryEntry> items) => inventory.SetItems(items);
+    public void SetItems(IReadOnlyList<InventoryEntry> items) => inventory.SetBag(items);
 
     public override void _Process(double delta)
     {
