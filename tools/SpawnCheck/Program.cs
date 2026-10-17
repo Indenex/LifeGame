@@ -121,6 +121,49 @@ float stepX = back.X + 3;
 for (int i = 0; i < 10; i++) { conn.Reducers.Move(back.X + 0.3f * (i + 1), back.Z, MathF.PI / 2); Pump(100); }
 WaitFor(() => MyPos() is { } p && p.X > stepX - 0.5f, 10, "can walk on after reconnecting");
 
+// Water is walkable (bugfix-32): find a pond or stream with dry ground on both sides, walk across
+// it at the wading pace and come out the other side.
+{
+    (int x0, int x1, int z)? crossing = null;
+    int bx = (int)MathF.Round(back.X), bz = (int)MathF.Round(back.Z);
+    for (int dz = 0; dz < 400 && crossing == null; dz++)
+        foreach (int cz in new[] { bz + dz, bz - dz })
+            for (int cx = bx - 80; cx < bx + 80 && crossing == null; cx++)
+            {
+                if (World.BaseHeight(cx, cz) < World.WaterLevel || World.BaseHeight(cx + 1, cz) >= World.WaterLevel) continue;
+                // cx is the last dry cell; follow the water east until the bank rises out of it again.
+                int wet = 0, deep = 0;
+                while (World.BaseHeight(cx + 1 + wet, cz) < World.WaterLevel && wet < 60) { if (World.BaseHeight(cx + 1 + wet, cz) < World.WaterLevel - 0.3f) deep++; wet++; }
+                if (wet >= 6 && deep >= 3 && wet < 60) crossing = (cx, cx + 1 + wet, cz);
+            }
+    Check(crossing != null, "found water to cross near the player");
+    var (wx0, wx1, wz) = crossing!.Value;
+    float sx = wx0 - 2, ex = wx1 + 2;
+    float cxw = MyPos()!.X, czw = MyPos()!.Z;
+    void WalkTo(float tx, float tz)
+    {
+        for (int guard = 0; guard < 2000; guard++)
+        {
+            float dx = tx - cxw, dz2 = tz - czw, d = MathF.Sqrt(dx * dx + dz2 * dz2);
+            if (d < 0.2f) break;
+            var seen = MyPos()!;
+            if (MathF.Abs(seen.X - cxw) + MathF.Abs(seen.Z - czw) < 0.8f)
+            {
+                float step = MathF.Min(d, 0.3f);
+                cxw += dx / d * step; czw += dz2 / d * step;
+            }
+            conn.Reducers.Move(cxw, czw, MathF.Atan2(dx, dz2));
+            Pump(100);
+        }
+        WaitFor(() => MyPos() is { } p && MathF.Abs(p.X - tx) + MathF.Abs(p.Z - tz) < 1.0f, 15, $"server has us at ({tx:F0}, {tz:F0})");
+    }
+    WalkTo(sx, wz);
+    WalkTo(wx0 + (wx1 - wx0) / 2f, wz);
+    Check(MyPos() is { } mid && mid.X > wx0 + 1, "the server lets us stand in the water");
+    WalkTo(ex, wz);
+    Check(MyPos() is { } far2 && far2.X >= ex - 1f, $"crossed the water from x={wx0} to x={wx1} and came out the other side");
+}
+
 Console.WriteLine($"All spawn checks passed in {clock.Elapsed.TotalSeconds:F0}s");
 conn.Disconnect();
 return 0;

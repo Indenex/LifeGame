@@ -91,12 +91,12 @@ public static partial class Module
     {
         bool burnt = Roasting.Burnt(seconds);
         byte cap = 100;
-        bool venison = (Item)roast.Item == Item.RawVenison;
-        string process = venison ? "cook.venison" : "cook.meat";
+        var def = Foods.FindRoast((Item)roast.Item) ?? throw new Exception("That doesn't roast");
+        string process = def.Process;
         QualityCapFor(ctx, roast.PlayerId, process, ref cap);
         byte quality = burnt ? Items.RawQuality : Processes.Quality(roast.Quality, Roasting.Score(seconds), cap);
         OnProcessPerformed(ctx, roast.PlayerId, process, quality, burnt);
-        return burnt ? (venison ? Item.BurntVenison : Item.BurntMutton, Items.RawQuality) : (venison ? Item.CookedVenison : Item.CookedMutton, quality);
+        return burnt ? (def.Burnt, Items.RawQuality) : (def.Cooked, quality);
     }
 
     // When a fire burns out, whatever was on it drops beside it as it is: raw if

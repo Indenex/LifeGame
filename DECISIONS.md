@@ -1035,3 +1035,67 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-255 — 2026-10-17 — First player roster: Pebble, Kit, Capling and Bramble; Modeling builds the shared base plus Kit first (follows D-254)
 **Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling first built the shared base plus Kit (model-6). Update: for the new models Modeling builds the shared base plus Pebble and Bramble first; Kit and Capling are deferred.
 **Who:** Justin, picking the roster (relayed by the PM), and then "for the new models, just focus on pebble and bramble for now".
+
+## D-256 — 2026-10-17 — Grass: back to main's original blade grass, lightly stylised toward the references (overrides D-246's grass restyle details; follows D-242)
+**Decision:** The grass stays main's original blade grass, with shape, height, density and wind unchanged. Only a light stylise toward the references is applied: colour, tone bands and lit tips, perhaps a few flowers. The shorter, denser and clumped rework is dropped, which overrides the grass details of D-246. The screenshot rule in D-246 stands. Owner: Environment.
+**Who:** Justin ("for the grass, just go back to the old one, and try to stylize it a bit to match references. It was far better.")
+
+## D-257 — 2026-10-17 — The atmosphere-25 lighting grade becomes the default look (follows D-234)
+**Decision:** The atmosphere-25 lighting grade becomes the default look (option a). Owner: Atmosphere.
+**Who:** Justin, picking option a (relayed by the PM; no direct quote).
+
+## D-258 — 2026-10-17 — Neighbours share building rights through a town roster everyone signs
+**Decision:** Neighbours share building rights through a town roster that everyone signs. Owner: Claims.
+**Who:** Justin, picking "Add neighbors together via a roster everyone signs".
+
+## D-259 — 2026-10-17 — The next animal is the hen
+**Decision:** The next animal is the hen: a tame flock that lays eggs, with low upkeep (D-148). Owner: Animals.
+**Who:** Justin, picking the hen (relayed by the PM; no direct quote).
+
+## D-260 — 2026-10-17 — Tool repair trains Toolmaking; wading and floating train a new Swimming skill
+**Decision:** Repairing a tool trains Toolmaking. Wading and floating train a new Swimming skill. This follows the one shared progression formula (D-175).
+**Who:** Justin, picking "Both, but make wading train swimming".
+
+## D-261 — 2026-10-17 — Pines: fuller, closer to the painted texture, with random sides, widths and heights (follows D-253)
+**Decision:** The 3D pine, at about 80% of the painted card pines, is a step in the right direction. It should be fuller and match the texture even more. Pines also need random sides, widths, heights and so on for variety (D-166). Owner: Modeling.
+**Who:** Justin ("fuller and match the texture even more, but this is a step in the right direction. We also need random sides, widths, heights, etc for some variety.")
+
+## D-262 — 2026-10-17 — Antler stays a plain material for now
+**Decision:** Antler stays a plain material. There is no soft hammer or flaker made from it for now.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-263 — 2026-10-17 — Tools in the doll's Tools section count as carried (refines D-219, D-223)
+**Decision:** Tools in the doll's Tools section count as carried, so recipes, trades, stashing and death can take them. The Tools section is just a weightless home: no bag space and no weight, as in D-219 and D-223.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-264 — 2026-10-17 — Swimming skill effects stay small (follows D-260)
+**Decision:** The Swimming skill's effects stay small. At max rank, wade speed rises from 0.60 to 0.75 and float speed from 0.50 to 0.70. The gain is front-loaded and the skill levels at a slow pace, using the one shared progression formula (D-175). The ids are `swim.wade` and `swim.float`.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
+**Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
+**Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
+**Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
+
+## D-267 — 2026-10-17 — Eggs cook into a boiled egg (follows D-259)
+**Decision:** Eggs cook into a boiled egg.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-268 — 2026-10-17 — Feathers fletch better arrows; plain arrows still work (follows D-259)
+**Decision:** Feathers fletch better arrows. Plain arrows still work.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-269 — 2026-10-17 — Hens roost in their coop at night and come out at dawn (follows D-259, D-265)
+**Decision:** Hens roost in their coop at night and come out at dawn.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-270 — 2026-10-17 — Other players in water get ripples and splashes, but no wet legs
+**Decision:** Other players in water get ripples and splashes, but no wet legs.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-271 — 2026-10-17 — Interior props at 1.25x cover furniture only (refines D-231; PM default, Justin not yet asked)
+**Decision:** Interior props scaled to 1.25x cover furniture only: the crafting table and the repair table. The hearth, jars and baskets stay at 1x. This is the PM's default; Justin has not been asked.
+**Who:** PM default (Justin not yet asked).
