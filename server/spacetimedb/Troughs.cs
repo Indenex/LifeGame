@@ -47,7 +47,7 @@ public static partial class Module
         var state = RequireCooldown(ctx, player);
 
         RemoveFromStack(ctx, stack.Value, 1);
-        AddToInventory(ctx, ctx.Sender, Foods.FindPot(filled)!.Empty, 1, stack.Value.Quality);
+        AddToInventory(ctx, Me(ctx), Foods.FindPot(filled)!.Empty, 1, stack.Value.Quality, stack.Value.Wear, stack.Value.Maker);
         SetTroughLitres(ctx, structureId, have + litres);
         TouchStructure(ctx, structureId);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
@@ -77,7 +77,7 @@ public static partial class Module
         var (_, player) = RequireTrough(ctx, structureId);
         int have = (int)(ctx.Db.TroughWater.StructureId.Find(structureId)?.Litres ?? 0);
         if (have <= 0) throw new Exception("The trough is dry");
-        var empty = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var empty = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FilledItem((Item)i.Item) is not null)
             .ToList();
         if (empty.Count == 0) throw new Exception("You have no fired pot to fill");
@@ -90,7 +90,7 @@ public static partial class Module
             int n = (int)Math.Min(stack.Count, have / each);
             if (n <= 0) continue;
             RemoveFromStack(ctx, stack, (uint)n);
-            AddToInventory(ctx, ctx.Sender, filled, (uint)n, stack.Quality);
+            AddToInventory(ctx, Me(ctx), filled, (uint)n, stack.Quality, stack.Wear, stack.Maker);
             have -= n * each;
             any = true;
         }

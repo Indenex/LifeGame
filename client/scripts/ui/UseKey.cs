@@ -18,6 +18,10 @@ public partial class UseKey : CanvasLayer
     public Func<bool> Blocked = () => false;
 
     readonly Label verb = new();
+    // A dimmer second line: what else G could do ("also: Chop tree"), or a hint when it can do nothing.
+    readonly Label second = new();
+    float hintLeft, secondAlpha;
+    string hintText = "";
     Label keyLabel = null!;
     Control panel = null!;
     UseOffer? offer;
@@ -54,6 +58,16 @@ public partial class UseKey : CanvasLayer
         panel.Modulate = new Color(1, 1, 1, 0);
         root.AddChild(panel);
 
+        Hud.Soft(second, 14, 0.8f);
+        second.HorizontalAlignment = HorizontalAlignment.Center;
+        second.MouseFilter = Control.MouseFilterEnum.Ignore;
+        second.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        second.GrowHorizontal = Control.GrowDirection.Both;
+        second.GrowVertical = Control.GrowDirection.Begin;
+        second.Position = new Vector2(0, -186);
+        second.Modulate = new Color(1, 1, 1, 0);
+        root.AddChild(second);
+
         // --screenshot-use="Pick berries" shows a prompt without a server, for screenshots.
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--screenshot-use="))
@@ -70,6 +84,25 @@ public partial class UseKey : CanvasLayer
             // The player's own Use key, if they moved it.
             keyLabel.Text = Controls.KeyFor("use") ?? "E";
         }
+
+        // The second line: the runner-up offer, or (with no offer) now and then a hint.
+        string secondText = "";
+        if (offer != null)
+        {
+            hintLeft = 0f;
+            var others = Use.Others(Player(), Facing(), offer);
+            if (others.Count > 0) secondText = "also: " + others[0].Prompt;
+            else if (offer.Target is { } target && Use.MakerAt(target) is { } maker) secondText = $"made by {maker}";
+        }
+        else if (!Blocked())
+        {
+            if (hintLeft > 0f) hintLeft -= dt;
+            else if (Use.Hint(Player(), Time.GetTicksMsec() / 1000.0) is { } found) { hintText = found; hintLeft = Use.HintShown; }
+            if (hintLeft > 0f) secondText = hintText;
+        }
+        if (secondText != "") second.Text = secondText;
+        secondAlpha = Mathf.MoveToward(secondAlpha, secondText != "" ? 1f : 0f, dt * 4f);
+        second.Modulate = new Color(1, 1, 1, secondAlpha);
 
         // While a held key repeats (Use, dig or pick up), the cap's rim and glow pulse warm, so
         // you can see it will keep going; they ease back when it stops.

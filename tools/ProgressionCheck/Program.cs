@@ -36,4 +36,16 @@ if (Wading.SpeedFactor(0.4f) != Wading.SpeedFactor(0.4f, 0) || Wading.SpeedFacto
 if (Skills.Watchable(Wading.WadeProcess) || Skills.Watchable(Wading.FloatProcess) || !Skills.Watchable("knap.flake")) { Console.WriteLine("FAIL: swim ids watchable"); failures++; }
 if (Skills.SpecFor(Skills.Shoot)?.Id != "archery") { Console.WriteLine("FAIL: archery mapping"); failures++; }
 Console.WriteLine(failures == 0 ? "OK" : $"{failures} failure(s)");
+// Skill tooltips: every skill lists at least one effect, and every effect is listed by some skill.
+var listed = new HashSet<EffectKind>();
+foreach (var spec in Skills.Specializations)
+{
+    var text = Progression.Describe(spec.Id, 15);
+    Console.WriteLine($"\n{spec.Name} at rank 15:\n{text}");
+    if (text.Length == 0) { Console.WriteLine("  FAIL: no effects listed"); failures++; }
+    foreach (var k in Progression.EffectsFor(spec.Id)) listed.Add(k);
+}
+foreach (var e in Progression.Effects)
+    if (!listed.Contains(e.Kind)) { Console.WriteLine($"FAIL: no skill tooltip lists {e.Name}"); failures++; }
+
 return failures == 0 ? 0 : 1;

@@ -17,6 +17,13 @@ public partial class CeramicsView
 
     void AttachMarks(SpacetimeDB.Types.DbConnection c)
     {
+        // A new or changed mark restyles every pot its maker made: drop the cached meshes so they rebuild.
+        c.Db.StructureMark.OnInsert += (_, m) => StructureMarks.Set(m.StructureId, m.Mark);
+        c.Db.StructureMark.OnUpdate += (_, _, m) => StructureMarks.Set(m.StructureId, m.Mark);
+        c.Db.StructureMark.OnDelete += (_, m) => StructureMarks.Remove(m.StructureId);
+        foreach (var m in c.Db.StructureMark.Iter()) StructureMarks.Set(m.StructureId, m.Mark);
+        c.Db.PlayerMark.OnInsert += (_, _) => ClayItemLook.ClearMarked();
+        c.Db.PlayerMark.OnUpdate += (_, _, _) => ClayItemLook.ClearMarked();
         c.Db.MyCraftJob.OnInsert += (_, job) =>
         {
             if (askedForMark || OpenMarkPicker == null) return;

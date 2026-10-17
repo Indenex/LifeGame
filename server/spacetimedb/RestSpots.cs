@@ -23,7 +23,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MyRespawnPoint", Public = true)]
     public static List<RespawnPoint> MyRespawnPoint(ViewContext ctx) =>
-        ctx.Db.Player.Identity.Find(ctx.Sender) is { } p && ctx.Db.RespawnPoint.PlayerId.Find(p.PlayerId) is { } r
+        ctx.Db.Player.Identity.Find(Me(ctx)) is { } p && ctx.Db.RespawnPoint.PlayerId.Find(p.PlayerId) is { } r
             ? new List<RespawnPoint> { r }
             : new List<RespawnPoint>();
 

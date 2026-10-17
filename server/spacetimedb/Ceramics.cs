@@ -161,9 +161,9 @@ public static partial class Module
 
         ctx.Db.ClayPiece.Id.Delete(piece.Id);
         if (form == ClayForm.Brick)
-            AddToInventory(ctx, ctx.Sender, Item.Brick, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.Brick, 1, Items.RawQuality);
         else
-            AddToInventory(ctx, ctx.Sender, ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark);
+            AddToInventory(ctx, Me(ctx), ClayRules.UnfiredItem(form), 1, piece.Quality, piece.Mark, MakerOfMark(piece.Mark));
     }
 
     // Sets every unfired pot you carry into a fire within reach, as many as fit.
@@ -177,7 +177,7 @@ public static partial class Module
         RequireClaimAccess(ctx, fire.X, fire.Z);
         RequireFuelForFiring(ctx, fire);
 
-        var pots = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var pots = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FormOfUnfired((Item)i.Item) is not null)
             .ToList();
         if (pots.Count == 0)
@@ -211,7 +211,7 @@ public static partial class Module
                     ChunkZ = fire.ChunkZ,
                     Moisture = 0f,
                     MoistureAt = ctx.Timestamp,
-                    Mark = stack.Wear,
+                    Mark = MarkFromStack(stack.Wear, stack.Maker),
                 });
                 StartFiring(ctx, piece, fire, 0f);
                 used++;
@@ -232,7 +232,7 @@ public static partial class Module
         if (!NearWater(ctx, pos.X, pos.Z))
             throw new Exception("Stand at the water's edge to fill a pot");
 
-        var empty = ctx.Db.InventoryItem.Owner.Filter(ctx.Sender)
+        var empty = ctx.Db.InventoryItem.Owner.Filter(Me(ctx))
             .Where(i => Items.IsKnown(i.Item) && ClayRules.FilledItem((Item)i.Item) is not null)
             .ToList();
         if (empty.Count == 0)
@@ -240,7 +240,7 @@ public static partial class Module
         foreach (var stack in empty)
         {
             RemoveFromStack(ctx, stack, stack.Count);
-            AddToInventory(ctx, ctx.Sender, ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality, stack.Wear);
+            AddToInventory(ctx, Me(ctx), ClayRules.FilledItem((Item)stack.Item)!.Value, stack.Count, stack.Quality, stack.Wear, stack.Maker);
             if ((Item)stack.Item != Item.Waterskin)
                 OnProcessPerformed(ctx, player.PlayerId, ClayRules.FillProcess, stack.Quality, false);
         }
@@ -433,6 +433,14 @@ public static partial class Module
     }
 
     // Drops an item on the ground where a piece was, nudged so several don't stack.
+    // A pot's maker and slip travel as one number (shared/Marks.cs and shared/Slip.cs) inside Ceramics'
+    // own rows (ClayPiece.Mark, KilnMarks, Lamp.Mark). On an item row the maker is ALSO in the Maker
+    // column (crafting-25) and the Wear number keeps both, so the two readers agree; rows from before
+    // the column (maker in Wear only) still read.
+    static uint MarkFromStack(uint wear, uint maker) => (maker != 0 ? Marks.Pack(maker) : wear & 0x1FFFFu) | (wear & ~0x1FFFFu);
+
+    static uint MakerOfMark(uint mark) => Marks.Has(mark) ? Marks.Maker(mark) : 0u;
+
     static void DropNear(ReducerContext ctx, ClayPiece piece, Item item, byte quality, int index, uint wear = 0)
     {
         float x = piece.X + index * 0.18f, z = piece.Z - index * 0.12f;
@@ -441,6 +449,7 @@ public static partial class Module
             Id = 0, Item = (ushort)item, Quality = quality,
             X = x, Z = z, ChunkX = World.ChunkOf(x), ChunkZ = World.ChunkOf(z),
             Wear = wear,
+            Maker = MakerOfMark(wear),
         });
     }
 

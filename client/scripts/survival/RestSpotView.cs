@@ -69,7 +69,7 @@ public partial class RestSpotView : CanvasLayer
         });
     }
 
-    uint MyId() => conn?.Identity is { } id && conn.Db.Player.Identity.Find(id) is { } p ? p.PlayerId : 0;
+    uint MyId() => Me.PlayerId(conn);
 
     SleepingMat? MyMat() => MyId() is var me and not 0 && conn!.Db.SleepingMat.PlayerId.Find(me) is { } m ? m : null;
 

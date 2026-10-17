@@ -11,7 +11,9 @@ public partial class Terrain
 {
     // One standing tree, as the chunk would draw it on cell (x, z), with only its trunk
     // and crown (TreeFall). Instances are in world space. Null where no tree grows.
-    public Node3D? StandingTree(int x, int z)
+    // felled: the same tree sawn off at the foot, with no roots, for the fall (env-23):
+    // Modeling's cut painted trees, and the cut trunk for birches.
+    public Node3D? StandingTree(int x, int z, bool felled = false)
     {
         Prewarm();
         var snapshot = TakeSnapshot(World.ChunkOfCell(x), World.ChunkOfCell(z));
@@ -24,8 +26,13 @@ public partial class Terrain
             // Painted trees come as a near and a far batch; a falling tree is always near,
             // so only the near one is drawn, with no distance limit.
             if (painted && range.Item1 > 0f) continue;
+            var drawn = mesh;
+            // A crown on its own trunk (a birch) falls as it is; a whole painted tree is swapped
+            // for its sawn-off version.
+            if (felled && painted && !PaintedTrees.IsCrown(mesh)) drawn = PaintedTrees.Felled(material == PaintedTrees.PineMaterial, TreeVariant(x, z, material == PaintedTrees.PineMaterial ? 31u : 30u));
+            else if (felled && material == Painted.Bark) drawn = PropMeshes.CutTrunk;
             if (painted || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
-                AddMulti(root, mesh, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
+                AddMulti(root, drawn, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
         }
         if (root.GetChildCount() == 0) { root.Free(); return null; }
         // A tree near the player fades out of the camera's way and its see-through copy
@@ -36,13 +43,7 @@ public partial class Terrain
 
     // The trunk's radius at the foot, as TerrainCollision has it (birches by the water
     // are slim, the odd heath tree broad).
-    public static float TrunkFoot(int x, int z)
-    {
-        float scale = 1.3f + Hash01(x, z, 15) * 0.6f, girth = 1f;
-        if (Forest.Wetland(x, z) > 0.4f && Hash01(x, z, 23) < 0.8f) girth = 0.6f;
-        else if (Forest.Heath(x, z) > 0.5f) girth = 1.35f;
-        return TrunkRadius(scale * girth);
-    }
+    public static float TrunkFoot(int x, int z) => Obstacles.TrunkFoot(x, z);
 }
 
 // Felled trees (env-22). When a ChoppedTree row turns Felled the tree tips over away
@@ -58,7 +59,7 @@ public partial class TreeFall : Node3D
     public const float FallSeconds = 1.6f;
     const float BounceSeconds = 0.35f, LieSeconds = 4f, SinkSeconds = 1.5f;
     const float FallAngle = 1.48f; // about 85 degrees: the crown props the trunk a little off the ground
-    const float StumpHeight = 0.32f;
+    const float StumpHeight = Trees.StumpHeight;
 
     // When a tree starts to fall (where its foot is, which way) and when it hits the ground.
     public static event Action<Vector3, Vector3>? Falling;
@@ -92,6 +93,9 @@ public partial class TreeFall : Node3D
         Name = "TreeFall";
         var before = terrain.NoEase;
         terrain.NoEase = (x, z) => before?.Invoke(x, z) == true || felled.ContainsKey(World.CellKey(x, z)) || regrown.ContainsKey(World.CellKey(x, z));
+        // Collision for the stump and the regrowth (env-29), from the same stages as drawn.
+        terrain.FelledProgress = (x, z) => felled.TryGetValue(World.CellKey(x, z), out var f) && f.Removing < 0f
+            ? Mathf.Clamp((float)((Now - f.ChoppedAt) / Trees.RegrowSeconds), 0f, 1f) : -1f;
     }
 
     public void Attach(DbConnection conn)
@@ -139,7 +143,7 @@ public partial class TreeFall : Node3D
         var foot = new Vector3(tx, terrain.TileHeight(x, z), tz);
         f.Stump = Stump(x, z, foot);
         AddChild(f.Stump);
-        if (fall && terrain.StandingTree(x, z) is { } tree)
+        if (fall && terrain.StandingTree(x, z, felled: true) is { } tree)
         {
             // Away from the chopper; with nobody near, the way the shader used to pick.
             Vector2 away = chopper is { } c && (new Vector2(tx, tz) - c).LengthSquared() > 0.01f
@@ -242,10 +246,7 @@ public partial class TreeFall : Node3D
     void Grow(Felled f, float p)
     {
         p = Mathf.Clamp(p, 0f, 1f);
-        float size = p < 0.28f ? 0f
-            : p < 0.5f ? Mathf.Lerp(0.12f, 0.4f, (p - 0.28f) / 0.22f)
-            : p < 0.85f ? Mathf.Lerp(0.4f, 0.78f, (p - 0.5f) / 0.35f)
-            : Mathf.Lerp(0.78f, 0.97f, (p - 0.85f) / 0.15f);
+        float size = Trees.RegrowSize(p);
         if (size > 0f && f.Fall == null)
         {
             if (f.Growth == null && terrain.StandingTree(f.X, f.Z) is { } tree)
@@ -262,7 +263,7 @@ public partial class TreeFall : Node3D
         if (f.Stump != null)
         {
             // The stump rots down into the ground before the sapling comes up in its place.
-            float weather = Mathf.Clamp((p - 0.14f) / 0.14f, 0f, 1f);
+            float weather = 1f - Trees.StumpLeft(p);
             f.Stump.Visible = weather < 1f;
             f.Stump.Scale = new Vector3(1f, 1f - weather, 1f);
         }

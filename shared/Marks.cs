@@ -27,12 +27,12 @@ namespace LifeGame.Shared
         public static bool Has(uint wear) => (wear & (1u << 16)) != 0;
         public static uint Maker(uint wear) => wear & 0xFFFFu;
 
-        // The clay items that carry their maker: pots, jars and lamps, unfired or fired, full or empty.
+        // The clay items that carry their maker: pots, jars, lamps and troughs, unfired or fired, full or empty.
         public static bool Marked(Item item) => item switch
         {
             Item.PinchPot or Item.CoilPot or Item.PinchPotOfWater or Item.CoilPotOfWater
                 or Item.UnfiredPinchPot or Item.UnfiredCoilPot or Item.StorageJar or Item.UnfiredStorageJar
-                or Item.ClayLamp or Item.UnfiredLamp => true,
+                or Item.ClayLamp or Item.UnfiredLamp or Item.UnfiredClayTrough or Item.ClayTrough => true,
             _ => false,
         };
 
@@ -46,17 +46,28 @@ namespace LifeGame.Shared
 
         public static uint ClampColor(uint rgb)
         {
+            var (h, s, v) = ToHsv(rgb);
+            return FromHsv(h, Math.Clamp(s, MinSaturation, MaxSaturation), Math.Clamp(v, MinValue, MaxValue));
+        }
+
+        // Hue 0 to 6 (sixths of the wheel), saturation and value 0 to 1.
+        public static (float h, float s, float v) ToHsv(uint rgb)
+        {
             float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
             float max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b));
-            float d = max - min, v = max, s = max <= 0f ? 0f : d / max, h = 0f;
+            float d = max - min, h = 0f;
             if (d > 0f)
             {
                 if (max == r) h = ((g - b) / d + 6f) % 6f;
                 else if (max == g) h = (b - r) / d + 2f;
                 else h = (r - g) / d + 4f;
             }
-            s = Math.Clamp(s, MinSaturation, MaxSaturation);
-            v = Math.Clamp(v, MinValue, MaxValue);
+            return (h, max <= 0f ? 0f : d / max, max);
+        }
+
+        public static uint FromHsv(float h, float s, float v)
+        {
+            h = ((h % 6f) + 6f) % 6f;
             float c = v * s, x = c * (1f - Math.Abs(h % 2f - 1f)), m = v - c;
             (float rr, float gg, float bb) = ((int)h) switch
             {

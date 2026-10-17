@@ -9,7 +9,7 @@ namespace LifeGame;
 // A standalone scene that lines up the model styles side by side under the game's
 // light, so the Render lane can capture them for Justin (model-1). No server.
 //   godot --path client res://scripts/models/Showcase.tscn -- --view=row --shot=out.png
-// Views: row (everyone), people, faces, sheep, walk, items (--old for today's), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
+// Views: row (everyone), people, stylefaces (model-1 heads), faces (chibi face states), sheep, walk, items (--old for today's, --compare for today vs painted), held, clothes, stations, props, env, hearth, (people mid-stride, from the side).
 // --yaw=<degrees> turns every model; --shot saves a PNG after the scene settles and quits.
 public partial class Showcase : Node3D
 {
@@ -17,6 +17,20 @@ public partial class Showcase : Node3D
     readonly List<Skeleton3D> people = new();
     string? shot;
     int frames;
+
+    // A view is a parameterless instance method marked [ShowcaseView("name")], in this file or in a
+    // Showcase.<Lane>.cs of the lane's own (found by reflection), so lanes never edit one shared list.
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class ShowcaseViewAttribute : Attribute
+    {
+        public string Name { get; }
+        public ShowcaseViewAttribute(string name) => Name = name;
+    }
+
+    static readonly Dictionary<string, System.Reflection.MethodInfo> views = typeof(Showcase)
+        .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+        .Where(m => m.GetParameters().Length == 0 && m.GetCustomAttributes(typeof(ShowcaseViewAttribute), false).Length > 0)
+        .ToDictionary(m => ((ShowcaseViewAttribute)m.GetCustomAttributes(typeof(ShowcaseViewAttribute), false)[0]).Name);
 
     public override void _Ready()
     {
@@ -30,26 +44,9 @@ public partial class Showcase : Node3D
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
         SetupWorld();
-        if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd")
+        if (views.TryGetValue(view, out var show))
         {
-            if (view == "hearth") Hearth();
-            else if (view == "stations") Stations();
-            else if (view == "props") Props();
-            else if (view == "env") EnvProps();
-            else if (view == "cooking") Cooking();
-            else if (view == "deer") Deer();
-            else if (view == "hen") Hen();
-            else if (view == "stonehearth") StoneHearthView();
-            else if (view == "treelod") TreeLod();
-            else if (view == "rocks") Rocks();
-            else if (view == "bushes") Bushes();
-            else if (view == "logs") Logs();
-            else if (view == "wear") WearRows();
-            else if (view == "devices") Devices();
-            else if (view == "crowd") Crowd();
-            else if (view == "items") ItemGrid(args.ContainsKey("old"));
-            else if (view == "held") HeldTools();
-            else Clothes();
+            show.Invoke(this, null);
             return;
         }
 
@@ -60,7 +57,7 @@ public partial class Showcase : Node3D
         wool.SetShaderParameter("cavity", 0.08f);
 
         // Today's figure first, for comparison, then each style.
-        float gap = view == "faces" ? 0.75f : 2.2f;
+        float gap = view == "stylefaces" ? 0.75f : 2.2f;
         float x0 = -gap * 1.5f;
         var today = new Avatar("") { Position = new Vector3(x0, 0, 0), Rotation = new Vector3(0, yaw, 0), Visible = view != "sheep" };
         AddChild(today);
@@ -92,13 +89,13 @@ public partial class Showcase : Node3D
             person.Visible = view != "sheep";
             AddChild(sheep);
             int tris = HumanFigure.Build(style).Triangles;
-            Label(view == "faces" ? $"{style.Key}  {style.Name}"
+            Label(view == "stylefaces" ? $"{style.Key}  {style.Name}"
                 : view == "sheep" ? $"{style.Key}  {fleece}\n{SheepFigure.Build(fleece, wool).Triangles:N0} tris"
                 : $"{style.Key}  {style.Name}\nperson {tris:N0} tris, sheep {SheepFigure.Build(fleece, wool).Triangles:N0}", new Vector3(x, view == "sheep" ? -1.1f : 0, 0));
         }
         if (view == "walk") Stride();
         // The faces view is close enough that the labels would cover the heads.
-        if (view == "faces")
+        if (view == "stylefaces")
             foreach (var child in GetChildren())
                 if (child is Label3D label) label.Position += new Vector3(0, -2.15f + 0.1f, 0.3f);
 
@@ -107,7 +104,7 @@ public partial class Showcase : Node3D
         var (from, at) = view switch
         {
             "people" => (new Vector3(0f, 1.3f, 8.4f), new Vector3(0f, 0.95f, 0f)),
-            "faces" => (new Vector3(0f, 1.6f, 4.2f), new Vector3(0f, 1.45f, 0f)),
+            "stylefaces" => (new Vector3(0f, 1.6f, 4.2f), new Vector3(0f, 1.45f, 0f)),
             "sheep" => (new Vector3(0.6f, 1.5f, 6.2f), new Vector3(0.6f, 0.5f, 0f)),
             "walk" => (new Vector3(0f, 1.2f, 8.4f), new Vector3(0f, 0.95f, 0f)),
             _ => (new Vector3(0.4f, 3.2f, 10.5f), new Vector3(0.4f, 0.7f, 0f)),
@@ -116,11 +113,21 @@ public partial class Showcase : Node3D
     }
 
     // Every item lying on the grass in rows, the new model or (--old) today's.
+    [ShowcaseView("items")]
+    void ItemsView()
+    {
+        if (args.ContainsKey("compare")) PaintedItemRows();
+        else ItemGrid(args.ContainsKey("old"));
+    }
+
+    [ShowcaseView("structures")]
+    void StructuresView() => Structures(args.GetValueOrDefault("set", "homes"));
+
     void ItemGrid(bool old)
     {
         var items = new List<LifeGame.Shared.Item>(LifeGame.Shared.Items.All.Keys);
         // Items other lanes are still adding (D-074, animals-8), shown by number.
-        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps", [18] = "Spade" };
+        var pending = new Dictionary<ushort, string> { [202] = "Raw venison", [203] = "Deer hide", [204] = "Antler", [197] = "Drop spindle", [198] = "Wool yarn", [199] = "Wool cloth", [200] = "Wool tunic", [201] = "Foot wraps" };
         foreach (var id in pending.Keys)
             if (!items.Contains((LifeGame.Shared.Item)id)) items.Add((LifeGame.Shared.Item)id);
         // --ids=207,211 shows only those items.
@@ -159,7 +166,42 @@ public partial class Showcase : Node3D
         camera.LookAtFromPosition(new Vector3(0, 4.3f, 3.6f), new Vector3(0, 0, 0.35f), Vector3.Up);
     }
 
+    // painted-6: representative items in pairs of rows, today's look behind, painted in front.
+    void PaintedItemRows()
+    {
+        var items = new[]
+        {
+            Item.StoneAxe, Item.StoneKnife, Item.Stone, Item.HandAxe, (Item)18, Item.Spear, Item.Cordage,
+            Item.Waterskin, Item.PinchPot, Item.StorageJar, Item.Egg, Item.Berries, Item.CookedMutton, Item.SheepHide,
+        };
+        const int columns = 7;
+        const float step = 0.62f;
+        for (int i = 0; i < items.Length; i++)
+        {
+            var painted = ItemLook.MeshFor(items[i]);
+            float x = (i % columns - (columns - 1) / 2f) * step;
+            float z = (i / columns) * 1.25f - 0.62f;
+            // Each scaled to fill its cell, so small things (an egg) read as well as big ones.
+            float fit = 0.5f / painted.GetAabb().Size.Length();
+            AddChild(new MeshInstance3D { Mesh = PaintedItems.Unpaint(painted), Position = new Vector3(x, 0, z - 0.5f), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
+            AddChild(new MeshInstance3D { Mesh = painted, Position = new Vector3(x, 0, z), Scale = Vector3.One * fit, Rotation = new Vector3(0, -0.5f, 0) });
+            AddChild(new Label3D
+            {
+                Text = Items.All.TryGetValue(items[i], out var def) ? def.Name : "?",
+                FontSize = 22, PixelSize = 0.0022f, Modulate = Look.Cream, OutlineSize = 6,
+                OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.8f),
+                Position = new Vector3(x, 0.02f, z + 0.24f), Rotation = new Vector3(-Mathf.Pi / 2f + 0.9f, 0, 0),
+            });
+        }
+        foreach (var (text, z) in new[] { ("today", -1.12f), ("painted", -0.62f), ("today", 0.13f), ("painted", 0.63f) })
+            AddChild(new Label3D { Text = text, FontSize = 26, PixelSize = 0.0024f, Modulate = Look.Cream, OutlineSize = 6, Position = new Vector3(-2.3f, 0.02f, z), Rotation = new Vector3(-1.2f, 0, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 3.6f, 2.4f), new Vector3(0, 0, -0.1f), Vector3.Up);
+    }
+
     // The player figure holding tools in its right hand, arm raised a little.
+    [ShowcaseView("held")]
     void HeldTools()
     {
         // Stand-in ids for the bow and arrow until Crafting's reach main.
@@ -187,6 +229,7 @@ public partial class Showcase : Node3D
     }
 
     // World props for Environment (model-2), tinted the way Terrain tints them.
+    [ShowcaseView("props")]
     void Props()
     {
         ShaderMaterial Tinted(ShaderMaterial source, Color color)
@@ -215,6 +258,7 @@ public partial class Showcase : Node3D
     }
 
     // Each tool that wears, as new, worn and spent (D-155), lying in rows.
+    [ShowcaseView("wear")]
     void WearRows()
     {
         var tools = new[] { LifeGame.Shared.Item.StoneAxe, LifeGame.Shared.Item.StoneKnife, LifeGame.Shared.Item.Spear, LifeGame.Shared.Item.DiggingStick, LifeGame.Shared.Item.BowDrill, (LifeGame.Shared.Item)16 };
@@ -233,6 +277,7 @@ public partial class Showcase : Node3D
     }
 
     // Red deer for Animals: a hind and a stag, with a person and a sheep for scale.
+    [ShowcaseView("deer")]
     void Deer()
     {
         var coat = Look.Solid(new Color(0.55f, 0.30f, 0.18f));
@@ -260,6 +305,7 @@ public partial class Showcase : Node3D
 
     // The hen in three feather colours (white, brown, grey, from the sheep's fleece
     // tints), one pecking and one flapping, beside a sheep and the player for scale.
+    [ShowcaseView("hen")]
     void Hen()
     {
         var tints = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f), new Color(0.6f, 0.58f, 0.55f) };
@@ -285,6 +331,7 @@ public partial class Showcase : Node3D
 
     // The stone-ringed hearth (model-9, D-286): its first course on the left, the
     // finished kerb on the right, the player beside for scale.
+    [ShowcaseView("stonehearth")]
     void StoneHearthView()
     {
         var pieces = StructureModel.StoneHearth();
@@ -303,6 +350,7 @@ public partial class Showcase : Node3D
 
     // The painted trees as the world draws them (model-10): each variant's detailed
     // version in the front row and its far version behind, pines left, broadleaf right.
+    [ShowcaseView("treelod")]
     void TreeLod()
     {
         for (int v = 0; v < PaintedTrees.Variants; v++)
@@ -314,12 +362,15 @@ public partial class Showcase : Node3D
             }
         var camera = new Camera3D { Fov = 40f, Current = true };
         AddChild(camera);
-        camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
+        // --top: from high above, as the camera sees the crowns when zoomed out.
+        if (args.ContainsKey("top")) camera.LookAtFromPosition(new Vector3(-4.5f, 19f, 9f), new Vector3(-4.5f, 2.5f, -2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(0f, 6f, 22f), new Vector3(0f, 3.0f, -2f), Vector3.Up);
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
     // Rocks as the world draws them (painted-1): today's material in the back row, the
     // painted one in front: boulders, outcrops and river stones.
+    [ShowcaseView("rocks")]
     void Rocks()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -346,9 +397,116 @@ public partial class Showcase : Node3D
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
+    // Built structures (painted-5): today's materials in the back row, painted in front.
+    // set=homes: lean-to, clay hut, log cabin; set=small: table, kiln, stone hearth, fire
+    // ring, fence and jar.
+    void Structures(string set)
+    {
+        bool homes = set != "small";
+        var builds = homes
+            ? new List<(System.Func<List<StructureModel.Piece>>, float)>
+            {
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.LeanTo), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.LeanTo)),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.ClayHut), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.ClayHut)),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.LogCabin), LifeGame.Shared.Structures.ScaleOf((int)SpacetimeDB.Types.StructureKind.LogCabin)),
+            }
+            : new List<(System.Func<List<StructureModel.Piece>>, float)>
+            {
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.CraftingTable), 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.Kiln), 1f),
+                (() => StructureModel.StoneHearth(), 1f),
+                (() => new List<StructureModel.Piece> { new() { Mesh = HearthModel.Ring, Material = HearthModel.Ring.SurfaceGetMaterial(0) } }, 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.Fence), 1f),
+                (() => StructureModel.Pieces((int)SpacetimeDB.Types.StructureKind.StorageJar), 1f),
+            };
+        float gap = homes ? 6.5f : 2.0f, depth = homes ? 7.5f : 2.4f;
+        for (int i = 0; i < builds.Count; i++)
+            for (int row = 0; row < 2; row++)
+            {
+                var (pieces, scale) = builds[i];
+                var root = new Node3D { Position = new Vector3((i - (builds.Count - 1) / 2f) * gap, 0, row == 0 ? -depth : 0), Rotation = new Vector3(0, 0.45f, 0), Scale = Vector3.One * scale };
+                AddChild(root);
+                foreach (var piece in pieces())
+                    if (piece.Stage >= 0)
+                    {
+                        var material = row == 0 ? PaintedStructures.Unpainted(piece.Material) : piece.Material;
+                        // --cutaway: the roofs half faded, as StructureView does from inside (D-168).
+                        if (args.ContainsKey("cutaway") && piece.Role == StructureModel.PieceRole.Roof && material is ShaderMaterial solid)
+                        {
+                            var ghost = Painted.StructureGhostOf(solid) ?? Look.StructureGhost(solid);
+                            ghost.SetShaderParameter("fade_override", 0.5f);
+                            material = ghost;
+                        }
+                        root.AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = material });
+                    }
+            }
+        var figure = PlayerModel.Build();
+        figure.Position = homes ? new Vector3(-gap * 0.5f, 0, 2.2f) : new Vector3(-gap * 3.3f, 0, 0.8f);
+        AddChild(figure);
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        if (homes) camera.LookAtFromPosition(new Vector3(0, 7.5f, 15f), new Vector3(0, 1.0f, -3.2f), Vector3.Up);
+        else camera.LookAtFromPosition(new Vector3(-0.6f, 3.9f, 8.2f), new Vector3(-0.6f, 0.3f, -1.2f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // The animals painted (painted-4): today's look in the back row, the painted one in
+    // front: a sheep in two fleece colours, a deer hind and a stag, and two hens.
+    [ShowcaseView("animals")]
+    void Animals()
+    {
+        ShaderMaterial Wool(Color color)
+        {
+            // As Sheep.WoolLook, before painting.
+            var wool = Look.Solid(color);
+            wool.SetShaderParameter("detail_scale", 1.5f);
+            wool.SetShaderParameter("bump", 0.15f);
+            wool.SetShaderParameter("cavity", 0.08f);
+            return wool;
+        }
+        // The meshes are shared, so each animal wears its materials on its own instance.
+        void Put(Skeleton3D animal, Material outer, Material inner, Vector3 at, float yaw)
+        {
+            foreach (var child in animal.GetChildren())
+                if (child is MeshInstance3D mesh)
+                {
+                    mesh.SetSurfaceOverrideMaterial(0, outer);
+                    if (mesh.Mesh.GetSurfaceCount() > 1) mesh.SetSurfaceOverrideMaterial(1, inner);
+                }
+            animal.Position = at;
+            animal.Rotation = new Vector3(0, yaw, 0);
+            AddChild(animal);
+        }
+        var cream = new Color(0.74f, 0.71f, 0.63f);
+        var dark = new Color(0.34f, 0.27f, 0.22f);
+        var coat = new Color(0.47f, 0.30f, 0.19f);
+        var hens = new[] { new Color(0.95f, 0.93f, 0.88f), new Color(0.62f, 0.4f, 0.24f) };
+        var oldSkin = Look.Solid(Colors.White);
+        for (int row = 0; row < 2; row++)
+        {
+            bool painted = row == 1;
+            float z = painted ? 0.6f : -2.4f;
+            Material W(Color c) => painted ? PaintedAnimals.Wool(Wool(c)) : Wool(c);
+            Material C(Color c) => painted ? PaintedAnimals.Coat(Look.Solid(c)) : Look.Solid(c);
+            Material skin = painted ? PaintedAnimals.Skin : oldSkin;
+            Put(SheepFigure.Create(SheepFigure.Variant, oldSkin), W(cream), skin, new Vector3(-3.3f, 0, z), 1.2f);
+            Put(SheepFigure.Create(SheepFigure.Variant, oldSkin), W(dark), skin, new Vector3(-2.0f, 0, z + 0.3f), 0.9f);
+            Put(DeerFigure.Create(false, oldSkin), C(coat), skin, new Vector3(-0.4f, 0, z), 1.3f);
+            Put(DeerFigure.Create(true, oldSkin), C(coat), skin, new Vector3(1.4f, 0, z - 0.3f), 1.0f);
+            for (int i = 0; i < 2; i++)
+                Put(HenFigure.Create(oldSkin), W(hens[i]), skin, new Vector3(2.9f + i * 0.6f, 0, z + 0.5f), 0.7f - i * 0.6f);
+            Label(painted ? "Painted" : "Today", new Vector3(-3.0f, painted ? -2.05f : -1.2f, z + (painted ? 1.0f : 0.4f)));
+        }
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0f, 2.3f, 6.6f), new Vector3(0f, 0.55f, -0.9f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
     // Bushes as the world draws them (painted-2): today's in the back row (forest bush,
     // heather, gorse, a stand-in for the old berry bush's sphere lobes), the painted ones
     // in front, with a berry bush ripe and one picked.
+    [ShowcaseView("bushes")]
     void Bushes()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -389,6 +547,7 @@ public partial class Showcase : Node3D
 
     // Bark and leaves as the world draws them (painted-3): today's materials in the back
     // row, the painted ones in front: birches with their canopies and fallen logs.
+    [ShowcaseView("logs")]
     void Logs()
     {
         void Place(Mesh mesh, Material material, Transform3D at, Color tint)
@@ -407,7 +566,8 @@ public partial class Showcase : Node3D
             {
                 var at = new Transform3D(new Basis(Vector3.Up, v * 1.3f).Scaled(Vector3.One * 0.6f), new Vector3(-7f + v * 3f, 0, z));
                 Place(PropMeshes.Birch(v % PropMeshes.BirchVariants), bark, at.ScaledLocal(new Vector3(1f, 1.1f, 1f)), Colors.White.Darkened(v * 0.05f));
-                Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                if (row == 0) Place(Terrain.LeafyCanopy, leaves, at.ScaledLocal(new Vector3(0.6f, 1.1f, 0.6f)), Look.LeafLight.Lerp(Look.Leaf, v * 0.15f));
+                else Place(PaintedTrees.BroadleafCrown(v, false), PaintedTrees.BroadleafMaterial, Terrain.BirchCrown(at), Terrain.BirchLeaf.Darkened(v * 0.05f));
             }
             for (int v = 0; v < PropMeshes.FallenLogVariants && v < 3; v++)
                 Place(PropMeshes.FallenLog(v), bark, new Transform3D(new Basis(Vector3.Up, 0.3f + v * 0.5f), new Vector3(3.5f + v * 1.4f, 0, z + 1.5f + v * 0.5f)), Look.Bark.Darkened(0.1f));
@@ -418,8 +578,33 @@ public partial class Showcase : Node3D
         if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
     }
 
+    // Ceramics' clay under ClayLook (painted-8): one row per form, wet, dry, pit-fired,
+    // kiln-fired and cracked left to right, and a slip-banded coil pot at the end.
+    [ShowcaseView("pots")]
+    void Pots()
+    {
+        var forms = new[] { ClayForm.CoilPot, ClayForm.PinchPot, ClayForm.Lamp };
+        var looks = new[]
+        {
+            ClayLook.For(ClayStage.Drying, FireKind.Pit, 1f, 0), ClayLook.For(ClayStage.Drying, FireKind.Pit, 0f, 0),
+            ClayLook.For(ClayStage.Fired, FireKind.Pit, 0f, 1), ClayLook.For(ClayStage.Fired, FireKind.Kiln, 0f, 2),
+            ClayLook.For(ClayStage.Cracked, FireKind.Pit, 0f, 0),
+        };
+        for (int f = 0; f < forms.Length; f++)
+        {
+            for (int s = 0; s < looks.Length; s++)
+                AddChild(new MeshInstance3D { Mesh = PotMesh.For(forms[f], (ulong)s), Scale = Vector3.One * PotView.Size, MaterialOverride = looks[s], Position = new Vector3((s - 2.5f) * 0.55f, 0, (f - 1) * 0.6f) });
+        }
+        var slip = ClayLook.Decorate(looks[3], ClayForm.CoilPot, -1, Colors.White, 3, 2);
+        AddChild(new MeshInstance3D { Mesh = PotMesh.For(ClayForm.CoilPot, 9), Scale = Vector3.One * PotView.Size, MaterialOverride = slip, Position = new Vector3(3 * 0.55f, 0, -0.6f) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 1.6f, 2.6f), new Vector3(0, 0.1f, 0), Vector3.Up);
+    }
+
     // Ceramics' cooking pot at a fire's edge, on its stones, with each dish
     // floating in it, roughly as SimmerView draws it.
+    [ShowcaseView("cooking")]
     void Cooking()
     {
         AddChild(new MeshInstance3D { Mesh = HearthModel.Ring, Position = new Vector3(0, 0, -0.55f) });
@@ -442,6 +627,7 @@ public partial class Showcase : Node3D
 
     // Environment's env-4 props, drawn the way Terrain draws them: a MultiMesh
     // instance with a color, under the world materials.
+    [ShowcaseView("env")]
     void EnvProps()
     {
         void Place(Mesh mesh, Material material, Vector3 at, Color tint, float scale = 1f)
@@ -492,6 +678,7 @@ public partial class Showcase : Node3D
     }
 
     // Work stations side by side (model-2), with a player for scale.
+    [ShowcaseView("stations")]
     void Stations()
     {
         var stations = new[]
@@ -517,6 +704,7 @@ public partial class Showcase : Node3D
     }
 
     // Batch devices (D-195): each at fill 1 idle in front, full and working behind.
+    [ShowcaseView("devices")]
     void Devices()
     {
         var builds = new (string, System.Func<int, bool, List<StructureModel.Piece>>)[]
@@ -542,6 +730,7 @@ public partial class Showcase : Node3D
 
     // Players side by side, each with their own look from their player id (skin, hair,
     // cut, beard), the first in the default look.
+    [ShowcaseView("crowd")]
     void Crowd()
     {
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "0"), System.Globalization.CultureInfo.InvariantCulture));
@@ -560,6 +749,7 @@ public partial class Showcase : Node3D
     }
 
     // The cold hearth: the stone ring with ash and burnt stubs.
+    [ShowcaseView("hearth")]
     void Hearth()
     {
         AddChild(new MeshInstance3D { Mesh = HearthModel.Ring });
@@ -570,6 +760,7 @@ public partial class Showcase : Node3D
     }
 
     // Leaf wrap, then wool tunic and foot wraps standing, walking, and from behind.
+    [ShowcaseView("clothes")]
     void Clothes()
     {
         for (int i = 0; i < 4; i++)
@@ -680,5 +871,151 @@ public partial class Showcase : Node3D
         GetViewport().GetTexture().GetImage().SavePng(shot);
         GD.Print($"Showcase: saved {shot}");
         GetTree().Quit();
+    }
+
+    // The chibi face states (model-15), close up: Bramble's row above Pebble's, each
+    // open, blink, happy and sleepy. --far steps the camera back to a play distance.
+    [ShowcaseView("faces")]
+    void ChibiFaces()
+    {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-12"), System.Globalization.CultureInfo.InvariantCulture));
+        var races = new[] { new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0) };
+        const float gap = 0.9f, lift = 1.55f;
+        for (int r = 0; r < races.Length; r++)
+            for (int f = 0; f < 4; f++)
+            {
+                var figure = ChibiFigure.Create(races[r]);
+                figure.Position = new Vector3((f - 1.5f) * gap, r == 0 ? lift : 0f, 0);
+                figure.Rotation = new Vector3(0, yaw, 0);
+                AddChild(figure);
+                PlayerModel.SetFace(figure, (Face)f);
+                // The upper row floats; it casts no shadow onto the heads below.
+                if (r == 0)
+                    foreach (var child in figure.GetChildren())
+                        if (child is GeometryInstance3D g) g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+                if (r == 1) Label(((Face)f).ToString(), new Vector3((f - 1.5f) * gap, -1.17f, 0.4f));
+            }
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        float back = args.ContainsKey("far") ? 9f : 4f;
+        camera.LookAtFromPosition(new Vector3(0f, 2f, back), new Vector3(0f, 1.95f, 0f), Vector3.Up);
+        if (args.ContainsKey("time-of-day")) AddChild(new Atmosphere());
+    }
+
+    // The chibi player base (model-6) beside today's figure and a 0.75 m table:
+    // Bramble and Pebble, each in a couple of looks, front and three-quarter.
+    [ShowcaseView("roster")]
+    void Roster()
+    {
+        float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", "-20"), System.Globalization.CultureInfo.InvariantCulture));
+        var today = PlayerModel.Build();
+        today.Position = new Vector3(-2.6f, 0, 0);
+        today.Rotation = new Vector3(0, yaw, 0);
+        AddChild(today);
+        // --flat draws them with today's shader, to compare with the painted look.
+        ChibiFigure.Painted = !args.ContainsKey("flat");
+        var looks = new[]
+        {
+            new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 1, 1),
+            new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 1, 1, 1),
+        };
+        for (int i = 0; i < looks.Length; i++)
+        {
+            var figure = ChibiFigure.Create(looks[i]);
+            // --dressed puts on the wool tunic and the foot wraps.
+            if (args.ContainsKey("dressed"))
+            {
+                figure.GetNode(PlayerModel.SlotNode(PlayerModel.Body)).Free();
+                foreach (var (slot, item) in new[] { (PlayerModel.Body, Garments.WoolTunic), (PlayerModel.Feet, Garments.FootWraps) })
+                    if (ChibiFigure.Garment(looks[i], slot, item) is { } worn)
+                        figure.AddChild(new MeshInstance3D { Mesh = worn, Skeleton = new NodePath("..") });
+            }
+            figure.Position = new Vector3(-1.6f + i * 1.25f, 0, 0);
+            figure.Rotation = new Vector3(0, yaw + (i % 2 == 1 ? -0.6f : 0f), 0);
+            AddChild(figure);
+        }
+        foreach (var piece in StationMeshes.CraftingTable())
+            if (piece.Stage >= 0) AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(4f, 0, -0.3f) });
+        var camera = new Camera3D { Fov = 35f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0.6f, 1.7f, 7.4f), new Vector3(0.6f, 0.85f, 0), Vector3.Up);
+    }
+
+    // The hen coop (model-7) at each build stage, frame, walls and roof, left to right,
+    // turned a little so the pop-hole, ramp and side show.
+    [ShowcaseView("coop")]
+    void Coop()
+    {
+        int kind = (int)SpacetimeDB.Types.StructureKind.HenCoop;
+        for (int c = 0; c < 3; c++)
+            foreach (var piece in StructureModel.Pieces(kind))
+                if (piece.Stage >= 0 && piece.Stage <= c)
+                    AddChild(new MeshInstance3D { Mesh = piece.Mesh, MaterialOverride = piece.Material, Position = new Vector3(-2.6f + c * 2.6f, 0, 0), Rotation = new Vector3(0, 0.55f, 0) });
+        var camera = new Camera3D { Fov = 40f, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, 2.4f, 6.2f), new Vector3(0, 0.55f, 0), Vector3.Up);
+    }
+
+    // One chibi look turned through five views in a row (art-rnd-1): front three-quarter,
+    // side, back three-quarter, back and the other side, close up, so a part can be
+    // checked all the way round in one shot. --race=1 --main= --second= --style= pick the look.
+    [ShowcaseView("turntable")]
+    void Turntable()
+    {
+        int Arg(string name, int fallback) => int.TryParse(args.GetValueOrDefault(name, ""), out int v) ? v : fallback;
+        var look = new ChibiFigure.Look((ChibiFigure.Race)Arg("race", 1), Arg("main", 0), Arg("second", 0), Arg("style", 1));
+        // --built-shell draws Pebble with ChibiFigure's built shell instead of the authored one.
+        ChibiShell.Enabled = !args.ContainsKey("built-shell");
+        var yaws = new[] { 25f, -35f, -95f, -125f, 145f };
+        // --variants: the same view of five looks instead (Pebble: the three shell
+        // colours with scutes, then two worn smooth).
+        bool variants = args.ContainsKey("variants");
+        for (int i = 0; i < yaws.Length; i++)
+        {
+            var figure = ChibiFigure.Create(variants ? look with { Second = i % 3, Style = i < 3 ? 1 : 0 } : look);
+            if (variants) yaws[i] = -95f;
+            figure.Position = new Vector3((i - 2) * 0.95f, 0, 0);
+            figure.Rotation = new Vector3(0, Mathf.DegToRad(yaws[i]), 0);
+            AddChild(figure);
+        }
+        var camera = new Camera3D { Fov = 30f, Current = true };
+        AddChild(camera);
+        // --close: the middle three views, near.
+        if (args.ContainsKey("close"))
+            camera.LookAtFromPosition(new Vector3(0, 0.95f, 3.7f), new Vector3(0, 0.66f, 0), Vector3.Up);
+        else
+            camera.LookAtFromPosition(new Vector3(0, 1.1f, 6.2f), new Vector3(0, 0.62f, 0), Vector3.Up);
+    }
+
+    // Today's model beside its Blender-authored version (art-rnd-1), each turned through
+    // three views: --view=art --piece=<name> finds the static class LifeGame.Art<Name>
+    // (client/scripts/models/art/), which has Node3D Today(), Node3D Authored() and the
+    // float fields Spacing (m between models) and Height (m, for framing).
+    // --yaws=30,-60,-150 picks the views; --close frames the authored ones only.
+    [ShowcaseView("art")]
+    void ArtPiece()
+    {
+        string piece = args.GetValueOrDefault("piece", "tree");
+        var type = System.Type.GetType("LifeGame.Art" + char.ToUpperInvariant(piece[0]) + piece[1..])
+            ?? throw new System.ArgumentException($"no art piece {piece}");
+        Node3D Make(string name) => (Node3D)type.GetMethod(name)!.Invoke(null, null)!;
+        float spacing = (float)type.GetField("Spacing")!.GetValue(null)!;
+        float height = (float)type.GetField("Height")!.GetValue(null)!;
+        var yaws = args.GetValueOrDefault("yaws", "30,-60,-150").Split(',');
+        bool close = args.ContainsKey("close");
+        int n = yaws.Length, count = close ? n : 2 * n;
+        for (int i = 0; i < count; i++)
+        {
+            var model = close || i >= n ? Make("Authored") : Make("Today");
+            model.Position = new Vector3((i - (count - 1) * 0.5f) * spacing + (close || i < n ? 0 : spacing * 0.4f), 0, 0);
+            model.Rotation = new Vector3(0, Mathf.DegToRad(float.Parse(yaws[i % n], System.Globalization.CultureInfo.InvariantCulture)), 0);
+            AddChild(model);
+        }
+        float fov = 30f;
+        float width = count * spacing + spacing * 0.6f;
+        float distance = Mathf.Max(width * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f * 16f / 9f)), height * 0.5f / Mathf.Tan(Mathf.DegToRad(fov * 0.5f))) * 1.08f;
+        var camera = new Camera3D { Fov = fov, Current = true };
+        AddChild(camera);
+        camera.LookAtFromPosition(new Vector3(0, height * 0.55f + distance * 0.12f, distance), new Vector3(0, height * 0.48f, 0), Vector3.Up);
     }
 }

@@ -1,7 +1,7 @@
 # ceramics-15: Maker's mark
 Lane: Clay and ceramics
 Owner: Clay and ceramics lane (Sonnet session_01Sc3N1RCsurSszfX5YwGzMU)
-Status: in_review
+Status: done
 Branch: claude/clay-ceramics-15-kfr4kr
 PR: #478
 
@@ -22,6 +22,8 @@ Justin's answer (via the PM, 2026-10-17): "Pick from a panel and give them a bun
 
 - 2026-10-17 03:23: opened #478 (head 4f436b0); ClayCheck --pot passed on db c15m1 (mark kept through pit fire and pick-up, mark change works)
 
+- 2026-10-17: #478 merged (maker mark, pale lip, demo framing); #477 (UX mark picker) merged on top.
+
 ## Open questions / blockers
 - 'Made by' on every made item (tools, garments and so on) needs a real `Maker` column on InventoryItem, WorldItem, BasketItem and ClaimStash, set when a craft finishes, with stack identity: a Crafting and Integration ticket (asked the PM to assign it). Until then only pots carry a maker.
 - Cooking in a marked pot loses the mark (the craft doesn't track which pot it used).
@@ -29,4 +31,4 @@ Justin's answer (via the PM, 2026-10-17): "Pick from a panel and give them a bun
 - Look: the glyph art is rough line art until Justin picks (D-154).
 
 ## Next step
-Wait for CI on #478, send the PM the green sha; then render feedback; then the Maker column once Crafting has it.
+Done in ceramics-21 (the Maker column from crafting-25 is wired in).

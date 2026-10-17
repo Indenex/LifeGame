@@ -54,7 +54,7 @@ public static class ItemModels
     {
         wear = Mathf.Clamp(wear, 0, 2);
         if (Held.TryGetValue((item, wear), out var mesh) && mesh != null) return mesh;
-        mesh = Make(item, true, wear) ?? HungFromTop(ItemLook.MeshFor(item));
+        mesh = Make(item, true, wear) ?? HungFromTop(ItemLook.MeshFor(item), PaintedItems.FamilyOf(item));
         Held[(item, wear)] = mesh;
         return mesh;
     }
@@ -68,7 +68,7 @@ public static class ItemModels
         _ => 0,
     };
 
-    static Mesh HungFromTop(Mesh source)
+    static Mesh HungFromTop(Mesh source, PaintedItems.Family family)
     {
         var mesh = new ArrayMesh();
         var box = source.GetAabb();
@@ -80,7 +80,7 @@ public static class ItemModels
             for (int i = 0; i < verts.Length; i++) verts[i] += shift;
             arrays[(int)Mesh.ArrayType.Vertex] = verts;
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, source.SurfaceGetMaterial(s));
+            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, PaintedItems.Of(source.SurfaceGetMaterial(s), family, held: true));
         }
         return mesh;
     }
@@ -101,7 +101,8 @@ public static class ItemModels
         EnsureMaterials();
         var surfaces = new List<(Godot.Collections.Array Arrays, Material Material)>();
         // Use darkens wood and cord: handled, sweaty, weathered.
-        void Take(MeshKit k, Material groundMaterial, float darken)
+        // Each surface goes on its family's painted twin (painted-6).
+        void Take(MeshKit k, Material groundMaterial, float darken, PaintedItems.Family family)
         {
             if (k.Empty) return;
             var arrays = k.CommitToArrays();
@@ -115,12 +116,12 @@ public static class ItemModels
                 }
                 arrays[(int)Mesh.ArrayType.Color] = colors;
             }
-            surfaces.Add((arrays, held ? plain! : groundMaterial));
+            surfaces.Add((arrays, PaintedItems.Of(held ? plain! : groundMaterial, family, held)));
         }
-        Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f);
-        Take(kit.Stone, stone!, 1f);
-        Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f);
-        Take(kit.Plain, plain!, 1f);
+        Take(kit.Wood, wood!, wear == 0 ? 1f : wear == 1 ? 0.82f : 0.6f, PaintedItems.Family.Wood);
+        Take(kit.Stone, stone!, 1f, PaintedItems.Family.Stone);
+        Take(kit.Plant, plant!, wear == 0 ? 1f : wear == 1 ? 0.84f : 0.62f, PaintedItems.Family.Fibre);
+        Take(kit.Plain, plain!, 1f, PaintedItems.FamilyOf(item));
 
         // Rest on the ground, centered; held upright things hang from their top.
         var min = Vector3.Inf;
@@ -240,8 +241,8 @@ public static class ItemModels
         // Boiled and burnt eggs (crafting-24).
         Item.BoiledEgg => (k => Egg(k, new Color(0.97f, 0.96f, 0.92f), false), true),
         Item.BurntEgg => (k => Egg(k, new Color(0.13f, 0.11f, 0.09f), true), true),
-        // Spade (Crafting's crafting-shovel), by number until the item reaches main.
-        (Item)18 => (Spade, false),
+        // Spade (Crafting's crafting-shovel).
+        Item.Spade => (Spade, false),
         // Waterskins (survival-20).
         Item.Waterskin => (k => Waterskin(k, false), true),
         Item.WaterskinOfWater => (k => Waterskin(k, true), true),
@@ -749,8 +750,8 @@ public static class ItemModels
         ArrowParts(kit, new Vector3(0, 0, -0.36f), new Vector3(0, 0, 0.36f));
         EnsureMaterials();
         var mesh = new ArrayMesh();
-        foreach (var k in new[] { kit.Wood, kit.Stone, kit.Plant, kit.Plain })
-            if (!k.Empty) k.Commit(mesh, plain!);
+        foreach (var (k, family) in new[] { (kit.Wood, PaintedItems.Family.Wood), (kit.Stone, PaintedItems.Family.Stone), (kit.Plant, PaintedItems.Family.Fibre), (kit.Plain, PaintedItems.Family.Wood) })
+            if (!k.Empty) k.Commit(mesh, PaintedItems.Of(plain!, family, held: true));
         return mesh;
     }
 

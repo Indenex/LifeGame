@@ -4,6 +4,7 @@
 // that other systems (skills, the journal) key on: never rename one.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
@@ -99,6 +100,9 @@ namespace LifeGame.Shared
         // How the body moves while it runs (shared/WorkMotion.cs). None lets the client
         // guess from the id; set it on new processes.
         public WorkMotion Motion;
+        // The skill (a Specialization id) this process trains. It wins over the guess from the
+        // id when set; null = inferred from the id by Skills.SpecFor.
+        public string? Skill;
     }
 
     public static class Processes
@@ -154,7 +158,8 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.Stone) }, NeedsTool = ItemTags.Hammer,
                 Seconds = Base(1, 1.5f), Minigame = Minigame.Strike, Makes = Item.HandAxe, FailBelow = 0.3f,
             },
-            Roast(Item.RawMutton),
+        }.Concat(Foods.Roasts.Select(r => Roast(r.Raw))).Concat(new[]
+        {
             // Cooking in a fired pot (ceramics-7): set at a burning fire, it simmers
             // on its own and is taken off with Use (server/spacetimedb/CookingPot.cs).
             new ProcessDef
@@ -176,9 +181,12 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CoilPotOfWater), new Ingredient(Item.RawMutton, 2) },
                 Seconds = 2, Outcome = Outcome.Placed, Makes = Item.Tallow,
             },
-            Roast(Item.RawVenison),
-            Roast(Item.RawChicken),
-            Roast(Item.Egg),
+            new ProcessDef
+            {
+                Id = "carve.spade", Name = "Carve a spade", Doing = "Carving a spade", Tier = 2,
+                Consumes = new[] { new Ingredient(Item.Log), new Ingredient(Item.Stone), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
+                Seconds = Base(2, 1.5f), Makes = Item.Spade,
+            },
             new ProcessDef
             {
                 Id = "carve.digging_stick", Name = "Carve a digging stick", Doing = "Sharpening a digging stick", Tier = 1,
@@ -380,7 +388,7 @@ namespace LifeGame.Shared
             {
                 Id = "clay.lamp", Name = "Pinch a lamp", Doing = "Pinching a lamp", Tier = 3,
                 Consumes = new[] { new Ingredient(Item.TemperedClay) },
-                Seconds = 6, Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
+                Seconds = Base(3, 0.5f), Minigame = Minigame.Shape, Station = StationKind.PottersBench, Outcome = Outcome.Placed, FailBelow = 0.15f,
             },
             new ProcessDef
             {
@@ -415,7 +423,7 @@ namespace LifeGame.Shared
                 Consumes = new[] { new Ingredient(Item.CleanClay), new Ingredient(Item.Fiber) },
                 Seconds = Base(3, 0.25f), Makes = Item.Daub, MakesCount = 2,
             },
-        };
+        }).ToList();
 
         static readonly Dictionary<string, ProcessDef> ById = Index();
 

@@ -31,8 +31,9 @@ public partial class Avatar : Node3D
         rig = new PlayerRig(figure);
         PlaceMouth();
         animator = new PlayerAnimator(rig, GetInstanceId());
+        animator.Surroundings = Surroundings;
         animator.Impact = (motion, thrown) =>
-            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : workRight) ?? 0));
+            Impact?.Invoke(this, motion, ToolPoint(), thrown, (ushort)((WorkMotions.IsAct(motion) ? actItem : RightBase) ?? 0));
         // Breath in the cold leaves the mouth, on the head bone's attachment.
         if (figure.FindChild("HeadAttach", true, false) is Node3D head)
             head.AddChild(new Breath { Position = PlayerModel.MouthAt });
@@ -46,10 +47,40 @@ public partial class Avatar : Node3D
             Modulate = Look.Cream,
             OutlineSize = 6,
             OutlineModulate = new Color(0.1f, 0.1f, 0.08f, 0.55f),
-            Position = new Vector3(0, 2.05f, 0),
+            Position = new Vector3(0, PlayerModel.Height + 0.3f, 0),
         };
         AddChild(nameplate);
         PlaceNameplate();
+    }
+
+    // Every avatar in the world, for fidgets that notice each other (waving).
+    static readonly System.Collections.Generic.List<Avatar> all = new();
+    public override void _EnterTree() => all.Add(this);
+    public override void _ExitTree() => all.Remove(this);
+
+    // 0 to 1: warmth from burning fires at a spot (AvatarWork sets it from the fire table).
+    public static System.Func<Vector3, float>? FireWarmthAt;
+
+    const float WaveReach = 6f;
+
+    (float, float?) Surroundings()
+    {
+        float warmth = FireWarmthAt?.Invoke(Position) ?? 0f;
+        float? friend = null;
+        float best = WaveReach * WaveReach;
+        foreach (var a in all)
+        {
+            if (a == this || !a.IsVisibleInTree()) continue;
+            var d = a.Position - Position;
+            float d2 = d.X * d.X + d.Z * d.Z;
+            if (d2 >= best || d2 < 0.5f) continue;
+            // Only someone roughly in front: nobody waves over their shoulder.
+            float yaw = Mathf.AngleDifference(Rotation.Y, Mathf.Atan2(d.X, d.Z));
+            if (Mathf.Abs(yaw) > 1.4f) continue;
+            best = d2;
+            friend = yaw;
+        }
+        return (warmth, friend);
     }
 
     // Set from player_sneaking for other players; tracks the key for your own.
@@ -59,6 +90,33 @@ public partial class Avatar : Node3D
 
     // What this player's hands are doing, from their running craft job (AvatarWork).
     public WorkMotion Work { set => animator.Work = value; }
+
+    // Sit or lie down (anim-12), from the player's rest state: seat is the hips' height
+    // when sitting on something (0 on the ground). RestKind.None gets up again. The
+    // figure lies along the way the avatar faces, head forward.
+    public void Rest(RestKind kind, float seat = 0f, bool asleep = false, bool instant = false)
+    {
+        animator.Rest = kind;
+        animator.Seat = seat;
+        animator.Asleep = asleep;
+        if (instant) animator.SettleRest();
+    }
+
+    // Your own avatar: the rest key sits you down, lies you down from sitting, and gets
+    // you up again; walking off also gets you up (the server ends the rest).
+    public event System.Action<RestKind>? RestRequested;
+    public const string RestAction = "rest";
+
+    void RestKey()
+    {
+        if (!InputMap.HasAction(RestAction))
+        {
+            InputMap.AddAction(RestAction);
+            InputMap.ActionAddEvent(RestAction, new InputEventKey { PhysicalKeycode = Key.H });
+        }
+        if (!Input.IsActionJustPressed(RestAction) || GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
+        RestRequested?.Invoke(animator.Rest switch { RestKind.None => RestKind.Sit, RestKind.Sit => RestKind.Lie, _ => RestKind.None });
+    }
 
     // Turn on the spot to face a point on the ground (your own avatar; others follow the server).
     public void Face(float x, float z)
@@ -70,7 +128,34 @@ public partial class Avatar : Node3D
     // Jump state from movement (bugfix-25): in the air or not, still rising, and how hard
     // the last landing was (0 to 1, set on the frame you land). The avatar's height is
     // moved by whoever moves it; this only poses the body.
-    public void SetJump(bool airborne, bool rising, float landing) => animator.Jump(airborne, rising, landing);
+    public void SetJump(bool airborne, bool rising, float landing)
+    {
+        animator.Jump(airborne, rising, landing);
+        // A squishy landing (#17): the body squashes down and springs back, keeping
+        // its volume; taking off stretches it a little.
+        if (landing > 0.01f) Squish(-0.16f * Mathf.Clamp(landing, 0.3f, 1f));
+        else if (airborne && rising && !wasRising) Squish(0.07f);
+        wasRising = airborne && rising;
+    }
+
+    float squish, squishTime = 99f;
+    bool wasRising;
+
+    void Squish(float amount)
+    {
+        squish = amount;
+        squishTime = 0f;
+    }
+
+    void SquishTick(float dt)
+    {
+        if (squishTime > 1f) return;
+        squishTime += dt;
+        float y = 1f + squish * Mathf.Exp(-8f * squishTime) * Mathf.Cos(20f * squishTime);
+        if (squishTime > 1f) y = 1f;
+        float side = 1f / Mathf.Sqrt(y);
+        figure.Scale = new Vector3(side, y, side);
+    }
 
     // Lifts the figure off the ground by this many metres without moving the avatar node.
     // Use it for other players' jumps: their node glides toward the server position every
@@ -103,11 +188,43 @@ public partial class Avatar : Node3D
         (workRight, workLeft) = (right, left);
         if (actItem == null)
         {
-            Grip("ToolR", right, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", left, ref heldLeft);
         }
     }
     Item? heldRight, heldLeft, workRight, workLeft;
+
+    // The tool this player has equipped from the hotbar (crafting-29 PlayerEquip), carried
+    // in the right hand when no job or quick action needs the hand. Changing it plays a
+    // quick draw or stow (0.3 s) and the model swaps halfway, as the hand passes the hip.
+    // instant: no draw motion (an avatar just come into view already holding it).
+    public void Equip(Item? item, bool instant = false)
+    {
+        if (item == pendingEquip) return;
+        pendingEquip = item;
+        if (item == equipped) { swapIn = -1f; return; }
+        if (!instant) animator.Swap();
+        swapIn = instant ? 0f : PlayerAnimator.SwapSeconds * 0.5f;
+    }
+    Item? equipped, pendingEquip;
+    // Load units (roughly kg) from which a held thing is hugged in both arms (anim-18).
+    const float HeavyHold = 4f;
+    float swapIn = -1f;
+
+    // What the right hand holds when nothing borrows it: the job's tool, else the equipped one.
+    Item? RightBase => workRight ?? equipped;
+
+    void CarryTick(float dt)
+    {
+        if (swapIn >= 0f && (swapIn -= dt) < 0f)
+        {
+            equipped = pendingEquip;
+            if (actItem == null) Grip("ToolR", RightBase, ref heldRight);
+        }
+        animator.Carrying = equipped != null && workRight == null && actItem == null;
+        animator.CarryingHeavy = animator.Carrying && equipped is { } held && Items.IsKnown((ushort)held)
+            && LifeGame.Shared.Carry.Weight(held) >= HeavyHold;
+    }
 
     // A quick action from the server's player_act (anim-4): drinking, eating, picking
     // berries, picking something up. item shows in the right hand for its part of it:
@@ -118,7 +235,7 @@ public partial class Avatar : Node3D
         // An empty-handed action (a flinch) gives back whatever the last one borrowed.
         if (item == null && actItem != null)
         {
-            Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", workLeft, ref heldLeft);
         }
         actItem = item;
@@ -134,7 +251,7 @@ public partial class Avatar : Node3D
         if (left <= 0f || actItem == null)
         {
             actItem = null;
-            Grip("ToolR", workRight, ref heldRight);
+            Grip("ToolR", RightBase, ref heldRight);
             Grip("ToolL", workLeft, ref heldLeft);
             return;
         }
@@ -149,7 +266,7 @@ public partial class Avatar : Node3D
             _ => true,
         };
         if (inLeft) Grip("ToolL", show ? actItem : workLeft, ref heldLeft);
-        else Grip("ToolR", show ? actItem : workRight, ref heldRight);
+        else Grip("ToolR", show ? actItem : RightBase, ref heldRight);
     }
 
     void Grip(string hand, Item? item, ref Item? held)
@@ -177,8 +294,14 @@ public partial class Avatar : Node3D
     void PlaceNameplate()
     {
         if (figure.GetNodeOrNull<MeshInstance3D>("Body") is { Mesh: { } mesh })
-            nameplate.Position = new Vector3(0, mesh.GetAabb().End.Y + 0.3f, 0);
+        {
+            rig.Height = mesh.GetAabb().End.Y;
+            nameplateY = rig.Height + 0.3f;
+        }
+        nameplate.Position = new Vector3(0, nameplateY, 0);
     }
+
+    float nameplateY = PlayerModel.Height + 0.3f;
 
     // Where the mouth is on the resting figure, for hand-to-mouth reaches (eating, drinking).
     void PlaceMouth()
@@ -210,6 +333,7 @@ public partial class Avatar : Node3D
         turnRate = Mathf.Lerp(turnRate, Mathf.AngleDifference(lastHeading, Rotation.Y) / Mathf.Max(dt, 1e-4f), k);
         lastHeading = Rotation.Y;
 
+        if (!Remote) RestKey();
         // Your own sneak is the key; other players' comes from the server (player_sneaking).
         bool sneaking = Remote ? Sneaking : Input.IsActionPressed(SneakAction);
         if (!Remote && sneaking != Sneaking)
@@ -222,8 +346,14 @@ public partial class Avatar : Node3D
         {
             // How far the feet are below the water line: wading, or afloat (shared/Wading.cs).
             animator.WaterDepth = Look.WaterLevel - Position.Y - figure.Position.Y;
+            CarryTick(dt);
+            SquishTick(dt);
             animator.Update(dt, speed, turnRate, sneaking);
             if (actItem != null) ShowActItem();
+            // Blinks and expressions on the chibi's face parts (#16); a no-op on bodies without them.
+            if (figure is Skeleton3D skeleton) PlayerModel.SetFace(skeleton, animator.Face);
+            // The name comes down with the head when sitting or lying.
+            nameplate.Position = new Vector3(0, nameplateY - rig.Height * animator.RestLowering, 0);
         }
     }
 }

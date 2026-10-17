@@ -4,53 +4,40 @@ using LifeGame.Shared;
 namespace LifeGame;
 
 // Wading and floating, seen (atmosphere-26). Since bugfix-32 you can walk into ponds
-// and float in deep water; now the water answers: soft painted ripple rings spread
-// around you while you're in it (faster and brighter when you move), a small splash
-// throws up droplets as you step or jump in, and your legs come out darker and a
-// little glossy up to the waterline, drying off over about half a minute.
+// and float in deep water; now the water answers: a small splash throws up droplets as
+// you step or jump in, and your legs come out darker and a little glossy up to the
+// waterline, drying off over about half a minute. The ripples round a wader are the
+// water's own now (WaterRipples, atmosphere-31), not painted rings.
 //
-// Other players in the water get the same rings and splash (atmosphere-27), but stay
-// dry-legged: the wet band is one global, so it can only follow you.
+// Other players in the water get the same splash (atmosphere-27), but stay dry-legged:
+// the wet band is one global, so it can only follow you.
 //
 // The wet band is drawn by the painted shader (which the player figure uses) from two
 // globals: wet_line, the world height it reaches, and wet_amount, how wet (0 to 1).
 public partial class Atmosphere
 {
-    static readonly StringName NWetLine = "wet_line", NWetAmount = "wet_amount", NStir = "stir", NRippleTint = "tint", NRippleAmount = "amount";
+    static readonly StringName NWetLine = "wet_line", NWetAmount = "wet_amount";
 
     // How long legs take to dry after leaving the water, in seconds.
     const float DryTime = 30f;
 
-    // Other players' figures, for their rings and splashes (Main hands these over).
+    // Other players' figures, for their splashes and ripples (Main hands these over).
     public System.Func<System.Collections.Generic.IEnumerable<Node3D>>? OtherFigures;
 
-    // Others only show rings this close, and at most this many at once.
+    // Others only splash this close, and at most this many at once.
     const float OthersReach = 60f;
     const int OthersMax = 12;
 
-    readonly MeshInstance3D ripples = NewRipples();
-    readonly ShaderMaterial rippleMaterial = new() { Shader = RippleShader };
     readonly CpuParticles3D splash = NewSplash();
 
-    // Rings and splash following one other player, with what they need from frame to frame.
+    // The splash following one other player, with what it needs from frame to frame.
     sealed class OtherWater
     {
-        public readonly MeshInstance3D Ripples = NewRipples();
-        public readonly ShaderMaterial Material = new() { Shader = RippleShader };
         public readonly CpuParticles3D Splash = NewSplash();
         public Vector3 LastPos;
         public bool InWater, Seen;
-        public float Amount;
     }
     readonly System.Collections.Generic.Dictionary<Node3D, OtherWater> othersWater = new();
-
-    static MeshInstance3D NewRipples() => new()
-    {
-        Mesh = new PlaneMesh { Size = new Vector2(2.6f, 2.6f) },
-        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        Visible = false,
-        TopLevel = true,
-    };
 
     static CpuParticles3D NewSplash() => new()
     {
@@ -88,20 +75,18 @@ public partial class Atmosphere
     };
 
     bool wasInWater;
-    float wetOffset, wetAmount, rippleAmount;
+    float wetOffset, wetAmount;
     Vector3 waterLastPos;
 
     void ReadyWater()
     {
-        ripples.MaterialOverride = rippleMaterial;
-        AddChild(ripples);
         AddChild(splash);
     }
 
     void UpdateWater(float dt, Vector3 focus, Color air)
     {
         if (Player == null || !Player.IsInsideTree() || terrain == null) return;
-        UpdateOthersWater(dt, focus, air);
+        UpdateOthersWater(dt, focus);
         var at = Player.GlobalPosition;
         float speed = dt > 0f ? new Vector2(at.X - waterLastPos.X, at.Z - waterLastPos.Z).Length() / dt : 0f;
         waterLastPos = at;
@@ -111,13 +96,16 @@ public partial class Atmosphere
         // In the water when the surface is above the feet (not while hopping clear of it).
         bool inWater = depth > 0.03f && at.Y < World.WaterLevel - 0.02f;
 
-        // Stepping or dropping in throws up a splash.
+        // Stepping or dropping in throws up a splash and a ring of waves.
         if (inWater && !wasInWater)
         {
             splash.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.02f, at.Z);
             splash.Restart();
+            waterRipples.Disturb(at, 0.5f, 1f);
         }
         wasInWater = inWater;
+        // Moving through it leaves a wake; standing still, a gentle stir.
+        if (inWater) waterRipples.Disturb(at, 0.35f, Mathf.Clamp(0.08f + speed * 0.12f, 0f, 0.5f) * dt * 8f);
 
         // Legs are wet up to where the water reached on them, and dry off slowly.
         if (inWater)
@@ -128,20 +116,9 @@ public partial class Atmosphere
         else wetAmount = Mathf.Max(0f, wetAmount - dt / DryTime);
         RenderingServer.GlobalShaderParameterSet(NWetLine, at.Y + wetOffset);
         RenderingServer.GlobalShaderParameterSet(NWetAmount, wetAmount);
-
-        // Ripple rings follow you on the surface, livelier when you move.
-        rippleAmount = Mathf.Lerp(rippleAmount, inWater ? 1f : 0f, 1f - Mathf.Exp(-dt * 4f));
-        ripples.Visible = rippleAmount > 0.02f;
-        if (ripples.Visible)
-        {
-            ripples.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.015f, at.Z);
-            rippleMaterial.SetShaderParameter(NRippleAmount, rippleAmount);
-            rippleMaterial.SetShaderParameter(NStir, Mathf.Clamp(speed / 3f, 0f, 1f));
-            rippleMaterial.SetShaderParameter(NRippleTint, air.Lerp(Colors.White, 0.55f));
-        }
     }
 
-    void UpdateOthersWater(float dt, Vector3 focus, Color air)
+    void UpdateOthersWater(float dt, Vector3 focus)
     {
         foreach (var w in othersWater.Values) w.Seen = false;
         if (OtherFigures?.Invoke() is { } figures)
@@ -156,8 +133,6 @@ public partial class Atmosphere
                 {
                     if (shown >= OthersMax) continue;
                     w = new OtherWater { LastPos = at };
-                    w.Ripples.MaterialOverride = w.Material;
-                    AddChild(w.Ripples);
                     AddChild(w.Splash);
                     othersWater[figure] = w;
                 }
@@ -170,16 +145,11 @@ public partial class Atmosphere
                 {
                     w.Splash.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.02f, at.Z);
                     w.Splash.Restart();
+                    waterRipples.Disturb(at, 0.5f, 1f);
                 }
                 w.InWater = inWater;
-                w.Amount = Mathf.Lerp(w.Amount, inWater ? 1f : 0f, 1f - Mathf.Exp(-dt * 4f));
-                w.Ripples.Visible = w.Amount > 0.02f;
-                if (!w.Ripples.Visible) continue;
-                w.Ripples.GlobalPosition = new Vector3(at.X, World.WaterLevel + 0.015f, at.Z);
-                w.Material.SetShaderParameter(NRippleAmount, w.Amount);
                 // Remote positions arrive in steps, so their speed is rougher; ease it.
-                w.Material.SetShaderParameter(NStir, Mathf.Clamp(speed / 4f, 0f, 1f));
-                w.Material.SetShaderParameter(NRippleTint, air.Lerp(Colors.White, 0.55f));
+                if (inWater) waterRipples.Disturb(at, 0.35f, Mathf.Clamp(0.08f + speed * 0.1f, 0f, 0.5f) * dt * 8f);
             }
         }
         // Drop the ones whose player left, went out of reach or out of sight.
@@ -189,38 +159,8 @@ public partial class Atmosphere
         if (gone == null) return;
         foreach (var figure in gone)
         {
-            var w = othersWater[figure];
-            w.Ripples.QueueFree();
-            w.Splash.QueueFree();
+            othersWater[figure].Splash.QueueFree();
             othersWater.Remove(figure);
         }
     }
-
-    // Three painted rings at a time, each widening and fading out; they come faster
-    // and stand out more when stirred by walking or swimming.
-    static readonly Shader RippleShader = new()
-    {
-        Code = """
-            shader_type spatial;
-            render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
-
-            uniform float amount = 0.0;
-            uniform float stir = 0.0;
-            uniform vec4 tint : source_color = vec4(0.9, 0.95, 1.0, 1.0);
-
-            void fragment() {
-                vec2 p = UV * 2.0 - 1.0;
-                float r = length(p);
-                float a = 0.0;
-                for (int i = 0; i < 3; i++) {
-                    float phase = fract(TIME * (0.35 + 0.45 * stir) + float(i) / 3.0);
-                    float radius = 0.22 + phase * 0.72;
-                    float band = 1.0 - smoothstep(0.0, 0.03 + 0.025 * phase, abs(r - radius));
-                    a += band * (1.0 - phase);
-                }
-                ALBEDO = tint.rgb;
-                ALPHA = clamp(a, 0.0, 1.0) * amount * (0.4 + 0.3 * stir) * (1.0 - smoothstep(0.8, 1.0, r));
-            }
-            """,
-    };
 }

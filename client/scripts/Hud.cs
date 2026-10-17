@@ -116,6 +116,7 @@ public partial class Hud : CanvasLayer
 
     public void Note(string text)
     {
+        BugLog.Note(text);
         if (toastTime > 0f && toast.Text != text) earlier.Push(toast, toastTime);
         toast.Text = text;
         toastTime = 3f;
@@ -173,7 +174,7 @@ public partial class Hud : CanvasLayer
     internal static void Soft(Label label, int size, float alpha)
     {
         Style(label, size, alpha);
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.45f));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.5f) : new Color(0, 0, 0, 0.45f));
         label.AddThemeConstantOverride("shadow_outline_size", 7);
         label.AddThemeConstantOverride("shadow_offset_y", 2);
     }
@@ -189,7 +190,9 @@ public partial class Hud : CanvasLayer
     {
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", new Color(Look.Cream, alpha));
-        label.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.35f));
+        // D-313: the HUD stays light and boxless, in Nunito with a soft warm shadow.
+        if (WarmLook.On) label.AddThemeFontOverride("font", Ui.Font(700));
+        label.AddThemeColorOverride("font_shadow_color", WarmLook.On ? new Color(0.22f, 0.12f, 0.06f, 0.4f) : new Color(0, 0, 0, 0.35f));
         label.AddThemeConstantOverride("shadow_offset_y", 1);
     }
 

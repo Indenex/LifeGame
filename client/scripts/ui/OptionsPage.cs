@@ -29,6 +29,9 @@ public partial class OptionsPage : Control
     readonly Label[] percents = new Label[Levels.Length];
     Button music = null!;
     Button lightRays = null!;
+    Button softGlow = null!, vignette = null!;
+    Button shadows = null!;
+    Button ambientLife = null!;
     HSlider view = null!;
     Button markButton = null!;
     Label viewName = null!;
@@ -91,6 +94,15 @@ public partial class OptionsPage : Control
         viewName = new Label { Text = ViewDistance.Names[(int)ViewDistance.Setting], CustomMinimumSize = new Vector2(70, 0) };
         Hud.Soft(viewName, 16, 0.7f);
         view.GetParent().AddChild(viewName);
+        // How thick the grass is drawn (Environment, env-32); Low for slower PCs.
+        Button grass = null!;
+        grass = ControlsPage.TextButton(GrassText(), () =>
+        {
+            GrassDetail.Setting = (GrassDetail.Setting + 1) % GrassDetail.Names.Length;
+            grass.Text = GrassText();
+        });
+        grass.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(grass);
         // Beams of low sunlight through the air (Atmosphere); Off for slower PCs.
         lightRays = ControlsPage.TextButton(RaysText(), () =>
         {
@@ -100,6 +112,59 @@ public partial class OptionsPage : Control
         });
         lightRays.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(lightRays);
+        // A soft lens (Atmosphere, D-313): warm glow and light leaks, and a vignette.
+        softGlow = ControlsPage.TextButton(OnOff("Soft glow", Atmosphere.SoftGlow), () =>
+        {
+            Atmosphere.SoftGlow = !Atmosphere.SoftGlow;
+            Settings.Set("graphics", "soft_glow", Atmosphere.SoftGlow ? 1 : 0);
+            softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        });
+        softGlow.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(softGlow);
+        vignette = ControlsPage.TextButton(OnOff("Vignette", Atmosphere.Vignette), () =>
+        {
+            Atmosphere.Vignette = !Atmosphere.Vignette;
+            Settings.Set("graphics", "vignette", Atmosphere.Vignette ? 1 : 0);
+            vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        });
+        vignette.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(vignette);
+        // Bouncy windows, squishy buttons, wiggling items (D-314); off for a calmer screen.
+        Button motion = null!;
+        motion = ControlsPage.TextButton(OnOff("Reduce motion", Bounce.Reduce), () =>
+        {
+            Bounce.Reduce = !Bounce.Reduce;
+            motion.Text = OnOff("Reduce motion", Bounce.Reduce);
+        });
+        motion.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(motion);
+
+        // Water reflections (Atmosphere, atmosphere-31): off, normal or high.
+        Button reflections = null!;
+        reflections = ControlsPage.TextButton(ReflectText(), () =>
+        {
+            Atmosphere.WaterReflections = (Atmosphere.WaterReflections + 1) % 3;
+            Settings.Set("graphics", "water_reflections", Atmosphere.WaterReflections);
+            reflections.Text = ReflectText();
+        });
+        reflections.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(reflections);
+        // Sun shadow quality (SunShadows): Low for slower PCs.
+        shadows = ControlsPage.TextButton(ShadowsText(), () =>
+        {
+            SunShadows.Setting = (SunShadows.Level)(((int)SunShadows.Setting + 1) % SunShadows.Names.Length);
+            shadows.Text = ShadowsText();
+        });
+        shadows.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(shadows);
+        // Butterflies, pollen and fireflies (Environment, env-30); Off for slower PCs.
+        ambientLife = ControlsPage.TextButton(LifeText(), () =>
+        {
+            AmbientLife.Setting = (AmbientLife.Setting + 1) % AmbientLife.Names.Length;
+            ambientLife.Text = LifeText();
+        });
+        ambientLife.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        column.AddChild(ambientLife);
 
         // How you look (ui-21): the same picker as at first join.
         var lookButton = ControlsPage.TextButton("Your look", () => LookPicker.OpenFromMenu?.Invoke());
@@ -118,6 +183,13 @@ public partial class OptionsPage : Control
 
     static string Percent(double v) => $"{Mathf.RoundToInt(v * 100)}%";
 
+    static string ReflectText() => $"Water reflections: {new[] { "Off", "Normal", "High" }[Atmosphere.WaterReflections]}";
+    static string OnOff(string name, bool on) => $"{name}: {(on ? "On" : "Off")}";
+    static string ShadowsText() => $"Shadows: {SunShadows.Names[(int)SunShadows.Setting]}";
+    static string LifeText() => $"Ambient life: {AmbientLife.Names[AmbientLife.Setting]}";
+
+    static string GrassText() => $"Grass: {GrassDetail.Names[GrassDetail.Setting]}";
+
     static string RaysText() => $"Light rays: {new[] { "Off", "Normal", "High" }[Atmosphere.GodRays]}";
 
     public void Open()
@@ -132,6 +204,9 @@ public partial class OptionsPage : Control
         view.SetValueNoSignal((int)ViewDistance.Setting);
         viewName.Text = ViewDistance.Names[(int)ViewDistance.Setting];
         lightRays.Text = RaysText();
+        softGlow.Text = OnOff("Soft glow", Atmosphere.SoftGlow);
+        vignette.Text = OnOff("Vignette", Atmosphere.Vignette);
+        shadows.Text = ShadowsText();
         Visible = true;
     }
 

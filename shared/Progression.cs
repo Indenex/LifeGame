@@ -5,6 +5,7 @@
 // is earned. Keep this file free of engine and SpacetimeDB types.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeGame.Shared
 {
@@ -154,6 +155,45 @@ namespace LifeGame.Shared
             new(EffectKind.FloatSpeed, "Float speed", Wading.FloatSpeed, Ceiling.FloatSpeed, "x"),
             new(EffectKind.ArcheryDrawTime, "Draw time", 2f, Ceiling.ArcheryDrawTime, "s"),
         };
+
+
+        // Which effects each skill's rank changes, for the journal's skill tooltip. Crafting
+        // skills share the three general effects; the rest list their own.
+        static readonly EffectKind[] CraftEffects = { EffectKind.QualityCap, EffectKind.WorkTime, EffectKind.MinigameSteps };
+
+        public static IEnumerable<EffectKind> EffectsFor(string specId)
+        {
+            switch (specId)
+            {
+                case "endurance": return new[] { EffectKind.RunSeconds, EffectKind.RefillSeconds };
+                case "swimming": return new[] { EffectKind.WadeSpeed, EffectKind.FloatSpeed };
+                case "stalking": return new[] { EffectKind.SneakDistance, EffectKind.SneakCritChance, EffectKind.SneakCritBonus };
+                case "archery": return new[] { EffectKind.ArcheryDamage, EffectKind.ArcheryHitChance, EffectKind.ArcheryDrawTime };
+                case "earthwork": return CraftEffects.Concat(new[] { EffectKind.DugClayBonus, EffectKind.SecondLumpChance });
+                case "firecraft": return CraftEffects.Concat(new[] { EffectKind.FireSeconds });
+                default: return CraftEffects;
+            }
+        }
+
+        static string Format(EffectDef e, float v) => e.Unit switch
+        {
+            "x" => $"{v:0.##}x",
+            "chance" => $"{Math.Round(v * 100)}%",
+            "x damage" => $"+{Math.Round(v * 100)}% damage",
+            _ => v < 10f ? $"{v:0.#} {e.Unit}" : $"{Math.Round(v)} {e.Unit}",
+        };
+
+        // One line per effect: its name, the value now at this rank and the Master value.
+        public static string Describe(string specId, int rank)
+        {
+            var lines = new List<string>();
+            foreach (var kind in EffectsFor(specId))
+            {
+                var e = Get(kind);
+                lines.Add($"{e.Name}: {Format(e, Effect(kind, rank))} now, {Format(e, e.Hi)} at Master");
+            }
+            return string.Join("\n", lines);
+        }
 
         public static EffectDef Get(EffectKind kind)
         {

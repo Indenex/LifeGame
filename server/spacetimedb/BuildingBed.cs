@@ -39,7 +39,7 @@ public static partial class Module
         if (ctx.Db.SleepingMat.PlayerId.Find(player.PlayerId) is not null)
         {
             ctx.Db.SleepingMat.PlayerId.Delete(player.PlayerId);
-            AddToInventory(ctx, ctx.Sender, Item.SleepingMat, 1, Items.RawQuality);
+            AddToInventory(ctx, Me(ctx), Item.SleepingMat, 1, Items.RawQuality);
         }
         ctx.Db.SleepingMat.Insert(new SleepingMat { PlayerId = player.PlayerId, StructureId = s.Id, X = pos.X, Z = pos.Z, Yaw = pos.Heading });
         TouchStructure(ctx, s.Id);
@@ -54,14 +54,14 @@ public static partial class Module
         var mat = ctx.Db.SleepingMat.PlayerId.Find(player.PlayerId) ?? throw new Exception("You have no mat laid out");
         RequireReach(pos, mat.X, mat.Z);
         ctx.Db.SleepingMat.PlayerId.Delete(player.PlayerId);
-        AddToInventory(ctx, ctx.Sender, Item.SleepingMat, 1, Items.RawQuality);
+        AddToInventory(ctx, Me(ctx), Item.SleepingMat, 1, Items.RawQuality);
     }
 
     static bool MayLiveIn(ReducerContext ctx, Structure s)
     {
-        if (s.Owner == ctx.Sender) return true;
-        if (ctx.Db.StructureBuilder.StructureId.Filter(s.Id).Any(b => b.Builder == ctx.Sender)) return true;
-        return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, ctx.Sender);
+        if (s.Owner == Me(ctx)) return true;
+        if (ctx.Db.StructureBuilder.StructureId.Filter(s.Id).Any(b => b.Builder == Me(ctx))) return true;
+        return ClaimAt(ctx, s.X, s.Z) is { } claim && HasClaimRights(ctx, claim, Me(ctx));
     }
 
     // A building is gone: its mats are left lying where they were.
