@@ -11,6 +11,10 @@ public partial class SocialLayer
 
     public void ToggleFriends() => friends.Toggle();
 
+    // ui-84: the group list shows the way to a member with the same arrow.
+    public void ShowWay(uint id, string name, System.Func<Godot.Vector2?> at) => way.Follow(id, name, at);
+    public uint ShowingWay => way.Target;
+
     void ReadyFriends()
     {
         AddChild(friends);

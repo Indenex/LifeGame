@@ -16,6 +16,9 @@ public partial class GroupView : CanvasLayer
 {
     public Func<uint, Node3D?> AvatarOf = _ => null;
     public Func<uint> MyId = () => 0;
+    // ui-84: click a member who is here to show the way to them (FriendWay); again to stop.
+    public Action<uint, string, Func<Vector2?>> ShowWay = (_, _, _) => { };
+    public Func<uint> Showing = () => 0;
 
     DbConnection? conn;
     VBoxContainer list = null!;
@@ -74,7 +77,7 @@ public partial class GroupView : CanvasLayer
         // --screenshot-group: a pretend group of four for Render (ui-78), kept once connected.
         if (Preview)
         {
-            if (!previewed) Fill(new[] { ("You", true, (string?)null), ("Mara", true, "40 m north"), ("Tobin", true, "close by"), ("Wren", false, null) });
+            if (!previewed) Fill(new[] { (0u, "You", true, (string?)null), (1u, "Mara", true, "40 m north"), (2u, "Tobin", true, "close by"), (3u, "Wren", false, null) });
             previewed = true;
             return;
         }
@@ -85,15 +88,15 @@ public partial class GroupView : CanvasLayer
 
         // Rebuild the list only when it changes.
         var members = conn.Db.MyGroup.Iter().OrderBy(m => m.JoinedAt.MicrosecondsSinceUnixEpoch).ToList();
-        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}:{HowFar(m.PlayerId)}"));
+        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}:{HowFar(m.PlayerId)}")) + "/" + Showing();
         if (key == shown) return;
         shown = key;
-        Fill(members.Select(m => (m.PlayerId == MyId() ? "You" : m.Name, Online(m.PlayerId), m.PlayerId == MyId() ? null : HowFar(m.PlayerId))).ToList());
+        Fill(members.Select(m => (m.PlayerId, m.PlayerId == MyId() ? "You" : m.Name, Online(m.PlayerId), m.PlayerId == MyId() ? null : HowFar(m.PlayerId))).ToList());
     }
 
     // The list itself: a title, each member (name, then how far and which way, or "(away)"), and
     // "Leave group".
-    void Fill(System.Collections.Generic.IReadOnlyList<(string Name, bool Here, string? Far)> members)
+    void Fill(System.Collections.Generic.IReadOnlyList<(uint Id, string Name, bool Here, string? Far)> members)
     {
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
         if (members.Count == 0) return;
@@ -103,7 +106,23 @@ public partial class GroupView : CanvasLayer
         list.AddChild(title);
         foreach (var m in members)
         {
-            var name = Hud.Text(m.Name + (!m.Here ? "  (away)" : m.Far is { } f ? $"   {f}" : ""), 15);
+            string text = m.Name + (!m.Here ? "  (away)" : m.Far is { } f ? $"   {f}" : "");
+            if (m.Here && m.Far != null)
+            {
+                // Someone you can walk to: a click shows the way (ui-84).
+                bool showing = Showing() == m.Id;
+                uint id = m.Id;
+                string who = m.Name;
+                var row = ControlsPage.TextButton(text, () => { ShowWay(id, who, () => Where(id)); shown = ""; });
+                row.AddThemeFontSizeOverride("font_size", 15);
+                row.Alignment = HorizontalAlignment.Left;
+                row.MouseFilter = Control.MouseFilterEnum.Stop;
+                row.FocusMode = Control.FocusModeEnum.None;
+                row.TooltipText = showing ? "Stop showing the way" : $"Show the way to {who}";
+                list.AddChild(row);
+                continue;
+            }
+            var name = Hud.Text(text, 15);
             Hud.Soft(name, 15, m.Here ? 0.9f : 0.45f);
             list.AddChild(name);
         }
@@ -113,6 +132,10 @@ public partial class GroupView : CanvasLayer
         leave.MouseFilter = Control.MouseFilterEnum.Stop;
         list.AddChild(leave);
     }
+
+    // Where a member is, while they're online; the arrow lets go once this is null.
+    Vector2? Where(uint playerId) =>
+        Online(playerId) && conn?.Db.PlayerPos.PlayerId.Find(playerId) is { } p ? new Vector2(p.X, p.Z) : null;
 
     bool Online(uint playerId) => conn?.Db.Player.PlayerId.Find(playerId) is { Online: true };
 

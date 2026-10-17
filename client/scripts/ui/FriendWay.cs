@@ -9,7 +9,8 @@ namespace LifeGame;
 // It reads the server's rounded spot for friends who marked you back (claims-32), so it is
 // never more exact than the Friends list. It lets go by itself when you reach them or they
 // leave, with a quiet note, and fades under open panels. ui-83: the same arrow shows the way home
-// (K away from your claim), pointing at the marker of your nearest claim.
+// (K away from your claim), pointing at the marker of your nearest claim. ui-84: and the way to
+// a group member, clicked in the group list.
 public partial class FriendWay : CanvasLayer
 {
     // Where a friend is, when the server says they're online; null otherwise.
@@ -27,6 +28,7 @@ public partial class FriendWay : CanvasLayer
     public bool ShowingHome => home != null;
     string name = "";
     Vector2? home;
+    Func<Vector2?>? where;
     WayView view = null!;
     float alpha;
 
@@ -45,12 +47,16 @@ public partial class FriendWay : CanvasLayer
     }
 
     // Start showing the way to this friend, or stop if it already is.
-    public void Follow(uint friend)
+    public void Follow(uint friend) => Follow(friend, NameOf(friend), () => Spot(friend));
+
+    // Start showing the way to someone wherever `at` says they are (null once they've gone).
+    public void Follow(uint id, string label, Func<Vector2?> at)
     {
-        if (Target == friend) { Stop(); return; }
-        Target = friend;
+        if (Target == id) { Stop(); return; }
+        Target = id;
         home = null;
-        name = NameOf(friend);
+        where = at;
+        name = label;
     }
 
     // Show the way to your claim's marker, named by the place or "Home".
@@ -58,6 +64,7 @@ public partial class FriendWay : CanvasLayer
     {
         Target = 0;
         home = at;
+        where = null;
         name = label;
     }
 
@@ -65,6 +72,7 @@ public partial class FriendWay : CanvasLayer
     {
         Target = 0;
         home = null;
+        where = null;
     }
 
     bool Showing => Target != 0 || home != null;
@@ -84,7 +92,7 @@ public partial class FriendWay : CanvasLayer
     // Turns the arrow toward the friend; false (and lets go) once they're found or gone.
     bool Aim()
     {
-        if ((home ?? Spot(Target)) is not { } at) { Note($"{name} has gone"); Stop(); return false; }
+        if ((home ?? where?.Invoke()) is not { } at) { Note($"{name} has gone"); Stop(); return false; }
         var me = MyPos();
         float dx = at.X - me.X, dz = at.Y - me.Z;
         float d = Mathf.Sqrt(dx * dx + dz * dz);
