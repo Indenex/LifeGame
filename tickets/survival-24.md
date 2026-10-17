@@ -1,9 +1,9 @@
 # survival-24: Several characters per login
 Lane: Survival (server side); UX builds the menu
 Owner: Survival thread
-Status: in_progress
+Status: in_review
 Branch: claude/survival-characters
-PR: (not yet opened)
+PR: (see STATUS)
 
 ## Goal
 Justin: "a character menu when logging in, and a way to delete/create new characters." One login can hold up to `Characters.MaxPerLogin` (3, raisable) characters, each with its own position, bag, skills, needs, claims, mats and town seat. No world wipe; every existing player becomes character #1 of their login.
@@ -22,9 +22,12 @@ Justin: "a character menu when logging in, and a way to delete/create new charac
 - 2026-10-17 06:00: server side built (Characters.cs, mechanical ctx.Sender -> Me(ctx), connect/disconnect through EnterWorld/LeaveWorld), pushed.
 - 2026-10-17 06:20: client Me helper + Subscriptions + Main stand-in, tools/CharacterCheck written.
 
+- 2026-10-17 07:00: local fresh world: CharacterCheck, SurvivalCheck, SpawnCheck, SocialTest, LoadTest, upgrade check (origin/main) and full BuildTest (429 s) pass. BuildTest/SpawnCheck/ClayCheck/Puppet follow the menu (a returning login calls SelectCharacter). Fixed SurvivalCheck's bot name (digits were refused by the name rules since #558, so make_admin found nobody).
+
 ## Open questions / blockers
 - Race: the game has no race yet, so CreateCharacter takes the look only.
+- tools/render/Puppet does not build on main (AcceptTrade needs the `accept` argument; not from this change). Render lane to fix.
 - Admin status is per character (WorldAdmin is keyed by the key).
 
 ## Next step
-Run tools/CharacterCheck on a fresh local world, run the other checks (upgrade check, BuildTest, SurvivalCheck), open the PR, tell UX (session_01V6qgbNbvTwniqW946KACLr) the reducers/views/Me helper.
+Wait for CI (PM re-runs after the release), send the PM the green sha; ask Integration to add CharacterCheck and tools/check-ctx-sender.sh to CI; UX replaces Main.AtCharacterMenu with the menu.
