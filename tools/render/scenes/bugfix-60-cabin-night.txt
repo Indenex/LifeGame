@@ -2,11 +2,11 @@
 # burning inside, laid by the SeedCabin render reducer. Run with RENDER_PATCH=tools/render/patches/cabin.sh.
 # night: the player stands ~5 m from the door, as in Justin's bug report shot; day: the player
 # stands inside, the camera looks in through the doorway at the floor.
-client --time-of-day=0.88 --rain=0 --cloud=0.3 --wind=0.2 --season=0.05 --debug-position=30,20
+client --time-of-day=0.88 --rain=0 --cloud=0.3 --wind=0.2 --season=0.05 --debug-position=-6,-6 --render-cam=7.5,3.6,0,1.2
 name B
 find
 wait 30
-act SeedCabin 25.05 15.05 45
+act SeedCabin -11.3 -11.3 45
 warp 40 40
 wait 40
 snap
