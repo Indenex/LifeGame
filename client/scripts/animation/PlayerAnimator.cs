@@ -139,6 +139,34 @@ public sealed class PlayerAnimator
         if (landing > landKick) landKick = Mathf.Clamp(landing, 0f, 1f);
     }
 
+    // The face to show (#16): blinking every few seconds, happy while eating or waving or
+    // swaying by a fire, sleepy when lying down, yawning or idle late at night. The
+    // Modeling's Face parts show it (PlayerModel.SetFace).
+    public Face Face { get; private set; }
+    float blinkIn = 3f, blinkLeft;
+    int blinkCount;
+
+    void Expressions(float dt)
+    {
+        bool lying = Rest == RestKind.Lie && restStage > 2.5f;
+        Face mood =
+            lying && Asleep ? Face.Closed
+            : lying || shownGesture == Gesture.Yawn ? Face.Sleepy
+            : shownAct == WorkMotion.Eat || shownGesture is Gesture.Wave or Gesture.Sway ? Face.Happy
+            : walkBlend < 0.3f && Atmosphere.Night > 0.7f ? Face.Sleepy
+            : Face.Open;
+        // Blink every 2.5 to 6 s, now and then twice; sleepy eyes blink slower.
+        blinkIn -= dt;
+        if (blinkLeft > 0f) blinkLeft -= dt;
+        else if (blinkIn <= 0f)
+        {
+            blinkLeft = 0.13f;
+            bool twice = Mathf.PosMod(time * 3.7f + seed, 1f) < 0.2f && blinkCount++ % 2 == 0;
+            blinkIn = twice ? 0.25f : (mood == Face.Sleepy ? 4f : 2.5f) + Mathf.PosMod(seed * 17f + time * 1.3f, 3.5f);
+        }
+        Face = blinkLeft > 0f && mood is Face.Open or Face.Sleepy ? Face.Closed : mood;
+    }
+
     // How much hop is in the walk (#17): full on the chibi, a trace on a tall figure.
     float Bounce => rig.HipHeight < 0.6f ? 1f : 0.15f;
 
@@ -211,6 +239,7 @@ public sealed class PlayerAnimator
         Carry(dt);
         Gestures(dt);
         if (shownAct != WorkMotion.None) PlayAct(dt);
+        Expressions(dt);
         air = Mathf.Lerp(air, airborne ? 1f : 0f, 1f - Mathf.Exp(-16f * dt));
         rise = Mathf.Lerp(rise, rising ? 1f : 0f, 1f - Mathf.Exp(-10f * dt));
         landKick *= Mathf.Exp(-7f * dt);
