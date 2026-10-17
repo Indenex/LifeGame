@@ -1,7 +1,7 @@
 # crafting-27: Chop loop polish
 Lane: Crafting
 Owner: Crafting thread
-Status: in_review
+Status: done
 Branch: crafting-chop
 PR: (open after CI)
 
@@ -15,4 +15,4 @@ From the PM's review of the chop loop: (4) offer a chop only with a usable axe (
 - none
 
 ## Next step
-Push, open the PR, send the PM the green sha.
+None: merged (#503). Later sections below are history.

@@ -72,6 +72,59 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // Batch devices (crafting-23, D-195): load one and it works through a batch on its own.
+            new StructureDef
+            {
+                Kind = 21,
+                Shape = new StructureShape
+                {
+                    Name = "Settling tub",
+                    Category = "Crafting",
+                    Round = true, Radius = 0.55f,
+                    Clearance = 1.0f,
+                    Solid = true,
+                    Station = StationKind.ClayTub,
+                    Stages = new[] { "Tub" },
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 6u), (Item.Cordage, 2u), (Item.Log, 1u) },
+                    },
+                },
+            },
+            new StructureDef
+            {
+                Kind = 22,
+                Shape = new StructureShape
+                {
+                    Name = "Crushing block",
+                    Category = "Crafting",
+                    HalfWidth = 0.45f, HalfDepth = 0.45f,
+                    Clearance = 0.9f,
+                    Station = StationKind.CrushBlock,
+                    Stages = new[] { "Block" },
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Log, 1u), (Item.Stone, 3u) },
+                    },
+                },
+            },
+            new StructureDef
+            {
+                Kind = 23,
+                Shape = new StructureShape
+                {
+                    Name = "Tempering trough",
+                    Category = "Crafting",
+                    HalfWidth = 0.85f, HalfDepth = 0.4f,
+                    Clearance = 1.0f,
+                    Station = StationKind.TemperTrough,
+                    Stages = new[] { "Trough" },
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 4u), (Item.Cordage, 2u), (Item.Log, 1u) },
+                    },
+                },
+            },
         };
     }
 }
