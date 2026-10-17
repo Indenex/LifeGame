@@ -22,14 +22,7 @@ public static class PaintedAnimals
     }
 
     // Short coats (deer): smooth hide, a firmer ink edge.
-    public static ShaderMaterial Coat(ShaderMaterial source)
-    {
-        var twin = CoatTwin(source);
-        // A coat leans a little toward a warmer, richer card brown.
-        twin.SetShaderParameter("base_paint", new Color(0.62f, 0.33f, 0.17f));
-        twin.SetShaderParameter("base_mix", 0.3f);
-        return twin;
-    }
+    public static ShaderMaterial Coat(ShaderMaterial source) => CoatTwin(source);
 
     static ShaderMaterial CoatTwin(ShaderMaterial source)
     {
