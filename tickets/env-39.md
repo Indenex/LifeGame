@@ -41,8 +41,12 @@ quality setting. Stills at noon, golden hour and rain through Render.
 
 - 2026-10-17 16:15: Render's smoke frame at noon, cover 0.45 showed a solid cream sky: any cloud at all along a ray counted as cloud, so slanting rays through the slab nearly always hit one. Clouds are now only the heart of each shadow patch, with thin edges and a shorter march, so a fair sky keeps blue gaps.
 
+- 2026-10-17 17:05: paused by Justin (usage). Findings from local renders (Godot now downloads here; tools/render/setup.sh plus `apt-get install dotnet-sdk-8.0`):
+  - Painted clouds never drew: the sky shader lacked `render_mode use_half_res_pass`, so HALF_RES_COLOR was empty. Fixed in d8e3460b, which also keeps the scene fog off the sky (`disable_fog`, which washed the dome to cream) and lays haze only along the horizon (`haze_color` = FogLightColor), plus flatter (40 m) jittered cumulus with thinner cover. Local frames now show cumulus with blue gaps.
+  - The noon sky is still pale grey-blue (bluest gap about rgb 176,187,188). With `--grade=0` it is clearly blue (169,196,216); --cosy=0, --soft-glow=0 and --vignette=0 barely change it. So AtmosphereGrade (the faded/cosy colour curve, DOF blur or its fog changes) greys the sky. Not yet narrowed down; it's a look Justin picked (D-313), so any change to it goes to the PM as options.
+
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Wait for the PM to merge #843 (green at 4d1f443e); then push env-40 (Cool Water blend).
+Narrow which part of AtmosphereGrade.Grade() greys the noon sky (local render of the sky shot `--offline --debug-position=0,12 --render-cam=6,1.2,0,4.7 --time-of-day=0.5 --cloud=0.3` with each of: AdjustmentColorCorrection null, DofBlurAmount 0, the FogLightColor/FogAerialPerspective lines skipped), then send the PM options. #843 is held until the sky frame shows blue gaps.
