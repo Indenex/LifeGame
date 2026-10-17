@@ -158,7 +158,7 @@ public static class Painted
                 color *= mix(1.0, 0.62, ink * smoothstep(0.66, 0.9, rim));
                 ALBEDO = clamp(color, 0.0, 1.0);
             """);
-        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
+        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n" + Rim + "\n#else\n");
         code = code.TrimEnd();
         if (!code.EndsWith("}")) throw new System.InvalidOperationException("Painted: Look's shader no longer ends with light()");
         return code[..^1] + "#endif\n}\n";
@@ -183,6 +183,21 @@ public static class Painted
             vec2 b = vec2(p.z * 0.9, p.y * 1.2) / dab_size + 0.37;
             return mix(texture(dabs, a).r, texture(dabs, b).r, 0.45);
         }
+        """;
+
+    // The soft rim light (D-313, Justin's pick): a thin warm glow round the edges of a shape
+    // that face away from the sun, strongest when it is backlit, as the cards outline their
+    // figures against the light. Characters (ChibiLook), animals, props, buildings and items
+    // all add it; trees and the ground do not. It takes the sun's own colour, so it warms
+    // at dawn and dusk with Atmosphere's light. RimStrength is the one constant to raise.
+    internal const float RimStrength = 0.5f;
+    internal static readonly string Rim = $$"""
+            if (LIGHT_IS_DIRECTIONAL) {
+                float rim_edge = smoothstep(0.5, 0.9, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0));
+                float rim_back = smoothstep(-0.2, 0.8, dot(-VIEW, LIGHT));
+                float rim_away = 1.0 - smoothstep(0.0, 0.5, dot(NORMAL, LIGHT));
+                DIFFUSE_LIGHT += LIGHT_COLOR * vec3(1.0, 0.86, 0.66) * rim_edge * mix(0.5, 1.0, rim_back) * rim_away * {{RimStrength.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture)}} / PI;
+            }
         """;
 
     // Stepped light as on the painted trees: shade, mid and lit with brush-broken edges,
