@@ -164,7 +164,7 @@ public static class LandmarkProps
         float tiltDir = H(x, z, 303) * Mathf.Tau, tilt = Range(x, z, 304, 0f, 0.3f);
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 305) * Mathf.Tau)
             * Basis.FromScale(stretch * size);
-        var color = Look.Rock.Darkened(Range(x, z, 306, 0f, 0.15f)).Lerp(Look.Moss, H(x, z, 307) < 0.4f ? Range(x, z, 308, 0.1f, 0.35f) : 0f);
+        var color = Look.WorldRock.Darkened(Range(x, z, 306, 0f, 0.15f)).Lerp(Look.Moss, H(x, z, 307) < 0.4f ? Range(x, z, 308, 0.1f, 0.35f) : 0f);
         into.Put(PropMeshes.Rock(Pick(x, z, 309, PropMeshes.RockVariants)), Look.RockSurface,
             (new Transform3D(basis, at with { Y = at.Y - 0.18f * size * stretch.Y }), color, custom with { B = 1f }));
         float radius = 0.4f * size * Mathf.Max(stretch.X, stretch.Z);
@@ -180,7 +180,7 @@ public static class LandmarkProps
         float tiltDir = H(x, z, 313) * Mathf.Tau, tilt = tipped ? Range(x, z, 314, 0.15f, 0.3f) : Range(x, z, 314, 0f, 0.1f);
         var basis = new Basis(new Vector3(Mathf.Cos(tiltDir), 0, Mathf.Sin(tiltDir)), tilt) * new Basis(Vector3.Up, H(x, z, 315) * Mathf.Tau)
             * Basis.FromScale(stretch * scale);
-        var color = Look.Rock.Darkened(Range(x, z, 316, 0f, 0.12f));
+        var color = Look.WorldRock.Darkened(Range(x, z, 316, 0f, 0.12f));
         into.Put(PropMeshes.Outcrop(Pick(x, z, 317, PropMeshes.OutcropVariants)), Look.RockSurface,
             (new Transform3D(basis, at with { Y = at.Y - 0.1f * scale }), color, custom with { B = 1f }));
         into.Blocks.Add((at.X, at.Z, 1.25f * scale * Mathf.Max(stretch.X, stretch.Z)));
@@ -208,7 +208,7 @@ public static class LandmarkProps
         var stretch = new Vector3(Range(x, z, 411, 1.5f, 2.7f), Range(x, z, 412, 1.0f, 1.6f), Range(x, z, 413, 1.5f, 2.7f));
         var basis = new Basis(Vector3.Up, H(x, z, 414) * Mathf.Tau) * Basis.FromScale(stretch);
         var pos = new Vector3(x + Range(x, z, 415, -0.25f, 0.25f), top, z + Range(x, z, 416, -0.3f, 0.3f));
-        var color = Look.Rock.Lightened(Range(x, z, 417, 0f, 0.08f)).Lerp(Look.Moss, H(x, z, 418) < 0.3f ? 0.25f : 0f);
+        var color = Look.WorldRock.Lightened(Range(x, z, 417, 0f, 0.08f)).Lerp(Look.Moss, H(x, z, 418) < 0.3f ? 0.25f : 0f);
         into.Put(PropMeshes.RiverStone(Pick(x, z, 419, PropMeshes.RiverStoneVariants)), Look.RockSurface, (new Transform3D(basis, pos), color, custom with { B = 1f }));
     }
 
