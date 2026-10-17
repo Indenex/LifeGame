@@ -309,9 +309,10 @@ public partial class Terrain : Node3D
                 // of a stream open.
                 if (top < Look.WaterLevel + 0.1f)
                 {
-                    // Stepping stones or a fallen log mark an easy place to ford a stream.
-                    if (Landmarks.FordStoneAt(x, z))
-                        LandmarkProps.Ford(x, z, top, landmarks, custom);
+                    // Features in the water (shared/Features.cs): stepping stones or a
+                    // fallen log mark an easy place to ford a stream.
+                    if (Features.At(x, z, FeatureGround.Stream) is { } wading)
+                        LandmarkProps.For(wading).Build(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     else if (top > Look.WaterLevel - 0.15f && Hash01(x, z, 60) < 0.4f)
                     {
                         var reed = (Plant(fx, top, fz, yaw, 0.8f + Hash01(x, z, 61) * 0.5f), Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z, 62) * 0.3f), custom);
@@ -340,15 +341,11 @@ public partial class Terrain : Node3D
                 float tree = Forest.TreeChance(density, heath); // the same as Trees.Forest(x, z)
                 float trail = Landmarks.Trail(x, z);
 
-                // Landmarks to steer by (env-5), each shaped by its own seed.
-                if (Landmarks.GiantOakAt(x, z))
+                // Landmarks to steer by (env-5), each shaped by its own seed; whatever
+                // the feature registry puts on a cell is all that stands there.
+                if (Features.At(x, z, FeatureGround.Dry) is { } feature)
                 {
-                    LandmarkProps.GiantTree(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
-                    continue;
-                }
-                if (Landmarks.OutcropAt(x, z))
-                {
-                    LandmarkProps.Outcrop(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
+                    LandmarkProps.For(feature).Build(x, z, new Vector3(fx, top, fz), HeightAt, landmarks, custom);
                     continue;
                 }
                 float sapling = tree + 0.03f * edge * (1f - heath);
