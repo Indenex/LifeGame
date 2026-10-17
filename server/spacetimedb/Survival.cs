@@ -168,6 +168,7 @@ public static partial class Module
                 ? ctx.Timestamp.MicrosecondsSinceUnixEpoch + Stamina.WellFedMicros
                 : v.WellFedUntil,
         });
+        NoteAct(ctx, player.PlayerId, WorkMotion.Eat, (Item)item);
     }
 
     [SpacetimeDB.Reducer]
@@ -183,6 +184,7 @@ public static partial class Module
             throw new Exception("You are not thirsty");
 
         ctx.Db.Vitals.PlayerId.Update(v with { Water = Math.Min(1f, v.Water + Needs.SipWater) });
+        NoteAct(ctx, player.PlayerId, WorkMotion.Drink);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
 
@@ -242,6 +244,7 @@ public static partial class Module
 
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, Needs.BushRegrowMicros) });
         AddToInventory(ctx, ctx.Sender, Item.Berries, 3, Items.RawQuality);
+        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, Item.Berries);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }

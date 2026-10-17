@@ -52,12 +52,15 @@ public static class Subscriptions
         $"SELECT * FROM lamp WHERE {range}",
         "SELECT * FROM clay_news",
         "SELECT * FROM my_inventory",
+        "SELECT * FROM my_admin",
         // What you wear (animals-12, read by the equipment panel, ui-10).
         "SELECT * FROM my_worn",
         "SELECT * FROM my_hotbar",
         "SELECT * FROM my_craft_job",
         "SELECT * FROM player_sneaking",
+        "SELECT * FROM player_look",
         "SELECT * FROM player_jump",
+        "SELECT * FROM player_act",
         "SELECT * FROM worn_item",
         $"SELECT * FROM structure WHERE {farRange}",
     };
