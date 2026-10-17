@@ -1075,3 +1075,7 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-265 — 2026-10-17 — The hen coop is a claim-only small thatched coop with a pop-hole (follows D-259, D-229)
 **Decision:** The hen coop is a small thatched coop with a pop-hole, and it can only be built inside a claim (D-229). Owner: Animals.
 **Who:** Justin (relayed by the PM; no direct quote).
+
+## D-266 — 2026-10-17 — Pottery decoration is a maker's mark, not slip bands
+**Decision:** Pottery decoration is a maker's mark: a small personal stamp on the pots a player makes, not slip bands. Justin picked it over the banded rim, zigzag and finger-swipe looks. Owner: Ceramics.
+**Who:** Justin, picking the maker's mark (relayed by the PM; no direct quote).
