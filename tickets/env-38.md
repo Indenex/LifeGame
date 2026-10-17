@@ -56,7 +56,7 @@ shoreline foam, no realistic glare, and the bugs fixed. Before/after stills thro
 
 - 2026-10-17 16:30: Render's pond frame at 7107848a: water teal, not milky, no shader errors. Fixed the two flaws it showed: stair-stepped foam streaks from the wave grid (sim now sampled with four smoothing taps, wider minimum splash, softer crest foam) and dragonflies reading as crossed sticks (oval wings with a dark rim and tip spot, a head, thorax and banded tapering tail).
 
-- 2026-10-17 17:05: paused by Justin. Stair-stepped white blocks still show in the pond foreground at 198e5ed0 and after the sim-normal fix in 973518b2. With --water-reflections=0 they remain, so they aren't the screen reflections. A debug build (local branch dbg-water, fe42b526, not pushed: `--wdbg=1..5` shows normal, fresnel, foam, ripple lines, depth) was about to show which term causes them.
+- 2026-10-17 17:05: paused by Justin. Stair-stepped white blocks still show in the pond foreground at 198e5ed0 and after the sim-normal fix in 973518b2. With --water-reflections=0 they remain, so they aren't the screen reflections. A debug build (local branch dbg-water, fe42b526, saved as /mnt/project-files/patches/env-38/0001-dbg.patch: `--wdbg=1..5` shows normal, fresnel, foam, ripple lines, depth) was about to show which term causes them.
 
 ## Open questions / blockers
 - Godot shader errors only show at runtime, so the Render lane's "after" shots are the
