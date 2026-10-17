@@ -136,7 +136,7 @@ namespace LifeGame.Shared
             {
                 Id = "gather.tinder", Name = "Shred tinder", Doing = "Shredding fiber into tinder", Tier = 0,
                 Consumes = new[] { new Ingredient(Item.Fiber, 2) },
-                Seconds = Base(0, 1f), Makes = Item.Tinder,
+                Seconds = Base(0, 1f), Makes = Item.Tinder, Motion = WorkMotion.Twist,
             },
 
             // Tier 1: fire and the first stone edges.
@@ -230,7 +230,7 @@ namespace LifeGame.Shared
             {
                 Id = "hide.waterskin", Name = "Make a waterskin", Doing = "Sewing a hide into a waterskin", Tier = 2,
                 Consumes = new[] { new Ingredient(Item.SheepHide), new Ingredient(Item.Cordage) }, NeedsTool = ItemTags.Cutting,
-                Seconds = Base(2, 1.5f), Makes = Item.Waterskin,
+                Seconds = Base(2, 1.5f), Makes = Item.Waterskin, Motion = WorkMotion.Wrap,
             },
             // House building: a woven grass mat to lay inside a hut or house and wake on (BuildingBed.cs).
             new ProcessDef
