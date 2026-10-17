@@ -3,7 +3,7 @@
 # at random spots, so the first two are deleted and re-inserted here by owner SQL (the client only
 # draws a patch where its row was inserted, so an UPDATE would not move it).
 client-as-puppet
-client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.05 --season=0.25 --render-cam=3.2,1.7,0,0.2
+client --time-of-day=0.45 --rain=0 --cloud=0.15 --wind=0.05 --season=0.25 --render-cam=4.2,2.3,0,0.2
 wait 35
 sh S="spacetimedb-cli sql --server http://127.0.0.1:3300 lifegame"; for id in $($S "SELECT id FROM forage_bush WHERE kind = 1" | grep -oE '^ *[0-9]+ *$' | tr -d ' '); do $S "DELETE FROM forage_bush WHERE id = $id"; done
 act SeedForage 13.3 -0.9 1 0
@@ -13,8 +13,7 @@ warp 15.1 0.2
 wait 6
 act Forage bush
 wait 4
-warp 14.2 0.6
-face 180
+warp 17.4 -0.4
 wait 12
 snap
 wait 6
