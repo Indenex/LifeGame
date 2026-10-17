@@ -29,6 +29,7 @@ public partial class Showcase : Node3D
         string view = args.GetValueOrDefault("view", "row");
         float yaw = Mathf.DegToRad(float.Parse(args.GetValueOrDefault("yaw", view == "walk" ? "90" : "-25"), System.Globalization.CultureInfo.InvariantCulture));
 
+        SetupWorld();
         if (view is "items" or "held" or "clothes" or "hearth" or "stations" or "props" or "env" or "cooking" or "deer" or "hen" or "stonehearth" or "treelod" or "rocks" or "bushes" or "logs" or "wear" or "devices" or "crowd" or "roster" or "animals" or "structures" or "faces" or "pots" or "turntable" or "art")
         {
             if (view == "faces") ChibiFaces();
