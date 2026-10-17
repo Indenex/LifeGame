@@ -352,10 +352,15 @@ Console.WriteLine($"Wove a basket at the table; 4 fiber came from the stash ({st
     uint cordageBefore = CountOf(Item.Cordage);
     lastError = null;
     var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    // Hang the spent axe on the tools belt first: mending keeps it there.
+    conn.Reducers.PutOnBelt(oldAxe.Id, 255);
+    Pump(() => conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.OnBelt), 5, "the axe onto the belt");
+    oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
     conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
     Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
     if (lastError != null) Fail($"mending the axe: {lastError}");
     var mendedAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+    if (!mendedAxe.OnBelt) Fail("the mended axe fell off the belt into the bag");
     byte expectQ = Durability.RepairedQuality(oldAxe.Quality, oldAxe.Wear);
     if (Durability.IsSpent(mendedAxe.Quality, mendedAxe.Wear) || Durability.Used(mendedAxe.Wear) != 0) Fail("the mended axe still shows wear");
     if (mendedAxe.Quality != expectQ || mendedAxe.Quality > oldAxe.Quality) Fail($"mended axe quality {mendedAxe.Quality}, expected {expectQ} (was {oldAxe.Quality})");
