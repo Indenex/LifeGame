@@ -228,7 +228,9 @@ public partial class BuildMenu : CanvasLayer
             },
         });
 
-        foreach (int kind in Structures.Kinds)
+        // The tab you'll see first is made first (ui-59), so its cards fill in right away.
+        string first = category != "" ? category : Order.FirstOrDefault(c => Kinds(c).Any()) ?? "";
+        foreach (int kind in Structures.Kinds.OrderBy(k => CategoryOf(k) == first ? 0 : 1))
         {
             var model = new StructureView(kind);
             view.AddChild(model);
