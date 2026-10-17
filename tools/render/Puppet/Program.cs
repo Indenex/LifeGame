@@ -362,6 +362,15 @@ bool Step(string line)
             Run("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"");
             Pump(0.5);
             break;
+        case "sqlout":
+        {
+            // like sql, but prints the result table: puppet: sqlout | <line>
+            using var q = Process.Start(new ProcessStartInfo("spacetimedb-cli", $"sql --server {uri} {db} \"{rest.Replace("{me}", "0x" + me).Replace("{target}", target.ToString())}\"") { RedirectStandardError = true, RedirectStandardOutput = true })!;
+            var outText = q.StandardOutput.ReadToEnd(); q.WaitForExit();
+            foreach (var line in outText.Split('\n')) if (line.Trim().Length > 0) Console.WriteLine($"puppet: sqlout | {line.TrimEnd()}");
+            Pump(0.5);
+            break;
+        }
         case "call":
             Run("spacetimedb-cli", $"call --server {uri} {db} {rest}");
             Pump(0.5);
