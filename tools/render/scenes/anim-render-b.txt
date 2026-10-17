@@ -1,0 +1,22 @@
+# claude/anim-render: Emote(24 wave, 25 cheer, 26 dance, 27 bow) about 3.5 s apart, then eat berries (X): happy face. Chibi, 3/4 view.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=2.6,0.8,35,0.5
+frames 48
+give 160 3 50
+frames +12
+mark emote-start
+act Emote 24
+frames +42
+act Emote 25
+frames +42
+act Emote 26
+frames +42
+act Emote 27
+frames +42
+key x
+frames +36
+key x
+frames +36
+mark emote-end
+frames +12

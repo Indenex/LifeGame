@@ -1,0 +1,24 @@
+# claude/anim-render: light a fire, step 3-4 m away, press H (turns to the fire and sits), hold ~25 s for fidgets, H again (lie, sleepy),
+# H again (stand). Chibi, 3/4 view.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.8 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=4.0,1.2,35,0.5
+frames 48
+give 1 20 50
+give 5 4 50
+face 0
+craft fire.hand_drill
+frames +24
+keydown w
+frames +36
+keyup w
+frames +12
+mark sit-start
+key h
+frames +300
+key h
+frames +96
+key h
+frames +48
+mark sit-end
+frames +12
