@@ -91,7 +91,8 @@ public partial class FriendWay : CanvasLayer
         // off the left edge, because a Control under a CanvasLayer measures from the screen's
         // left, not its middle (bugfix-73). ui-85: plus where it was dragged (Alt).
         var moved = Mover.Offset("way");
-        float top = 10 + SundialArc.Room + moved.Y;
+        // Under the status line (Hud, 18 px below the sundial), so "Connected" never sits under it.
+        float top = 44 + SundialArc.Room + moved.Y;
         view.OffsetLeft = -Width / 2 + moved.X;
         view.OffsetRight = Width / 2 + moved.X;
         view.OffsetTop = top;
