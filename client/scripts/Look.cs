@@ -80,6 +80,13 @@ public static class Look
         // Legs wet from wading (Atmosphere): up to this world height, this wet (0 to 1).
         Add("wet_line", RenderingServer.GlobalShaderParameterType.Float, -1000f);
         Add("wet_amount", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Morning frost (Atmosphere): 0 none to 1 a full white rime.
+        Add("frost", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Shifts where frost lies thickest from one morning to the next.
+        Add("frost_seed", RenderingServer.GlobalShaderParameterType.Float, 0f);
+        // Tint for Modeling's rim light, on top of the light colour (Atmosphere, by
+        // time of day): rgb the colour, a scales the rim strength.
+        Add("rim_tint", RenderingServer.GlobalShaderParameterType.Color, new Color(1f, 0.86f, 0.66f, 1f));
     }
 
     // Seconds since the game started (from 1), shared with the shaders as
@@ -109,7 +116,7 @@ public static class Look
 
     // Trees between the camera and the player fade softly, so you can always see
     // yourself in the woods. A faded tree is drawn by its ghost: the same surface,
-    // transparent, drawn by a second instance that only shows trees in the way.
+    // see-through, drawn by a second instance that only shows trees in the way.
     // Anything drawn with a see-through material needs its ghost drawn too, or a
     // tree in the way would just vanish.
     public static ShaderMaterial TreeBark => treeBark ??= SeeThrough(BarkSurface);
@@ -127,7 +134,7 @@ public static class Look
     // The ghost to draw alongside a see-through material, if it has one.
     public static ShaderMaterial? GhostOf(Material material) =>
         material == TreeFoliage ? treeFoliageGhost ??= Ghost(TreeFoliage) :
-        material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : null;
+        material == TreeBark ? treeBarkGhost ??= Ghost(TreeBark) : PaintedTrees.GhostOf(material);
 
     // A see-through copy of any painted surface for a building to fade by hand: set its
     // fade_override from 0 (solid) to 1 (clear) and swap it in for the solid one.
@@ -135,7 +142,7 @@ public static class Look
 
     static ShaderMaterial Ghost(ShaderMaterial source) => Ghost(source, GhostShader);
 
-    static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
+    internal static ShaderMaterial Ghost(ShaderMaterial source, Shader shader)
     {
         var ghost = new ShaderMaterial { Shader = shader };
         foreach (var uniform in source.Shader.GetShaderUniformList())
@@ -304,6 +311,11 @@ public static class Look
         // How far up the player is wet from wading, and how wet (0 dry to 1 just out).
         global uniform float wet_line;
         global uniform float wet_amount;
+        // Rime after a cold clear night, 0 none to 1 full; it melts away patchily.
+        global uniform float frost;
+        global uniform float frost_seed;
+        // Rime is a cool blue-white, so the warm dawn light doesn't turn it pink.
+        const vec3 FROST = vec3(0.74, 0.84, 0.97);
         // The season (Atmosphere, D-099): warmth -1 deep winter to 1 high summer,
         // autumn 0 green to 1 leaves fully turned, snow lying on the ground and
         // snow falling now, all 0 to 1.
@@ -325,6 +337,15 @@ public static class Look
         }
         uniform sampler2D clouds : repeat_enable, filter_linear_mipmap;
 
+        // How cold this spot runs on a frosty morning, 0 to 1: higher ground and damp
+        // hollows by the water more, in broad patches that shift from day to day.
+        float frost_local(vec3 p) {
+            float n = texture(clouds, p.xz * 0.004 + vec2(frost_seed, frost_seed * 0.37)).r;
+            float high = smoothstep(0.0, 25.0, p.y + 1.0) * 0.35;
+            float damp = (1.0 - smoothstep(0.0, 1.5, p.y + 1.0)) * 0.3;
+            return clamp(n * 0.9 + high + damp - 0.15, 0.0, 1.0);
+        }
+
         float cloud_shadow(vec3 p) {
             if (cloud_cover <= 0.01) return 1.0;
             // Clouds a few dozen meters across, so on a fair day their shadows
@@ -339,16 +360,16 @@ public static class Look
 
     // The same surface drawn transparent, for trees fading out of the way.
     static Shader GhostShader => ghostShader ??= MakeShader(PaintedCode
-        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_draw_always;")
+        .Replace("render_mode cull_disabled;", "render_mode cull_back, depth_prepass_alpha;")
         .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
 
     // A building's ghost: open faces stay visible as on the solid, and an opaque depth pass first,
     // so a faded near wall can't hide a far wall that shares its mesh (a brick course, a daub ring).
     static Shader StructureGhostShader => structureGhostShader ??= MakeShader(PaintedCode
         .Replace("render_mode cull_disabled;", "render_mode cull_disabled, depth_prepass_alpha;")
-        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST"));
+        .Replace("shader_type spatial;", "shader_type spatial;\n#define GHOST\n#define STRUCTURE_GHOST"));
 
-    const string PaintedCode = """
+    internal const string PaintedCode = """
             shader_type spatial;
             render_mode cull_disabled;
 
@@ -404,9 +425,9 @@ public static class Look
                 float t = clamp((b * s + f) / e, 0.0, 1.0);
                 s = clamp((b * t - c) / a, 0.0, 1.0);
                 float d = distance(p1 + d1 * s, p2 + d2 * t);
-                // A canopy reaches about 1.9 times the tree's width from its axis; fade
-                // fully inside that and ease out a little beyond.
-                return 1.0 - smoothstep(1.9 * wide, 2.7 * wide, d);
+                // Only a tree truly across the line fades (env-25): fully within 1.5
+                // times its width of the axis, easing out by 2.1.
+                return 1.0 - smoothstep(1.5 * wide, 2.1 * wide, d);
             }
 
             varying vec3 tint;
@@ -520,6 +541,25 @@ public static class Look
                 float snow = snow_cover * smoothstep(0.3, 0.75, world_normal.y) * smoothstep(0.0, 0.5, snow_cover * 1.4 - h * 0.6);
                 color = mix(color, SNOW * (1.0 + paint), snow);
                 wet *= 1.0 - snow;
+                // Morning frost whitens what faces the open sky, thickest on the bumps,
+                // and melts back in patches; people, animals and made things (no
+                // cavity) stay clear of it. Tiny glints sparkle as you move.
+                if (frost > 0.0 && cavity > 0.01) {
+                    float patches = texture(detail, world_pos.xz * 0.06).r;
+                    float rime = smoothstep(patches - 0.12, patches + 0.12, frost * (0.5 + 0.5 * frost_local(world_pos)) * 1.25 - 0.12);
+                    // Only on the raised grain of what faces up, so the colour beneath
+                    // still shows through: a dusting, not a snow cover. Bare ground
+                    // takes less than rocks and leaves, which the grass covers anyway.
+                    // Rocks and leaves take a clear white edge on their upper faces and
+                    // raised grain (Justin: "in between"); flat bare ground only a trace.
+                    rime *= smoothstep(0.1, 0.6, world_normal.y) * smoothstep(0.25, 0.65, h) * (1.0 - snow);
+                    rime *= puddles_ok > 0.5 ? 0.2 : 0.75;
+                    vec3 cell = floor(world_pos * 28.0);
+                    float glint = step(0.985, fract(sin(dot(cell + floor(view_camera_position * 3.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453));
+                    color = mix(color, FROST * (1.0 + paint), rime);
+                    color = mix(color, vec3(1.0), glint * min(rime * 2.0, 1.0) * 0.8);
+                    wet *= 1.0 - rime;
+                }
                 // Puddles gather on flat ground in the low spots of a slow pattern,
                 // spreading as the ground stays soaked and shrinking as it dries:
                 // dark, still and glossy.
@@ -572,6 +612,7 @@ public static class Look
                 float window = 1.0 - smoothstep(0.09, 0.3, apart);
                 // Fully clear right around the player, so even several layers of
                 // canopy never hide them.
+            #ifdef STRUCTURE_GHOST
                 if (cut_mode > 1.5) {
                     // cut_floor 1 clears the whole roof (player inside); 0 clears only the
                     // circle round the player (player behind the building).
@@ -584,6 +625,13 @@ public static class Look
                     ALPHA = 1.0 - fade * (0.35 + 0.65 * window);
                 }
                 if (ALPHA < 0.04) discard;
+            #else
+                // A tree in the way thins to about 55% (env-25), a little more right round
+                // the player. The ghost draws its depth first (depth_prepass_alpha), so only
+                // the front-most surface blends: overlapping crowns never stack up.
+                float opening = 1.0 - smoothstep(0.04, 0.42, apart);
+                ALPHA = 1.0 - fade * (0.45 + 0.2 * opening * opening);
+            #endif
             #endif
             }
 
@@ -675,6 +723,13 @@ public static class Look
                 vec3 straw = vec3(0.42, 0.36, 0.20) * (0.7 + 0.5 * tip);
                 color = mix(color, straw, 0.55 * max(0.0, -season_warmth));
                 color = mix(color, SNOW, snow_cover * (0.55 + 0.45 * tip));
+                // Frost silvers the blades, most at the tips, gone first where it melts.
+                if (frost > 0.0) {
+                    float patches = texture(clouds, world_pos.xz * 0.035).r;
+                    float rime = smoothstep(patches - 0.15, patches + 0.15, frost * (0.5 + 0.5 * frost_local(world_pos)) * 1.3 - 0.15) * (1.0 - snow_cover);
+                    // The tips are clearly silvered; the blades stay green below.
+                    color = mix(color, FROST, rime * 0.8 * smoothstep(0.35, 0.9, tip));
+                }
                 ALBEDO = clamp(color, 0.0, 1.0);
                 shade = cloud_shadow(world_pos);
                 // Both faces of a blade are lit like the ground beneath it.
@@ -693,126 +748,28 @@ public static class Look
     // Open water: a calm, deep color that only softly catches the light (no mirror
     // shine), slow shimmering ripples that stir with the wind's gusts, rain rings
     // spreading on the surface while it rains, and a soft fade where it meets the bank.
-    public static ShaderMaterial WaterSurface => water ??= MakeWater();
-    static ShaderMaterial? water;
-
-    static ShaderMaterial MakeWater()
+    // Open water (Atmosphere's WaterLook, atmosphere-31): the far plane, and the dense
+    // waving surface Atmosphere keeps round the player.
+    public static ShaderMaterial WaterSurface
     {
-        var material = new ShaderMaterial { Shader = MakeShader(WaterCode) };
-        material.SetShaderParameter("water_color", Water);
-        material.SetShaderParameter("clouds", Clouds);
-        return material;
+        get
+        {
+            EnsureWeatherGlobals();
+            return water ??= WaterLook.Make(near: false);
+        }
     }
-
-    const string WaterCode = """
-        shader_type spatial;
-        render_mode blend_mix, depth_draw_opaque, cull_back, specular_schlick_ggx;
-
-        uniform vec4 water_color : source_color;
-        uniform vec4 shallow_color : source_color = vec4(0.30, 0.55, 0.55, 1.0);
-        uniform vec4 sky_tint : source_color = vec4(0.62, 0.72, 0.78, 1.0);
-        uniform sampler2D depth_texture : hint_depth_texture, filter_linear;
-        global uniform vec3 player_position;
-        varying vec3 world_pos;
-
-        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-
-        // Height of the slow wind ripples: a few soft waves crossing at angles.
-        float ripples(vec2 p, float t, float stir) {
-            float h = sin(dot(p, vec2(0.9, 0.5)) * 1.7 + t * 1.1) * 0.5
-                    + sin(dot(p, vec2(-0.4, 1.0)) * 2.6 + t * 1.6) * 0.3
-                    + sin(dot(p, vec2(0.7, -0.8)) * 4.3 + t * 2.3) * 0.15;
-            return h * stir;
+    public static ShaderMaterial WaterNear
+    {
+        get
+        {
+            EnsureWeatherGlobals();
+            return waterNear ??= WaterLook.Make(near: true);
         }
-
-        // Rain rings: each cell of a grid gets drops at its own moments, and each drop
-        // sends out one ring that widens and fades.
-        vec3 rings(vec2 p, float t, float density) {
-            vec2 slope = vec2(0.0);
-            float crest = 0.0;
-            for (int layer = 0; layer < 2; layer++) {
-                vec2 q = p * 1.3 + float(layer) * 0.37;
-                vec2 cell = floor(q);
-                for (int dx = -1; dx <= 1; dx++)
-                for (int dz = -1; dz <= 1; dz++) {
-                    vec2 c = cell + vec2(float(dx), float(dz));
-                    float h = hash(c + float(layer) * 17.0);
-                    if (h > density) continue;
-                    float rate = 0.7 + h * 0.6;
-                    float age = fract(t * rate + h * 7.0);
-                    // Each new drop lands somewhere else in its cell.
-                    float drop = floor(t * rate + h * 7.0);
-                    vec2 center = c + 0.1 + vec2(hash(c + drop * 1.37 + 3.1), hash(c + drop * 2.11 + 5.7)) * 0.8;
-                    vec2 d = q - center;
-                    float r = length(d);
-                    float radius = age * 0.55;
-                    float band = r - radius;
-                    float wave = sin(band * 40.0) * exp(-band * band * 260.0) * (1.0 - age) * (1.0 - age);
-                    slope += (r > 0.001 ? d / r : vec2(0.0)) * wave;
-                    crest += max(wave, 0.0);
-                }
-            }
-            return vec3(slope, crest);
-        }
-
-        void vertex() {
-            world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-        }
-
-        void fragment() {
-            vec2 p = world_pos.xz;
-            float t = TIME;
-            float stir = 0.03 + 0.06 * wind_strength * (0.5 + 0.8 * wind_gust);
-            float e = 0.05;
-            float h0 = ripples(p, t, stir);
-            vec2 slope = vec2(ripples(p + vec2(e, 0.0), t, stir) - h0, ripples(p + vec2(0.0, e), t, stir) - h0) / e;
-            float rain = smoothstep(0.02, 0.6, rain_amount);
-            float crest = 0.0;
-            if (rain > 0.0) {
-                vec3 ring = rings(p, t, mix(0.15, 0.9, rain));
-                slope += ring.xy * 0.12 * rain;
-                crest = min(ring.z, 1.0) * rain;
-            }
-            vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
-            NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-
-            // Deeper water reads darker; the bank shows through the shallows.
-            float depth = textureLod(depth_texture, SCREEN_UV, 0.0).r;
-            vec4 behind = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
-            behind.xyz /= behind.w;
-            float through = clamp(VERTEX.z - behind.z, 0.0, 10.0);
-            vec3 color = pow(water_color.rgb, vec3(2.2));
-            // Looking across the water it takes on the pale sky; looking down into it,
-            // its own deep color. Soft, never a mirror.
-            float across = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
-            vec3 sky = pow(sky_tint.rgb, vec3(2.2));
-            vec3 shallow = pow(shallow_color.rgb, vec3(2.2));
-            // Ring crests and the steeper ripples catch a little of the sky.
-            float glint = clamp(crest * 0.45 + length(slope) * 0.6, 0.0, 0.5);
-            ALBEDO = mix(mix(shallow, color, smoothstep(0.0, 1.2, through)), sky, across * 0.35 + glint);
-            // Even ankle-deep water reads as water; only a thin rim at the bank softens.
-            ALPHA = water_color.a * mix(0.85, 1.0, smoothstep(0.05, 0.8, through)) * smoothstep(0.0, 0.04, through);
-            ROUGHNESS = mix(0.32, 0.45, rain);
-            SPECULAR = 0.12;
-            METALLIC = 0.0;
-
-            // Like the land, the water melts into the fog over the outer quarter of
-            // the distant land, and past its edge there is none to see.
-            if (far_land_radius > 0.0) {
-                float reach = length(world_pos.xz - player_position.xz);
-                if (reach > far_land_radius) discard;
-                float rim = smoothstep(0.75 * far_land_radius, far_land_radius, reach);
-                ALBEDO *= 1.0 - rim;
-                EMISSION = fog_tint * rim;
-                ALPHA = mix(ALPHA, 1.0, rim);
-                SPECULAR *= 1.0 - rim;
-                ROUGHNESS = mix(ROUGHNESS, 1.0, rim);
-            }
-        }
-        """;
+    }
+    static ShaderMaterial? water, waterNear;
 
     // Puts the weather uniforms right after the shader's render mode line.
-    static Shader MakeShader(string code)
+    internal static Shader MakeShader(string code)
     {
         EnsureWeatherGlobals();
         int split = code.IndexOf('\n', code.IndexOf("render_mode")) + 1;

@@ -52,9 +52,10 @@ public static partial class Module
         var animal = ctx.Db.Animal.Id.Find(animalId) ?? throw new Exception("It got away");
         var mind = ctx.Db.AnimalMind.AnimalId.Find(animalId) ?? throw new Exception("It got away");
 
-        var spear = BestTool(ctx, ItemTags.Piercing);
-        var blade = BestTool(ctx, ItemTags.Cutting);
-        if (spear == null && blade == null) throw new Exception(NoToolMessage(ctx, ItemTags.Piercing | ItemTags.Cutting, "You need a spear or a blade to hunt with"));
+        // Fighting is a world action: only the weapon in the equipped slot strikes (Equip.cs).
+        var spear = EquippedTool(ctx, ItemTags.Piercing);
+        var blade = EquippedTool(ctx, ItemTags.Cutting);
+        if (spear == null && blade == null) throw new Exception(NoWeaponMessage(ctx, "a spear or a blade"));
 
         // A spear reaches a little further; a running target gets some slack for
         // where the hunter saw it a moment ago.
@@ -189,7 +190,7 @@ public static partial class Module
         var player = RequirePlayer(ctx);
         var carcass = ctx.Db.AnimalCarcass.Id.Find(carcassId) ?? throw new Exception("There's nothing left there");
         RequireReach(RequirePos(ctx, player), carcass.X, carcass.Z);
-        var tool = BestTool(ctx, ItemTags.Cutting) ?? throw new Exception(NoToolMessage(ctx, ItemTags.Cutting, "You need a blade to butcher with"));
+        var tool = EquippedToolOrThrow(ctx, ItemTags.Cutting, "a blade");
 
         byte cap = 100;
         QualityCapFor(ctx, player.PlayerId, ButcherProcess, ref cap);

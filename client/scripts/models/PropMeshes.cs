@@ -45,6 +45,23 @@ public static class PropMeshes
         return Done(k);
     }
 
+    // The trunk cut down (Environment's TreeFall): sawn through above the root flare, flat
+    // at the base, the same height and branch stubs as Trunk otherwise.
+    public static Mesh CutTrunk => cutTrunk ??= BuildCutTrunk();
+    static Mesh? cutTrunk;
+
+    static ArrayMesh BuildCutTrunk()
+    {
+        var k = Kit();
+        k.Paint(Colors.White).Loft(new Vector3(0, 0.25f, 0), new Vector3(0, 2.8f, 0), new MeshKit.Ring[]
+        {
+            new(0f, 0.2f, 0.19f), new(0.1f, 0.19f, 0.18f, 0.01f), new(0.47f, 0.15f, 0.145f, -0.02f, 0.025f), new(1f, 0.1f, 0.1f),
+        }, 7, 0f);
+        k.Paint(Colors.White, 0.92f).Tube(new[] { new Vector3(0.1f, 1.7f, 0), new Vector3(0.32f, 1.95f, 0.04f) }, 0.055f, 5, 0.04f);
+        k.Paint(Colors.White, 0.92f).Tube(new[] { new Vector3(-0.06f, 2.2f, 0.06f), new Vector3(-0.24f, 2.4f, 0.2f) }, 0.045f, 5, 0.03f);
+        return Done(k);
+    }
+
     // A weathered boulder about 1 m across, settled into the ground with moss on
     // top. Four shapes, since boulders are everywhere: worn lumps, a tall split
     // stone, a low slab, and a round stone cracked in two.

@@ -13,7 +13,7 @@ public static partial class StructureModel
     const float HouseWallTop = 2.0f, HouseRidge = 3.3f, HouseDoorHalf = 0.5f, HouseDoorTop = 1.78f; // 1.78 x 1.25 = 2.2 m clear (building-14)
     const float HouseEaveZ = Structures.HouseWallZ + 0.5f, HouseEaveX = Structures.HouseWallX + 0.45f;
     static ShaderMaterial? brick;
-    static ShaderMaterial Brick => brick ??= Look.Solid(new Color(0.74f, 0.5f, 0.36f));
+    static ShaderMaterial Brick => brick ??= Painted(Look.Solid(new Color(0.74f, 0.5f, 0.36f)), PaintedStructures.Family.Clay);
 
     // The doorway's two jambs and height, for hanging the door.
     public static (Vector3 a, Vector3 b, float height) HouseDoor =>

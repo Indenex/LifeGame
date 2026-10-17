@@ -86,27 +86,21 @@ void ExpectError(Tester t, Action call, string contains, string what)
     Check(t.LastError?.Contains(contains) == true, $"{what} ({t.LastError ?? "no error"})");
 }
 
+// The shared walk (tools/common/BotWalker.cs): routes round trunks and walls, sidesteps a stall, and as a
+// last resort asks the server to shake the bot free (unstuck).
+var walkers = new Dictionary<Tester, BotWalker>();
 void Walk(Tester t, float x, float z)
 {
-    (x, z) = t.Stand(x, z);
-    var route = t.Route(x, z);
-    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1}) in {route.Count} legs: {string.Join(" ", route.Select(r => $"({r.X:F1},{r.Z:F1})"))}");
-    for (int i = 0; i < route.Count; i++)
+    if (!walkers.TryGetValue(t, out var w))
     {
-        var (lx, lz) = i == route.Count - 1 ? (x, z) : route[i];
-        var sw = Stopwatch.StartNew();
-        while (!t.StepToward(lx, lz))
+        w = walkers[t] = new BotWalker(t.Conn, t.PlayerId, "Social test", t.Name, ms =>
         {
-            if (sw.Elapsed.TotalSeconds > 60)
-            {
-                var seen = t.Conn.Db.PlayerPos.PlayerId.Find(t.PlayerId);
-                Console.WriteLine($"FAIL  {t.Name} stuck on leg {i + 1}/{route.Count} to ({lx:F1}, {lz:F1}): bot ({t.X:F1}, {t.Z:F1}), server ({seen?.X:F1}, {seen?.Z:F1}) (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})\n  near: {t.Describe()}");
-                Environment.Exit(1);
-            }
-            foreach (var u in all) u.Tick();
-            Thread.Sleep(5);
-        }
+            for (var until = Stopwatch.StartNew(); until.ElapsedMilliseconds < ms; Thread.Sleep(5))
+                foreach (var u in all) u.Tick();
+        }, msg => { Console.WriteLine($"FAIL  {msg} (A: {a.LastError ?? "-"}, B: {b.LastError ?? "-"})"); Environment.Exit(1); });
     }
+    Console.WriteLine($"  walk {t.Name} ({t.X:F1}, {t.Z:F1}) -> ({x:F1}, {z:F1})");
+    w.To(ref t.X, ref t.Z, x, z, 0.3f, stand: true);
 }
 
 Pump(() => a.Ready && b.Ready, 20, "connections");
@@ -268,9 +262,14 @@ long day = 86_400_000_000L, t0 = 1_000L * day;
 Check(Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0) == "Tended 2 days ago · stands 1 more day", $"the marker line reads well ({Social.TendedLine(t0 - 2 * day - 5_000_000, t0 + day + 7_000_000, t0)})");
 
 // claims-4: the owner adds B by name (any case), and a calm line says so.
-string bName = $"Tobin{Random.Shared.Next(10000, 99999)}";
+// Names are letters only and unique (ui-31, shared Names), so the bot's is too.
+string bName = "Tobin" + new string(Enumerable.Range(0, 6).Select(_ => (char)('a' + Random.Shared.Next(26))).ToArray());
 b.Conn.Reducers.SetName(bName);
 Pump(() => a.Conn.Db.Player.PlayerId.Find(b.PlayerId)?.Name == bName, 5, "rename");
+// ui-31: a name someone has (in any case), a name kept for the game, and digits are refused.
+ExpectError(a, () => a.Conn.Reducers.SetName(bName.ToUpperInvariant()), "taken", "a name someone else has is refused");
+ExpectError(a, () => a.Conn.Reducers.SetName("Mayor"), "kept for the game", "a town office isn't a name");
+ExpectError(a, () => a.Conn.Reducers.SetName("Ann42"), "letters", "digits aren't part of a name");
 ExpectError(a, () => a.Conn.Reducers.AddClaimMemberByName("Nobody" + bName), "Nobody called", "adding an unknown name is refused");
 ulong chatBeforeAdd = b.Conn.Db.MyChat.Iter().Select(m => m.Id).DefaultIfEmpty(0UL).Max();
 a.LastError = null;
