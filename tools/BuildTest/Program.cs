@@ -745,10 +745,23 @@ sealed class Bot
                 {
                     noneLogged = true;
                     Console.WriteLine($"::warning::BuildTest {name}: no world item left for {string.Join(", ", missing)} (carrying {Carried()})");
+                    noneFor.Restart();
+                }
+                // The bots only see items near them, and earlier builds picked the nearby ones: walk on, round a
+                // widening spiral, until some come into view.
+                if (gatherPump != null && noneFor.Elapsed.TotalSeconds > 3)
+                {
+                    exploreStep++;
+                    float angle = exploreStep * 2.4f, reach = MathF.Min(15f + 8f * exploreStep, 90f);
+                    float ex = X + MathF.Cos(angle) * reach, ez = Z + MathF.Sin(angle) * reach;
+                    Console.WriteLine($"  {name}: looking further for {string.Join(", ", missing)}, step {exploreStep} to ({ex:F0}, {ez:F0})");
+                    WalkTo(ex, ez, 2f, gatherPump);
+                    noneFor.Restart();
                 }
                 return;
             }
             noneLogged = false;
+            exploreStep = 0;
         }
         float itemLeft = StepRouted(item.X, item.Z, dt);
         if (GatherStalled(itemLeft, 1.2f)) WalkTo(item.X, item.Z, 1.0f, gatherPump!);
@@ -764,6 +777,8 @@ sealed class Bot
     // walk to the shared walker (sidesteps, then a logged reposition) so a wedged bot cannot fail the check.
     // Standing at the target (digging, picking up) is not a stall.
     bool noneLogged;
+    int exploreStep;
+    readonly Stopwatch noneFor = Stopwatch.StartNew();
     readonly Stopwatch gatherStill = Stopwatch.StartNew();
     float gatherMarkX, gatherMarkZ;
     Action<int>? gatherPump;
