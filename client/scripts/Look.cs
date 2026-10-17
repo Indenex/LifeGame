@@ -661,6 +661,8 @@ public static class Look
             uniform float stylised = 0.0;
             // 1 when the ground is painted (PaintedTerrain, env-27): the blades take its stepped light.
             uniform float painted_light = 0.0;
+            // env-31 prototypes (GroundLooks): 1 Breath of the Wild, 2 Ghibli.
+            uniform float look = 0.0;
             global uniform vec3 player_position;
 
             varying vec3 tint;
@@ -695,7 +697,9 @@ public static class Look
                 gust = smoothstep(0.2, 1.0, wave);
                 float flutter = sin(TIME * 3.1 + world.x * 1.7 + world.z * 2.3) * 0.03;
                 float wind = (0.45 + wind_strength * 1.8) * (0.7 + 0.6 * wind_gust);
-                vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16) * wind + vec3(flutter, 0.0, -flutter) * wind;
+                // The Breath of the Wild look: longer blades, bigger waves rolling through.
+                float wave_by = look > 0.5 && look < 1.5 ? 1.8 : 1.0;
+                vec3 bend = vec3(wind_dir.x, 0.0, wind_dir.y) * (0.06 + gust * 0.16 * wave_by) * wind + vec3(flutter, 0.0, -flutter) * wind;
                 vec3 local = inverse(mat3(MODEL_MATRIX)) * bend;
                 VERTEX.xz += local.xz * tip * tip;
                 VERTEX.y -= gust * 0.06 * tip * tip;
@@ -719,6 +723,32 @@ public static class Look
                     color = mix(root_shade, olive, smoothstep(0.05, 0.4, tip));
                     color = mix(color, lit_tip, smoothstep(0.6, 0.95, tip));
                 }
+                if (look > 0.5 && look < 1.5) {
+                    // Breath of the Wild: broad soft fields from sun-warmed yellow-green to
+                    // cool blue-green across tens of metres, dark at the roots, bright
+                    // tips, and a pale sheen where a wave bends the blades over.
+                    float big = texture(clouds, world_pos.xz * 0.007).r;
+                    float mid = texture(clouds, world_pos.xz * 0.031 + vec2(0.37, 0.61)).r;
+                    vec3 warm_field = vec3(0.42, 0.56, 0.12);
+                    vec3 cool_field = vec3(0.12, 0.3, 0.19);
+                    vec3 field = mix(cool_field, warm_field, smoothstep(0.3, 0.72, big + (mid - 0.5) * 0.35));
+                    field = mix(field, tint, 0.3);
+                    color = mix(field * 0.45, field, smoothstep(0.0, 0.55, tip));
+                    color = mix(color, field * vec3(1.3, 1.25, 0.9) + vec3(0.03, 0.03, 0.0), smoothstep(0.65, 1.0, tip));
+                    color += vec3(0.1, 0.11, 0.07) * gust * tip * tip;
+                } else if (look > 1.5) {
+                    // Ghibli: rich painted greens in gentle blooms, warm light-green
+                    // patches and deeper pools, soft from root to tip.
+                    float big = texture(clouds, world_pos.xz * 0.018).r;
+                    float bloom = texture(clouds, world_pos.xz * 0.05 + vec2(0.71, 0.13)).r;
+                    vec3 deep = vec3(0.06, 0.24, 0.05);
+                    vec3 bright = vec3(0.24, 0.5, 0.07);
+                    vec3 field = mix(deep, bright, smoothstep(0.32, 0.68, big));
+                    field = mix(field, vec3(0.42, 0.52, 0.1), 0.35 * smoothstep(0.6, 0.85, bloom));
+                    field = mix(field, tint, 0.25);
+                    color = mix(field * 0.7, field * vec3(1.18, 1.15, 0.95), smoothstep(0.1, 0.95, tip));
+                    color += vec3(0.03, 0.03, 0.01) * gust * tip;
+                } else
                 color += vec3(0.05, 0.05, 0.02) * gust * tip;
                 color *= mix(1.0, 0.88, wetness);
                 // Grass fades to straw in the cold and wears snow on its tips.

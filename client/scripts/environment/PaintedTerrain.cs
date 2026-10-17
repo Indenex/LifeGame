@@ -18,25 +18,30 @@ namespace LifeGame;
 // Both keep the grass blades' shape and number (D-256); the grass only takes the stepped light.
 public static class PaintedTerrain
 {
-    public enum Style { Old, Painted, Tiles }
+    public enum Style { Old, Painted, Tiles, Botw, Ghibli }
 
     public static readonly Style Chosen = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs())
         .FirstOrDefault(a => a.StartsWith("--ground="))?["--ground=".Length..] switch
     {
         "painted" => Style.Painted,
         "tiles" => Style.Tiles,
+        "botw" => Style.Botw,
+        "ghibli" => Style.Ghibli,
         _ => Style.Old,
     };
 
     // The terrain's material for the chosen style.
-    public static ShaderMaterial Ground => ground ??= Chosen == Style.Old ? Look.Ground : Make(Chosen == Style.Tiles);
+    public static ShaderMaterial Ground => ground ??= Chosen is Style.Old or Style.Botw ? Look.Ground : Make(Chosen == Style.Tiles);
     static ShaderMaterial? ground;
 
     // Switches the grass tufts onto the same stepped light, for the painted styles.
     public static void Prewarm()
     {
         _ = Ground;
-        if (Chosen != Style.Old) Look.GrassTufts.SetShaderParameter("painted_light", 1f);
+        if (Chosen is Style.Painted or Style.Tiles or Style.Ghibli) Look.GrassTufts.SetShaderParameter("painted_light", 1f);
+        // env-31 prototypes: the grass carries the look.
+        if (Chosen == Style.Botw) Look.GrassTufts.SetShaderParameter("look", 1f);
+        if (Chosen == Style.Ghibli) Look.GrassTufts.SetShaderParameter("look", 2f);
     }
 
     static ShaderMaterial Make(bool tiles)
