@@ -12,11 +12,12 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 |---|---|---|---|
 | W A S D / arrows | Walk | Crafting | same |
 | Hold right mouse + drag | Turn the view, eased (D-050); drag up or down to tilt it a little (up for more sky, down to look from higher; stays above the ground). The only way to turn since ui-17: no Q/E turn keys | UX/UI | ui-17, integration-4 |
+| Right click a player | Opens the player menu (ui-35, Justin): Trade, Whisper, Invite to town, Inspect, Invite to group (coming soon). A right click that moves under 6 px within 250 ms is a click; more is a drag | UX/UI | ui-35 |
 | Hold Shift | Run (uses stamina). Bound now; out of the F1 list until the stamina lane makes it work | whichever lane builds stamina; reads the `run` action | new, D-088 |
 | Hold Ctrl | Sneak (slow walk; sheep stay calm). Was Shift until D-088 | Animals (small hook in Main.cs) | D-026, moved to Ctrl by D-091 |
 | Space | Jump (Bug fixes builds it, bugfix-25; reads the `jump` action). Out of F1 until that lands | Bug fixes | ui-17 |
 | F | Dig | Crafting | same |
-| E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, ask a player to trade or say yes when one asks (Esc says no; ui-9) | all | Was G (Use) and Space (Pick up) until ui-17 |
+| E | **Use** what you're facing, or **pick up** what lies at your feet when there is nothing to use (ui-17, Justin). Uses: pick berries, feed a fire, drink at water or from your pot, add materials to a blueprint, hang, open or shut a door, open a basket, read a note, tend a claim marker, say yes when a player asks to trade (Esc says no; ui-9). Nothing on players themselves: asking to trade is the right-click player menu (ui-35) | all | Was G (Use) and Space (Pick up) until ui-17 |
 | Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
@@ -26,7 +27,7 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
 | I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
-| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, or set a made thing down (tools work by themselves). Rebindable | UX/UI | new, ui-19 |
+| 1 to 9, 0 | Take what sits on hotbar slot 1 to 10 in hand (gold ring); the same key again puts it away, an empty slot's key puts away what you hold (Justin: every slot equips). Click then uses it: eat, drink, put on, or set a made thing down. With a tool or weapon the click is the strike as before, and E chops, digs, shears or butchers with the tool in hand (crafting-29). Rebindable | UX/UI | ui-19, ui-36 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
