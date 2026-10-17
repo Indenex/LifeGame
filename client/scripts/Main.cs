@@ -42,6 +42,7 @@ public partial class Main : Node3D
     readonly Dictionary<uint, Avatar> others = new();
     readonly GroundItems items = new();
     readonly Woodcutting woodcutting = new();
+    TreeFall treeFall = null!;
     readonly Dictionary<uint, string> names = new();
     BuildingSystem building = null!;
 
@@ -98,6 +99,7 @@ public partial class Main : Node3D
         hud.Hotbar.PlaceRequested += placing.StartItem;
         AddChild(placing);
         AddChild(woodcutting);
+        AddChild(treeFall = new TreeFall(terrain));
         crafting.Notice += hud.Note;
         building = new BuildingSystem(terrain, hud, me, cameraRig, view, () => conn);
         atmosphere.Sheltered = p => building.ShelterAt(p) != null;
@@ -403,6 +405,7 @@ public partial class Main : Node3D
         AvatarWork.Attach(conn, me, id => others.GetValueOrDefault(id));
         fires.Attach(conn);
         woodcutting.Attach(conn, terrain, crafting);
+        treeFall.Attach(conn);
         clay.Attach(conn);
         building.Bind(conn);
         survival.Attach(conn);

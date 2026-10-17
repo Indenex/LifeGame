@@ -1,0 +1,18 @@
+# env-22: Felled trees fall, leave a stump, and regrow in stages
+Lane: Environment
+Owner: Environment thread (session_012hVejTxLoxBpZyX3GQmNL9)
+Status: in_progress
+Branch: claude/environment-tree-fall
+PR: (opening)
+
+## Goal
+Part of Justin's "interact with the world more" push (PM). A felled tree no longer vanishes: it tips over away from the chopper (so "Stand clear when it falls" reads), falls with weight over 1.6 s, bounces once, lies as a log 4 s, then sinks away; a stump stays. Over Trees.RegrowSeconds (2 h) it regrows in stages: stump, sapling beside it, young tree, nearly full; the server's row delete brings the full tree. Pines, broadleaf and birches. Client only, from ChoppedTree (Felled, LastChop); no server change.
+
+## Progress log
+- 2026-10-17: `environment/TreeFall.cs`: TreeFall node (Main hook: create + Attach(conn)); `Terrain.StandingTree(x, z)` builds one cell's tree through the normal chunk code (Snapshot.Keep / Only), so every species and variant matches; `Terrain.NoEase` makes the chunk drop felled cells at once instead of its old shrink-topple. Events `TreeFall.Falling` and `TreeFall.Landed` (1.6 s after Felled) for Audio's crash and Atmosphere's #486 dust. `--debug-fell=x,z[,s]` fells the nearest tree with no server, for renders. `--view-hash` at (-4,46) identical to main (F40A5E9D7558D092). Builds.
+
+## Open questions / blockers
+- (none)
+
+## Next step
+Check the fall frames (scratchpad fall*.png), open the PR, send the Render clip request (--debug-fell) and the PR number to the PM, Audio and Atmosphere.
