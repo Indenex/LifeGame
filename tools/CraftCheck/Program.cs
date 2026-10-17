@@ -452,6 +452,7 @@ if (runStations)
 // with the spade in the bag; it would be refused with the stick alone.
 {
     Gather(Item.Stone, 1);
+    Gather(Item.Fiber, 3);
     while (CountOf(Item.Cordage) < 1) Craft("cord.twist", 0, null);
     if (CountOf(Item.Log) < 1)
     {
@@ -460,7 +461,6 @@ if (runStations)
         WalkTo(tr.X, tr.Z);
         Craft("chop.log", 0, Item.Log);
     }
-    Gather(Item.Fiber, 2);
     Craft("carve.spade", 0, Item.Spade);
     var (sx, sz) = (World.CellOf(x) + 3, World.CellOf(z) + 3);
     WalkTo(sx * World.CellSize, sz * World.CellSize);
