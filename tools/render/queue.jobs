@@ -23,6 +23,7 @@ ui-23-clicks env RENDER_SIZE=1280x720 tools/render/scene.sh ui-23-clicks 53a44de
 ui-22 env RENDER_SIZE=1280x720 tools/render/render.sh ui-22 e1087eaf "--offline --time-of-day=0.45 --screenshot-look --chibi --render-slowstart=0.05,45 --screenshot-delay=3" "--offline --time-of-day=0.45 --screenshot-look --chibi --render-slowstart=0.05,45 --screenshot-delay=5"
 ui-22-clicks env RENDER_SIZE=1280x720 tools/render/scene.sh ui-22-clicks e1087eaf tools/render/scenes/ui-22-clicks.txt
 ui-23b env RENDER_SIZE=1280x720 tools/render/render.sh ui-23b 85494a3d "--offline --time-of-day=0.45 --screenshot-mark --render-slowstart=0.05,45 --screenshot-delay=4"
+ui-23b-clicks env RENDER_SIZE=1280x720 tools/render/scene.sh ui-23b-clicks 85494a3d tools/render/scenes/ui-23b-clicks.txt
 pinetest5 env TICKET=pinetest5 "VIEWS=pinetest --time-of-day=0.55,pinetest --time-of-day=0.32" tools/render/scenes/model-1-style.sh 0940e3c9
 pinetest5v2 env TICKET=pinetest5v2 "VIEWS=pinetest --time-of-day=0.55" tools/render/scenes/model-1-style.sh 7355afe8
 ceramics-15 tools/render/render.sh ceramics-15 1cb35e3 "--time-of-day=0.5 --rain=0 --cloud=0.2 --screenshot-delay=90 --ceramics-demo=marks-sheet" "--time-of-day=0.5 --rain=0 --cloud=0.2 --screenshot-delay=90 --ceramics-demo=marks" "--time-of-day=0.5 --rain=0 --cloud=0.2 --screenshot-delay=90 --ceramics-demo=marks --render-cam=2,1.0,0,0.5" "--time-of-day=0.5 --rain=0 --cloud=0.2 --screenshot-delay=90 --ceramics-demo=marks --render-cam=2,1.0,35,0.5"

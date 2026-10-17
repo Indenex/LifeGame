@@ -1,0 +1,13 @@
+# ui-23b mark picker (85494a3d): Runes tab, a glyph, the blue preset. Positions from the 1280x720 still.
+client-as-puppet
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --screenshot-mark
+wait 40
+snap
+click 445 133
+wait 4
+snap
+click 295 186
+wait 3
+click 948 375
+wait 4
+snap
