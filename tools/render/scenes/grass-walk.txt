@@ -4,8 +4,6 @@ client-as-puppet
 client-movie 12
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.4
 frames 150
-key Return
-frames +12
 mark walk-start
 keydown w
 frames +72

@@ -3,8 +3,6 @@
 client-as-puppet
 client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1
 wait 35
-key Return
-wait 3
 give 1 120 50
 give 2 20 50
 give 15 40 50

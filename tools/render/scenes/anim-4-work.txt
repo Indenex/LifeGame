@@ -4,8 +4,6 @@ client-as-puppet
 client-movie 24
 client --time-of-day=0.45 --rain=0 --cloud=0.1 --wind=0.2 --render-cam=2.5,0.5,35,0.1
 frames 330
-key Return
-frames +12
 give 160 6 50
 give 3 200 50
 give 2 60 50
