@@ -21,6 +21,7 @@ Render: `renders/model-19-giant-log.png`.
   - Moss sits on top. The bark is weathered grey-brown, with moss bands and cushions along the trunk.
   - FallenGiantLogVariants is now 6: even variants are straight, odd ones broken, and each has its own plate roll, size, lobes and roots (D-166).
   - Vertex colours can't exceed the bark tint, so the giant now carries its own colours: it must be drawn with the white `PropMeshes.GiantTint`, not Look.Bark.
+- 2026-10-17 12:00: PM's final round: each plate is now a wide, flat disc on edge (a flat-faced loft 0.28 deep along the trunk, about 2.5 trunk widths across), with the trunk out of its middle. It keeps the ragged lopsided rim, and a shallow earth mound sits at its foot.
 
 ## Open questions / blockers
 - (none) Environment swaps the mesh in its builder and may want to preload it in ChunkWorker as FallenLog is.
