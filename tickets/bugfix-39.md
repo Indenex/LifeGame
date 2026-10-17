@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread (cse_01Eo43mKAGzgoCFVpXAGCUqW)
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (to open)
+PR: #491
 
 ## Goal
 On #44, CI failed "A can dig in their own claim" with "Too deep to dig by hand"

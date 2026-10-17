@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread (cse_01Eo43mKAGzgoCFVpXAGCUqW)
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (to open)
+PR: #491
 
 ## Goal
 With the Esc menu open, C, J, B and K still opened the crafting panel, journal,

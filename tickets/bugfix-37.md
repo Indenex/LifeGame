@@ -3,7 +3,7 @@ Lane: Bug fixes
 Owner: Bug fixes thread (cse_01Eo43mKAGzgoCFVpXAGCUqW)
 Status: in_review
 Branch: claude/bugfix-lyle6o
-PR: (to open)
+PR: #491
 
 ## Goal
 `ClaimPanel.Close` releases focus on the "Add someone by name" and "Name this place" boxes, but both are only put in the panel for the claim's owner. For a member or visitor the boxes are outside the tree, and Godot logs an error on every close. Done: Close only releases a box that is in the panel, so closing it as a non-owner is silent.
