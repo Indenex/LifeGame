@@ -145,8 +145,8 @@ namespace LifeGame.Shared
                 // and burns longer like the raised hearth. Wild like the campfire; modest stone cost.
             new StructureDef
             {
-                // 18: the next enum position after the hen coop (see tickets/building-17.md).
-                Kind = 18,
+                // 19: its StructureKind position, after HenCoop = 18 (a SpacetimeDB enum takes no explicit values).
+                Kind = 19,
                 Shape = new StructureShape
                 {
                     Name = "Stone-ringed hearth",
