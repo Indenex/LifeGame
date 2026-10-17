@@ -28,7 +28,8 @@ public partial class SurvivalClient : Node
     DbConnection? conn;
     Vitals? vitals;
     uint deathsSeen = uint.MaxValue;
-    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened;
+    bool warnedCold, warnedFood, warnedWater, wasNearHeat, wasBurdened, wasInWater;
+    long coldWaterNotedAt;
     float ripenTimer;
 
     // How fast you walk as a fraction of normal, slower when you carry too much. Main reads this.
@@ -88,7 +89,7 @@ public partial class SurvivalClient : Node
             Id = "survival.forage",
             Priority = 10,
             Find = at => conn != null && NearestRipeBush() is { } bush
-                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", new Vector2(bush.X - at.X, bush.Z - at.Z).Length(), () => conn.Reducers.Forage(bush.Id),
+                ? new UseOffer(Needs.IsHazelBush(bush.Id) ? "Gather hazelnuts" : "Pick berries", Mathf.Max(0f, new Vector2(bush.X - at.X, bush.Z - at.Z).Length() - Needs.BushRadius), () => conn.Reducers.Forage(bush.Id),
                     Target: new Vector3(bush.X, 0, bush.Z), Again: Use.HoldInterval)
                 : null,
         });
@@ -156,6 +157,14 @@ public partial class SurvivalClient : Node
         }
         deathsSeen = v.Deaths;
         if (v.NearHeat && !wasNearHeat) hud.Note("The fire's warmth seeps into you");
+        // Cold water bites fast, so say so as you step in, well before the "freezing" warning
+        // (at most once a minute, and only while the water is chilling you).
+        if (v.Wet && !wasInWater && v.WarmthRate < 0f && NowMicros - coldWaterNotedAt > 60_000_000)
+        {
+            hud.Note("The water is bitterly cold");
+            coldWaterNotedAt = NowMicros;
+        }
+        wasInWater = v.Wet;
         wasNearHeat = v.NearHeat;
     }
 
@@ -336,7 +345,7 @@ public partial class SurvivalClient : Node
         if (conn == null) return null;
         var p = player.Position;
         ForageBush? best = null;
-        float bestDistance = Needs.BushReach - 0.2f;
+        float bestDistance = Needs.BushPickDistance - 0.2f;
         foreach (var b in conn.Db.ForageBush.Iter())
         {
             float d = new Vector2(b.X - p.X, b.Z - p.Z).Length();
