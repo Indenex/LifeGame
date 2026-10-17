@@ -64,6 +64,9 @@ namespace LifeGame.Shared
         // the same food eaten raw or roasted, and it quenches some thirst too.
         public const float BrothFood = 0.45f, BrothWater = 0.3f;
         public const float StewFood = 0.65f, StewWater = 0.3f;
+        // A shared pot (survival-37, a lane default): a finished broth or stew pot on a fire
+        // can be ladled by its owner's group, this many bowls to a pot, each a share of the dish.
+        public const int PotBowls = 3;
         // A pot of water (Justin, D-030): a pinch pot quenches half your thirst, a coil pot all of it.
         // A hide waterskin (Justin picked it, survival-20): carries less than a pot, 40% of a drink.
         public const float WaterskinWater = 0.4f;

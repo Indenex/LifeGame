@@ -32,6 +32,9 @@ public static partial class Module
         public uint PotWear;
         [Default(0u)]
         public uint PotMaker;
+        // Bowls ladled out so far (SharedPot.cs); a pot served from is scraped clean when taken off.
+        [Default((byte)0)]
+        public byte Served;
     }
 
     // The carried pot a craft is about to take (the same one Take picks: best quality first), so its
@@ -110,7 +113,12 @@ public static partial class Module
         if (left > 0)
             throw new Exception($"Still simmering, about {MathF.Ceiling(left):0} s left");
         ctx.Db.SimmerPot.Id.Delete(pot.Id);
-        if (ClayRules.KeepsPot((Item)pot.Dish))
+        if (pot.Served > 0)
+        {
+            // Bowls have been ladled out of it: only the empty pot comes back (survival-37).
+            AddToInventory(ctx, Me(ctx), Item.CoilPot, 1, pot.Quality, pot.PotWear, pot.PotMaker);
+        }
+        else if (ClayRules.KeepsPot((Item)pot.Dish))
         {
             // Tallow is skimmed off the top; the pot comes back empty (ceramics-9).
             AddToInventory(ctx, Me(ctx), (Item)pot.Dish, 1, Items.RawQuality);
