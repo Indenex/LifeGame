@@ -29,9 +29,11 @@ public sealed class MockCharacterLink : ICharacterLink
     {
         new(1, "Mara Thistledown", "Human", new HumanFigure.Appearance(2, 1, 1, false), DateTime.Now.AddDays(-2)),
         new(2, "Bram", "Human", new HumanFigure.Appearance(0, 3, 0, true), null),
+        // The longest name allowed (24), so previews show it fitting.
+        new(3, "Wilhelmina Bramblethorne", "Human", new HumanFigure.Appearance(1, 2, 2, false), DateTime.Now.AddHours(-5)),
     };
     public IReadOnlyList<CharacterCard> Characters => list;
-    public int Slots => 3;
+    public int Slots => 4;
     public event Action? Changed;
     public void Play(ulong id) { }
     public void Delete(ulong id, string typedName)
@@ -249,7 +251,11 @@ public partial class CharacterMenu : CanvasLayer
         figures.Add(figure);
         column.AddChild(frame);
 
-        var name = Text(c.Name, 21, 800);
+        // Long names (up to the 24-letter limit) shrink to fit the polaroid, then wrap to a
+        // second line, rather than clip.
+        int nameSize = 21;
+        while (nameSize > 16 && Rounded(800).GetStringSize(c.Name, HorizontalAlignment.Left, -1, nameSize).X > card.Inner) nameSize--;
+        var name = Text(c.Name, nameSize, 800);
         name.HorizontalAlignment = HorizontalAlignment.Center;
         name.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         name.CustomMinimumSize = new Vector2(card.Inner, 0);
