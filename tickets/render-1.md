@@ -158,6 +158,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 - Reviewed and sent to the PM: house-show-36ac39d-1..6 (chest yaw flag had no effect: three identical chest shots; sundial noon/15:00; devices with labels), animals25b-534a588-1/2 (no rabbits or hens in frame; shot 2 has large dark triangle shadows across the view). Copies in /mnt/project-files/screenshots/.
 - Priority order (STATUS 14:40): env-35 dragonflies pond, fallen giant glade, rabbits and hens, straw bed in the world, emotes front clip, then the rest of B's and C's owed lists.
 
+- 2026-10-17 15:05: requests from the PM: env-35 (Environment, sha 7d68a4b0; its client code is identical to 47bafb11, so shot on 47bafb11) pond dragonflies + dusk bird flock; ui-69 (UX, PR #829, claude/ux-ui-coal5x 5854923c) paper windows warm/cold, right after env-35. UX's hotbar before/after (Justin's request) jumps the queue when it arrives.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
