@@ -42,6 +42,7 @@ public static partial class Module
         EnsureWorldClock(ctx);
         EnsureServerInfo(ctx);
         EnsureAnimals(ctx);
+        EnsureDeviceStatus(ctx);
         BackfillCharacter(ctx, ctx.Sender);
         // A login with no character yet gets its first, named for now; it picks a real name
         // and look at the creator. A login with characters waits at the menu, unless its
