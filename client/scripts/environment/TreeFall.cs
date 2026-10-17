@@ -24,7 +24,7 @@ public partial class Terrain
             // Painted trees come as a near and a far batch; a falling tree is always near,
             // so only the near one is drawn, with no distance limit.
             if (painted && range.Item1 > 0f) continue;
-            if (painted || material == Look.TreeBark || material == Look.TreeFoliage)
+            if (painted || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
                 AddMulti(root, mesh, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
         }
         if (root.GetChildCount() == 0) { root.Free(); return null; }
