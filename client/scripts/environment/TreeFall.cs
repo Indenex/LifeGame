@@ -31,7 +31,8 @@ public partial class Terrain
             // for its sawn-off version.
             if (felled && painted && !PaintedTrees.IsCrown(mesh)) drawn = PaintedTrees.Felled(material == PaintedTrees.PineMaterial, TreeVariant(x, z, material == PaintedTrees.PineMaterial ? 31u : 30u));
             else if (felled && material == Painted.Bark) drawn = PropMeshes.CutTrunk;
-            if (painted || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
+            else if (felled && NatureKit.Felled(mesh) is { } sawn) drawn = sawn;
+            if (painted || NatureKit.IsTree(mesh) || material == Painted.Bark || material == Painted.Leaves || material == Look.TreeBark || material == Look.TreeFoliage)
                 AddMulti(root, drawn, items.Select(i => (i.Item1, i.Item2, new Color(0, 0, 0, i.Item3.A))).ToList(), material, shadow);
         }
         if (root.GetChildCount() == 0) { root.Free(); return null; }

@@ -1,9 +1,9 @@
 # bugfix-57: Hidden values, family 4 (StructureProgress stage internals)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-rnwmoa-9
-PR: (opening)
+PR: #846 (merged)
 
 ## Goal
 Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer receive a stage-in-progress's summed material quality, item count or helper list. `StructureProgress.Quality` stays public: the client draws store stacks and trough litres from it (BuildingSystem.Use.cs, CeramicsView.Troughs.cs, ClayCheck).
@@ -18,4 +18,4 @@ Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer receive a s
 - (none)
 
 ## Next step
-Push to a branch, open the PR (list Building.cs for House building), wait for CI.
+Done: merged in #846. Nothing left on this ticket.

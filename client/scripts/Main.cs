@@ -195,6 +195,8 @@ public partial class Main : Node3D
         herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || placing.Active || Panels.Open() || survival.Mourning || hud.Hotbar.ClickUsesHeld;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         herd.ClaimGoodsOpenAt = social.ClaimGoodsOpenAt;
+        social.StrikeBlocked = () => herd.Blocked();
+        social.Facing = () => herd.Facing();
         herd.ClaimStandingAt = social.ClaimStandingAt;
         AddChild(useKey);
         AddChild(new Hints());
@@ -221,6 +223,8 @@ public partial class Main : Node3D
             AnswerTrade = yes => trade.Link.Answer(yes),
             InviteToTown = id => conn?.Reducers.InviteToTown(id),
             InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
+            AddFriend = id => conn?.Reducers.AddFriend(id),
+            ToggleFriends = social.ToggleFriends,
             JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
             SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < PlayerMenu.Reach),
@@ -229,6 +233,8 @@ public partial class Main : Node3D
         // ui-38: your group's members, and the invitation waiting for you.
         groupView.AvatarOf = id => others.GetValueOrDefault(id);
         groupView.MyId = () => myId;
+        groupView.ShowWay = social.ShowWay;
+        groupView.Showing = () => social.ShowingWay;
         AddChild(groupView);
         // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
         AddChild(new EmoteWheel
@@ -721,7 +727,8 @@ public partial class Main : Node3D
         var stacks = conn.Db.MyInventory.Iter()
             .OrderBy(i => i.Item).ThenByDescending(i => i.Quality)
             .GroupBy(i => (i.Item, Grade: Items.IsKnown(i.Item) && Items.Def((Item)i.Item).HasQuality ? Processes.Grade(i.Quality) : "", Worn: ItemLook.Condition(i.Item, i.Quality, i.Wear)))
-            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n, g.Key.Worn), n); })
+            .Select(g => { uint n = (uint)g.Sum(i => i.Count); return new InventoryEntry((Item)g.Key.Item, ItemLook.Label((Item)g.Key.Item, g.First().Quality, n, g.Key.Worn), n,
+                Durability.Wears((Item)g.Key.Item) ? g.Max(i => Durability.Left(i.Quality, i.Wear)) : 1f); })
             .ToList();
         hud.SetItems(stacks);
     }

@@ -137,7 +137,7 @@ public partial class Atmosphere
         foreach (var h in homes)
             if (h.Chimney && k < SmokeSlots) SetSmoke(smokes[k++], h.Roof, h.Strength, air);
         foreach (var f in openFires)
-            if (k < SmokeSlots) SetSmoke(smokes[k++], f.At + new Vector3(0f, 0.9f, 0f), f.Strength * 0.6f, air);
+            if (k < SmokeSlots) SetSmoke(smokes[k++], f.At + new Vector3(0f, 0.9f, 0f), f.Strength * 0.6f, air, wisp: true);
         for (; k < SmokeSlots; k++)
         {
             smokes[k].Emitting = false;
@@ -145,15 +145,20 @@ public partial class Atmosphere
         }
     }
 
-    void SetSmoke(CpuParticles3D smoke, Vector3 at, float strength, Color air)
+    // A campfire's smoke is a light wisp that drifts and fades, not a column (Justin, bugfix-72):
+    // puffs at 0.4 of a chimney's size and a third as dense.
+    const float WispSize = 0.4f, WispDensity = 0.35f;
+
+    void SetSmoke(CpuParticles3D smoke, Vector3 at, float strength, Color air, bool wisp = false)
     {
         smoke.Visible = true;
+        smoke.ScaleAmountMin = smoke.ScaleAmountMax = wisp ? WispSize : 1f;
         smoke.Emitting = strength > 0.05f;
         smoke.GlobalPosition = at;
         // Drift with the wind, harder in a gale.
         var drift = new Vector3(WindDirection.X, 0f, WindDirection.Y) * (0.2f + wind * 1.2f);
         smoke.Gravity = new Vector3(drift.X, 0.25f, drift.Z);
-        smoke.Color = air.Lerp(new Color(0.75f, 0.75f, 0.78f), 0.5f) with { A = Mathf.Clamp(strength, 0.2f, 1f) };
+        smoke.Color = air.Lerp(new Color(0.75f, 0.75f, 0.78f), 0.5f) with { A = Mathf.Clamp(strength, 0.2f, 1f) * (wisp ? WispDensity : 1f) };
     }
 
     // Which fires burn inside a finished home with a doorway, and which burn in the open.

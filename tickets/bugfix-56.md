@@ -1,9 +1,9 @@
 # bugfix-56: Hidden values, family 3 (clay pieces and kiln loads)
 Lane: Bug fixes
 Owner: Bug fixes thread
-Status: in_progress
+Status: done
 Branch: claude/bugfix-rnwmoa-9
-PR: (opening)
+PR: #846 (merged)
 
 ## Goal
 Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer read the quality of clay drying or firing in the open. The maker's mark stays public.
@@ -22,4 +22,4 @@ Part of audit item 7 (tickets/bugfix-53.md). Other clients no longer read the qu
 - (none)
 
 ## Next step
-Push to a branch, open the PR, wait for CI (incl. ClayCheck and the Upgrade check), tell Ceramics through the PM.
+Done: merged in #846. Nothing left on this ticket.

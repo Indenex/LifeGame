@@ -6,7 +6,8 @@ using SpacetimeDB.Types;
 
 namespace LifeGame;
 
-// Your group on screen (ui-38, the shell): a quiet list of members down the left edge, no box
+// Your group on screen (ui-38, the shell): a quiet list of members down the left edge, each with
+// how far off they are and which way (ui-78), no box
 // (D-045), with "Leave group" under it; "Mara asks you to join her group    E joins" (the Use
 // key as bound) above the Use prompt while an invitation waits, and a soft "wants you in their group" over the
 // inviter's head, like the trade cue. The server decides everything (Groups.cs); this reads
@@ -15,6 +16,9 @@ public partial class GroupView : CanvasLayer
 {
     public Func<uint, Node3D?> AvatarOf = _ => null;
     public Func<uint> MyId = () => 0;
+    // ui-84: click a member who is here to show the way to them (FriendWay); again to stop.
+    public Action<uint, string, Func<Vector2?>> ShowWay = (_, _, _) => { };
+    public Func<uint> Showing = () => 0;
 
     DbConnection? conn;
     VBoxContainer list = null!;
@@ -22,6 +26,8 @@ public partial class GroupView : CanvasLayer
     Label3D? cue;
     uint cueFor;
     string shown = "";
+    bool previewed;
+    static readonly bool Preview = OS.GetCmdlineUserArgs().Contains("--screenshot-group");
 
     public void Attach(DbConnection connection)
     {
@@ -68,6 +74,13 @@ public partial class GroupView : CanvasLayer
 
     public override void _Process(double delta)
     {
+        // --screenshot-group: a pretend group of four for Render (ui-78), kept once connected.
+        if (Preview)
+        {
+            if (!previewed) Fill(new[] { (0u, "You", true, (string?)null), (1u, "Mara", true, "40 m north"), (2u, "Tobin", true, "close by"), (3u, "Wren", false, null) });
+            previewed = true;
+            return;
+        }
         if (conn == null) return;
         var invite = Incoming;
         asked.Text = invite is { } i ? $"{i.FromName} asks you to join their group    {Controls.KeyFor("use") ?? "Use"} joins" : "";
@@ -75,9 +88,16 @@ public partial class GroupView : CanvasLayer
 
         // Rebuild the list only when it changes.
         var members = conn.Db.MyGroup.Iter().OrderBy(m => m.JoinedAt.MicrosecondsSinceUnixEpoch).ToList();
-        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}"));
+        string key = string.Join("|", members.Select(m => $"{m.PlayerId}:{Online(m.PlayerId)}:{HowFar(m.PlayerId)}")) + "/" + Showing();
         if (key == shown) return;
         shown = key;
+        Fill(members.Select(m => (m.PlayerId, m.PlayerId == MyId() ? "You" : m.Name, Online(m.PlayerId), m.PlayerId == MyId() ? null : HowFar(m.PlayerId))).ToList());
+    }
+
+    // The list itself: a title, each member (name, then how far and which way, or "(away)"), and
+    // "Leave group".
+    void Fill(System.Collections.Generic.IReadOnlyList<(uint Id, string Name, bool Here, string? Far)> members)
+    {
         foreach (var child in list.GetChildren()) { list.RemoveChild(child); child.QueueFree(); }
         if (members.Count == 0) return;
 
@@ -86,9 +106,24 @@ public partial class GroupView : CanvasLayer
         list.AddChild(title);
         foreach (var m in members)
         {
-            bool here = Online(m.PlayerId);
-            var name = Hud.Text((m.PlayerId == MyId() ? "You" : m.Name) + (here ? "" : "  (away)"), 15);
-            Hud.Soft(name, 15, here ? 0.9f : 0.45f);
+            string text = m.Name + (!m.Here ? "  (away)" : m.Far is { } f ? $"   {f}" : "");
+            if (m.Here && m.Far != null)
+            {
+                // Someone you can walk to: a click shows the way (ui-84).
+                bool showing = Showing() == m.Id;
+                uint id = m.Id;
+                string who = m.Name;
+                var row = ControlsPage.TextButton(text, () => { ShowWay(id, who, () => Where(id)); shown = ""; });
+                row.AddThemeFontSizeOverride("font_size", 15);
+                row.Alignment = HorizontalAlignment.Left;
+                row.MouseFilter = Control.MouseFilterEnum.Stop;
+                row.FocusMode = Control.FocusModeEnum.None;
+                row.TooltipText = showing ? "Stop showing the way" : $"Show the way to {who}";
+                list.AddChild(row);
+                continue;
+            }
+            var name = Hud.Text(text, 15);
+            Hud.Soft(name, 15, m.Here ? 0.9f : 0.45f);
             list.AddChild(name);
         }
         var leave = ControlsPage.TextButton("Leave group", () => conn?.Reducers.LeaveGroup());
@@ -98,7 +133,22 @@ public partial class GroupView : CanvasLayer
         list.AddChild(leave);
     }
 
+    // Where a member is, while they're online; the arrow lets go once this is null.
+    Vector2? Where(uint playerId) =>
+        Online(playerId) && conn?.Db.PlayerPos.PlayerId.Find(playerId) is { } p ? new Vector2(p.X, p.Z) : null;
+
     bool Online(uint playerId) => conn?.Db.Player.PlayerId.Find(playerId) is { Online: true };
+
+    // How far a member is and which way (ui-78; Justin picked distance and direction): "close by",
+    // "40 m north", "far off to the southwest". Steps of 10 m and eight world compass words (not
+    // the camera's), so the list doesn't flicker as people walk. Null when a position isn't known.
+    string? HowFar(uint playerId)
+    {
+        if (conn == null || playerId == MyId()) return null;
+        if (conn.Db.PlayerPos.PlayerId.Find(playerId) is not { } them || conn.Db.PlayerPos.PlayerId.Find(MyId()) is not { } me) return null;
+        // The same words as the friends list (shared/Friends.cs).
+        return Friends.HowFar(them.X - me.X, them.Z - me.Z);
+    }
 
     // "wants you in their group" over the inviter's head while you are asked; only you see it.
     void Cue(uint from)

@@ -56,7 +56,11 @@ public static partial class Module
 
     // Crafting calls this from Drop with the new WorldItem row, so dropped things can weather.
     static partial void OnPlayerDroppedItem(ReducerContext ctx, WorldItem item);
-    static partial void OnPlayerDroppedItem(ReducerContext ctx, WorldItem item) => TouchGroundItem(ctx, item);
+    static partial void OnPlayerDroppedItem(ReducerContext ctx, WorldItem item)
+    {
+        TouchGroundItem(ctx, item);
+        RecordDropper(ctx, item.Id, RequirePlayer(ctx).PlayerId);
+    }
 
     // Claims implements InClaimHook (true inside a standing claim).
     static bool InClaim(ReducerContext ctx, float x, float z)

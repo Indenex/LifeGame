@@ -106,7 +106,7 @@ public partial class BuildingSystem
     {
         float keepOut = Social.SpawnClearRadius + Social.ClaimRadius;
         if (x * x + z * z < keepOut * keepOut)
-            return "This clearing is where newcomers wake up. Claim land further out";
+            return "Too close to where newcomers wake up. Claim land a little further out";
         float minGap = Social.ClaimRadius * 2f;
         foreach (var (cx, cz, tooClose, _) in claimsNear)
             if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < minGap * minGap)
