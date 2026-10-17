@@ -14,21 +14,13 @@ Short gameplay clips (5-15 s, 12 fps movie, 960x540) requested by lanes or the P
 - Lessons: default scene timeout (1800 s) killed the first run; the project viewport is 1600x900 so scene.sh now overrides it; ffmpeg needed -nostdin in the mark loop; the puppet's `give` needs the 8-column inventory_item and `walkto bush` needs forage_bush subscribed (both fixed here). `--debug-position` pins the player every frame (no walking); to place the player use `sql UPDATE player_pos SET x=..` (the client snaps to the server if >3 m off). The camera sits at (sin a, cos a)*dist from the player with a = 45 + render-cam yaw; w walks (-x,-z), s (+x,+z). Ponds on main are <= 0.4 m deep (no swimming); the pond near (30,76) starts at z about 78 (x 26-42).
 - Check frames before sending (ffmpeg tile into a PNG and look).
 
-## Queue (priority order; PM re-orders)
-1. water before/after #517 (claude/atmosphere-31-water, latest head; before = main a6c49acb), then rain, no-reflection, stream take; autumn still (Atmosphere)
-2. hold-repeat PR #495 (0f4ecc5d): bush, dig, tree (first run was unusable: no bush, no axe)
-3. painted trees #544 (claude/model-10-painted-trees latest head): walk from spawn, day 0.55 and dusk 0.76, note pops at ~40 m
-4. tree fall #537 on main: chop a pine until it falls, lie and sink, stump
-5. chibi clip PR #466 (d9f8571c) + Animation anim-10 pose check (claude/model-6-chibi 163ac301)
-6. smoke signal #524 (claude/atmosphere-32-smoke-signal, c1fa9240): near, far, night
-7. dig with stick, wading (main), anim-9 idle clips (PR #508, warm and cold)
-8. crafting-29 equip clips (PR #582 branch crafting-equip fbb3fea8): nothing equipped / axe equipped / axe in bag only
-9. painted-6 items (PR #584, 4a90fc8b): swing stone axe and spade at noon, look for shimmering paint, hotbar icons
-10. anim-11 (PR #586 claude/anim-11): equip/stow draw clips
-11. painted-2 bushes walk-past clip (PR #561 10899ddd) if the PM wants it
-12. anim-12 sit/lie clip (PR #600 claude/anim-12 a030b0ce): Rest(1) sit, Rest(2) lie, StandUp, ~3 s apart (or H key); chibi (Bramble/Pebble) and adult, side and 3/4 views; look at ground clipping of the lying shoulder/arm and the nameplate
-13. anim-13 cutesy clips (PR #613 claude/anim-13 e2a67c28, chibi): idle fidgets ~30 s; sway by a lit fire ~20 s; two players 3 m apart (one waves); side-view walk (hop); a couple of jumps (squash/stretch)
-Stills requests from Modeling (painted-1 rocks, painted-2 bushes) were forwarded to Render B.
+## Queue (PM order 2026-10-17 07:35; the rest was dropped by the PM)
+1. water BEFORE on main 2d9e6e27 (AFTER done: renders/water-after-d02f740-water-after.mp4); both go to the PM and Atmosphere (session_01KvVF5vpkYEHTKNRpHC18WN)
+2. hold-repeat dig check (PR #495 0f4ecc5d): "one dig then Still working, no repeat" may be a real bug; reshoot cleanly, if it reproduces tell the PM and Crafting (session_01N9APthjRDfjknUvCweqzzN)
+3. anim-11 equip/hold in hand (main): scenes/anim-11-equip.txt; copy Animation (session_019roNRWQBPw4ozNLDhzseig)
+4. anim-12 sit/lie + anim-13 idle fidgets and hop in one clip (branch claude/anim-13 e2a67c28): scenes/anim-12-13-rest-idle.txt; copy Animation
+5. smoke signal #524 (c1fa9240): near, far; copy Atmosphere
+Dropped: painted trees, tree fall, painted items, chibi, anim-10, anim-9 idle, water rain/no-reflect/stream, crafting-29 equip, painted-2 walk-past. Scenes for some exist in tools/render/scenes if they come back.
 
 ## Progress log
 - 2026-10-17 03:45: took over from Render A; scenes already existed (tools/render/scenes), never rendered.
