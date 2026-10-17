@@ -43,6 +43,7 @@ var conn = DbConnection.Builder()
                 "SELECT * FROM claim",
                 "SELECT * FROM my_claim_stash",
                 "SELECT * FROM craft_work",
+                "SELECT * FROM my_skills",
             });
     })
     .OnConnectError(e => Fail($"connect: {e.Message}"))
@@ -130,6 +131,7 @@ if (runTools)
     Pump(() => conn.Db.Fire.Count > firesBefore, 5, "a fire to be lit");
     var fire = conn.Db.Fire.Iter().First(f => f.LitBy == myId);
     Console.WriteLine($"Fire lit at ({fire.X:F1}, {fire.Z:F1})");
+    if (fire.FuelCapSeconds < Fires.MaxSeconds) Fail($"a fresh fire's fuel cap is {fire.FuelCapSeconds} s, under the base {Fires.MaxSeconds}");
     OffRocks(fire);
 
     // A failed drill loses its inputs and lights nothing.
@@ -399,6 +401,7 @@ if (runStations)
         uint cordageBefore = CountOf(Item.Cordage);
         lastError = null;
         var oldAxe = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.StoneAxe);
+        int toolmakingBefore = conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points);
         conn.Reducers.RepairTool(oldAxe.Item, oldAxe.Quality, oldAxe.Wear);
         Pump(() => lastError != null || conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.StoneAxe && r.Wear != oldAxe.Wear), 5, "the axe to be mended");
         if (lastError != null) Fail($"mending the axe: {lastError}");
@@ -409,6 +412,8 @@ if (runStations)
         if (Durability.Origin(mendedAxe.Wear) != oldAxe.Quality) Fail($"the mended axe forgot its original quality ({Durability.Origin(mendedAxe.Wear)} vs {oldAxe.Quality})");
         if (CountOf(Item.Cordage) != cordageBefore - 1) Fail($"mending the axe took {cordageBefore - CountOf(Item.Cordage)} cordage, not 1");
         Console.WriteLine($"Mended the axe: quality {oldAxe.Quality} -> {mendedAxe.Quality}, 1 cordage");
+        Pump(() => conn.Db.MySkills.Iter().Where(r => r.Spec == "toolmaking").Sum(r => (int)r.Points) > toolmakingBefore, 5, "mending to train Toolmaking");
+        Console.WriteLine("Mending trained Toolmaking");
 
         uint cordageNow = CountOf(Item.Cordage);
         lastError = null;

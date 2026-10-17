@@ -7,7 +7,9 @@ namespace LifeGame;
 // heading, so a change here restyles them all.
 public static class Ui
 {
-    public static readonly Color Frame = new(0.10f, 0.11f, 0.09f, 0.82f);
+    // Nearly opaque, so world labels (nameplates, claim markers) don't read through a window
+    // over a dark forest (Render B on #494).
+    public static readonly Color Frame = new(0.10f, 0.11f, 0.09f, 0.94f);
     public const int Corner = 12, TitleSize = 20;
 
     // A centred window around the content; roomy gives the bigger margins of a full page (Options).

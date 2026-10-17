@@ -89,5 +89,6 @@ public static partial class Module
         var again = FindStack(ctx, ctx.Sender, (Item)item, quality, wear) ?? stack;
         RemoveFromStack(ctx, again, 1);
         AddToInventory(ctx, ctx.Sender, (Item)item, 1, Durability.RepairedQuality(quality, wear), Durability.Repaired(quality, wear));
+        PerformedProcess(ctx, player.PlayerId, Skills.Repair, pos.X, pos.Z);
     }
 }
