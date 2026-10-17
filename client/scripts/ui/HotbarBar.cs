@@ -72,6 +72,7 @@ public partial class HotbarBar : Control
         Attach(Link);
         // --screenshot-hotbar: berries, a hand axe and a stone axe, with the stone axe in hand, and
         // cordage you've run out of (its grey ghost, ui-70).
+        // It stays up once the game connects (the server's bar would replace it, ui-73).
         if (OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--screenshot-hotbar")) && Link is MockHotbarLink mock)
         {
             SetBag(new[] { new InventoryEntry(Item.Berries, "Berries", 6), new InventoryEntry(Item.HandAxe, "Hand axe", 1), new InventoryEntry(Item.StoneAxe, "Stone axe", 1) });
@@ -80,11 +81,16 @@ public partial class HotbarBar : Control
             mock.Set(2, Item.StoneAxe);
             mock.Set(3, Item.Cordage);
             Equip(2, Item.StoneAxe);
+            preview = true;
         }
     }
 
+    // True while --screenshot-hotbar's pretend bar is shown: the server's bar and bag are ignored.
+    bool preview;
+
     public void Attach(IHotbarLink link)
     {
+        if (preview) return;
         Link = link;
         Link.Changed += Refresh;
         filledOnce = false;
@@ -94,6 +100,7 @@ public partial class HotbarBar : Control
     // Everything you carry, from Main whenever the inventory changes.
     public void SetBag(IReadOnlyList<InventoryEntry> items)
     {
+        if (preview) return;
         var before = new Dictionary<Item, uint>(carried);
         carried.Clear();
         labels.Clear();
@@ -340,7 +347,7 @@ public partial class HotbarSlotView : PanelContainer
     Label count = null!, key = null!;
     Panel plate = null!;
     TextureRect shadow = null!;
-    readonly ActiveRing ring = new() { Radius = HotbarBar.Slot / 2 + 5 };
+    readonly ActiveRing ring = new() { Radius = HotbarBar.Slot / 2 + 6 };
     Item? item;
     float pop;
 
