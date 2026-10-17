@@ -49,6 +49,7 @@ public partial class Main : Node3D
     Identity? myIdentity;
     uint myId;
     readonly TradeWindow trade = new();
+    readonly AdminPanel admin = new();
     readonly EquipmentPanel equipment = new();
     readonly StationPanel station = new();
     readonly BuildMenu buildMenu = new();
@@ -101,9 +102,9 @@ public partial class Main : Node3D
         // Last child, so G reaches the Use key before any lane's old binding.
         useKey.Player = () => me.Position;
         useKey.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
-        useKey.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
+        useKey.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning;
         // The hotbar's number keys (ui-19) rest while something else has the keys.
-        hud.Hotbar.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
+        hud.Hotbar.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || Panels.Side() || survival.Mourning || social.Typing;
         hud.Hotbar.Note = hud.Note;
         // The bag in the I panel (ui-18): drags go to the hotbar, the worn slots or the ground.
         hud.Hotbar.ShowOverPanels = () => equipment.IsOpen;
@@ -126,6 +127,11 @@ public partial class Main : Node3D
         // Trading face to face (ui-9, D-069).
         trade.Note = hud.Note;
         AddChild(trade);
+        AddChild(admin);
+        admin.Note = hud.Note;
+        AdminCommands.Menu = admin;
+        AdminCommands.IsFlying = () => flying;
+        AdminCommands.SetFlying = SetFlying;
         // The panel at a crafting station (ui-13, D-098).
         station.Conn = () => conn;
         station.Crafting = crafting;
@@ -145,7 +151,7 @@ public partial class Main : Node3D
             || buildMenu.IsOpen
             || lookPicker.IsOpen;
         Panels.Side = () => crafting.PanelOpen;
-        herd.Blocked = () => crafting.CapturesInput || building.Placing || Panels.Open() || survival.Mourning;
+        herd.Blocked = () => crafting.CapturesInput || admin.IsOpen || building.Placing || Panels.Open() || survival.Mourning;
         herd.Facing = () => new Vector3(Mathf.Sin(me.Rotation.Y), 0, Mathf.Cos(me.Rotation.Y));
         AddChild(useKey);
         AddChild(new Hints());
@@ -156,7 +162,7 @@ public partial class Main : Node3D
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -373,6 +379,7 @@ public partial class Main : Node3D
         conn.OnUnhandledReducerError += (_, e) => ServerCheck.Failed(e.Message, hud.Note, "");
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
         trade.Attach(new ServerTradeLink(conn, () => myId));
+        admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
         hud.Hotbar.Attach(new ServerHotbarLink(conn, () => myId));
         equipment.Bag.Link = new ServerBagLink(conn);
@@ -490,7 +497,7 @@ public partial class Main : Node3D
             // Before spawning we wait for the area around us (see Subscribe).
             if (!spawned) return;
             // The server clamps impossible moves; snap back if we drifted too far.
-            if (new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
+            if (!flying && new Vector2(me.Position.X - p.X, me.Position.Z - p.Z).Length() > 3f)
                 me.Position = at;
             return;
         }
@@ -574,7 +581,7 @@ public partial class Main : Node3D
         float dt = (float)delta;
         conn?.FrameTick();
 
-        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput) Walk(dt);
+        if (spawned && !PauseMenu.IsOpen && !crafting.CapturesInput && !admin.IsOpen) Walk(dt);
         jumpView.Process(dt, atmosphere.GroundAt);
         social.Track(me.Position, myId);
         terrain.Focus(World.ChunkOf(me.Position.X), World.ChunkOf(me.Position.Z));
@@ -600,6 +607,7 @@ public partial class Main : Node3D
     void Walk(float dt)
     {
         var input = social.Typing ? Vector2.Zero : Input.GetVector(NWalkLeft, NWalkRight, NWalkBack, NWalkForward);
+        if (flying) { Fly(dt, input); return; }
         bool sneak = Input.IsActionPressed(NSneak);
         var wish = (cameraRig.Right * input.X + cameraRig.Forward * input.Y) * survival.MoveSpeed(sneak, input != Vector2.Zero, WalkSpeed, dt);
         // Ease in and out of walking rather than starting and stopping instantly.
