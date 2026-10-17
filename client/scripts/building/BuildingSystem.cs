@@ -290,7 +290,8 @@ public partial class BuildingSystem : Node
                 continue;
             }
             if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
-            const float wall = 1.7f, half = 0.32f, door = 0.42f;
+            float wall = Structures.HutWallRadiusFor((int)s.Kind);
+            const float half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
             float r = Mathf.Sqrt(lx * lx + lz * lz);
             if (Mathf.Abs(r - wall) > half || r < 0.01f) continue;
@@ -335,8 +336,8 @@ public partial class BuildingSystem : Node
     // A brick house's four straight walls, open at the doorway unless the door is shut.
     Vector3 HouseWalls(Structure s, Vector3 from, Vector3 to)
     {
-        const float half = 0.3f, door = 0.48f;
-        float wx = Structures.HouseWallX, wz = Structures.HouseWallZ;
+        const float half = 0.3f;
+        float wx = Structures.HouseWallXFor((int)s.Kind), wz = Structures.HouseWallZFor((int)s.Kind), door = Structures.HouseDoorHalfWidthFor((int)s.Kind);
         var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);
         var (fx, fz) = Structures.ToLocal(s.X, s.Z, s.Yaw, from.X, from.Z);
         // Side walls at x = ±wx.
@@ -399,6 +400,14 @@ public partial class BuildingSystem : Node
             Place();
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    // Starts placing a particular kind (the picture build menu, ui-20); B still starts with the last one.
+    public void StartPlacing(int kind)
+    {
+        if (kind < 0 || kind >= Structures.Shapes.Length) return;
+        placeKind = kind;
+        StartPlacing();
     }
 
     void StartPlacing()

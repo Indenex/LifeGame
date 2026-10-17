@@ -20,12 +20,13 @@ The keys themselves live in `client/scripts/ui/Controls.cs`, which binds them be
 | Shift+E | Bar or unbar a hut door (whoever hung it, or claim members); read inside Building's door offer, no separate binding | Building | new, building-3; confirmed by UX/UI 2026-10-16 (F1 shows "Shift E"; follows the Use key) |
 | C | Crafting panel | Crafting | C also eat (Survival) |
 | X | Eat the best food you carry | Survival | C |
-| B | Build menu (huts and the claim marker) | Building | B also place claim (Claims) |
+| B | Build menu: pictures by category (Shelter, Storage, Crafting, Fire, Fences and gates, Claims), costs on each tile, greyed when short; click one to lay it out (T turns, Tab next, click places, Esc or B cancels). B or Esc closes the menu | Building, UX/UI (ui-20) | Justin picked the picture panel |
 | K | Claim panel | Claims | T |
 | J | Journal | Journal | same |
 | Enter | Chat | Claims | same |
 | M | Music on/off | Atmosphere | same |
-| I | What you wear: the equipment panel (body and feet slots; click a slot, then what to put on). I or Esc closes | UX/UI | new, ui-10 (D-074); I decided by Justin (D-094) |
+| I | What you carry and wear: the bag beside the worn slots (ui-18). Drag onto the bar, onto a slot to wear, or out onto the ground; double-click uses. I or Esc closes | UX/UI | ui-10 (D-074, D-094); bag ui-18 |
+| 1 to 9, 0 | Use what sits on hotbar slot 1 to 10: eat, drink, wear, or set a made thing down (tools work by themselves). Rebindable | UX/UI | new, ui-19 |
 | Left click / Z | Strike (attack an animal, D-039) | Animals | new |
 | Hold Ctrl while starting a craft | Work it by hand: a Master plays the minigame anyway (D-047). Shares Ctrl with sneak; it only counts in the crafting panel (D-091) | Journal and skills | new |
 | Hold F1 | Show every world key | UX/UI | new |
