@@ -417,6 +417,7 @@ public partial class SurvivalClient : Node
     {
         if (node is BerryBush bush) bush.Ripe = ripe;
         else if (node is MushroomPatch patch) patch.Ripe = ripe;
+        else if (node is RootPatch roots) roots.Ripe = ripe;
     }
 
     // --- World objects -----------------------------------------------------
@@ -426,6 +427,8 @@ public partial class SurvivalClient : Node
         if (bushes.ContainsKey(b.Id)) return;
         Node3D node = b.Kind == Forages.MushroomKind
             ? new MushroomPatch(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.01f, b.Z) }
+            : b.Kind == Forages.RootKind
+            ? new RootPatch(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.01f, b.Z) }
             : new BerryBush(b.Id) { Position = new Vector3(b.X, terrain.HeightAt(b.X, b.Z) - 0.05f, b.Z) };
         SetRipe(node, IsRipe(b));
         bushes[b.Id] = node;

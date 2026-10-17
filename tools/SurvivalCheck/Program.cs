@@ -160,6 +160,19 @@ foreach (var m in patches)
 }
 Ok($"{patches.Count} mushroom patches, each beside a tree");
 
+// --- Wild roots (survival-36): patches in open meadow, no tree close by ---
+var roots = conn.Db.ForageBush.Iter().Where(b => b.Kind == Forages.RootKind).ToList();
+if (roots.Count < allBushes.Count / 4) Fail($"only {roots.Count} root patches for {allBushes.Count} bushes");
+foreach (var rp in roots)
+{
+    int rx = World.CellOf(rp.X), rz = World.CellOf(rp.Z), o = Needs.RootOpenRadius;
+    for (int dx = -o; dx <= o; dx++)
+        for (int dz = -o; dz <= o; dz++)
+            if (dx * dx + dz * dz <= o * o && Trees.GrowsAt(rx + dx, rz + dz))
+                Fail($"a root patch at ({rp.X:F1}, {rp.Z:F1}) has a tree within {o} m");
+}
+Ok($"{roots.Count} root patches, each in the open");
+
 // --- Stew: a good meal, the pot comes back at its quality ---
 Give(Item.PotOfStew, 77);
 conn.Reducers.Eat((ushort)Item.PotOfStew);
@@ -327,6 +340,15 @@ Settle(200);
 if (MathF.Abs((V().Food - foodM) - Needs.MushroomFood) > 0.01f)
     Fail($"a mushroom gave {V().Food - foodM:F3} food, expected {Needs.MushroomFood:F3}");
 Ok($"a mushroom gives {Needs.MushroomFood:P0} food (from Foods)");
+
+Give(Item.WildRoots);
+float foodR = V().Food;
+conn.Reducers.Eat((ushort)Item.WildRoots);
+Pump(() => CountOf(Item.WildRoots) == 0, 5, "the root to be eaten");
+Settle(200);
+if (MathF.Abs((V().Food - foodR) - Needs.RootFood) > 0.01f)
+    Fail($"a wild root gave {V().Food - foodR:F3} food, expected {Needs.RootFood:F3}");
+Ok($"a wild root gives {Needs.RootFood:P0} food (from Foods)");
 
 Console.WriteLine("Survival check passed");
 conn.Disconnect();

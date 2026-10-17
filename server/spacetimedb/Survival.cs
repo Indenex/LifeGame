@@ -269,12 +269,20 @@ public static partial class Module
             throw new Exception(def.OutOfSeason);
         if (ctx.Timestamp.MicrosecondsSinceUnixEpoch < bush.RipeAt.MicrosecondsSinceUnixEpoch)
             throw new Exception(def.NotReady);
+        InventoryItem? tool = null;
+        if (def.Tool != 0 && (tool = EquippedTool(ctx, def.Tool)) == null)
+            throw new Exception(def.NoTool);
         var state = RequireCooldown(ctx, player);
 
         var yield = def.Yield;
         ctx.Db.ForageBush.Id.Update(bush with { RipeAt = Later(ctx, def.RegrowMicros) });
         AddToInventory(ctx, Me(ctx), yield, def.PerPick, Items.RawQuality);
-        NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
+        if (tool is { } digger)
+        {
+            WearTool(ctx, digger);
+            NoteAct(ctx, player.PlayerId, WorkMotion.Dig, (Item)digger.Item);
+        }
+        else NoteAct(ctx, player.PlayerId, WorkMotion.Pluck, yield);
         OnProcessPerformed(ctx, player.PlayerId, Needs.ForageProcess, Items.RawQuality, false);
         ctx.Db.PlayerState.PlayerId.Update(state with { LastActionAt = ctx.Timestamp });
     }
@@ -658,6 +666,40 @@ public static partial class Module
         foreach (var b in ctx.Db.ForageBush.Iter())
             if (b.Kind == Forages.MushroomKind) { hasMushrooms = true; break; }
         if (!hasMushrooms) SeedMushrooms(ctx);
+
+        // Roots came later still (survival-36).
+        bool hasRoots = false;
+        foreach (var b in ctx.Db.ForageBush.Iter())
+            if (b.Kind == Forages.RootKind) { hasRoots = true; break; }
+        if (!hasRoots) SeedRoots(ctx);
+    }
+
+    // A root patch per chunk in open meadow: the first of a handful of random tries that
+    // lands on dry ground with no standing tree within Needs.RootOpenRadius cells.
+    static void SeedRoots(ReducerContext ctx)
+    {
+        int r = World.SpawnRadiusChunks;
+        float span = World.ChunkSize * World.CellSize;
+        for (int cx = -r; cx < r; cx++)
+            for (int cz = -r; cz < r; cz++)
+                for (int i = 0; i < Needs.RootsPerChunk; i++)
+                    for (int attempt = 0; attempt < 12; attempt++)
+                    {
+                        float x = (cx + (float)ctx.Rng.NextDouble()) * span;
+                        float z = (cz + (float)ctx.Rng.NextDouble()) * span;
+                        if (!IsDry(x, z) || TreeCrowding(ctx, x, z, Needs.RootOpenRadius) > 0) continue;
+                        ctx.Db.ForageBush.Insert(new ForageBush
+                        {
+                            Id = 0,
+                            X = x,
+                            Z = z,
+                            ChunkX = World.ChunkOf(x),
+                            ChunkZ = World.ChunkOf(z),
+                            RipeAt = ctx.Timestamp,
+                            Kind = Forages.RootKind,
+                        });
+                        break;
+                    }
     }
 
     // A few mushroom patches per chunk, each in the shade beside a tree: the first of
