@@ -97,6 +97,8 @@ public partial class Atmosphere
         scale.AddPoint(new Vector2(1f, 1.8f));
         return new CpuParticles3D
         {
+            // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Amount = 18,
             Lifetime = 7f,
             Emitting = false,

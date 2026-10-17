@@ -211,6 +211,8 @@ public partial class FireView : Node3D
             ramp.SetColor(1, new Color(0.7f, 0.7f, 0.68f, 0f));
             return new CpuParticles3D
             {
+                // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 Amount = 8,
                 Lifetime = 4f,
                 Mesh = new QuadMesh
@@ -329,6 +331,8 @@ public partial class FireView : Node3D
             ramp.SetColor(1, new Color(0.9f, 0.25f, 0.05f, 0f));
             return new CpuParticles3D
             {
+                // A particle's card would cast a hard square shadow that flickers (bugfix-65).
+                                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 Amount = amount,
                 Lifetime = lifetime,
                 Mesh = new QuadMesh { Size = Vector2.One * size, Material = material },
