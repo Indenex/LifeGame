@@ -35,17 +35,17 @@ public static partial class StructureModel
     static readonly Dictionary<int, List<Piece>> Cache = new();
     static ShaderMaterial? wood, fiber, thatch, clay, stone, tile;
 
-    internal static ShaderMaterial Wood => wood ??= Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f));
-    static ShaderMaterial Fiber => fiber ??= Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f);
-    static ShaderMaterial Thatch => thatch ??= Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f);
+    internal static ShaderMaterial Wood => wood ??= Painted(Tinted(Look.BarkSurface, Look.Bark.Lightened(0.18f)), PaintedStructures.Family.Wood);
+    static ShaderMaterial Fiber => fiber ??= Painted(Tinted(Look.Foliage, Look.LeafWarm.Darkened(0.2f), sway: 0f), PaintedStructures.Family.Thatch);
+    static ShaderMaterial Thatch => thatch ??= Painted(Tinted(Look.Foliage, new Color(0.78f, 0.64f, 0.34f), sway: 0.012f), PaintedStructures.Family.Thatch);
     // Fired roof tiles (ceramics-10): a rough terracotta until the art direction is settled (D-232).
-    internal static ShaderMaterial Tile => tile ??= Tinted(Look.Ground, new Color(0.70f, 0.34f, 0.21f));
-    internal static ShaderMaterial Clay => clay ??= Tinted(Look.Ground, Look.Clay.Lightened(0.06f));
-    internal static ShaderMaterial Stone => stone ??= Tinted(Look.RockSurface, Look.Rock);
+    internal static ShaderMaterial Tile => tile ??= Painted(Tinted(Look.Ground, new Color(0.70f, 0.34f, 0.21f)), PaintedStructures.Family.Clay);
+    internal static ShaderMaterial Clay => clay ??= Painted(Tinted(Look.Ground, Look.Clay.Lightened(0.06f)), PaintedStructures.Family.Clay);
+    internal static ShaderMaterial Stone => stone ??= Painted(Tinted(Look.RockSurface, Look.Rock), PaintedStructures.Family.Stone);
     static ShaderMaterial? weave, paleWood;
     // Freshly cut wood, for things that should catch the eye (a door's bar).
-    internal static ShaderMaterial PaleWood => paleWood ??= Tinted(Look.BarkSurface, new Color(0.86f, 0.74f, 0.55f));
-    internal static ShaderMaterial Weave => weave ??= Tinted(Look.Foliage, new Color(0.72f, 0.58f, 0.32f), sway: 0f);
+    internal static ShaderMaterial PaleWood => paleWood ??= Painted(Tinted(Look.BarkSurface, new Color(0.86f, 0.74f, 0.55f)), PaintedStructures.Family.Wood);
+    internal static ShaderMaterial Weave => weave ??= Painted(Tinted(Look.Foliage, new Color(0.72f, 0.58f, 0.32f), sway: 0f), PaintedStructures.Family.Thatch);
 
     public static int StageCount(int kind) => LifeGame.Shared.Structures.Shape(kind).Stages.Length;
 
@@ -62,13 +62,15 @@ public static partial class StructureModel
             LifeGame.Shared.StationKind.ClayTub => StationMeshes.SettlingTub(0),
             LifeGame.Shared.StationKind.CrushBlock => StationMeshes.CrushingBlock(0),
             LifeGame.Shared.StationKind.TemperTrough => StationMeshes.TemperingTrough(0),
-            _ => LifeGame.Shared.Structures.Shape(kind).Model switch { "ClayHut" => ClayHut(), "ClaimMarker" => ClaimMarkerModel.Pieces(), "Kiln" => KilnModel.Pieces(), "Basket" => Basket(), "Jar" => JarModel.Pieces(), "LeanTo" => LeanTo(), "StoneHearth" => StoneHearth(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
+            _ => LifeGame.Shared.Structures.Shape(kind).Model switch { "ClayHut" => ClayHut(), "ClaimMarker" => ClaimMarkerModel.Pieces(), "Kiln" => KilnModel.Pieces(), "Basket" => Basket(), "Jar" => JarModel.Pieces(), "Trough" => TroughModel.Pieces(), "LeanTo" => LeanTo(), "StoneHearth" => StoneHearth(), _ when LifeGame.Shared.Structures.Shape(kind).BrickWalls => BrickHouse(kind), _ when LifeGame.Shared.Structures.IsIndoor(kind) => Hearth(), _ when LifeGame.Shared.Structures.IsRoom(kind) => LogCabin(), _ when LifeGame.Shared.Structures.IsFence(kind) => Fence(LifeGame.Shared.Structures.IsGate(kind)), _ => LeanTo() },
         };
         // A lean-to is all roof: its sloped thatch is the wall between the camera and the player, so
         // the near slope fades and the far slope stays rather than the whole thing clearing.
         if (LifeGame.Shared.Structures.Shape(kind).Model == "LeanTo")
             foreach (var piece in pieces)
                 if (piece.Role == PieceRole.Roof) piece.Role = PieceRole.Wall;
+        // Everything else a structure is made of (stations, kilns, jars, claim posts) goes painted too (painted-5).
+        foreach (var piece in pieces) piece.Material = PaintedStructures.Of(piece.Material, PaintedStructures.Family.Plain);
         Cache[kind] = pieces;
         return pieces;
     }
@@ -479,6 +481,10 @@ public static partial class StructureModel
     }
 
     static float Hash(int x, int salt) => Terrain.Hash01(x, salt, 777);
+
+    // A structure material on the painted look (painted-5), tuned for its family.
+    static ShaderMaterial Painted(ShaderMaterial source, PaintedStructures.Family family) =>
+        (ShaderMaterial)PaintedStructures.Of(source, family);
 
     static ShaderMaterial Tinted(ShaderMaterial source, Color color, float? sway = null)
     {

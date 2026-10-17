@@ -218,7 +218,7 @@ public partial class StructureView : Node3D
     ShaderMaterial SeeThroughMaterial(ShaderMaterial source, StructureModel.PieceRole role)
     {
         if (seeThroughMaterials.TryGetValue((source, role), out var material)) return material;
-        material = Look.StructureGhost(source);
+        material = LifeGame.Painted.StructureGhostOf(source) ?? Look.StructureGhost(source);
         material.SetShaderParameter("cut_mode", role == StructureModel.PieceRole.Roof ? 2f : 1f);
         material.SetShaderParameter("cut_origin", GlobalPosition);
         return seeThroughMaterials[(source, role)] = material;

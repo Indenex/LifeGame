@@ -1,5 +1,5 @@
 // Building kinds: Crafting stations (Crafting and Ceramics). New kinds: 200 and up.
-// One StructureDef per kind: its fixed id (never renumbered or reused) and its StructureShape
+// One StructureDef per kind: its id, the StructureKind enum ordinal (append-only, never renumbered or reused) and its StructureShape
 // (footprint, rules, stage names and what each stage takes). Shared by the server module and the
 // client; keep this file free of engine and SpacetimeDB types. To add a kind, add a def here and
 // list it in StructureKind (server/spacetimedb/Building.cs) with the same number (docs/CONTENT.md).
@@ -75,7 +75,7 @@ namespace LifeGame.Shared
                 // Batch devices (crafting-23, D-195): load one and it works through a batch on its own.
             new StructureDef
             {
-                Kind = 17,
+                Kind = 18,
                 Shape = new StructureShape
                 {
                     Name = "Settling tub",
@@ -93,7 +93,7 @@ namespace LifeGame.Shared
             },
             new StructureDef
             {
-                Kind = 18,
+                Kind = 19,
                 Shape = new StructureShape
                 {
                     Name = "Crushing block",
@@ -110,7 +110,7 @@ namespace LifeGame.Shared
             },
             new StructureDef
             {
-                Kind = 19,
+                Kind = 20,
                 Shape = new StructureShape
                 {
                     Name = "Tempering trough",

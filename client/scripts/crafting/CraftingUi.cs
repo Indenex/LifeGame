@@ -103,6 +103,7 @@ public partial class CraftingUi : CanvasLayer
         conn.Db.Roast.OnDelete += (_, _) => Refresh();
         DeviceUse.Register(conn, this);
         Mending.Register(conn);
+        Knows = id => conn.Db.MyJournal.Iter().Any(e => e.ProcessId == id);
         // G beside a fire takes your meat off once it is done; ahead of feeding the fire.
         Use.Register(new UseHandler
         {
@@ -211,7 +212,8 @@ public partial class CraftingUi : CanvasLayer
     {
         if (conn == null) { Notice?.Invoke("Crafting needs the server"); return; }
         if (job != null) { Notice?.Invoke("Your hands are busy"); return; }
-        if (Missing(def) is { } missing) { Notice?.Invoke(missing); return; }
+        // The notice gives the first thing missing; the card's hover lists them all.
+        if (Missing(def) is { } missing) { Notice?.Invoke(missing.Split('\n')[0]); return; }
 
         // The panel stays open after a craft, so pressing the same number repeats
         // it; it only steps aside while a minigame is played.
@@ -307,14 +309,20 @@ public partial class CraftingUi : CanvasLayer
             if (station == null)
                 return $"Made at a {StationInfo.Name(def.Station)}. Build one inside your claim and stand at it.";
         }
+        // Every short input gets a line on where it comes from, and the step before that when
+        // you lack that too (a pot of water needs a fired pot first), so the whole way is shown.
+        var lines = new List<string>();
         foreach (var input in def.Consumes)
         {
             uint have = Count(input.Item) + (station != null && conn != null ? Stations.StoredNear(conn, station, input.Item) : 0);
             if (have >= input.Count) continue;
             uint lacking = input.Count - have;
             string what = Items.Def(input.Item).Count(lacking).ToLowerInvariant();
-            return $"You need {(have > 0 ? lacking + " more" : lacking.ToString())} {what}. {WhereFrom(input.Item)}";
+            lines.Add($"You need {(have > 0 ? lacking + " more" : lacking.ToString())} {what}. {WhereFrom(input.Item)}");
+            if (Before(input.Item) is { } before && Count(before) == 0)
+                lines.Add($"{Items.Def(before).Name}: {Lower(WhereFrom(before))}");
         }
+        if (lines.Count > 0) return string.Join("\n", lines);
         if (def.NeedsTool.HasFlag(ItemTags.Hammer))
         {
             // The stone being worked cannot also be the one striking it.
@@ -334,7 +342,7 @@ public partial class CraftingUi : CanvasLayer
     }
 
     // One short line on where a new player gets an item.
-    static string WhereFrom(Item item)
+    internal static string WhereFrom(Item item)
     {
         string Key(string action) =>
             Controls.World.FirstOrDefault(b => b.Action == action) is { } b && Controls.KeysFor(b) is { } k ? $" ({k})" : "";
@@ -345,12 +353,51 @@ public partial class CraftingUi : CanvasLayer
             Item.Stone or Item.Fiber => $"Pick it up off the ground{Key("pick_up")}.",
             Item.Clay => $"Dig{Key("dig")} on the bare tan patches where the grass thins out.",
             Item.Potsherd => "Sherds are what's left of a pot that cracks in the fire.",
+            // A pot (or waterskin) of water: filled from its empty one (Foods.Pots). Filling is
+            // a step no menu shows, so until it's in your journal only a nudge is given (Justin).
+            _ when Foods.Pots.FirstOrDefault(p => p.Full == item) is { } pot => Knows(ClayRules.FillProcess)
+                ? $"Fill {Article(Items.Def(pot.Empty).Name.ToLowerInvariant())} at the water's edge{Key("use")}."
+                : $"Not yet discovered: try taking {Article(Items.Def(pot.Empty).Name.ToLowerInvariant())} to the water's edge.",
+            // Fired and unfired clay: shaped at the potter's bench (a recipe you can see there),
+            // dried, then fired, which is a hidden step until your journal has it (Justin).
+            _ when Shaping(item) is ({ } shape, var fired, var form) =>
+                $"{shape.Name} at a potter's bench ({Inputs(shape)}), let it dry" + (!fired ? "."
+                    : ClayRules.KilnOnly(form)
+                        ? Knows(ClayRules.KilnFireProcess) ? ", then fire it in a kiln." : ". Firing it is not yet discovered: try a kiln."
+                        : Knows(ClayRules.PitFireProcess) || Knows(ClayRules.KilnFireProcess) ? ", then fire it in a fire or kiln." : ". Firing it is not yet discovered: try setting it by a hot fire."),
             _ when Processes.List.FirstOrDefault(p => p.Makes == item) is { } maker => maker.Station == StationKind.None
-                ? $"Make it first: {maker.Name}."
-                : $"Make it first at a {StationInfo.Name(maker.Station)}: {maker.Name}.",
+                ? $"Make it first: {maker.Name} ({Inputs(maker)})."
+                : $"Make it first at a {StationInfo.Name(maker.Station)}: {maker.Name} ({Inputs(maker)}).",
             _ => "",
         };
     }
+
+    // Whether a step is in your journal (MyJournal); Attach sets it. Steps no menu shows
+    // (filling, firing) are only spelled out once known; until then a nudge names a place or
+    // material to try, so a new player is never stuck (Justin).
+    internal static Func<string, bool> Knows = _ => true;
+
+    // The item one step before this one on its way, when that step isn't a recipe: the empty
+    // pot a pot of water is filled from. Missing shows it too when you have none.
+    static Item? Before(Item item) => Foods.Pots.FirstOrDefault(p => p.Full == item)?.Empty;
+
+    // The bench process that shapes a clay item, whether the item is the fired or unfired piece.
+    static (ProcessDef? shape, bool fired, ClayForm form) Shaping(Item item)
+    {
+        foreach (var p in Processes.List)
+            // Bricks are set down to dry where they are made, not carried and fired.
+            if (ClayRules.FormFor(p.Id) is { } form && form != ClayForm.Brick)
+            {
+                if (ClayRules.FiredItem(form) == item) return (p, true, form);
+                if (ClayRules.UnfiredItem(form) == item) return (p, false, form);
+            }
+        return (null, false, default);
+    }
+
+    static string Inputs(ProcessDef p) =>
+        string.Join(", ", p.Consumes.Select(i => $"{i.Count} {Items.Def(i.Item).Count(i.Count).ToLowerInvariant()}"));
+
+    static string Lower(string s) => s.Length == 0 ? s : char.ToLowerInvariant(s[0]) + s[1..];
 
     static string Article(string noun) => ("aeiou".Contains(noun[0]) ? "an " : "a ") + noun;
 
@@ -492,7 +539,7 @@ public partial class CraftingUi : CanvasLayer
         string? missing = Missing(def);
         if (failed || handsOn || missing != null)
         {
-            if (!failed && !handsOn) Notice?.Invoke(missing!);
+            if (!failed && !handsOn) Notice?.Invoke(missing!.Split('\n')[0]);
             CraftGrid.StopHolding();
             return;
         }

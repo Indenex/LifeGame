@@ -98,12 +98,17 @@ public partial class EquipmentPanel : CanvasLayer
         if (e is not InputEventKey { Pressed: true, Echo: false }) return;
         if (IsOpen && (e.IsActionPressed(NEquipment) || e.IsActionPressed("ui_cancel")))
             Close();
+        // I opens the bag over any other centre window, which closes (D-283). Only typing in a
+        // text box you can see (chat, a search box, a name) or the Esc menu keeps the key; a box
+        // that kept focus after its panel hid must not swallow I (Justin: "the bag won't open").
         else if (!IsOpen && live && InputMap.HasAction(NEquipment) && e.IsActionPressed(NEquipment)
-                 && !Panels.Open() && GetViewport().GuiGetFocusOwner() == null)
+                 && !PauseMenu.IsOpen && !Typing())
             Open();
         else return;
         GetViewport().SetInputAsHandled();
     }
+
+    bool Typing() => GetViewport().GuiGetFocusOwner() is { } f && f.IsVisibleInTree() && f is LineEdit or TextEdit;
 
     public override void _Process(double delta)
     {

@@ -216,9 +216,9 @@ public partial class BuildingSystem : Node
             ShowDevice(s, v);
         int appeared = v.Show(s.Stage, Fraction(s), s.Complete, animate: existed || fresh);
         // A finished claim marker is drawn by client/scripts/social, which weathers it.
-        v.Visible = !(s.Complete && s.Kind == StructureKind.ClaimMarker);
+        v.Visible = !(s.Complete && Structures.Shape((int)s.Kind).Model == "ClaimMarker");
         if (appeared > 0 && (existed || fresh))
-            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || s.Kind == StructureKind.ClayHut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
+            Puff(v.Position + Vector3.Up * 0.6f, s.Stage >= 3 || Structures.Shape((int)s.Kind).Hut && s.Stage == 2 ? Look.LeafWarm : Look.DugEarth);
 
         if (existed && !before!.Complete && s.Complete && me.Position.DistanceTo(v.Position) < 30f)
             hud.Note($"The {ShapeOf(s).Name.ToLowerInvariant()} is finished");
@@ -270,10 +270,10 @@ public partial class BuildingSystem : Node
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++)
             {
-                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f)) continue;
+                if (!Structures.Contains((int)s.Kind, s.X, s.Z, s.Yaw, x, z, 0.4f + ShapeOf(s).ClearExtra)) continue;
                 long key = World.CellKey(x, z);
                 if (on) cleared.Add(key);
-                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f))) cleared.Remove(key);
+                else if (!rows.Values.Any(o => Structures.Contains((int)o.Kind, o.X, o.Z, o.Yaw, x, z, 0.4f + ShapeOf(o).ClearExtra))) cleared.Remove(key);
                 terrain.Refresh(x, z);
             }
     }
@@ -310,12 +310,12 @@ public partial class BuildingSystem : Node
                 to = HouseWalls(s, from, to);
                 continue;
             }
-            if (s.Kind == StructureKind.LeanTo)
+            if (shape.Model == "LeanTo")
             {
                 to = LeanToWalls(s, shape, from, to);
                 continue;
             }
-            if (s.Kind != StructureKind.ClayHut || (!s.Complete && s.Stage < 1)) continue;
+            if (!shape.Hut || (!s.Complete && s.Stage < 1)) continue;
             float wall = Structures.HutWallRadiusFor((int)s.Kind);
             const float half = 0.32f, door = 0.42f;
             var (lx, lz) = Structures.ToLocal(s.X, s.Z, s.Yaw, to.X, to.Z);

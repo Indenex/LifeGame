@@ -11,7 +11,7 @@ namespace LifeGame;
 //
 // Preview keys in debug builds (only change what you see and hear): hold F5 to
 // fast-forward time, F6 to cycle rain / clear / the server's weather, M to mute or unmute music.
-// Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5
+// Command line: --time-of-day=0.8 --rain=1 --wetness=1 --cloud=0.5 --wind=0.5 --smoke-signal=1
 // --day-minutes=4 (a shorter day, for watching the whole cycle), and
 // --debug-position=x,z to hold the player somewhere for screenshots.
 public partial class Atmosphere : Node3D
@@ -119,15 +119,19 @@ public partial class Atmosphere : Node3D
         AddChild(mist);
         AddChild(leaves);
         ReadyWater();
+        ReadyWaterSurface();
         AddChild(sound);
         Sheep.Bleat = sound.Bleat;
         Deer.Cry = sound.DeerCry;
         ReadySeasons();
         ReadyFronts();
         ReadyGrade();
+        ReadyLens();
+        ReadyFrost();
         ReadyImpacts();
         ReadyStorms();
         ReadyHomes();
+        ReadySignals();
 
         // Previews are for testing, so release builds leave them out.
         if (OS.IsDebugBuild())
@@ -203,9 +207,10 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnInsert += (_, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
+        HearFireCaps(conn);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
-            .Subscribe(new[] { "SELECT * FROM world_clock", "SELECT * FROM weather", "SELECT * FROM world_admin", "SELECT * FROM craft_work", "SELECT * FROM season_clock", "SELECT * FROM season_state" });
+            .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
         ToolSounds.Connect(conn);
@@ -316,6 +321,7 @@ public partial class Atmosphere : Node3D
         fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
+        UpdateSignals(dt, focus, Night);
         sound.Daylight = daylight;
         sound.Rain = rainAmount;
         sound.Wind = wind;
@@ -326,6 +332,8 @@ public partial class Atmosphere : Node3D
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
+        UpdateWaterSurface(dt, focus);
+        UpdateFrost(dt);
         UpdateImpacts(dt);
         sound.Foliage = wooded;
         Lightning(dt, focus);
@@ -427,6 +435,7 @@ public partial class Atmosphere : Node3D
         Color top = Grey(mood.Top, grey, 1.05f) * dim, horizon = Grey(mood.Horizon, grey, 1.0f) * dim;
         sky.SetShaderParameter(NTopColor, top);
         sky.SetShaderParameter(NHorizonColor, horizon);
+        (waterSkyTop, waterSkyHorizon, waterSunDir) = (top, horizon, sunDir);
         sky.SetShaderParameter(NGroundColor, Grey(mood.Ground, grey, 1f) * dim);
         sky.SetShaderParameter(NSunColor, sunColor * (1f - overcast * 0.8f));
         sky.SetShaderParameter(NSunDir, sunDir);
@@ -461,6 +470,8 @@ public partial class Atmosphere : Node3D
             env.AmbientLightEnergy += flash * 1.6f;
             env.FogLightColor = env.FogLightColor.Lerp(bolt, flash * 0.5f);
         }
+        UpdateLens(sunHeight, daylight, overcast, sunDir);
+        CapFog();
     }
 
     // The campfires you can hear: louder the closer and the better they burn,
@@ -468,8 +479,8 @@ public partial class Atmosphere : Node3D
     void FireSound(Vector3 listener, Vector3 right)
     {
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-        float total = 0f, nearest = 0f, pan = 0f;
-        foreach (var (x, z, fuelUntil) in fires.Values)
+        float total = 0f, nearest = 0f, pan = 0f, stoke = 0f;
+        foreach (var (id, (x, z, fuelUntil)) in fires)
         {
             float left = (fuelUntil - now) / 1_000_000f;
             if (left <= 0f) continue;
@@ -481,11 +492,14 @@ public partial class Atmosphere : Node3D
             if (g > nearest)
             {
                 nearest = g;
+                // Stoked: fuel left against what a fire holds at most (a well-fed fire roars).
+                stoke = Stoke(id, left);
                 pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
             }
         }
         sound.Fire = Mathf.Min(total, 1f);
         sound.FirePan = pan;
+        sound.FireStoke = stoke;
     }
 
     // How much of night it is, 0 full day to 1 full night, for other lanes that
@@ -618,6 +632,8 @@ public partial class Atmosphere : Node3D
             uniform float storm = 0.0;
             uniform float flash = 0.0;
             uniform vec3 flash_dir = vec3(0.0, 0.25, -1.0);
+            // Soft glow (AtmosphereLens): a wide warm halo round the sun, 0 off.
+            uniform float halo = 0.0;
 
             float hash(vec3 p) {
                 p = fract(p * 0.3183099 + 0.1);
@@ -636,6 +652,7 @@ public partial class Atmosphere : Node3D
                 float sun_vis = smoothstep(-0.15, 0.05, sun_dir.y);
                 col += sun_color * (pow(s, 5.0) * 0.3 + pow(s, 60.0) * 0.5) * sun_vis;
                 col += sun_color * smoothstep(0.9993, 0.9997, s) * 6.0 * step(-0.02, sun_dir.y);
+                col += sun_color * vec3(1.0, 0.86, 0.72) * (pow(s, 3.0) * 0.08 + pow(s, 16.0) * 0.12) * sun_vis * halo;
 
                 float night = 1.0 - daylight;
                 float m = max(dot(d, moon_dir), 0.0);
