@@ -214,7 +214,9 @@ foreach (var scene in scenes)
             if (At(5)) mix.Play(CueDefs.TreeCreak);
             if (At(5.95)) mix.Play(CueDefs.TreeCrash);
             if (At(10)) mix.Play(CueDefs.DigStick);
-            if (At(12.5)) mix.Play(CueDefs.DigHands);
+            if (At(11.5)) mix.Play(CueDefs.DigSpade);
+            if (At(12.5)) mix.Play(CueDefs.DirtThrow);
+            if (At(14)) mix.Play(CueDefs.DigHands);
         }
         // Acts scene: drink, eat, pluck, pick up, 4 s apart.
         if (parts[0] == "acts")

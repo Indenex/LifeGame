@@ -190,7 +190,6 @@ public partial class Atmosphere
     // played from where that player stands, so nearby players hear each other.
     static CueDef? SoundOfAct(WorkMotion motion, ushort item) => motion switch
     {
-        WorkMotion.Dig => item != 0 ? CueDefs.DigStick : CueDefs.DigHands,
         WorkMotion.Drink => CueDefs.Drink,
         WorkMotion.Eat => CueDefs.Eat,
         WorkMotion.Pluck => CueDefs.Pluck,

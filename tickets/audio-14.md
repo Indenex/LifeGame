@@ -21,8 +21,10 @@ Check the sounds for chopping, felling and digging and add what is missing, as C
   - Dig: `SoundOfAct` now returns `DigStick` when `player_act.Item` is a digging stick and `DigHands` for bare hands; contact at about 0.28 s, matching the stab in Animation's Dig pose.
   - Levels (loudest 50 ms, dBFS, over the morning bed): chop -27, creak -30, crash -20, dig stick -27, dig hands -30. `tools:15` SoundPreview scene plays them. Edges and fuzz soak clean; client builds.
 
+- 2026-10-17: anim-7 (#496, `Avatar.Impact(avatar, motion, toolPoint, thrown, item)`) is on main, so the interim timers are gone. `ToolSounds` now plays on Animation's impact frame for everyone (`Sfx.PlayBy` at the tool point: yours full, others quieter): Chop -> `ChopThunk`; Dig -> `DigStick` (stick), `DigSpade` (item 18, Crafting's spade; swap the const for `Item.Spade` once on main), `DirtThrow` (thrown), `DigHands` (bare hands). The dig `player_act` entry is removed from `SoundOfAct` (the Impact covers it). Dig cues now start at contact. Knap, strike, feed-fire and pick-up impacts are left to their existing sounds. Tree creak/crash unchanged.
+
 ## Open questions / blockers
-- Not heard in the running game (no Godot here); the chop sync assumes Animation's work clock starts at the `MyCraftJob` insert.
+- Not heard in the running game (no Godot here).
 - The tree vanishes the instant it is felled, so the creak and crash play over an already-empty spot. If Environment adds a falling-tree animation, tell Audio to retime the crash to its impact.
 
 ## Next step

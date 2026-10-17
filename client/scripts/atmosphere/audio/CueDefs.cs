@@ -338,22 +338,41 @@ public static class CueDefs
         new CueLayer(Src.Noise, 1.1f, 0.5f, 0.045f, 1000f, 4000f, 0.1f),
     }, Send: 0.3f);
 
-    // Dig with a stick (0.9 s): the point plunges in about 0.3 s, then the lever and the crumbling soil.
-    public static readonly CueDef DigStick = new("tool.dig.stick", 0.9f, new[]
+    // Dig with a stick: the point goes in (Animation's Impact, stick in the ground), then a little
+    // lever and the soil crumbling off it.
+    public static readonly CueDef DigStick = new("tool.dig.stick", 0.7f, new[]
     {
-        new CueLayer(Src.Noise, 0.28f, 0.05f, 0.3f, 300f, 2000f, 0.006f),
-        new CueLayer(Src.Tone, 0.28f, 0.06f, 0.12f, 110f, 80f, 0.006f),
-        new CueLayer(Src.Noise, 0.45f, 0.2f, 0.08f, 800f, 4000f, 0.15f),
-        new CueLayer(Src.Noise, 0.6f, 0.02f, 0.1f, 1500f, 5000f, 0.003f),
-        new CueLayer(Src.Noise, 0.7f, 0.02f, 0.08f, 1500f, 5000f, 0.003f),
+        new CueLayer(Src.Noise, 0f, 0.05f, 0.195f, 300f, 2000f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.06f, 0.078f, 110f, 80f, 0.006f),
+        new CueLayer(Src.Noise, 0.17f, 0.2f, 0.052f, 800f, 4000f, 0.15f),
+        new CueLayer(Src.Noise, 0.32f, 0.02f, 0.065f, 1500f, 5000f, 0.003f),
+        new CueLayer(Src.Noise, 0.42f, 0.02f, 0.052f, 1500f, 5000f, 0.003f),
     });
 
-    // Dig with bare hands (0.9 s): fingers raking in and a soft scoop of loose earth.
-    public static readonly CueDef DigHands = new("tool.dig.hands", 0.9f, new[]
+    // Dig with a spade: the blade slices in, deeper and crunchier than a stick, with a root or two.
+    public static readonly CueDef DigSpade = new("tool.dig.spade", 0.6f, new[]
     {
-        new CueLayer(Src.Noise, 0.2f, 0.2f, 0.192f, 1000f, 5000f, 0.08f),
-        new CueLayer(Src.Noise, 0.45f, 0.1f, 0.24f, 400f, 2000f, 0.02f),
-        new CueLayer(Src.Noise, 0.65f, 0.025f, 0.112f, 1500f, 5000f, 0.003f),
+        new CueLayer(Src.Noise, 0f, 0.07f, 0.221f, 200f, 2600f, 0.006f),
+        new CueLayer(Src.Tone, 0f, 0.09f, 0.104f, 95f, 65f, 0.006f),
+        new CueLayer(Src.Noise, 0.04f, 0.03f, 0.078f, 1500f, 5500f, 0.003f),
+        new CueLayer(Src.Noise, 0.14f, 0.15f, 0.0455f, 800f, 4000f, 0.1f),
+    });
+
+    // The spade's load thrown off (Impact with thrown): a soft scatter of dirt landing.
+    public static readonly CueDef DirtThrow = new("tool.dig.throw", 0.7f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.12f, 0.16f, 400f, 3500f, 0.03f),
+        new CueLayer(Src.Noise, 0.08f, 0.03f, 0.08f, 1500f, 5000f, 0.004f),
+        new CueLayer(Src.Noise, 0.16f, 0.03f, 0.06f, 1500f, 5000f, 0.004f),
+        new CueLayer(Src.Noise, 0.26f, 0.03f, 0.04f, 1500f, 5000f, 0.004f),
+    });
+
+    // Dig with bare hands: a scuff of fingers in loose earth.
+    public static readonly CueDef DigHands = new("tool.dig.hands", 0.5f, new[]
+    {
+        new CueLayer(Src.Noise, 0f, 0.18f, 0.19f, 1000f, 5000f, 0.04f),
+        new CueLayer(Src.Noise, 0.05f, 0.1f, 0.24f, 400f, 2000f, 0.02f),
+        new CueLayer(Src.Noise, 0.22f, 0.025f, 0.11f, 1500f, 5000f, 0.003f),
     });
 
     public static CueDef? ForCue(Cue cue) => cue switch
