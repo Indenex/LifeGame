@@ -39,6 +39,9 @@ public partial class Sheep : Node3D
     float glide = 1f, targetHeading, speed, gait, hop = HopSeconds, pitch, yaw, turnRate, hipHeight;
     Vector3 lastPosition;
     AnimalState state = AnimalState.Graze;
+    Vector3 baseScale = Vector3.One;
+    // Set by the herd: whether a finished hen coop stands over a spot, so roosting hens go inside it.
+    public static System.Func<float, float, bool>? InsideCoop;
     Color woolColor;
     float wool = 1f, woolTarget = 1f;
     // Grown size (varies per sheep), and how grown up this one is (lambs are small).
@@ -100,7 +103,7 @@ public partial class Sheep : Node3D
         var def = AnimalDefs.Get((byte)species);
         bool deer = def.Model == "deer";
         // Until Modeling's hen figure lands (animals-19), a hen is drawn as a small sheep.
-        if (def.Model == "hen") Scale = Vector3.One * 0.4f;
+        if (def.Model == "hen") Scale = baseScale = Vector3.One * 0.4f;
         // About a third of deer are antlered stags (AnimalDef.AntlerShare).
         bool stag = deer && IsStag(id);
         BuildMeshes();
@@ -216,6 +219,10 @@ public partial class Sheep : Node3D
         // Just shorn: the fleece comes off in a soft burst of tufts.
         else if (woolTarget < wool - 0.5f) Tufts();
         state = a.State;
+        // A roosting animal settles low; one in its coop is out of sight.
+        bool roost = a.State == AnimalState.Roost;
+        Scale = roost ? new Vector3(baseScale.X, baseScale.Y * 0.7f, baseScale.Z) : baseScale;
+        Visible = !(roost && InsideCoop?.Invoke(a.X, a.Z) == true);
     }
 
     public override void _Process(double delta)
