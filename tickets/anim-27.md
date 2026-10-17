@@ -1,8 +1,8 @@
 # anim-27: hands hold the work when lashing and sewing
 Lane: Animation
 Owner: Animation thread (session_019roNRWQBPw4ozNLDhzseig)
-Status: in_progress
-Branch: claude/anim-27 (stacked on claude/anim-26 / #746 until that merges)
+Status: in_review
+Branch: claude/anim-27
 PR: (not yet)
 
 ## Goal
@@ -12,9 +12,10 @@ How: `HeldTools.For` adds Wrap to the left-hand rule. The right hand takes the l
 
 ## Progress log
 - 2026-10-17 11:55: HeldTools change; regenerating bindings after the main merge to build.
+- 2026-10-17 12:00: client builds (bindings regenerated); merged main; PR opened.
 
 ## Open questions / blockers
 - (none)
 
 ## Next step
-Finish the client build, commit, push, and open the PR once #746 merges (else base claude/anim-26).
+Wait for CI on the PR, then send the PM the green sha.
