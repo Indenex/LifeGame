@@ -55,10 +55,13 @@ public partial class NeedGauge : Control
             DrawCircle(center, radius + 3f, new Color(NeedsHud.WarmColor, 0.10f + 0.05f * Mathf.Sin(pulse * 2.5f)));
         // On warm paper (ui-54) the empty track is a faint ink ring and the colours deepen a
         // little so they read on cream; on the dark look they stay as they were.
-        if (WarmLook.On) c = new Color(c.Darkened(0.12f), c.A);
-        DrawArc(center, radius, 0, Mathf.Tau, 48, WarmLook.On ? new Color(WarmLook.Ink, 0.16f) : new Color(1, 1, 1, 0.14f), 4f, true);
+        // ui-59: on paper the level reads as a strong colour on a clear ink track, and the
+        // icon is drawn in ink (breathing when low), so it reads at least as well as the dark HUD.
+        if (WarmLook.On) c = new Color(color.Darkened(0.22f), 1f);
+        DrawArc(center, radius, 0, Mathf.Tau, 48, WarmLook.On ? new Color(WarmLook.Ink, 0.32f) : new Color(1, 1, 1, 0.14f), WarmLook.On ? 5f : 4f, true);
         if (shown > 0.005f)
-            DrawArc(center, radius, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * shown, 48, c, 4f, true);
+            DrawArc(center, radius, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * shown, 48, c, WarmLook.On ? 5f : 4f, true);
+        if (WarmLook.On) c = new Color(WarmLook.Ink, 0.55f + 0.4f * low);
 
         var icon = WarmLook.On ? new Color(WarmLook.Ink, 0.85f) : new Color(Look.Cream, 0.9f);
         switch (glyph)

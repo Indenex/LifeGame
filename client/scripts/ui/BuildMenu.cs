@@ -109,7 +109,7 @@ public partial class BuildMenu : CanvasLayer
         // widening the panel, and a tall tab scrolls instead of running off the screen.
         float across = Columns * (Thumb + 24) + (Columns - 1) * Gap;
         tabs = new HFlowContainer { CustomMinimumSize = new Vector2(across, 0) };
-        tabs.AddThemeConstantOverride("h_separation", 6);
+        tabs.AddThemeConstantOverride("h_separation", 3);
         tabs.AddThemeConstantOverride("v_separation", 4);
         box.AddChild(tabs);
         grid = new GridContainer { Columns = Columns };
@@ -134,7 +134,7 @@ public partial class BuildMenu : CanvasLayer
         foreach (var c in Order.Where(c => Kinds(c).Any()))
         {
             var tab = new Button { Text = c, Flat = c != category, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
-            tab.AddThemeFontSizeOverride("font_size", 15);
+            tab.AddThemeFontSizeOverride("font_size", 14);
             tab.Modulate = new Color(1, 1, 1, c == category ? 1f : 0.65f);
             string chosen = c;
             tab.Pressed += () => { category = chosen; Refresh(); };
