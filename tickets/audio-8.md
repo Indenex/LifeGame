@@ -1,20 +1,20 @@
-# audio-8: Cute, relaxing music (Dofus mood)
+# audio-8: Recorded music player (Justin brings his own music)
 Lane: Audio
 Owner: Audio lane (Sonnet session_01SXcxtoyeqDmypiHxkHedU6)
-Status: in_progress
+Status: in_review
 Branch: claude/audio-8-music
-PR: (after Justin picks a style)
+PR: (see PM message)
 
 ## Goal
-Justin (via the PM): "music similar to Dofus, a basic theme similar to Grynpyret's Kites, and a song about naps; very cutesy and relaxing, less Valheim-y." Mood reference only: original melodies, nothing copied. Music goes through the synthesized engine as data (pieces and styles are entries), keeping the music slider and on/off. D-154: prototype first, Justin picks a style, then the game's music is converted.
+Justin found the synthesized music tasters "super generic" and will supply music made with Suno. So no more synthesized composition: build the player for recorded tracks. Tracks are a data registry (MusicDef: id, file, mood tags, volume trim); OGG streamed from client/assets/music/ on a Music bus (outside the synth thread); cross-fade 3 to 5 s on mood change; 75 to 200 s of silence between tracks; respects the Music on/off and slider. docs/MUSIC.md tells Justin how to add a track.
 
 ## Progress log
-- 2026-10-17: style options A (Sunny picnic: harp, recorder, bells, light percussion, lilting 6/8), B (Music-box storybook), C (Light chiptune-folk) sent to the PM; Justin wants tasters of all three: main theme + nap song in A (30 to 60 s) and 15 s tasters of B and C playing the same melody.
-- 2026-10-17: built `client/scripts/atmosphere/audio/Score.cs` (Track + Arrangement data, additive instruments: pluck, recorder flute, bell, music box, pad, pulse/square, triangle, shaker, woodblock, hat; small Schroeder reverb) and `Pieces.cs` (MainTheme in G major 6/8, NapSong in D major 6/8, four arrangements). `dotnet run -c Release -- --pieces=outdir` in tools/SoundPreview writes the prototypes as WAV (convert with ffmpeg). Checked the first note's pitch by FFT (D5 as written). Prototypes published for the PM as an audio page: https://claude.ai/artifact/Jp2midnVmqzgRSddHp3nL8 (private; share from the Share menu).
-- Not in the game yet: Score is not connected to SoundMix/SoundScape (prototype only).
+- 2026-10-17: Tasters (synth Score/Pieces) were rejected by Justin; removed from the branch (they stay in git history, commit "audio-8: music prototypes"). The private tasters page can be ignored.
+- 2026-10-17: Built `client/scripts/atmosphere/audio/MusicDirector.cs` (pure rules: Mood day/dusk/night/rest/rain, MusicDef, MusicDefs.All, the director with 6 s mood debounce, 4 s cross-fade, 75 to 200 s gaps, first track after 15 to 45 s, no immediate repeats, fallbacks), `client/scripts/audio/MusicPlayer.cs` (Godot node: two AudioStreamPlayers on a runtime-created "Music" bus, per-track fades and trim, bus volume from the slider capped at +6 dB, missing files skipped with a log line), SoundScape adds the player and exposes the context it already receives (TimeOfDayNow, RainNow, CoverNow, FireNow). The old synthesized score is off (`SoundMix.SynthMusic` false) so the world sounds stay and the generated music is gone. SoundPreview `--music-test` checks the rules with fake tracks (empty list silent, gaps at least a minute, cross-fades 3 to 5 s, off means silent, mood rules): passes. Client builds, 0 errors. docs/MUSIC.md and client/assets/music/README.md written.
+- Not run in Godot: no engine in my sandbox, so the playback node (bus creation, fades, Finished signal) is untested until a real .ogg is in the project.
 
 ## Open questions / blockers
-- Justin's pick of style (A, B or C) and feedback on the tunes.
+- Waiting for Justin's music files. Until MusicDefs.All has entries, the game has no music.
 
 ## Next step
-When Justin picks: refine that style, then stream Score through SoundMix (replace the old Music class, keep MusicOn and the slider, pick pieces by time of day / sheltered / resting), as a PR. Placement default: main theme and lighter pieces by day, the nap song at dusk, night and while resting.
+When Justin's .ogg files arrive: add them to client/assets/music/, add one MusicDef line each (docs/MUSIC.md), run the game once with each mood to check levels and the cross-fade by ear, and set trims.
