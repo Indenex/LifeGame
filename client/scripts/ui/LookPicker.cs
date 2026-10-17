@@ -188,7 +188,7 @@ public partial class LookPicker : CanvasLayer
         choices.AddChild(Words("Cut", Looks.CutNames, cuts, i => look = look with { Cut = i }));
         choices.AddChild(Words("Beard", Looks.BeardNames, beards, i => look = look with { Beard = i != 0 }));
         choices.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
-        done = ControlsPage.TextButton("Done", Done);
+        done = Ui.MainButton("Done", Done);
         done.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
         choices.AddChild(done);
 
@@ -210,7 +210,6 @@ public partial class LookPicker : CanvasLayer
     {
         bool ok = !first || nameField.Valid;
         done.Disabled = !ok;
-        done.Modulate = new Color(1, 1, 1, ok ? 1f : 0.4f);
     }
 
     // A labelled row of round colour swatches.
