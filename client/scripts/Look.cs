@@ -646,6 +646,8 @@ public static class Look
             uniform float fade_far = 0.0;
             // 1 on the grass tufts only: the art-reference colour bands.
             uniform float stylised = 0.0;
+            // 1 when the ground is painted (PaintedTerrain, env-27): the blades take its stepped light.
+            uniform float painted_light = 0.0;
             global uniform vec3 player_position;
 
             varying vec3 tint;
@@ -727,7 +729,7 @@ public static class Look
 
             void light() {
                 float sky = LIGHT_IS_DIRECTIONAL ? shade : 1.0;
-                if (stylised > 0.5) {
+                if (painted_light > 0.5) {
                     // The painted light of the ground and props (Painted, env-25): shade,
                     // mid and lit in soft steps, the shade leaning violet, at the ground's
                     // overall brightness (PaintedTerrain) so blades and soil match.

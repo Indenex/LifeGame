@@ -120,7 +120,7 @@ public partial class Terrain
         _ = Undergrowth.Reed;
         _ = Undergrowth.Flowers;
         _ = Undergrowth.Bush;
-        _ = PaintedTerrain.Ground;
+        PaintedTerrain.Prewarm();
         foreach (var material in new Material[] { Look.Ground, Look.RockSurface, Look.Foliage, Look.TreeBark, Look.TreeFoliage, Look.Grass, Look.GrassTufts })
             _ = Look.GhostOf(material);
     }
