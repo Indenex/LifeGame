@@ -48,7 +48,7 @@ public partial class LookPicker : CanvasLayer
         // Start from the look you have now: your chosen row, or the one the game gave you.
         uint id = MyId();
         look = Conn()?.Db.PlayerLook.PlayerId.Find(id) is { } row
-            ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard)
+            ? HumanFigure.Appearance.From(row.Skin, row.Hair, row.Cut, row.Beard, row.Race)
             : id != 0 ? HumanFigure.Appearance.For(id) : HumanFigure.Appearance.Default;
         title.Text = first ? "Choose how you look" : "Your look";
         panel.Visible = true;

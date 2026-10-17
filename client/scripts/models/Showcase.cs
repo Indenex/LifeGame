@@ -524,7 +524,7 @@ public partial class Showcase : Node3D
         var looks = new[]
         {
             new ChibiFigure.Look(ChibiFigure.Race.Bramble, 0, 2, 0), new ChibiFigure.Look(ChibiFigure.Race.Bramble, 3, 1, 1),
-            new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 1, 1, 0),
+            new ChibiFigure.Look(ChibiFigure.Race.Pebble, 0, 0, 0), new ChibiFigure.Look(ChibiFigure.Race.Pebble, 1, 1, 1),
         };
         for (int i = 0; i < looks.Length; i++)
         {

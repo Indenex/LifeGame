@@ -16,7 +16,8 @@ public static class ChibiFigure
     public const float Height = 1.35f;
     const float Heads = 2.8f;
 
-    public enum Race { Bramble, Kit, Pebble }
+    // In the order of the race byte on player_look (LifeGame.Shared.Looks.Races).
+    public enum Race { Bramble, Pebble, Kit }
 
     // A chibi player's look: race, then a main colour, a second colour and a part
     // style, each an index into the race's lists below.
@@ -118,6 +119,20 @@ public static class ChibiFigure
             {
                 new(0f, 0.265f, 0.2f), new(1f, 0.27f, 0.205f),
             }, 18, 0.05f);
+            // Pattern 1, scutes: pale plates set into the shell's back in rows.
+            if (look.Style % 2 == 1)
+            {
+                var radii = new Vector3(0.28f, 0.5f, 0.23f);
+                foreach (var (u, cols) in new[] { (0.5f, 1), (0.88f, 3), (1.22f, 3) })
+                    for (int c = 0; c < cols; c++)
+                    {
+                        float a = cols == 1 ? 0f : (c - 1) * 0.62f;
+                        var at = dome + new Vector3(radii.X * Mathf.Sin(u) * Mathf.Sin(a), radii.Y * Mathf.Cos(u), -radii.Z * Mathf.Sin(u) * Mathf.Cos(a));
+                        var off = at - dome;
+                        var normal = new Vector3(off.X / (radii.X * radii.X), off.Y / (radii.Y * radii.Y), off.Z / (radii.Z * radii.Z)).Normalized();
+                        k.Paint(ShellRim, 0.92f).Ellipsoid(at + normal * 0.004f, new Vector3(0.075f, 0.075f, 0.014f), 6, 4, MeshKit.Aim(normal));
+                    }
+            }
         }
 
         // The head: big and round, a little wider than tall.
