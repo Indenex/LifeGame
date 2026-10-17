@@ -192,6 +192,8 @@ Notes: nolook.sh now also handles the once-only look picker; render.sh has --whe
 
 - 2026-10-17 16:05: Godot hung after saving the ui-70 ghost PNG (20 min lost). tools/render/watchdog.sh (run detached: `nohup tools/render/watchdog.sh > /tmp/render/wd.log &`) kills a render.sh Godot 90 s after its PNG exists.
 
+- 2026-10-17 16:15: naturekit-1 replaced: 9a7565c1, noon and 0.28, with and without --naturekit (4 shots), summary for the PM in the request.
+
 ## Open questions / blockers
 - Waiting on Justin (via the PM): which ground look (botw or ghibli) he picks.
 
