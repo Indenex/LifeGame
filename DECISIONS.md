@@ -1033,5 +1033,5 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 **Who:** Justin ("this new version is even worse. Go back to the old animal/humanoid look, just slightly less cute, chibiish is fine.")
 
 ## D-255 — 2026-10-17 — First player roster: Pebble, Kit, Capling and Bramble; Modeling builds the shared base plus Kit first (follows D-254)
-**Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling builds the shared base plus Kit first (model-6).
-**Who:** Justin, picking the roster (relayed by the PM; no direct quote).
+**Decision:** Justin picked the first player roster: Pebble, Kit, Capling and Bramble, at round 4's level of cute (locked). Modeling first built the shared base plus Kit (model-6). Update: for the new models Modeling builds the shared base plus Pebble and Bramble first; Kit and Capling are deferred.
+**Who:** Justin, picking the roster (relayed by the PM), and then "for the new models, just focus on pebble and bramble for now".
