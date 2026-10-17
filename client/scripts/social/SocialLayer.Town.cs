@@ -32,7 +32,7 @@ public partial class SocialLayer
         c.Db.Claim.OnInsert += (_, _) => dirty(); c.Db.Claim.OnUpdate += (_, _, _) => dirty(); c.Db.Claim.OnDelete += (_, _) => dirty();
     }
 
-    // One centred window at a time: the town panel takes the claim panel's place.
+    // The claim panel is docked, not centred, so it closes by hand; Panels.Opening closes other centre windows.
     void OpenTown()
     {
         panel.Close();

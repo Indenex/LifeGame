@@ -46,8 +46,7 @@ public partial class TownPanel : CanvasLayer
     byte? votingFor;     // an office chosen to vote for; the next signer clicked gets the vote
     ulong selected;      // the claim whose card shows under the map
 
-    // --- Window: kept in these few spots so UX's Ui.Window / Panels.Centre (PR #494, D-283)
-    // can replace them in one line each once that lands. -------------------------------------
+    // --- Window: UX's shared look (Ui.Window) and the one-centre-window rule (Panels, D-283). ---
 
     public override void _Ready()
     {
@@ -55,31 +54,19 @@ public partial class TownPanel : CanvasLayer
         var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(root);
-        window = MakeWindow(Body());
+        window = Ui.Window(Body());
+        window.MouseFilter = Control.MouseFilterEnum.Stop;
         window.Visible = false;
+        Panels.Centre(this, Close);
         root.AddChild(window);
         ReadyBoxes();
         map.Picked += Pick;
     }
 
-    // Centred, dark and warm like the equipment window (frame alpha 0.82, corner 12, margins 14/18).
-    static PanelContainer MakeWindow(Control content)
-    {
-        var outer = Hud.Panel(content, Vector2.Zero);
-        outer.MouseFilter = Control.MouseFilterEnum.Stop;
-        var style = (StyleBoxFlat)outer.GetThemeStylebox("panel");
-        style.BgColor = new Color(0.10f, 0.11f, 0.09f, 0.82f);
-        style.ContentMarginTop = style.ContentMarginBottom = 14;
-        style.ContentMarginLeft = style.ContentMarginRight = 18;
-        outer.SetAnchorsPreset(Control.LayoutPreset.Center);
-        outer.GrowHorizontal = Control.GrowDirection.Both;
-        outer.GrowVertical = Control.GrowDirection.Both;
-        return outer;
-    }
-
     public void Open()
     {
         if (window == null) return;
+        Panels.Opening(this);
         window.Visible = true;
         confirmLeave = false;
         dirty = true;
@@ -106,7 +93,7 @@ public partial class TownPanel : CanvasLayer
     {
         var body = new VBoxContainer();
         body.AddThemeConstantOverride("separation", 10);
-        Hud.Style(title, 20, 1f);
+        Hud.Style(title, Ui.TitleSize, 1f);
         body.AddChild(title);
 
         var columns = new HBoxContainer();
