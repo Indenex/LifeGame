@@ -306,6 +306,13 @@ public partial class BagSlotView : PanelContainer
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 4);
         box.AddChild(Hud.Text(Stack.Label, 14));
+        // What it's for, in a few words (ui-64).
+        foreach (var line in ItemUses.Lines(Stack.Item))
+        {
+            var use = Hud.Text(line, 13);
+            use.Modulate = new Color(1, 1, 1, 0.8f);
+            box.AddChild(use);
+        }
         if (Stack.Maker != 0 && BagGrid.Makers?.Maker(Stack.Maker) is { } who)
         {
             var row = new HBoxContainer();
