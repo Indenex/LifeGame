@@ -34,7 +34,7 @@ public static partial class Module
 
     [SpacetimeDB.View(Accessor = "MySkills", Public = true)]
     public static List<SkillLevel> MySkills(ViewContext ctx) =>
-        ctx.Db.SkillLevel.Owner.Filter(ctx.Sender).ToList();
+        ctx.Db.SkillLevel.Owner.Filter(Me(ctx)).ToList();
 
     // Crafting asks for the best quality this player can make with a process.
     static partial void QualityCapFor(ReducerContext ctx, uint playerId, string processId, ref byte cap) =>
@@ -73,10 +73,10 @@ public static partial class Module
         var spec = Skills.Spec(specId) ?? throw new Exception("No such skill");
         if (spec.Basic)
             throw new Exception($"{spec.Name} is a survival basic and always grows");
-        if (FindSkill(ctx, ctx.Sender, specId) is { } row)
+        if (FindSkill(ctx, Me(ctx), specId) is { } row)
             ctx.Db.SkillLevel.Id.Update(row with { Mode = mode });
         else
-            ctx.Db.SkillLevel.Insert(new SkillLevel { Id = 0, Owner = ctx.Sender, Spec = specId, Points = 0, Mode = mode });
+            ctx.Db.SkillLevel.Insert(new SkillLevel { Id = 0, Owner = Me(ctx), Spec = specId, Points = 0, Mode = mode });
     }
 
     static SkillLevel? FindSkill(ReducerContext ctx, Identity who, string specId)

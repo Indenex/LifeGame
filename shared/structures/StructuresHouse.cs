@@ -114,6 +114,31 @@ namespace LifeGame.Shared
                     },
                 },
             },
+                // A hen coop (building-16, Justin: claim-only, hens roost in it at night): a small shed on legs
+                // with a pop-hole and ramp at the front. Animals walk to Entry and settle at Roost.
+            new StructureDef
+            {
+                // 18: its StructureKind position, after ClayTrough = 17 (a SpacetimeDB enum takes no explicit values).
+                Kind = 18,
+                Shape = new StructureShape
+                {
+                    Name = "Hen coop",
+                    Model = "Coop",
+                    Category = "Animals",
+                    HalfWidth = 0.9f, HalfDepth = 0.7f,
+                    Clearance = 1.5f,
+                    RainCover = 1f, Warmth = 0.2f,
+                    Entry = (0f, 1.5f), Roost = (0f, -0.1f),
+                    Stages = new[] { "Frame", "Wattle walls", "Thatch roof" },
+                    // Hen coop: Frame, Wattle walls, Thatch roof (a little less than a lean-to, D-075)
+                    Costs = new (Item Item, uint Count)[][]
+                    {
+                        new[] { (Item.Stick, 5u) },
+                        new[] { (Item.Stick, 4u), (Item.Fiber, 4u) },
+                        new[] { (Item.Fiber, 6u) },
+                    },
+                },
+            },
         };
     }
 }

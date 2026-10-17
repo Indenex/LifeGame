@@ -63,6 +63,7 @@ var builder = DbConnection.Builder()
                 "SELECT * FROM lamp",
                 "SELECT * FROM trough_water",
                 "SELECT * FROM player_mark",
+                "SELECT * FROM structure_mark",
                 "SELECT * FROM animal",
                 "SELECT * FROM animal_carcass",
                 "SELECT * FROM forage_bush",
@@ -84,6 +85,9 @@ conn.Db.ClayNews.OnInsert += (_, n) =>
 
 Pump(() => subscribed, 20, "subscription");
 Pump(() => me is { } id && conn.Db.Player.Identity.Find(id) is not null, 10, "player row");
+// A returning login waits at the character menu (survival-24): play its character.
+if (conn.Db.Player.Identity.Find(me!.Value) is { Online: false }) conn.Reducers.SelectCharacter(me!.Value);
+Pump(() => conn.Db.Player.Identity.Find(me!.Value) is { Online: true }, 10, "the character in the world");
 myId = conn.Db.Player.Identity.Find(me!.Value)!.PlayerId;
 var ground = new BotGround(conn);
 var start = conn.Db.PlayerPos.PlayerId.Find(myId)!;
@@ -732,6 +736,10 @@ void TroughCheck(Structure kiln)
     if (CountOf(Item.ClayTrough) != 0) Fail("the trough is still in the bag");
     int capacity = Structures.TroughLitres(conn.Db.StructureProgress.StructureId.Find(placed.Id)?.Quality ?? Items.RawQuality);
     Log($"Trough set down; it holds {capacity} L");
+    Pump(() => conn.Db.StructureMark.StructureId.Find(placed.Id) != null, 3, "the trough's maker to be recorded");
+    if (conn.Db.StructureMark.StructureId.Find(placed.Id) is not { } troughMark || Marks.MakerOf(Item.ClayTrough, troughMark.Mark) != myId)
+        Fail($"the set-down trough lost its maker: {conn.Db.StructureMark.StructureId.Find(placed.Id)?.Mark:X}, expected player {myId}");
+    Log("The set-down trough kept its maker");
     Log("STAGE trough-placed");
 
     // Pouring with no water pot is refused.
@@ -751,11 +759,16 @@ void TroughCheck(Structure kiln)
     Pump(() => lastError != null || CountOf(Item.PinchPotOfWater) == 1, 3, "a pot of water");
     if (lastError != null) Fail($"filling a pot: {lastError}");
     WalkTo(placed.X - 1.2f, placed.Z, 0.2f);
+    uint wearBefore = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPotOfWater).Wear;
     lastError = null;
     conn.Reducers.PourIntoTrough(placed.Id);
     Pump(() => lastError != null || conn.Db.TroughWater.StructureId.Find(placed.Id) is { Litres: 2 }, 3, "the trough to fill");
     if (lastError != null) Fail($"pouring: {lastError}");
     if (CountOf(Item.PinchPot) != 1 || CountOf(Item.PinchPotOfWater) != 0) Fail("the emptied pot did not come back");
+    // The pot's maker (and slip) ride its Wear number: the emptied pot must come back with it.
+    uint wearAfter = conn.Db.MyInventory.Iter().First(r => r.Item == (ushort)Item.PinchPot).Wear;
+    if (wearAfter != wearBefore) Fail($"the emptied pot lost its maker: {wearAfter:X}, was {wearBefore:X}");
+    Log($"The emptied pot kept its maker ({wearAfter:X})");
     Log("Poured a pot in: the trough holds 2 L");
     Log("STAGE trough-poured");
 
@@ -949,7 +962,11 @@ int PotCheck()
     Pump(() => lastError != null || CountOf(Item.PotOfBroth) == 0, 3, "eating the broth");
     if (lastError != null) Fail($"eating: {lastError}");
     Pump(() => CountOf(Item.CoilPot) == pots + 1, 3, "the empty pot back");
-    Log("Ate the broth; the coil pot came back");
+    // The pot that cooked comes back as it went in: its maker bits and slip in Wear, and the Maker column (crafting-25).
+    if (!conn.Db.MyInventory.Iter().Any(r => r.Item == (ushort)Item.CoilPot && r.Wear == expectedMark && r.Maker == myId))
+        Fail("the pot that cooked came back without its maker or slip: " + string.Join(", ",
+            conn.Db.MyInventory.Iter().Where(r => r.Item == (ushort)Item.CoilPot).Select(r => $"wear {r.Wear:X} maker {r.Maker}")));
+    Log("Ate the broth; the coil pot came back with its maker and slip");
     Log("STAGE broth-eaten");
     Log("Pot check passed: a fired pot cooks broth that feeds you");
     conn.Disconnect();
@@ -994,6 +1011,11 @@ void JarCheck(Structure kiln)
     }
     if (conn.Db.Structure.Id.Find(site.Id) is not { Complete: true }) Fail("jar never set down");
     if (CountOf(Item.StorageJar) != 0) Fail("the jar is still in the bag");
+    // The jar remembers who made it (ceramics-15, crafting-25): the structure_mark row has the maker.
+    Pump(() => conn.Db.StructureMark.StructureId.Find(site.Id) != null, 3, "the jar's maker to be recorded");
+    if (conn.Db.StructureMark.StructureId.Find(site.Id) is not { } jarMark || Marks.MakerOf(Item.StorageJar, jarMark.Mark) != myId)
+        Fail($"the set-down jar lost its maker: {conn.Db.StructureMark.StructureId.Find(site.Id)?.Mark:X}, expected player {myId}");
+    Log("The set-down jar kept its maker");
     Log("STAGE jar-placed");
 
     if (CountOf(Item.Stick) < 1) Gather(Item.Stick, 2);
@@ -1046,6 +1068,14 @@ void SetUpBench()
         InMyClaim(sx, sz, 7f) && DistanceTo(sx, sz, marker.X, marker.Z) >= 10f && ClearGround(sx, sz, -3, 6, -2, 4));
     Log($"Built a potter's bench at {bench.X:F1}, {bench.Z:F1}; {CountOf(Item.Stone)} stones left");
     Log("STAGE bench");
+    // The kiln run's pots carry their maker, so the trough steps can check it survives pouring and scooping.
+    if (kilnRun)
+    {
+        lastError = null;
+        conn.Reducers.SetMark(Marks.All[3].Id, Marks.Presets[2]);
+        Pump(() => lastError != null || conn.Db.PlayerMark.PlayerId.Find(myId) != null, 3, "the mark to be set");
+        if (lastError != null) Fail($"setting the mark: {lastError}");
+    }
 }
 
 // Stands where pots are shaped: just on the player's (south) side of the bench.

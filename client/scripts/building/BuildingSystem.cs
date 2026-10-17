@@ -197,6 +197,7 @@ public partial class BuildingSystem : Node
         {
             v = new StructureView((int)s.Kind)
             {
+                StructureId = s.Id,
                 Position = new Vector3(s.X, terrain.HeightAt(s.X, s.Z), s.Z),
                 Rotation = new Vector3(0, s.Yaw, 0),
             };
@@ -672,7 +673,7 @@ public partial class BuildingSystem : Node
     static string ItemName(ushort item, uint count) =>
         Items.IsKnown(item) ? Items.Def((Item)item).Count(count).ToLowerInvariant() : "something";
 
-    SpacetimeDB.Identity? MyIdentity() => conn()?.Identity;
+    SpacetimeDB.Identity? MyIdentity() => Me.Key(conn());
 
     void Puff(Vector3 at, Color color)
     {

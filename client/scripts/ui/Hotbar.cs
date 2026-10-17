@@ -85,7 +85,7 @@ public sealed class ServerHotbarLink : IHotbarLink
     public void Move(int from, int to) => conn.Reducers.MoveHotbarSlot((byte)from, (byte)to);
     public void Use(Item item) => conn.Reducers.UseItem((ushort)item);
 
-    public int Equipped => conn.Identity is { } me && conn.Db.PlayerEquip.Owner.Find(me) is { } e ? e.Slot : -1;
+    public int Equipped => Me.Key(conn) is { } me && conn.Db.PlayerEquip.Owner.Find(me) is { } e ? e.Slot : -1;
     public void Equip(int index) => conn.Reducers.EquipSlot(index < 0 ? (byte)255 : (byte)index);
     public void UseHeld() => conn.Reducers.UseHeld();
 }

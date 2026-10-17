@@ -47,7 +47,7 @@ public partial class Main : Node3D
     BuildingSystem building = null!;
 
     DbConnection? conn;
-    Identity? myIdentity;
+    Identity? myIdentity => Me.Key(conn);
     uint myId;
     readonly TradeWindow trade = new();
     readonly AdminPanel admin = new();
@@ -56,7 +56,10 @@ public partial class Main : Node3D
     readonly BuildMenu buildMenu = new();
     readonly MarkPicker markPicker = new();
     readonly Placing placing = new();
+    readonly GroupView groupView = new();
     readonly LookPicker lookPicker = new();
+    readonly CharacterMenu characterMenu = new();
+    bool characterHooks;
     bool spawned;
     Vector3 velocity;
     float heading, sendTimer;
@@ -72,6 +75,9 @@ public partial class Main : Node3D
         // First, so it sees every window built after it (the --warm prototype, D-313).
         AddChild(new WarmLook());
         AddChild(new Bounce());
+        // ui-47: a soft "Waking up…" veil until you stand in the world.
+        // The veil gives way to the world, or to the character menu when a login has characters (ui-39).
+        AddChild(new WakeVeil { Done = () => spawned || characterMenu.IsOpen });
         SetupInput();
         SetupView();
         SetupEnvironment();
@@ -168,10 +174,14 @@ public partial class Main : Node3D
         lookPicker.MyId = () => myId;
         lookPicker.Note = hud.Note;
         AddChild(lookPicker);
+        // ui-39: the character menu, the first screen once a login has characters (AtCharacterMenu).
+        characterMenu.NewCharacter = () => NewCharacter(null);
+        AddChild(characterMenu);
         // The sundial's time-of-day arc (ui-32); Has comes from House building's building-18 flag.
         AddChild(new SundialArc { TimeOfDay = () => atmosphere.TimeOfDay });
         JournalPanel? journalPanel = null;
         Panels.Open = () => PauseMenu.IsOpen
+            || bugReport?.IsOpen == true
             || (journalPanel ??= journal.GetChildren().OfType<JournalPanel>().FirstOrDefault())?.IsOpen == true
             || social.PanelOpen
             || trade.IsOpen
@@ -191,8 +201,9 @@ public partial class Main : Node3D
         AddChild(new FirstEvening { Conn = () => conn, MyId = () => myId, TimeOfDay = () => atmosphere.TimeOfDay });
         var keyHelp = new KeyHelp();
         AddChild(keyHelp);
+        SetUpBugReport();
         // Esc belongs to whatever panel, chat or placement is open; otherwise it opens the menu.
-        var menu = new PauseMenu { Unstuck = RequestUnstuck, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
+        var menu = new PauseMenu { ToCharacters = ReturnToMenu, ReportBug = () => GetTree().CreateTimer(0.15).Timeout += () => bugReport?.Open(), Unstuck = RequestUnstuck, Keys = keyHelp, Sound = () => atmosphere.Sound, OthersOpen = () => bugReport?.IsOpen == true || crafting.CapturesInput || admin.IsOpen || building.Placing || social.Typing || social.PanelOpen || GetViewport().GuiGetFocusOwner() != null };
         AddChild(menu);
         // First child, so Esc reaches it only after every lane panel had its turn.
         MoveChild(menu, 0);
@@ -206,9 +217,22 @@ public partial class Main : Node3D
             AskTrade = id => conn?.Reducers.AskTrade(id),
             AnswerTrade = yes => trade.Link.Answer(yes),
             InviteToTown = id => conn?.Reducers.InviteToTown(id),
+            InviteToGroup = id => conn?.Reducers.InviteToGroup(id),
+            JoinGroup = id => { if (groupView.Incoming is { } i && i.FromId == id) groupView.Answer(i, true); },
             OpenChat = social.OpenChat,
         };
         AddChild(playerMenu);
+        // ui-38: your group's members, and the invitation waiting for you.
+        groupView.AvatarOf = id => others.GetValueOrDefault(id);
+        groupView.MyId = () => myId;
+        AddChild(groupView);
+        // ui-48: the emote wheel (Q); the server checks the emote and everyone sees it (anim-16).
+        AddChild(new EmoteWheel
+        {
+            Blocked = playerMenu.Blocked,
+            Play = e => conn?.Reducers.Emote((byte)e.Motion),
+            SomeoneNear = () => others.Values.Any(o => o.Position.DistanceTo(me.Position) < 10f),
+        });
         var cameraDrag = new CameraDrag { Rig = cameraRig, Blocked = () => building.Placing };
         cameraDrag.Clicked += playerMenu.Clicked;
         AddChild(cameraDrag);
@@ -432,9 +456,12 @@ public partial class Main : Node3D
         conn.Db.MyInventory.OnDelete += (_, _) => RefreshInventory();
         herd.Bind(conn, terrain, () => me.Position);
         jumpView.Attach(conn, id => others.GetValueOrDefault(id), () => myId);
-        conn.OnUnhandledReducerError += (_, e) => { Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
+        // A dig that lands inside the server's cooldown ("Still working") is not a failure to give up on: a held
+        // key tries again after the next interval, so one early repeat on a laggy link does not end the hold.
+        conn.OnUnhandledReducerError += (_, e) => { BugLog.Error(e.Message); if (!e.Message.Contains("Still working")) Use.Failed(); ServerCheck.Failed(e.Message, hud.Note, ""); };
         Use.Busy = () => crafting.Working;
         social.Attach(conn, view, terrain, hud, id => id == myId ? me : others.GetValueOrDefault(id));
+        groupView.Attach(conn);
         trade.Attach(new ServerTradeLink(conn, () => myId));
         admin.Attach(conn);
         equipment.Attach(new ServerEquipLink(conn));
@@ -456,7 +483,6 @@ public partial class Main : Node3D
 
     void OnConnected(DbConnection c, Identity identity, string token)
     {
-        myIdentity = identity;
         SaveToken(token);
         hud.SetStatus("Connected");
         ServerCheck.Warn = hud.Warn;
@@ -499,8 +525,8 @@ public partial class Main : Node3D
         conn.SubscriptionBuilder()
             .OnApplied(_ =>
             {
-                var at = MyPos();
-                Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+                if (!Me.InWorld(conn)) { AtCharacterMenu(); return; }
+                EnterWorldArea();
             })
             .OnError((_, e) =>
             {
@@ -508,6 +534,69 @@ public partial class Main : Node3D
                 Subscribe(0, 0);
             })
             .Subscribe(Subscriptions.Self);
+        // Picking a character at the menu puts it in the world: its row goes online.
+        conn.Db.MyPlayer.OnUpdate += (_, _, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+        conn.Db.MyPlayer.OnInsert += (_, p) => { if (p.Online && subscribedChunk.Item1 == int.MinValue) EnterWorldArea(); };
+    }
+
+    void EnterWorldArea()
+    {
+        var at = MyPos();
+        Subscribe(World.ChunkOf(at?.X ?? 0), World.ChunkOf(at?.Z ?? 0));
+    }
+
+    // The login has characters and none is in the world yet: the character menu (ui-39).
+    void AtCharacterMenu()
+    {
+        if (conn == null) return;
+        if (!characterHooks)
+        {
+            characterHooks = true;
+            characterMenu.Attach(new ServerCharacterLink(conn));
+            // A refused Play or Delete comes back to the menu with the server's reason.
+            conn.Reducers.OnSelectCharacter += (ctx, _) =>
+            {
+                if (ctx.Event.Status is not SpacetimeDB.Status.Failed(var reason)) return;
+                hud.Note(reason);
+                characterMenu.Open();
+            };
+            conn.Reducers.OnDeleteCharacter += (ctx, _, _) =>
+            {
+                if (ctx.Event.Status is SpacetimeDB.Status.Failed(var reason)) hud.Note(reason);
+            };
+            conn.Reducers.OnCreateCharacter += (ctx, _, _, _, _, _, _) =>
+            {
+                if (ctx.Event.Status is SpacetimeDB.Status.Failed(var reason)) NewCharacter(reason);
+            };
+        }
+        characterMenu.Open();
+    }
+
+    // New character: today's look picker and name field (Justin: "can be used temporarily"),
+    // then CreateCharacter, which steps straight into the world. Esc goes back to the menu.
+    void NewCharacter(string? refused)
+    {
+        characterMenu.Close();
+        lookPicker.OpenNew(
+            (name, look) => conn?.Reducers.CreateCharacter(name, (byte)look.Race, (byte)look.Skin, (byte)look.Hair, (byte)look.Cut, (byte)(look.Beard ? 1 : 0)),
+            () => characterMenu.Open(),
+            refused);
+    }
+
+    // Back to the character menu from the pause menu: the server takes the character out of the
+    // world, the area subscription goes (its rows leave, so the views clear), and the menu opens.
+    // Picking one again comes back in through EnterWorldArea.
+    void ReturnToMenu()
+    {
+        if (conn == null || !spawned) return;
+        conn.Reducers.ReturnToMenu();
+        subscription?.Unsubscribe();
+        subscription = null;
+        subscribedChunk = (int.MinValue, int.MinValue);
+        spawned = false;
+        foreach (var other in others.Values) other.QueueFree();
+        others.Clear();
+        AtCharacterMenu();
     }
 
     // Why a fire can't go at (x, z), or null: Crafting's shared ground rule (level, dry, clear of
@@ -522,9 +611,7 @@ public partial class Main : Node3D
         return null;
     }
 
-    PlayerPos? MyPos() =>
-        conn != null && myIdentity is { } id && conn.Db.Player.Identity.Find(id) is { } p
-            ? conn.Db.PlayerPos.PlayerId.Find(p.PlayerId) : null;
+    PlayerPos? MyPos() => conn?.Db.MyPlayerPos.Iter().FirstOrDefault();
 
     void Subscribe(int chunkX, int chunkZ)
     {
@@ -608,7 +695,7 @@ public partial class Main : Node3D
     bool IsMine(uint playerId)
     {
         if (conn == null || myIdentity == null) return false;
-        if (conn.Db.Player.Identity.Find(myIdentity.Value) is not { } mine) return false;
+        if (Me.Player(conn) is not { } mine) return false;
         myId = mine.PlayerId;
         return mine.PlayerId == playerId;
     }

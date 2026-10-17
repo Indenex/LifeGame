@@ -45,6 +45,8 @@ public partial class Atmosphere : Node3D
     readonly Fireflies fireflies = new();
     readonly Mist mist = new();
     readonly FallingLeaves leaves = new();
+    // Butterflies, pollen and seeds, and fireflies by water (Environment, env-30).
+    readonly AmbientLife life = new();
     readonly SoundScape sound = new();
     // The soundscape, for settings such as the menu's music slider (Sound.MusicVolume).
     public SoundScape Sound => sound;
@@ -113,11 +115,13 @@ public partial class Atmosphere : Node3D
         env.Sky.RadianceSize = Sky.RadianceSizeEnum.Size128;
         sky.SetShaderParameter(NClouds, Look.Clouds);
         sun.ShadowEnabled = true;
+        AddChild(new SunShadows(sun));
 
         AddChild(rain);
         AddChild(fireflies);
         AddChild(mist);
         AddChild(leaves);
+        AddChild(life);
         ReadyWater();
         ReadyWaterSurface();
         AddChild(sound);
@@ -208,13 +212,13 @@ public partial class Atmosphere : Node3D
         conn.Db.Fire.OnUpdate += (_, _, f) => fires[f.Id] = (f.X, f.Z, f.FuelUntil.MicrosecondsSinceUnixEpoch);
         conn.Db.Fire.OnDelete += (_, f) => fires.Remove(f.Id);
         HearFireCaps(conn);
+        HearKilns(conn);
         conn.SubscriptionBuilder()
             .OnError((_, e) => GD.PushWarning($"Weather subscription: {e.Message}"))
             .Subscribe(Subscriptions.Atmosphere);
         KeyHelp.Extra = () => TimeCommands.HelpFor(conn);
         WorkSounds.Connect(conn, sound);
-        ToolSounds.Connect(conn);
-        StructureSounds.Connect(conn);
+        AudioHooks.Connect(conn);
     }
 
     void OnClock(WorldClock c)
@@ -319,7 +323,7 @@ public partial class Atmosphere : Node3D
         var towardSun = WorldTime.SunHeight(timeOfDay) > -0.06f ? sun.GlobalBasis.Z : -sun.GlobalBasis.Z;
         mist.Follow(focus, Mist.Amount(timeOfDay, wind, rainAmount, wetness), env.FogLightColor.Lerp(sun.LightColor, 0.3f).Lerp(Colors.White, 0.2f),
             towardSun, sun.LightColor * sunLow * (1f - Mathf.Clamp(cloud * 1.2f - 0.2f, 0f, 1f)), wind, dt);
-        fireflies.Follow(focus, Mathf.SmoothStep(0.85f, 1f, 1f - daylight) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
+        fireflies.Follow(focus, life.Fireflies(Mathf.SmoothStep(0.85f, 1f, 1f - daylight), 1f - daylight, Year) * (1f - Mathf.Clamp(rainAmount * 3f, 0f, 1f)));
         Night = 1f - daylight;
         UpdateHomes(dt, focus, Night, env.FogLightColor);
         UpdateSignals(dt, focus, Night);
@@ -332,6 +336,7 @@ public partial class Atmosphere : Node3D
         float wooded = Woodedness(focus);
         woods += (wooded - woods) * Mathf.Min(1f, dt / 3f);
         leaves.Follow(focus, Year, wind, woods, WindDirection);
+        life.Follow(dt, focus, terrain, daylight, Year, wind, WindDirection, woods, rainAmount);
         UpdateWater(dt, focus, env.FogLightColor.Lerp(sun.LightColor, 0.4f));
         UpdateWaterSurface(dt, focus);
         UpdateFrost(dt);
@@ -344,7 +349,7 @@ public partial class Atmosphere : Node3D
             FireSound(focus, ear.GlobalBasis.X);
             WaterSound(dt, focus, ear.GlobalBasis.X);
             WorkSounds.Place(dt, focus, ear.GlobalBasis.X);
-            ToolSounds.Tick(dt);
+            AudioHooks.Tick(dt);
         }
     }
 
@@ -409,7 +414,8 @@ public partial class Atmosphere : Node3D
         float moonElevation = 16f + Mathf.Max(-sunHeight, 0f) * 32f;
         Vector3 sunDir = Toward(sunHeight * 55f, azimuth), moonDir = Toward(moonElevation, azimuth + 180f);
         float elevation = Mathf.Max(isDay ? sunHeight * 55f : moonElevation, 3f);
-        sun.Rotation = new Vector3(Mathf.DegToRad(-elevation), Mathf.DegToRad(isDay ? azimuth : azimuth + 180f), 0);
+        // Stepped, not turned every frame, so shadow edges hold still (SunShadows).
+        sun.Rotation = SunShadows.Steady(elevation, isDay ? azimuth : azimuth + 180f);
 
         Color low = new(1.0f, 0.64f, 0.38f), mid = new(1.0f, 0.86f, 0.66f), high = new(1.0f, 0.95f, 0.87f);
         float h = Mathf.Clamp(sunHeight, 0f, 1f);
@@ -498,6 +504,23 @@ public partial class Atmosphere : Node3D
                 nearest = g;
                 // Stoked: fuel left against what a fire holds at most (a well-fed fire roars).
                 stoke = Stoke(id, left);
+                pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
+            }
+        }
+        // A firing kiln is a fire in a brick dome: always roaring (full stoke), a little muffled
+        // and heard a little less far than an open campfire (audio-20).
+        foreach (var (x, z, finish) in kilnFires.Values)
+        {
+            if (finish <= now) continue;
+            var offset = new Vector3(x - listener.X, 0f, z - listener.Z);
+            float d = offset.Length();
+            if (d > 14f) continue;
+            float g = 0.8f * Mathf.Pow(1f - d / 14f, 2f);
+            total += g;
+            if (g > nearest)
+            {
+                nearest = g;
+                stoke = 1f;
                 pan = d < 0.5f ? 0f : offset.Normalized().Dot(new Vector3(right.X, 0f, right.Z).Normalized());
             }
         }

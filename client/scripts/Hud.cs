@@ -116,6 +116,7 @@ public partial class Hud : CanvasLayer
 
     public void Note(string text)
     {
+        BugLog.Note(text);
         if (toastTime > 0f && toast.Text != text) earlier.Push(toast, toastTime);
         toast.Text = text;
         toastTime = 3f;

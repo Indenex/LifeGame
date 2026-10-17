@@ -513,7 +513,7 @@ public static class WorkMotions
     // worked out from this body's own arm lengths, shoulders and mouth: a two-bone
     // reach, so it lands on a tall adult and a short, big-headed chibi alike. apart
     // moves the hand that far off the middle (cupped hands side by side).
-    static (float swing, float sideways, float elbow) ToMouth(PlayerRig body, bool left, float apart)
+    internal static (float swing, float sideways, float elbow) ToMouth(PlayerRig body, bool left, float apart)
     {
         var shoulder = left ? body.ShoulderL : body.ShoulderR;
         var target = body.Mouth + new Vector3(left ? apart : -apart, -0.02f, 0.06f) - shoulder;

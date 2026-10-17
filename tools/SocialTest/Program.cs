@@ -420,9 +420,13 @@ ExpectError(b, () => b.Conn.Reducers.TakeFromStash(claim.Id, (ushort)Item.Stone,
 // The land's owner can clear anything on it; nobody else can take down the owner's things.
 Walk(b, site.X + 1.5f, site.Z);
 ExpectError(b, () => b.Conn.Reducers.Dismantle(site.Id), "take it down", "B cannot take down A's marker");
-Walk(a, hx - 2, hz);
+// Stand in front of the lean-to, outside its side walls: two metres west of its middle is on the wall
+// itself, which no route can reach (the "stuck on leg 2/2 to (38.0, 33.4)" flake).
+var hutShape = Structures.Shape((int)hut!.Kind);
+var hutFront = Structures.ToWorld(hut.X, hut.Z, hut.Yaw, 0f, hutShape.HalfDepth + 1.2f);
+Walk(a, hutFront.x, hutFront.z);
 a.LastError = null;
-a.Conn.Reducers.Dismantle(hut!.Id);
+a.Conn.Reducers.Dismantle(hut.Id);
 Pump(() => !a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id) || a.LastError != null, 5, "owner clears");
 Check(!a.Conn.Db.Structure.Iter().Any(s => s.Id == hut.Id), $"the owner can take down a member's building ({a.LastError ?? "ok"})");
 
@@ -698,6 +702,33 @@ else
     }
 }
 
+// ui-38: groups, the shell. Invite from close by, accept, /g reaches a member far away,
+// leaving a group of two ends it.
+Check(Groups.IsGroupLine("/g hi") && Groups.GroupBody("/g hi") == "hi" && !Groups.IsGroupLine("/go"), "\"/g hi\" is a group line");
+Walk(a, b.X + 30, b.Z);
+ExpectError(a, () => a.Conn.Reducers.InviteToGroup(b.PlayerId), "Walk closer", "you can't invite someone across a distance");
+ExpectError(a, () => a.Conn.Reducers.InviteToGroup(a.PlayerId), "yourself", "you can't invite yourself");
+Walk(a, b.X + 2, b.Z);
+a.LastError = null;
+a.Conn.Reducers.InviteToGroup(b.PlayerId);
+Check(Wait(() => b.Conn.Db.MyGroupInvites.Iter().Any(i => i.FromId == a.PlayerId), 5), $"B sees A's group invitation ({a.LastError ?? "ok"})");
+Check(Wait(() => a.Conn.Db.MyGroupInvites.Iter().Any(i => i.InviteeId == b.PlayerId), 5), "A sees the invitation it sent");
+var groupInvite = b.Conn.Db.MyGroupInvites.Iter().First(i => i.FromId == a.PlayerId);
+b.Conn.Reducers.AnswerGroup(groupInvite.Id, true);
+Check(Wait(() => a.Conn.Db.MyGroup.Count == 2 && b.Conn.Db.MyGroup.Count == 2, 5), "accepting forms a group of two that both see");
+Check(!b.Conn.Db.MyGroupInvites.Iter().Any(), "the invitation is gone once answered");
+ExpectError(a, () => a.Conn.Reducers.InviteToGroup(b.PlayerId), "already in your group", "a member can't be invited again");
+ExpectError(b, () => b.Conn.Reducers.AnswerGroup(groupInvite.Id, true), "gone", "an answered invitation can't be used twice");
+Walk(b, b.X + 80, b.Z);
+a.LastError = null;
+a.Conn.Reducers.SendChat("/g over here");
+Check(Wait(() => b.Conn.Db.MyChat.Iter().Any(m => m.Text == "/g over here" && m.SenderId == a.PlayerId), 5), $"B hears A's /g line 80 m away ({a.LastError ?? "ok"})");
+b.Conn.Reducers.LeaveGroup();
+Check(Wait(() => a.Conn.Db.MyGroup.Count == 0 && b.Conn.Db.MyGroup.Count == 0, 5), "B leaving a group of two ends it for both");
+ExpectError(b, () => b.Conn.Reducers.LeaveGroup(), "not in a group", "leaving with no group is refused");
+Thread.Sleep(600);
+ExpectError(a, () => a.Conn.Reducers.SendChat("/g anyone?"), "not in a group", "/g with no group says so");
+
 Console.WriteLine(failures == 0 ? "All social checks passed" : $"{failures} checks failed");
 // The SDK keeps background threads alive, so leave explicitly.
 Environment.Exit(failures == 0 ? 0 : 1);
@@ -744,7 +775,7 @@ sealed class Tester
                     {
                         "SELECT * FROM player", "SELECT * FROM player_pos", "SELECT * FROM world_item",
                         "SELECT * FROM terrain_edit", "SELECT * FROM my_inventory", "SELECT * FROM claim",
-                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended",
+                        "SELECT * FROM claim_member", "SELECT * FROM town", "SELECT * FROM town_signer", "SELECT * FROM town_office", "SELECT * FROM town_vote", "SELECT * FROM town_merge", "SELECT * FROM town_merge_vote", "SELECT * FROM town_ban", "SELECT * FROM town_log", "SELECT * FROM my_town_invites", "SELECT * FROM my_claim_stash", "SELECT * FROM my_chat", "SELECT * FROM structure", "SELECT * FROM player_health", "SELECT * FROM claim_name", "SELECT * FROM my_claim_stash_log", "SELECT * FROM my_trade", "SELECT * FROM my_trade_items", "SELECT * FROM trade_ended", "SELECT * FROM my_group", "SELECT * FROM my_group_invites",
                     });
             })
             .OnConnectError(e => Console.WriteLine($"{name} connect error: {e.Message}"))

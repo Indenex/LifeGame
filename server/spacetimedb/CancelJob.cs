@@ -20,7 +20,7 @@ public static partial class Module
     public static void CancelCraft(ReducerContext ctx)
     {
         RequirePlayer(ctx);
-        CancelJob(ctx, ctx.Sender);
+        CancelJob(ctx, Me(ctx));
     }
 
     // Ends a job now: removes its timer, returns what it took, and tells the work hooks.
@@ -38,7 +38,9 @@ public static partial class Module
                 var item = Items.Def(input.Item);
                 byte given = job.InputQuality > 0 ? job.InputQuality : job.Quality;
                 byte quality = ClayRules.IsVessel(input.Item) ? job.VesselQuality : item.HasQuality ? given : Items.RawQuality;
-                AddToInventory(ctx, owner, input.Item, input.Count, quality);
+                // A pot goes back as it was, with its maker and slip (ceramics, crafting-25).
+                bool vessel = ClayRules.IsVessel(input.Item);
+                AddToInventory(ctx, owner, input.Item, input.Count, quality, vessel ? job.VesselWear : 0u, vessel ? job.VesselMaker : 0u);
             }
         return true;
     }
@@ -54,8 +56,8 @@ public static partial class Module
     // After the hand changes (EquipSlot, SyncEquip): a chop needs the axe still in hand.
     static void CheckJobTool(ReducerContext ctx)
     {
-        if (ctx.Db.CraftJob.Owner.Find(ctx.Sender) is not { } job) return;
+        if (ctx.Db.CraftJob.Owner.Find(Me(ctx)) is not { } job) return;
         if (Processes.Find(job.ProcessId) is not { Outcome: Outcome.Chop } def) return;
-        if (EquippedTool(ctx, def.NeedsTool) is null) CancelJob(ctx, ctx.Sender);
+        if (EquippedTool(ctx, def.NeedsTool) is null) CancelJob(ctx, Me(ctx));
     }
 }
