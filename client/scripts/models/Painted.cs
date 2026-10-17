@@ -124,8 +124,8 @@ public static class Painted
     }
 
     static Shader Shader => shader ??= Look.MakeShader(Code(ghost: null));
-    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_draw_always;"));
-    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;"));
+    static Shader GhostShader => ghostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_back, depth_prepass_alpha;"));
+    static Shader StructureGhostShader => structureGhostShader ??= Look.MakeShader(Code(ghost: "render_mode cull_disabled, depth_prepass_alpha;", structure: true));
     static Shader? shader, ghostShader, structureGhostShader;
 
     static NoiseTexture2D Dabs => dabs ??= new NoiseTexture2D
@@ -146,12 +146,13 @@ public static class Painted
     }
 
     // ghost: the render mode of a see-through variant, or null for the solid.
-    static string Code(string? ghost)
+    // structure: a building's ghost, which keeps Look's structure fade rules (env-25).
+    static string Code(string? ghost, bool structure = false)
     {
         string code = Look.PaintedCode;
-        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : ""));
+        code = Splice(code, "shader_type spatial;", "shader_type spatial;\n#define PAINTED_PROP" + (ghost != null ? "\n#define GHOST" : "") + (structure ? "\n#define STRUCTURE_GHOST" : ""));
         if (ghost != null) code = Splice(code, "render_mode cull_disabled;", ghost);
-        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations);
+        code = Splice(code, "varying float season_kind;", "varying float season_kind;\n" + Declarations + "\n" + RimUniform);
         code = Splice(code, "vec3 color = tint * (1.0 + paint * 2.0);", $$"""
             dab = dab_at(world_pos);
                 // Clean colour (D-319): the brush only drifts the colour in broad, soft
@@ -175,7 +176,7 @@ public static class Painted
         // what read as pitting.
         code = Splice(code, "NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035);", $"NORMAL = normalize(abs(det) * NORMAL - grad * bump * 0.035 * {F(Smooth.Relief)});");
         code = Splice(code, "AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6);", $"AO = mix(1.0, smoothstep(0.0, 0.6, h), cavity * 0.6 * {F(Smooth.Relief)});");
-        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n#else\n");
+        code = Splice(code, "void light() {", "void light() {\n#ifdef PAINTED_PROP\n" + Light + "\n" + Rim + "\n#else\n");
         code = code.TrimEnd();
         if (!code.EndsWith("}")) throw new System.InvalidOperationException("Painted: Look's shader no longer ends with light()");
         return code[..^1] + "#endif\n}\n";
@@ -225,6 +226,24 @@ public static class Painted
         }
         """;
 
+    // The soft rim light (D-313, Justin's pick): a thin warm glow round the edges of a shape
+    // that face away from the sun, strongest when it is backlit, as the cards outline their
+    // figures against the light. Characters (ChibiLook), animals, props, buildings and items
+    // all add it; trees and the ground do not. Its colour is the sun's times Atmosphere's
+    // global rim_tint (cream by day, peach at golden hour, rose at dusk, cool blue at night;
+    // its alpha scales the strength, #612). RimStrength is the one constant to raise.
+    // Shaders that splice Rim declare RimUniform once at the top level.
+    internal const float RimStrength = 0.5f;
+    internal const string RimUniform = "global uniform vec4 rim_tint;";
+    internal static readonly string Rim = $$"""
+            if (LIGHT_IS_DIRECTIONAL) {
+                float rim_edge = smoothstep(0.5, 0.9, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0));
+                float rim_back = smoothstep(-0.2, 0.8, dot(-VIEW, LIGHT));
+                float rim_away = 1.0 - smoothstep(0.0, 0.5, dot(NORMAL, LIGHT));
+                DIFFUSE_LIGHT += LIGHT_COLOR * rim_tint.rgb * rim_edge * mix(0.5, 1.0, rim_back) * rim_away * rim_tint.a * {{RimStrength.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture)}} / PI;
+            }
+        """;
+
     // Stepped light as on the painted trees: shade, mid and lit with brush-broken edges,
     // the shade leaning violet, a lift at low sun, fires and doorways fading with distance.
     internal const string Light = """
@@ -237,7 +256,10 @@ public static class Painted
             float soft = BAND_SOFT;
             float mid = smoothstep(0.32 - soft, 0.32 + soft, l);
             float lit = smoothstep(0.64 - soft, 0.64 + soft, l);
-            float band = 0.12 + 0.2 * low_sun + 0.4 * mid + 0.36 * lit;
+            // At low sun the shade lifts (it wraps further), but the lit side does not: the
+            // golden light is bright enough, and lifting both washed sunlit faces out to a
+            // pale peach at dusk (painted-11).
+            float band = 0.12 + 0.2 * low_sun * (1.0 - mid) + 0.4 * mid * (1.0 - 0.2 * low_sun) + 0.36 * lit * (1.0 - 0.5 * low_sun);
             vec3 tone = mix(shade_tint, vec3(1.0), mid);
             float reach = LIGHT_IS_DIRECTIONAL ? 1.0 : smoothstep(0.0, 0.25, ATTENUATION);
             DIFFUSE_LIGHT += LIGHT_COLOR * tone * band * reach / PI;

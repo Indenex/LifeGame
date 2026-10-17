@@ -181,6 +181,16 @@ namespace LifeGame.Shared
         public const long TownVacancyMicros = 24L * 3600 * 1_000_000;
 
         // Whether two claim markers are near enough for the same town.
+        // Who may bar or unbar a gate on a claim (claims-21): the owner, the members the owner added, and the
+        // town's Gatekeeper. A signer who is neither only opens and shuts it. A banned player (never the owner)
+        // loses every right on the claim, member and Gatekeeper included.
+        public static bool MayBarGate(bool isOwner, bool isMember, bool isTownmate, bool isGatekeeper, bool banned)
+        {
+            bool inner = isOwner || (isMember && !banned);
+            bool rights = inner || (isTownmate && !banned);
+            return rights && (inner || isGatekeeper);
+        }
+
         public static bool TownNear(float x1, float z1, float x2, float z2)
         {
             float dx = x1 - x2, dz = z1 - z2;
