@@ -42,7 +42,7 @@ public static partial class Module
                 if (to < keep && to < Dist(fromX, fromZ, s.X, s.Z)) return true;
                 continue;
             }
-            bool walls = s.Kind == StructureKind.ClayHut ? s.Complete || s.Stage >= 1 : Structures.IsRoom(kind) && (s.Complete || s.Stage >= 2);
+            bool walls = Structures.Shape(kind).Hut ? s.Complete || s.Stage >= 1 : Structures.IsRoom(kind) && (s.Complete || s.Stage >= 2);
             if (walls && Structures.StepCrossesWalls(kind, s.X, s.Z, s.Yaw, DoorClosed(ctx, s.Id), fromX, fromZ, toX, toZ)) return true;
             // Lean-to sides (Structures.StepCrossesLeanTo) are not enforced yet: the open-fronted frame
             // wedges the straight-walking check bots (bugfix-27 follow-up).
