@@ -285,10 +285,13 @@ public partial class Terrain : Node3D
 
         // Banks fade from grass to sand over the last few hand-widths above the water,
         // and the sand darkens to damp at the waterline (env-21), instead of one hard strip.
-        float sand = 1f - Mathf.SmoothStep(Look.WaterLevel + 0.08f, Look.WaterLevel + 0.34f, top);
-        color = color.Lerp(Look.Shore, sand * 0.8f);
-        float damp = 1f - Mathf.SmoothStep(Look.WaterLevel - 0.02f, Look.WaterLevel + 0.12f, top);
-        color = color.Lerp(DampShore, damp * 0.7f);
+        // The painted ground prototypes (env-27) draw the shore bolder, so it reads from the
+        // default camera: a wider sand bank in its own colour and a darker wet band.
+        bool bold = PaintedTerrain.Chosen != PaintedTerrain.Style.Old;
+        float sand = 1f - Mathf.SmoothStep(Look.WaterLevel + 0.08f, Look.WaterLevel + (bold ? 0.5f : 0.34f), top);
+        color = color.Lerp(Look.Shore, sand * (bold ? 0.92f : 0.8f));
+        float damp = 1f - Mathf.SmoothStep(Look.WaterLevel - 0.02f, Look.WaterLevel + (bold ? 0.16f : 0.12f), top);
+        color = color.Lerp(bold ? WetShore : DampShore, damp * (bold ? 0.85f : 0.7f));
 
         if (Depth(x, z) > 0)
             color = World.IsClay(x, z) ? Look.Clay.Darkened(0.15f) : Look.DugEarth;
@@ -319,6 +322,7 @@ public partial class Terrain : Node3D
     }
 
     static readonly Color DampShore = new(0.50f, 0.45f, 0.34f);
+    static readonly Color WetShore = new(0.36f, 0.32f, 0.25f);
     static readonly Color LeafLitter = Look.Earth.Lerp(Look.LeafWarm, 0.25f);
 
     // A dry cell within two meters of open water, where reeds and stones gather.
@@ -507,11 +511,12 @@ public partial class Terrain : Node3D
                     float clump = Mathf.SmoothStep(0.45f, 0.7f, World.Noise(x + 4421, z - 2203, 6f, 99));
                     if (Hash01(x, z, 60) < 0.08f + 0.6f * clump)
                     {
-                        int stems = 1 + (int)(Hash01(x, z, 72) * 2.999f * clump);
+                        bool bold = PaintedTerrain.Chosen != PaintedTerrain.Style.Old;
+                        int stems = (bold ? 2 : 1) + (int)(Hash01(x, z, 72) * 2.999f * clump);
                         for (int s = 0; s < stems; s++)
                         {
                             float ox = (Hash01(x + s * 31, z, 64) - 0.5f) * 0.7f, oz = (Hash01(x, z + s * 31, 65) - 0.5f) * 0.7f;
-                            reeds.Add((Plant(fx + ox, top, fz + oz, yaw + s * 2.1f, 0.6f + Hash01(x + s, z, 61) * 0.5f),
+                            reeds.Add((Plant(fx + ox, top, fz + oz, yaw + s * 2.1f, (bold ? 0.95f : 0.6f) + Hash01(x + s, z, 61) * 0.5f),
                                 Look.LeafLight.Lerp(Look.LeafWarm, Hash01(x, z + s, 62) * 0.3f), custom));
                         }
                     }
