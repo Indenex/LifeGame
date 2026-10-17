@@ -21,9 +21,11 @@ Justin found Pebble's turtle shell (#594, renders/model-11-pebble-shell-*.png on
 
 - 2026-10-17: D-313 (cutesy, relaxing, hint of realism) from the PM: v4 49d7efa2 makes the shell cute: 3 vertebral + 2 costal a side, 16 chunky marginals, wide soft grooves, pastel caramel palette, cocoa seams, one faint ring. Sheets: renders/art-rnd-1-shell-cute-turntable.png, renders/art-rnd-1-shell-cute-close.png. Report updated with D-313 rules.
 
+- 2026-10-17: PM: Modeling lands the shell (option a). Shell colours re-picked to the D-313 palette (54381e65): caramel (0.54,0.42,0.28), honey (0.6,0.5,0.29), sage-olive (0.41,0.43,0.27); image renders/art-rnd-1-shell-colours.png.
+- 2026-10-17: Justin asked for more Blender showcase pieces. Added PaintedAsset.cs and Showcase --view=art --piece=<p> (class LifeGame.Art<P>: Today(), Authored(), Spacing, Height). Three Opus helpers on worktree branches: trees (birch + pine), heads (Bramble, Pebble, faces with 4 expressions), sheep (+ axe). Each lands as tools/art/<piece>/, client/assets/art/<piece>/, client/scripts/models/art/Art<Piece>.cs and renders/art-rnd-1-<piece>.png; the coordinator merges them into claude/art-rnd-1 and sends links one at a time.
+
 ## Open questions / blockers
-- Modeling owns client/scripts/models and client/assets/models: does Modeling take ChibiShell + tools/art/pebble_shell as is, or fold the method into #594? (PM to decide with Modeling.)
 - Justin: is this the direction (painted texture on authored meshes) to roll out to other hero pieces?
 
 ## Next step
-Wait for the PM's answer. Meanwhile (D-145), try stamped brush strokes sampled from the Golden Skull tiles in paint.py, plus slight asymmetry, and compare with the v3 turntable.
+Merge each helper branch as it reports (git worktree branches in this repo), check its image, push, and send the PM the raw link. If a helper session is lost, its piece's brief is in the 2026-10-17 progress entry; restart it from tools/art/pebble_shell as the example.
