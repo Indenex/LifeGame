@@ -1,0 +1,12 @@
+# anim-7 (branch claude/anim-7): chopping at the tree 14 m east of spawn, ~4 swings, camera yaw 90.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --debug-position=13,-2 --render-cam=3.5,1.0,90,0.9
+sql UPDATE player_pos SET x = 13.0, z = -2.0, chunk_x = 0, chunk_z = -1
+frames 300
+give 10 1 60
+frames +12
+mark chop-start
+craftloop chop.log +120
+mark chop-end
+frames +24

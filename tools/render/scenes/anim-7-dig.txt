@@ -1,0 +1,20 @@
+# anim-7: digging with hands (2 digs), then with the digging stick (2 digs). 12 fps, side view.
+client-as-puppet
+client-movie 12
+client --time-of-day=0.45 --rain=0 --cloud=0.2 --wind=0.1 --render-cam=3.2,1.0,90,0.4
+frames 240
+mark hands-start
+act Dig cellx cellz
+frames +30
+act Dig cellx cellz
+frames +30
+mark hands-end
+give 12 1 60
+frames +12
+mark stick-start
+act Dig cellx cellz
+frames +30
+act Dig cellx cellz
+frames +30
+mark stick-end
+frames +12
