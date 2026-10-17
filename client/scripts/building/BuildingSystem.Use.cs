@@ -220,7 +220,7 @@ public partial class BuildingSystem
         {
             Kind = "bag", Width = 5, Empty = "Nothing",
             Source = () => conn() is { } c
-                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
+                ? c.Db.MyInventory.Iter().Where(i => i.Count > 0 && !i.OnBelt).Select(i => new BagStack((Item)i.Item, i.Quality, i.Count))
                 : Enumerable.Empty<BagStack>(),
             Clicked = (s, all) => { if (openBasket is { } id) conn()?.Reducers.BasketPut(id, (ushort)s.Item, s.Quality, all ? s.Count : 1); },
             Accepts = d => d["from"].AsString() == "basket",

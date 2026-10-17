@@ -1115,3 +1115,41 @@ Append-only. Never edit or delete an entry; add a new one that supersedes it. Wr
 ## D-275 — 2026-10-17 — Towns: any signer can invite, ten voted roles including a Mayor who can remove people, claims stay nearby and towns can merge (extends D-258)
 **Decision:** Any signer of the town roster can invite others. There are ten roles that everyone votes for; a Mayor, for instance, could remove people. Claims in a town must be near each other, and nearby towns can merge into very large ones. The PM reads Justin's word "cousins" as "towns", meaning claims must be near a signed claim and neighbouring towns can merge. Claims proposes the role list, voting and merge rules, which come back to Justin before they are built. Owner: Claims.
 **Who:** Justin ("There should be ten roles, that everyone votes for. Mayor for instance. Mayor could remove people." and "They should be nearby, but the idea is cousins can merge into very large towns")
+
+## D-276 — 2026-10-17 — Towns: ten offices, open voting, 60 m claim chains, merging by majority, "Map first" panel (refines D-275, D-258)
+**Decision:** Justin approved Claims' proposal for towns:
+- **Offices:** ten offices: Mayor, Deputy, Judge, Herald, Warden, Marshal, Treasurer, Gatekeeper, Scribe and Elder. The Mayor and voting are built first.
+- **Voting:** open voting. A majority wins at once; otherwise the most votes win after a 7-day term. A vacant seat is filled after 24 h.
+- **Claims:** a claim joins a town within 60 m of a signed claim's marker. Chains make towns of any size, with a soft cap of 64.
+- **Merging:** towns merge by a majority of each town within 3 days.
+- **Town panel look:** "Map first", a top-down map of the town's claims.
+Owner: Claims.
+**Who:** Justin, approving Claims' proposal and picking "Map first" (relayed by the PM; no direct quote).
+
+## D-277 — 2026-10-17 — Broadleaf trees get the same painted-shader treatment as the pines (follows D-274)
+**Decision:** Broadleaf trees get the same painted-shader treatment as the pines. Their crowns are not just recoloured. Owner: Modeling, after the pine shader settles.
+**Who:** Justin (relayed by the PM; no direct quote).
+
+## D-278 — 2026-10-17 — There is one hen coop structure, House building's #479; Animals builds only the roosting behaviour (refines D-265, D-269)
+**Decision:** There is one hen coop structure: House building's #479. Animals builds only the roosting behaviour, against the coop's Entry and Roost points.
+**Who:** PM call.
+
+## D-279 — 2026-10-17 — Survival's next addition is a hide waterskin only, no bark bowl
+**Decision:** Survival's next addition is a hide waterskin only, with no bark bowl. It is an early way to carry a little water before pottery. Owner: Survival.
+**Who:** Justin, picking the hide waterskin only (relayed by the PM; no direct quote).
+
+## D-280 — 2026-10-17 — Crafting menu becomes a twin of the build menu
+**Decision:** The crafting menu becomes a twin of the build menu. C opens a centred panel with category tabs and search, and a grid of picture cards. Each card shows its inputs (have/need) and the tool. Cards the player can't make are greyed, and hovering one says what is missing. Click a card to make it.
+**Who:** Relayed by the PM; no direct quote.
+
+## D-281 — 2026-10-17 — Hold a key to repeat actions
+**Decision:** Holding the action key repeats the action (harvesting, digging and similar), so players don't have to click constantly. Integration builds it in the Use dispatcher. Repeating is never faster than clicking, and the server still validates each action.
+**Who:** Justin: "When harvesting things, digging etc let me hold the key down to repeat the action instead of clicking it constantly."
+
+## D-282 — 2026-10-17 — Pines darker, closer to the model image
+**Decision:** The pine trees are made darker, closer to the model image on the left of the comparison.
+**Who:** Justin: "make them darker, closer to the model image on the left."
+
+## D-283 — 2026-10-17 — One centre panel at a time, walking allowed
+**Decision:** Only one centre panel is open at a time, and the player can keep walking with panels open.
+**Who:** PM default; Justin didn't answer.

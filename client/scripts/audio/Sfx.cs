@@ -34,6 +34,19 @@ public static class Sfx
 
     // A cue defined as data (CueDefs).
     public static void Play(CueDef def) => scape?.Play(def);
+    public static void Play(CueDef def, float gain) => scape?.Play(def, gain);
+
+    // Something hitting the water at `where`: strength 0 (a drop) to 1 (a big body); you (within
+    // 1.5 m of the listener) at full volume, others from their side. Atmosphere calls this for
+    // the player's own entry; anything else that splashes (a thrown stone, an animal, another
+    // player) can call it too.
+    public static void Splash(Vector3 where, float strength)
+    {
+        float s = Mathf.Clamp(strength, 0f, 1f);
+        float gain = 0.3f + 0.9f * s;
+        if (new Vector3(where.X - listener.X, 0, where.Z - listener.Z).LengthSquared() < 1.5f * 1.5f) scape?.Play(CueDefs.SplashIn, gain);
+        else if (Place(where, out float g, out float pan)) scape?.Play(CueDefs.SplashIn, gain * g, pan);
+    }
 
     // The same for something that happens at `where`: you (within 1.5 m of the listener) at full
     // volume, others from their side, quieter with distance.
