@@ -308,7 +308,7 @@ public static partial class Module
             var shape = Structures.Shape((int)s.Kind);
             float warmth = Structures.HasDoorway((int)s.Kind) && DoorClosed(ctx, s.Id) ? MathF.Max(shape.Warmth, shape.ShutWarmth) : shape.Warmth;
             if (shape.Room && FireInside(ctx, s)) warmth = 1f;
-            if (s.Kind == StructureKind.ClayHut && HearthFireIn(ctx, s)) warmth = 1f;
+            if (shape.Hut && HearthFireIn(ctx, s)) warmth = 1f;
             if (shape.RainCover > best.RainCover || warmth > best.Warmth)
                 best = new Shelter(MathF.Max(best.RainCover, shape.RainCover), MathF.Max(best.Warmth, warmth), s.Id);
         }
